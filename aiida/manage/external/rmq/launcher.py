@@ -68,15 +68,14 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             return False
 
         if node.is_terminated:
-
             LOGGER.info('not continuing process<%d> which is already terminated with state %s', pid, node.process_state)
 
             future = kiwipy.Future()
 
             if node.is_finished:
-                future.set_result({
-                    entry.link_label: entry.node for entry in node.base.links.get_outgoing(node_class=Data)
-                })
+                future.set_result(
+                    {entry.link_label: entry.node for entry in node.base.links.get_outgoing(node_class=Data)}
+                )
             elif node.is_excepted:
                 future.set_exception(PastException(node.exception))
             elif node.is_killed:
@@ -114,10 +113,11 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             # server based.
             LOGGER.exception(
                 'A subscriber with the process id<%d> already exists, which most likely means this worker is already '
-                'working on it and this task was sent as a duplicate by mistake. Deleting the task now.', pid
+                'working on it and this task was sent as a duplicate by mistake. Deleting the task now.',
+                pid,
             )
             return False
-        except asyncio.CancelledError:  # pylint: disable=try-except-raise
+        except asyncio.CancelledError:
             # note this is only required in python<=3.7,
             # where asyncio.CancelledError inherits from Exception
             raise

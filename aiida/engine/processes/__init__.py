@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .builder import *
 from .calcjobs import *
@@ -64,4 +63,4 @@ __all__ = (
     'workfunction',
 )
 
-# yapf: enable
+# fmt: on

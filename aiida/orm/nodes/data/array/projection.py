@@ -23,8 +23,7 @@ __all__ = ('ProjectionData',)
 
 
 class ProjectionData(OrbitalData, ArrayData):
-    """
-    A class to handle arrays of projected wavefunction data. That is projections
+    """A class to handle arrays of projected wavefunction data. That is projections
     of a orbitals, usually an atomic-hydrogen orbital, onto a
     given bloch wavefunction, the bloch wavefunction being indexed by
     s, n, and k. E.g. the elements are the projections described as
@@ -32,8 +31,7 @@ class ProjectionData(OrbitalData, ArrayData):
     """
 
     def _check_projections_bands(self, projection_array):
-        """
-        Checks to make sure that a reference bandsdata is already set, and that
+        """Checks to make sure that a reference bandsdata is already set, and that
         projection_array is of the same shape of the bands data
 
         :param projwfc_arrays: nk x nb x nwfc array, to be
@@ -53,8 +51,7 @@ class ProjectionData(OrbitalData, ArrayData):
             raise AttributeError('These arrays are not the same shape as the bands')
 
     def set_reference_bandsdata(self, value):
-        """
-        Sets a reference bandsdata, creates a uuid link between this data
+        """Sets a reference bandsdata, creates a uuid link between this data
         object and a bandsdata object, must be set before any projection arrays
 
         :param value: a BandsData instance, a uuid or a pk
@@ -74,7 +71,7 @@ class ProjectionData(OrbitalData, ArrayData):
                 try:
                     bands = load_node(uuid=uuid)
                     uuid = bands.uuid
-                except Exception:  # pylint: disable=bare-except
+                except Exception:
                     raise exceptions.NotExistent(
                         'The value passed to set_reference_bandsdata was not associated to any bandsdata'
                     )
@@ -82,8 +79,7 @@ class ProjectionData(OrbitalData, ArrayData):
         self.base.attributes.set('reference_bandsdata_uuid', uuid)
 
     def get_reference_bandsdata(self):
-        """
-        Returns the reference BandsData, using the set uuid via
+        """Returns the reference BandsData, using the set uuid via
         set_reference_bandsdata
 
         :return: a BandsData instance
@@ -91,6 +87,7 @@ class ProjectionData(OrbitalData, ArrayData):
         :raise exceptions.NotExistent: if the bandsdata uuid did not retrieve bandsdata
         """
         from aiida.orm import load_node
+
         try:
             uuid = self.base.attributes.get('reference_bandsdata_uuid')
         except AttributeError:
@@ -102,8 +99,7 @@ class ProjectionData(OrbitalData, ArrayData):
         return bands
 
     def _find_orbitals_and_indices(self, **kwargs):
-        """
-        Finds all the orbitals and their indicies associated with kwargs
+        """Finds all the orbitals and their indicies associated with kwargs
         essential for retrieving the other indexed array parameters
 
         :param kwargs: kwargs that can call orbitals as in get_orbitals()
@@ -119,8 +115,7 @@ class ProjectionData(OrbitalData, ArrayData):
         return retrieve_indices, all_orbitals
 
     def get_pdos(self, **kwargs):
-        """
-        Retrieves all the pdos arrays corresponding to the input kwargs
+        """Retrieves all the pdos arrays corresponding to the input kwargs
 
         :param kwargs: inputs describing the orbitals associated with the pdos
                        arrays
@@ -129,15 +124,18 @@ class ProjectionData(OrbitalData, ArrayData):
 
         """
         retrieve_indices, all_orbitals = self._find_orbitals_and_indices(**kwargs)
-        out_list = [(
-            all_orbitals[i], self.get_array(f'pdos_{self._from_index_to_arrayname(i)}'),
-            self.get_array(f'energy_{self._from_index_to_arrayname(i)}')
-        ) for i in retrieve_indices]
+        out_list = [
+            (
+                all_orbitals[i],
+                self.get_array(f'pdos_{self._from_index_to_arrayname(i)}'),
+                self.get_array(f'energy_{self._from_index_to_arrayname(i)}'),
+            )
+            for i in retrieve_indices
+        ]
         return out_list
 
     def get_projections(self, **kwargs):
-        """
-        Retrieves all the pdos arrays corresponding to the input kwargs
+        """Retrieves all the pdos arrays corresponding to the input kwargs
 
         :param kwargs: inputs describing the orbitals associated with the pdos
                        arrays
@@ -153,9 +151,7 @@ class ProjectionData(OrbitalData, ArrayData):
 
     @staticmethod
     def _from_index_to_arrayname(index):
-        """
-        Used internally to determine the array names.
-        """
+        """Used internally to determine the array names."""
         return f'array_{index}'
 
     def set_projectiondata(
@@ -165,10 +161,9 @@ class ProjectionData(OrbitalData, ArrayData):
         list_of_energy=None,
         list_of_pdos=None,
         tags=None,
-        bands_check=True
+        bands_check=True,
     ):
-        """
-        Stores the projwfc_array using the projwfc_label, after validating both.
+        """Stores the projwfc_array using the projwfc_label, after validating both.
 
         :param list_of_orbitals: list of orbitals, of class orbital data.
                                  They should be the ones up on which the
@@ -196,11 +191,8 @@ class ProjectionData(OrbitalData, ArrayData):
                             cannot be called
         """
 
-        # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
-
         def single_to_list(item):
-            """
-            Checks if the item is a list or tuple, and converts it to a list
+            """Checks if the item is a list or tuple, and converts it to a list
             if it is not already a list or tuple
 
             :param item: an object which may or may not be a list or tuple
@@ -213,8 +205,7 @@ class ProjectionData(OrbitalData, ArrayData):
             return [item]
 
         def array_list_checker(array_list, array_name, orb_length):
-            """
-            Does basic checks over everything in the array_list. Makes sure that
+            """Does basic checks over everything in the array_list. Makes sure that
             all the arrays are np.ndarray floats, that the length is same as
             required_length, raises exception using array_name if there is
             a failure
@@ -287,13 +278,10 @@ class ProjectionData(OrbitalData, ArrayData):
                 raise exceptions.ValidationError('Tags must set a list of strings')
             self.base.attributes.set('tags', tags)
 
-    def set_orbitals(self, **kwargs):  # pylint: disable=arguments-differ
-        """
-        This method is inherited from OrbitalData, but is blocked here.
+    def set_orbitals(self, **kwargs):
+        """This method is inherited from OrbitalData, but is blocked here.
         If used will raise a NotImplementedError
         """
         raise NotImplementedError(
-            'You cannot set orbitals using this class!'
-            ' This class is for setting orbitals and '
-            ' projections only!'
+            'You cannot set orbitals using this class!' ' This class is for setting orbitals and ' ' projections only!'
         )

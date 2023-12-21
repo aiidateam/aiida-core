@@ -8,10 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Complex tests for the export and import routines"""
-# pylint: disable=too-many-locals
-from datetime import datetime
 import random
 import string
+from datetime import datetime
 
 import numpy as np
 
@@ -23,8 +22,7 @@ from aiida.tools.archive import create_archive, import_archive
 
 
 def test_complex_graph_import_export(aiida_profile_clean, tmp_path, aiida_localhost):
-    """
-    This test checks that a small and bit complex graph can be correctly
+    """This test checks that a small and bit complex graph can be correctly
     exported and imported.
 
     It will create the graph, store it to the database, export it to a file
@@ -75,7 +73,7 @@ def test_complex_graph_import_export(aiida_profile_clean, tmp_path, aiida_localh
         pd2.uuid: pd2.label,
         rd1.uuid: rd1.label,
         calc2.uuid: calc2.label,
-        fd1.uuid: fd1.label
+        fd1.uuid: fd1.label,
     }
 
     filename = tmp_path / 'export.aiida'
@@ -93,8 +91,7 @@ def test_complex_graph_import_export(aiida_profile_clean, tmp_path, aiida_localh
 
 
 def test_reexport(aiida_profile_clean, tmp_path):
-    """
-    Export something, import and re-export and check if everything is valid.
+    """Export something, import and re-export and check if everything is valid.
     The export is rather easy::
 
         ___       ___          ___
@@ -108,12 +105,12 @@ def test_reexport(aiida_profile_clean, tmp_path):
     size = 10
     grouplabel = 'test-group'
 
-    nparr = np.random.random((4, 3, 2))  # pylint: disable=no-member
+    nparr = np.random.random((4, 3, 2))
     trial_dict = {}
     # give some integers:
     trial_dict.update({str(k): np.random.randint(100) for k in range(10)})
     # give some floats:
-    trial_dict.update({str(k): np.random.random() for k in range(10, 20)})  # pylint: disable=no-member
+    trial_dict.update({str(k): np.random.random() for k in range(10, 20)})
     # give some booleans:
     trial_dict.update({str(k): bool(np.random.randint(1)) for k in range(20, 30)})
     # give some text:
@@ -121,7 +118,7 @@ def test_reexport(aiida_profile_clean, tmp_path):
 
     param = orm.Dict(dict=trial_dict)
     param.label = str(datetime.now())
-    param.description = f'd_{str(datetime.now())}'
+    param.description = f'd_{datetime.now()!s}'
     param.store()
     calc = orm.CalculationNode()
     # setting also trial dict as attributes, but randomizing the keys)
@@ -175,22 +172,27 @@ def get_hash_from_db_content(grouplabel):
     assert builder.count() > 0
     # The hash is given from the preservable entries in an export-import cycle,
     # uuids, attributes, labels, descriptions, arrays, link-labels, link-types:
-    hash_ = make_hash([(
-        item['param']['*'].base.attributes.all,
-        item['param']['*'].uuid,
-        item['param']['*'].label,
-        item['param']['*'].description,
-        item['calc']['*'].uuid,
-        item['calc']['*'].base.attributes.all,
-        item['array']['*'].base.attributes.all,
-        [item['array']['*'].get_array(name).tolist() for name in item['array']['*'].get_arraynames()],
-        item['array']['*'].uuid,
-        item['group']['*'].uuid,
-        item['group']['*'].label,
-        item['p2c']['label'],
-        item['p2c']['type'],
-        item['c2a']['label'],
-        item['c2a']['type'],
-        item['group']['*'].label,
-    ) for item in builder.dict()])
+    hash_ = make_hash(
+        [
+            (
+                item['param']['*'].base.attributes.all,
+                item['param']['*'].uuid,
+                item['param']['*'].label,
+                item['param']['*'].description,
+                item['calc']['*'].uuid,
+                item['calc']['*'].base.attributes.all,
+                item['array']['*'].base.attributes.all,
+                [item['array']['*'].get_array(name).tolist() for name in item['array']['*'].get_arraynames()],
+                item['array']['*'].uuid,
+                item['group']['*'].uuid,
+                item['group']['*'].label,
+                item['p2c']['label'],
+                item['p2c']['type'],
+                item['c2a']['label'],
+                item['c2a']['type'],
+                item['group']['*'].label,
+            )
+            for item in builder.dict()
+        ]
+    )
     return hash_

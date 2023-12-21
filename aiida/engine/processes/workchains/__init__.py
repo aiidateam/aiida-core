@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .awaitable import *
 from .context import *
@@ -37,4 +36,4 @@ __all__ = (
     'while_',
 )
 
-# yapf: enable
+# fmt: on

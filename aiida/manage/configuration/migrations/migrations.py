@@ -14,8 +14,14 @@ from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER
 
 __all__ = (
-    'CURRENT_CONFIG_VERSION', 'OLDEST_COMPATIBLE_CONFIG_VERSION', 'get_current_version', 'check_and_migrate_config',
-    'config_needs_migrating', 'upgrade_config', 'downgrade_config', 'MIGRATIONS'
+    'CURRENT_CONFIG_VERSION',
+    'OLDEST_COMPATIBLE_CONFIG_VERSION',
+    'get_current_version',
+    'check_and_migrate_config',
+    'config_needs_migrating',
+    'upgrade_config',
+    'downgrade_config',
+    'MIGRATIONS',
 )
 
 ConfigType = Dict[str, Any]
@@ -55,6 +61,7 @@ class SingleMigration(Protocol):
 
 class Initial(SingleMigration):
     """Base migration (no-op)."""
+
     down_revision = 0
     down_compatible = 0
     up_revision = 1
@@ -75,6 +82,7 @@ class AddProfileUuid(SingleMigration):
     The profile uuid will be used as a general purpose identifier for the profile, in
     for example the RabbitMQ message queues and exchanges.
     """
+
     down_revision = 1
     down_compatible = 0
     up_revision = 2
@@ -82,6 +90,7 @@ class AddProfileUuid(SingleMigration):
 
     def upgrade(self, config: ConfigType) -> None:
         from uuid import uuid4  # we require this import here, to patch it in the tests
+
         for profile in config.get('profiles', {}).values():
             profile.setdefault('PROFILE_UUID', uuid4().hex)
 
@@ -97,6 +106,7 @@ class SimplifyDefaultProfiles(SingleMigration):
     configuration no longer needs a value per process ('verdi', 'daemon'). We remove the dictionary 'default_profiles'
     and replace it with a simple value 'default_profile'.
     """
+
     down_revision = 2
     down_compatible = 0
     up_revision = 3
@@ -123,6 +133,7 @@ class SimplifyDefaultProfiles(SingleMigration):
 
 class AddMessageBroker(SingleMigration):
     """Add the configuration for the message broker, which was not configurable up to now."""
+
     down_revision = 3
     down_compatible = 3
     up_revision = 4
@@ -130,6 +141,7 @@ class AddMessageBroker(SingleMigration):
 
     def upgrade(self, config: ConfigType) -> None:
         from aiida.manage.external.rmq import BROKER_DEFAULTS
+
         defaults = [
             ('broker_protocol', BROKER_DEFAULTS.protocol),
             ('broker_username', BROKER_DEFAULTS.username),
@@ -150,6 +162,7 @@ class AddMessageBroker(SingleMigration):
 
 class SimplifyOptions(SingleMigration):
     """Remove unnecessary difference between file/internal representation of options"""
+
     down_revision = 4
     down_compatible = 3
     up_revision = 5
@@ -205,6 +218,7 @@ class AbstractStorageAndProcess(SingleMigration):
 
     This allows for different storage backends to have different configuration.
     """
+
     down_revision = 5
     down_compatible = 5
     up_revision = 6
@@ -270,6 +284,7 @@ class MergeStorageBackendTypes(SingleMigration):
 
     The legacy name is stored under the `_v6_backend` key, to allow for downgrades.
     """
+
     down_revision = 6
     down_compatible = 6
     up_revision = 7
@@ -298,6 +313,7 @@ class MergeStorageBackendTypes(SingleMigration):
 
 class AddTestProfileKey(SingleMigration):
     """Add the ``test_profile`` key."""
+
     down_revision = 7
     down_compatible = 7
     up_revision = 8
@@ -313,7 +329,6 @@ class AddTestProfileKey(SingleMigration):
 
         # Iterate over the fixed list of the profile names, since we are mutating the profiles dictionary.
         for profile_name in profile_names:
-
             profile = profiles.pop(profile_name)
             profile_name_new = None
             test_profile = profile.pop('test_profile', False)  # If absent, assume it is not a test profile
@@ -331,14 +346,13 @@ class AddTestProfileKey(SingleMigration):
                 )
 
             if profile_name_new is not None:
-
                 if profile_name_new in profile_names:
                     raise exceptions.ConfigurationError(
                         f'cannot change `{profile_name}` to `{profile_name_new}` because it already exists.'
                     )
 
                 CONFIG_LOGGER.warning(f'changing profile name from `{profile_name}` to `{profile_name_new}`.')
-                profile_name = profile_name_new
+                profile_name = profile_name_new  # noqa: PLW2901
 
             profile['test_profile'] = test_profile
             profiles[profile_name] = profile
@@ -350,6 +364,7 @@ class AddPrefixToStorageBackendTypes(SingleMigration):
     At this point, it should only ever contain ``psql_dos`` which should therefore become ``core.psql_dos``. To cover
     for cases where people manually added a read only ``sqlite_zip`` profile, we also migrate that.
     """
+
     down_revision = 8
     down_compatible = 8
     up_revision = 9
@@ -406,9 +421,7 @@ def get_oldest_compatible_version(config):
 
 
 def upgrade_config(
-    config: ConfigType,
-    target: int = CURRENT_CONFIG_VERSION,
-    migrations: Iterable[Type[SingleMigration]] = MIGRATIONS
+    config: ConfigType, target: int = CURRENT_CONFIG_VERSION, migrations: Iterable[Type[SingleMigration]] = MIGRATIONS
 ) -> ConfigType:
     """Run the registered configuration migrations up to the target version.
 

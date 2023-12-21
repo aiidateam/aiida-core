@@ -21,7 +21,7 @@ def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
     inputs = {
         'x': orm.Int(1),
         'y': orm.Int(2),
-        'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash')
+        'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
     }
 
     calc_info = generate_calc_job(fixture_sandbox, 'core.arithmetic.add', inputs)
@@ -60,7 +60,7 @@ def test_add_custom_filenames(fixture_sandbox, aiida_localhost, generate_calc_jo
                 'input_filename': input_filename,
                 'output_filename': output_filename,
             }
-        }
+        },
     }
 
     calc_info = generate_calc_job(fixture_sandbox, 'core.arithmetic.add', inputs)
@@ -83,7 +83,7 @@ def test_sleep(fixture_sandbox, aiida_localhost, generate_calc_job):
             'options': {
                 'sleep': sleep,
             }
-        }
+        },
     }
 
     generate_calc_job(fixture_sandbox, 'core.arithmetic.add', inputs)

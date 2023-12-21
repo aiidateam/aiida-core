@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :class:`aiida.orm.nodes.data.code.installed.InstalledCode` class."""
 import pathlib
 
@@ -21,7 +20,7 @@ from aiida.orm.nodes.data.code.installed import InstalledCode
 def test_constructor_raises(aiida_localhost):
     """Test the constructor when it is supposed to raise."""
     with pytest.raises(TypeError, match=r'missing .* required positional arguments'):
-        InstalledCode()  # pylint: disable=no-value-for-parameter
+        InstalledCode()
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         InstalledCode(computer=aiida_localhost, filepath_executable=pathlib.Path('/usr/bin/bash'))
@@ -44,7 +43,7 @@ def test_validate(aiida_localhost):
     code = InstalledCode(computer=aiida_localhost, filepath_executable=filepath_executable)
 
     code.computer = aiida_localhost
-    code.base.attributes.set(code._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)  # pylint: disable=protected-access
+    code.base.attributes.set(code._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)
 
     with pytest.raises(ValidationError, match='The `filepath_executable` is not set.'):
         code.store()

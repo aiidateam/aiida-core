@@ -16,15 +16,12 @@ __all__ = ('UserParamType',)
 
 
 class UserParamType(click.ParamType):
-    """
-    The user parameter type for click.   Can get or create a user.
-    """
+    """The user parameter type for click.   Can get or create a user."""
+
     name = 'user'
 
     def __init__(self, create=False):
-        """
-        :param create: If the user does not exist, create a new instance (unstored).
-        """
+        """:param create: If the user does not exist, create a new instance (unstored)."""
         self._create = create
 
     @with_dbenv()
@@ -45,9 +42,8 @@ class UserParamType(click.ParamType):
         return results[0]
 
     @with_dbenv()
-    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
-        """
-        Return possible completions based on an incomplete value
+    def shell_complete(self, ctx, param, incomplete):
+        """Return possible completions based on an incomplete value
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """

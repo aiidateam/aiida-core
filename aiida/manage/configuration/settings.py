@@ -56,7 +56,6 @@ def create_instance_directories() -> None:
 
     try:
         for path in list_of_paths:
-
             if path is directory_base and not path.exists():
                 warnings.warn(f'Creating AiiDA configuration folder `{path}`.')
 
@@ -82,21 +81,17 @@ def set_configuration_directory(aiida_config_folder: pathlib.Path | None = None)
 
     In principle then, a configuration folder should always be found or automatically created.
     """
-    # pylint: disable = global-statement
-    global AIIDA_CONFIG_FOLDER
-    global DAEMON_DIR
-    global DAEMON_LOG_DIR
-    global ACCESS_CONTROL_DIR
+    global AIIDA_CONFIG_FOLDER  # noqa: PLW0603
+    global DAEMON_DIR  # noqa: PLW0603
+    global DAEMON_LOG_DIR  # noqa: PLW0603
+    global ACCESS_CONTROL_DIR  # noqa: PLW0603
 
     if aiida_config_folder is not None:
-
         AIIDA_CONFIG_FOLDER = aiida_config_folder
 
     elif environment_variable := os.environ.get(DEFAULT_AIIDA_PATH_VARIABLE):
-
         # Loop over all the paths in the `AIIDA_PATH` variable to see if any of them contain a configuration folder
         for base_dir_path in [path for path in environment_variable.split(':') if path]:
-
             AIIDA_CONFIG_FOLDER = pathlib.Path(base_dir_path).expanduser()
 
             # Only add the base config directory name to the base path if it does not already do so

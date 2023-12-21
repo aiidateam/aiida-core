@@ -31,10 +31,11 @@ class DBLogHandler(logging.Handler):
                 # The backend should be set. We silently absorb this error
                 pass
 
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             # To avoid loops with the error handler, I just print.
             # Hopefully, though, this should not happen!
             import traceback
+
             traceback.print_exc()
             raise
 

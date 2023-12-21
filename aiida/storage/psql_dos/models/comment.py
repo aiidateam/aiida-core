@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Module to manage comments for the SQLA backend."""
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
@@ -27,13 +26,13 @@ class DbComment(Base):
 
     __tablename__ = 'db_dbcomment'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False, unique=True)
     dbnode_id = Column(
         Integer,
         ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=False,
-        index=True
+        index=True,
     )
     ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
     mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
@@ -41,7 +40,7 @@ class DbComment(Base):
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=False,
-        index=True
+        index=True,
     )
     content = Column(Text, default='', nullable=False)
 
@@ -50,6 +49,5 @@ class DbComment(Base):
 
     def __str__(self):
         return 'DbComment for [{} {}] on {}'.format(
-            self.dbnode.get_simple_name(), self.dbnode.id,
-            timezone.localtime(self.ctime).strftime('%Y-%m-%d')
+            self.dbnode.get_simple_name(), self.dbnode.id, timezone.localtime(self.ctime).strftime('%Y-%m-%d')
         )

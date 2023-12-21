@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=invalid-name,no-member
 """Rename `db_dbcomputer.name` to `db_dbcomputer.label`
 
 Revision ID: 535039300e4a
@@ -19,7 +18,7 @@ depends_on = None
 def upgrade():
     """Migrations for the upgrade."""
     op.drop_constraint('db_dbcomputer_name_key', 'db_dbcomputer')
-    op.alter_column('db_dbcomputer', 'name', new_column_name='label')  # pylint: disable=no-member
+    op.alter_column('db_dbcomputer', 'name', new_column_name='label')
     op.create_unique_constraint('db_dbcomputer_label_key', 'db_dbcomputer', ['label'])
 
 

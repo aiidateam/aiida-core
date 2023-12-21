@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .datastructures import *
 from .scheduler import *
@@ -30,4 +29,4 @@ __all__ = (
     'SchedulerParsingError',
 )
 
-# yapf: enable
+# fmt: on

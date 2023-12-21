@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Move trajectory symbols from repository array to attribute
 
 Note, this is similar to the django migration django_0026
@@ -17,7 +16,6 @@ Revises: 37f3d4882837
 Create Date: 2019-01-21 10:15:02.451308
 
 """
-# pylint: disable=invalid-name
 
 from alembic import op
 from sqlalchemy import Integer, String, cast
@@ -42,7 +40,7 @@ def upgrade():
     connection = op.get_bind()
     repo_path = get_filepath_container(op.get_context().opts['aiida_profile']).parent
 
-    DbNode = table(
+    DbNode = table(  # noqa: N806
         'db_dbnode',
         column('id', Integer),
         column('uuid', UUID),
@@ -51,14 +49,17 @@ def upgrade():
     )
 
     nodes = connection.execute(
-        select(DbNode.c.id,
-               DbNode.c.uuid).where(DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))
+        select(DbNode.c.id, DbNode.c.uuid).where(
+            DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.')
+        )
     ).fetchall()
 
     for pk, uuid in nodes:
         symbols = load_numpy_array_from_repository(repo_path, uuid, 'symbols').tolist()
         connection.execute(
-            DbNode.update().where(DbNode.c.id == pk).values(
+            DbNode.update()
+            .where(DbNode.c.id == pk)
+            .values(
                 attributes=func.jsonb_set(DbNode.c.attributes, op.inline_literal('{"symbols"}'), cast(symbols, JSONB))
             )
         )

@@ -8,16 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA archive writer implementation."""
-from datetime import datetime
 import hashlib
-from io import BytesIO
 import json
 import os
-from pathlib import Path
 import shutil
 import tempfile
-from typing import Any, BinaryIO, Dict, List, Literal, Optional, Set, Union
 import zipfile
+from datetime import datetime
+from io import BytesIO
+from pathlib import Path
+from typing import Any, BinaryIO, Dict, List, Literal, Optional, Set, Union
 
 from archive_path import NOTSET, ZipPath, extract_file_in_zip, read_file_in_zip
 from sqlalchemy import insert

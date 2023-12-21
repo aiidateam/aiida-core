@@ -92,6 +92,7 @@ def echo_response(response: 'requests.Response', exit_on_error: bool = True) -> 
     :param exit_on_error: Boolean, if ``True``, call ``sys.exit`` with the status code of the response.
     """
     import requests
+
     try:
         response.raise_for_status()
     except requests.HTTPError:
@@ -107,8 +108,8 @@ def echo_response(response: 'requests.Response', exit_on_error: bool = True) -> 
 @click.pass_context
 def with_client(ctx, wrapped, _, args, kwargs):
     """Decorate a function injecting a :class:`aiida.manage.external.rmq.client.RabbitmqManagementClient`."""
-
     from aiida.manage.external.rmq.client import RabbitmqManagementClient
+
     config = ctx.obj.profile.process_control_config
     client = RabbitmqManagementClient(
         username=config['broker_username'],
@@ -146,7 +147,7 @@ def cmd_server_properties(manager):
     '--project',
     type=click.Choice(AVAILABLE_PROJECTORS),
     cls=options.MultipleValueOption,
-    default=('name', 'messages', 'state')
+    default=('name', 'messages', 'state'),
 )
 @options.RAW()
 @click.option('-f', '--filter-name', type=str, help='Provide a regex pattern to filter queues based on their name. ')
@@ -240,6 +241,7 @@ def cmd_tasks_analyze(ctx, fix):
     Use ``-v INFO`` to be more verbose and print more information.
     """
     from .cmd_process import process_repair
+
     ctx.invoke(process_repair, dry_run=not fix)
 
 

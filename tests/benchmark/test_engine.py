@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument,redefined-outer-name
 """Performance benchmark tests for local processes.
 
 The purpose of these tests is to benchmark and compare processes,
@@ -51,7 +50,7 @@ class WorkchainLoopWcSerial(WorkchainLoop):
 
     def run_task(self):
         future = self.submit(WorkchainLoop, iterations=Int(1))
-        return self.to_context(**{f'wkchain{str(self.ctx.counter)}': future})
+        return self.to_context(**{f'wkchain{self.ctx.counter!s}': future})
 
 
 class WorkchainLoopWcThreaded(WorkchainLoop):
@@ -62,10 +61,8 @@ class WorkchainLoopWcThreaded(WorkchainLoop):
         self.ctx.iter = 1
 
     def run_task(self):
-
         context = {
-            f'wkchain{str(i)}': self.submit(WorkchainLoop, iterations=Int(1))
-            for i in range(self.inputs.iterations.value)
+            f'wkchain{i!s}': self.submit(WorkchainLoop, iterations=Int(1)) for i in range(self.inputs.iterations.value)
         }
         return self.to_context(**context)
 
@@ -98,7 +95,7 @@ class WorkchainLoopCalcThreaded(WorkchainLoop):
                 'y': Int(2),
                 'code': self.inputs.code,
             }
-            futures[f'addition{str(i)}'] = self.submit(ArithmeticAddCalculation, **inputs)
+            futures[f'addition{i!s}'] = self.submit(ArithmeticAddCalculation, **inputs)
         return self.to_context(**futures)
 
 

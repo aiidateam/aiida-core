@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=global-statement
 """Test engine utilities such as the exponential backoff mechanism."""
 import asyncio
 
@@ -31,22 +30,21 @@ class TestExponentialBackoffRetry:
     """Tests for the exponential backoff retry coroutine."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
         self.authinfo = self.computer.get_authinfo(orm.User.collection.get_default())
 
     @staticmethod
     def test_exp_backoff_success():
         """Test that exponential backoff will successfully catch exceptions as long as max_attempts is not exceeded."""
-        global ITERATION
+        global ITERATION  # noqa: PLW0603
         ITERATION = 0
         loop = asyncio.get_event_loop()
 
         async def coro():
             """A function that will raise RuntimeError as long as ITERATION is smaller than MAX_ITERATIONS."""
-            global ITERATION
+            global ITERATION  # noqa: PLW0603
             ITERATION += 1
             if ITERATION < MAX_ITERATIONS:
                 raise RuntimeError
@@ -56,13 +54,13 @@ class TestExponentialBackoffRetry:
 
     def test_exp_backoff_max_attempts_exceeded(self):
         """Test that exponential backoff will finally raise if max_attempts is exceeded"""
-        global ITERATION
+        global ITERATION  # noqa: PLW0603
         ITERATION = 0
         loop = asyncio.get_event_loop()
 
         def coro():
             """A function that will raise RuntimeError as long as ITERATION is smaller than MAX_ITERATIONS."""
-            global ITERATION
+            global ITERATION  # noqa: PLW0603
             ITERATION += 1
             if ITERATION < MAX_ITERATIONS:
                 raise RuntimeError
@@ -98,7 +96,7 @@ def test_is_process_function():
 
 
 class TestInterruptable:
-    """ Tests for InterruptableFuture and interruptable_task."""
+    """Tests for InterruptableFuture and interruptable_task."""
 
     def test_normal_future(self):
         """Test interrupt future not being interrupted"""
@@ -121,7 +119,7 @@ class TestInterruptable:
         interruptable = InterruptableFuture()
         loop.call_soon(interruptable.interrupt, RuntimeError('STOP'))
         try:
-            loop.run_until_complete(interruptable.with_interrupt(asyncio.sleep(10.)))
+            loop.run_until_complete(interruptable.with_interrupt(asyncio.sleep(10.0)))
         except RuntimeError as err:
             assert str(err) == 'STOP'
         else:
@@ -137,7 +135,7 @@ class TestInterruptable:
         fut = asyncio.Future()
 
         async def task():
-            await asyncio.sleep(1.)
+            await asyncio.sleep(1.0)
             interruptable.interrupt(RuntimeError('STOP'))
             fut.set_result('I got set.')
 
@@ -162,7 +160,7 @@ class TestInterruptable:
 
         loop.create_task(task())
         try:
-            loop.run_until_complete(interruptable.with_interrupt(asyncio.sleep(20.)))
+            loop.run_until_complete(interruptable.with_interrupt(asyncio.sleep(20.0)))
         except RuntimeError as err:
             assert str(err) == "This interruptible future had it's result set unexpectedly to 'NOT ME!!!'"
         else:
@@ -172,8 +170,8 @@ class TestInterruptable:
 
 
 @pytest.mark.requires_rmq
-class TestInterruptableTask():
-    """ Tests for InterruptableFuture and interruptable_task."""
+class TestInterruptableTask:
+    """Tests for InterruptableFuture and interruptable_task."""
 
     @pytest.mark.asyncio
     async def test_task(self):

@@ -73,7 +73,7 @@ class ProfileParamType(LabelStringType):
 
         return profile
 
-    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
+    def shell_complete(self, ctx, param, incomplete):
         """Return possible completions based on an incomplete value
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description

@@ -31,7 +31,7 @@ class Pluginable(VerdiCommandGroup):
 
         return subcommands
 
-    def get_command(self, ctx, name):  # pylint: disable=arguments-renamed
+    def get_command(self, ctx, name):
         """Try to load a subcommand from entry points, else defer to super."""
         command = None
         if not self._exclude_external_plugins:

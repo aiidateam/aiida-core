@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test using the archive backend directly."""
-# pylint: disable=redefined-outer-name
 import pytest
 
 from aiida import orm

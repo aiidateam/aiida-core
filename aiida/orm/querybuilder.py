@@ -7,9 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines
-"""
-The QueryBuilder: A class that allows you to query the AiiDA database, independent from backend.
+"""The QueryBuilder: A class that allows you to query the AiiDA database, independent from backend.
 Note that the backend implementation is enforced and handled with a composition model!
 :func:`QueryBuilder` is the frontend class that the user can use. It inherits from *object* and contains
 backend-specific functionality. Backend specific functionality is provided by the implementation classes.
@@ -21,6 +19,7 @@ when instantiated by the user.
 """
 from __future__ import annotations
 
+import warnings
 from copy import deepcopy
 from inspect import isclass as inspect_isclass
 from typing import (
@@ -40,7 +39,6 @@ from typing import (
     cast,
     overload,
 )
-import warnings
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
@@ -57,16 +55,15 @@ from aiida.orm.implementation.querybuilder import (
 from . import authinfos, comments, computers, convert, entities, groups, logs, nodes, users
 
 if TYPE_CHECKING:
-    # pylint: disable=ungrouped-imports
     from aiida.engine import Process
     from aiida.orm.implementation import StorageBackend
 
 __all__ = ('QueryBuilder',)
 
 # re-usable type annotations
-EntityClsType = Type[Union[entities.Entity, 'Process']]  # pylint: disable=invalid-name
-ProjectType = Union[str, dict, Sequence[Union[str, dict]]]  # pylint: disable=invalid-name
-FilterType = Dict[str, Any]  # pylint: disable=invalid-name
+EntityClsType = Type[Union[entities.Entity, 'Process']]
+ProjectType = Union[str, dict, Sequence[Union[str, dict]]]
+FilterType = Dict[str, Any]
 OrderByType = Union[dict, List[dict], Tuple[dict, ...]]
 
 LOGGER = AIIDA_LOGGER.getChild('querybuilder')
@@ -74,13 +71,13 @@ LOGGER = AIIDA_LOGGER.getChild('querybuilder')
 
 class Classifier(NamedTuple):
     """A classifier for an entity."""
+
     ormclass_type_string: str
     process_type_string: Optional[str] = None
 
 
 class QueryBuilder:
-    """
-    The class to query the AiiDA database.
+    """The class to query the AiiDA database.
 
     Usage::
 
@@ -92,8 +89,6 @@ class QueryBuilder:
         results = qb.all()
 
     """
-
-    # pylint: disable=too-many-instance-attributes,too-many-public-methods
 
     # This tag defines how edges are tagged (labeled) by the QueryBuilder default
     # namely tag of first entity + _EDGE_TAG_DELIM + tag of second entity
@@ -113,8 +108,7 @@ class QueryBuilder:
         order_by: Optional[OrderByType] = None,
         distinct: bool = False,
     ) -> None:
-        """
-        Instantiates a QueryBuilder instance.
+        """Instantiates a QueryBuilder instance.
 
         Which backend is used decided here based on backend-settings (taken from the user profile).
         This cannot be overridden so far by the user.
@@ -228,7 +222,7 @@ class QueryBuilder:
 
     @property
     def queryhelp(self) -> 'QueryDictType':
-        """"Legacy name for ``as_dict`` method."""
+        """ "Legacy name for ``as_dict`` method."""
         warn_deprecation('`QueryBuilder.queryhelp` is deprecated, use `QueryBuilder.as_dict()` instead', version=3)
         return self.as_dict()
 
@@ -267,8 +261,7 @@ class QueryBuilder:
         return given_tags
 
     def _get_unique_tag(self, classifiers: List[Classifier]) -> str:
-        """
-        Using the function get_tag_from_type, I get a tag.
+        """Using the function get_tag_from_type, I get a tag.
         I increment an index that is appended to that tag until I have an unused tag.
         This function is called in :func:`QueryBuilder.append` when no tag is given.
 
@@ -303,11 +296,10 @@ class QueryBuilder:
         outerjoin: bool = False,
         joining_keyword: Optional[str] = None,
         joining_value: Optional[Any] = None,
-        orm_base: Optional[str] = None,  # pylint: disable=unused-argument
-        **kwargs: Any
+        orm_base: Optional[str] = None,
+        **kwargs: Any,
     ) -> 'QueryBuilder':
-        """
-        Any iterative procedure to build the path for a graph query
+        """Any iterative procedure to build the path for a graph query
         needs to invoke this method to append to the path.
 
         :param cls:
@@ -368,7 +360,6 @@ class QueryBuilder:
 
         :return: self
         """
-        # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
         # INPUT CHECKS ##########################
         # This function can be called by users, so I am checking the input now.
         # First of all, let's make sure the specified the class or the type (not both)
@@ -459,7 +450,7 @@ class QueryBuilder:
             raise exception
 
         # JOINING #####################################
-        # pylint: disable=too-many-nested-blocks
+
         try:
             # Get the functions that are implemented:
             spec_to_function_map = set(EntityRelationships[ormclass.value])
@@ -521,9 +512,8 @@ class QueryBuilder:
                 if edge_tag is None:
                     edge_destination_tag = self._tags.get(joining_value)
                     edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
-                else:
-                    if edge_tag in self._tags:
-                        raise ValueError(f'The tag {edge_tag} is already in use')
+                elif edge_tag in self._tags:
+                    raise ValueError(f'The tag {edge_tag} is already in use')
                 LOGGER.debug('edge_tag chosen: %s', edge_tag)
 
                 # edge tags do not have an ormclass
@@ -579,8 +569,7 @@ class QueryBuilder:
         return self
 
     def order_by(self, order_by: OrderByType) -> 'QueryBuilder':
-        """
-        Set the entity to order by
+        """Set the entity to order by
 
         :param order_by:
             This is a list of items, where each item is a dictionary specifies
@@ -612,7 +601,6 @@ class QueryBuilder:
             qb.append(Node, tag='node')
             qb.order_by({'node':[{'id':'desc'}]})
         """
-        # pylint: disable=too-many-nested-blocks,too-many-branches
         self._order_by = []
         allowed_keys = ('cast', 'order')
         possible_orders = ('asc', 'desc')
@@ -629,12 +617,12 @@ class QueryBuilder:
             _order_spec: dict = {}
             for tagspec, items_to_order_by in order_spec.items():
                 if not isinstance(items_to_order_by, (tuple, list)):
-                    items_to_order_by = [items_to_order_by]
+                    items_to_order_by = [items_to_order_by]  # noqa: PLW2901
                 tag = self._tags.get(tagspec)
                 _order_spec[tag] = []
                 for item_to_order_by in items_to_order_by:
                     if isinstance(item_to_order_by, str):
-                        item_to_order_by = {item_to_order_by: {}}
+                        item_to_order_by = {item_to_order_by: {}}  # noqa: PLW2901
                     elif isinstance(item_to_order_by, dict):
                         pass
                     else:
@@ -651,9 +639,9 @@ class QueryBuilder:
                             this_order_spec = orderspec
                         else:
                             raise TypeError(
-                                'I was expecting a string or a dictionary\n'
-                                'You provided {} {}\n'
-                                ''.format(type(orderspec), orderspec)
+                                'I was expecting a string or a dictionary\n' 'You provided {} {}\n' ''.format(
+                                    type(orderspec), orderspec
+                                )
                             )
                         for key in this_order_spec:
                             if key not in allowed_keys:
@@ -679,8 +667,7 @@ class QueryBuilder:
         return self
 
     def add_filter(self, tagspec: Union[str, EntityClsType], filter_spec: FilterType) -> 'QueryBuilder':
-        """
-        Adding a filter to my filters.
+        """Adding a filter to my filters.
 
         :param tagspec: A tag string or an ORM class which maps to an existing tag
         :param filter_spec: The specifications for the filter, has to be a dictionary
@@ -720,8 +707,7 @@ class QueryBuilder:
         return processed_filters
 
     def _add_node_type_filter(self, tagspec: str, classifiers: List[Classifier], subclassing: bool):
-        """
-        Add a filter based on node type.
+        """Add a filter based on node type.
 
         :param tagspec: The tag, which has to exist already as a key in self._filters
         :param classifiers: a dictionary with classifiers
@@ -738,8 +724,7 @@ class QueryBuilder:
         self.add_filter(tagspec, {'node_type': entity_type_filter})
 
     def _add_process_type_filter(self, tagspec: str, classifiers: List[Classifier], subclassing: bool) -> None:
-        """
-        Add a filter based on process type.
+        """Add a filter based on process type.
 
         :param tagspec: The tag, which has to exist already as a key in self._filters
         :param classifiers: a dictionary with classifiers
@@ -757,14 +742,12 @@ class QueryBuilder:
             if len(process_type_filter['or']) > 0:
                 self.add_filter(tagspec, {'process_type': process_type_filter})
 
-        else:
-            if classifiers[0].process_type_string is not None:
-                process_type_filter = _get_process_type_filter(classifiers[0], subclassing)
-                self.add_filter(tagspec, {'process_type': process_type_filter})
+        elif classifiers[0].process_type_string is not None:
+            process_type_filter = _get_process_type_filter(classifiers[0], subclassing)
+            self.add_filter(tagspec, {'process_type': process_type_filter})
 
     def _add_group_type_filter(self, tagspec: str, classifiers: List[Classifier], subclassing: bool) -> None:
-        """
-        Add a filter based on group type.
+        """Add a filter based on group type.
 
         :param tagspec: The tag, which has to exist already as a key in self._filters
         :param classifiers: a dictionary with classifiers
@@ -854,8 +837,7 @@ class QueryBuilder:
         self._projections[tag] = _projections
 
     def set_debug(self, debug: bool) -> 'QueryBuilder':
-        """
-        Run in debug mode. This does not affect functionality, but prints intermediate stages
+        """Run in debug mode. This does not affect functionality, but prints intermediate stages
         when creating a query on screen.
 
         :param debug: Turn debug on or off
@@ -879,8 +861,7 @@ class QueryBuilder:
             print(f'DEBUG: {msg}' % objects)
 
     def limit(self, limit: Optional[int]) -> 'QueryBuilder':
-        """
-        Set the limit (nr of rows to return)
+        """Set the limit (nr of rows to return)
 
         :param limit: integers of number of rows of rows to return
         """
@@ -890,8 +871,7 @@ class QueryBuilder:
         return self
 
     def offset(self, offset: Optional[int]) -> 'QueryBuilder':
-        """
-        Set the offset. If offset is set, that many rows are skipped before returning.
+        """Set the offset. If offset is set, that many rows are skipped before returning.
         *offset* = 0 is the same as omitting setting the offset.
         If both offset and limit appear,
         then *offset* rows are skipped before starting to count the *limit* rows
@@ -905,8 +885,7 @@ class QueryBuilder:
         return self
 
     def distinct(self, value: bool = True) -> 'QueryBuilder':
-        """
-        Asks for distinct rows, which is the same as asking the backend to remove
+        """Asks for distinct rows, which is the same as asking the backend to remove
         duplicates.
         Does not execute the query!
 
@@ -928,48 +907,48 @@ class QueryBuilder:
         return self
 
     def inputs(self, **kwargs: Any) -> 'QueryBuilder':
-        """
-        Join to inputs of previous vertice in path.
+        """Join to inputs of previous vertice in path.
 
         :returns: self
         """
         from aiida.orm import Node
+
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
         self.append(cls=cls, with_outgoing=join_to, **kwargs)
         return self
 
     def outputs(self, **kwargs: Any) -> 'QueryBuilder':
-        """
-        Join to outputs of previous vertice in path.
+        """Join to outputs of previous vertice in path.
 
         :returns: self
         """
         from aiida.orm import Node
+
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
         self.append(cls=cls, with_incoming=join_to, **kwargs)
         return self
 
     def children(self, **kwargs: Any) -> 'QueryBuilder':
-        """
-        Join to children/descendants of previous vertice in path.
+        """Join to children/descendants of previous vertice in path.
 
         :returns: self
         """
         from aiida.orm import Node
+
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
         self.append(cls=cls, with_ancestors=join_to, **kwargs)
         return self
 
     def parents(self, **kwargs: Any) -> 'QueryBuilder':
-        """
-        Join to parents/ancestors of previous vertice in path.
+        """Join to parents/ancestors of previous vertice in path.
 
         :returns: self
         """
         from aiida.orm import Node
+
         join_to = self._path[-1]['tag']
         cls = kwargs.pop('cls', Node)
         self.append(cls=cls, with_descendants=join_to, **kwargs)
@@ -1043,16 +1022,14 @@ class QueryBuilder:
         return result
 
     def count(self) -> int:
-        """
-        Counts the number of rows returned by the backend.
+        """Counts the number of rows returned by the backend.
 
         :returns: the number of rows as an integer
         """
         return self._impl.count(self.as_dict())
 
     def iterall(self, batch_size: Optional[int] = 100) -> Iterable[List[Any]]:
-        """
-        Same as :meth:`.all`, but returns a generator.
+        """Same as :meth:`.all`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
         https://docs.sqlalchemy.org/en/14/orm/query.html#sqlalchemy.orm.Query.yield_per
@@ -1071,8 +1048,7 @@ class QueryBuilder:
             yield item
 
     def iterdict(self, batch_size: Optional[int] = 100) -> Iterable[Dict[str, Dict[str, Any]]]:
-        """
-        Same as :meth:`.dict`, but returns a generator.
+        """Same as :meth:`.dict`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
         https://docs.sqlalchemy.org/en/14/orm/query.html#sqlalchemy.orm.Query.yield_per
@@ -1117,6 +1093,7 @@ class QueryBuilder:
         :raises: NotExistent if no result was found
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
+
         limit = self._limit
         self.limit(2)
         try:
@@ -1130,8 +1107,7 @@ class QueryBuilder:
         return res[0]
 
     def dict(self, batch_size: Optional[int] = None) -> List[Dict[str, Dict[str, Any]]]:
-        """
-        Executes the full query with the order of the rows as returned by the backend.
+        """Executes the full query with the order of the rows as returned by the backend.
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
 
@@ -1220,8 +1196,7 @@ def _get_ormclass(
 
 
 def _get_ormclass_from_cls(cls: EntityClsType) -> Tuple[EntityTypes, Classifier]:
-    """
-    Return the correct classifiers for the QueryBuilder from an ORM class.
+    """Return the correct classifiers for the QueryBuilder from an ORM class.
 
     :param cls: an AiiDA ORM class or backend ORM class.
     :param query: an instance of the appropriate QueryBuilder backend.
@@ -1230,7 +1205,6 @@ def _get_ormclass_from_cls(cls: EntityClsType) -> Tuple[EntityTypes, Classifier]
     Note: the ormclass_type_string is currently hardcoded for group, computer etc. One could instead use something like
         aiida.orm.utils.node.get_type_string_from_class(cls.__module__, cls.__name__)
     """
-    # pylint: disable=protected-access,too-many-branches,too-many-statements
     # Note: Unable to move this import to the top of the module for some reason
     from aiida.engine import Process
     from aiida.orm.utils.node import is_valid_node_type_string
@@ -1312,8 +1286,7 @@ def _get_ormclass_from_str(type_string: str) -> Tuple[EntityTypes, Classifier]:
 
 
 def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
-    """
-    Return filter dictionaries given a set of classifiers.
+    """Return filter dictionaries given a set of classifiers.
 
     :param classifiers: a dictionary with classifiers (note: does *not* support lists)
     :param subclassing: if True, allow for subclasses of the ormclass
@@ -1322,6 +1295,7 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
     """
     from aiida.common.escaping import escape_for_sql_like
     from aiida.orm.utils.node import get_query_type_from_type_string
+
     value = classifiers.ormclass_type_string
 
     if not subclassing:
@@ -1335,8 +1309,7 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
 
 
 def _get_process_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
-    """
-    Return filter dictionaries given a set of classifiers.
+    """Return filter dictionaries given a set of classifiers.
 
     :param classifiers: a dictionary with classifiers (note: does *not* support lists)
     :param subclassing: if True, allow for subclasses of the process type
@@ -1356,47 +1329,39 @@ def _get_process_type_filter(classifiers: Classifier, subclassing: bool) -> dict
 
     if not subclassing:
         filters = {'==': value}
+    elif ':' in value:
+        # if value is an entry point, do usual subclassing
+
+        # Note: the process_type_string stored in the database does *not* end in a dot.
+        # In order to avoid that querying for class 'Begin' will also find class 'BeginEnd',
+        # we need to search separately for equality and 'like'.
+        filters = {
+            'or': [
+                {'==': value},
+                {'like': escape_for_sql_like(get_query_string_from_process_type_string(value))},
+            ]
+        }
+    elif value.startswith('aiida.engine'):
+        # For core process types, a filter is not is needed since each process type has a corresponding
+        # ormclass type that already specifies everything.
+        # Note: This solution is fragile and will break as soon as there is not an exact one-to-one correspondence
+        # between process classes and node classes
+
+        # Note: Improve this when issue https://github.com/aiidateam/aiida-core/issues/2475 is addressed
+        filters = {'like': '%'}
     else:
-        if ':' in value:
-            # if value is an entry point, do usual subclassing
-
-            # Note: the process_type_string stored in the database does *not* end in a dot.
-            # In order to avoid that querying for class 'Begin' will also find class 'BeginEnd',
-            # we need to search separately for equality and 'like'.
-            filters = {
-                'or': [
-                    {
-                        '==': value
-                    },
-                    {
-                        'like': escape_for_sql_like(get_query_string_from_process_type_string(value))
-                    },
-                ]
-            }
-        elif value.startswith('aiida.engine'):
-            # For core process types, a filter is not is needed since each process type has a corresponding
-            # ormclass type that already specifies everything.
-            # Note: This solution is fragile and will break as soon as there is not an exact one-to-one correspondence
-            # between process classes and node classes
-
-            # Note: Improve this when issue https://github.com/aiidateam/aiida-core/issues/2475 is addressed
-            filters = {'like': '%'}
-        else:
-            warnings.warn(
-                "Process type '{value}' does not correspond to a registered entry. "
-                'This risks queries to fail once the location of the process class changes. '
-                "Add an entry point for '{value}' to remove this warning.".format(value=value), AiidaEntryPointWarning
-            )
-            filters = {
-                'or': [
-                    {
-                        '==': value
-                    },
-                    {
-                        'like': escape_for_sql_like(get_query_string_from_process_type_string(value))
-                    },
-                ]
-            }
+        warnings.warn(
+            "Process type '{value}' does not correspond to a registered entry. "
+            'This risks queries to fail once the location of the process class changes. '
+            "Add an entry point for '{value}' to remove this warning.".format(value=value),
+            AiidaEntryPointWarning,
+        )
+        filters = {
+            'or': [
+                {'==': value},
+                {'like': escape_for_sql_like(get_query_string_from_process_type_string(value))},
+            ]
+        }
 
     return filters
 
@@ -1434,7 +1399,7 @@ class _QueryTagMap:
         self,
         tag: str,
         etype: Union[None, EntityTypes] = None,
-        klasses: Union[None, EntityClsType, Sequence[EntityClsType]] = None
+        klasses: Union[None, EntityClsType, Sequence[EntityClsType]] = None,
     ) -> None:
         """Add a tag."""
         self._tag_to_type[tag] = etype
@@ -1464,7 +1429,7 @@ class _QueryTagMap:
                     f'The object used as a tag ({tag_or_cls}) has multiple values associated with it: '
                     f'{self._cls_to_tag_map[tag_or_cls]}'
                 )
-            return list(self._cls_to_tag_map[tag_or_cls])[0]
+            return next(iter(self._cls_to_tag_map[tag_or_cls]))
         raise ValueError(f'The given object ({tag_or_cls}) has no tags associated with it.')
 
 
@@ -1478,7 +1443,7 @@ def _get_group_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
     """
     from aiida.common.escaping import escape_for_sql_like
 
-    value = classifiers.ormclass_type_string[len(GROUP_ENTITY_TYPE_PREFIX):]
+    value = classifiers.ormclass_type_string[len(GROUP_ENTITY_TYPE_PREFIX) :]
 
     if not subclassing:
         filters = {'==': value}

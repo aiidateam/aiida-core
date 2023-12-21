@@ -17,8 +17,7 @@ from aiida.engine import CalcJob
 
 
 class TemplatereplacerCalculation(CalcJob):
-    """
-    Simple stub of a plugin that can be used to replace some text in a given template.
+    """Simple stub of a plugin that can be used to replace some text in a given template.
     Can be used for many different codes, or as a starting point to develop a new plugin.
 
     This simple plugin takes two node inputs, both of type Dict, with the labels
@@ -68,7 +67,7 @@ class TemplatereplacerCalculation(CalcJob):
             'parameters',
             valid_type=orm.Dict,
             required=False,
-            help='Parameters used to replace placeholders in the template.'
+            help='Parameters used to replace placeholders in the template.',
         )
         spec.input_namespace('files', valid_type=(orm.RemoteData, orm.SinglefileData), required=False, dynamic=True)
 
@@ -79,37 +78,35 @@ class TemplatereplacerCalculation(CalcJob):
             301,
             'ERROR_NO_TEMPORARY_RETRIEVED_FOLDER',
             invalidates_cache=True,
-            message='The temporary retrieved folder data node could not be accessed.'
+            message='The temporary retrieved folder data node could not be accessed.',
         )
         spec.exit_code(
             305,
             'ERROR_NO_OUTPUT_FILE_NAME_DEFINED',
             invalidates_cache=True,
-            message='The `template` input node did not specify the key `output_file_name`.'
+            message='The `template` input node did not specify the key `output_file_name`.',
         )
         spec.exit_code(
             310,
             'ERROR_READING_OUTPUT_FILE',
             invalidates_cache=True,
-            message='The output file could not be read from the retrieved folder.'
+            message='The output file could not be read from the retrieved folder.',
         )
         spec.exit_code(
             311,
             'ERROR_READING_TEMPORARY_RETRIEVED_FILE',
             invalidates_cache=True,
-            message='A temporary retrieved file could not be read from the temporary retrieved folder.'
+            message='A temporary retrieved file could not be read from the temporary retrieved folder.',
         )
         spec.exit_code(
             320, 'ERROR_INVALID_OUTPUT', invalidates_cache=True, message='The output file contains invalid output.'
         )
 
     def prepare_for_submission(self, folder):
-        """
-        This is the routine to be called when you want to create the input files and related stuff with a plugin.
+        """This is the routine to be called when you want to create the input files and related stuff with a plugin.
 
         :param folder: a aiida.common.folders.Folder subclass where the plugin should put all its files.
         """
-        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         from aiida.common.exceptions import ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
 
@@ -174,9 +171,8 @@ class TemplatereplacerCalculation(CalcJob):
         input_content = input_file_template.format(**parameters)
         if input_file_name:
             folder.create_file_from_filelike(io.StringIO(input_content), input_file_name, 'w', encoding='utf8')
-        else:
-            if input_file_template:
-                self.logger.warning('No input file name passed, but a input file template is present')
+        elif input_file_template:
+            self.logger.warning('No input file name passed, but a input file template is present')
 
         cmdline_params = [i.format(**parameters) for i in cmdline_params_tmpl]
 

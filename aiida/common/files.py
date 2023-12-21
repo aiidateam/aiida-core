@@ -44,8 +44,7 @@ def md5_file(filepath, block_size_factor=128):
 
 
 def sha1_file(filename, block_size_factor=128):
-    """
-    Open a file and return its sha1sum (hexdigested).
+    """Open a file and return its sha1sum (hexdigested).
 
     :param filename: the filename of the file for which we want the sha1sum
     :param block_size_factor: the file is read at chunks of size

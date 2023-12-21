@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member
 # start-marker for docs
 """Code snippets for the "How to extend workflows" section."""
 from aiida.engine import ToContext, WorkChain, calcfunction
@@ -163,9 +162,7 @@ class MultiplyAddIsEvenWorkChain(WorkChain):
 
     def multiply_add(self):
         """Multiply two integers and add a third."""
-        future = self.submit(
-            MultiplyAddWorkChain, **self.exposed_inputs(MultiplyAddWorkChain, 'multiply_add')
-        )
+        future = self.submit(MultiplyAddWorkChain, **self.exposed_inputs(MultiplyAddWorkChain, 'multiply_add'))
         return ToContext(multi_addition=future)
 
     def is_even(self):
@@ -173,6 +170,7 @@ class MultiplyAddIsEvenWorkChain(WorkChain):
         result_is_even = is_even(self.ctx.multi_addition.outputs.result)
 
         self.out('is_even', result_is_even)
+
 
 class ResultMultiplyAddIsEvenWorkChain(WorkChain):
     """WorkChain to multiply two numbers and add a third, for testing and demonstration purposes."""
@@ -191,9 +189,7 @@ class ResultMultiplyAddIsEvenWorkChain(WorkChain):
 
     def multiply_add(self):
         """Multiply two integers and add a third."""
-        future = self.submit(
-            MultiplyAddWorkChain, **self.exposed_inputs(MultiplyAddWorkChain, 'multiply_add')
-        )
+        future = self.submit(MultiplyAddWorkChain, **self.exposed_inputs(MultiplyAddWorkChain, 'multiply_add'))
 
         return ToContext(multi_addition=future)
 

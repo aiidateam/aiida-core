@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# yapf: disable
+
 """Module with pre-defined reusable commandline arguments that can be used as `click` decorators."""
 
 import click
@@ -16,9 +16,29 @@ from .. import types
 from .overridable import OverridableArgument
 
 __all__ = (
-    'PROFILE', 'PROFILES', 'CALCULATION', 'CALCULATIONS', 'CODE', 'CODES', 'COMPUTER', 'COMPUTERS', 'DATUM', 'DATA',
-    'GROUP', 'GROUPS', 'NODE', 'NODES', 'PROCESS', 'PROCESSES', 'WORKFLOW', 'WORKFLOWS', 'INPUT_FILE', 'OUTPUT_FILE',
-    'LABEL', 'USER', 'CONFIG_OPTION'
+    'PROFILE',
+    'PROFILES',
+    'CALCULATION',
+    'CALCULATIONS',
+    'CODE',
+    'CODES',
+    'COMPUTER',
+    'COMPUTERS',
+    'DATUM',
+    'DATA',
+    'GROUP',
+    'GROUPS',
+    'NODE',
+    'NODES',
+    'PROCESS',
+    'PROCESSES',
+    'WORKFLOW',
+    'WORKFLOWS',
+    'INPUT_FILE',
+    'OUTPUT_FILE',
+    'LABEL',
+    'USER',
+    'CONFIG_OPTION',
 )
 
 

@@ -7,13 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N802
 """This module contains the AiiDA backend ORM classes for the SQLite backend.
 
 It re-uses the classes already defined in ``psql_dos`` backend (for PostGresQL),
 but redefines the SQLAlchemy models to the SQLite compatible ones.
 """
-from functools import singledispatch
 import json
+from functools import singledispatch
 from typing import Any, List, Optional, Tuple, Union
 
 from sqlalchemy import JSON, case, func
@@ -62,78 +63,66 @@ class SqliteEntityOverride:
         cls._class_check()
         type_check(dbmodel, cls.MODEL_CLASS)
         entity = cls.__new__(cls)
-        super(entities.SqlaModelEntity, entity).__init__(backend)  # type: ignore # # pylint: disable=bad-super-call
-        entity._model = utils.ModelWrapper(dbmodel, backend)  # pylint: disable=protected-access
+        super(entities.SqlaModelEntity, entity).__init__(backend)  # type: ignore
+        entity._model = utils.ModelWrapper(dbmodel, backend)
         return entity
 
     def store(self, *args, **kwargs):
-        backend = self._model._backend  # pylint: disable=protected-access
+        backend = self._model._backend
         if backend.read_only:
             raise ReadOnlyError(f'Cannot store entity in read-only backend: {backend}')
-        return super().store(*args, **kwargs)  # type: ignore # pylint: disable=no-member
+        return super().store(*args, **kwargs)  # type: ignore
 
 
 class SqliteUser(SqliteEntityOverride, users.SqlaUser):
-
     MODEL_CLASS = models.DbUser
 
 
 class SqliteUserCollection(users.SqlaUserCollection):
-
     ENTITY_CLASS = SqliteUser
 
 
 class SqliteComputer(SqliteEntityOverride, computers.SqlaComputer):
-
     MODEL_CLASS = models.DbComputer
 
 
 class SqliteComputerCollection(computers.SqlaComputerCollection):
-
     ENTITY_CLASS = SqliteComputer
 
 
 class SqliteAuthInfo(SqliteEntityOverride, authinfos.SqlaAuthInfo):
-
     MODEL_CLASS = models.DbAuthInfo
     USER_CLASS = SqliteUser
     COMPUTER_CLASS = SqliteComputer
 
 
 class SqliteAuthInfoCollection(authinfos.SqlaAuthInfoCollection):
-
     ENTITY_CLASS = SqliteAuthInfo
 
 
 class SqliteComment(SqliteEntityOverride, comments.SqlaComment):
-
     MODEL_CLASS = models.DbComment
     USER_CLASS = SqliteUser
 
 
 class SqliteCommentCollection(comments.SqlaCommentCollection):
-
     ENTITY_CLASS = SqliteComment
 
 
 class SqliteGroup(SqliteEntityOverride, groups.SqlaGroup):
-
     MODEL_CLASS = models.DbGroup
     USER_CLASS = SqliteUser
 
 
 class SqliteGroupCollection(groups.SqlaGroupCollection):
-
     ENTITY_CLASS = SqliteGroup
 
 
 class SqliteLog(SqliteEntityOverride, logs.SqlaLog):
-
     MODEL_CLASS = models.DbLog
 
 
 class SqliteLogCollection(logs.SqlaLogCollection):
-
     ENTITY_CLASS = SqliteLog
 
 
@@ -147,7 +136,6 @@ class SqliteNode(SqliteEntityOverride, nodes.SqlaNode):
 
 
 class SqliteNodeCollection(nodes.SqlaNodeCollection):
-
     ENTITY_CLASS = SqliteNode
 
 
@@ -188,7 +176,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
     @property
     def table_groups_nodes(self):
-        return models.DbGroupNodes.__table__  # type: ignore[attr-defined] # pylint: disable=no-member
+        return models.DbGroupNodes.__table__  # type: ignore[attr-defined]
 
     @staticmethod
     def _get_projectable_entity(
@@ -197,7 +185,6 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         attrpath: List[str],
         cast: Optional[str] = None,
     ) -> Union[ColumnElement, InstrumentedAttribute]:
-
         if not (attrpath or column_name in ('attributes', 'extras')):
             return get_column(column_name, alias)
 
@@ -221,7 +208,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         return entity
 
     @staticmethod
-    def get_filter_expr_from_jsonb(  # pylint: disable=too-many-return-statements,too-many-branches
+    def get_filter_expr_from_jsonb(
         operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
     ):
         """Return a filter expression.
@@ -301,34 +288,42 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         # to-do, see: https://github.com/sqlalchemy/sqlalchemy/discussions/7836
 
         if operator == 'has_key':
-            return case((
-                func.json_type(database_entity) == 'object',
-                func.json_each(database_entity).table_valued('key', joins_implicitly=True).c.key == value,
-            ),
-                        else_=False)
+            return case(
+                (
+                    func.json_type(database_entity) == 'object',
+                    func.json_each(database_entity).table_valued('key', joins_implicitly=True).c.key == value,
+                ),
+                else_=False,
+            )
 
         if operator == 'in':
             type_filter, casted_entity = _cast_json_type(database_entity, value[0])
             return case((type_filter, casted_entity.in_(value)), else_=False)
 
         if operator == 'of_length':
-            return case((
-                func.json_type(database_entity) == 'array',
-                func.json_array_length(database_entity.as_json()) == value,
-            ),
-                        else_=False)
+            return case(
+                (
+                    func.json_type(database_entity) == 'array',
+                    func.json_array_length(database_entity.as_json()) == value,
+                ),
+                else_=False,
+            )
         if operator == 'longer':
-            return case((
-                func.json_type(database_entity) == 'array',
-                func.json_array_length(database_entity.as_json()) > value,
-            ),
-                        else_=False)
+            return case(
+                (
+                    func.json_type(database_entity) == 'array',
+                    func.json_array_length(database_entity.as_json()) > value,
+                ),
+                else_=False,
+            )
         if operator == 'shorter':
-            return case((
-                func.json_type(database_entity) == 'array',
-                func.json_array_length(database_entity.as_json()) < value,
-            ),
-                        else_=False)
+            return case(
+                (
+                    func.json_type(database_entity) == 'array',
+                    func.json_array_length(database_entity.as_json()) < value,
+                ),
+                else_=False,
+            )
 
         raise ValueError(f'SQLite does not support JSON query: {query_str}')
 
@@ -363,7 +358,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
 
 @singledispatch
-def get_backend_entity(dbmodel, backend):  # pylint: disable=unused-argument
+def get_backend_entity(dbmodel, backend):
     raise TypeError(f"No corresponding AiiDA backend class exists for the model class '{dbmodel.__class__.__name__}'")
 
 
@@ -405,4 +400,5 @@ def _(dbmodel, backend):
 @get_backend_entity.register(models.DbLink)  # type: ignore[call-overload]
 def _(dbmodel, backend):
     from aiida.orm.utils.links import LinkQuadruple
+
     return LinkQuadruple(dbmodel.input_id, dbmodel.output_id, dbmodel.type, dbmodel.label)

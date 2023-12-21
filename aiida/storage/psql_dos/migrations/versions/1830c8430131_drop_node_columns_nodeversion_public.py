@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Drop `db_dbnode.nodeversion` and `db_dbnode.public`
 
 This is similar to migration django_0034
@@ -17,7 +16,6 @@ Revises: 1b8ed3425af9
 Create Date: 2019-05-27 15:35:37.404644
 
 """
-# pylint: disable=invalid-name,no-member,import-error,no-name-in-module
 
 from alembic import op
 

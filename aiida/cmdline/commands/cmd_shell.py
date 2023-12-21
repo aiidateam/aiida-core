@@ -24,17 +24,16 @@ from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
 @click.option(
     '--no-startup',
     is_flag=True,
-    help='When using plain Python, ignore the PYTHONSTARTUP environment variable and ~/.pythonrc.py script.'
+    help='When using plain Python, ignore the PYTHONSTARTUP environment variable and ~/.pythonrc.py script.',
 )
 @click.option(
     '-i',
     '--interface',
     type=click.Choice(AVAILABLE_SHELLS.keys()),
-    help='Specify an interactive interpreter interface.'
+    help='Specify an interactive interpreter interface.',
 )
 def shell(plain, no_startup, interface):
     """Start a python shell with preloaded AiiDA environment."""
-
     try:
         if plain:
             # Don't bother loading IPython, because the user wants plain Python.
@@ -70,15 +69,13 @@ def shell(plain, no_startup, interface):
             for pythonrc in (os.environ.get('PYTHONSTARTUP'), '~/.pythonrc.py'):
                 if not pythonrc:
                     continue
-                pythonrc = os.path.expanduser(pythonrc)
-                if not os.path.isfile(pythonrc):
+                pythonrc_expanded = os.path.expanduser(pythonrc)
+                if not os.path.isfile(pythonrc_expanded):
                     continue
                 try:
-                    with open(pythonrc, encoding='utf8') as handle:
-                        exec(compile(handle.read(), pythonrc, 'exec'), imported_objects)  # pylint: disable=exec-used
+                    with open(pythonrc_expanded, encoding='utf8') as handle:
+                        exec(compile(handle.read(), pythonrc_expanded, 'exec'), imported_objects)
                 except NameError:
                     pass
 
-        # The pylint disabler is necessary because the builtin code module
-        # clashes with the local commands.code module here.
-        code.interact(local=imported_objects)  # pylint: disable=no-member
+        code.interact(local=imported_objects)

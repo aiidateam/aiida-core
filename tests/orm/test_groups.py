@@ -325,18 +325,17 @@ class TestGroupsSubclasses:
     @staticmethod
     def test_creation_unregistered():
         """Test rules around creating `Group` subclasses without a registered entry point."""
-
         # Defining an unregistered subclas should issue a warning and its type string should be set to `None`
         with pytest.warns(UserWarning):
 
             class SubGroup(orm.Group):
                 pass
 
-            assert SubGroup._type_string is None  # pylint: disable=protected-access
+            assert SubGroup._type_string is None
 
         # Creating an instance is allowed
         instance = SubGroup(label=uuid.uuid4().hex)
-        assert instance._type_string is None  # pylint: disable=protected-access
+        assert instance._type_string is None
 
         # Storing the instance, however, is forbidden and should raise
         with pytest.raises(exceptions.StoringNotAllowed):
@@ -413,9 +412,9 @@ class TestGroupsSubclasses:
 
         group.add_nodes([data])
 
-        builder = orm.QueryBuilder().append(orm.Data, filters={
-            'id': data.pk
-        }, tag='data').append(orm.Group, with_node='data')
+        builder = (
+            orm.QueryBuilder().append(orm.Data, filters={'id': data.pk}, tag='data').append(orm.Group, with_node='data')
+        )
 
         loaded = builder.one()[0]
 
@@ -426,9 +425,8 @@ class TestGroupExtras:
     """Test the property and methods of group extras."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.group = orm.Group(uuid.uuid4().hex)
 
     def test_extras(self):

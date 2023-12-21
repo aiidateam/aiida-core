@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Translator for computer
+"""Translator for computer
 """
 
 from aiida import orm
@@ -16,9 +15,8 @@ from aiida.restapi.translator.base import BaseTranslator
 
 
 class ComputerTranslator(BaseTranslator):
-    """
-    Translator relative to resource 'computers' and aiida class Computer
-    """
+    """Translator relative to resource 'computers' and aiida class Computer"""
+
     # A label associated to the present class (coincides with the resource name)
     __label__ = 'computers'
     # The AiiDA class one-to-one associated to the present class
@@ -31,9 +29,8 @@ class ComputerTranslator(BaseTranslator):
 
     _result_type = __label__
 
-    def get_projectable_properties(self):  # pylint: disable=arguments-differ
-        """
-        Get projectable properties specific for Computer
+    def get_projectable_properties(self):
+        """Get projectable properties specific for Computer
         :return: dict of projectable properties and column_order list
         """
         from aiida.common.exceptions import EntryPointError
@@ -59,28 +56,28 @@ class ComputerTranslator(BaseTranslator):
                 'help_text': 'short description of the Computer',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': False
+                'is_display': False,
             },
             'hostname': {
                 'display_name': 'Host',
                 'help_text': 'Name of the host',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': True
+                'is_display': True,
             },
             'id': {
                 'display_name': 'Id',
                 'help_text': 'Id of the object',
                 'is_foreign_key': False,
                 'type': 'int',
-                'is_display': False
+                'is_display': False,
             },
             'label': {
                 'display_name': 'Label',
                 'help_text': 'Label of the computer',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': True
+                'is_display': True,
             },
             'scheduler_type': {
                 'display_name': 'Scheduler',
@@ -88,7 +85,7 @@ class ComputerTranslator(BaseTranslator):
                 'is_foreign_key': False,
                 'type': 'str',
                 'valid_choices': schedulers,
-                'is_display': True
+                'is_display': True,
             },
             'transport_type': {
                 'display_name': 'Transport type',
@@ -96,15 +93,15 @@ class ComputerTranslator(BaseTranslator):
                 'is_foreign_key': False,
                 'type': 'str',
                 'valid_choices': transports,
-                'is_display': False
+                'is_display': False,
             },
             'uuid': {
                 'display_name': 'Unique ID',
                 'help_text': 'Universally Unique Identifier',
                 'is_foreign_key': False,
                 'type': 'unicode',
-                'is_display': True
-            }
+                'is_display': True,
+            },
         }
 
         # Note: final schema will contain details for only the fields present in column order

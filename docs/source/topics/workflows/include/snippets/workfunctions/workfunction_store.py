@@ -7,4 +7,5 @@ from aiida.orm import Int
 def illegal_workfunction(x, y):
     return Int(x + y)
 
+
 result = illegal_workfunction(Int(1), Int(2))

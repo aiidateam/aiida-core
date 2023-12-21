@@ -7,14 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Plugin for LSF.
+"""Plugin for LSF.
 This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 """
 
+import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
 from aiida.common.extendeddicts import AttributeDict
-import aiida.schedulers
 from aiida.schedulers import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
 
@@ -40,12 +39,12 @@ from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
 #         causes:
 #         - The load conditions on the execution host or hosts have exceeded a
 #           threshold according to the loadStop vector defined for the host or queue.
-#         - The run window of the job’s queue is closed. See bqueues(1), bhosts(1),
+#         - The run window of the job's queue is closed. See bqueues(1), bhosts(1),
 #           and lsb.queues(5).
 #
 # DONE    The job has terminated with status of 0.
 #
-# EXIT    The job has terminated with a non-zero status – it may have been aborted
+# EXIT    The job has terminated with a non-zero status - it may have been aborted
 #         due to an error in its execution, or killed by its owner or the LSF
 #         administrator.
 #         For example, exit code 131 means that the job exceeded a configured
@@ -62,7 +61,7 @@ from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
 #         - The host on which a rerunnable job is running is unavailable and the
 #           job has been requeued by LSF with a new job ID, as if the job were submitted as a new job.
 #         - After the execution host becomes available, LSF tries to kill the
-#           ZOMBI job. Upon successful termination of the ZOMBI job, the job’s
+#           ZOMBI job. Upon successful termination of the ZOMBI job, the job's
 #           status is changed to EXIT.
 #         With MultiCluster, when a job running on a remote execution cluster
 #         becomes a ZOMBI job, the execution cluster treats the job the same way
@@ -87,8 +86,7 @@ _FIELD_SEPARATOR = '|'
 
 
 class LsfJobResource(JobResource):
-    """
-    An implementation of JobResource for LSF, that supports
+    """An implementation of JobResource for LSF, that supports
     the OPTIONAL specification of a parallel environment (a string) + the total
     number of processors.
 
@@ -99,6 +97,7 @@ class LsfJobResource(JobResource):
     See https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_command_ref/bsub.1.dita?lang=en
     for more details about the parallel environment definition (the -m option of bsub).
     """
+
     _default_fields = ('parallel_env', 'tot_num_mpiprocs', 'default_mpiprocs_per_machine', 'num_machines')
 
     @classmethod
@@ -146,8 +145,7 @@ class LsfJobResource(JobResource):
         return resources
 
     def __init__(self, **kwargs):
-        """
-        Initialize the job resources from the passed arguments (the valid keys can be
+        """Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
 
         :raise ValueError: on invalid parameters.
@@ -159,26 +157,23 @@ class LsfJobResource(JobResource):
         super().__init__(resources)
 
     def get_tot_num_mpiprocs(self):
-        """
-        Return the total number of cpus of this job resource.
-        """
+        """Return the total number of cpus of this job resource."""
         return self.tot_num_mpiprocs
 
     @classmethod
     def accepts_default_mpiprocs_per_machine(cls):
-        """
-        Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
+        """Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
         key, False otherwise.
         """
         return False
 
 
 class LsfScheduler(aiida.schedulers.Scheduler):
-    """
-    Support for the IBM LSF scheduler
+    """Support for the IBM LSF scheduler
     'https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_welcome.html'
     """
-    _logger = aiida.schedulers.Scheduler._logger.getChild('lsf')  # pylint: disable=protected-access
+
+    _logger = aiida.schedulers.Scheduler._logger.getChild('lsf')
 
     # Query only by list of jobs and not by user
     _features = {
@@ -262,8 +257,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
     ]
 
     def _get_joblist_command(self, jobs=None, user=None):
-        """
-        The command to report full information on existing jobs.
+        """The command to report full information on existing jobs.
 
         Separates the fields with the _field_separator string order:
         jobnum, state, walltime, queue[=partition], user, numnodes, numcores, title
@@ -295,8 +289,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         return comm
 
     def _get_detailed_job_info_command(self, job_id):
-        """
-        Return the command to run to get the detailed information on a job,
+        """Return the command to run to get the detailed information on a job,
         even after the job has finished.
 
         The output text is just retrieved, and returned for logging purposes.
@@ -304,8 +297,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         return f'bjobs -l {escape_for_bash(job_id)}'
 
     def _get_submit_script_header(self, job_tmpl):
-        """
-        Return the submit script header, using the parameters from the
+        """Return the submit script header, using the parameters from the
         job_tmpl. See the following manual
         https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_command_ref/bsub.1.dita?lang=en
         for more details about the possible options to bsub, in particular for
@@ -313,7 +305,6 @@ class LsfScheduler(aiida.schedulers.Scheduler):
 
         :param job_tmpl: an JobTemplate instance with relevant parameters set.
         """
-        # pylint: disable=too-many-statements,too-many-branches
         import re
         import string
 
@@ -412,9 +403,9 @@ class LsfScheduler(aiida.schedulers.Scheduler):
                     raise ValueError
             except ValueError as exc:
                 raise ValueError(
-                    'max_wallclock_seconds must be '
-                    "a positive integer (in seconds)! It is instead '{}'"
-                    ''.format((job_tmpl.max_wallclock_seconds))
+                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
+                        (job_tmpl.max_wallclock_seconds)
+                    )
                 ) from exc
             hours = tot_secs // 3600
             # The double negation results in the ceiling rather than the floor
@@ -422,7 +413,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
             minutes = -(-(tot_secs % 3600) // 60)
             lines.append(f'#BSUB -W {hours:02d}:{minutes:02d}')
 
-        # TODO: check if this is the memory per node  # pylint: disable=fixme
+        # TODO: check if this is the memory per node
         if job_tmpl.max_memory_kb:
             try:
                 physical_memory_kb = int(job_tmpl.max_memory_kb)
@@ -442,30 +433,31 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         # The following seems to be the only way to copy the input files
         # to the node where the computation are actually launched (the
         # -f option of bsub that does not always work...)
-        # TODO: implement the case when LSB_OUTDIR is not properly defined...  # pylint: disable=fixme
+        # TODO: implement the case when LSB_OUTDIR is not properly defined...
         # (need to add the line "#BSUB -outdir PATH_TO_REMOTE_DIRECTORY")
         # IMPORTANT! the -z is needed, because if LSB_OUTDIR is not defined,
         # you would do 'cp -R /* .' basically copying ALL FILES in your
         # computer (including mounted partitions) in the current dir!!
-        lines.append("""
+        lines.append(
+            """
 if [ ! -z "$LSB_OUTDIR" ]
 then
   cp -R "$LSB_OUTDIR"/* .
 fi
-""")
+"""
+        )
 
         return '\n'.join(lines)
 
     def _get_submit_script_footer(self, job_tmpl):
-        """
-        Return the submit script final part, using the parameters from the
+        """Return the submit script final part, using the parameters from the
         job_tmpl.
 
         :param job_tmpl: a JobTemplate instance with relevant parameters set.
         """
         # line to retrieve back the output of the computation (rather than
         # the -f option of bsub that does not always work...)
-        # TODO: implement the case when LSB_OUTDIR is not properly defined...  # pylint: disable=fixme
+        # TODO: implement the case when LSB_OUTDIR is not properly defined...
         # (need to add the line "#BSUB -outdir PATH_TO_REMOTE_DIRECTORY")
         # As above, important to check if the folder variable is defined
         return """
@@ -476,8 +468,7 @@ fi
 """
 
     def _get_submit_command(self, submit_script):
-        """
-        Return the string to execute to submit a given script.
+        """Return the string to execute to submit a given script.
 
         :param submit_script: the path of the submit script relative to the working
                 directory.
@@ -490,8 +481,7 @@ fi
         return submit_command
 
     def _parse_joblist_output(self, retval, stdout, stderr):
-        """
-        Parse the queue output string, as returned by executing the
+        """Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command,
         that is here implemented as a list of lines, one for each
         job, with _field_separator as separator. The order is described
@@ -506,7 +496,6 @@ fi
             in the qstat output; missing jobs (for whatever reason) simply
             will not appear here.
         """
-        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         num_fields = len(self._joblist_fields)
 
         if retval != 0:
@@ -522,12 +511,13 @@ fi
         # the last field), I don't split the title.
         # This assumes that _field_separator never
         # appears in any previous field.
-        jobdata_raw = [l.split(_FIELD_SEPARATOR, num_fields) for l in stdout.splitlines() if _FIELD_SEPARATOR in l]
+        jobdata_raw = [
+            line.split(_FIELD_SEPARATOR, num_fields) for line in stdout.splitlines() if _FIELD_SEPARATOR in line
+        ]
 
         # Create dictionary and parse specific fields
         job_list = []
         for job in jobdata_raw:
-
             # Each job should have all fields.
             if len(job) != num_fields:
                 # I skip this calculation
@@ -557,8 +547,20 @@ fi
             #             number_cpus, allocated_machines, partition,
             #             time_limit, time_used, dispatch_time, job_name) = job
             (
-                _, _, _, _, username, number_nodes, number_cpus, allocated_machines, partition, finish_time, start_time,
-                percent_complete, submission_time, job_name
+                _,
+                _,
+                _,
+                _,
+                username,
+                number_nodes,
+                number_cpus,
+                allocated_machines,
+                partition,
+                finish_time,
+                start_time,
+                percent_complete,
+                submission_time,
+                job_name,
             ) = job
 
             this_job.job_owner = username
@@ -602,6 +604,7 @@ fi
                     # in december and finishing in january would produce negative time differences
                     if requested_walltime.total_seconds() < 0:
                         import datetime
+
                         old_month = psd_finish_time.month
                         old_day = psd_finish_time.day
                         old_hour = psd_finish_time.hour
@@ -613,13 +616,13 @@ fi
                         )
                         requested_walltime = psd_finish_time - psd_start_time
 
-                    this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds()  # pylint: disable=invalid-name
+                    this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds()
                 except (TypeError, ValueError):
                     self.logger.warning(f'Error parsing the time limit for job id {this_job.job_id}')
 
                 try:
                     psd_percent_complete = float(percent_complete.strip(' L').strip('%'))
-                    this_job.wallclock_time_seconds = requested_walltime.total_seconds() * psd_percent_complete / 100.
+                    this_job.wallclock_time_seconds = requested_walltime.total_seconds() * psd_percent_complete / 100.0
                 except ValueError:
                     self.logger.warning(f'Error parsing the time used for job id {this_job.job_id}')
 
@@ -636,14 +639,12 @@ fi
             # Double check of redundant info
             # Not really useful now, allocated_machines in this
             # version of the plugin is never set
-            if (this_job.allocated_machines is not None and this_job.num_machines is not None):
+            if this_job.allocated_machines is not None and this_job.num_machines is not None:
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error(
                         'The length of the list of allocated '
                         'nodes ({}) is different from the '
-                        'expected number of nodes ({})!'.format(
-                            len(this_job.allocated_machines), this_job.num_machines
-                        )
+                        'expected number of nodes ({})!'.format(len(this_job.allocated_machines), this_job.num_machines)
                     )
 
             # I append to the list of jobs to return
@@ -652,8 +653,7 @@ fi
         return job_list
 
     def _parse_submit_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the submit command, as returned by executing the
+        """Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
 
         To be implemented by the plugin.
@@ -678,8 +678,7 @@ fi
             raise SchedulerParsingError(f'Cannot parse submission output: `{stdout}`') from exc
 
     def _parse_time_string(self, string, fmt='%b %d %H:%M'):
-        """
-        Parse a time string and returns a datetime object.
+        """Parse a time string and returns a datetime object.
         Example format: 'Feb  2 07:39' or 'Feb  2 07:39 L'
         """
         import datetime
@@ -705,16 +704,13 @@ fi
         return thetime
 
     def _get_kill_command(self, jobid):
-        """
-        Return the command to kill the job with specified jobid.
-        """
+        """Return the command to kill the job with specified jobid."""
         submit_command = f'bkill {jobid}'
         self.logger.info(f'killing job {jobid}')
         return submit_command
 
     def _parse_kill_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the kill command.
+        """Parse the output of the kill command.
 
         :return: True if everything seems ok, False otherwise.
         """

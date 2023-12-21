@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Various decorators useful for creating verdi commands, for example loading the dbenv lazily.
+"""Various decorators useful for creating verdi commands, for example loading the dbenv lazily.
 
 Always avoids trying to load the dbenv twice. When it has to be loaded,
 a spinner ASCII widget is displayed.
@@ -35,6 +34,7 @@ __all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
 def with_manager(wrapped, _, args, kwargs):
     """Decorate a function injecting a :class:`kiwipy.rmq.communicator.RmqCommunicator`."""
     from aiida.manage import get_manager
+
     kwargs['manager'] = get_manager()
     return wrapped(*args, **kwargs)
 
@@ -85,8 +85,7 @@ def with_dbenv():
 
 @contextmanager
 def dbenv():
-    """
-    Loads the dbenv for a specific region of code, does not unload afterwards
+    """Loads the dbenv for a specific region of code, does not unload afterwards
 
     Only use when it makes it possible to avoid loading the dbenv for certain
     code paths
@@ -195,8 +194,7 @@ def only_if_daemon_not_running(echo_function=echo.echo_critical, message=None):
 
 @decorator
 def check_circus_zmq_version(wrapped, _, args, kwargs):
-    """
-    Function decorator to check for the right ZMQ version before trying to run circus.
+    """Function decorator to check for the right ZMQ version before trying to run circus.
 
     Example::
 
@@ -206,6 +204,7 @@ def check_circus_zmq_version(wrapped, _, args, kwargs):
             pass
     """
     import zmq
+
     try:
         zmq_version = [int(part) for part in zmq.__version__.split('.')[:2]]
         if len(zmq_version) < 2:
@@ -222,12 +221,12 @@ def check_circus_zmq_version(wrapped, _, args, kwargs):
 def deprecated_command(message):
     """Function decorator that will mark a click command as deprecated when invoked.
 
-        Example::
+    Example::
 
-            @click.command()
-            @deprecated_command('This command has been deprecated in AiiDA v1.0, please use 'foo' instead.)
-            def mycommand():
-                pass
+        @click.command()
+        @deprecated_command('This command has been deprecated in AiiDA v1.0, please use 'foo' instead.)
+        def mycommand():
+            pass
     """
 
     @decorator

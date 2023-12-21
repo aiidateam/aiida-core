@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unnecessary-lambda-assignment
+# ruff: noqa: N802
 """A module containing the logic for creating joined queries."""
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional, Protocol, Type
@@ -27,8 +27,6 @@ from aiida.storage.psql_dos.models.base import Model
 
 class _EntityMapper(Protocol):
     """Mapping of implemented entity types."""
-
-    # pylint: disable=invalid-name
 
     @property
     def AuthInfo(self) -> Type[Model]:
@@ -74,16 +72,17 @@ class JoinReturn:
     edge_tag: str = ''
 
 
-FilterType = Dict[str, Any]  # pylint: disable=invalid-name
-JoinFuncType = Callable[[Any, Any, bool, FilterType, bool], JoinReturn]  # pylint: disable=invalid-name
+FilterType = Dict[str, Any]
+JoinFuncType = Callable[[Any, Any, bool, FilterType, bool], JoinReturn]
 
 
 class SqlaJoiner:
     """A class containing the logic for SQLAlchemy entities joining entities."""
 
     def __init__(
-        self, entity_mapper: _EntityMapper, filter_builder: Callable[[AliasedClass, FilterType],
-                                                                     Optional[BooleanClauseList]]
+        self,
+        entity_mapper: _EntityMapper,
+        filter_builder: Callable[[AliasedClass, FilterType], Optional[BooleanClauseList]],
     ):
         """Initialise the class"""
         self._entities = entity_mapper
@@ -94,8 +93,7 @@ class SqlaJoiner:
         return self._entity_join_map()[entity_key][relationship]
 
     def _entity_join_map(self) -> Dict[str, Dict[str, JoinFuncType]]:
-        """
-        Map relationship type keywords to functions
+        """Map relationship type keywords to functions
         The first level defines the entity which has been passed to the qb.append function,
         and the second defines the relationship with respect to a given tag.
         """
@@ -141,31 +139,31 @@ class SqlaJoiner:
         return mapping  # type: ignore
 
     def _join_computer_authinfo(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: the aliased user you want to join to
+        """:param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
         """
-        _check_dbentities((joined_entity, self._entities.Computer), (entity_to_join, self._entities.AuthInfo),
-                          'with_computer')
-        new_query = lambda q: q.join(
-            entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin
+        _check_dbentities(
+            (joined_entity, self._entities.Computer), (entity_to_join, self._entities.AuthInfo), 'with_computer'
         )
+
+        def new_query(q):
+            return q.join(entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_user_authinfo(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: the aliased user you want to join to
+        """:param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
         """
         _check_dbentities((joined_entity, self._entities.User), (entity_to_join, self._entities.AuthInfo), 'with_user')
-        new_query = lambda q: q.join(
-            entity_to_join, entity_to_join.aiidauser_id == joined_entity.id, isouter=isouterjoin
-        )
+
+        def new_query(q):
+            return q.join(entity_to_join, entity_to_join.aiidauser_id == joined_entity.id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_group_node(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity:
+        """:param joined_entity:
             The (aliased) ORMclass that is
             a group in the database
         :param entity_to_join:
@@ -178,14 +176,16 @@ class SqlaJoiner:
         """
         _check_dbentities((joined_entity, self._entities.Group), (entity_to_join, self._entities.Node), 'with_group')
         aliased_group_nodes = aliased(self._entities.table_groups_nodes)
-        new_query = lambda q: q.join(aliased_group_nodes, aliased_group_nodes.c.dbgroup_id == joined_entity.id).join(
-            entity_to_join, entity_to_join.id == aliased_group_nodes.c.dbnode_id, isouter=isouterjoin
-        )
+
+        def new_query(q):
+            return q.join(aliased_group_nodes, aliased_group_nodes.c.dbgroup_id == joined_entity.id).join(
+                entity_to_join, entity_to_join.id == aliased_group_nodes.c.dbnode_id, isouter=isouterjoin
+            )
+
         return JoinReturn(new_query, aliased_group_nodes)
 
     def _join_node_group(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: The (aliased) node in the database
+        """:param joined_entity: The (aliased) node in the database
         :param entity_to_join: The (aliased) Group
 
         **joined_entity** and **entity_to_join** are
@@ -195,142 +195,168 @@ class SqlaJoiner:
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Group), 'with_node')
         aliased_group_nodes = aliased(self._entities.table_groups_nodes)
-        new_query = lambda q: q.join(aliased_group_nodes, aliased_group_nodes.c.dbnode_id == joined_entity.id).join(
-            entity_to_join, entity_to_join.id == aliased_group_nodes.c.dbgroup_id, isouter=isouterjoin
-        )
+
+        def new_query(q):
+            return q.join(aliased_group_nodes, aliased_group_nodes.c.dbnode_id == joined_entity.id).join(
+                entity_to_join, entity_to_join.id == aliased_group_nodes.c.dbgroup_id, isouter=isouterjoin
+            )
+
         return JoinReturn(new_query, aliased_group_nodes)
 
     def _join_node_user(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: the aliased node
+        """:param joined_entity: the aliased node
         :param entity_to_join: the aliased user to join to that node
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.User), 'with_node')
-        new_query = lambda q: q.join(entity_to_join, entity_to_join.id == joined_entity.user_id, isouter=isouterjoin)
+
+        def new_query(q):
+            return q.join(entity_to_join, entity_to_join.id == joined_entity.user_id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_user_node(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: the aliased user you want to join to
+        """:param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
         """
         _check_dbentities((joined_entity, self._entities.User), (entity_to_join, self._entities.Node), 'with_user')
-        new_query = lambda q: q.join(entity_to_join, entity_to_join.user_id == joined_entity.id, isouter=isouterjoin)
+
+        def new_query(q):
+            return q.join(entity_to_join, entity_to_join.user_id == joined_entity.id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_computer_node(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: the (aliased) computer entity
+        """:param joined_entity: the (aliased) computer entity
         :param entity_to_join: the (aliased) node entity
 
         """
-        _check_dbentities((joined_entity, self._entities.Computer), (entity_to_join, self._entities.Node),
-                          'with_computer')
-        new_query = lambda q: q.join(
-            entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin
+        _check_dbentities(
+            (joined_entity, self._entities.Computer), (entity_to_join, self._entities.Node), 'with_computer'
         )
+
+        def new_query(q):
+            return q.join(entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_node_computer(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: An entity that can use a computer (eg a node)
+        """:param joined_entity: An entity that can use a computer (eg a node)
         :param entity_to_join: aliased dbcomputer entity
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Computer), 'with_node')
-        new_query = lambda q: q.join(
-            entity_to_join, joined_entity.dbcomputer_id == entity_to_join.id, isouter=isouterjoin
-        )
+
+        def new_query(q):
+            return q.join(entity_to_join, joined_entity.dbcomputer_id == entity_to_join.id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_group_user(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: An aliased dbgroup
+        """:param joined_entity: An aliased dbgroup
         :param entity_to_join: aliased dbuser
         """
         _check_dbentities((joined_entity, self._entities.Group), (entity_to_join, self._entities.User), 'with_group')
-        new_query = lambda q: q.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
+
+        def new_query(q):
+            return q.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_user_group(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: An aliased user
+        """:param joined_entity: An aliased user
         :param entity_to_join: aliased group
         """
         _check_dbentities((joined_entity, self._entities.User), (entity_to_join, self._entities.Group), 'with_user')
-        new_query = lambda q: q.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
+
+        def new_query(q):
+            return q.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_node_comment(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: An aliased node
+        """:param joined_entity: An aliased node
         :param entity_to_join: aliased comment
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Comment), 'with_node')
-        new_query = lambda q: q.join(entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
+
+        def new_query(q):
+            return q.join(entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_comment_node(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: An aliased comment
+        """:param joined_entity: An aliased comment
         :param entity_to_join: aliased node
         """
-        _check_dbentities((joined_entity, self._entities.Comment), (entity_to_join, self._entities.Node),
-                          'with_comment')
-        new_query = lambda q: q.join(entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
+        _check_dbentities(
+            (joined_entity, self._entities.Comment), (entity_to_join, self._entities.Node), 'with_comment'
+        )
+
+        def new_query(q):
+            return q.join(entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_node_log(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: An aliased node
+        """:param joined_entity: An aliased node
         :param entity_to_join: aliased log
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Log), 'with_node')
-        new_query = lambda q: q.join(entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
+
+        def new_query(q):
+            return q.join(entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_log_node(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: An aliased log
+        """:param joined_entity: An aliased log
         :param entity_to_join: aliased node
         """
         _check_dbentities((joined_entity, self._entities.Log), (entity_to_join, self._entities.Node), 'with_log')
-        new_query = lambda q: q.join(entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
+
+        def new_query(q):
+            return q.join(entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_user_comment(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: An aliased user
+        """:param joined_entity: An aliased user
         :param entity_to_join: aliased comment
         """
         _check_dbentities((joined_entity, self._entities.User), (entity_to_join, self._entities.Comment), 'with_user')
-        new_query = lambda q: q.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
+
+        def new_query(q):
+            return q.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_authinfo_user(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: An aliased comment
+        """:param joined_entity: An aliased comment
         :param entity_to_join: aliased user
         """
-        _check_dbentities((joined_entity, self._entities.AuthInfo), (entity_to_join, self._entities.User),
-                          'with_authinfo')
-        new_query = lambda q: q.join(
-            entity_to_join, joined_entity.aiidauser_id == entity_to_join.id, isouter=isouterjoin
+        _check_dbentities(
+            (joined_entity, self._entities.AuthInfo), (entity_to_join, self._entities.User), 'with_authinfo'
         )
+
+        def new_query(q):
+            return q.join(entity_to_join, joined_entity.aiidauser_id == entity_to_join.id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_comment_user(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: An aliased comment
+        """:param joined_entity: An aliased comment
         :param entity_to_join: aliased user
         """
-        _check_dbentities((joined_entity, self._entities.Comment), (entity_to_join, self._entities.User),
-                          'with_comment')
-        new_query = lambda q: q.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
+        _check_dbentities(
+            (joined_entity, self._entities.Comment), (entity_to_join, self._entities.User), 'with_comment'
+        )
+
+        def new_query(q):
+            return q.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
+
         return JoinReturn(new_query)
 
     def _join_node_outputs(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: The (aliased) ORMclass that is an input
+        """:param joined_entity: The (aliased) ORMclass that is an input
         :param entity_to_join: The (aliased) ORMClass that is an output.
 
         **joined_entity** and **entity_to_join** are joined with a link
@@ -340,14 +366,16 @@ class SqlaJoiner:
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_incoming')
 
         aliased_edge = aliased(self._entities.Link)
-        new_query = lambda q: q.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin).join(
-            entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin
-        )
+
+        def new_query(q):
+            return q.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin).join(
+                entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin
+            )
+
         return JoinReturn(new_query, aliased_edge)
 
     def _join_node_inputs(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
-        """
-        :param joined_entity: The (aliased) ORMclass that is an output
+        """:param joined_entity: The (aliased) ORMclass that is an output
         :param entity_to_join: The (aliased) ORMClass that is an input.
 
         **joined_entity** and **entity_to_join** are joined with a link
@@ -355,24 +383,23 @@ class SqlaJoiner:
         (**enitity_to_join** is *with_outgoing* **joined_entity**)
 
         """
-
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_outgoing')
         aliased_edge = aliased(self._entities.Link)
-        new_query = lambda q: q.join(
-            aliased_edge,
-            aliased_edge.output_id == joined_entity.id,
-        ).join(entity_to_join, aliased_edge.input_id == entity_to_join.id, isouter=isouterjoin)
+
+        def new_query(q):
+            return q.join(aliased_edge, aliased_edge.output_id == joined_entity.id).join(
+                entity_to_join, aliased_edge.input_id == entity_to_join.id, isouter=isouterjoin
+            )
+
         return JoinReturn(new_query, aliased_edge)
 
     def _join_node_descendants_recursive(
         self, joined_entity, entity_to_join, isouterjoin: bool, filter_dict: FilterType, expand_path=False
     ):
-        """
-        joining descendants using the recursive functionality
+        """Joining descendants using the recursive functionality
         :TODO: Move the filters to be done inside the recursive query (for example on depth)
         :TODO: Pass an option to also show the path, if this is wanted.
         """
-
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_ancestors')
 
         link1 = aliased(self._entities.Link)
@@ -394,40 +421,48 @@ class SqlaJoiner:
         if expand_path:
             selection_walk_list.append(array((link1.input_id, link1.output_id)).label('path'))
 
-        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.input_id == node1.id)
-                                                        ).where(filters).cte(recursive=True)
+        walk = (
+            select(*selection_walk_list)
+            .select_from(join(node1, link1, link1.input_id == node1.id))
+            .where(filters)
+            .cte(recursive=True)
+        )
 
         aliased_walk = aliased(walk)
 
         selection_union_list = [
             aliased_walk.c.ancestor_id.label('ancestor_id'),
             link2.output_id.label('descendant_id'),
-            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth')  # type: ignore[type-var]
+            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth'),  # type: ignore[type-var]
         ]
         if expand_path:
             selection_union_list.append((aliased_walk.c.path + array((link2.output_id,))).label('path'))
 
         descendants_recursive = aliased(
             aliased_walk.union_all(
-                select(*selection_union_list
-                       ).select_from(join(
-                           aliased_walk,
-                           link2,
-                           link2.input_id == aliased_walk.c.descendant_id,
-                       )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
+                select(*selection_union_list)
+                .select_from(
+                    join(
+                        aliased_walk,
+                        link2,
+                        link2.input_id == aliased_walk.c.descendant_id,
+                    )
+                )
+                .where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
             )
         )  # .alias()
 
-        new_query = lambda q: q.join(
-            descendants_recursive, descendants_recursive.c.ancestor_id == joined_entity.id
-        ).join(entity_to_join, descendants_recursive.c.descendant_id == entity_to_join.id, isouter=isouterjoin)
+        def new_query(q):
+            return q.join(descendants_recursive, descendants_recursive.c.ancestor_id == joined_entity.id).join(
+                entity_to_join, descendants_recursive.c.descendant_id == entity_to_join.id, isouter=isouterjoin
+            )
+
         return JoinReturn(new_query, descendants_recursive.c)
 
     def _join_node_ancestors_recursive(
         self, joined_entity, entity_to_join, isouterjoin: bool, filter_dict: FilterType, expand_path=False
     ):
-        """
-        joining ancestors using the recursive functionality
+        """Joining ancestors using the recursive functionality
         :TODO: Move the filters to be done inside the recursive query (for example on depth)
         :TODO: Pass an option to also show the path, if this is wanted.
 
@@ -453,8 +488,12 @@ class SqlaJoiner:
         if expand_path:
             selection_walk_list.append(array((link1.output_id, link1.input_id)).label('path'))
 
-        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.output_id == node1.id)
-                                                        ).where(filters).cte(recursive=True)
+        walk = (
+            select(*selection_walk_list)
+            .select_from(join(node1, link1, link1.output_id == node1.id))
+            .where(filters)
+            .cte(recursive=True)
+        )
 
         aliased_walk = aliased(walk)
 
@@ -468,19 +507,24 @@ class SqlaJoiner:
 
         ancestors_recursive = aliased(
             aliased_walk.union_all(
-                select(*selection_union_list
-                       ).select_from(join(
-                           aliased_walk,
-                           link2,
-                           link2.output_id == aliased_walk.c.ancestor_id,
-                       )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
+                select(*selection_union_list)
+                .select_from(
+                    join(
+                        aliased_walk,
+                        link2,
+                        link2.output_id == aliased_walk.c.ancestor_id,
+                    )
+                )
+                .where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
                 # I can't follow RETURN or CALL links
             )
         )
 
-        new_query = lambda q: q.join(ancestors_recursive, ancestors_recursive.c.descendant_id == joined_entity.id).join(
-            entity_to_join, ancestors_recursive.c.ancestor_id == entity_to_join.id, isouter=isouterjoin
-        )
+        def new_query(q):
+            return q.join(ancestors_recursive, ancestors_recursive.c.descendant_id == joined_entity.id).join(
+                entity_to_join, ancestors_recursive.c.ancestor_id == entity_to_join.id, isouter=isouterjoin
+            )
+
         return JoinReturn(new_query, ancestors_recursive.c)
 
 
@@ -496,9 +540,7 @@ def _check_dbentities(entities_cls_joined, entities_cls_to_join, relationship: s
     :param str relationship:
         The relationship between the two entities to make the Exception comprehensible
     """
-    # pylint: disable=protected-access
     for entity, cls in (entities_cls_joined, entities_cls_to_join):
-
         if not issubclass(entity._sa_class_manager.class_, cls):
             raise TypeError(
                 "You are attempting to join {} as '{}' of {}\n"

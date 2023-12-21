@@ -10,8 +10,8 @@
 """Test daemon module."""
 import asyncio
 
-from plumpy.process_states import ProcessState
 import pytest
+from plumpy.process_states import ProcessState
 
 from aiida.manage import get_manager
 from tests.utils import processes as test_processes

@@ -21,7 +21,7 @@ class FileType(enum.Enum):
     FILE = 1
 
 
-class File():
+class File:
     """Data class representing a file object."""
 
     def __init__(
@@ -29,7 +29,7 @@ class File():
         name: str = '',
         file_type: FileType = FileType.DIRECTORY,
         key: typing.Union[str, None] = None,
-        objects: typing.Optional[typing.Dict[str, 'File']] = None
+        objects: typing.Optional[typing.Dict[str, 'File']] = None,
     ) -> None:
         """Construct a new instance.
 

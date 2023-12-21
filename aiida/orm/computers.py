@@ -13,7 +13,6 @@ import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from aiida.common import exceptions
-from aiida.common.lang import classproperty
 from aiida.manage import get_manager
 from aiida.plugins import SchedulerFactory, TransportFactory
 
@@ -21,7 +20,7 @@ from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
-    from aiida.orm.implementation import BackendComputer, StorageBackend
+    from aiida.orm.implementation import StorageBackend
     from aiida.schedulers import Scheduler
     from aiida.transports import Transport
 
@@ -36,8 +35,7 @@ class ComputerCollection(entities.Collection['Computer']):
         return Computer
 
     def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple[bool, 'Computer']:
-        """
-        Try to retrieve a Computer from the DB with the given arguments;
+        """Try to retrieve a Computer from the DB with the given arguments;
         create (and store) a new Computer if such a Computer was not present yet.
 
         :param label: computer label
@@ -63,21 +61,18 @@ class ComputerCollection(entities.Collection['Computer']):
 
 
 class Computer(entities.Entity['BackendComputer', ComputerCollection]):
-    """
-    Computer entity.
-    """
-    # pylint: disable=too-many-public-methods
+    """Computer entity."""
 
     _logger = logging.getLogger(__name__)
 
-    PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL = 'minimum_scheduler_poll_interval'  # pylint: disable=invalid-name
-    PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT = 10.  # pylint: disable=invalid-name
+    PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL = 'minimum_scheduler_poll_interval'
+    PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT = 10.0
     PROPERTY_WORKDIR = 'workdir'
     PROPERTY_SHEBANG = 'shebang'
 
     _CLS_COLLECTION = ComputerCollection
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         label: Optional[str] = None,
         hostname: str = '',
@@ -94,14 +89,14 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             hostname=hostname,
             description=description,
             transport_type=transport_type,
-            scheduler_type=scheduler_type
+            scheduler_type=scheduler_type,
         )
         super().__init__(model)
         if workdir is not None:
             self.set_workdir(workdir)
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}: {str(self)}>'
+        return f'<{self.__class__.__name__}: {self!s}>'
 
     def __str__(self):
         return f'{self.label} ({self.hostname}), pk: {self.pk}'
@@ -122,64 +117,50 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     @classmethod
     def _label_validator(cls, label: str) -> None:
-        """
-        Validates the label.
-        """
+        """Validates the label."""
         if not label.strip():
             raise exceptions.ValidationError('No label specified')
 
     @classmethod
     def _hostname_validator(cls, hostname: str) -> None:
-        """
-        Validates the hostname.
-        """
+        """Validates the hostname."""
         if not (hostname or hostname.strip()):
             raise exceptions.ValidationError('No hostname specified')
 
     @classmethod
     def _description_validator(cls, description: str) -> None:
-        """
-        Validates the description.
-        """
+        """Validates the description."""
         # The description is always valid
 
     @classmethod
     def _transport_type_validator(cls, transport_type: str) -> None:
-        """
-        Validates the transport string.
-        """
+        """Validates the transport string."""
         from aiida.plugins.entry_point import get_entry_point_names
+
         if transport_type not in get_entry_point_names('aiida.transports'):
             raise exceptions.ValidationError('The specified transport is not a valid one')
 
     @classmethod
     def _scheduler_type_validator(cls, scheduler_type: str) -> None:
-        """
-        Validates the transport string.
-        """
+        """Validates the transport string."""
         from aiida.plugins.entry_point import get_entry_point_names
+
         if scheduler_type not in get_entry_point_names('aiida.schedulers'):
             raise exceptions.ValidationError(f'The specified scheduler `{scheduler_type}` is not a valid one')
 
     @classmethod
     def _prepend_text_validator(cls, prepend_text: str) -> None:
-        """
-        Validates the prepend text string.
-        """
+        """Validates the prepend text string."""
         # no validation done
 
     @classmethod
     def _append_text_validator(cls, append_text: str) -> None:
-        """
-        Validates the append text string.
-        """
+        """Validates the append text string."""
         # no validation done
 
     @classmethod
     def _workdir_validator(cls, workdir: str) -> None:
-        """
-        Validates the transport string.
-        """
+        """Validates the transport string."""
         if not workdir.strip():
             raise exceptions.ValidationError('No workdir specified')
 
@@ -194,8 +175,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             raise exceptions.ValidationError('The workdir must be an absolute path')
 
     def _mpirun_command_validator(self, mpirun_cmd: Union[List[str], Tuple[str, ...]]) -> None:
-        """
-        Validates the mpirun_command variable. MUST be called after properly
+        """Validates the mpirun_command variable. MUST be called after properly
         checking for a valid scheduler.
         """
         if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, str) for i in mpirun_cmd):
@@ -218,8 +198,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             raise exceptions.ValidationError(f"Error in the string: '{exc}'")
 
     def validate(self) -> None:
-        """
-        Check if the attributes and files retrieved from the DB are valid.
+        """Check if the attributes and files retrieved from the DB are valid.
         Raise a ValidationError if something is wrong.
 
         Must be able to work even before storing: therefore, use the get_attr and similar methods
@@ -249,9 +228,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     @classmethod
     def _default_mpiprocs_per_machine_validator(cls, def_cpus_per_machine: Optional[int]) -> None:
-        """
-        Validates the default number of CPUs per machine (node)
-        """
+        """Validates the default number of CPUs per machine (node)"""
         if def_cpus_per_machine is None:
             return
 
@@ -273,14 +250,11 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             )
 
     def copy(self) -> 'Computer':
-        """
-        Return a copy of the current object to work with, not stored yet.
-        """
+        """Return a copy of the current object to work with, not stored yet."""
         return entities.from_backend_entity(Computer, self._backend_entity.copy())
 
     def store(self) -> 'Computer':
-        """
-        Store the computer in the DB.
+        """Store the computer in the DB.
 
         Differently from Nodes, a computer can be re-stored if its properties
         are to be changed (e.g. a new mpirun command, etc.)
@@ -385,8 +359,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         self._backend_entity.set_metadata(value)
 
     def delete_property(self, name: str, raise_exception: bool = True) -> None:
-        """
-        Delete a property from this computer
+        """Delete a property from this computer
 
         :param name: the name of the property
         :param raise_exception: if True raise if the property does not exist, otherwise return None
@@ -452,12 +425,12 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         :param use_double_quotes: True if to escape with double quotes, False otherwise.
         """
         from aiida.common.lang import type_check
+
         type_check(val, bool)
         self.set_property('use_double_quotes', val)
 
     def get_mpirun_command(self) -> List[str]:
-        """
-        Return the mpirun command. Must be a list of strings, that will be
+        """Return the mpirun command. Must be a list of strings, that will be
         then joined with spaces when submitting.
 
         I also provide a sensible default that may be ok in many cases.
@@ -465,8 +438,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         return self.get_property('mpirun_command', ['mpirun', '-np', '{tot_num_mpiprocs}'])
 
     def set_mpirun_command(self, val: Union[List[str], Tuple[str, ...]]) -> None:
-        """
-        Set the mpirun command. It must be a list of strings (you can use
+        """Set the mpirun command. It must be a list of strings (you can use
         string.split() if you have a single, space-separated string).
         """
         if not isinstance(val, (tuple, list)) or not all(isinstance(i, str) for i in val):
@@ -474,15 +446,13 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         self.set_property('mpirun_command', val)
 
     def get_default_mpiprocs_per_machine(self) -> Optional[int]:
-        """
-        Return the default number of CPUs per machine (node) for this computer,
+        """Return the default number of CPUs per machine (node) for this computer,
         or None if it was not set.
         """
         return self.get_property('default_mpiprocs_per_machine', None)
 
     def set_default_mpiprocs_per_machine(self, def_cpus_per_machine: Optional[int]) -> None:
-        """
-        Set the default number of CPUs per machine (node) for this computer.
+        """Set the default number of CPUs per machine (node) for this computer.
         Accepts None if you do not want to set this value.
         """
         if def_cpus_per_machine is None:
@@ -492,15 +462,13 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         self.set_property('default_mpiprocs_per_machine', def_cpus_per_machine)
 
     def get_default_memory_per_machine(self) -> Optional[int]:
-        """
-        Return the default amount of memory (kB) per machine (node) for this computer,
+        """Return the default amount of memory (kB) per machine (node) for this computer,
         or None if it was not set.
         """
         return self.get_property('default_memory_per_machine', None)
 
     def set_default_memory_per_machine(self, def_memory_per_machine: Optional[int]) -> None:
-        """
-        Set the default amount of memory (kB) per machine (node) for this computer.
+        """Set the default amount of memory (kB) per machine (node) for this computer.
         Accepts None if you do not want to set this value.
         """
         self.default_memory_per_machine_validator(def_memory_per_machine)
@@ -524,8 +492,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         return self.get_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, default)
 
     def set_minimum_job_poll_interval(self, interval: float) -> None:
-        """
-        Set the minimum interval between subsequent requests to update the list
+        """Set the minimum interval between subsequent requests to update the list
         of jobs currently running on this computer.
 
         :param interval: The minimum interval in seconds
@@ -533,8 +500,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         self.set_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, interval)
 
     def get_workdir(self) -> str:
-        """
-        Get the working directory for this computer
+        """Get the working directory for this computer
         :return: The currently configured working directory
         """
         return self.get_property(self.PROPERTY_WORKDIR, '/scratch/{username}/aiida_run/')
@@ -546,9 +512,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         return self.get_property(self.PROPERTY_SHEBANG, '#!/bin/bash')
 
     def set_shebang(self, val: str) -> None:
-        """
-        :param str val: A valid shebang line
-        """
+        """:param str val: A valid shebang line"""
         if not isinstance(val, str):
             raise ValueError(f'{val} is invalid. Input has to be a string')
         if not val.startswith('#!'):
@@ -558,8 +522,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         self.metadata = metadata
 
     def get_authinfo(self, user: 'User') -> 'AuthInfo':
-        """
-        Return the aiida.orm.authinfo.AuthInfo instance for the
+        """Return the aiida.orm.authinfo.AuthInfo instance for the
         given user on this computer, if the computer
         is configured for the given user.
 
@@ -589,8 +552,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         return self.is_user_configured(users.User.get_collection(self.backend).get_default())
 
     def is_user_configured(self, user: 'User') -> bool:
-        """
-        Is the user configured on this computer?
+        """Is the user configured on this computer?
 
         :param user: the user to check
         :return: True if configured, False otherwise
@@ -602,8 +564,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             return False
 
     def is_user_enabled(self, user: 'User') -> bool:
-        """
-        Is the given user enabled to run on this computer?
+        """Is the given user enabled to run on this computer?
 
         :param user: the user to check
         :return: True if enabled, False otherwise
@@ -616,8 +577,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             return False
 
     def get_transport(self, user: Optional['User'] = None) -> 'Transport':
-        """
-        Return a Transport class, configured with all correct parameters.
+        """Return a Transport class, configured with all correct parameters.
         The Transport is closed (meaning that if you want to run any operation with
         it, you have to open it first (i.e., e.g. for a SSH transport, you have
         to open a connection). To do this you can call ``transports.open()``, or simply
@@ -634,7 +594,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             parameters to the supercomputer, as configured with ``verdi computer configure``
             for the user specified as a parameter ``user``.
         """
-        from . import authinfos  # pylint: disable=cyclic-import
+        from . import authinfos
 
         user = user or users.User.get_collection(self.backend).get_default()
         authinfo = authinfos.AuthInfo.get_collection(self.backend).get(dbcomputer=self, aiidauser=user)

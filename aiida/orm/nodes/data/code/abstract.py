@@ -50,7 +50,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         with_mpi: bool | None = None,
         is_hidden: bool = False,
         wrap_cmdline_params: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """Construct a new instance.
 
@@ -347,13 +347,13 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'short_name': '-D',
                 'type': click.STRING,
                 'prompt': 'Description',
-                'help': 'Human-readable description of this code ideally including version and compilation environment.'
+                'help': 'Human-readable description, ideally including version and compilation environment.',
             },
             'default_calc_job_plugin': {
                 'short_name': '-P',
                 'type': click.STRING,
                 'prompt': 'Default `CalcJob` plugin',
-                'help': 'Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).'
+                'help': 'Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).',
             },
             'use_double_quotes': {
                 'is_flag': True,
@@ -381,7 +381,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'extension': '.bash',
                 'header': 'PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call '
                 'in all submit scripts for this code, type that between the equal signs below and save the file.',
-                'footer': 'All lines that start with `#=`: will be ignored.'
+                'footer': 'All lines that start with `#=`: will be ignored.',
             },
             'append_text': {
                 'cls': TemplateInteractiveOption,
@@ -392,6 +392,6 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'extension': '.bash',
                 'header': 'APPEND_TEXT: if there is any bash commands that should be appended to the executable call '
                 'in all submit scripts for this code, type that between the equal signs below and save the file.',
-                'footer': 'All lines that start with `#=`: will be ignored.'
+                'footer': 'All lines that start with `#=`: will be ignored.',
             },
         }

@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .workchain import *
 from .workflow import *
@@ -24,4 +23,4 @@ __all__ = (
     'WorkflowNode',
 )
 
-# yapf: enable
+# fmt: on

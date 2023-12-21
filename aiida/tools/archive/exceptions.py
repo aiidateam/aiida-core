@@ -53,5 +53,5 @@ class ImportValidationError(ArchiveImportError):
     """Raised when validation fails during import, e.g. for parameter types and values."""
 
 
-class ImportTestRun(ArchiveImportError):
+class ImportTestRun(ArchiveImportError):  # noqa: N818
     """Raised during an import, before the transaction is commited."""

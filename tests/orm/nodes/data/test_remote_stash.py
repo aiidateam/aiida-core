@@ -45,12 +45,13 @@ def test_constructor(store):
 
 
 @pytest.mark.parametrize(
-    'argument, value', (
+    'argument, value',
+    (
         ('stash_mode', 'copy'),
         ('target_basepath', ['list']),
         ('source_list', 'relative/path'),
         ('source_list', ('/absolute/path')),
-    )
+    ),
 )
 def test_constructor_invalid(argument, value):
     """Test the constructor for invalid argument types."""

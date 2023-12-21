@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import collections
 import dataclasses
-from datetime import datetime, timedelta
 import enum
 import inspect
 import typing as t
+from datetime import datetime, timedelta
 
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
@@ -182,14 +182,14 @@ class CalcJobMonitors:
         :returns: ``None`` or a monitor result.
         """
         for key, monitor in self.monitors.items():
-
             if monitor.disabled:
                 LOGGER.debug(f'monitor`{key}` is disabled, skipping')
                 continue
 
             if (
-                monitor.minimum_poll_interval and monitor.call_timestamp and
-                datetime.now() - monitor.call_timestamp < timedelta(seconds=monitor.minimum_poll_interval)
+                monitor.minimum_poll_interval
+                and monitor.call_timestamp
+                and datetime.now() - monitor.call_timestamp < timedelta(seconds=monitor.minimum_poll_interval)
             ):
                 LOGGER.debug(f'skipping monitor `{key}` because minimum poll interval has not expired yet.')
                 continue

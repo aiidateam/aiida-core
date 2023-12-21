@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Serialisation functions for AiiDA types
+"""Serialisation functions for AiiDA types
 
 WARNING: Changing the representation of things here may break people's current saved e.g. things like
 checkpoints and messages in the RabbitMQ queue so do so with caution.  It is fine to add representers
@@ -16,15 +15,15 @@ for new types though.
 """
 from __future__ import annotations
 
+import inspect
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from functools import partial
-import inspect
 from typing import Any, Protocol, Type, overload
 
+import yaml
 from plumpy import Bundle, get_object_loader
 from plumpy.utils import AttributesFrozendict
-import yaml
 
 from aiida import orm
 from aiida.common import AttributeDict
@@ -91,9 +90,9 @@ def node_constructor(loader: yaml.Loader, node: yaml.Node) -> orm.Node:
 def represent_node_links_manager(dumper: yaml.Dumper, node_links_manager: NodeLinksManager) -> yaml.MappingNode:
     """Represent a link in yaml."""
     data = {
-        'incoming': node_links_manager._incoming,  # pylint: disable=protected-access
-        'link_type': node_links_manager._link_type.value,  # pylint: disable=protected-access
-        'node': node_links_manager._node.uuid,  # pylint: disable=protected-access
+        'incoming': node_links_manager._incoming,
+        'link_type': node_links_manager._link_type.value,
+        'node': node_links_manager._node.uuid,
     }
     return dumper.represent_mapping(_NODE_LINKS_MANAGER_TAG, data)
 
@@ -101,6 +100,7 @@ def represent_node_links_manager(dumper: yaml.Dumper, node_links_manager: NodeLi
 def node_links_manager_constructor(loader: yaml.Loader, node_links_manager: yaml.Node) -> NodeLinksManager:
     """Load a link from the yaml representation."""
     from aiida.common.links import LinkType
+
     yaml_node_links_manager = loader.construct_mapping(node_links_manager)  # type: ignore[arg-type]
     link_type = LinkType(yaml_node_links_manager['link_type'])
     node = orm.load_node(uuid=yaml_node_links_manager['node'])
@@ -140,8 +140,7 @@ def represent_mapping(tag: str, dumper: yaml.Dumper, mapping: Any) -> yaml.Mappi
 
 
 class _MappingType(Protocol):
-
-    def __init__(self, mapping: dict) -> None:  # pylint: disable=super-init-not-called
+    def __init__(self, mapping: dict) -> None:
         ...
 
 

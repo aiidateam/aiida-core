@@ -8,19 +8,19 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for orm logging abstract classes"""
-from datetime import datetime
 import logging
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 from aiida.common import timezone
-from aiida.common.lang import classproperty
 from aiida.manage import get_manager
 
 from . import entities
 
 if TYPE_CHECKING:
     from aiida.orm import Node
-    from aiida.orm.implementation import BackendLog, StorageBackend
+    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation.logs import BackendLog  # noqa: F401
     from aiida.orm.querybuilder import FilterType, OrderByType
 
 __all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')
@@ -29,13 +29,12 @@ ASCENDING = 'asc'
 DESCENDING = 'desc'
 
 
-def OrderSpecifier(field, direction):  # pylint: disable=invalid-name
+def OrderSpecifier(field, direction):  # noqa: N802
     return {field: direction}
 
 
 class LogCollection(entities.Collection['Log']):
-    """
-    This class represents the collection of logs and can be used to create
+    """This class represents the collection of logs and can be used to create
     and retrieve logs.
     """
 
@@ -60,6 +59,7 @@ class LogCollection(entities.Collection['Log']):
         # If an `exc_info` is present, the log message was an exception, so format the full traceback
         try:
             import traceback
+
             exc_info = metadata.pop('exc_info')
             message = ''.join(traceback.format_exception(*exc_info))
         except (TypeError, KeyError):
@@ -77,7 +77,7 @@ class LogCollection(entities.Collection['Log']):
             dbnode_id=dbnode_id,
             message=message,
             metadata=metadata,
-            backend=self.backend
+            backend=self.backend,
         )
 
     def get_logs_for(self, entity: 'Node', order_by: Optional['OrderByType'] = None) -> List['Log']:
@@ -91,7 +91,7 @@ class LogCollection(entities.Collection['Log']):
         from . import nodes
 
         if not isinstance(entity, nodes.Node):
-            raise Exception('Only node logs are stored')  # pylint: disable=broad-exception-raised
+            raise Exception('Only node logs are stored')
 
         return self.find({'dbnode_id': entity.pk}, order_by=order_by)
 
@@ -124,9 +124,7 @@ class LogCollection(entities.Collection['Log']):
 
 
 class Log(entities.Entity['BackendLog', LogCollection]):
-    """
-    An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node.
-    """
+    """An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node."""
 
     _CLS_COLLECTION = LogCollection
 
@@ -138,8 +136,8 @@ class Log(entities.Entity['BackendLog', LogCollection]):
         dbnode_id: int,
         message: str = '',
         metadata: Optional[Dict[str, Any]] = None,
-        backend: Optional['StorageBackend'] = None
-    ):  # pylint: disable=too-many-arguments
+        backend: Optional['StorageBackend'] = None,
+    ):
         """Construct a new log
 
         :param time: time
@@ -165,7 +163,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
             levelname=levelname,
             dbnode_id=dbnode_id,
             message=message,
-            metadata=metadata
+            metadata=metadata,
         )
         super().__init__(model)
         self.store()  # Logs are immutable and automatically stored
@@ -182,8 +180,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
     @property
     def time(self) -> datetime:
-        """
-        Get the time corresponding to the entry
+        """Get the time corresponding to the entry
 
         :return: The entry timestamp
         """
@@ -191,8 +188,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
     @property
     def loggername(self) -> str:
-        """
-        The name of the logger that created this entry
+        """The name of the logger that created this entry
 
         :return: The entry loggername
         """
@@ -200,8 +196,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
     @property
     def levelname(self) -> str:
-        """
-        The name of the log level
+        """The name of the log level
 
         :return: The entry log level name
         """
@@ -209,8 +204,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
     @property
     def dbnode_id(self) -> int:
-        """
-        Get the id of the object that created the log entry
+        """Get the id of the object that created the log entry
 
         :return: The id of the object that created the log entry
         """
@@ -218,8 +212,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
     @property
     def message(self) -> str:
-        """
-        Get the message corresponding to the entry
+        """Get the message corresponding to the entry
 
         :return: The entry message
         """
@@ -227,8 +220,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
     @property
     def metadata(self) -> Dict[str, Any]:
-        """
-        Get the metadata corresponding to the entry
+        """Get the metadata corresponding to the entry
 
         :return: The entry metadata
         """

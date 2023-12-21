@@ -3,8 +3,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .abstract import *
 from .containerized import *
@@ -20,4 +19,4 @@ __all__ = (
     'PortableCode',
 )
 
-# yapf: enable
+# fmt: on

@@ -35,9 +35,7 @@ def linearize_namespace(tree_namespace, linear_namespace=None):
 
 @pytest.mark.usefixtures('populate_restapi_database')
 def test_count_consistency(restapi_server, server_url):
-    """
-    Test the consistency in values between full_type_count and statistics
-    """
+    """Test the consistency in values between full_type_count and statistics"""
     server = restapi_server()
     server_thread = Thread(target=server.serve_forever)
 

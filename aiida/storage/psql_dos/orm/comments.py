@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQLA implementations for the Comment entity and collection."""
-# pylint: disable=import-error,no-name-in-module
 
 from datetime import datetime
 
@@ -27,7 +26,6 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
     MODEL_CLASS = models.DbComment
     USER_CLASS = users.SqlaUser
 
-    # pylint: disable=too-many-arguments
     def __init__(self, backend, node, user, content=None, ctime=None, mtime=None):
         """Construct a SqlaComment.
 
@@ -38,7 +36,7 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
         :param mtime: The modification time as datetime object
         """
         super().__init__(backend)
-        lang.type_check(user, self.USER_CLASS)  # pylint: disable=no-member
+        lang.type_check(user, self.USER_CLASS)
 
         arguments = {
             'dbnode': node.bare_model,
@@ -104,8 +102,7 @@ class SqlaCommentCollection(BackendCommentCollection):
     ENTITY_CLASS = SqlaComment
 
     def create(self, node, user, content=None, **kwargs):
-        """
-        Create a Comment for a given node and user
+        """Create a Comment for a given node and user
 
         :param node: a Node instance
         :param user: a User instance
@@ -115,8 +112,7 @@ class SqlaCommentCollection(BackendCommentCollection):
         return self.ENTITY_CLASS(self.backend, node, user, content, **kwargs)
 
     def delete(self, comment_id):
-        """
-        Remove a Comment from the collection with the given id
+        """Remove a Comment from the collection with the given id
 
         :param comment_id: the id of the comment to delete
         :type comment_id: int
@@ -138,8 +134,7 @@ class SqlaCommentCollection(BackendCommentCollection):
             raise exceptions.NotExistent(f"Comment with id '{comment_id}' not found")
 
     def delete_all(self):
-        """
-        Delete all Comment entries.
+        """Delete all Comment entries.
 
         :raises `~aiida.common.exceptions.IntegrityError`: if all Comments could not be deleted
         """
@@ -153,8 +148,7 @@ class SqlaCommentCollection(BackendCommentCollection):
             raise exceptions.IntegrityError(f'Could not delete all Comments. Full exception: {exc}')
 
     def delete_many(self, filters):
-        """
-        Delete Comments based on ``filters``
+        """Delete Comments based on ``filters``
 
         :param filters: similar to QueryBuilder filter
         :type filters: dict

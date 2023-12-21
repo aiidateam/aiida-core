@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .calculation import *
 from .choice import *
@@ -60,4 +59,4 @@ __all__ = (
     'WorkflowParamType',
 )
 
-# yapf: enable
+# fmt: on

@@ -27,6 +27,7 @@ __all__ = ('is_verbose',)
 def tabulate(table, **kwargs):
     """A dummy wrapper to hide the import cost of tabulate"""
     import tabulate as tb
+
     return tb.tabulate(table, **kwargs)
 
 
@@ -49,7 +50,7 @@ def get_env_with_venv_bin():
 
     warn_deprecation(
         '`get_env_with_venv_bin` function is deprecated use `aiida.engine.daemon.client.DaemonClient.get_env` instead.',
-        version=3
+        version=3,
     )
 
     config = get_config()
@@ -63,8 +64,7 @@ def get_env_with_venv_bin():
 
 
 def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
-    """
-    Format a datetime object or UNIX timestamp in a human readable format
+    """Format a datetime object or UNIX timestamp in a human readable format
 
     :param timestamp: a datetime object or a float representing a UNIX timestamp
     :param format_str: optional string format to pass to strftime
@@ -78,8 +78,7 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
 
 
 def print_last_process_state_change(process_type=None):
-    """
-    Print the last time that a process of the specified type has changed its state.
+    """Print the last time that a process of the specified type has changed its state.
 
     :param process_type: optional process type for which to get the latest state change timestamp.
         Valid process types are either 'calculation' or 'work'.
@@ -208,10 +207,9 @@ def format_flat_links(links, headers):
     table = []
 
     for link_triple in links:
-        table.append([
-            link_triple.link_label, link_triple.node.pk,
-            link_triple.node.base.attributes.get('process_label', '')
-        ])
+        table.append(
+            [link_triple.link_label, link_triple.node.pk, link_triple.node.base.attributes.get('process_label', '')]
+        )
 
     result = f'\n{tabulate(table, headers=headers)}'
 
@@ -256,8 +254,7 @@ def format_nested_links(links, headers):
 
 
 def get_calcjob_report(calcjob):
-    """
-    Return a multi line string representation of the log messages and output of a given calcjob
+    """Return a multi line string representation of the log messages and output of a given calcjob
 
     :param calcjob: the calcjob node
     :return: a string representation of the log messages and scheduler output
@@ -310,8 +307,7 @@ def get_calcjob_report(calcjob):
 
 
 def get_process_function_report(node):
-    """
-    Return a multi line string representation of the log messages and output of a given process function node
+    """Return a multi line string representation of the log messages and output of a given process function node
 
     :param node: the node
     :return: a string representation of the log messages
@@ -327,13 +323,11 @@ def get_process_function_report(node):
 
 
 def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_depth=None):
-    """
-    Return a multi line string representation of the log messages and output of a given workchain
+    """Return a multi line string representation of the log messages and output of a given workchain
 
     :param node: the workchain node
     :return: a nested string representation of the log messages
     """
-    # pylint: disable=too-many-locals
     import itertools
 
     from aiida import orm
@@ -349,8 +343,7 @@ def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_de
         return [(_, depth) for _ in entries]
 
     def get_subtree(uuid, level=0):
-        """
-        Get a nested tree of work calculation nodes and their nesting level starting from this uuid.
+        """Get a nested tree of work calculation nodes and their nesting level starting from this uuid.
         The result is a list of uuid of these nodes.
         """
         builder = orm.QueryBuilder(backend=node.backend)
@@ -362,7 +355,7 @@ def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_de
             # for now, CALL links are the only ones allowing calc-calc
             # (we here really want instead to follow CALL links)
             with_incoming='workcalculation',
-            tag='subworkchains'
+            tag='subworkchains',
         )
         result = builder.all(flat=True)
 
@@ -400,7 +393,7 @@ def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_de
             time=entry.time,
             width_id=width_id,
             width_levelname=width_levelname,
-            indent=' ' * (depth * indent_size)
+            indent=' ' * (depth * indent_size),
         )
         report.append(line)
 
@@ -437,7 +430,6 @@ def print_process_spec(process_spec):
         result = []
 
         for name, port in sorted(ports.items(), key=lambda x: (not x[1].required, x[0])):
-
             if name.startswith('_'):
                 continue
 

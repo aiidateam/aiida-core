@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Replace null values with defaults
 
 Revision ID: main_0000a
@@ -15,8 +14,8 @@ Revises: main_0000
 Create Date: 2022-03-04
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 from aiida.common import timezone
 
@@ -27,7 +26,7 @@ branch_labels = None
 depends_on = None
 
 
-def upgrade():  # pylint: disable=too-many-statements
+def upgrade():
     """Convert null values to default values.
 
     This migration is performed in preparation for the next migration,

@@ -145,4 +145,4 @@ def validate_verdi_documentation():
 
 
 if __name__ == '__main__':
-    cli()  # pylint: disable=no-value-for-parameter
+    cli()

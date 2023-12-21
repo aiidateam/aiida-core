@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Seal any process nodes that have not yet been sealed but should.
 
 This should have been accomplished by the last step in the previous migration, but because the WHERE clause was
@@ -25,8 +24,8 @@ Revision ID: django_0041
 Revises: django_0040
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'django_0041'
 down_revision = 'django_0040'

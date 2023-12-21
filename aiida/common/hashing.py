@@ -8,18 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common password and hash generation functions."""
-from collections import OrderedDict, abc
-from datetime import date, datetime, timezone
-from decimal import Decimal
-from functools import singledispatch
 import hashlib
-from itertools import chain
 import numbers
-from operator import itemgetter
 import secrets
 import string
 import typing
 import uuid
+from collections import OrderedDict, abc
+from datetime import date, datetime, timezone
+from decimal import Decimal
+from functools import singledispatch
+from itertools import chain
+from operator import itemgetter
 
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from aiida.common.exceptions import HashingError
@@ -75,8 +75,7 @@ def chunked_file_hash(
 
 
 def make_hash(object_to_hash, **kwargs):
-    """
-    Makes a hash from a dictionary, list, tuple or set to any level, that contains
+    """Makes a hash from a dictionary, list, tuple or set to any level, that contains
     only other hashable or nonhashable types (including lists, tuples, sets, and
     dictionaries).
 
@@ -95,7 +94,7 @@ def make_hash(object_to_hash, **kwargs):
     hashing iteratively. Uses python's sorted function to sort unsorted
     sets and dictionaries by sorting the hashed keys.
     """
-    hashes = _make_hash(object_to_hash, **kwargs)  # pylint: disable=assignment-from-no-return
+    hashes = _make_hash(object_to_hash, **kwargs)
 
     # use the Unlimited fanout hashing protocol outlined in
     #   https://blake2.net/blake2_20130129.pdf
@@ -112,8 +111,7 @@ def make_hash(object_to_hash, **kwargs):
 
 @singledispatch
 def _make_hash(object_to_hash, **_):
-    """
-    Implementation of the ``make_hash`` function. The hash is created as a
+    """Implementation of the ``make_hash`` function. The hash is created as a
     28 byte integer, and only later converted to a string.
     """
     raise HashingError(f'Value of type {type(object_to_hash)} cannot be hashed')
@@ -141,16 +139,22 @@ def _(val, **kwargs):
 @_make_hash.register(abc.Sequence)
 def _(sequence_obj, **kwargs):
     # unpack the list and use the elements
-    return [_single_digest('list(')] + list(chain.from_iterable(_make_hash(i, **kwargs) for i in sequence_obj)
-                                            ) + [_END_DIGEST]
+    return (
+        [_single_digest('list(')]
+        + list(chain.from_iterable(_make_hash(i, **kwargs) for i in sequence_obj))
+        + [_END_DIGEST]
+    )
 
 
 @_make_hash.register(abc.Set)
 def _(set_obj, **kwargs):
     # turn the set objects into a list of hashes which are always sortable,
     # then return a flattened list of the hashes
-    return [_single_digest('set(')] + list(chain.from_iterable(sorted(_make_hash(i, **kwargs) for i in set_obj))
-                                           ) + [_END_DIGEST]
+    return (
+        [_single_digest('set(')]
+        + list(chain.from_iterable(sorted(_make_hash(i, **kwargs) for i in set_obj)))
+        + [_END_DIGEST]
+    )
 
 
 @_make_hash.register(abc.Mapping)
@@ -161,33 +165,39 @@ def _(mapping, **kwargs):
         for key, value in mapping.items():
             yield (_make_hash(key, **kwargs), value)
 
-    return [_single_digest('dict(')] + list(
-        chain.from_iterable(
-            (k_digest + _make_hash(val, **kwargs)) for k_digest, val in sorted(hashed_key_mapping(), key=itemgetter(0))
+    return (
+        [_single_digest('dict(')]
+        + list(
+            chain.from_iterable(
+                (k_digest + _make_hash(val, **kwargs))
+                for k_digest, val in sorted(hashed_key_mapping(), key=itemgetter(0))
+            )
         )
-    ) + [_END_DIGEST]
+        + [_END_DIGEST]
+    )
 
 
 @_make_hash.register(OrderedDict)
 def _(mapping, **kwargs):
-    """
-    Hashing of OrderedDicts
+    """Hashing of OrderedDicts
 
     :param odict_as_unordered: hash OrderedDicts as normal dicts (mostly for testing)
     """
-
     if kwargs.get('odict_as_unordered', False):
         return _make_hash.registry[abc.Mapping](mapping)
 
-    return ([_single_digest('odict(')] + list(
-        chain.from_iterable((_make_hash(key, **kwargs) + _make_hash(val, **kwargs)) for key, val in mapping.items())
-    ) + [_END_DIGEST])
+    return (
+        [_single_digest('odict(')]
+        + list(
+            chain.from_iterable((_make_hash(key, **kwargs) + _make_hash(val, **kwargs)) for key, val in mapping.items())
+        )
+        + [_END_DIGEST]
+    )
 
 
 @_make_hash.register(numbers.Real)
 def _(val, **kwargs):
-    """
-    Before hashing a float, convert to a string (via rounding) and with a fixed number of digits after the comma.
+    """Before hashing a float, convert to a string (via rounding) and with a fixed number of digits after the comma.
     Note that the `_single_digest` requires a bytes object so we need to encode the utf-8 string first
     """
     return [_single_digest('float', float_to_text(val, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
@@ -195,8 +205,7 @@ def _(val, **kwargs):
 
 @_make_hash.register(Decimal)
 def _(val, **kwargs):
-    """
-    While a decimal can be converted exactly to a string which captures all characteristics of the underlying
+    """While a decimal can be converted exactly to a string which captures all characteristics of the underlying
     implementation, we also need compatibility with "equal" representations as int or float. Hence we are checking
     for the exponent (which is negative if there is a fractional component, 0 otherwise) and get the same hash
     as for a corresponding float or int.
@@ -208,21 +217,20 @@ def _(val, **kwargs):
 
 @_make_hash.register(numbers.Complex)
 def _(val, **kwargs):
-    """
-    In case of a complex number, use the same encoding of two floats and join them with a special symbol (a ! here).
-    """
+    """In case of a complex number, use the same encoding of two floats and join with a special symbol (a ! here)."""
     return [
         _single_digest(
-            'complex', '{}!{}'.format(
+            'complex',
+            '{}!{}'.format(
                 float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION), float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)
-            ).encode('utf-8')
+            ).encode('utf-8'),
         )
     ]
 
 
 @_make_hash.register(numbers.Integral)
 def _(val, **kwargs):
-    """get the hash of the little-endian signed long long representation of the integer"""
+    """Get the hash of the little-endian signed long long representation of the integer"""
     return [_single_digest('int', f'{val}'.encode('utf-8'))]
 
 
@@ -238,7 +246,7 @@ def _(val, **kwargs):
 
 @_make_hash.register(datetime)
 def _(val, **kwargs):
-    """hashes the little-endian rep of the float <epoch-seconds>.<subseconds>"""
+    """Hashes the little-endian rep of the float <epoch-seconds>.<subseconds>"""
     # see also https://stackoverflow.com/a/8778548 for an excellent elaboration
     if val.tzinfo is None or val.utcoffset() is None:
         val = val.replace(tzinfo=timezone.utc)
@@ -260,24 +268,27 @@ def _(val, **kwargs):
 
 @_make_hash.register(DatetimePrecision)
 def _(datetime_precision, **kwargs):
-    """ Hashes for DatetimePrecision object
-    """
-    return [_single_digest('dt_prec')] + list(
-        chain.from_iterable(_make_hash(i, **kwargs) for i in [datetime_precision.dtobj, datetime_precision.precision])
-    ) + [_END_DIGEST]
+    """Hashes for DatetimePrecision object"""
+    return (
+        [_single_digest('dt_prec')]
+        + list(
+            chain.from_iterable(
+                _make_hash(i, **kwargs) for i in [datetime_precision.dtobj, datetime_precision.precision]
+            )
+        )
+        + [_END_DIGEST]
+    )
 
 
 @_make_hash.register(Folder)
 def _(folder, **kwargs):
-    """
-    Hash the content of a Folder object. The name of the folder itself is actually ignored
+    """Hash the content of a Folder object. The name of the folder itself is actually ignored
     :param ignored_folder_content: list of filenames to be ignored for the hashing
     """
-
     ignored_folder_content = kwargs.get('ignored_folder_content', [])
 
     def folder_digests(subfolder):
-        """traverses the given folder and yields digests for the contained objects"""
+        """Traverses the given folder and yields digests for the contained objects"""
         for name, isfile in sorted(subfolder.get_content_list(only_paths=False), key=itemgetter(0)):
             if name in ignored_folder_content:
                 continue
@@ -296,14 +307,13 @@ def _(folder, **kwargs):
 
 
 def float_to_text(value, sig):
-    """
-    Convert float to text string for computing hash.
+    """Convert float to text string for computing hash.
     Preseve up to N significant number given by sig.
 
     :param value: the float value to convert
     :param sig: choose how many digits after the comma should be output
     """
     if value == 0:
-        value = 0.  # Identify value of -0. and overwrite with 0.
+        value = 0.0  # Identify value of -0. and overwrite with 0.
     fmt = f'{{:.{sig}g}}'
     return fmt.format(value)

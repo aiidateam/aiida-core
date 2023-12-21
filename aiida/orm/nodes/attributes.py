@@ -115,7 +115,7 @@ class NodeAttributes:
         :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
-        self._node._check_mutability_attributes([key])  # pylint: disable=protected-access
+        self._node._check_mutability_attributes([key])
         self._backend_node.set_attribute(key, value)
 
     def set_many(self, attributes: Dict[str, Any]) -> None:
@@ -127,7 +127,7 @@ class NodeAttributes:
         :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
-        self._node._check_mutability_attributes(list(attributes))  # pylint: disable=protected-access
+        self._node._check_mutability_attributes(list(attributes))
         self._backend_node.set_attribute_many(attributes)
 
     def reset(self, attributes: Dict[str, Any]) -> None:
@@ -139,7 +139,7 @@ class NodeAttributes:
         :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
-        self._node._check_mutability_attributes()  # pylint: disable=protected-access
+        self._node._check_mutability_attributes()
         self._backend_node.reset_attributes(attributes)
 
     def delete(self, key: str) -> None:
@@ -149,7 +149,7 @@ class NodeAttributes:
         :raises AttributeError: if the attribute does not exist
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
-        self._node._check_mutability_attributes([key])  # pylint: disable=protected-access
+        self._node._check_mutability_attributes([key])
         self._backend_node.delete_attribute(key)
 
     def delete_many(self, keys: List[str]) -> None:
@@ -159,12 +159,12 @@ class NodeAttributes:
         :raises AttributeError: if at least one of the attribute does not exist
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
-        self._node._check_mutability_attributes(keys)  # pylint: disable=protected-access
+        self._node._check_mutability_attributes(keys)
         self._backend_node.delete_attribute_many(keys)
 
     def clear(self) -> None:
         """Delete all attributes."""
-        self._node._check_mutability_attributes()  # pylint: disable=protected-access
+        self._node._check_mutability_attributes()
         self._backend_node.clear_attributes()
 
     def items(self) -> Iterable[Tuple[str, Any]]:

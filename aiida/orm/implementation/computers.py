@@ -24,7 +24,6 @@ class BackendComputer(BackendEntity):
     It has an associated transport_type, which points to a plugin for connecting to the resource and passing data,
     and a scheduler_type, which points to a plugin for scheduling calculations.
     """
-    # pylint: disable=too-many-public-methods
 
     _logger = logging.getLogger(__name__)
 
@@ -58,8 +57,7 @@ class BackendComputer(BackendEntity):
 
     @abc.abstractmethod
     def set_hostname(self, val: str) -> None:
-        """
-        Set the hostname of this computer
+        """Set the hostname of this computer
         :param val: The new hostname
         """
 
@@ -102,8 +100,7 @@ class BackendComputerCollection(BackendCollection[BackendComputer]):
 
     @abc.abstractmethod
     def delete(self, pk: int) -> None:
-        """
-        Delete an entry with the given pk
+        """Delete an entry with the given pk
 
         :param pk: the pk of the entry to delete
         """

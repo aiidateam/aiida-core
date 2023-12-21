@@ -18,44 +18,45 @@ class TestKpoints:
     """Test for the `Kpointsdata` class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
-
         alat = 5.430  # angstrom
-        cell = [[
-            0.5 * alat,
-            0.5 * alat,
-            0.,
-        ], [
-            0.,
-            0.5 * alat,
-            0.5 * alat,
-        ], [0.5 * alat, 0., 0.5 * alat]]
+        cell = [
+            [
+                0.5 * alat,
+                0.5 * alat,
+                0.0,
+            ],
+            [
+                0.0,
+                0.5 * alat,
+                0.5 * alat,
+            ],
+            [0.5 * alat, 0.0, 0.5 * alat],
+        ]
         self.alat = alat
         structure = StructureData(cell=cell)
         structure.append_atom(position=(0.000 * alat, 0.000 * alat, 0.000 * alat), symbols=['Si'])
         structure.append_atom(position=(0.250 * alat, 0.250 * alat, 0.250 * alat), symbols=['Si'])
         self.structure = structure
         # Define the expected reciprocal cell
-        val = 2. * np.pi / alat
+        val = 2.0 * np.pi / alat
         self.expected_reciprocal_cell = np.array([[val, val, -val], [-val, val, val], [val, -val, val]])
 
     def test_reciprocal_cell(self):
-        """
-        Test the `reciprocal_cell` method.
+        """Test the `reciprocal_cell` method.
 
         This is a regression test for #2749.
         """
         kpt = KpointsData()
         kpt.set_cell_from_structure(self.structure)
 
-        assert np.abs(kpt.reciprocal_cell - self.expected_reciprocal_cell).sum() == 0.
+        assert np.abs(kpt.reciprocal_cell - self.expected_reciprocal_cell).sum() == 0.0
 
         # Check also after storing
         kpt.store()
         kpt2 = load_node(kpt.pk)
-        assert np.abs(kpt2.reciprocal_cell - self.expected_reciprocal_cell).sum() == 0.
+        assert np.abs(kpt2.reciprocal_cell - self.expected_reciprocal_cell).sum() == 0.0
 
     def test_get_kpoints(self):
         """Test the `get_kpoints` method."""
@@ -63,21 +64,21 @@ class TestKpoints:
         kpt.set_cell_from_structure(self.structure)
 
         kpoints = [
-            [0., 0., 0.],
+            [0.0, 0.0, 0.0],
             [0.5, 0.5, 0.5],
         ]
 
         cartesian_kpoints = [
-            [0., 0., 0.],
+            [0.0, 0.0, 0.0],
             [np.pi / self.alat, np.pi / self.alat, np.pi / self.alat],
         ]
 
         kpt.set_kpoints(kpoints)
-        assert np.abs(kpt.get_kpoints() - np.array(kpoints)).sum() == 0.
-        assert np.abs(kpt.get_kpoints(cartesian=True) - np.array(cartesian_kpoints)).sum() == 0.
+        assert np.abs(kpt.get_kpoints() - np.array(kpoints)).sum() == 0.0
+        assert np.abs(kpt.get_kpoints(cartesian=True) - np.array(cartesian_kpoints)).sum() == 0.0
 
         # Check also after storing
         kpt.store()
         kpt2 = load_node(kpt.pk)
-        assert np.abs(kpt2.get_kpoints() - np.array(kpoints)).sum() == 0.
-        assert np.abs(kpt2.get_kpoints(cartesian=True) - np.array(cartesian_kpoints)).sum() == 0.
+        assert np.abs(kpt2.get_kpoints() - np.array(kpoints)).sum() == 0.0
+        assert np.abs(kpt2.get_kpoints(cartesian=True) - np.array(cartesian_kpoints)).sum() == 0.0

@@ -7,16 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=missing-docstring
-"""
-Unittests for aiida.common.hashing:make_hash with hardcoded hash values
+"""Unittests for aiida.common.hashing:make_hash with hardcoded hash values
 """
 import collections
-from datetime import datetime
-from decimal import Decimal
 import hashlib
 import itertools
 import uuid
+from datetime import datetime
+from decimal import Decimal
 
 import numpy as np
 import pytest
@@ -30,9 +28,7 @@ from aiida.orm import Dict
 
 
 class TestFloatToTextTest:
-    """
-    Tests for the float_to_text methods
-    """
+    """Tests for the float_to_text methods"""
 
     def test_subnormal(self):
         assert float_to_text(-0.00, sig=2) == '0'  # 0 is always printed as '0'
@@ -42,31 +38,32 @@ class TestFloatToTextTest:
 
 
 @pytest.mark.parametrize(
-    'value,digest', [
+    'value,digest',
+    [
         ('something in ASCII', '06e87857590c91280d25e02f05637cd2381002bd1425dff3e36ca860bbb26a29'),
         (42, '9468692328de958d7a8039e8a2eb05cd6888b7911bbc3794d0dfebd8df3482cd'),
         (3.141, 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be'),
         (complex(1, 2), '287c6bb18d4fb00fd5f3a6fb6931a85cd8ae4b1f43be4707a76964fbc322872e'),
         (True, '31ad5fa163a0c478d966c7f7568f3248f0c58d294372b2e8f7cb0560d8c8b12f'),
         (None, '1729486cc7e56a6383542b1ec73125ccb26093651a5da05e04657ac416a74b8f'),
-    ]
+    ],
 )
 def test_builtin_types(value, digest):
     assert make_hash(value) == digest
 
 
 class TestMakeHashTest:
-    """
-    Tests for the make_hash function.
-    """
+    """Tests for the make_hash function."""
 
     def test_unicode_string(self):
-        assert make_hash(
-            'something still in ASCII'
-        ) == 'd55e492596cf214d877e165cdc3394f27e82e011838474f5ba5b9824074b9e91'
+        assert (
+            make_hash('something still in ASCII') == 'd55e492596cf214d877e165cdc3394f27e82e011838474f5ba5b9824074b9e91'
+        )
 
-        assert make_hash('öpis mit Umluut wie ä, ö, ü und emene ß') == \
-            'c404bf9a62cba3518de5c2bae8c67010aff6e4051cce565fa247a7f1d71f1fc7'
+        assert (
+            make_hash('öpis mit Umluut wie ä, ö, ü und emene ß')
+            == 'c404bf9a62cba3518de5c2bae8c67010aff6e4051cce565fa247a7f1d71f1fc7'
+        )
 
     def test_collection_with_ordered_sets(self):
         assert make_hash((1, 2, 3)) == 'b6b13d50e3bee7e58371af2b303f629edf32d1be2f7717c9d14193b4b8b23e04'
@@ -87,37 +84,56 @@ class TestMakeHashTest:
         assert make_hash({'a': 'b', 'c': 'd'}) == '656ef313d44684c44977b0c75f48f27a43686c63ae44c8778ea0fe05f629b3b9'
 
         # order changes in dictionaries should give the same hashes
-        assert make_hash(collections.OrderedDict([('c', 'd'), ('a', 'b')]), odict_as_unordered=True) == \
-            make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')]), odict_as_unordered=True)
+        assert make_hash(collections.OrderedDict([('c', 'd'), ('a', 'b')]), odict_as_unordered=True) == make_hash(
+            collections.OrderedDict([('a', 'b'), ('c', 'd')]), odict_as_unordered=True
+        )
 
     def test_collection_with_odicts(self):
         # ordered dicts should always give a different hash (because they are a different type), unless told otherwise:
         assert make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')])) != make_hash(dict([('a', 'b'), ('c', 'd')]))
-        assert make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')]), odict_as_unordered=True) == \
-            make_hash(dict([('a', 'b'), ('c', 'd')]))
+        assert make_hash(collections.OrderedDict([('a', 'b'), ('c', 'd')]), odict_as_unordered=True) == make_hash(
+            dict([('a', 'b'), ('c', 'd')])
+        )
 
     def test_nested_collections(self):
-        obj_a = collections.OrderedDict([
-            ('3', 4),
-            (3, 4),
-            ('a', {
-                '1': 'hello',
-                2: 'goodbye',
-                1: 'here',
-            }),
-            ('b', 4),
-            ('c', set([2, '5', 'a', 'b', 5])),
-        ])
+        obj_a = collections.OrderedDict(
+            [
+                ('3', 4),
+                (3, 4),
+                (
+                    'a',
+                    {
+                        '1': 'hello',
+                        2: 'goodbye',
+                        1: 'here',
+                    },
+                ),
+                ('b', 4),
+                ('c', set([2, '5', 'a', 'b', 5])),
+            ]
+        )
 
-        obj_b = collections.OrderedDict([('c', set([2, 'b', 5, 'a', '5'])), ('b', 4),
-                                         ('a', {
-                                             2: 'goodbye',
-                                             1: 'here',
-                                             '1': 'hello',
-                                         }), ('3', 4), (3, 4)])
+        obj_b = collections.OrderedDict(
+            [
+                ('c', set([2, 'b', 5, 'a', '5'])),
+                ('b', 4),
+                (
+                    'a',
+                    {
+                        2: 'goodbye',
+                        1: 'here',
+                        '1': 'hello',
+                    },
+                ),
+                ('3', 4),
+                (3, 4),
+            ]
+        )
 
-        assert make_hash(obj_a, odict_as_unordered=True) == \
-            'e27bf6081c23afcb3db0ee3a24a64c73171c062c7f227fecc7f17189996add44'
+        assert (
+            make_hash(obj_a, odict_as_unordered=True)
+            == 'e27bf6081c23afcb3db0ee3a24a64c73171c062c7f227fecc7f17189996add44'
+        )
         assert make_hash(obj_a, odict_as_unordered=True) == make_hash(obj_b, odict_as_unordered=True)
 
     def test_bytes(self):
@@ -131,18 +147,24 @@ class TestMakeHashTest:
 
     def test_datetime(self):
         # test for timezone-naive datetime:
-        assert make_hash(
-            datetime(2018, 8, 18, 8, 18)
-        ) == '714138f1114daa5fdc74c3483260742952b71b568d634c6093bb838afad76646'
-        assert make_hash(
-            datetime.utcfromtimestamp(0)
-        ) == 'b4d97d9d486937775bcc25a5cba073f048348c3cd93d4460174a4f72a6feb285'
+        assert (
+            make_hash(datetime(2018, 8, 18, 8, 18))
+            == '714138f1114daa5fdc74c3483260742952b71b568d634c6093bb838afad76646'
+        )
+        assert (
+            make_hash(datetime.utcfromtimestamp(0))
+            == 'b4d97d9d486937775bcc25a5cba073f048348c3cd93d4460174a4f72a6feb285'
+        )
 
         # test with timezone-aware datetime:
-        assert make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=timezone_from_name('US/Eastern'))) == \
-            '194478834b3b8bd0518cf6ca6fefacc13bea15f9c0b8f5d585a0adf2ebbd562f'
-        assert make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=timezone_from_name('Europe/Amsterdam'))) == \
-            'be7c7c7faaff07d796db4cbef4d3d07ed29fdfd4a38c9aded00a4c2da2b89b9c'
+        assert (
+            make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=timezone_from_name('US/Eastern')))
+            == '194478834b3b8bd0518cf6ca6fefacc13bea15f9c0b8f5d585a0adf2ebbd562f'
+        )
+        assert (
+            make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=timezone_from_name('Europe/Amsterdam')))
+            == 'be7c7c7faaff07d796db4cbef4d3d07ed29fdfd4a38c9aded00a4c2da2b89b9c'
+        )
 
     def test_datetime_precision_hashing(self):
         dt_prec = DatetimePrecision(datetime(2018, 8, 18, 8, 18), 10)
@@ -151,21 +173,20 @@ class TestMakeHashTest:
         assert make_hash(dt_prec_utc) == '8c756ee99eaf9655bb00166839b9d40aa44eac97684b28f6e3c07d4331ae644e'
 
     def test_numpy_types(self):
-        assert make_hash(np.float64(3.141)) == 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be'  # pylint: disable=no-member
-        assert make_hash(np.int64(42)) == '9468692328de958d7a8039e8a2eb05cd6888b7911bbc3794d0dfebd8df3482cd'  # pylint: disable=no-member
+        assert make_hash(np.float64(3.141)) == 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be'
+        assert make_hash(np.int64(42)) == '9468692328de958d7a8039e8a2eb05cd6888b7911bbc3794d0dfebd8df3482cd'
 
     def test_decimal(self):
-        assert make_hash(Decimal('3.141')) == 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be'  # pylint: disable=no-member
+        assert make_hash(Decimal('3.141')) == 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be'
 
         # make sure we get the same hashes as for corresponding float or int
-        assert make_hash(Decimal('3.141')) == make_hash(3.141)  # pylint: disable=no-member
+        assert make_hash(Decimal('3.141')) == make_hash(3.141)
 
-        assert make_hash(Decimal('3.')) == make_hash(3)  # pylint: disable=no-member
+        assert make_hash(Decimal('3.')) == make_hash(3)
 
-        assert make_hash(Decimal('3141')) == make_hash(3141)  # pylint: disable=no-member
+        assert make_hash(Decimal('3141')) == make_hash(3141)
 
     def test_unhashable_type(self):
-
         class MadeupClass:
             pass
 
@@ -204,14 +225,11 @@ class TestMakeHashTest:
 
 
 class TestCheckDBRoundTrip:
-    """
-    Check that the hash does not change after a roundtrip via the DB.
-    """
+    """Check that the hash does not change after a roundtrip via the DB."""
 
     @staticmethod
     def test_attribute_storing():
-        """
-        I test that when storing different types of data as attributes (using a dict), the hash is the
+        """I test that when storing different types of data as attributes (using a dict), the hash is the
         same before and after storing.
         """
         test_data = [
@@ -226,19 +244,16 @@ class TestCheckDBRoundTrip:
             True,
             False,
             None,
-            np.array([1., 2., 3.2]),  # This will be converted to a list internally by clean_value
+            np.array([1.0, 2.0, 3.2]),  # This will be converted to a list internally by clean_value
             ['a', True, 4.322],
-            {
-                'a': 33,
-                'b': 6.433453
-            }
+            {'a': 33, 'b': 6.433453},
         ]
         # This will run across the edge where floats become integer (see discussion in the clean_value function),
         # they should so something like:
         # 9.5e+13, 9.6e+13, 9.7e+13, 9.8e+13, 9.9e+13, 100000000000000, 101000000000000, 102000000000000,
         # 103000000000000, 104000000000000
         for i in range(10):
-            test_data.append(9.5e13 + 1.e12 * i)
+            test_data.append(9.5e13 + 1.0e12 * i)
 
         for val in test_data:
             node = Dict(dict={'data': val})

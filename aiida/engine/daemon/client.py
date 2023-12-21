@@ -80,7 +80,7 @@ def get_daemon_client(profile_name: str | None = None) -> 'DaemonClient':
     return DaemonClient(profile)
 
 
-class DaemonClient:  # pylint: disable=too-many-public-methods
+class DaemonClient:
     """Client to interact with the daemon."""
 
     _DAEMON_NAME = 'aiida-{name}'
@@ -239,7 +239,6 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
             except (ValueError, IOError):
                 raise RuntimeError('daemon is running so sockets file should have been there but could not read it')
         else:
-
             # The SOCKET_DIRECTORY is already set, a temporary directory was already created and the same should be used
             if self._socket_directory is not None:
                 return self._socket_directory
@@ -519,7 +518,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         timeout = timeout or self._daemon_timeout
 
         try:
-            subprocess.check_output(command, env=env, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
+            subprocess.check_output(command, env=env, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exception:
             raise DaemonException('The daemon failed to start.') from exception
 
@@ -647,7 +646,6 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         start_time = time.time()
 
         while not condition():
-
             time.sleep(interval)
 
             if time.time() - start_time > timeout:
@@ -687,23 +685,25 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
             'debug': False,
             'statsd': True,
             'pidfile': self.circus_pid_file,
-            'watchers': [{
-                'cmd': ' '.join(self.cmd_start_daemon_worker),
-                'name': self.daemon_name,
-                'numprocesses': number_workers,
-                'virtualenv': self.virtualenv,
-                'copy_env': True,
-                'stdout_stream': {
-                    'class': 'FileStream',
-                    'filename': self.daemon_log_file,
-                },
-                'stderr_stream': {
-                    'class': 'FileStream',
-                    'filename': self.daemon_log_file,
-                },
-                'env': self.get_env(),
-            }]
-        }  # yapf: disable
+            'watchers': [
+                {
+                    'cmd': ' '.join(self.cmd_start_daemon_worker),
+                    'name': self.daemon_name,
+                    'numprocesses': number_workers,
+                    'virtualenv': self.virtualenv,
+                    'copy_env': True,
+                    'stdout_stream': {
+                        'class': 'FileStream',
+                        'filename': self.daemon_log_file,
+                    },
+                    'stderr_stream': {
+                        'class': 'FileStream',
+                        'filename': self.daemon_log_file,
+                    },
+                    'env': self.get_env(),
+                }
+            ],
+        }
 
         if not foreground:
             daemonize()
@@ -724,10 +724,10 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
                 future = arbiter.start()
                 should_restart = False
                 if check_future_exception_and_log(future) is None:
-                    should_restart = arbiter._restarting  # pylint: disable=protected-access
+                    should_restart = arbiter._restarting
             except Exception as exception:
                 # Emergency stop
-                arbiter.loop.run_sync(arbiter._emergency_stop)  # pylint: disable=protected-access
+                arbiter.loop.run_sync(arbiter._emergency_stop)
                 raise exception
             except KeyboardInterrupt:
                 pass

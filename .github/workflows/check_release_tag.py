@@ -14,8 +14,11 @@ def get_version_from_module(content: str) -> str:
         raise IOError(f'Unable to parse module: {exc}')
     try:
         return next(
-            ast.literal_eval(statement.value) for statement in module.body if isinstance(statement, ast.Assign)
-            for target in statement.targets if isinstance(target, ast.Name) and target.id == '__version__'
+            ast.literal_eval(statement.value)
+            for statement in module.body
+            if isinstance(statement, ast.Assign)
+            for target in statement.targets
+            if isinstance(target, ast.Name) and target.id == '__version__'
         )
     except StopIteration:
         raise IOError('Unable to find __version__ in module')

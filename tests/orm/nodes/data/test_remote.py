@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :mod:`aiida.orm.nodes.data.remote.base.RemoteData` module."""
 import pytest
 
@@ -29,6 +28,6 @@ def test_clean(remote_data):
     assert not remote_data.is_empty
     assert not remote_data.is_cleaned
 
-    remote_data._clean()  #  pylint: disable=protected-access
+    remote_data._clean()
     assert remote_data.is_empty
     assert remote_data.is_cleaned

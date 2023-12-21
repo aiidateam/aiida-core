@@ -100,9 +100,8 @@ INVALID_LINK_SELECT_STATEMENTS = (
 def migrate_infer_calculation_entry_point(alembic_op):
     """Set the process type for calculation nodes by inferring it from their type string."""
     connection = alembic_op.get_bind()
-    DbNode = table(  # pylint: disable=invalid-name
-        'db_dbnode', column('id', Integer), column('uuid', UUID), column('type', String),
-        column('process_type', String)
+    DbNode = table(  # noqa: N806
+        'db_dbnode', column('id', Integer), column('uuid', UUID), column('type', String), column('process_type', String)
     )
 
     query_set = connection.execute(select(DbNode.c.type).where(DbNode.c.type.like('calculation.%'))).fetchall()
@@ -112,7 +111,6 @@ def migrate_infer_calculation_entry_point(alembic_op):
     fallback_cases = []
 
     for type_string, entry_point_string in mapping_node_type_to_entry_point.items():
-
         # If the entry point string does not contain the entry point string separator, the mapping function was not able
         # to map the type string onto a known entry point string. As a fallback it uses the modified type string itself.
         # All affected entries should be logged to file that the user can consult.
@@ -126,8 +124,9 @@ def migrate_infer_calculation_entry_point(alembic_op):
                 fallback_cases.append([uuid, type_string, entry_point_string])
 
         connection.execute(
-            DbNode.update().where(DbNode.c.type == alembic_op.inline_literal(type_string)
-                                  ).values(process_type=alembic_op.inline_literal(entry_point_string))
+            DbNode.update()
+            .where(DbNode.c.type == alembic_op.inline_literal(type_string))
+            .values(process_type=alembic_op.inline_literal(entry_point_string))
         )
 
     if fallback_cases:

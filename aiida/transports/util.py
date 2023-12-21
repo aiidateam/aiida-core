@@ -17,11 +17,11 @@ from aiida.common.extendeddicts import FixedFieldsAttributeDict
 
 
 class FileAttribute(FixedFieldsAttributeDict):
-    """
-    A class, resembling a dictionary, to describe the attributes of a file,
+    """A class, resembling a dictionary, to describe the attributes of a file,
     that is returned by get_attribute().
     Possible keys: st_size, st_uid, st_gid, st_mode, st_atime, st_mtime
     """
+
     _valid_fields = (
         'st_size',
         'st_uid',
@@ -35,13 +35,13 @@ class FileAttribute(FixedFieldsAttributeDict):
 class _DetachedProxyCommand(ProxyCommand):
     """Modifies paramiko's ProxyCommand by launching the process in a separate process group."""
 
-    def __init__(self, command_line):  # pylint: disable=super-init-not-called
+    def __init__(self, command_line):
         # Note that the super().__init__ MUST NOT be called here, otherwise two subprocesses will be created.
         from shlex import split as shlsplit
         from subprocess import PIPE, Popen
 
         self.cmd = shlsplit(command_line)
-        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, start_new_session=True)  # pylint: disable=consider-using-with
+        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, start_new_session=True)
         self.timeout = None
 
     def close(self):
@@ -67,8 +67,7 @@ class _DetachedProxyCommand(ProxyCommand):
 
 
 def copy_from_remote_to_remote(transportsource, transportdestination, remotesource, remotedestination, **kwargs):
-    """
-    Copy files or folders from a remote computer to another remote computer.
+    """Copy files or folders from a remote computer to another remote computer.
 
     :param transportsource: transport to be used for the source computer
     :param transportdestination: transport to be used for the destination computer

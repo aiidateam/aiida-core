@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Calculations provided by aiida_diff tutorial plugin.
+"""Calculations provided by aiida_diff tutorial plugin.
 
 Register calculations via the "aiida.calculations" entry point in the pyproject.toml file.
 """
@@ -10,8 +9,7 @@ from aiida.orm import SinglefileData
 
 
 class DiffCalculation(CalcJob):
-    """
-    AiiDA calculation plugin wrapping the diff executable.
+    """AiiDA calculation plugin wrapping the diff executable.
 
     Simple AiiDA plugin wrapper for 'diffing' two files.
     """
@@ -19,7 +17,6 @@ class DiffCalculation(CalcJob):
     @classmethod
     def define(cls, spec):
         """Define inputs and outputs of the calculation."""
-        # yapf: disable
         super(DiffCalculation, cls).define(spec)
 
         # new ports
@@ -29,18 +26,17 @@ class DiffCalculation(CalcJob):
 
         spec.input('metadata.options.output_filename', valid_type=str, default='patch.diff')
         spec.inputs['metadata']['options']['resources'].default = {
-                                            'num_machines': 1,
-                                            'num_mpiprocs_per_machine': 1,
-                                            }
+            'num_machines': 1,
+            'num_mpiprocs_per_machine': 1,
+        }
         spec.inputs['metadata']['options']['parser_name'].default = 'diff-tutorial'
 
-        spec.exit_code(300, 'ERROR_MISSING_OUTPUT_FILES',
-                message='Calculation did not produce all expected output files.')
-
+        spec.exit_code(
+            300, 'ERROR_MISSING_OUTPUT_FILES', message='Calculation did not produce all expected output files.'
+        )
 
     def prepare_for_submission(self, folder):
-        """
-        Create input files.
+        """Create input files.
 
         :param folder: an `aiida.common.folders.Folder` where the plugin should temporarily place all files needed by
             the calculation.

@@ -201,10 +201,7 @@ class JobsList:
 
     @staticmethod
     def _has_job_state_changed(old: Optional['JobInfo'], new: Optional['JobInfo']) -> bool:
-        """Return whether the states `old` and `new` are different.
-
-
-        """
+        """Return whether the states `old` and `new` are different."""
         if old is None and new is None:
             return False
 
@@ -225,13 +222,13 @@ class JobsList:
         """
         if self.last_updated is None:
             # Never updated, so do it straight away
-            return 0.
+            return 0.0
 
         # Make sure to actually 'get' the minimum interval here, in case the user changed since last time
         minimum_interval = self.get_minimum_update_interval()
         elapsed = time.time() - self.last_updated
 
-        delay = max(minimum_interval - elapsed, 0.)
+        delay = max(minimum_interval - elapsed, 0.0)
 
         return delay
 

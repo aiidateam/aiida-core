@@ -49,44 +49,24 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
 
     @overload
     def open(
-        self,
-        path: Union[str, Path],
-        mode: Literal['r'],
-        *,
-        compression: int = 6,
-        **kwargs: Any
+        self, path: Union[str, Path], mode: Literal['r'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveReaderSqlZip:
         ...
 
     @overload
     def open(
-        self,
-        path: Union[str, Path],
-        mode: Literal['x', 'w'],
-        *,
-        compression: int = 6,
-        **kwargs: Any
+        self, path: Union[str, Path], mode: Literal['x', 'w'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveWriterSqlZip:
         ...
 
     @overload
     def open(
-        self,
-        path: Union[str, Path],
-        mode: Literal['a'],
-        *,
-        compression: int = 6,
-        **kwargs: Any
+        self, path: Union[str, Path], mode: Literal['a'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveAppenderSqlZip:
         ...
 
     def open(
-        self,
-        path: Union[str, Path],
-        mode: Literal['r', 'x', 'w', 'a'] = 'r',
-        *,
-        compression: int = 6,
-        **kwargs: Any
+        self, path: Union[str, Path], mode: Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: Any
     ) -> Union[ArchiveReaderSqlZip, ArchiveWriterSqlZip, ArchiveAppenderSqlZip]:
         if mode == 'r':
             return ArchiveReaderSqlZip(path, **kwargs)
@@ -101,7 +81,7 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
         version: str,
         *,
         force: bool = False,
-        compression: int = 6
+        compression: int = 6,
     ) -> None:
         """Migrate an archive to a specific version.
 

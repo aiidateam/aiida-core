@@ -13,9 +13,7 @@ from aiida.engine import WorkChain
 
 
 class BrokenDemoWorkChain(WorkChain):
-    """
-    A demo workchain that raises when its spec is built.
-    """
+    """A demo workchain that raises when its spec is built."""
 
     @classmethod
     def define(cls, spec):

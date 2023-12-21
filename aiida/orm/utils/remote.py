@@ -14,8 +14,7 @@ from aiida.orm.nodes.data.remote.base import RemoteData
 
 
 def clean_remote(transport, path):
-    """
-    Recursively remove a remote folder, with the given absolute path, and all its contents. The path should be
+    """Recursively remove a remote folder, with the given absolute path, and all its contents. The path should be
     made accessible through the transport channel, which should already be open
 
     :param transport: an open Transport channel
@@ -39,7 +38,7 @@ def clean_remote(transport, path):
         pass
 
 
-def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
+def get_calcjob_remote_paths(
     pks=None,
     past_days=None,
     older_than=None,
@@ -49,8 +48,7 @@ def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
     exit_status=None,
     only_not_cleaned=False,
 ):
-    """
-    Return a mapping of computer uuids to a list of remote paths, for a given set of calcjobs. The set of
+    """Return a mapping of computer uuids to a list of remote paths, for a given set of calcjobs. The set of
     calcjobs will be determined by a query with filters based on the pks, past_days, older_than,
     computers and user arguments.
 
@@ -63,7 +61,6 @@ def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
     :param only_not_cleaned: only include calcjobs whose workdir have not been cleaned
     :return: mapping of computer uuid and list of remote folder
     """
-    # pylint: disable=too-many-branches
     from datetime import timedelta
 
     from aiida import orm
@@ -102,15 +99,10 @@ def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
         filters_calc['id'] = {'in': pks}
 
     if only_not_cleaned is True:
-        filters_remote['or'] = [{
-            f'extras.{RemoteData.KEY_EXTRA_CLEANED}': {
-                '!==': True
-            }
-        }, {
-            'extras': {
-                '!has_key': RemoteData.KEY_EXTRA_CLEANED
-            }
-        }]
+        filters_remote['or'] = [
+            {f'extras.{RemoteData.KEY_EXTRA_CLEANED}': {'!==': True}},
+            {'extras': {'!has_key': RemoteData.KEY_EXTRA_CLEANED}},
+        ]
 
     query = orm.QueryBuilder(backend=backend)
     query.append(CalcJobNode, tag='calc', filters=filters_calc)

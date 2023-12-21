@@ -13,8 +13,7 @@ import warnings
 
 
 class AiidaDeprecationWarning(Warning):
-    """
-    Class for AiiDA deprecations.
+    """Class for AiiDA deprecations.
 
     It does *not* inherit, on purpose, from `DeprecationWarning` as
     this would be filtered out by default.
@@ -25,15 +24,11 @@ class AiidaDeprecationWarning(Warning):
 
 
 class AiidaEntryPointWarning(Warning):
-    """
-    Class for warnings concerning AiiDA entry points.
-    """
+    """Class for warnings concerning AiiDA entry points."""
 
 
 class AiidaTestWarning(Warning):
-    """
-    Class for warnings concerning the AiiDA testing infrastructure.
-    """
+    """Class for warnings concerning the AiiDA testing infrastructure."""
 
 
 def warn_deprecation(message: str, version: int, stacklevel=2) -> None:

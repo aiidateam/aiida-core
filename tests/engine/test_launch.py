@@ -18,7 +18,7 @@ from aiida.common import exceptions
 from aiida.engine import CalcJob, Process, WorkChain, calcfunction, launch
 from aiida.plugins import CalculationFactory
 
-ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 @calcfunction
@@ -116,9 +116,8 @@ class TestLaunchers:
     """Class to test process launchers."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
         self.term_a = orm.Int(1)
         self.term_b = orm.Int(2)
@@ -196,10 +195,10 @@ class TestLaunchersDryRun:
     """Test the launchers when performing a dry-run."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         from aiida.common.folders import CALC_JOB_DRY_RUN_BASE_PATH
+
         assert Process.current() is None
         self.computer = aiida_localhost
         self.code = orm.InstalledCode(
@@ -211,7 +210,7 @@ class TestLaunchersDryRun:
         filepath = os.path.join(os.getcwd(), CALC_JOB_DRY_RUN_BASE_PATH)
         try:
             shutil.rmtree(filepath)
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             pass
 
     def test_launchers_dry_run(self):
@@ -220,15 +219,7 @@ class TestLaunchersDryRun:
             'code': self.code,
             'x': orm.Int(1),
             'y': orm.Int(1),
-            'metadata': {
-                'dry_run': True,
-                'options': {
-                    'resources': {
-                        'num_machines': 1,
-                        'num_mpiprocs_per_machine': 1
-                    }
-                }
-            }
+            'metadata': {'dry_run': True, 'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}},
         }
 
         result = launch.run(ArithmeticAddCalculation, **inputs)
@@ -257,13 +248,8 @@ class TestLaunchersDryRun:
             'metadata': {
                 'dry_run': True,
                 'store_provenance': False,
-                'options': {
-                    'resources': {
-                        'num_machines': 1,
-                        'num_mpiprocs_per_machine': 1
-                    }
-                }
-            }
+                'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}},
+            },
         }
 
         result = launch.run(ArithmeticAddCalculation, **inputs)
@@ -312,13 +298,8 @@ class TestLaunchersDryRun:
             'metadata': {
                 'dry_run': True,
                 'store_provenance': False,
-                'options': {
-                    'resources': {
-                        'num_machines': 1,
-                        'num_mpiprocs_per_machine': 1
-                    }
-                }
-            }
+                'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}},
+            },
         }
 
         _, node = launch.run_get_node(FileCalcJob, **inputs)

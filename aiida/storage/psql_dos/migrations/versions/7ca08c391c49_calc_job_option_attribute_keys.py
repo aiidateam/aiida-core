@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Migration of ProcessNode attributes for metadata options whose key changed.
 
 Revision ID: 7ca08c391c49

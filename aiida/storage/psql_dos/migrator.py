@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods
 """Schema validation and migration utilities.
 
 This code interacts directly with the database, outside of the ORM,
@@ -52,7 +51,7 @@ Database schema version `{schema_version_database}` is incompatible with the req
 To migrate the database schema version to the current one, run the following command:
 
     verdi -p {profile_name} storage migrate
-"""
+"""  # noqa: E501
 
 ALEMBIC_REL_PATH = 'migrations'
 
@@ -160,7 +159,7 @@ class PsqlDosMigrator:
                 TEMPLATE_INVALID_SCHEMA_VERSION.format(
                     schema_version_database=schema_version_database,
                     schema_version_code=schema_version_code,
-                    profile_name=self.profile.name
+                    profile_name=self.profile.name,
                 )
             )
 
@@ -174,7 +173,7 @@ class PsqlDosMigrator:
         if database_repository_uuid != repository_uuid:
             raise exceptions.CorruptStorage(
                 f'The database has a repository UUID configured to {database_repository_uuid} '
-                f'but the disk-objectstore\'s is {repository_uuid}.'
+                f"but the disk-objectstore's is {repository_uuid}."
             )
 
     def get_container(self) -> 'Container':
@@ -256,9 +255,8 @@ class PsqlDosMigrator:
 
         :returns: ``True`` if the database is initialised, ``False`` otherwise.
         """
-        return (
-            inspect(self.connection).has_table(self.alembic_version_tbl_name) or
-            inspect(self.connection).has_table(self.django_version_table.name)
+        return inspect(self.connection).has_table(self.alembic_version_tbl_name) or inspect(self.connection).has_table(
+            self.django_version_table.name
         )
 
     def reset_repository(self) -> None:
@@ -267,6 +265,7 @@ class PsqlDosMigrator:
         This will also destroy the configuration and so in order to use it again, it will have to be reinitialised.
         """
         import shutil
+
         try:
             shutil.rmtree(self.get_container().get_folder())
         except FileNotFoundError:
@@ -282,6 +281,7 @@ class PsqlDosMigrator:
     def initialise_repository(self) -> None:
         """Initialise the repository."""
         from aiida.storage.psql_dos.backend import CONTAINER_DEFAULTS
+
         container = self.get_container()
         container.init_container(clear=True, **CONTAINER_DEFAULTS)
 
@@ -322,7 +322,6 @@ class PsqlDosMigrator:
         exclude_tables = exclude_tables or []
 
         if inspect(self.connection).has_table(self.alembic_version_tbl_name):
-
             metadata = MetaData()
             metadata.reflect(bind=self.connection)
 
@@ -382,7 +381,7 @@ class PsqlDosMigrator:
                 self.migrate_up('sqlalchemy@head')
             # now re-stamp with the comparable revision on the main branch
             with self._migration_context() as context:
-                context._ensure_version_table(purge=True)  # pylint: disable=protected-access
+                context._ensure_version_table(purge=True)
                 context.stamp(context.script, 'main_0001')
                 self.connection.commit()
 
@@ -428,15 +427,15 @@ class PsqlDosMigrator:
         retrieved, also in the `env.py` file, which is run when the database is migrated.
         """
         config = self._alembic_config()
-        config.attributes['connection'] = self.connection  # pylint: disable=unsupported-assignment-operation
-        config.attributes['aiida_profile'] = self.profile  # pylint: disable=unsupported-assignment-operation
+        config.attributes['connection'] = self.connection
+        config.attributes['aiida_profile'] = self.profile
 
-        def _callback(step: MigrationInfo, **kwargs):  # pylint: disable=unused-argument
+        def _callback(step: MigrationInfo, **kwargs):
             """Callback to be called after a migration step is executed."""
             from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
             MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')
 
-        config.attributes['on_version_apply'] = _callback  # pylint: disable=unsupported-assignment-operation
+        config.attributes['on_version_apply'] = _callback
 
         yield config
 

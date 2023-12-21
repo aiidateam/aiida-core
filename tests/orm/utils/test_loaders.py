@@ -20,9 +20,8 @@ class TestOrmUtils:
     """Test orm utils."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
 
     def test_load_entity(self):
@@ -101,7 +100,6 @@ class TestOrmUtils:
 
     def test_load_computer(self):
         """Test the functionality of load_group."""
-        # pylint: disable=no-member
         computer = self.computer
 
         # Load through label

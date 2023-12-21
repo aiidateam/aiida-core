@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Drop `db_dbnode.nodeversion` and `db_dbnode.public`
 
 This is similar to migration 1830c8430131

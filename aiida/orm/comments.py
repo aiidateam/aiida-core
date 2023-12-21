@@ -11,14 +11,13 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Type
 
-from aiida.common.lang import classproperty
 from aiida.manage import get_manager
 
 from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
-    from aiida.orm.implementation import BackendComment, StorageBackend
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('Comment',)
 
@@ -31,8 +30,7 @@ class CommentCollection(entities.Collection['Comment']):
         return Comment
 
     def delete(self, pk: int) -> None:
-        """
-        Remove a Comment from the collection with the given id
+        """Remove a Comment from the collection with the given id
 
         :param pk: the id of the comment to delete
 
@@ -42,16 +40,14 @@ class CommentCollection(entities.Collection['Comment']):
         self._backend.comments.delete(pk)
 
     def delete_all(self) -> None:
-        """
-        Delete all Comments from the Collection
+        """Delete all Comments from the Collection
 
         :raises `~aiida.common.exceptions.IntegrityError`: if all Comments could not be deleted
         """
         self._backend.comments.delete_all()
 
     def delete_many(self, filters: dict) -> List[int]:
-        """
-        Delete Comments from the Collection based on ``filters``
+        """Delete Comments from the Collection based on ``filters``
 
         :param filters: similar to QueryBuilder filter
 

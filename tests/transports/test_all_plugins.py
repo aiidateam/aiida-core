@@ -7,9 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,fixme,redefined-outer-name
-"""
-This module contains a set of unittest test classes that can be loaded from
+"""This module contains a set of unittest test classes that can be loaded from
 the plugin.
 Every transport plugin should be able to pass all of these common tests.
 Plugin specific tests will be written in the plugin itself.
@@ -49,9 +47,7 @@ def custom_transport(request) -> Transport:
 
 
 class TestBasicFunctionality:
-    """
-    Tests to check basic functionality of transports.
-    """
+    """Tests to check basic functionality of transports."""
 
     def test_is_open(self, custom_transport):
         """Test that the is_open property works."""
@@ -64,14 +60,10 @@ class TestBasicFunctionality:
 
 
 class TestDirectoryManipulation:
-    """
-    Tests to check, create and delete folders.
-    """
+    """Tests to check, create and delete folders."""
 
     def test_makedirs(self, custom_transport):
-        """
-        Verify the functioning of makedirs command
-        """
+        """Verify the functioning of makedirs command"""
         with custom_transport as transport:
             location = transport.normalize(os.path.join('/', 'tmp'))
             directory = 'temp_dir_test'
@@ -106,9 +98,7 @@ class TestDirectoryManipulation:
             transport.rmdir(directory)
 
     def test_rmtree(self, custom_transport):
-        """
-        Verify the functioning of rmtree command
-        """
+        """Verify the functioning of rmtree command"""
         with custom_transport as transport:
             location = transport.normalize(os.path.join('/', 'tmp'))
             directory = 'temp_dir_test'
@@ -145,9 +135,7 @@ class TestDirectoryManipulation:
             transport.rmdir(directory)
 
     def test_listdir(self, custom_transport):
-        """
-        create directories, verify listdir, delete a folder with subfolders
-        """
+        """Create directories, verify listdir, delete a folder with subfolders"""
         with custom_transport as trans:
             # We cannot use tempfile.mkdtemp because we're on a remote folder
             location = trans.normalize(os.path.join('/', 'tmp'))
@@ -187,13 +175,10 @@ class TestDirectoryManipulation:
             trans.rmdir(directory)
 
     def test_listdir_withattributes(self, custom_transport):
-        """
-        create directories, verify listdir_withattributes, delete a folder with subfolders
-        """
+        """Create directories, verify listdir_withattributes, delete a folder with subfolders"""
 
         def simplify_attributes(data):
-            """
-            Take data from listdir_withattributes and return a dictionary
+            """Take data from listdir_withattributes and return a dictionary
             {fname: isdir}
 
             :param data: the output of listdir_withattributes
@@ -231,7 +216,7 @@ class TestDirectoryManipulation:
                 'as': True,
                 'a2': True,
                 'a4f': True,
-                'a': False
+                'a': False,
             }
             assert simplify_attributes(trans.listdir_withattributes('.', 'a?')), {'as': True, 'a2': True}
             assert simplify_attributes(trans.listdir_withattributes('.', 'a[2-4]*')), {'a2': True, 'a4f': True}
@@ -267,8 +252,7 @@ class TestDirectoryManipulation:
             transport.rmdir(directory)
 
     def test_dir_copy(self, custom_transport):
-        """
-        Verify if in the copy of a directory also the protection bits
+        """Verify if in the copy of a directory also the protection bits
         are carried over
         """
         with custom_transport as transport:
@@ -293,9 +277,8 @@ class TestDirectoryManipulation:
             transport.rmdir(directory)
             transport.rmdir(dest_directory)
 
-    def test_dir_permissions_creation_modification(self, custom_transport):  # pylint: disable=invalid-name
-        """
-        verify if chmod raises IOError when trying to change bits on a
+    def test_dir_permissions_creation_modification(self, custom_transport):
+        """Verify if chmod raises IOError when trying to change bits on a
         non-existing folder
         """
         with custom_transport as transport:
@@ -345,8 +328,7 @@ class TestDirectoryManipulation:
             transport.rmdir(directory)
 
     def test_dir_reading_permissions(self, custom_transport):
-        """
-        Try to enter a directory with no read permissions.
+        """Try to enter a directory with no read permissions.
         Verify that the cwd has not changed after failed try.
         """
         with custom_transport as transport:
@@ -382,8 +364,7 @@ class TestDirectoryManipulation:
             # transport.rmdir(directory)
 
     def test_isfile_isdir_to_empty_string(self, custom_transport):
-        """
-        I check that isdir or isfile return False when executed on an
+        """I check that isdir or isfile return False when executed on an
         empty string
         """
         with custom_transport as transport:
@@ -393,8 +374,7 @@ class TestDirectoryManipulation:
             assert not transport.isfile('')
 
     def test_isfile_isdir_to_non_existing_string(self, custom_transport):
-        """
-        I check that isdir or isfile return False when executed on an
+        """I check that isdir or isfile return False when executed on an
         empty string
         """
         with custom_transport as transport:
@@ -407,8 +387,7 @@ class TestDirectoryManipulation:
                 transport.chdir(fake_folder)
 
     def test_chdir_to_empty_string(self, custom_transport):
-        """
-        I check that if I pass an empty string to chdir, the cwd does
+        """I check that if I pass an empty string to chdir, the cwd does
         not change (this is a paramiko default behavior), but getcwd()
         is still correctly defined.
         """
@@ -420,8 +399,7 @@ class TestDirectoryManipulation:
 
 
 class TestPutGetFile:
-    """
-    Test to verify whether the put and get functions behave correctly on files.
+    """Test to verify whether the put and get functions behave correctly on files.
     1) they work
     2) they need abs paths where necessary, i.e. for local paths
     3) they reject empty strings
@@ -459,9 +437,9 @@ class TestPutGetFile:
             list_of_files = transport.listdir('.')
             # it is False because local_file_name has the full path,
             # while list_of_files has not
-            assert not local_file_name in list_of_files
+            assert local_file_name not in list_of_files
             assert remote_file_name in list_of_files
-            assert not retrieved_file_name in list_of_files
+            assert retrieved_file_name not in list_of_files
 
             os.remove(local_file_name)
             transport.remove(remote_file_name)
@@ -471,9 +449,7 @@ class TestPutGetFile:
             transport.rmdir(directory)
 
     def test_put_get_abs_path(self, custom_transport):
-        """
-        test of exception for non existing files and abs path
-        """
+        """Test of exception for non existing files and abs path"""
         local_dir = os.path.join('/', 'tmp')
         remote_dir = local_dir
         directory = 'tmp_try'
@@ -528,9 +504,7 @@ class TestPutGetFile:
             transport.rmdir(directory)
 
     def test_put_get_empty_string(self, custom_transport):
-        """
-        test of exception put/get of empty strings
-        """
+        """Test of exception put/get of empty strings"""
         # TODO : verify the correctness of \n at the end of a file
         local_dir = os.path.join('/', 'tmp')
         remote_dir = local_dir
@@ -601,8 +575,7 @@ class TestPutGetFile:
 
 
 class TestPutGetTree:
-    """
-    Test to verify whether the put and get functions behave correctly on folders.
+    """Test to verify whether the put and get functions behave correctly on folders.
     1) they work
     2) they need abs paths where necessary, i.e. for local paths
     3) they reject empty strings
@@ -615,7 +588,6 @@ class TestPutGetTree:
         directory = 'tmp_try'
 
         with custom_transport as transport:
-
             transport.chdir(remote_dir)
 
             while os.path.exists(os.path.join(local_dir, directory)):
@@ -650,9 +622,9 @@ class TestPutGetTree:
                 list_of_dirs = transport.listdir('.')
                 # # it is False because local_file_name has the full path,
                 # # while list_of_files has not
-                assert not local_subfolder in list_of_dirs
+                assert local_subfolder not in list_of_dirs
                 assert remote_subfolder in list_of_dirs
-                assert not retrieved_subfolder in list_of_dirs
+                assert retrieved_subfolder not in list_of_dirs
                 assert 'tmp1' in list_of_dirs
                 assert 'tmp3' in list_of_dirs
 
@@ -789,7 +761,6 @@ class TestPutGetTree:
 
     def test_put(self, custom_transport):
         """Test putting files."""
-        # pylint: disable=too-many-statements
         # exactly the same tests of copy, just with the put function
         # and therefore the local path must be absolute
         local_dir = os.path.join('/', 'tmp')
@@ -865,7 +836,6 @@ class TestPutGetTree:
 
     def test_get(self, custom_transport):
         """Test getting files."""
-        # pylint: disable=too-many-statements
         # exactly the same tests of copy, just with the put function
         # and therefore the local path must be absolute
         local_dir = os.path.join('/', 'tmp')
@@ -910,8 +880,9 @@ class TestPutGetTree:
             transport.get('local', os.path.join(local_destination, 'prova'))
             assert set(['prova', 'local']) == set(os.listdir(local_destination))
             assert set(['local']) == set(os.listdir(os.path.join(local_destination, 'prova')))
-            assert set(['a.txt', 'b.tmp',
-                        'c.txt']) == set(os.listdir(os.path.join(local_destination, 'prova', 'local')))
+            assert set(['a.txt', 'b.tmp', 'c.txt']) == set(
+                os.listdir(os.path.join(local_destination, 'prova', 'local'))
+            )
             shutil.rmtree(os.path.join(local_destination, 'prova'))
             # third test copy. Can copy one file into a new file
             transport.get(os.path.join('local', '*.tmp'), os.path.join(local_destination, 'prova'))
@@ -942,9 +913,7 @@ class TestPutGetTree:
             transport.rmtree(directory)
 
     def test_put_get_abs_path(self, custom_transport):
-        """
-        test of exception for non existing files and abs path
-        """
+        """Test of exception for non existing files and abs path"""
         local_dir = os.path.join('/', 'tmp')
         remote_dir = local_dir
         directory = 'tmp_try'
@@ -1009,9 +978,7 @@ class TestPutGetTree:
             transport.rmdir(directory)
 
     def test_put_get_empty_string(self, custom_transport):
-        """
-        test of exception put/get of empty strings
-        """
+        """Test of exception put/get of empty strings"""
         # TODO : verify the correctness of \n at the end of a file
         local_dir = os.path.join('/', 'tmp')
         remote_dir = local_dir
@@ -1090,15 +1057,13 @@ class TestPutGetTree:
 
 
 class TestExecuteCommandWait:
-    """
-    Test some simple command executions and stdin/stdout management.
+    """Test some simple command executions and stdin/stdout management.
 
     It also checks for escaping of the folder names.
     """
 
     def test_exec_pwd(self, custom_transport):
-        """
-        I create a strange subfolder with a complicated name and
+        """I create a strange subfolder with a complicated name and
         then see if I can run pwd. This also checks the correct
         escaping of funny characters, both in the directory
         creation (which should be done by paramiko) and in the command
@@ -1108,7 +1073,6 @@ class TestExecuteCommandWait:
         delete_at_end = False
 
         with custom_transport as transport:
-
             # To compare with: getcwd uses the normalized ('realpath') path
             location = transport.normalize('/tmp')
             subfolder = """_'s f"#"""  # A folder with characters to escape
@@ -1208,7 +1172,7 @@ class TestExecuteCommandWait:
             with pytest.raises(ValueError):
                 transport.exec_command_wait('cat', stdin=1)
 
-    def test_transfer_big_stdout(self, custom_transport):  # pylint: disable=too-many-locals
+    def test_transfer_big_stdout(self, custom_transport):
         """Test the transfer of a large amount of data on stdout."""
         # Create a "big" file of > 2MB (10MB here; in general, larger than the buffer size)
         min_file_size_bytes = 5 * 1024 * 1024
@@ -1301,8 +1265,7 @@ for i in range({}):
 
 
 class TestDirectScheduler:
-    """
-    Test how the direct scheduler works.
+    """Test how the direct scheduler works.
 
     While this is technically a scheduler test, I put it under the transport tests
     because 1) in reality I am testing the interaction of each transport with the
@@ -1341,8 +1304,9 @@ class TestDirectScheduler:
                 # SSH connection etc.) and I don't want to have false failures.
                 # Actually, if the time is short, it could mean also that the execution failed!
                 # So I double check later that the execution was successful.
-                assert elapsed_time < 5, \
-                    'Getting back control after remote execution took more than 5 seconds! Probably submission blocks'
+                assert (
+                    elapsed_time < 5
+                ), 'Getting back control after remote execution took more than 5 seconds! Probably submission blocks'
 
                 # Check that the job is still running
                 # Wait 0.2 more seconds, so that I don't do a super-quick check that might return True

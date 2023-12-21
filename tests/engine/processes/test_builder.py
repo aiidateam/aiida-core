@@ -7,13 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=protected-access,no-member,no-name-in-module,redefined-outer-name
 """Tests for `aiida.engine.processes.builder.ProcessBuilder`."""
-from collections.abc import Mapping, MutableMapping
 import textwrap
+from collections.abc import Mapping, MutableMapping
 
-from IPython.lib.pretty import pretty
 import pytest
+from IPython.lib.pretty import pretty
 
 from aiida import orm
 from aiida.common import LinkType
@@ -97,23 +96,14 @@ class MappingData(Mapping, orm.Data):  # type: ignore[misc]
 @pytest.fixture()
 def example_inputs():
     return {
-        'dynamic': {
-            'namespace': {
-                'alp': orm.Int(1).store()
-            }
-        },
+        'dynamic': {'namespace': {'alp': orm.Int(1).store()}},
         'name': {
             'spaced': orm.Int(1).store(),
         },
         'name_spaced': orm.Str('underscored').store(),
-        'dict': orm.Dict({
-            'a': 1,
-            'b': {
-                'c': 2
-            }
-        }),
+        'dict': orm.Dict({'a': 1, 'b': {'c': 2}}),
         'boolean': orm.Bool(True).store(),
-        'metadata': {}
+        'metadata': {},
     }
 
 
@@ -153,7 +143,8 @@ def test_builder_inputs():
 
 
 @pytest.mark.parametrize(
-    'process_class', [
+    'process_class',
+    [
         ExampleWorkChain,
         LazyProcessNamespace,
         SimpleProcessNamespace,
@@ -161,7 +152,7 @@ def test_builder_inputs():
         CalculationFactory('core.templatereplacer'),
         CalculationFactory('core.arithmetic.add'),
         CalculationFactory('core.transfer'),
-    ]
+    ],
 )
 def test_process_builder_attributes(process_class):
     """Check that the builder has all the input ports of the process class as attributes."""
@@ -253,25 +244,26 @@ def test_builder_restart_work_chain(example_inputs):
     assert builder.default == orm.Int(DEFAULT_INT)
 
 
-def test_port_names_overlapping_mutable_mapping_methods():  # pylint: disable=invalid-name
+def test_port_names_overlapping_mutable_mapping_methods():
     """Check that port names take precedence over `collections.MutableMapping` methods.
 
     The `ProcessBuilderNamespace` is a `collections.MutableMapping` but since the port names are made accessible
     as attributes, they can overlap with some of the mappings builtin methods, e.g. `values()`, `items()` etc.
     The port names should take precendence in this case and if one wants to access the mapping methods one needs to
-    cast the builder to a dictionary first."""
+    cast the builder to a dictionary first.
+    """
     builder = ExampleWorkChain.get_builder()
 
     # The `values` method is obscured by a port that also happens to be called `values`, so calling it should raise
     with pytest.raises(TypeError):
-        builder.values()  # pylint: disable=not-callable
+        builder.values()
 
     # However, we can assign a node to it
     builder.values = orm.Int(2)
 
     # Calling the attribute `values` will then actually try to call the node, which should raise
     with pytest.raises(TypeError):
-        builder.values()  # pylint: disable=not-callable
+        builder.values()
 
     # Casting the builder to a dict, *should* then make `values` callable again
     assert orm.Int(2) in dict(builder).values()
@@ -296,13 +288,7 @@ def test_calc_job_node_get_builder_restart(aiida_local_code_factory):
         'metadata': {
             'label': 'some-label',
             'description': 'some-description',
-            'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                },
-                'max_wallclock_seconds': 1800
-            }
+            'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}, 'max_wallclock_seconds': 1800},
         },
         'x': orm.Int(1),
         'y': orm.Int(2),
@@ -323,7 +309,7 @@ def test_code_get_builder(aiida_localhost):
         label='test_code',
         computer=aiida_localhost,
         filepath_executable='/bin/true',
-        default_calc_job_plugin='core.templatereplacer'
+        default_calc_job_plugin='core.templatereplacer',
     )
     code.store()
 
@@ -432,8 +418,7 @@ def test_pretty_repr(example_inputs):
     builder = ExampleWorkChain.get_builder()
     builder._update(example_inputs)
 
-    pretty_repr = \
-    """
+    pretty_repr = """
     Process class: ExampleWorkChain
     Inputs:
     boolean: true

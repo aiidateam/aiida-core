@@ -129,6 +129,6 @@ class FileOrUrl(click.File):
         import urllib.request
 
         try:
-            return urllib.request.urlopen(url, timeout=self.timeout_seconds)  # pylint: disable=consider-using-with
+            return urllib.request.urlopen(url, timeout=self.timeout_seconds)
         except (urllib.error.URLError, urllib.error.HTTPError, socket.timeout):
             self.fail(f'{self.name} "{url}" could not be reached within {self.timeout_seconds} s.\n', param, ctx)

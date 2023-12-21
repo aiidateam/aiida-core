@@ -9,9 +9,9 @@
 ###########################################################################
 """Common variables"""
 import os
-from pathlib import Path
 import shutil
 import tempfile
+from pathlib import Path
 from typing import Callable, Sequence
 
 from archive_path import TarPath, ZipPath
@@ -71,7 +71,7 @@ def copy_zip_to_zip(
     compression: int = 6,
     overwrite: bool = True,
     title: str = 'Writing new zip file',
-    info_order: Sequence[str] = ()
+    info_order: Sequence[str] = (),
 ) -> None:
     """Create a new zip file from an existing zip file.
 
@@ -119,7 +119,7 @@ def copy_tar_to_zip(
     compression: int = 6,
     overwrite: bool = True,
     title: str = 'Writing new zip file',
-    info_order: Sequence[str] = ()
+    info_order: Sequence[str] = (),
 ) -> None:
     """Create a new zip file from an existing tar file.
 
@@ -149,7 +149,7 @@ def copy_tar_to_zip(
                 allow_dev=False,
                 allow_symlink=False,
                 callback=callback,
-                cb_descript=f'{title} (extracting tar)'
+                cb_descript=f'{title} (extracting tar)',
             )
         temp_archive = Path(tmpdirname) / 'archive.zip'
         with ZipPath(temp_archive, mode='w', compresslevel=compression, info_order=info_order) as new_path:

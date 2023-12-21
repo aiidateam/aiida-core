@@ -17,7 +17,7 @@ default installation, additional information needs to be provided.
 """
 from typing import TYPE_CHECKING
 
-from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
+from pgsu import DEFAULT_DSN as DEFAULT_DBINFO
 from pgsu import PGSU, PostgresConnectionMode
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\' {}'
 _DROP_USER_COMMAND = 'DROP USER "{}"'
 _CREATE_DB_COMMAND = (
     'CREATE DATABASE "{}" OWNER "{}" ENCODING \'UTF8\' '
-    'LC_COLLATE=\'en_US.UTF-8\' LC_CTYPE=\'en_US.UTF-8\' '
+    "LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8' "
     'TEMPLATE=template0'
 )
 _DROP_DB_COMMAND = 'DROP DATABASE "{}"'
@@ -39,8 +39,7 @@ _COPY_DB_COMMAND = 'CREATE DATABASE "{}" WITH TEMPLATE "{}" OWNER "{}"'
 
 
 class Postgres(PGSU):
-    """
-    Adds convenience functions to :py:class:`pgsu.PGSU`.
+    """Adds convenience functions to :py:class:`pgsu.PGSU`.
 
     Provides convenience functions for
       * creating/dropping users
@@ -76,7 +75,7 @@ class Postgres(PGSU):
         dbinfo.update(
             dict(
                 host=profile.storage_config['database_hostname'] or DEFAULT_DBINFO['host'],
-                port=profile.storage_config['database_port'] or DEFAULT_DBINFO['port']
+                port=profile.storage_config['database_port'] or DEFAULT_DBINFO['port'],
             )
         )
 
@@ -85,8 +84,7 @@ class Postgres(PGSU):
     ### DB user functions ###
 
     def dbuser_exists(self, dbuser):
-        """
-        Find out if postgres user with name dbuser exists
+        """Find out if postgres user with name dbuser exists
 
         :param str dbuser: database user to check for
         :return: (bool) True if user exists, False otherwise
@@ -94,8 +92,7 @@ class Postgres(PGSU):
         return bool(self.execute(_USER_EXISTS_COMMAND.format(dbuser)))
 
     def create_dbuser(self, dbuser, dbpass, privileges=''):
-        """
-        Create a database user in postgres
+        """Create a database user in postgres
 
         :param str dbuser: Name of the user to be created.
         :param str dbpass: Password the user should be given.
@@ -108,8 +105,7 @@ class Postgres(PGSU):
         self.execute(_GRANT_ROLE_COMMAND.format(dbuser))
 
     def drop_dbuser(self, dbuser):
-        """
-        Drop a database user in postgres
+        """Drop a database user in postgres
 
         :param str dbuser: Name of the user to be dropped.
         """
@@ -141,8 +137,9 @@ class Postgres(PGSU):
         :param dbpass: the database password
         :return: True if the credentials are valid, False otherwise
         """
-        from pgsu import _execute_psyco
         import psycopg2
+        from pgsu import _execute_psyco
+
         dsn = self.dsn.copy()
         dsn['user'] = dbuser
         dsn['password'] = dbpass
@@ -157,8 +154,7 @@ class Postgres(PGSU):
     ### DB functions ###
 
     def db_exists(self, dbname):
-        """
-        Check wether a postgres database with dbname exists
+        """Check wether a postgres database with dbname exists
 
         :param str dbname: Name of the database to check for
         :return: (bool), True if database exists, False otherwise
@@ -166,8 +162,7 @@ class Postgres(PGSU):
         return bool(self.execute(_CHECK_DB_EXISTS_COMMAND.format(dbname)))
 
     def create_db(self, dbuser, dbname):
-        """
-        Create a database in postgres
+        """Create a database in postgres
 
         :param str dbuser: Name of the user which should own the db.
         :param str dbname: Name of the database.
@@ -175,8 +170,7 @@ class Postgres(PGSU):
         self.execute(_CREATE_DB_COMMAND.format(dbname, dbuser))
 
     def drop_db(self, dbname):
-        """
-        Drop a database in postgres
+        """Drop a database in postgres
 
         :param str dbname: Name of the database.
         """
@@ -257,12 +251,14 @@ class Postgres(PGSU):
 def manual_setup_instructions(db_username, db_name):
     """Create a message with instructions for manually creating a database"""
     db_pass = '<password>'
-    instructions = '\n'.join([
-        'Run the following commands as a UNIX user with access to PostgreSQL (Ubuntu: $ sudo su postgres):',
-        '',
-        '\t$ psql template1',
-        f'	==> {_CREATE_USER_COMMAND.format(db_username, db_pass, "")}',
-        f'	==> {_GRANT_ROLE_COMMAND.format(db_username)}',
-        f'	==> {_CREATE_DB_COMMAND.format(db_name, db_username)}',
-    ])
+    instructions = '\n'.join(
+        [
+            'Run the following commands as a UNIX user with access to PostgreSQL (Ubuntu: $ sudo su postgres):',
+            '',
+            '\t$ psql template1',
+            f'	==> {_CREATE_USER_COMMAND.format(db_username, db_pass, "")}',
+            f'	==> {_GRANT_ROLE_COMMAND.format(db_username)}',
+            f'	==> {_CREATE_DB_COMMAND.format(db_name, db_username)}',
+        ]
+    )
     return instructions

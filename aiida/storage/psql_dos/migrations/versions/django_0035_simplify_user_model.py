@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Simplify `db_dbuser`, by dropping unnecessary columns and join tables
 
 These columns were part of the default Django user model

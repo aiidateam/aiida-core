@@ -9,10 +9,10 @@
 ###########################################################################
 """Utilities for this backend."""
 import json
-from pathlib import Path
 import tarfile
-from typing import Any, Dict, Optional, Union
 import zipfile
+from pathlib import Path
+from typing import Any, Dict, Optional, Union
 
 from archive_path import read_file_in_tar, read_file_in_zip
 from sqlalchemy import event
@@ -114,5 +114,5 @@ def read_version(path: Union[str, Path], *, search_limit: Optional[int] = None) 
 class ReadOnlyError(AiidaException):
     """Raised when a write operation is called on a read-only archive."""
 
-    def __init__(self, msg='sqlite_zip storage is read-only'):  # pylint: disable=useless-super-delegation
+    def __init__(self, msg='sqlite_zip storage is read-only'):
         super().__init__(msg)

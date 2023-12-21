@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cyclic-import
 """Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
 import asyncio
 from typing import Optional, Union
@@ -29,7 +28,7 @@ class ProcessFuture(asyncio.Future):
         pk: int,
         loop: Optional[asyncio.AbstractEventLoop] = None,
         poll_interval: Union[None, int, float] = None,
-        communicator: Optional[kiwipy.Communicator] = None
+        communicator: Optional[kiwipy.Communicator] = None,
     ):
         """Construct a future for a process node being finished.
 
@@ -60,7 +59,7 @@ class ProcessFuture(asyncio.Future):
             # Try setting up a filtered broadcast subscriber
             if self._communicator is not None:
 
-                def _subscriber(*args, **kwargs):  # pylint: disable=unused-argument
+                def _subscriber(*args, **kwargs):
                     if not self.done():
                         self.set_result(node)
 

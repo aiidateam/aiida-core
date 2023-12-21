@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :class:`aiida.orm.nodes.data.data:Data` class."""
 import os
 
@@ -20,7 +19,6 @@ from tests.static import STATIC_DIR
 
 @pytest.fixture
 def generate_class_instance():
-    # pylint: disable=too-many-return-statements, too-many-statements
     """Generate a dummy `Data` instance for the given sub class."""
 
     def _generate_class_instance(data_class):
@@ -40,7 +38,7 @@ def generate_class_instance():
         if data_class is orm.BandsData:
             kpoints = orm.KpointsData()
             kpoints.set_cell([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-            kpoints.set_kpoints([[0., 0., 0.], [0.1, 0.1, 0.1]])
+            kpoints.set_kpoints([[0.0, 0.0, 0.0], [0.1, 0.1, 0.1]])
             instance = data_class()
             instance.set_kpointsdata(kpoints)
             instance.set_bands([[1.0, 2.0], [3.0, 4.0]])
@@ -50,8 +48,8 @@ def generate_class_instance():
             instance = data_class()
             stepids = numpy.array([60])
             times = stepids * 0.01
-            cells = numpy.array([[[3., 0., 0.], [0., 3., 0.], [0., 0., 3.]]])
-            positions = numpy.array([[[0., 0., 0.]]])
+            cells = numpy.array([[[3.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 3.0]]])
+            positions = numpy.array([[[0.0, 0.0, 0.0]]])
             instance.set_trajectory(stepids=stepids, cells=cells, symbols=['H'], positions=positions, times=times)
             return instance
 
@@ -82,7 +80,6 @@ def generate_class_instance():
             return instance
 
         if data_class is orm.ProjectionData:
-
             my_real_hydrogen_dict = {
                 'angular_momentum': -3,
                 'diffusivity': None,
@@ -93,16 +90,16 @@ def generate_class_instance():
                 'spin': 0,
                 'spin_orientation': None,
                 'x_orientation': None,
-                'z_orientation': None
+                'z_orientation': None,
             }
             kpoints = orm.KpointsData()
             kpoints.set_cell([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-            kpoints.set_kpoints([[0., 0., 0.]])
+            kpoints.set_kpoints([[0.0, 0.0, 0.0]])
             bands = orm.BandsData()
             bands.set_kpointsdata(kpoints)
             bands.set_bands([[1.0]])
 
-            RealHydrogen = plugins.OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
+            RealHydrogen = plugins.OrbitalFactory('core.realhydrogen')  # noqa: N806
             orbital = RealHydrogen(**my_real_hydrogen_dict)
 
             instance = data_class()
@@ -150,6 +147,6 @@ def test_data_exporters(data_plugin, generate_class_instance):
     instance = generate_class_instance(data_plugin)
 
     for fileformat in export_formats:
-        content, dictionary = instance._exportcontent(fileformat)  # pylint: disable=protected-access
+        content, dictionary = instance._exportcontent(fileformat)
         assert isinstance(content, bytes)
         assert isinstance(dictionary, dict)

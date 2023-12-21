@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Change `db_dbnode.type` for base `Data` types.
 
 The base Data types Bool, Float, Int and Str have been moved in the source code, which means that their

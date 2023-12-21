@@ -7,12 +7,13 @@ from aiida.orm import Int
 def add(x, y):
     return Int(x + y)
 
+
 @calcfunction
 def multiply(x, y):
     return Int(x * y)
 
-class AddAndMultiplyWorkChain(WorkChain):
 
+class AddAndMultiplyWorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)

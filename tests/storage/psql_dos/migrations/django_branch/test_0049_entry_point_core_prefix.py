@@ -82,7 +82,6 @@ def test_entry_point_core_prefix(perform_migrations: PsqlDosMigrator):
     comp_model = perform_migrations.get_current_table('db_dbcomputer')
     node_model = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
-
         computer = session.query(comp_model).filter(comp_model.id == computer_id).one()
         assert computer.scheduler_type == 'core.direct'
         assert computer.transport_type == 'core.local'

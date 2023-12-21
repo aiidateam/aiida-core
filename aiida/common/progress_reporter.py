@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=global-statement,unused-argument
 """Provide a singleton progress reporter implementation.
 
 The interface is inspired by `tqdm <https://github.com/tqdm/tqdm>`,
@@ -22,8 +21,12 @@ from types import TracebackType
 from typing import Any, Callable, Optional, Type
 
 __all__ = (
-    'get_progress_reporter', 'set_progress_reporter', 'set_progress_bar_tqdm', 'ProgressReporterAbstract',
-    'TQDM_BAR_FORMAT', 'create_callback'
+    'get_progress_reporter',
+    'set_progress_reporter',
+    'set_progress_bar_tqdm',
+    'ProgressReporterAbstract',
+    'TQDM_BAR_FORMAT',
+    'create_callback',
 )
 
 TQDM_BAR_FORMAT = '{desc:40.40}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'
@@ -65,7 +68,7 @@ class ProgressReporterAbstract:
         return self._desc
 
     @property
-    def n(self) -> int:  # pylint: disable=invalid-name
+    def n(self) -> int:
         """Return the current iteration."""
         # note using `n` as the attribute name is necessary for compatibility with tqdm
         return self._increment
@@ -89,7 +92,7 @@ class ProgressReporterAbstract:
         """
         self._desc = text
 
-    def update(self, n: int = 1):  # pylint: disable=invalid-name
+    def update(self, n: int = 1):
         """Update the progress counter.
 
         :param n: Increment to add to the internal counter of iterations
@@ -115,7 +118,7 @@ class ProgressReporterNull(ProgressReporterAbstract):
     """
 
 
-PROGRESS_REPORTER: Type[ProgressReporterAbstract] = ProgressReporterNull  # pylint: disable=invalid-name
+PROGRESS_REPORTER: Type[ProgressReporterAbstract] = ProgressReporterNull
 
 
 def get_progress_reporter() -> Type[ProgressReporterAbstract]:
@@ -129,7 +132,7 @@ def get_progress_reporter() -> Type[ProgressReporterAbstract]:
                 progress.update()
 
     """
-    global PROGRESS_REPORTER  # pylint: disable=global-variable-not-assigned
+    global PROGRESS_REPORTER  # noqa: PLW0602
     return PROGRESS_REPORTER
 
 
@@ -152,7 +155,7 @@ def set_progress_reporter(reporter: Optional[Type[ProgressReporterAbstract]] = N
                 progress.update()
 
     """
-    global PROGRESS_REPORTER
+    global PROGRESS_REPORTER  # noqa: PLW0603
     if reporter is None:
         PROGRESS_REPORTER = ProgressReporterNull
     elif kwargs:
@@ -173,6 +176,7 @@ def set_progress_bar_tqdm(bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Op
 
     """
     from tqdm import tqdm
+
     set_progress_reporter(tqdm, bar_format=bar_format, leave=leave, **kwargs)
 
 

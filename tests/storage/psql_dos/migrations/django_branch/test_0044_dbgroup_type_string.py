@@ -58,7 +58,6 @@ def test_group_type_string(perform_migrations: PsqlDosMigrator):
 
     group_model = perform_migrations.get_current_table('db_dbgroup')
     with perform_migrations.session() as session:
-
         # 'user' -> 'core'
         group_user = session.get(group_model, group_user_id)
         assert group_user.type_string == 'core'

@@ -11,7 +11,7 @@
 
 This migration applies the name change of the ``Computer`` attribute ``name`` to ``label``.
 """
-from ..utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
+from ..utils import update_metadata, verify_metadata_version
 
 
 def migrate_v10_to_v11(metadata: dict, data: dict) -> None:

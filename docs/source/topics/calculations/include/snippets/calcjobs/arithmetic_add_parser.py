@@ -4,7 +4,6 @@ from aiida.parsers.parser import Parser
 
 
 class ArithmeticAddParser(Parser):
-
     def parse(self, **kwargs):
         """Parse the contents of the output files retrieved in the `FolderData`."""
         output_folder = self.retrieved

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Correct the type string for the code class
 
 Revision ID: a603da2cc809
@@ -31,9 +30,11 @@ def upgrade():
 
     # The Code class used to be just a sub class of Node but was changed to act like a Data node.
     # To make everything fully consistent, its type string should therefore also start with `data.`
-    statement = text("""
+    statement = text(
+        """
         UPDATE db_dbnode SET type = 'data.code.Code.' WHERE type = 'code.Code.';
-    """)
+    """
+    )
     conn.execute(statement)
 
 
@@ -41,7 +42,9 @@ def downgrade():
     """Migrations for the downgrade."""
     conn = op.get_bind()
 
-    statement = text("""
+    statement = text(
+        """
         UPDATE db_dbnode SET type = 'code.Code.' WHERE type = 'data.code.Code.';
-    """)
+    """
+    )
     conn.execute(statement)

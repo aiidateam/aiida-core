@@ -52,7 +52,7 @@ def user_list():
     prompt='User email',
     help='Email address that serves as the user name and a way to identify data created by it.',
     type=types.UserParamType(create=True),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 @options_setup.SETUP_USER_FIRST_NAME(contextual_default=lambda ctx: ctx.params['user'].first_name)
 @options_setup.SETUP_USER_LAST_NAME(contextual_default=lambda ctx: ctx.params['user'].last_name)
@@ -63,11 +63,11 @@ def user_list():
     help='Set the user as the default user for the current profile.',
     is_flag=True,
     cls=options.interactive.InteractiveOption,
-    contextual_default=lambda ctx: ctx.params['user'].is_default
+    contextual_default=lambda ctx: ctx.params['user'].is_default,
 )
 @click.pass_context
 @decorators.with_dbenv()
-def user_configure(ctx, user, first_name, last_name, institution, set_default):  # pylint: disable=too-many-arguments
+def user_configure(ctx, user, first_name, last_name, institution, set_default):
     """Configure a new or existing user.
 
     An e-mail address is used as the user name.
@@ -91,5 +91,6 @@ def user_configure(ctx, user, first_name, last_name, institution, set_default): 
 def user_set_default(ctx, user):
     """Set a user as the default user for the profile."""
     from aiida.manage import get_manager
+
     get_manager().set_default_user_email(ctx.obj.profile, user.email)
     echo.echo_success(f'Set `{user.email}` as the default user for profile `{ctx.obj.profile.name}.`')

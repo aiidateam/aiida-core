@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import textwrap
+from pathlib import Path
 
 import click
 
@@ -50,20 +50,24 @@ def verdi_config_list(ctx, prefix, description: bool):
     option_values = config.get_options(profile.name if profile else None)
 
     def _join(val):
-        """split arrays into multiple lines."""
+        """Split arrays into multiple lines."""
         if isinstance(val, list):
             return '\n'.join(str(v) for v in val)
         return val
 
     if description:
-        table = [[name, source, _join(value), '\n'.join(textwrap.wrap(c.description))]
-                 for name, (c, source, value) in option_values.items()
-                 if name.startswith(prefix)]
+        table = [
+            [name, source, _join(value), '\n'.join(textwrap.wrap(c.description))]
+            for name, (c, source, value) in option_values.items()
+            if name.startswith(prefix)
+        ]
         headers = ['name', 'source', 'value', 'description']
     else:
-        table = [[name, source, _join(value)]
-                 for name, (c, source, value) in option_values.items()
-                 if name.startswith(prefix)]
+        table = [
+            [name, source, _join(value)]
+            for name, (c, source, value) in option_values.items()
+            if name.startswith(prefix)
+        ]
         headers = ['name', 'source', 'value']
 
     # sort by name
@@ -86,7 +90,7 @@ def verdi_config_show(ctx, option):
         'values': {
             'default': '<NOTSET>' if option.default is None else option.default,
             'global': config.options.get(option.name, '<NOTSET>'),
-        }
+        },
     }
 
     if not profile:

@@ -55,7 +55,7 @@ def start_daemon_worker() -> None:
         sys.setrecursionlimit(rlimit)
 
     signals = (signal.SIGTERM, signal.SIGINT)
-    for s in signals:  # pylint: disable=invalid-name
+    for s in signals:
         runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))
 
     try:

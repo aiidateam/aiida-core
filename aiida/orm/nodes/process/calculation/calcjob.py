@@ -20,7 +20,6 @@ from ..process import ProcessNodeCaching
 from .calculation import CalculationNode
 
 if TYPE_CHECKING:
-    from aiida.engine.processes.builder import ProcessBuilder
     from aiida.orm import FolderData
     from aiida.orm.authinfos import AuthInfo
     from aiida.orm.utils.calcjob import CalcJobResultManager
@@ -45,19 +44,20 @@ class CalcJobNodeCaching(ProcessNodeCaching):
         has started and the input files have been written to the repository.
         """
         from importlib import import_module
+
         objects = [
             import_module(self._node.__module__.split('.', 1)[0]).__version__,
             {
                 key: val
                 for key, val in self._node.base.attributes.items()
-                if key not in self._node._hash_ignored_attributes and key not in self._node._updatable_attributes  # pylint: disable=unsupported-membership-test,protected-access
+                if key not in self._node._hash_ignored_attributes and key not in self._node._updatable_attributes
             },
-            self._node.computer.uuid if self._node.computer is not None else None,  # pylint: disable=no-member
+            self._node.computer.uuid if self._node.computer is not None else None,
             {
                 entry.link_label: entry.node.base.caching.get_hash()
                 for entry in self._node.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
                 if entry.link_label not in self._hash_ignored_inputs
-            }
+            },
         ]
         return objects
 
@@ -65,7 +65,6 @@ class CalcJobNodeCaching(ProcessNodeCaching):
 class CalcJobNode(CalculationNode):
     """ORM class for all nodes representing the execution of a CalcJob."""
 
-    # pylint: disable=too-many-public-methods
     _CLS_NODE_CACHING = CalcJobNodeCaching
 
     CALC_JOB_STATE_KEY = 'state'
@@ -114,7 +113,7 @@ class CalcJobNode(CalculationNode):
         return self._tools
 
     @classproperty
-    def _updatable_attributes(cls) -> Tuple[str, ...]:  # pylint: disable=no-self-argument
+    def _updatable_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
         return super()._updatable_attributes + (
             cls.CALC_JOB_STATE_KEY,
             cls.IMMIGRATED_KEY,
@@ -129,7 +128,7 @@ class CalcJobNode(CalculationNode):
         )
 
     @classproperty
-    def _hash_ignored_attributes(cls) -> Tuple[str, ...]:  # pylint: disable=no-self-argument
+    def _hash_ignored_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
         return super()._hash_ignored_attributes + (
             'queue_name',
             'account',
@@ -145,8 +144,7 @@ class CalcJobNode(CalculationNode):
         return self.base.attributes.get(self.IMMIGRATED_KEY, None) is True
 
     def get_option(self, name: str) -> Optional[Any]:
-        """
-        Retun the value of an option that was set for this CalcJobNode
+        """Retun the value of an option that was set for this CalcJobNode
 
         :param name: the option name
         :return: the option value or None
@@ -155,8 +153,7 @@ class CalcJobNode(CalculationNode):
         return self.base.attributes.get(name, None)
 
     def set_option(self, name: str, value: Any) -> None:
-        """
-        Set an option to the given value
+        """Set an option to the given value
 
         :param name: the option name
         :param value: the value to set
@@ -166,8 +163,7 @@ class CalcJobNode(CalculationNode):
         self.base.attributes.set(name, value)
 
     def get_options(self) -> Dict[str, Any]:
-        """
-        Return the dictionary of options set for this CalcJobNode
+        """Return the dictionary of options set for this CalcJobNode
 
         :return: dictionary of the options and their values
         """
@@ -180,8 +176,7 @@ class CalcJobNode(CalculationNode):
         return options
 
     def set_options(self, options: Dict[str, Any]) -> None:
-        """
-        Set the options for this CalcJobNode
+        """Set the options for this CalcJobNode
 
         :param options: dictionary of option and their values to set
         """
@@ -249,7 +244,6 @@ class CalcJobNode(CalculationNode):
             raise TypeError('file retrieval directives has to be a list or tuple')
 
         for directive in directives:
-
             # A string as a directive is valid, so we continue
             if isinstance(directive, str):
                 continue
@@ -414,7 +408,7 @@ class CalcJobNode(CalculationNode):
         if computer is None:
             raise exceptions.NotExistent('No computer has been set for this calculation')
 
-        return computer.get_authinfo(self.user)  # pylint: disable=no-member
+        return computer.get_authinfo(self.user)
 
     def get_transport(self) -> 'Transport':
         """Return the transport for this calculation.
@@ -449,16 +443,19 @@ class CalcJobNode(CalculationNode):
         :return: the retrieved FolderData node or None if not found
         """
         from aiida.orm import FolderData
+
         try:
-            return self.base.links.get_outgoing(node_class=FolderData,
-                                                link_label_filter=self.link_label_retrieved).one().node
+            return (
+                self.base.links.get_outgoing(node_class=FolderData, link_label_filter=self.link_label_retrieved)
+                .one()
+                .node
+            )
         except ValueError:
             return None
 
     @property
     def res(self) -> 'CalcJobResultManager':
-        """
-        To be used to get direct access to the parsed parameters.
+        """To be used to get direct access to the parsed parameters.
 
         :return: an instance of the CalcJobResultManager.
 
@@ -467,6 +464,7 @@ class CalcJobNode(CalculationNode):
             The command `calc.res.energy` will return such a list.
         """
         from aiida.orm.utils.calcjob import CalcJobResultManager
+
         return CalcJobResultManager(self)
 
     def get_scheduler_stdout(self) -> Optional[AnyStr]:

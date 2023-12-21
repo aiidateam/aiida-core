@@ -15,7 +15,6 @@ def test_migrate_v12_to_v13(core_archive, migrate_from_func):
     """Test the data migration of transport entry point strings
     e.g. from local to core.local.
     """
-
     # Migrate v0.12 to v0.13
     _, data = migrate_from_func('export_0.12_simple.aiida', '0.12', '0.13', migrate_v12_to_v13, core_archive)
 
@@ -24,4 +23,4 @@ def test_migrate_v12_to_v13(core_archive, migrate_from_func):
             assert values['transport_type'] in [
                 'core.local',
                 'core.ssh',
-            ], (f"encountered illegal transport entry point string `{values['transport_type']}`")
+            ], f"encountered illegal transport entry point string `{values['transport_type']}`"

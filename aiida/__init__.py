@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-AiiDA is a flexible and scalable informatics' infrastructure to manage,
+"""AiiDA is a flexible and scalable informatics' infrastructure to manage,
 preserve, and disseminate the simulations, data, and workflows of
 modern-day computational science.
 
@@ -20,8 +19,8 @@ and workflow engine for the automation of complex sequences of simulations.
 
 More information at http://www.aiida.net
 """
-from aiida.common.log import configure_logging
-from aiida.manage.configuration import get_config_option, get_profile, load_profile, profile_context
+from aiida.common.log import configure_logging  # noqa: F401
+from aiida.manage.configuration import get_config_option, get_profile, load_profile, profile_context  # noqa: F401
 
 __copyright__ = (
     'Copyright (c), This file is part of the AiiDA platform. '
@@ -38,15 +37,15 @@ __paper_short__ = 'S. P. Huber et al., Scientific Data 7, 300 (2020).'
 
 
 def get_strict_version():
-    """
-    Return a distutils StrictVersion instance with the current distribution version
+    """Return a distutils StrictVersion instance with the current distribution version
 
     :returns: StrictVersion instance with the current version
     :rtype: :class:`!distutils.version.StrictVersion`
     """
-    from distutils.version import StrictVersion  # pylint: disable=deprecated-module
+    from distutils.version import StrictVersion
 
     from aiida.common.warnings import warn_deprecation
+
     warn_deprecation(
         'This method is deprecated as the `distutils` package it uses will be removed in Python 3.12.', version=3
     )
@@ -54,8 +53,7 @@ def get_strict_version():
 
 
 def get_version() -> str:
-    """
-    Return the current AiiDA distribution version
+    """Return the current AiiDA distribution version
 
     :returns: the current version
     """
@@ -63,8 +61,7 @@ def get_version() -> str:
 
 
 def _get_raw_file_header() -> str:
-    """
-    Get the default header for source AiiDA source code files.
+    """Get the default header for source AiiDA source code files.
     Note: is not preceded by comment character.
 
     :return: default AiiDA source file header
@@ -76,8 +73,7 @@ If you use AiiDA for publication purposes, please cite:
 
 
 def get_file_header(comment_char: str = '# ') -> str:
-    """
-    Get the default header for source AiiDA source code files.
+    """Get the default header for source AiiDA source code files.
 
     .. note::
 
@@ -94,4 +90,5 @@ def get_file_header(comment_char: str = '# ') -> str:
 def load_ipython_extension(ipython):
     """Load the AiiDA IPython extension, using ``%load_ext aiida``."""
     from .tools.ipython.ipython_magics import AiiDALoaderMagics
+
     ipython.register_magics(AiiDALoaderMagics)

@@ -30,7 +30,6 @@ class TestVerdiNode:
     @pytest.fixture(autouse=True)
     def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init,invalid-name
         node = orm.Data()
 
         self.ATTR_KEY_ONE = 'a'
@@ -240,8 +239,7 @@ class TestVerdiNode:
 
 
 def delete_temporary_file(filepath):
-    """
-    Attempt to delete a file, given an absolute path. If the deletion fails because the file does not exist
+    """Attempt to delete a file, given an absolute path. If the deletion fails because the file does not exist
     the exception will be caught and passed. Any other exceptions will raise.
 
     :param filepath: the absolute file path
@@ -259,9 +257,8 @@ class TestVerdiGraph:
     """Tests for the ``verdi node graph`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, run_cli_command, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, run_cli_command, tmp_path):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         from aiida.orm import Data
 
         self.node = Data().store()
@@ -276,8 +273,7 @@ class TestVerdiGraph:
         os.rmdir(self.cwd)
 
     def test_generate_graph(self, run_cli_command):
-        """
-        Test that the default graph can be generated
+        """Test that the default graph can be generated
         The command should run without error and should produce the .dot file
         """
         # Get a PK of a node which exists
@@ -291,8 +287,7 @@ class TestVerdiGraph:
             delete_temporary_file(filename)
 
     def test_catch_bad_pk(self, run_cli_command):
-        """
-        Test that an invalid root_node pk (non-numeric, negative, or decimal),
+        """Test that an invalid root_node pk (non-numeric, negative, or decimal),
         or non-existent pk will produce an error
         """
         from aiida.common.exceptions import NotExistent
@@ -319,7 +314,7 @@ class TestVerdiGraph:
             pass
         #  Make sure verdi graph rejects this non-existant pk
         try:
-            filename = f'{str(root_node)}.dot.pdf'
+            filename = f'{root_node!s}.dot.pdf'
             options = [str(root_node)]
             run_cli_command(cmd_node.graph_generate, options, raises=True)
             assert not os.path.isfile(filename)
@@ -362,9 +357,7 @@ class TestVerdiGraph:
                     delete_temporary_file(filename)
 
     def test_check_io_flags(self, run_cli_command):
-        """
-        Test the input and output flags work.
-        """
+        """Test the input and output flags work."""
         root_node = str(self.node.pk)
         filename = f'{root_node}.dot.pdf'
 
@@ -377,13 +370,10 @@ class TestVerdiGraph:
                 delete_temporary_file(filename)
 
     def test_output_format(self, run_cli_command):
-        """
-        Test that the output file format can be specified
-        """
+        """Test that the output file format can be specified"""
         root_node = str(self.node.pk)
 
         for option in ['-f', '--output-format']:
-
             # Test different formats. Could exhaustively test the formats
             # supported on a given OS (printed by '$ dot -T?') but here
             # we just use the built-ins dot and canon as a minimal check that
@@ -398,9 +388,7 @@ class TestVerdiGraph:
                     delete_temporary_file(filename)
 
     def test_node_id_label_format(self, run_cli_command):
-        """
-        Test that the node id label format can be specified
-        """
+        """Test that the node id label format can be specified"""
         root_node = str(self.node.pk)
         filename = f'{root_node}.dot.pdf'
 
@@ -429,9 +417,8 @@ class TestVerdiUserCommand:
     """Tests for the ``verdi node comment`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, run_cli_command):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init,invalid-name
         self.node = orm.Data().store()
 
     def test_comment_show_simple(self, run_cli_command):
@@ -472,13 +459,13 @@ class TestVerdiUserCommand:
 
 
 @pytest.fixture(scope='class')
-def create_nodes(aiida_profile_clean_class):  # pylint: disable=unused-argument
+def create_nodes(aiida_profile_clean_class):
     return [
         orm.Data().store(),
         orm.Bool(True).store(),
         orm.Bool(False).store(),
         orm.Float(1.0).store(),
-        orm.Int(1).store()
+        orm.Int(1).store(),
     ]
 
 
@@ -555,7 +542,6 @@ class TestVerdiRehash:
 
     def test_rehash_invalid_entry_point(self, run_cli_command):
         """Passing an invalid entry point should exit with non-zero status."""
-
         # Incorrect entry point group
         options = ['-f', '-e', 'data:core.structure']
         run_cli_command(cmd_node.rehash, options, raises=True)
@@ -570,18 +556,18 @@ class TestVerdiRehash:
 
 
 @pytest.mark.parametrize(
-    'options', (
+    'options',
+    (
         ['--verbosity', 'info'],
         ['--verbosity', 'info', '--force'],
         ['--create-forward'],
         ['--call-calc-forward'],
         ['--call-work-forward'],
         ['--force'],
-    )
+    ),
 )
 def test_node_delete_basics(run_cli_command, options):
-    """
-    Testing the correct translation for the `--force` and `--verbosity` options.
+    """Testing the correct translation for the `--force` and `--verbosity` options.
     This just checks that the calls do not except and that in all cases with the
     force flag there is no messages.
     """

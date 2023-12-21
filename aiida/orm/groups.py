@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA Group entites"""
+import warnings
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
-import warnings
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
@@ -23,7 +23,8 @@ if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
     from aiida.orm import Node, User
-    from aiida.orm.implementation import BackendGroup, StorageBackend
+    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation.groups import BackendGroup  # noqa: F401
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 
@@ -45,7 +46,7 @@ def load_group_class(type_string: str) -> Type['Group']:
         group_class = load_entry_point('aiida.groups', type_string)
     except EntryPointError:
         message = f'could not load entry point `{type_string}`, falling back onto `Group` base class.'
-        warnings.warn(message)  # pylint: disable=no-member
+        warnings.warn(message)
         group_class = Group
 
     return group_class
@@ -59,8 +60,7 @@ class GroupCollection(entities.Collection['Group']):
         return Group
 
     def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple['Group', bool]:
-        """
-        Try to retrieve a group from the DB with the given arguments;
+        """Try to retrieve a group from the DB with the given arguments;
         create (and store) a new group if such a group was not present yet.
 
         :param label: group label
@@ -82,8 +82,7 @@ class GroupCollection(entities.Collection['Group']):
         return res[0], False
 
     def delete(self, pk: int) -> None:
-        """
-        Delete a group
+        """Delete a group
 
         :param pk: the id of the group to delete
         """
@@ -116,10 +115,9 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         user: Optional['User'] = None,
         description: str = '',
         type_string: Optional[str] = None,
-        backend: Optional['StorageBackend'] = None
+        backend: Optional['StorageBackend'] = None,
     ):
-        """
-        Create a new group. Either pass a dbgroup parameter, to reload
+        """Create a new group. Either pass a dbgroup parameter, to reload
         a group from the DB (and then, no further parameters are allowed),
         or pass the parameters for the Group creation.
 
@@ -143,7 +141,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         super().__init__(model)
 
     @classproperty
-    def _type_string(cls) -> Optional[str]:
+    def _type_string(cls) -> Optional[str]:  # noqa: N805
         from aiida.plugins.entry_point import get_entry_point_from_class
 
         if hasattr(cls, '__type_string'):
@@ -153,12 +151,12 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         entry_point_group, entry_point = get_entry_point_from_class(mod, name)
 
         if entry_point_group is None or entry_point_group != 'aiida.groups':
-            cls.__type_string = None  # type: ignore[misc]  # pylint: disable=protected-access
+            cls.__type_string = None  # type: ignore[misc]
             message = f'no registered entry point for `{mod}:{name}` so its instances will not be storable.'
-            warnings.warn(message)  # pylint: disable=no-member
+            warnings.warn(message)
         else:
             assert entry_point is not None
-            cls.__type_string = entry_point.name  # type: ignore[misc]  # pylint: disable=protected-access
+            cls.__type_string = entry_point.name  # type: ignore[misc]
         return cls.__type_string
 
     @cached_property
@@ -183,7 +181,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         return super().store()
 
     @classproperty
-    def entry_point(cls) -> Optional['EntryPoint']:
+    def entry_point(cls) -> Optional['EntryPoint']:  # noqa: N805
         """Return the entry point associated this group type.
 
         :return: the associated entry point or ``None`` if it isn't known.
@@ -204,15 +202,12 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
     @property
     def label(self) -> str:
-        """
-        :return: the label of the group as a string
-        """
+        """:return: the label of the group as a string"""
         return self._backend_entity.label
 
     @label.setter
     def label(self, label: str) -> None:
-        """
-        Attempt to change the label of the group instance. If the group is already stored
+        """Attempt to change the label of the group instance. If the group is already stored
         and the another group of the same type already exists with the desired label, a
         UniquenessError will be raised
 
@@ -225,30 +220,22 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
     @property
     def description(self) -> str:
-        """
-        :return: the description of the group as a string
-        """
+        """:return: the description of the group as a string"""
         return self._backend_entity.description or ''
 
     @description.setter
     def description(self, description: str) -> None:
-        """
-        :param description: the description of the group as a string
-        """
+        """:param description: the description of the group as a string"""
         self._backend_entity.description = description
 
     @property
     def type_string(self) -> str:
-        """
-        :return: the string defining the type of the group
-        """
+        """:return: the string defining the type of the group"""
         return self._backend_entity.type_string
 
     @property
     def user(self) -> 'User':
-        """
-        :return: the user associated with this group
-        """
+        """:return: the user associated with this group"""
         return entities.from_backend_entity(users.User, self._backend_entity.user)
 
     @user.setter
@@ -269,8 +256,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
     @property
     def nodes(self) -> convert.ConvertIterator:
-        """
-        Return a generator/iterator that iterates over all nodes and returns
+        """Return a generator/iterator that iterates over all nodes and returns
         the respective AiiDA subclasses of Node, and also allows to ask for
         the number of nodes in the group using len().
         """
@@ -335,9 +321,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         self._backend_entity.remove_nodes([node.backend_entity for node in nodes])
 
     def is_user_defined(self) -> bool:
-        """
-        :return: True if the group is user defined, False otherwise
-        """
+        """:return: True if the group is user defined, False otherwise"""
         return not self.type_string
 
     _deprecated_extra_methods = {
@@ -355,8 +339,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     }
 
     def __getattr__(self, name: str) -> Any:
-        """
-        This method is called when an extras is not found in the instance.
+        """This method is called when an extras is not found in the instance.
 
         It allows for the handling of deprecated mixin methods.
         """

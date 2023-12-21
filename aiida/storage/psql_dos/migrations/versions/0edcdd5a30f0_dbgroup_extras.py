@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member,invalid-name
 """Migration to add the `extras` JSONB column to the `DbGroup` model.
 
 Revision ID: 0edcdd5a30f0
@@ -15,8 +14,8 @@ Revises: bf591f31dd12
 Create Date: 2019-04-03 14:38:50.585639
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.

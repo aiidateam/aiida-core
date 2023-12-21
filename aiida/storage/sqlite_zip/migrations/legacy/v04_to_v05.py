@@ -23,8 +23,7 @@ The individual SQLAlchemy database migrations may be found at:
 
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
-# pylint: disable=invalid-name
-from ..utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
+from ..utils import update_metadata, verify_metadata_version
 
 
 def remove_fields(metadata, data, entities, fields):
@@ -68,8 +67,7 @@ def migration_drop_computer_transport_params(metadata, data):
 
 
 def migrate_v4_to_v5(metadata: dict, data: dict) -> None:
-    """
-    Migration of archive files from v0.4 to v0.5
+    """Migration of archive files from v0.4 to v0.5
 
     This is from migration 0034 (drop_node_columns_nodeversion_public) and onwards
     """

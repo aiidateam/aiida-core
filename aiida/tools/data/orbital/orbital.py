@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Classes for describing atomic orbitals.
+"""Classes for describing atomic orbitals.
 
 Contains general Orbital class.
 For subclasses of Orbital, see submodules.
@@ -21,9 +20,7 @@ __all__ = ('Orbital',)
 
 
 def validate_int(value):
-    """
-    Validate that the value is an int
-    """
+    """Validate that the value is an int"""
     try:
         conv_value = int(value)
     except ValueError:
@@ -32,18 +29,14 @@ def validate_int(value):
 
 
 def validate_int_or_none(value):
-    """
-    Validate that the value is a int or is None
-    """
+    """Validate that the value is a int or is None"""
     if value is None:
         return None
     return validate_int(value)
 
 
 def validate_float(value):
-    """
-    Validate that the value is a float
-    """
+    """Validate that the value is a float"""
     try:
         conv_value = float(value)
     except ValueError:
@@ -52,18 +45,14 @@ def validate_float(value):
 
 
 def validate_float_or_none(value):
-    """
-    Validate that the value is a float or is None
-    """
+    """Validate that the value is a float or is None"""
     if value is None:
         return None
     return validate_float(value)
 
 
 def validate_len3_list(value):
-    """
-    Validate that the value is a list of three floats
-    """
+    """Validate that the value is a list of three floats"""
     try:
         conv_value = list(float(i) for i in value)
         if len(conv_value) != 3:
@@ -74,17 +63,14 @@ def validate_len3_list(value):
 
 
 def validate_len3_list_or_none(value):
-    """
-    Validate that the value is a list of three floats or is None
-    """
+    """Validate that the value is a list of three floats or is None"""
     if value is None:
         return None
     return validate_len3_list(value)
 
 
 class Orbital:
-    """
-    Base class for Orbitals. Can handle certain basic fields, their setting
+    """Base class for Orbitals. Can handle certain basic fields, their setting
     and validation. More complex Orbital objects should then inherit from
     this class
 
@@ -98,10 +84,12 @@ class Orbital:
     :param diffusivity: Float controls the radial term in orbital equation
                         units are reciprocal Angstrom.
     """
+
     # len-2 tuples, with name and validator function
-    _base_fields_required = (('position', validate_len3_list),
-                             #NOTE: _orbital_type is internally used to manage the orbital type
-                             )
+    _base_fields_required = (
+        ('position', validate_len3_list),
+        # NOTE: _orbital_type is internally used to manage the orbital type
+    )
 
     # len-3 tuples, with (name, validator, default_value)
     # See how it is defined in the RealhydrogenOrbital class
@@ -112,7 +100,7 @@ class Orbital:
         self.set_orbital_dict(kwargs)
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}: {str(self)}>'
+        return f'<{self.__class__.__name__}: {self!s}>'
 
     def __str__(self) -> str:
         orb_dict = self.get_orbital_dict()
@@ -121,8 +109,7 @@ class Orbital:
         return f'Orbital @ {position_string}'
 
     def _validate_keys(self, input_dict):
-        """
-        Checks all the input_dict and tries to validate them, to ensure
+        """Checks all the input_dict and tries to validate them, to ensure
         that they have been properly set raises Exceptions indicating any
         problems that should arise during the validation
 
@@ -132,15 +119,14 @@ class Orbital:
         :return: validated_dict: a dictionary containing all the input keys
                  which have now been validated.
         """
-
         validated_dict = {}
         if '_orbital_type' in input_dict:
             raise ValidationError('You cannot manually set the _orbital_type')
         entry_point = get_entry_point_from_class(self.__class__.__module__, self.__class__.__name__)[1]
         if entry_point is None:
             raise ValidationError(
-                'Unable to detect entry point for current class {}, maybe you did not register an entry point for it?'.
-                format(self.__class__)
+                f'Unable to detect entry point for current class {self.__class__}, maybe you did not register an entry '
+                'point for it?'
             )
 
         validated_dict['_orbital_type'] = entry_point.name
@@ -154,7 +140,7 @@ class Orbital:
             try:
                 value = validator(value)
             except ValidationError as exc:
-                raise exc.__class__(f"Error validating '{name}': {str(exc)}")
+                raise exc.__class__(f"Error validating '{name}': {exc!s}")
             validated_dict[name] = value
 
         for name, validator, default_value in self._base_fields_optional:
@@ -166,7 +152,7 @@ class Orbital:
             try:
                 value = validator(value)
             except ValidationError as exc:
-                raise exc.__class__(f"Error validating '{name}': {str(exc)}")
+                raise exc.__class__(f"Error validating '{name}': {exc!s}")
             validated_dict[name] = value
 
         if input_dict:
@@ -174,8 +160,7 @@ class Orbital:
         return validated_dict
 
     def set_orbital_dict(self, init_dict):
-        """
-        Sets the orbital_dict, which can vary depending on the particular
+        """Sets the orbital_dict, which can vary depending on the particular
         implementation of this base class.
 
         :param init_dict: the initialization dictionary
@@ -183,7 +168,5 @@ class Orbital:
         self._orbital_dict = self._validate_keys(init_dict)
 
     def get_orbital_dict(self):
-        """
-        returns the internal keys as a dictionary
-        """
+        """Returns the internal keys as a dictionary"""
         return self._orbital_dict

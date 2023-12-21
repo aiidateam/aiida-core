@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument,protected-access
 """Performance benchmark tests for import/export utilities.
 
 The purpose of these tests is to benchmark and compare importing and exporting
@@ -39,7 +38,7 @@ def recursive_provenance(in_node, depth, breadth, num_objects=0):
 
         out_node = Dict(dict={str(i): i for i in range(10)})
         for idx in range(num_objects):
-            out_node.base.repository.put_object_from_filelike(StringIO('a' * 10000), f'key{str(idx)}')
+            out_node.base.repository.put_object_from_filelike(StringIO('a' * 10000), f'key{idx!s}')
         out_node.base.links.add_incoming(calcfunc, link_type=LinkType.CREATE, link_label='output')
         out_node.store()
 

@@ -7,10 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-.. py:module::callable
-    :synopsis: A monkey-patched subclass of click.Option that does not evaluate callable default during tab completion
-"""
+"""A monkey-patched subclass of click.Option that does not evaluate callable default during tab completion."""
 
 import typing as t
 
@@ -27,8 +24,7 @@ class CallableDefaultOption(click.Option):
     """
 
     def get_default(self, ctx: click.Context, call: bool = True) -> t.Optional[t.Union[t.Any, t.Callable[[], t.Any]]]:
-        """provides the functionality of :meth:`click.Option.get_default`,
-        but ensures we do not evaluate callable defaults when in tab-completion context."""
+        """Return default unless in tab-completion context."""
         if ctx.resilient_parsing:
             return None
         return super().get_default(ctx=ctx, call=call)

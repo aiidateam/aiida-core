@@ -7,13 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member,too-many-public-methods
 """Module to test AiiDA processes."""
 import threading
 
 import plumpy
-from plumpy.utils import AttributesFrozendict
 import pytest
+from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
 from aiida.common.lang import override
@@ -41,16 +40,16 @@ class TestProcessNamespace:
     """Test process namespace"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
         yield
         assert Process.current() is None
 
     def test_namespaced_process(self):
         """Test that inputs in nested namespaces are properly validated and the link labels
-        are properly formatted by connecting the namespaces with underscores."""
+        are properly formatted by connecting the namespaces with underscores.
+        """
         proc = NameSpacedProcess(inputs={'some': {'name': {'space': {'a': orm.Int(5)}}}})
 
         # Test that the namespaced inputs are AttributesFrozenDicts
@@ -82,14 +81,14 @@ class ProcessStackTest(Process):
 
     @override
     def on_create(self):
-        # pylint: disable=attribute-defined-outside-init
         super().on_create()
         self._thread_id = threading.current_thread().ident
 
     @override
     def on_stop(self):
         """The therad must match the one used in on_create because process
-        stack is using thread local storage to keep track of who called who."""
+        stack is using thread local storage to keep track of who called who.
+        """
         super().on_stop()
         assert self._thread_id is threading.current_thread().ident
 
@@ -99,9 +98,8 @@ class TestProcess:
     """Test AiiDA process."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
         self.computer = aiida_localhost
         yield
@@ -144,6 +142,7 @@ class TestProcess:
     def test_input_after_stored(self):
         """Verify that adding an input link after storing a `ProcessNode` will raise because it is illegal."""
         from aiida.common import LinkType
+
         process = test_processes.DummyProcess()
 
         with pytest.raises(ValueError):
@@ -186,7 +185,7 @@ class TestProcess:
 
     def test_exit_codes(self):
         """Test the properties to return various (sub) sets of existing exit codes."""
-        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # noqa: N806
 
         exit_codes = ArithmeticAddCalculation.exit_codes
         assert isinstance(exit_codes, ExitCodesNamespace)
@@ -202,8 +201,7 @@ class TestProcess:
             ArithmeticAddCalculation.get_exit_statuses(['NON_EXISTING_EXIT_CODE_LABEL'])
 
     def test_exit_codes_invalidate_cache(self):
-        """
-        Test that returning an exit code with 'invalidates_cache' set to ``True``
+        """Test that returning an exit code with 'invalidates_cache' set to ``True``
         indeed means that the ProcessNode will not be cached from.
         """
         # Sanity check that caching works when the exit code is not returned.
@@ -220,8 +218,7 @@ class TestProcess:
             assert NodeCaching.CACHED_FROM_KEY not in node4.base.extras
 
     def test_valid_cache_hook(self):
-        """
-        Test that the is_valid_cache behavior can be specified from
+        """Test that the is_valid_cache behavior can be specified from
         the method in the Process sub-class.
         """
         # Sanity check that caching works when the hook returns True.
@@ -245,10 +242,7 @@ class TestProcess:
         parameters = orm.Dict(dict={})
         template = orm.Dict(dict={})
         options = {
-            'resources': {
-                'num_machines': 1,
-                'tot_num_mpiprocs': 1
-            },
+            'resources': {'num_machines': 1, 'tot_num_mpiprocs': 1},
             'max_wallclock_seconds': 1,
         }
 
@@ -258,7 +252,7 @@ class TestProcess:
             'template': template,
             'metadata': {
                 'options': options,
-            }
+            },
         }
 
         entry_point = 'core.templatereplacer'
@@ -273,8 +267,7 @@ class TestProcess:
         assert recovered_process == process_class
 
     def test_process_type_without_entry_point(self):
-        """
-        For a process without a registered entry point, the process_type will fall back on the fully
+        """For a process without a registered entry point, the process_type will fall back on the fully
         qualified class name
         """
         process = test_processes.DummyProcess()
@@ -384,12 +377,14 @@ class TestProcess:
         process = instantiate_process(runner, ParentProcess, input=orm.Int(1))
         exposed_outputs = process.exposed_outputs(node_child, ChildProcess)
 
-        expected = AttributeDict({
-            'name': {
-                'space': node_name_space,
-            },
-            'output': node_output,
-        })
+        expected = AttributeDict(
+            {
+                'name': {
+                    'space': node_name_space,
+                },
+                'output': node_output,
+            }
+        )
         assert exposed_outputs == expected
 
     def test_exposed_outputs_non_existing_namespace(self):
@@ -527,9 +522,7 @@ def test_metadata_inputs():
     inputs = {
         'metadata_port': 'value',
         'metadata_port_non_serializable': orm.Data().store(),
-        'metadata_portnamespace': {
-            'without_default': 100
-        }
+        'metadata_portnamespace': {'without_default': 100},
     }
     process = TestMetadataInputsProcess(runner=runner, inputs=inputs)
 
@@ -537,7 +530,5 @@ def test_metadata_inputs():
     # that are not JSON-serializable should also have been filtered out.
     assert process.node.get_metadata_inputs() == {
         'metadata_port': 'value',
-        'metadata_portnamespace': {
-            'without_default': 100
-        }
+        'metadata_portnamespace': {'without_default': 100},
     }

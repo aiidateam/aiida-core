@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=missing-docstring
 import json
 
-from packaging.version import parse
 import pytest
+from packaging.version import parse
 
 
 def test_correct_python_version_installed(aiida_exec, python_version):

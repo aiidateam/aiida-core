@@ -18,7 +18,6 @@ from aiida.engine import CalcJob
 
 def validate_instructions(instructions, _):
     """Check that the instructions dict contains the necessary keywords"""
-
     instructions_dict = instructions.get_dict()
     retrieve_files = instructions_dict.get('retrieve_files', None)
 
@@ -59,7 +58,6 @@ def validate_instructions(instructions, _):
 
 def validate_transfer_inputs(inputs, _):
     """Check that the instructions dict and the source nodes are consistent"""
-
     source_nodes = inputs['source_nodes']
     instructions = inputs['instructions']
     computer = inputs['metadata']['computer']
@@ -117,7 +115,6 @@ def validate_transfer_inputs(inputs, _):
 
 def check_node_type(list_name, node_label, node_object, node_type):
     """Common utility function to check the type of a node"""
-
     if node_object is None:
         return f' > node `{node_label}` requested on list `{list_name}` not found among inputs'
 
@@ -217,34 +214,37 @@ class TransferCalculation(CalcJob):
         retrieve_paths = []
 
         for source_label, source_relpath, target_relpath in local_files:
-
             source_node = source_nodes[source_label]
             retrieve_paths.append(target_relpath)
-            calc_info.local_copy_list.append((
-                source_node.uuid,
-                source_relpath,
-                target_relpath,
-            ))
+            calc_info.local_copy_list.append(
+                (
+                    source_node.uuid,
+                    source_relpath,
+                    target_relpath,
+                )
+            )
 
         for source_label, source_relpath, target_relpath in remote_files:
-
             source_node = source_nodes[source_label]
             retrieve_paths.append(target_relpath)
-            calc_info.remote_copy_list.append((
-                source_node.computer.uuid,
-                os.path.join(source_node.get_remote_path(), source_relpath),
-                target_relpath,
-            ))
+            calc_info.remote_copy_list.append(
+                (
+                    source_node.computer.uuid,
+                    os.path.join(source_node.get_remote_path(), source_relpath),
+                    target_relpath,
+                )
+            )
 
         for source_label, source_relpath, target_relpath in symlink_files:
-
             source_node = source_nodes[source_label]
             retrieve_paths.append(target_relpath)
-            calc_info.remote_symlink_list.append((
-                source_node.computer.uuid,
-                os.path.join(source_node.get_remote_path(), source_relpath),
-                target_relpath,
-            ))
+            calc_info.remote_symlink_list.append(
+                (
+                    source_node.computer.uuid,
+                    os.path.join(source_node.get_remote_path(), source_relpath),
+                    target_relpath,
+                )
+            )
 
         if retrieve_files:
             calc_info.retrieve_list = retrieve_paths

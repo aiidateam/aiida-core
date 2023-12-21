@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .calcfunction import *
 from .calcjob import *
@@ -24,4 +23,4 @@ __all__ = (
     'CalculationNode',
 )
 
-# yapf: enable
+# fmt: on

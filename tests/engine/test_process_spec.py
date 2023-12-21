@@ -18,9 +18,8 @@ class TestProcessSpec:
     """Tests for the `ProcessSpec` class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
         self.spec = Process.spec()
         self.spec.inputs.valid_type = Data

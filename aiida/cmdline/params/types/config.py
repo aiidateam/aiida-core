@@ -26,9 +26,8 @@ class ConfigOptionParamType(click.types.StringParamType):
 
         return get_option(value)
 
-    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
-        """
-        Return possible completions based on an incomplete value
+    def shell_complete(self, ctx, param, incomplete):
+        """Return possible completions based on an incomplete value
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """

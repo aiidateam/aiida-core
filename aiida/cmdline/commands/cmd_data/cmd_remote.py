@@ -25,7 +25,8 @@ def remote():
     Computers set up in AiiDA (e.g. where a CalcJob will run).
     This folder is called "remote" in the sense that it is on a Computer and
     not in the AiiDA repository. Note, however, that the "remote" computer
-    could also be "localhost"."""
+    could also be "localhost".
+    """
 
 
 @remote.command('ls')
@@ -35,18 +36,18 @@ def remote():
 def remote_ls(ls_long, path, datum):
     """List content of a (sub)directory in a RemoteData object."""
     import datetime
+
     try:
         content = datum.listdir_withattributes(path=path)
     except (IOError, OSError) as err:
-        echo.echo_critical(
-            f'Unable to access the remote folder or file, check if it exists.\nOriginal error: {str(err)}'
-        )
+        echo.echo_critical(f'Unable to access the remote folder or file, check if it exists.\nOriginal error: {err!s}')
     for metadata in content:
         if ls_long:
             mtime = datetime.datetime.fromtimestamp(metadata['attributes'].st_mtime)
             pre_line = '{} {:10}  {}  '.format(
-                stat.filemode(metadata['attributes'].st_mode), metadata['attributes'].st_size,
-                mtime.strftime('%d %b %Y %H:%M')
+                stat.filemode(metadata['attributes'].st_mode),
+                metadata['attributes'].st_size,
+                mtime.strftime('%d %b %Y %H:%M'),
             )
             echo.echo(pre_line, nl=False)
         if metadata['isdir']:
@@ -63,6 +64,7 @@ def remote_cat(datum, path):
     import os
     import sys
     import tempfile
+
     try:
         with tempfile.NamedTemporaryFile(delete=False) as tmpf:
             tmpf.close()
@@ -70,7 +72,7 @@ def remote_cat(datum, path):
             with open(tmpf.name, encoding='utf8') as fhandle:
                 sys.stdout.write(fhandle.read())
     except IOError as err:
-        echo.echo_critical(f'{err.errno}: {str(err)}')
+        echo.echo_critical(f'{err.errno}: {err!s}')
 
     try:
         os.remove(tmpf.name)

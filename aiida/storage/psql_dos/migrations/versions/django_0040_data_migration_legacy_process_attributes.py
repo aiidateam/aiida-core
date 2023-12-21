@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Migrate some legacy process attributes.
 
 Attribute keys that are renamed:
@@ -31,8 +30,8 @@ Revision ID: django_0040
 Revises: django_0039
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'django_0040'
 down_revision = 'django_0039'

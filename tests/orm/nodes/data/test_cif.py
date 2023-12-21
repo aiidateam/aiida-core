@@ -35,7 +35,7 @@ def test_parse_formula():
         'Cr': 0.53,
         'X': 0,
         'Te': 0.98,
-        'O': 6
+        'O': 6,
     }
     assert parse_formula('C[NH2]3NO3') == {'C': 1, 'N': 4, 'H': 6, 'O': 3}
     assert parse_formula('H80 C104{C0.50 X0.50}8N8 Cl4(Cl0.50X0.50)8.0O8') == {
@@ -44,7 +44,7 @@ def test_parse_formula():
         'X': 8.0,
         'N': 8,
         'Cl': 8.0,
-        'O': 8
+        'O': 8,
     }
     assert parse_formula('Na1.28[NH]0.28{N H2}0.72') == {'Na': 1.28, 'N': 1.0, 'H': 1.72}
 

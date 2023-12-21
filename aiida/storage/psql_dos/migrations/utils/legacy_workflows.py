@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name
+# ruff: noqa: N806
 """Utilities for removing legacy workflows."""
 import codecs
 import json
@@ -41,9 +41,9 @@ def export_workflow_data(connection, profile):
     DbWorkflowData = table('db_dbworkflowdata')
     DbWorkflowStep = table('db_dbworkflowstep')
 
-    count_workflow = connection.execute(select(func.count()).select_from(DbWorkflow)).scalar()  # pylint: disable=not-callable
-    count_workflow_data = connection.execute(select(func.count()).select_from(DbWorkflowData)).scalar()  # pylint: disable=not-callable
-    count_workflow_step = connection.execute(select(func.count()).select_from(DbWorkflowStep)).scalar()  # pylint: disable=not-callable
+    count_workflow = connection.execute(select(func.count()).select_from(DbWorkflow)).scalar()
+    count_workflow_data = connection.execute(select(func.count()).select_from(DbWorkflowData)).scalar()
+    count_workflow_step = connection.execute(select(func.count()).select_from(DbWorkflowStep)).scalar()
 
     # Nothing to do if all tables are empty
     if count_workflow == 0 and count_workflow_data == 0 and count_workflow_step == 0:
@@ -60,7 +60,6 @@ def export_workflow_data(connection, profile):
 
     delete_on_close = profile.is_test_profile
 
-    # pylint: disable=protected-access
     data = {
         'workflow': [dict(row._mapping) for row in connection.execute(select('*').select_from(DbWorkflow))],
         'workflow_data': [dict(row._mapping) for row in connection.execute(select('*').select_from(DbWorkflowData))],

@@ -14,9 +14,7 @@ from aiida.restapi.translator.base import BaseTranslator
 
 
 class UserTranslator(BaseTranslator):
-    """
-    Translator relative to resource 'users' and aiida class User
-    """
+    """Translator relative to resource 'users' and aiida class User"""
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = 'users'
@@ -32,9 +30,8 @@ class UserTranslator(BaseTranslator):
 
     _default_projections = ['id', 'first_name', 'last_name', 'institution']
 
-    def get_projectable_properties(self):  # pylint: disable=arguments-differ
-        """
-        Get projectable properties specific for User
+    def get_projectable_properties(self):
+        """Get projectable properties specific for User
         :return: dict of projectable properties and column_order list
         """
         projectable_properties = {
@@ -43,29 +40,29 @@ class UserTranslator(BaseTranslator):
                 'help_text': 'Id of the object',
                 'is_foreign_key': False,
                 'type': 'int',
-                'is_display': True
+                'is_display': True,
             },
             'first_name': {
                 'display_name': 'First name',
                 'help_text': 'First name of the user',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': True
+                'is_display': True,
             },
             'institution': {
                 'display_name': 'Institution',
                 'help_text': 'Affiliation of the user',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': True
+                'is_display': True,
             },
             'last_name': {
                 'display_name': 'Last name',
                 'help_text': 'Last name of the user',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': True
-            }
+                'is_display': True,
+            },
         }
 
         # Note: final schema will contain details for only the fields present in column order

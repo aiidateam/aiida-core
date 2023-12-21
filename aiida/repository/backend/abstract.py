@@ -76,8 +76,8 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raises TypeError: if the handle is not a byte stream.
         """
         if (
-            not isinstance(handle, io.BufferedIOBase) and  # type: ignore[redundant-expr,unreachable]
-            not self.is_readable_byte_stream(handle)
+            not isinstance(handle, io.BufferedIOBase)  # type: ignore[redundant-expr,unreachable]
+            and not self.is_readable_byte_stream(handle)
         ):
             raise TypeError(f'handle does not seem to be a byte stream: {type(handle)}.')
         return self._put_object_from_filelike(handle)
@@ -143,7 +143,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
             flag to indicate to the backend whether AiiDA is live or not (i.e. if the profile of the
             backend is currently being used/accessed). The backend is expected then to only allow (and
             thus set by default) the operations that are safe to perform in this state.
-    """
+        """
 
     @contextlib.contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:  # type: ignore[return]
@@ -167,7 +167,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be opened.
         """
-        with self.open(key) as handle:  # pylint: disable=not-context-manager
+        with self.open(key) as handle:
             return handle.read()
 
     @abc.abstractmethod
@@ -193,7 +193,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be opened.
         """
-        with self.open(key) as handle:  # pylint: disable=not-context-manager
+        with self.open(key) as handle:
             return chunked_file_hash(handle, hashlib.sha256)
 
     @abc.abstractmethod

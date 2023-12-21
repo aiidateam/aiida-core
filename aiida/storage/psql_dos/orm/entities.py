@@ -15,8 +15,8 @@ from aiida.storage.psql_dos.models.base import Base
 
 from . import utils
 
-ModelType = TypeVar('ModelType')  # pylint: disable=invalid-name
-SelfType = TypeVar('SelfType', bound='SqlaModelEntity')  # pylint: disable=invalid-name
+ModelType = TypeVar('ModelType')
+SelfType = TypeVar('SelfType', bound='SqlaModelEntity')
 
 
 class SqlaModelEntity(Generic[ModelType]):
@@ -38,13 +38,14 @@ class SqlaModelEntity(Generic[ModelType]):
         :param backend: the corresponding storage backend
         :return: the AiiDA entity
         """
-        from ..backend import PsqlDosBackend  # pylint: disable=cyclic-import
+        from ..backend import PsqlDosBackend
+
         cls._class_check()
         type_check(dbmodel, cls.MODEL_CLASS)
         type_check(backend, PsqlDosBackend)
         entity = cls.__new__(cls)
         super(SqlaModelEntity, entity).__init__(backend)
-        entity._model = utils.ModelWrapper(dbmodel, backend)  # pylint: disable=protected-access
+        entity._model = utils.ModelWrapper(dbmodel, backend)
         return entity
 
     def __init__(self, *args, **kwargs):
@@ -62,12 +63,11 @@ class SqlaModelEntity(Generic[ModelType]):
 
         .. warning:: Getting/setting attributes on this model bypasses AiiDA's internal update/flush mechanisms.
         """
-        return self.model._model  # pylint: disable=protected-access
+        return self.model._model
 
     @property
-    def id(self) -> int:  # pylint: disable=redefined-builtin, invalid-name
-        """
-        Get the id of this entity
+    def id(self) -> int:
+        """Get the id of this entity
 
         :return: the entity id
         """
@@ -75,16 +75,14 @@ class SqlaModelEntity(Generic[ModelType]):
 
     @property
     def is_stored(self) -> bool:
-        """
-        Is this entity stored?
+        """Is this entity stored?
 
         :return: True if stored, False otherwise
         """
         return self.model.id is not None
 
     def store(self: SelfType) -> SelfType:
-        """
-        Store this entity
+        """Store this entity
 
         :return: the entity itself
         """
@@ -93,4 +91,4 @@ class SqlaModelEntity(Generic[ModelType]):
 
     def _flush_if_stored(self, fields: Set[str]) -> None:
         if self.model.is_saved():
-            self.model._flush(fields)  # pylint: disable=protected-access
+            self.model._flush(fields)

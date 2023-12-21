@@ -9,4 +9,5 @@ from aiida.orm import Float, Int
 def add(x: t.Union[Int, Float], y: t.Union[Int, Float]):
     return x + y
 
+
 add(Int(1), Float(1.0))

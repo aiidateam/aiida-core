@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name
 """Update all link labels with the value `_return`
 
 This is the legacy default single link label.
@@ -22,7 +21,6 @@ Create Date: 2019-11-21 09:43:45.006053
 
 """
 
-# pylint: disable=no-member,no-name-in-module,import-error
 from alembic import op
 from sqlalchemy.sql import text
 
@@ -39,9 +37,11 @@ def upgrade():
 
     # The old process functions used to use `_return` as the default link label, however, since labels that start or end
     # with and underscore are illegal.
-    statement = text("""
+    statement = text(
+        """
         UPDATE db_dblink SET label='result' WHERE label = '_return';
-    """)
+    """
+    )
     conn.execute(statement)
 
 

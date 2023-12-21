@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Module to manage computers for the SQLA backend."""
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, relationship
@@ -22,6 +21,7 @@ from .base import Base
 
 class DbGroupNode(Base):
     """Database model to store group-to-nodes relations."""
+
     __tablename__ = 'db_dbgroup_dbnodes'
 
     id = Column(Integer, primary_key=True)
@@ -51,7 +51,7 @@ class DbGroup(Base):
 
     __tablename__ = 'db_dbgroup'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False, unique=True)
     label = Column(String(255), nullable=False, index=True)
     type_string = Column(String(255), default='', nullable=False, index=True)
@@ -62,7 +62,7 @@ class DbGroup(Base):
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=False,
-        index=True
+        index=True,
     )
 
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
@@ -77,7 +77,7 @@ class DbGroup(Base):
             'ix_pat_db_dbgroup_type_string',
             type_string,
             postgresql_using='btree',
-            postgresql_ops={'type_string': 'varchar_pattern_ops'}
+            postgresql_ops={'type_string': 'varchar_pattern_ops'},
         ),
     )
 

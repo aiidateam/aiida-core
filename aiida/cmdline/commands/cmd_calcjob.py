@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-many-locals
 """`verdi calcjob` commands."""
 import os
 
@@ -27,8 +26,7 @@ def verdi_calcjob():
 @verdi_calcjob.command('gotocomputer')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 def calcjob_gotocomputer(calcjob):
-    """
-    Open a shell in the remote folder on the calcjob.
+    """Open a shell in the remote folder on the calcjob.
 
     This command opens a ssh connection to the folder on the remote
     computer on which the calcjob is being/has been executed.
@@ -80,16 +78,15 @@ def calcjob_res(calcjob, fmt, keys):
 @click.argument('path', type=click.STRING, required=False)
 @decorators.with_dbenv()
 def calcjob_inputcat(calcjob, path):
-    """
-    Show the contents of one of the calcjob input files.
+    """Show the contents of one of the calcjob input files.
 
     You can specify the relative PATH in the raw input folder of the CalcJob.
 
     If PATH is not specified, the default input file path will be used, if defined by the calcjob plugin class.
     """
     import errno
-    from shutil import copyfileobj
     import sys
+    from shutil import copyfileobj
 
     # Get path from the given CalcJobNode if not defined by user
     if path is None:
@@ -151,8 +148,7 @@ def calcjob_remotecat(calcjob, path):
 @click.argument('path', type=click.STRING, required=False)
 @decorators.with_dbenv()
 def calcjob_outputcat(calcjob, path):
-    """
-    Show the contents of one of the calcjob retrieved outputs.
+    """Show the contents of one of the calcjob retrieved outputs.
 
     You can specify the relative PATH in the retrieved folder of the CalcJob.
 
@@ -160,8 +156,8 @@ def calcjob_outputcat(calcjob, path):
     Content can only be shown after the daemon has retrieved the remote files.
     """
     import errno
-    from shutil import copyfileobj
     import sys
+    from shutil import copyfileobj
 
     try:
         retrieved = calcjob.outputs.retrieved
@@ -204,8 +200,7 @@ def calcjob_outputcat(calcjob, path):
 @click.argument('path', type=click.STRING, required=False)
 @click.option('-c', '--color', 'color', is_flag=True, default=False, help='color folders with a different color')
 def calcjob_inputls(calcjob, path, color):
-    """
-    Show the list of the generated calcjob input files.
+    """Show the list of the generated calcjob input files.
 
     You can specify a relative PATH in the raw input folder of the CalcJob.
 
@@ -225,8 +220,7 @@ def calcjob_inputls(calcjob, path, color):
 @click.argument('path', type=click.STRING, required=False)
 @click.option('-c', '--color', 'color', is_flag=True, default=False, help='color folders with a different color')
 def calcjob_outputls(calcjob, path, color):
-    """
-    Show the list of the retrieved calcjob output files.
+    """Show the list of the retrieved calcjob output files.
 
     You can specify a relative PATH in the retrieved folder of the CalcJob.
 
@@ -255,8 +249,7 @@ def calcjob_outputls(calcjob, path, color):
 @options.FORCE()
 @options.EXIT_STATUS()
 def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit_status):
-    """
-    Clean all content of all output remote folders of calcjobs.
+    """Clean all content of all output remote folders of calcjobs.
 
     If no explicit calcjobs are specified as arguments, one or both of the -p and -o options has to be specified.
     If both are specified, a logical AND is done between the two, i.e. the calcjobs that will be cleaned have been
@@ -266,11 +259,10 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
     from aiida.orm.utils.remote import get_calcjob_remote_paths
 
     if calcjobs:
-        if (past_days is not None and older_than is not None):
+        if past_days is not None and older_than is not None:
             echo.echo_critical('specify either explicit calcjobs or use the filtering options')
-    else:
-        if (past_days is None and older_than is None):
-            echo.echo_critical('if no explicit calcjobs are specified, at least one filtering option is required')
+    elif past_days is None and older_than is None:
+        echo.echo_critical('if no explicit calcjobs are specified, at least one filtering option is required')
 
     calcjobs_pks = [calcjob.pk for calcjob in calcjobs]
     path_mapping = get_calcjob_remote_paths(
@@ -293,14 +285,13 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
     user = orm.User.collection.get_default()
 
     for computer_uuid, paths in path_mapping.items():
-
         counter = 0
         computer = orm.load_computer(uuid=computer_uuid)
         transport = orm.AuthInfo.collection.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk).get_transport()
 
         with transport:
             for remote_folder in paths:
-                remote_folder._clean(transport=transport)  # pylint:disable=protected-access
+                remote_folder._clean(transport=transport)
                 counter += 1
 
         echo.echo_success(f'{counter} remote folders cleaned on {computer.label}')

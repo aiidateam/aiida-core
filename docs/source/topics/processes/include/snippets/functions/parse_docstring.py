@@ -11,5 +11,6 @@ def add(x: int, y: int):
     """
     return x + y
 
+
 assert add.spec().inputs['a'].help == 'Left hand operand.'
 assert add.spec().inputs['b'].help == 'Right hand operand.'

@@ -3,7 +3,6 @@ from aiida.transports import Transport
 
 
 class NewTransport(Transport):
-
     def __init__(self, machine, **kwargs):
         """Initialize the Transport class.
 
@@ -182,7 +181,7 @@ class NewTransport(Transport):
         :raise IOError: if the path can't be resolved on the server
         """
 
-    def put(self, localpath, remotepath, *args, ** kwargs):
+    def put(self, localpath, remotepath, *args, **kwargs):
         """Put a file or a directory from local src to remote dst.
 
         Redirects to putfile and puttree.
@@ -193,7 +192,7 @@ class NewTransport(Transport):
         :param str remotepath: absolute path to local source
         """
 
-    def putfile(self, localpath, remotepath, *args, ** kwargs):
+    def putfile(self, localpath, remotepath, *args, **kwargs):
         """Put a file from local src to remote dst.
 
         .. note:: the destination must be an absolute path, the source not necessarily
@@ -202,7 +201,7 @@ class NewTransport(Transport):
         :param str remotepath: absolute path to local file
         """
 
-    def puttree(self, localpath, remotepath, *args, ** kwargs):
+    def puttree(self, localpath, remotepath, *args, **kwargs):
         """Put a folder recursively from local src to remote dst.
 
         .. note:: the destination must be an absolute path, the source not necessarily
@@ -211,7 +210,7 @@ class NewTransport(Transport):
         :param str remotepath: absolute path to local folder
         """
 
-    def rename(src, dst):
+    def rename(self, src, dst):
         """Rename a file or folder from src to dst.
 
         :param str oldpath: existing name of the file or folder

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name,unused-variable
 """Tests for the `GroupParamType`."""
 import uuid
 
@@ -113,11 +112,14 @@ def test_create_if_not_exist():
         GroupParamType(create_if_not_exist=True, sub_classes=('aiida.groups:core.auto', 'aiida.groups:core.import'))
 
 
-@pytest.mark.parametrize(('sub_classes', 'expected'), (
-    (None, (True, True, True)),
-    (('aiida.groups:core.auto',), (False, True, False)),
-    (('aiida.groups:core.auto', 'aiida.groups:core.import'), (False, True, True)),
-))
+@pytest.mark.parametrize(
+    ('sub_classes', 'expected'),
+    (
+        (None, (True, True, True)),
+        (('aiida.groups:core.auto',), (False, True, False)),
+        (('aiida.groups:core.auto', 'aiida.groups:core.import'), (False, True, True)),
+    ),
+)
 def test_sub_classes(setup_groups, sub_classes, expected):
     """Test the `sub_classes` constructor argument."""
     entity_01, entity_02, entity_03 = setup_groups

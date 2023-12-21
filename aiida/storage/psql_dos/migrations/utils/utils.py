@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name
 """Various utils that should be used during migrations and migrations tests because the AiiDA ORM cannot be used."""
 import datetime
 import functools
@@ -18,9 +17,9 @@ import pathlib
 import re
 from typing import Dict, Iterable, List, Optional, Union
 
+import numpy
 from disk_objectstore import Container
 from disk_objectstore.utils import LazyOpener
-import numpy
 
 from aiida.common import exceptions
 from aiida.repository.backend import AbstractRepositoryBackend
@@ -45,9 +44,8 @@ class LazyFile(File):
         name: str = '',
         file_type: FileType = FileType.DIRECTORY,
         key: Union[str, None, LazyOpener] = None,
-        objects: Dict[str, 'File'] = None
+        objects: Optional[Dict[str, 'File']] = None,
     ):
-        # pylint: disable=super-init-not-called
         if not isinstance(name, str):
             raise TypeError('name should be a string.')
 
@@ -149,7 +147,6 @@ def migrate_legacy_repository(profile, shard=None):
 
     :return: mapping of node UUIDs onto the new repository metadata.
     """
-    # pylint: disable=too-many-locals
     backend = NoopRepositoryBackend()
     repository = MigrationRepository(backend=backend)
 
@@ -218,13 +215,11 @@ def get_node_repository_dirpaths(profile, basepath, shard=None):
     :raises `~aiida.common.exceptions.StorageMigrationError`: if the repository contains node folders that contain both
         the `path` and `raw_input` subdirectories, which should never happen.
     """
-    # pylint: disable=too-many-branches
     mapping = {}
     missing_sub_repo_folder = []
     contains_both = []
 
     if shard is not None:
-
         # If the shard is not present in the basepath, there is nothing to do
         if shard not in os.listdir(basepath):
             return mapping, missing_sub_repo_folder
@@ -234,17 +229,14 @@ def get_node_repository_dirpaths(profile, basepath, shard=None):
         shards = basepath.iterdir()
 
     for shard_one in shards:
-
         if not REGEX_SHARD_SUB_LEVEL.match(shard_one.name):
             continue
 
         for shard_two in shard_one.iterdir():
-
             if not REGEX_SHARD_SUB_LEVEL.match(shard_two.name):
                 continue
 
             for shard_three in shard_two.iterdir():
-
                 if not REGEX_SHARD_FINAL_LEVEL.match(shard_three.name):
                     continue
 
@@ -281,8 +273,8 @@ def get_node_repository_dirpaths(profile, basepath, shard=None):
             ' as the `raw_input` subfolders. This should not have happened, as the latter is used for calculation job '
             'nodes, and the former for all other nodes. The migration will be aborted and the paths of the offending '
             'node folders will be printed below. If you know which of the subpaths is incorrect, you can manually '
-            'delete it and then restart the migration. Here is the list of offending node folders:\n' +
-            '\n'.join(contains_both)
+            'delete it and then restart the migration. Here is the list of offending node folders:\n'
+            + '\n'.join(contains_both)
         )
 
     return mapping, missing_sub_repo_folder
@@ -295,7 +287,7 @@ def serialize_repository(repository: Repository) -> dict:
 
     :return: dictionary with the content metadata.
     """
-    file_object = repository._directory  # pylint: disable=protected-access
+    file_object = repository._directory
     if file_object.file_type == FileType.DIRECTORY:
         if file_object.objects:
             return {'o': {key: obj.serialize() for key, obj in file_object.objects.items()}}

@@ -10,11 +10,11 @@
 """Definition of caching mechanism and configuration for calculations."""
 from __future__ import annotations
 
+import keyword
+import re
 from collections import namedtuple
 from contextlib import contextmanager, suppress
 from enum import Enum
-import keyword
-import re
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -66,7 +66,6 @@ class _ContextCache:
         :param strict: When set to ``True``, the function will actually try to resolve the identifier by loading it and
             if it fails, an exception is raised.
         """
-
         if self._default_all == 'disable':
             return False, [], []
 
@@ -238,7 +237,6 @@ def _validate_identifier_pattern(*, identifier: str, strict: bool = False):
     :raises ValueError: If the identifier is an invalid identifier.
     :raises ValueError: If ``strict=True`` and the identifier cannot be successfully loaded.
     """
-    # pylint: disable=too-many-branches
     import importlib
 
     from aiida.common.exceptions import EntryPointError
@@ -260,8 +258,8 @@ def _validate_identifier_pattern(*, identifier: str, strict: bool = False):
             for group_name in ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
         ):
             raise ValueError(
-                common_error_msg +
-                f'Group name pattern `{group_pattern}` does not match any of the AiiDA entry point group names.'
+                common_error_msg
+                + f'Group name pattern `{group_pattern}` does not match any of the AiiDA entry point group names.'
             )
 
         # If strict mode is enabled and the identifier is explicit, i.e., doesn't contain a wildcard, try to load it.
@@ -291,8 +289,8 @@ def _validate_identifier_pattern(*, identifier: str, strict: bool = False):
         if '*' in identifier_part:
             if not identifier_part.replace('*', 'a').isidentifier():
                 raise ValueError(
-                    common_error_msg +
-                    f'Identifier part `{identifier_part}` can not match a fully qualified Python name.'
+                    common_error_msg
+                    + f'Identifier part `{identifier_part}` can not match a fully qualified Python name.'
                 )
         else:
             if not identifier_part.isidentifier():

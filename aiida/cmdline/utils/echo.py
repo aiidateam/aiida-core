@@ -20,13 +20,20 @@ import click
 CMDLINE_LOGGER = logging.getLogger('verdi')
 
 __all__ = (
-    'echo_report', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_tabulate',
-    'echo_dictionary'
+    'echo_report',
+    'echo_info',
+    'echo_success',
+    'echo_warning',
+    'echo_error',
+    'echo_critical',
+    'echo_tabulate',
+    'echo_dictionary',
 )
 
 
 class ExitCode(enum.IntEnum):
     """Exit codes for the verdi command line."""
+
     CRITICAL = 1
     DEPRECATED = 80
     UNKNOWN = 99
@@ -185,7 +192,6 @@ def echo_deprecated(message: str, bold: bool = False, nl: bool = True, err: bool
     :param err: whether to log to stderr.
     :param exit: whether to exit after printing the message
     """
-    # pylint: disable=redefined-builtin
     prefix = click.style('Deprecated: ', fg=COLORS['deprecated'], bold=True)
     echo_warning(prefix + message, bold=bold, nl=nl, err=err, prefix=False)
 
@@ -232,7 +238,7 @@ def _format_dictionary_json_date(dictionary, sort_keys=True):
         if isinstance(data, datetime.datetime):
             return timezone.localtime(data).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 
-        raise TypeError(f'{repr(data)} is not JSON serializable')
+        raise TypeError(f'{data!r} is not JSON serializable')
 
     return json.dumps(dictionary, indent=4, sort_keys=sort_keys, default=default_jsondump)
 
@@ -266,6 +272,7 @@ def echo_tabulate(table, **kwargs):
     :param kwargs: Additional arguments passed to :meth:`tabulate.tabulate`.
     """
     from tabulate import tabulate
+
     echo(tabulate(table, **kwargs))
 
 
@@ -294,5 +301,4 @@ def is_stdout_redirected():
         echo.echo_info("Found {} results".format(qb.count()), err=echo.is_stdout_redirected)
         echo.echo(tabulate.tabulate(qb.all()))
     """
-    # pylint: disable=no-member
     return not sys.stdout.isatty()

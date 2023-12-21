@@ -67,7 +67,7 @@ def test_environment_variable_not_set(tmp_path, monkeypatch):
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_environment_variable_set_single_path_without_config_folder(tmp_path):  # pylint: disable=invalid-name
+def test_environment_variable_set_single_path_without_config_folder(tmp_path):
     """If `AIIDA_PATH` is set but does not contain a configuration folder, it should be created."""
     # Set the environment variable and call configuration initialization
     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(tmp_path)
@@ -81,7 +81,7 @@ def test_environment_variable_set_single_path_without_config_folder(tmp_path):  
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_environment_variable_set_single_path_with_config_folder(tmp_path):  # pylint: disable=invalid-name
+def test_environment_variable_set_single_path_with_config_folder(tmp_path):
     """If `AIIDA_PATH` is set and already contains a configuration folder it should simply be used."""
     (tmp_path / settings.DEFAULT_CONFIG_DIR_NAME).mkdir()
 
@@ -97,7 +97,7 @@ def test_environment_variable_set_single_path_with_config_folder(tmp_path):  # p
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_environment_variable_path_including_config_folder(tmp_path):  # pylint: disable=invalid-name
+def test_environment_variable_path_including_config_folder(tmp_path):
     """If `AIIDA_PATH` is set and the path contains the base name of the config folder, it should work, i.e:
 
         `/home/user/.virtualenvs/dev/`
@@ -117,7 +117,7 @@ def test_environment_variable_path_including_config_folder(tmp_path):  # pylint:
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_environment_variable_set_multiple_path(tmp_path):  # pylint: disable=invalid-name
+def test_environment_variable_set_multiple_path(tmp_path):
     """If `AIIDA_PATH` is set with multiple paths without actual config folder, one is created in the last."""
     directory_a = tmp_path / 'a'
     directory_b = tmp_path / 'b'
@@ -162,7 +162,6 @@ def test_from_file(tmp_path):
 
     Regression test for #3790: make sure configuration is written to disk after it is loaded and migrated.
     """
-
     # If the config file does not exist, a completely new file is created with a migrated config
     filepath_nonexisting = tmp_path / 'config_nonexisting.json'
     config = Config.from_file(filepath_nonexisting)
@@ -179,7 +178,6 @@ def test_from_file(tmp_path):
 
     # Finally, we test that an existing configuration file with an outdated schema is migrated and written to disk
     with (tmp_path / 'config.json').open('wb') as handle:
-
         # Write content of configuration with old schema to disk
         filepath = pathlib.Path(__file__).parent.absolute() / 'migrations' / 'test_samples' / 'input' / '0.json'
         with filepath.open('rb') as source:

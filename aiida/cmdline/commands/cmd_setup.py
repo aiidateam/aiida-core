@@ -43,15 +43,34 @@ from aiida.manage.configuration import Profile, load_profile
 @options.CONFIG_FILE()
 @click.pass_context
 def setup(
-    ctx, non_interactive, profile: Profile, email, first_name, last_name, institution, db_engine, db_backend, db_host,
-    db_port, db_name, db_username, db_password, broker_protocol, broker_username, broker_password, broker_host,
-    broker_port, broker_virtual_host, repository, test_profile, profile_uuid
+    ctx,
+    non_interactive,
+    profile: Profile,
+    email,
+    first_name,
+    last_name,
+    institution,
+    db_engine,
+    db_backend,
+    db_host,
+    db_port,
+    db_name,
+    db_username,
+    db_password,
+    broker_protocol,
+    broker_username,
+    broker_password,
+    broker_host,
+    broker_port,
+    broker_virtual_host,
+    repository,
+    test_profile,
+    profile_uuid,
 ):
     """Setup a new profile.
 
     This method assumes that an empty PSQL database has been created and that the database user has been created.
     """
-    # pylint: disable=too-many-arguments,too-many-locals,unused-argument
     from aiida import orm
 
     # store default user settings so user does not have to re-enter them
@@ -61,7 +80,8 @@ def setup(
         profile.uuid = profile_uuid
 
     profile.set_storage(
-        db_backend, {
+        db_backend,
+        {
             'database_engine': db_engine,
             'database_hostname': db_host,
             'database_port': db_port,
@@ -69,17 +89,18 @@ def setup(
             'database_username': db_username,
             'database_password': db_password,
             'repository_uri': f'file://{repository}',
-        }
+        },
     )
     profile.set_process_controller(
-        'rabbitmq', {
+        'rabbitmq',
+        {
             'broker_protocol': broker_protocol,
             'broker_username': broker_username,
             'broker_password': broker_password,
             'broker_host': broker_host,
             'broker_port': broker_port,
             'broker_virtual_host': broker_virtual_host,
-        }
+        },
     )
     profile.is_test_profile = test_profile
 
@@ -95,7 +116,7 @@ def setup(
 
     try:
         profile.storage_cls.initialise(profile)
-    except Exception as exception:  # pylint: disable=broad-except
+    except Exception as exception:
         echo.echo_critical(
             f'storage initialisation failed, probably because connection details are incorrect:\n{exception}'
         )
@@ -146,12 +167,33 @@ def setup(
 @options.CONFIG_FILE()
 @click.pass_context
 def quicksetup(
-    ctx, non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
-    db_name, db_username, db_password, su_db_name, su_db_username, su_db_password, broker_protocol, broker_username,
-    broker_password, broker_host, broker_port, broker_virtual_host, repository, test_profile
+    ctx,
+    non_interactive,
+    profile,
+    email,
+    first_name,
+    last_name,
+    institution,
+    db_engine,
+    db_backend,
+    db_host,
+    db_port,
+    db_name,
+    db_username,
+    db_password,
+    su_db_name,
+    su_db_username,
+    su_db_password,
+    broker_protocol,
+    broker_username,
+    broker_password,
+    broker_host,
+    broker_port,
+    broker_virtual_host,
+    repository,
+    test_profile,
 ):
     """Setup a new profile in a fully automated fashion."""
-    # pylint: disable=too-many-arguments,too-many-locals
     from aiida.manage.external.postgres import Postgres, manual_setup_instructions
 
     # store default user settings so user does not have to re-enter them
@@ -173,13 +215,12 @@ def quicksetup(
         db_username, db_name = postgres.create_dbuser_db_safe(dbname=db_name, dbuser=db_username, dbpass=db_password)
     except Exception as exception:
         echo.echo_error(
-            '\n'.join([
-                'Oops! quicksetup was unable to create the AiiDA database for you.',
-                'See `verdi quicksetup -h` for how to specify non-standard parameters for the postgresql connection.\n'
-                'Alternatively, create the AiiDA database yourself: ',
-                manual_setup_instructions(db_username=db_username,
-                                          db_name=db_name), '', 'and then use `verdi setup` instead', ''
-            ])
+            f"""Oops! quicksetup was unable to create the AiiDA database for you.
+            See `verdi quicksetup -h` for how to specify non-standard parameters for the postgresql connection.
+            Alternatively, create the AiiDA database yourself:\n
+            {manual_setup_instructions(db_username=db_username, db_name=db_name)}\n
+            and then use `verdi setup` instead.
+            """
         )
         raise exception
 

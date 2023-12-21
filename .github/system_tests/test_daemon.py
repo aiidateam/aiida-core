@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-name-in-module
 """Tests to run with a running daemon."""
 import os
 import re
@@ -40,7 +39,7 @@ from aiida.orm import CalcJobNode, Dict, Int, List, Str, load_code, load_node
 from aiida.orm.nodes.caching import NodeCaching
 from aiida.plugins import CalculationFactory, WorkflowFactory
 from aiida.workflows.arithmetic.add_multiply import add, add_multiply
-from tests.utils.memory import get_instances  # pylint: disable=import-error
+from tests.utils.memory import get_instances
 
 CODENAME_ADD = 'add@localhost'
 CODENAME_DOUBLER = 'doubler@localhost'
@@ -56,10 +55,12 @@ def print_daemon_log():
 
     print(f"Output of 'cat {daemon_log}':")
     try:
-        print(subprocess.check_output(
-            ['cat', f'{daemon_log}'],
-            stderr=subprocess.STDOUT,
-        ))
+        print(
+            subprocess.check_output(
+                ['cat', f'{daemon_log}'],
+                stderr=subprocess.STDOUT,
+            )
+        )
     except subprocess.CalledProcessError as exception:
         print(f'Note: the command failed, message: {exception}')
 
@@ -81,10 +82,12 @@ def print_report(pk):
     """Print the process report for given pk."""
     print(f"Output of 'verdi process report {pk}':")
     try:
-        print(subprocess.check_output(
-            ['verdi', 'process', 'report', f'{pk}'],
-            stderr=subprocess.STDOUT,
-        ))
+        print(
+            subprocess.check_output(
+                ['verdi', 'process', 'report', f'{pk}'],
+                stderr=subprocess.STDOUT,
+            )
+        )
     except subprocess.CalledProcessError as exception:
         print(f'Note: the command failed, message: {exception}')
 
@@ -193,12 +196,9 @@ def validate_workchains(expected_results):
 
 
 def validate_cached(cached_calcs):
-    """
-    Check that the calculations with created with caching are indeed cached.
-    """
+    """Check that the calculations with created with caching are indeed cached."""
     valid = True
     for calc in cached_calcs:
-
         if not calc.is_finished_ok:
             print(
                 'Cached calculation<{}> not finished ok: process_state<{}> exit_status<{}>'.format(
@@ -208,8 +208,9 @@ def validate_cached(cached_calcs):
             print_report(calc.pk)
             valid = False
 
-        if NodeCaching.CACHED_FROM_KEY not in calc.base.extras or calc.base.caching.get_hash(
-        ) != calc.base.extras.get('_aiida_hash'):
+        if NodeCaching.CACHED_FROM_KEY not in calc.base.extras or calc.base.caching.get_hash() != calc.base.extras.get(
+            '_aiida_hash'
+        ):
             print(f'Cached calculation<{calc.pk}> has invalid hash')
             print_report(calc.pk)
             valid = False
@@ -270,9 +271,7 @@ def launch_workfunction(inputval):
 
 
 def launch_calculation(code, counter, inputval):
-    """
-    Launch calculations to the daemon through the Process layer
-    """
+    """Launch calculations to the daemon through the Process layer"""
     process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
     calc = submit(process, **inputs)
     print(f'[{counter}] launched calculation {calc.uuid}, pk={calc.pk}')
@@ -280,9 +279,7 @@ def launch_calculation(code, counter, inputval):
 
 
 def run_calculation(code, counter, inputval):
-    """
-    Run a calculation through the Process layer.
-    """
+    """Run a calculation through the Process layer."""
     process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
     _, calc = run.get_node(process, **inputs)
     print(f'[{counter}] ran calculation {calc.uuid}, pk={calc.pk}')
@@ -290,28 +287,25 @@ def run_calculation(code, counter, inputval):
 
 
 def create_calculation_process(code, inputval):
-    """
-    Create the process and inputs for a submitting / running a calculation.
-    """
-    TemplatereplacerCalculation = CalculationFactory('core.templatereplacer')
+    """Create the process and inputs for a submitting / running a calculation."""
     parameters = Dict({'value': inputval})
-    template = Dict({
-        # The following line adds a significant sleep time.
-        # I set it to 1 second to speed up tests
-        # I keep it to a non-zero value because I want
-        # To test the case when AiiDA finds some calcs
-        # in a queued state
-        # 'cmdline_params': ["{}".format(counter % 3)], # Sleep time
-        'cmdline_params': ['1'],
-        'input_file_template': '{value}',  # File just contains the value to double
-        'input_file_name': 'value_to_double.txt',
-        'output_file_name': 'output.txt',
-        'retrieve_temporary_files': ['triple_value.tmp']
-    })
+    template = Dict(
+        {
+            # The following line adds a significant sleep time.
+            # I set it to 1 second to speed up tests
+            # I keep it to a non-zero value because I want
+            # To test the case when AiiDA finds some calcs
+            # in a queued state
+            # 'cmdline_params': ["{}".format(counter % 3)], # Sleep time
+            'cmdline_params': ['1'],
+            'input_file_template': '{value}',  # File just contains the value to double
+            'input_file_name': 'value_to_double.txt',
+            'output_file_name': 'output.txt',
+            'retrieve_temporary_files': ['triple_value.tmp'],
+        }
+    )
     options = {
-        'resources': {
-            'num_machines': 1
-        },
+        'resources': {'num_machines': 1},
         'max_wallclock_seconds': 5 * 60,
         'withmpi': False,
         'parser_name': 'core.templatereplacer',
@@ -325,15 +319,13 @@ def create_calculation_process(code, inputval):
         'template': template,
         'metadata': {
             'options': options,
-        }
+        },
     }
-    return TemplatereplacerCalculation, inputs, expected_result
+    return CalculationFactory('core.templatereplacer'), inputs, expected_result
 
 
 def run_arithmetic_add():
     """Run the `ArithmeticAddCalculation`."""
-    ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
-
     code = load_code(CODENAME_ADD)
     inputs = {
         'x': Int(1),
@@ -342,7 +334,7 @@ def run_arithmetic_add():
     }
 
     # Normal inputs should run just fine
-    results, node = run.get_node(ArithmeticAddCalculation, **inputs)
+    results, node = run.get_node(CalculationFactory('core.arithmetic.add'), **inputs)
     assert node.is_finished_ok, node.exit_status
     assert results['sum'] == 3
 
@@ -378,7 +370,7 @@ def run_base_restart_workchain():
     inputs['add']['y'] = Int(10)
     results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
     assert not node.is_finished_ok, node.process_state
-    assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_TOO_BIG.status, node.exit_status  # pylint: disable=no-member
+    assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_TOO_BIG.status, node.exit_status
     assert len(node.called) == 1
 
     # Check that overriding default handler enabled status works
@@ -386,14 +378,12 @@ def run_base_restart_workchain():
     inputs['handler_overrides'] = Dict({'disabled_handler': True})
     results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
     assert not node.is_finished_ok, node.process_state
-    assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_ENABLED_DOOM.status, node.exit_status  # pylint: disable=no-member
+    assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_ENABLED_DOOM.status, node.exit_status
     assert len(node.called) == 1
 
 
 def run_multiply_add_workchain():
     """Run the `MultiplyAddWorkChain`."""
-    MultiplyAddWorkChain = WorkflowFactory('core.arithmetic.multiply_add')
-
     code = load_code(CODENAME_ADD)
     inputs = {
         'x': Int(1),
@@ -403,7 +393,7 @@ def run_multiply_add_workchain():
     }
 
     # Normal inputs should run just fine
-    results, node = run.get_node(MultiplyAddWorkChain, **inputs)
+    results, node = run.get_node(WorkflowFactory('core.arithmetic.multiply_add'), **inputs)
     assert node.is_finished_ok, node.exit_status
     assert len(node.called) == 2
     assert 'result' in results
@@ -429,7 +419,6 @@ def launch_all():
 
     :returns: dictionary with expected results and pks of all launched calculations and workchains
     """
-    # pylint: disable=too-many-locals,too-many-statements
     expected_results_process_functions = {}
     expected_results_calculations = {}
     expected_results_workchains = {}
@@ -451,7 +440,6 @@ def launch_all():
     print('Testing the stashing functionality')
     process, inputs, expected_result = create_calculation_process(code=code_doubler, inputval=1)
     with tempfile.TemporaryDirectory() as tmpdir:
-
         # Delete the temporary directory to test that the stashing functionality will create it if necessary
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -571,8 +559,10 @@ def relaunch_cached(results):
             results['calculations'][calc.pk] = expected_result
 
     if not (
-        validate_calculations(results['calculations']) and validate_workchains(results['workchains']) and
-        validate_cached(cached_calcs) and validate_process_functions(results['process_functions'])
+        validate_calculations(results['calculations'])
+        and validate_workchains(results['workchains'])
+        and validate_cached(cached_calcs)
+        and validate_process_functions(results['process_functions'])
     ):
         print_daemon_log()
         print('')
@@ -586,7 +576,6 @@ def relaunch_cached(results):
 
 def main():
     """Launch a bunch of calculation jobs and workchains."""
-
     results = launch_all()
 
     print('Waiting for end of execution...')
@@ -603,19 +592,23 @@ def main():
         print('#' * 78)
         print("Output of 'verdi process list -a':")
         try:
-            print(subprocess.check_output(
-                ['verdi', 'process', 'list', '-a'],
-                stderr=subprocess.STDOUT,
-            ))
+            print(
+                subprocess.check_output(
+                    ['verdi', 'process', 'list', '-a'],
+                    stderr=subprocess.STDOUT,
+                )
+            )
         except subprocess.CalledProcessError as exception:
             print(f'Note: the command failed, message: {exception}')
 
         print("Output of 'verdi daemon status':")
         try:
-            print(subprocess.check_output(
-                ['verdi', 'daemon', 'status'],
-                stderr=subprocess.STDOUT,
-            ))
+            print(
+                subprocess.check_output(
+                    ['verdi', 'daemon', 'status'],
+                    stderr=subprocess.STDOUT,
+                )
+            )
         except subprocess.CalledProcessError as exception:
             print(f'Note: the command failed, message: {exception}')
 

@@ -19,7 +19,7 @@ from aiida.orm import Dict, Int
 def test_calc_job_monitor_result_constructor_invalid():
     """Test :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` constructor for invalid input."""
     with pytest.raises(TypeError, match=r'got an unexpected keyword argument .*'):
-        CalcJobMonitorResult(invalid_key='test')  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+        CalcJobMonitorResult(invalid_key='test')
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         CalcJobMonitorResult(key=[])
@@ -59,10 +59,10 @@ def test_calc_job_monitor_result_constructor_valid():
 def test_calc_job_monitor_constructor_invalid():
     """Test :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitor` constructor for invalid input."""
     with pytest.raises(TypeError, match=r'missing 1 required positional argument: .*'):
-        CalcJobMonitor()  # pylint: disable=no-value-for-parameter
+        CalcJobMonitor()
 
     with pytest.raises(TypeError, match=r'got an unexpected keyword argument .*'):
-        CalcJobMonitor(invalid_key='test')  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+        CalcJobMonitor(invalid_key='test')
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         CalcJobMonitor(entry_point=[])
@@ -101,17 +101,18 @@ def test_calc_job_monitor_load_entry_point():
     """Test the :meth:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitor.load_entry_point`."""
     entry_point = 'core.always_kill'
     monitor = CalcJobMonitor(entry_point)
-    assert monitor.load_entry_point() == base.always_kill  # pylint: disable=comparison-with-callable
+    assert monitor.load_entry_point() == base.always_kill
 
 
-# yapf: disable
-@pytest.mark.parametrize('monitors, expected', (
-    ({'a': {}, 'b': {}}, ['a', 'b']),
-    ({'a': {}, 'b': {'priority': 1}}, ['b', 'a']),
-    ({'a': {'priority': 2}, 'b': {'priority': 1}}, ['a', 'b']),
-    ({'b': {'priority': 3}, 'aab': {'priority': 2}, 'aaa': {'priority': 2}}, ['b', 'aaa', 'aab']),
-))
-# yapf: enable
+@pytest.mark.parametrize(
+    'monitors, expected',
+    (
+        ({'a': {}, 'b': {}}, ['a', 'b']),
+        ({'a': {}, 'b': {'priority': 1}}, ['b', 'a']),
+        ({'a': {'priority': 2}, 'b': {'priority': 1}}, ['a', 'b']),
+        ({'b': {'priority': 3}, 'aab': {'priority': 2}, 'aaa': {'priority': 2}}, ['b', 'aaa', 'aab']),
+    ),
+)
 def test_calc_job_monitors_monitors(monitors, expected):
     """Test the :meth:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitors.monitors` property."""
     monitors_full = {}
@@ -131,7 +132,7 @@ def test_calc_job_monitors_process_poll_interval(monkeypatch):
     """
     monitors = CalcJobMonitors({'always_kill': Dict({'entry_point': 'core.always_kill', 'minimum_poll_interval': 1})})
 
-    def always_kill(*args, **kwargs):  # pylint: disable=unused-argument
+    def always_kill(*args, **kwargs):
         return 'always_kill called'
 
     monkeypatch.setattr(base, 'always_kill', always_kill)
@@ -152,9 +153,10 @@ def test_calc_job_monitors_process_poll_interval(monkeypatch):
     assert result.message == 'always_kill called'
 
 
-def monitor_emit_warning(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_emit_warning(node, transport, **kwargs):
     """Test monitor that logs a warning when called."""
     from aiida.common.log import AIIDA_LOGGER
+
     AIIDA_LOGGER.warning('monitor_emit_warning monitor was called')
 
 

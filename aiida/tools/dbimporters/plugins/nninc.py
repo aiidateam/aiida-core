@@ -12,14 +12,10 @@ from aiida.tools.dbimporters.baseclasses import DbImporter, DbSearchResults, Upf
 
 
 class NnincDbImporter(DbImporter):
-    """
-    Database importer for NNIN/C Pseudopotential Virtual Vault.
-    """
+    """Database importer for NNIN/C Pseudopotential Virtual Vault."""
 
     def _str_clause(self, key, alias, values):
-        """
-        Returns part of HTTP GET query for querying string fields.
-        """
+        """Returns part of HTTP GET query for querying string fields."""
         if not isinstance(values, str):
             raise ValueError(f"incorrect value for keyword '{alias}' -- only strings and integers are accepted")
         return f'{key}={values}'
@@ -28,7 +24,7 @@ class NnincDbImporter(DbImporter):
         'xc_approximation': ['frmxcprox', _str_clause],
         'xc_type': ['frmxctype', _str_clause],
         'pseudopotential_class': ['frmspclass', _str_clause],
-        'element': ['element', None]
+        'element': ['element', None],
     }
 
     def __init__(self, **kwargs):
@@ -36,8 +32,7 @@ class NnincDbImporter(DbImporter):
         self.setup_db(**kwargs)
 
     def query_get(self, **kwargs):
-        """
-        Forms a HTTP GET query for querying the NNIN/C Pseudopotential
+        """Forms a HTTP GET query for querying the NNIN/C Pseudopotential
         Virtual Vault.
 
         :return: a string with HTTP GET statement.
@@ -55,8 +50,7 @@ class NnincDbImporter(DbImporter):
         return f"{self._query_url}?{'&'.join(get_parts)}"
 
     def query(self, **kwargs):
-        """
-        Performs a query on the NNIN/C Pseudopotential Virtual Vault using
+        """Performs a query on the NNIN/C Pseudopotential Virtual Vault using
         ``keyword = value`` pairs, specified in ``kwargs``.
 
         :return: an instance of
@@ -84,33 +78,31 @@ class NnincDbImporter(DbImporter):
 
         return NnincSearchResults([{'id': x} for x in results])
 
-    def setup_db(self, query_url=None, **kwargs):  # pylint: disable=arguments-differ
-        """
-        Changes the database connection details.
-        """
+    def setup_db(self, query_url=None, **kwargs):
+        """Changes the database connection details."""
         if query_url:
             self._query_url = query_url
 
         if kwargs.keys():
-            raise NotImplementedError( \
-                "unknown database connection parameter(s): '" + \
-                "', '".join(kwargs.keys()) + \
-                "', available parameters: 'query_url'")
+            raise NotImplementedError(
+                "unknown database connection parameter(s): '"
+                + "', '".join(kwargs.keys())
+                + "', available parameters: 'query_url'"
+            )
 
     def get_supported_keywords(self):
-        """
-        Returns the list of all supported query keywords.
+        """Returns the list of all supported query keywords.
 
         :return: list of strings
         """
         return self._keywords.keys()
 
 
-class NnincSearchResults(DbSearchResults):  # pylint: disable=abstract-method
-    """
-    Results of the search, performed on NNIN/C Pseudopotential Virtual
+class NnincSearchResults(DbSearchResults):
+    """Results of the search, performed on NNIN/C Pseudopotential Virtual
     Vault.
     """
+
     _base_url = 'http://nninc.cnf.cornell.edu/psp_files/'
 
     def __init__(self, results):
@@ -121,8 +113,7 @@ class NnincSearchResults(DbSearchResults):  # pylint: disable=abstract-method
         return len(self._results)
 
     def _get_source_dict(self, result_dict):
-        """
-        Returns a dictionary, which is passed as kwargs to the created
+        """Returns a dictionary, which is passed as kwargs to the created
         DbEntry instance, describing the source of the entry.
 
         :param result_dict: dictionary, describing an entry in the results.
@@ -130,8 +121,7 @@ class NnincSearchResults(DbSearchResults):  # pylint: disable=abstract-method
         return {'id': result_dict['id']}
 
     def _get_url(self, result_dict):
-        """
-        Returns an URL of an entry CIF file.
+        """Returns an URL of an entry CIF file.
 
         :param result_dict: dictionary, describing an entry in the results.
         """
@@ -139,13 +129,10 @@ class NnincSearchResults(DbSearchResults):  # pylint: disable=abstract-method
 
 
 class NnincEntry(UpfEntry):
-    """
-    Represents an entry from NNIN/C Pseudopotential Virtual Vault.
-    """
+    """Represents an entry from NNIN/C Pseudopotential Virtual Vault."""
 
     def __init__(self, uri, **kwargs):
-        """
-        Creates an instance of
+        """Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.nninc.NnincEntry`, related
         to the supplied URI.
         """

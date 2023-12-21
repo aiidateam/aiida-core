@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .daemon import *
 from .exceptions import *
@@ -77,4 +76,4 @@ __all__ = (
     'workfunction',
 )
 
-# yapf: enable
+# fmt: on

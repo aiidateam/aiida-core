@@ -23,8 +23,7 @@ The individual SQLAlchemy database migrations may be found at:
 
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
-# pylint: disable=invalid-name
-from ..utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
+from ..utils import update_metadata, verify_metadata_version
 
 
 def data_migration_legacy_process_attributes(data):
@@ -85,13 +84,13 @@ def data_migration_legacy_process_attributes(data):
 
     if illegal_cases:
         headers = ['UUID/PK', 'process_state']
-        warning_message = 'Found ProcessNodes with active process states ' \
-                          'that should never have been allowed to be exported.'
+        warning_message = (
+            'Found ProcessNodes with active process states ' 'that should never have been allowed to be exported.'
+        )
         write_database_integrity_violation(illegal_cases, headers, warning_message)
 
         raise CorruptStorage(
-            'Your export archive is corrupt! '
-            'Please see the log-file in your current directory for more details.'
+            'Your export archive is corrupt! ' 'Please see the log-file in your current directory for more details.'
         )
 
 

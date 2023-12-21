@@ -7,10 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for `verdi archive import`."""
-from click.exceptions import BadParameter
 import pytest
+from click.exceptions import BadParameter
 
 from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Group
@@ -41,12 +40,10 @@ def test_import_non_existing_archives(run_cli_command):
 
 
 def test_import_archive(run_cli_command, newest_archive):
-    """
-    Test import for archive files from disk
-    """
+    """Test import for archive files from disk"""
     archives = [
         get_archive_file('arithmetic.add.aiida', filepath='calcjob'),
-        get_archive_file(newest_archive, filepath=ARCHIVE_PATH)
+        get_archive_file(newest_archive, filepath=ARCHIVE_PATH),
     ]
 
     options = [] + archives
@@ -54,13 +51,12 @@ def test_import_archive(run_cli_command, newest_archive):
 
 
 def test_import_to_group(run_cli_command, newest_archive):
-    """
-    Test import to existing Group and that Nodes are added correctly for multiple imports of the same,
+    """Test import to existing Group and that Nodes are added correctly for multiple imports of the same,
     as well as separate, archives.
     """
     archives = [
         get_archive_file('arithmetic.add.aiida', filepath='calcjob'),
-        get_archive_file(newest_archive, filepath=ARCHIVE_PATH)
+        get_archive_file(newest_archive, filepath=ARCHIVE_PATH),
     ]
 
     group_label = 'import_madness'
@@ -78,18 +74,18 @@ def test_import_to_group(run_cli_command, newest_archive):
     # Invoke `verdi import` again, making sure Group count doesn't change
     options = ['-G', group.label] + [archives[0]]
     run_cli_command(cmd_archive.import_archive, options)
-    assert group.count() == \
-        nodes_in_group, \
-        f'The Group count should not have changed from {nodes_in_group}. Instead it is now {group.count()}'
+    assert (
+        group.count() == nodes_in_group
+    ), f'The Group count should not have changed from {nodes_in_group}. Instead it is now {group.count()}'
 
     # Invoke `verdi import` again with new archive, making sure Group count is upped
     options = ['-G', group.label] + [archives[1]]
     run_cli_command(cmd_archive.import_archive, options)
-    assert group.count() > \
-        nodes_in_group, \
-        'There should now be more than {} nodes in group {} , instead there are {}'.format(
-            nodes_in_group, group_label, group.count()
-        )
+    assert (
+        group.count() > nodes_in_group
+    ), 'There should now be more than {} nodes in group {} , instead there are {}'.format(
+        nodes_in_group, group_label, group.count()
+    )
 
 
 def test_import_make_new_group(run_cli_command, newest_archive):
@@ -135,7 +131,7 @@ def test_no_import_group(run_cli_command, newest_archive):
     assert Group.collection.count() == 6
 
 
-@pytest.mark.skip('Due to summary being logged, this can not be checked against `results.output`.')  # pylint: disable=not-callable
+@pytest.mark.skip('Due to summary being logged, this can not be checked against `results.output`.')
 def test_comment_mode(run_cli_command, newest_archive):
     """Test toggling comment mode flag"""
     archives = [get_archive_file(newest_archive, filepath=ARCHIVE_PATH)]
@@ -151,8 +147,10 @@ def test_import_old_url_archives(run_cli_command):
     """
     archive = 'export_v0.4_no_UPF.aiida'
     version = '0.4'
-    url_path = 'https://raw.githubusercontent.com/aiidateam/aiida-core/' \
+    url_path = (
+        'https://raw.githubusercontent.com/aiidateam/aiida-core/'
         '0599dabf0887bee172a04f308307e99e3c3f3ff2/aiida/backends/tests/fixtures/export/migrate/'
+    )
     options = [url_path + archive]
     result = run_cli_command(cmd_archive.import_archive, options)
     assert version in result.output, result.exception
@@ -163,12 +161,15 @@ def test_import_url_and_local_archives(run_cli_command, newest_archive):
     """Test import of both a remote and local archive"""
     url_archive = 'export_v0.4_no_UPF.aiida'
     local_archive = newest_archive
-    url_path = 'https://raw.githubusercontent.com/aiidateam/aiida-core/' \
+    url_path = (
+        'https://raw.githubusercontent.com/aiidateam/aiida-core/'
         '0599dabf0887bee172a04f308307e99e3c3f3ff2/aiida/backends/tests/fixtures/export/migrate/'
+    )
 
     options = [
-        get_archive_file(local_archive, filepath=ARCHIVE_PATH), url_path + url_archive,
-        get_archive_file(local_archive, filepath=ARCHIVE_PATH)
+        get_archive_file(local_archive, filepath=ARCHIVE_PATH),
+        url_path + url_archive,
+        get_archive_file(local_archive, filepath=ARCHIVE_PATH),
     ]
     run_cli_command(cmd_archive.import_archive, options)
 
@@ -218,7 +219,7 @@ def test_migration(run_cli_command):
 
 @pytest.mark.parametrize('version', [v for v in list_versions() if v not in ('main_0000a', 'main_0000b')])
 def test_import_old_local_archives(version, run_cli_command):
-    """ Test import of old local archives
+    """Test import of old local archives
     Expected behavior: Automatically migrate to newest version and import correctly.
     """
     archive, version = (f'export_{version}_simple.aiida', f'{version}')

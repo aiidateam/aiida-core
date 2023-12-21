@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """This migration adds uniqueness constraint to the UUID column.
 
 This migration corresponds to the 0024_dblog_update Django migration.

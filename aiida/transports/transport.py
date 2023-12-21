@@ -9,11 +9,11 @@
 ###########################################################################
 """Transport interface."""
 import abc
-from collections import OrderedDict
 import fnmatch
 import os
 import re
 import sys
+from collections import OrderedDict
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
@@ -21,7 +21,7 @@ from aiida.common.lang import classproperty
 __all__ = ('Transport',)
 
 
-def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argument
+def validate_positive_number(ctx, param, value):
     """Validate that the number passed to this parameter is a positive number.
 
     :param ctx: the `click.Context`
@@ -31,6 +31,7 @@ def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argum
     """
     if not isinstance(value, (int, float)) or value < 0:
         from click import BadParameter
+
         raise BadParameter(f'{value} is not a valid positive number')
 
     return value
@@ -38,14 +39,13 @@ def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argum
 
 class Transport(abc.ABC):
     """Abstract class for a generic transport (ssh, local, ...) contains the set of minimal methods."""
-    # pylint: disable=too-many-public-methods
 
     # This will be used for ``Computer.get_minimum_job_poll_interval``
     DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10
 
     # This is used as a global default in case subclasses don't redefine this,
     # but this should  be redefined in plugins where appropriate
-    _DEFAULT_SAFE_OPEN_INTERVAL = 30.
+    _DEFAULT_SAFE_OPEN_INTERVAL = 30.0
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
@@ -54,29 +54,30 @@ class Transport(abc.ABC):
     _valid_auth_options: list = []
     _common_auth_options = [
         (
-            'use_login_shell', {
+            'use_login_shell',
+            {
                 'default': True,
                 'switch': True,
                 'prompt': 'Use login shell when executing command',
                 'help': ' Not using a login shell can help suppress potential'
                 ' spurious text output that can prevent AiiDA from parsing the output of commands,'
                 ' but may result in some startup files (.profile) not being sourced.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),
         (
-            'safe_interval', {
+            'safe_interval',
+            {
                 'type': float,
                 'prompt': 'Connection cooldown time (s)',
                 'help': 'Minimum time interval in seconds between opening new connections.',
-                'callback': validate_positive_number
-            }
+                'callback': validate_positive_number,
+            },
         ),
     ]
 
-    def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
-        """
-        __init__ method of the Transport base class.
+    def __init__(self, *args, **kwargs):
+        """__init__ method of the Transport base class.
 
         :param safe_interval: (optional, default self._DEFAULT_SAFE_OPEN_INTERVAL)
            Minimum time interval in seconds between opening new connections.
@@ -84,6 +85,7 @@ class Transport(abc.ABC):
            if False, do not use a login shell when executing command
         """
         from aiida.common import AIIDA_LOGGER
+
         self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
         self._use_login_shell = kwargs.pop('use_login_shell', True)
         if self._use_login_shell:
@@ -100,8 +102,7 @@ class Transport(abc.ABC):
         self.hostname = kwargs.get('machine')
 
     def __enter__(self):
-        """
-        For transports that require opening a connection, opens
+        """For transports that require opening a connection, opens
         all required channels (used in 'with' statements).
 
         This object can be used in nested `with` statements and the connection
@@ -130,9 +131,7 @@ class Transport(abc.ABC):
         return self
 
     def __exit__(self, type_, value, traceback):
-        """
-        Closes connections, if needed (used in 'with' statements).
-        """
+        """Closes connections, if needed (used in 'with' statements)."""
         self._enters -= 1
         if self._enters == 0:
             self.close()
@@ -143,26 +142,21 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def open(self):
-        """
-        Opens a local transport channel
-        """
+        """Opens a local transport channel"""
 
     @abc.abstractmethod
     def close(self):
-        """
-        Closes the local transport channel
-        """
+        """Closes the local transport channel"""
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}: {str(self)}>'
+        return f'<{self.__class__.__name__}: {self!s}>'
 
     # redefine this in each subclass
     def __str__(self):
         return '[Transport class or subclass]'
 
     def set_logger_extra(self, logger_extra):
-        """
-        Pass the data that should be passed automatically to self.logger
+        """Pass the data that should be passed automatically to self.logger
         as 'extra' keyword. This is typically useful if you pass data
         obtained using get_dblogger_extra in aiida.orm.utils.log, to automatically
         log also to the DbLog table.
@@ -176,9 +170,7 @@ class Transport(abc.ABC):
 
     @classmethod
     def get_short_doc(cls):
-        """
-        Return the first non-empty line of the class docstring, if available
-        """
+        """Return the first non-empty line of the class docstring, if available"""
         # Remove empty lines
         docstring = cls.__doc__
         if not docstring:
@@ -191,16 +183,14 @@ class Transport(abc.ABC):
 
     @classmethod
     def get_valid_auth_params(cls):
-        """
-        Return the internal list of valid auth_params
-        """
+        """Return the internal list of valid auth_params"""
         if cls._valid_auth_options is None:
             raise NotImplementedError
         else:
             return cls.auth_options.keys()
 
     @classproperty
-    def auth_options(cls) -> OrderedDict:  # pylint: disable=no-self-argument
+    def auth_options(cls) -> OrderedDict:  # noqa: N805
         """Return the authentication options to be used for building the CLI.
 
         :return: `OrderedDict` of tuples, with first element option name and second dictionary of kwargs
@@ -208,25 +198,21 @@ class Transport(abc.ABC):
         return OrderedDict(cls._valid_auth_options + cls._common_auth_options)
 
     @classmethod
-    def _get_safe_interval_suggestion_string(cls, computer):  # pylint: disable=unused-argument
-        """
-        Return as a suggestion the default safe interval of this Transport class.
+    def _get_safe_interval_suggestion_string(cls, computer):
+        """Return as a suggestion the default safe interval of this Transport class.
 
         This is used to provide a default in ``verdi computer configure``.
         """
         return cls._DEFAULT_SAFE_OPEN_INTERVAL
 
     @classmethod
-    def _get_use_login_shell_suggestion_string(cls, computer):  # pylint: disable=unused-argument
-        """
-        Return a suggestion for the specific field.
-        """
+    def _get_use_login_shell_suggestion_string(cls, computer):
+        """Return a suggestion for the specific field."""
         return 'True'
 
     @property
     def logger(self):
-        """
-        Return the internal logger.
+        """Return the internal logger.
         If you have set extra parameters using set_logger_extra(), a
         suitable LoggerAdapter instance is created, bringing with itself
         also the extras.
@@ -241,8 +227,7 @@ class Transport(abc.ABC):
             raise InternalError('No self._logger configured for {}!')
 
     def get_safe_open_interval(self):
-        """
-        Get an interval (in seconds) that suggests how long the user should wait
+        """Get an interval (in seconds) that suggests how long the user should wait
         between consecutive calls to open the transport.  This can be used as
         a way to get the user to not swamp a limited number of connections, etc.
         However it is just advisory.
@@ -260,8 +245,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def chdir(self, path):
-        """
-        Change directory to 'path'
+        """Change directory to 'path'
 
         :param str path: path to change working directory into.
         :raises: IOError, if the requested path does not exist
@@ -270,8 +254,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def chmod(self, path, mode):
-        """
-        Change permissions of a path.
+        """Change permissions of a path.
 
         :param str path: path to file
         :param int mode: new permissions
@@ -279,8 +262,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def chown(self, path, uid, gid):
-        """
-        Change the owner (uid) and group (gid) of a file.
+        """Change the owner (uid) and group (gid) of a file.
         As with python's os.chown function, you must pass both arguments,
         so if you only want to change one, use stat first to retrieve the
         current owner and group.
@@ -292,8 +274,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def copy(self, remotesource, remotedestination, dereference=False, recursive=True):
-        """
-        Copy a file or a directory from remote source to remote destination
+        """Copy a file or a directory from remote source to remote destination
         (On the same remote machine)
 
         :param str remotesource: path of the remote source directory / file
@@ -308,8 +289,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def copyfile(self, remotesource, remotedestination, dereference=False):
-        """
-        Copy a file from remote source to remote destination
+        """Copy a file from remote source to remote destination
         (On the same remote machine)
 
         :param str remotesource: path of the remote source directory / file
@@ -322,8 +302,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def copytree(self, remotesource, remotedestination, dereference=False):
-        """
-        Copy a folder from remote source to remote destination
+        """Copy a folder from remote source to remote destination
         (On the same remote machine)
 
         :param str remotesource: path of the remote source directory / file
@@ -335,8 +314,7 @@ class Transport(abc.ABC):
         """
 
     def copy_from_remote_to_remote(self, transportdestination, remotesource, remotedestination, **kwargs):
-        """
-        Copy files or folders from a remote computer to another remote computer.
+        """Copy files or folders from a remote computer to another remote computer.
 
         :param transportdestination: transport to be used for the destination computer
         :param str remotesource: path to the remote source directory / file
@@ -386,8 +364,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def _exec_command_internal(self, command, **kwargs):
-        """
-        Execute the command on the shell, similarly to os.system.
+        """Execute the command on the shell, similarly to os.system.
 
         Enforce the execution to be run from the cwd (as given by
         self.getcwd), if this is not None.
@@ -402,8 +379,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def exec_command_wait_bytes(self, command, stdin=None, **kwargs):
-        """
-        Execute the command on the shell, waits for it to finish,
+        """Execute the command on the shell, waits for it to finish,
         and return the retcode, the stdout and the stderr as bytes.
 
         Enforce the execution to be run from the pwd (as given by self.getcwd), if this is not None.
@@ -416,8 +392,7 @@ class Transport(abc.ABC):
         """
 
     def exec_command_wait(self, command, stdin=None, encoding='utf-8', **kwargs):
-        """
-        Executes the specified command and waits for it to finish.
+        """Executes the specified command and waits for it to finish.
 
         :note: this function also decodes the bytes received into a string with the specified encoding,
             which is set to be ``utf-8`` by default (for backward-compatibility with earlier versions) of
@@ -441,8 +416,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def get(self, remotepath, localpath, *args, **kwargs):
-        """
-        Retrieve a file or folder from remote source to local destination
+        """Retrieve a file or folder from remote source to local destination
         dst must be an absolute path (src not necessarily)
 
         :param remotepath: (str) remote_folder_path
@@ -451,8 +425,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def getfile(self, remotepath, localpath, *args, **kwargs):
-        """
-        Retrieve a file from remote source to local destination
+        """Retrieve a file from remote source to local destination
         dst must be an absolute path (src not necessarily)
 
         :param str remotepath: remote_folder_path
@@ -461,8 +434,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def gettree(self, remotepath, localpath, *args, **kwargs):
-        """
-        Retrieve a folder recursively from remote source to local destination
+        """Retrieve a folder recursively from remote source to local destination
         dst must be an absolute path (src not necessarily)
 
         :param str remotepath: remote_folder_path
@@ -471,16 +443,14 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def getcwd(self):
-        """
-        Get working directory
+        """Get working directory
 
         :return: a string identifying the current working directory
         """
 
     @abc.abstractmethod
     def get_attribute(self, path):
-        """
-        Return an object FixedFieldsAttributeDict for file in a given path,
+        """Return an object FixedFieldsAttributeDict for file in a given path,
         as defined in aiida.common.extendeddicts
         Each attribute object consists in a dictionary with the following keys:
 
@@ -501,8 +471,7 @@ class Transport(abc.ABC):
         """
 
     def get_mode(self, path):
-        """
-        Return the portion of the file's mode that can be set by chmod().
+        """Return the portion of the file's mode that can be set by chmod().
 
         :param str path: path to file
         :return: the portion of the file's mode that can be set by chmod()
@@ -513,8 +482,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def isdir(self, path):
-        """
-        True if path is an existing directory.
+        """True if path is an existing directory.
 
         :param str path: path to directory
         :return: boolean
@@ -522,8 +490,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def isfile(self, path):
-        """
-        Return True if path is an existing file.
+        """Return True if path is an existing file.
 
         :param str path: path to file
         :return: boolean
@@ -531,8 +498,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def listdir(self, path='.', pattern=None):
-        """
-        Return a list of the names of the entries in the given path.
+        """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
 
@@ -542,9 +508,8 @@ class Transport(abc.ABC):
         :return: a list of strings
         """
 
-    def listdir_withattributes(self, path='.', pattern=None):  # pylint: disable=unused-argument
-        """
-        Return a list of the names of the entries in the given path.
+    def listdir_withattributes(self, path='.', pattern=None):
+        """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
 
@@ -575,8 +540,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def makedirs(self, path, ignore_existing=False):
-        """
-        Super-mkdir; create a leaf directory and all intermediate ones.
+        """Super-mkdir; create a leaf directory and all intermediate ones.
         Works like mkdir, except that any intermediate path segment (not
         just the rightmost) will be created if it does not exist.
 
@@ -589,8 +553,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def mkdir(self, path, ignore_existing=False):
-        """
-        Create a folder (directory) named path.
+        """Create a folder (directory) named path.
 
         :param str path: name of the folder to create
         :param bool ignore_existing: if True, does not give any error if the
@@ -601,8 +564,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def normalize(self, path='.'):
-        """
-        Return the normalized path (on the server) of a given path.
+        """Return the normalized path (on the server) of a given path.
         This can be used to quickly resolve symbolic links or determine
         what the server is considering to be the "current folder".
 
@@ -613,8 +575,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def put(self, localpath, remotepath, *args, **kwargs):
-        """
-        Put a file or a directory from local src to remote dst.
+        """Put a file or a directory from local src to remote dst.
         src must be an absolute path (dst not necessarily))
         Redirects to putfile and puttree.
 
@@ -624,8 +585,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def putfile(self, localpath, remotepath, *args, **kwargs):
-        """
-        Put a file from local src to remote dst.
+        """Put a file from local src to remote dst.
         src must be an absolute path (dst not necessarily))
 
         :param str localpath: absolute path to local file
@@ -634,8 +594,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def puttree(self, localpath, remotepath, *args, **kwargs):
-        """
-        Put a folder recursively from local src to remote dst.
+        """Put a folder recursively from local src to remote dst.
         src must be an absolute path (dst not necessarily))
 
         :param str localpath: absolute path to local folder
@@ -644,8 +603,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def remove(self, path):
-        """
-        Remove the file at the given path. This only works on files;
+        """Remove the file at the given path. This only works on files;
         for removing folders (directories), use rmdir.
 
         :param str path: path to file to remove
@@ -655,8 +613,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def rename(self, oldpath, newpath):
-        """
-        Rename a file or folder from oldpath to newpath.
+        """Rename a file or folder from oldpath to newpath.
 
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
@@ -667,8 +624,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def rmdir(self, path):
-        """
-        Remove the folder named path.
+        """Remove the folder named path.
         This works only for empty folders. For recursive remove, use rmtree.
 
         :param str path: absolute path to the folder to remove
@@ -676,16 +632,14 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def rmtree(self, path):
-        """
-        Remove recursively the content at path
+        """Remove recursively the content at path
 
         :param str path: absolute path to remove
         """
 
     @abc.abstractmethod
     def gotocomputer_command(self, remotedir):
-        """
-        Return a string to be run using os.system in order to connect
+        """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
         Expected behaviors:
@@ -699,8 +653,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def symlink(self, remotesource, remotedestination):
-        """
-        Create a symbolic link between the remote source and the remote
+        """Create a symbolic link between the remote source and the remote
         destination.
 
         :param remotesource: remote source
@@ -708,14 +661,12 @@ class Transport(abc.ABC):
         """
 
     def whoami(self):
-        """
-        Get the remote username
+        """Get the remote username
 
         :return: list of username (str),
                  retval (int),
                  stderr (str)
         """
-
         command = 'whoami'
         # Assuming here that the username is either ASCII or UTF-8 encoded
         # This should be true essentially always
@@ -730,9 +681,7 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def path_exists(self, path):
-        """
-        Returns True if path exists, False otherwise.
-        """
+        """Returns True if path exists, False otherwise."""
 
     # The following definitions are almost copied and pasted
     # from the python module glob.
@@ -811,7 +760,7 @@ class Transport(abc.ABC):
         return self._MAGIC_CHECK.search(string) is not None
 
     def _gotocomputer_string(self, remotedir):
-        """command executed when goto computer."""
+        """Command executed when goto computer."""
         connect_string = (
             """ "if [ -d {escaped_remotedir} ] ;"""
             """ then cd {escaped_remotedir} ; {bash_command} ; else echo '  ** The directory' ; """
@@ -824,7 +773,6 @@ class Transport(abc.ABC):
 
 
 class TransportInternalError(InternalError):
-    """
-    Raised if there is a transport error that is raised to an internal error (e.g.
+    """Raised if there is a transport error that is raised to an internal error (e.g.
     a transport method called without opening the channel first).
     """

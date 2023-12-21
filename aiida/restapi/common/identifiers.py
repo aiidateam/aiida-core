@@ -113,16 +113,15 @@ def get_full_type_filters(full_type):
         if process_type:
             process_type = escape_for_sql_like(process_type) + LIKE_OPERATOR_CHARACTER
             filters['process_type'] = {'like': process_type}
+    elif process_type:
+        filters['process_type'] = {'==': process_type}
     else:
-        if process_type:
-            filters['process_type'] = {'==': process_type}
-        else:
-            # A `process_type=''` is used to represents both `process_type='' and `process_type=None`.
-            # This is because there is no simple way to single out null `process_types`, and therefore
-            # we consider them together with empty-string process_types.
-            # Moreover, the existence of both is most likely a bug of migrations and thus both share
-            # this same "erroneous" origin.
-            filters['process_type'] = {'or': [{'==': ''}, {'==': None}]}
+        # A `process_type=''` is used to represents both `process_type='' and `process_type=None`.
+        # This is because there is no simple way to single out null `process_types`, and therefore
+        # we consider them together with empty-string process_types.
+        # Moreover, the existence of both is most likely a bug of migrations and thus both share
+        # this same "erroneous" origin.
+        filters['process_type'] = {'or': [{'==': ''}, {'==': None}]}
 
     return filters
 
@@ -146,14 +145,12 @@ def load_entry_point_from_full_type(full_type):
     node_type, process_type = full_type.split(FULL_TYPE_CONCATENATOR)
 
     if is_valid_entry_point_string(process_type):
-
         try:
             return load_entry_point_from_string(process_type)
         except EntryPointError:
             raise EntryPointError(f'could not load entry point `{process_type}`')
 
     elif node_type.startswith(data_prefix):
-
         base_name = strip_prefix(node_type, data_prefix)
         entry_point_name = base_name.rsplit('.', 2)[0]
 
@@ -189,18 +186,13 @@ class Namespace(MutableMapping):
     # This is a hard-coded mapping to generate the correct full types for process node namespaces of external
     # plugins. The `node_type` in that case is fixed and the `process_type` should start with the entry point group
     # followed by the plugin name and the wildcard.
-    # yapf: disable
+
     process_full_type_mapping = {
-        'process.calculation.calcjob.':
-        'process.calculation.calcjob.CalcJobNode.|aiida.calculations:{plugin_name}.%',
-        'process.calculation.calcfunction.':
-        'process.calculation.calcfunction.CalcFunctionNode.|aiida.calculations:{plugin_name}.%',
-        'process.workflow.workfunction.':
-        'process.workflow.workfunction.WorkFunctionNode.|aiida.workflows:{plugin_name}.%',
-        'process.workflow.workchain.':
-        'process.workflow.workchain.WorkChainNode.|aiida.workflows:{plugin_name}.%',
+        'process.calculation.calcjob.': 'process.calculation.calcjob.CalcJobNode.|aiida.calculations:{plugin_name}.%',
+        'process.calculation.calcfunction.': 'process.calculation.calcfunction.CalcFunctionNode.|aiida.calculations:{plugin_name}.%',  # noqa: E501
+        'process.workflow.workfunction.': 'process.workflow.workfunction.WorkFunctionNode.|aiida.workflows:{plugin_name}.%',  # noqa: E501
+        'process.workflow.workchain.': 'process.workflow.workchain.WorkChainNode.|aiida.workflows:{plugin_name}.%',
     }
-    # yapf: enable
 
     process_full_type_mapping_unplugged = {
         'process.calculation.calcjob.': 'process.calculation.calcjob.CalcJobNode.|{plugin_name}.%',
@@ -211,11 +203,11 @@ class Namespace(MutableMapping):
 
     def __str__(self):
         import json
+
         return json.dumps(self.get_description(), sort_keys=True, indent=4)
 
     def __init__(self, namespace, path=None, label=None, full_type=None, counter=None, is_leaf=True):
         """Construct a new node class namespace."""
-        # pylint: disable=super-init-not-called, too-many-arguments
         self._namespace = namespace
         self._path = path if path else namespace
         self._full_type = self._infer_full_type(full_type)
@@ -334,7 +326,6 @@ class Namespace(MutableMapping):
 
         # If this is True, the (sub) port namespace does not yet exist, so we create it
         if port_name not in self:
-
             # If there still is a `namespace`, we create a sub namespace, *without* the constructor arguments
             if namespace:
                 self[port_name] = self.__class__(port_name, path=path, is_leaf=False)
@@ -343,19 +334,19 @@ class Namespace(MutableMapping):
             else:
                 kwargs['is_leaf'] = True
                 self[port_name] = self.__class__(port_name, path=path, **kwargs)
-        else:
-            # The port does already exist: if it is a leaf and `namespace` is not empty, then the current leaf node is
-            # also a namespace itself, so create a namespace with the same name and put the leaf within itself
-            if self[port_name].is_leaf and namespace:
-                clone = self[port_name]
-                self[port_name] = self.__class__(port_name, path=path, is_leaf=False)
-                self[port_name][port_name] = clone
 
-            # If the current existing port is not a leaf and we do not have remaining namespace, that means the current
-            # namespace is the "concrete" version of the namespace, so we add the leaf version to the namespace.
-            elif not self[port_name].is_leaf and not namespace:
-                kwargs['is_leaf'] = True
-                self[port_name][port_name] = self.__class__(port_name, path=f'{path}.{port_name}', **kwargs)
+        # The port does already exist: if it is a leaf and `namespace` is not empty, then the current leaf node is
+        # also a namespace itself, so create a namespace with the same name and put the leaf within itself
+        elif self[port_name].is_leaf and namespace:
+            clone = self[port_name]
+            self[port_name] = self.__class__(port_name, path=path, is_leaf=False)
+            self[port_name][port_name] = clone
+
+        # If the current existing port is not a leaf and we do not have remaining namespace, that means the current
+        # namespace is the "concrete" version of the namespace, so we add the leaf version to the namespace.
+        elif not self[port_name].is_leaf and not namespace:
+            kwargs['is_leaf'] = True
+            self[port_name][port_name] = self.__class__(port_name, path=f'{path}.{port_name}', **kwargs)
 
         # If there is still `namespace` left, we create the next namespace
         if namespace:
@@ -370,7 +361,6 @@ def get_node_namespace(user_pk=None, count_nodes=False):
 
     :return: complete node `Namespace`
     """
-    # pylint: disable=too-many-branches
     from aiida import orm
     from aiida.plugins.entry_point import is_valid_entry_point_string, parse_entry_point_string
 
@@ -387,7 +377,6 @@ def get_node_namespace(user_pk=None, count_nodes=False):
     namespaces = []
 
     for node_type, process_type in unique_types:
-
         label = None
         counter = None
         namespace = None

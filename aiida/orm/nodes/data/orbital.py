@@ -19,21 +19,18 @@ __all__ = ('OrbitalData',)
 
 
 class OrbitalData(Data):
-    """
-    Used for storing collections of orbitals, as well as
+    """Used for storing collections of orbitals, as well as
     providing methods for accessing them internally.
     """
 
     def clear_orbitals(self):
-        """
-        Remove all orbitals that were added to the class
+        """Remove all orbitals that were added to the class
         Cannot work if OrbitalData has been already stored
         """
         self.base.attributes.set('orbital_dicts', [])
 
     def get_orbitals(self, **kwargs):
-        """
-        Returns all orbitals by default. If a site is provided, returns
+        """Returns all orbitals by default. If a site is provided, returns
         all orbitals cooresponding to the location of that site, additional
         arguments may be provided, which act as filters on the retrieved
         orbitals.
@@ -42,7 +39,6 @@ class OrbitalData(Data):
         :kwargs: attributes than can filter the set of returned orbitals
         :return list_of_outputs: a list of orbitals
         """
-
         orbital_dicts = copy.deepcopy(self.base.attributes.get('orbital_dicts', None))
         if orbital_dicts is None:
             raise AttributeError('Orbitals must be set before being retrieved')
@@ -66,8 +62,7 @@ class OrbitalData(Data):
         return list_of_outputs
 
     def set_orbitals(self, orbitals):
-        """
-        Sets the orbitals into the database. Uses the orbital's inherent
+        """Sets the orbitals into the database. Uses the orbital's inherent
         set_orbital_dict method to generate a orbital dict string.
 
         :param orbital: an orbital or list of orbitals to be set

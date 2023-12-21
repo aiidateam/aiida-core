@@ -12,7 +12,7 @@
 This migration is necessary after the v0.11 to v0.12 migration did not add the core prefix
 to transport entry points.
 """
-from ..utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
+from ..utils import update_metadata, verify_metadata_version
 
 MAPPING_TRANSPORTS = {
     'local': 'core.local',
@@ -22,7 +22,6 @@ MAPPING_TRANSPORTS = {
 
 def migrate_v12_to_v13(metadata: dict, data: dict) -> None:
     """Migration of export files from v0.12 to v0.13."""
-    # pylint: disable=too-many-branches
     old_version = '0.12'
     new_version = '0.13'
 
@@ -31,7 +30,6 @@ def migrate_v12_to_v13(metadata: dict, data: dict) -> None:
 
     # Migrate transport entry point names
     for values in data.get('export_data', {}).get('Computer', {}).values():
-
         if 'transport_type' in values:
             try:
                 new_transport_type = MAPPING_TRANSPORTS[values['transport_type']]

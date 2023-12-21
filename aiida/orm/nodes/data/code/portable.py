@@ -62,7 +62,7 @@ class PortableCode(Code):
 
         :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.  # pylint: disable=bad-super-call
+        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.
 
         try:
             filepath_executable = self.filepath_executable
@@ -162,7 +162,7 @@ class PortableCode(Code):
                 'type': click.Path(exists=True, file_okay=False, dir_okay=True, path_type=pathlib.Path),
                 'prompt': 'Code directory',
                 'help': 'Filepath to directory containing code files.',
-            }
+            },
         }
         options.update(**super()._get_cli_options())
 

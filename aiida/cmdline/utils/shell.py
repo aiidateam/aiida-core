@@ -57,7 +57,7 @@ def ipython():
 
 def bpython():
     """Start a bpython shell."""
-    import bpython as bpy_shell  # pylint: disable=import-error
+    import bpython as bpy_shell
 
     user_ns = get_start_namespace()
     if user_ns:
@@ -71,7 +71,6 @@ AVAILABLE_SHELLS = {'ipython': ipython, 'bpython': bpython}
 
 def run_shell(interface=None):
     """Start the chosen external shell."""
-
     available_shells = [AVAILABLE_SHELLS[interface]] if interface else AVAILABLE_SHELLS.values()
 
     # Try the specified or the available shells one by one until you
@@ -114,7 +113,7 @@ def get_start_namespace():
 
 def _ipython_pre_011():
     """Start IPython pre-0.11"""
-    from IPython.Shell import IPShell  # pylint: disable=import-error,no-name-in-module
+    from IPython.Shell import IPShell
 
     user_ns = get_start_namespace()
     if user_ns:
@@ -126,7 +125,7 @@ def _ipython_pre_011():
 
 def _ipython_pre_100():
     """Start IPython pre-1.0.0"""
-    from IPython.frontend.terminal.ipapp import TerminalIPythonApp  # pylint: disable=import-error,no-name-in-module
+    from IPython.frontend.terminal.ipapp import TerminalIPythonApp
 
     app = TerminalIPythonApp.instance()
     app.initialize(argv=[])
@@ -138,7 +137,7 @@ def _ipython_pre_100():
 
 def _ipython():
     """Start IPython >= 1.0"""
-    from IPython import start_ipython  # pylint: disable=import-error,no-name-in-module
+    from IPython import start_ipython
 
     user_ns = get_start_namespace()
     if user_ns:

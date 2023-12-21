@@ -66,8 +66,7 @@ class BackendLogCollection(BackendCollection[BackendLog]):
 
     @abc.abstractmethod
     def delete(self, log_id: int) -> None:
-        """
-        Remove a Log entry from the collection with the given id
+        """Remove a Log entry from the collection with the given id
 
         :param log_id: id of the Log to delete
 
@@ -77,16 +76,14 @@ class BackendLogCollection(BackendCollection[BackendLog]):
 
     @abc.abstractmethod
     def delete_all(self) -> None:
-        """
-        Delete all Log entries.
+        """Delete all Log entries.
 
         :raises `~aiida.common.exceptions.IntegrityError`: if all Logs could not be deleted
         """
 
     @abc.abstractmethod
     def delete_many(self, filters: dict) -> List[int]:
-        """
-        Delete Logs based on ``filters``
+        """Delete Logs based on ``filters``
 
         :param filters: similar to QueryBuilder filter
 

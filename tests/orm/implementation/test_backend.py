@@ -22,9 +22,9 @@ class TestBackend:
     """Test backend."""
 
     @pytest.fixture(autouse=True)
-    def init_test(self, backend):  # pylint: disable=unused-argument
+    def init_test(self, backend):
         """Set up the backend."""
-        self.backend = backend  # pylint: disable=attribute-defined-outside-init
+        self.backend = backend
 
     def test_transaction_nesting(self):
         """Test that transaction nesting works."""
@@ -113,13 +113,7 @@ class TestBackend:
         with pytest.raises(exceptions.IntegrityError, match='Incorrect fields'):
             self.backend.bulk_update(EntityTypes.USER, [{'id': users[0].pk, 'x': 'other'}])
         self.backend.bulk_update(
-            EntityTypes.USER, [{
-                'id': users[0].pk,
-                'email': 'other0'
-            }, {
-                'id': users[1].pk,
-                'email': 'other1'
-            }]
+            EntityTypes.USER, [{'id': users[0].pk, 'email': 'other0'}, {'id': users[1].pk, 'email': 'other1'}]
         )
         assert users[0].email == 'other0'
         assert users[1].email == 'other1'
@@ -132,13 +126,7 @@ class TestBackend:
         try:
             with self.backend.transaction():
                 self.backend.bulk_update(
-                    EntityTypes.USER, [{
-                        'id': users[0].pk,
-                        'email': 'random0'
-                    }, {
-                        'id': users[1].pk,
-                        'email': 'random1'
-                    }]
+                    EntityTypes.USER, [{'id': users[0].pk, 'email': 'random0'}, {'id': users[1].pk, 'email': 'random1'}]
                 )
                 raise RuntimeError
         except RuntimeError:

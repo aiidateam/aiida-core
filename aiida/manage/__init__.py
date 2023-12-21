@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Managing an AiiDA instance:
+"""Managing an AiiDA instance:
 
     * configuration file
     * profiles
@@ -22,8 +21,7 @@ Managing an AiiDA instance:
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .caching import *
 from .configuration import *
@@ -58,4 +56,4 @@ __all__ = (
     'upgrade_config',
 )
 
-# yapf: enable
+# fmt: on

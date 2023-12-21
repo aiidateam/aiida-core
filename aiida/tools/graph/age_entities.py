@@ -89,7 +89,6 @@ class AbstractSetContainer(metaclass=ABCMeta):
         :type inpset: set or None
         :param inpset: input set of identifiers that will become the new set contained
         """
-
         valid_type = isinstance(inpset, set) or inpset is None
 
         if not valid_type:
@@ -136,8 +135,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
         return not self == other
 
     def set_entities(self, new_entitites):
-        """
-        Replaces contained set with the new entities.
+        """Replaces contained set with the new entities.
 
         :param new_entities: entities which will replace the ones contained
             by the EntitySet. Must be an AiiDA instance (Node or Group) or
@@ -146,8 +144,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
         self.keyset = set(map(self._check_input_for_set, new_entitites))
 
     def add_entities(self, new_entitites):
-        """
-        Add new entitities to the existing set of self.
+        """Add new entitities to the existing set of self.
 
         :param new_entities: an iterable of new entities to add.
         """
@@ -176,7 +173,7 @@ class AiidaEntitySet(AbstractSetContainer):
         :param aiida_cls: a valid AiiDA ORM class (Node or Group supported).
         """
         super().__init__()
-        if not aiida_cls in VALID_ENTITY_CLASSES:
+        if aiida_cls not in VALID_ENTITY_CLASSES:
             raise TypeError(f'aiida_cls has to be among:{VALID_ENTITY_CLASSES}')
         self._aiida_cls = aiida_cls
         self.keyset = set()
@@ -242,7 +239,7 @@ class DirectedEdgeSet(AbstractSetContainer):
         """
         super().__init__()
         for aiida_cls in (aiida_cls_to, aiida_cls_from):
-            if not aiida_cls in VALID_ENTITY_CLASSES:
+            if aiida_cls not in VALID_ENTITY_CLASSES:
                 raise TypeError(f'aiida_cls has to be among:{VALID_ENTITY_CLASSES}')
         self._aiida_cls_to = aiida_cls_to
         self._aiida_cls_from = aiida_cls_from
@@ -252,8 +249,12 @@ class DirectedEdgeSet(AbstractSetContainer):
         if aiida_cls_from is orm.Node:
             if aiida_cls_to is orm.Node:
                 # This is a Node-Node connection, therefore I will get information on the links
-                self._edge_identifiers = (('edge', 'input_id'), ('edge', 'output_id'), ('edge', 'type'),
-                                          ('edge', 'label'))
+                self._edge_identifiers = (
+                    ('edge', 'input_id'),
+                    ('edge', 'output_id'),
+                    ('edge', 'type'),
+                    ('edge', 'label'),
+                )
                 self._edge_namedtuple = LinkQuadruple
             elif aiida_cls_to is orm.Group:
                 self._edge_identifiers = (('nodes', 'id'), ('groups', 'id'))
@@ -307,7 +308,7 @@ class DirectedEdgeSet(AbstractSetContainer):
         return self._edge_identifiers
 
 
-class Basket():
+class Basket:
     """Container for several instances of
     :py:class:`aiida.tools.graph.age_entities.AiidaEntitySet` .
 
@@ -328,7 +329,6 @@ class Basket():
         """
 
         def get_check_set_entity_set(input_object, keyword, aiida_class):
-
             if input_object is None:
                 output_set = AiidaEntitySet(aiida_class)
                 return output_set
@@ -371,16 +371,14 @@ class Basket():
 
     @property
     def sets(self):
-        """
-        All sets in the basket returned as an ordered list.
+        """All sets in the basket returned as an ordered list.
         The order is: 'groups', 'groups_nodes', 'nodes', 'nodes_nodes'.
         """
         return list(zip(*sorted(self.dict.items())))[1]
 
     @property
     def dict(self):
-        """
-        All sets in the basket returned as a dictionary.
+        """All sets in the basket returned as a dictionary.
         This includes the keys 'nodes', 'groups', 'nodes_nodes' and 'nodes_groups'.
         """
         return self._dict
@@ -440,7 +438,7 @@ class Basket():
         ret_str = ''
         for key, val in self._dict.items():
             ret_str += f'  {key}: '
-            ret_str += f'{str(val)}\n'
+            ret_str += f'{val!s}\n'
         return ret_str
 
     def empty(self):

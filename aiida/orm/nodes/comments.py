@@ -7,6 +7,9 @@ import typing as t
 from ..comments import Comment
 from ..users import User
 
+if t.TYPE_CHECKING:
+    from .node import Node
+
 
 class NodeComments:
     """Interface for comments of a node instance."""
@@ -40,10 +43,9 @@ class NodeComments:
 
         :return: the list of comments, sorted by pk
         """
-        return Comment.get_collection(self._node.backend
-                                      ).find(filters={'dbnode_id': self._node.pk}, order_by=[{
-                                          'id': 'asc'
-                                      }])
+        return Comment.get_collection(self._node.backend).find(
+            filters={'dbnode_id': self._node.pk}, order_by=[{'id': 'asc'}]
+        )
 
     def update(self, identifier: int, content: str) -> None:
         """Update the content of an existing comment.

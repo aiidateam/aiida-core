@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .sqlite_dos import *
 
@@ -20,6 +19,6 @@ __all__ = (
     'SqliteDosStorage',
 )
 
-# yapf: enable
+# fmt: on
 
 # END AUTO-GENERATED

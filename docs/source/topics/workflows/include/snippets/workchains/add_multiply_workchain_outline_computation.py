@@ -4,7 +4,6 @@ from aiida.orm import Int
 
 
 class AddAndMultiplyWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)

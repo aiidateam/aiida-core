@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .base import *
 
@@ -20,4 +19,4 @@ __all__ = (
     'CalculationTools',
 )
 
-# yapf: enable
+# fmt: on

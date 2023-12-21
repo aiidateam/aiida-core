@@ -51,7 +51,6 @@ class SqliteDosMigrator(PsqlDosMigrator):
     """
 
     def __init__(self, profile: Profile) -> None:
-        # pylint: disable=super-init-not-called
         filepath_database = Path(profile.storage_config['filepath']) / 'database.sqlite'
         filepath_database.touch()
 
@@ -86,7 +85,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
         # finally, generate the version table, "stamping" it with the most recent revision
         with self._migration_context() as context:
             context.stamp(context.script, 'main@head')  # type: ignore[arg-type]
-            self.connection.commit()  # pylint: disable=no-member
+            self.connection.commit()
 
 
 class SqliteDosStorage(PsqlDosBackend):
@@ -103,7 +102,7 @@ class SqliteDosStorage(PsqlDosBackend):
         filepath: str = Field(
             title='Directory of the backend',
             description='Filepath of the directory in which to store data for this backend.',
-            default_factory=lambda: AIIDA_CONFIG_FOLDER / 'repository' / f'sqlite_dos_{uuid4().hex}'
+            default_factory=lambda: AIIDA_CONFIG_FOLDER / 'repository' / f'sqlite_dos_{uuid4().hex}',
         )
 
         @field_validator('filepath')
@@ -147,7 +146,7 @@ class SqliteDosStorage(PsqlDosBackend):
         engine = create_sqla_engine(Path(self._profile.storage_config['filepath']) / 'database.sqlite')
         self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
 
-    def delete(self) -> None:  # type: ignore[override]  # pylint: disable=arguments-differ
+    def delete(self) -> None:  # type: ignore[override]
         """Delete the storage and all the data."""
         filepath = Path(self.profile.storage_config['filepath'])
         if filepath.exists():
@@ -156,6 +155,7 @@ class SqliteDosStorage(PsqlDosBackend):
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
+
         container = Container(str(Path(self.profile.storage_config['filepath']) / 'container'))
         return DiskObjectStoreRepositoryBackend(container=container)
 
@@ -164,7 +164,7 @@ class SqliteDosStorage(PsqlDosBackend):
         return get_schema_version_head()
 
     @classmethod
-    def version_profile(cls, profile: Profile) -> str | None:  # pylint: disable=unused-argument
+    def version_profile(cls, profile: Profile) -> str | None:
         return get_schema_version_head()
 
     def query(self) -> orm.SqliteQueryBuilder:

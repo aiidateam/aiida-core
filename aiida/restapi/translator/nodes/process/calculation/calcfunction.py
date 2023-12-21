@@ -7,22 +7,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Translator for calcfunction node
+"""Translator for calcfunction node
 """
 
 from aiida.restapi.translator.nodes.process.process import ProcessTranslator
 
 
 class CalcFunctionTranslator(ProcessTranslator):
-    """
-    Translator relative to resource 'calcfunction' and aiida class Calculation
-    """
+    """Translator relative to resource 'calcfunction' and aiida class Calculation"""
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = 'calcfunction'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import CalcFunctionNode
+
     _aiida_class = CalcFunctionNode
     # The string name of the AiiDA class
     _aiida_type = 'process.calculation.calcfunction.CalcFunctionNode'
@@ -30,9 +28,8 @@ class CalcFunctionTranslator(ProcessTranslator):
     _result_type = __label__
 
     @staticmethod
-    def get_derived_properties(node):  # pylint: disable=arguments-differ
-        """
-        Generic function extended for calcfunction. Currently
+    def get_derived_properties(node):
+        """Generic function extended for calcfunction. Currently
         it is not implemented.
 
         :param node: node object

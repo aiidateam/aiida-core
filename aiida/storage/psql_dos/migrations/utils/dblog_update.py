@@ -21,7 +21,7 @@ from .utils import dumps_json
 
 
 def get_legacy_workflow_log_number(connection):
-    """ Get the number of the log records that correspond to legacy workflows """
+    """Get the number of the log records that correspond to legacy workflows"""
     return connection.execute(
         sa.text(
             """
@@ -34,7 +34,7 @@ def get_legacy_workflow_log_number(connection):
 
 
 def get_unknown_entity_log_number(connection):
-    """ Get the number of the log records that correspond to unknown entities """
+    """Get the number of the log records that correspond to unknown entities"""
     return connection.execute(
         sa.text(
             """
@@ -48,7 +48,7 @@ def get_unknown_entity_log_number(connection):
 
 
 def get_logs_with_no_nodes_number(connection):
-    """ Get the number of the log records that correspond to nodes that were deleted """
+    """Get the number of the log records that correspond to nodes that were deleted"""
     return connection.execute(
         sa.text(
             """
@@ -62,7 +62,7 @@ def get_logs_with_no_nodes_number(connection):
 
 
 def get_serialized_legacy_workflow_logs(connection):
-    """ Get the serialized log records that correspond to legacy workflows """
+    """Get the serialized log records that correspond to legacy workflows"""
     query = connection.execute(
         sa.text(
             """
@@ -80,7 +80,7 @@ def get_serialized_legacy_workflow_logs(connection):
 
 
 def get_serialized_unknown_entity_logs(connection):
-    """ Get the serialized log records that correspond to unknown entities """
+    """Get the serialized log records that correspond to unknown entities"""
     query = connection.execute(
         sa.text(
             """
@@ -99,7 +99,7 @@ def get_serialized_unknown_entity_logs(connection):
 
 
 def get_serialized_logs_with_no_nodes(connection):
-    """ Get the serialized log records that correspond to nodes that were deleted """
+    """Get the serialized log records that correspond to nodes that were deleted"""
     query = connection.execute(
         sa.text(
             """
@@ -145,7 +145,6 @@ def export_and_clean_workflow_logs(connection, profile):
 
     # Exporting the legacy workflow log records
     if lwf_no_number != 0:
-
         # Get the records and write them to file
         with NamedTemporaryFile(
             prefix='legagy_wf_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+'
@@ -221,7 +220,7 @@ def export_and_clean_workflow_logs(connection, profile):
 
 
 def set_new_uuid(connection):
-    """ Set new and distinct UUIDs to all the logs """
+    """Set new and distinct UUIDs to all the logs"""
     from aiida.common.utils import get_new_uuid
 
     # Exit if there are no rows - e.g. initial setup

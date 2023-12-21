@@ -11,6 +11,9 @@ from aiida.common.lang import type_check
 
 from ..querybuilder import QueryBuilder
 
+if t.TYPE_CHECKING:
+    from .node import Node
+
 
 class NodeCaching:
     """Interface to control caching of a node instance."""
@@ -35,8 +38,7 @@ class NodeCaching:
         return self._get_hash(ignore_errors=ignore_errors, **kwargs)
 
     def _get_hash(self, ignore_errors: bool = True, **kwargs: t.Any) -> str | None:
-        """
-        Return the hash for this node based on its attributes.
+        """Return the hash for this node based on its attributes.
 
         This will always work, even before storing.
 
@@ -63,10 +65,10 @@ class NodeCaching:
             {
                 key: val
                 for key, val in self._node.base.attributes.items()
-                if key not in self._node._hash_ignored_attributes and key not in self._node._updatable_attributes  # pylint: disable=unsupported-membership-test,protected-access
+                if key not in self._node._hash_ignored_attributes and key not in self._node._updatable_attributes
             },
             self._node.base.repository.hash(),
-            self._node.computer.uuid if self._node.computer is not None else None
+            self._node.computer.uuid if self._node.computer is not None else None,
         ]
         return objects
 
@@ -121,8 +123,7 @@ class NodeCaching:
         return list(self._iter_all_same_nodes())
 
     def _iter_all_same_nodes(self, allow_before_store=False) -> t.Iterator['Node']:
-        """
-        Returns an iterator of all same nodes.
+        """Returns an iterator of all same nodes.
 
         Note: this should be only called on stored nodes, or internally from .store() since it first calls
         clean_value() on the attributes to normalise them.
@@ -132,14 +133,16 @@ class NodeCaching:
 
         node_hash = self._get_hash()
 
-        if not node_hash or not self._node._cachable:  # pylint: disable=protected-access
+        if not node_hash or not self._node._cachable:
             return iter(())
 
         builder = QueryBuilder(backend=self._node.backend)
         builder.append(self._node.__class__, filters={f'extras.{self._HASH_EXTRA_KEY}': node_hash}, subclassing=False)
 
         return (
-            node for node, in builder.iterall() if node.base.caching.is_valid_cache  # type: ignore[misc,union-attr]
+            node
+            for (node,) in builder.iterall()
+            if node.base.caching.is_valid_cache  # type: ignore[misc,union-attr]
         )
 
     @property

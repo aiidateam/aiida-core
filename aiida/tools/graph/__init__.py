@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .deletions import *
 
@@ -22,4 +21,4 @@ __all__ = (
     'delete_nodes',
 )
 
-# yapf: enable
+# fmt: on

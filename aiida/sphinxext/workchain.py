@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Defines an rst directive to auto-document AiiDA workchains.
+"""Defines an rst directive to auto-document AiiDA workchains.
 """
 import inspect
 
@@ -24,6 +23,7 @@ def setup_extension(app):
 
 class AiidaWorkChainDocumenter(AiidaProcessDocumenter):
     """Sphinx Documenter class for AiiDA WorkChains."""
+
     directivetype = 'aiida-workchain'
     objtype = 'workchain'
     priority = 20

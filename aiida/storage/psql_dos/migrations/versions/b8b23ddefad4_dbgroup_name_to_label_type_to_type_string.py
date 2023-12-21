@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """DbGroup class: Rename name with label and type with type_string
 
 Revision ID: b8b23ddefad4
@@ -15,7 +14,6 @@ Revises: 239cea6d2452
 Create Date: 2018-12-06 15:25:32.865136
 
 """
-# pylint: disable=no-name-in-module,import-error
 from alembic import op
 
 # revision identifiers, used by Alembic.

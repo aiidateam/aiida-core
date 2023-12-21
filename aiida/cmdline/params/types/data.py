@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module for the custom click param type for data
+"""Module for the custom click param type for data
 """
 from .identifier import IdentifierParamType
 
@@ -16,19 +15,17 @@ __all__ = ('DataParamType',)
 
 
 class DataParamType(IdentifierParamType):
-    """
-    The ParamType for identifying Data entities or its subclasses
-    """
+    """The ParamType for identifying Data entities or its subclasses"""
 
     name = 'Data'
 
     @property
     def orm_class_loader(self):
-        """
-        Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
+        """Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
 
         :return: the orm entity loader class for this ParamType
         """
         from aiida.orm.utils.loaders import DataEntityLoader
+
         return DataEntityLoader

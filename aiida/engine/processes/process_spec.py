@@ -46,16 +46,14 @@ class ProcessSpec(plumpy.process_spec.ProcessSpec):
 
     @property
     def exit_codes(self) -> ExitCodesNamespace:
-        """
-        Return the namespace of exit codes defined for this ProcessSpec
+        """Return the namespace of exit codes defined for this ProcessSpec
 
         :returns: ExitCodesNamespace of ExitCode named tuples
         """
         return self._exit_codes
 
     def exit_code(self, status: int, label: str, message: str, invalidates_cache: bool = False) -> None:
-        """
-        Add an exit code to the ProcessSpec
+        """Add an exit code to the ProcessSpec
 
         :param status: the exit status integer
         :param label: a label by which the exit code can be addressed

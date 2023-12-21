@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Module to manage computers for the SQLA backend."""
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.schema import Column
@@ -32,9 +31,10 @@ class DbComputer(Base):
     (and plugin) required to copy files and communicate to and from the computer.
     The ``metadata`` contains some general settings for these communication and management protocols.
     """
+
     __tablename__ = 'db_dbcomputer'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False, unique=True)
     label = Column(String(255), nullable=False, unique=True)
     hostname = Column(String(255), default='', nullable=False)
@@ -48,7 +48,7 @@ class DbComputer(Base):
             'ix_pat_db_dbcomputer_label',
             label,
             postgresql_using='btree',
-            postgresql_ops={'label': 'varchar_pattern_ops'}
+            postgresql_ops={'label': 'varchar_pattern_ops'},
         ),
     )
 

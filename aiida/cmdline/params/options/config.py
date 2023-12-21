@@ -7,9 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cyclic-import
-"""
-.. py:module::config
+""".. py:module::config
     :synopsis: Convenience class for configuration file option
 
 The functions :func:`configuration_callback` and :func:`configuration_option` were directly taken from the repository
@@ -30,7 +28,7 @@ from .overridable import OverridableOption
 __all__ = ('ConfigFileOption',)
 
 
-def yaml_config_file_provider(handle, cmd_name):  # pylint: disable=unused-argument
+def yaml_config_file_provider(handle, cmd_name):
     """Read yaml config file from file handle."""
     import yaml
 
@@ -130,7 +128,7 @@ def configuration_option(*param_decls, **attrs):
             'dir_okay': False,
             'writable': False,
             'readable': True,
-            'resolve_path': False
+            'resolve_path': False,
         }
         path_params = {k: attrs.pop(k, v) for k, v in path_default_params.items()}
         attrs['type'] = attrs.get('type', click.Path(**path_params))

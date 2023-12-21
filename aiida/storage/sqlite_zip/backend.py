@@ -10,13 +10,13 @@
 """The table models are dynamically generated from the sqlalchemy backend models."""
 from __future__ import annotations
 
+import json
+import shutil
+import tempfile
 from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
-import json
 from pathlib import Path
-import shutil
-import tempfile
 from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, cast
 from zipfile import ZipFile, is_zipfile
 
@@ -49,7 +49,7 @@ __all__ = ('SqliteZipBackend',)
 LOGGER = AIIDA_LOGGER.getChild(__file__)
 
 
-class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-methods
+class SqliteZipBackend(StorageBackend):
     """A read-only backend for a sqlite/zip format.
 
     The storage format uses an SQLite database and repository files, within a folder or zipfile.
@@ -90,19 +90,12 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
         """Create a new profile instance for this backend, from the path to the zip file."""
         profile_name = Path(filepath).name
         return Profile(
-            profile_name, {
-                'storage': {
-                    'backend': 'core.sqlite_zip',
-                    'config': {
-                        'filepath': str(filepath)
-                    }
-                },
-                'process_control': {
-                    'backend': 'null',
-                    'config': {}
-                },
+            profile_name,
+            {
+                'storage': {'backend': 'core.sqlite_zip', 'config': {'filepath': str(filepath)}},
+                'process_control': {'backend': 'null', 'config': {}},
                 'options': options or {},
-            }
+            },
         )
 
     @classmethod
@@ -321,7 +314,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
         return results
 
 
-class _RoBackendRepository(AbstractRepositoryBackend):  # pylint: disable=abstract-method
+class _RoBackendRepository(AbstractRepositoryBackend):
     """A backend abstract for a read-only folder or zip file."""
 
     def __init__(self, path: str | Path):
@@ -362,7 +355,7 @@ class _RoBackendRepository(AbstractRepositoryBackend):  # pylint: disable=abstra
 
     def iter_object_streams(self, keys: list[str]) -> Iterator[Tuple[str, BinaryIO]]:
         for key in keys:
-            with self.open(key) as handle:  # pylint: disable=not-context-manager
+            with self.open(key) as handle:
                 yield key, handle
 
     def delete_objects(self, keys: list[str]) -> None:
@@ -402,7 +395,7 @@ class ZipfileBackendRepository(_RoBackendRepository):
             raise ClosedStorage(f'repository is closed: {self._path}')
         if self.__zipfile is None:
             try:
-                self.__zipfile = ZipFile(self._path, mode='r')  # pylint: disable=consider-using-with
+                self.__zipfile = ZipFile(self._path, mode='r')
             except Exception as exc:
                 raise CorruptStorage(f'repository could not be read {self._path}: {exc}') from exc
         return self.__zipfile

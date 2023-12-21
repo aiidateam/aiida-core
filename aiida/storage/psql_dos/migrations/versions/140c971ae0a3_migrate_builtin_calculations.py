@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name
 """Migration to reflect the name change of the built in calculation entry points in the database.
 
 Revision ID: 140c971ae0a3
@@ -27,7 +26,7 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    conn = op.get_bind()  # pylint: disable=no-member
+    conn = op.get_bind()
 
     # The built in calculation plugins `arithmetic.add` and `templatereplacer` have been moved and their entry point
     # renamed. In the change the `simpleplugins` namespace was dropped so we migrate the existing nodes.

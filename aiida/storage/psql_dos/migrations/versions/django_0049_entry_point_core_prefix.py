@@ -7,15 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member,line-too-long
+# ruff: noqa: E501
 """Update node types after `core.` prefix was added to entry point names.
 
 Revision ID: django_0049
 Revises: django_0048
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'django_0049'
 down_revision = 'django_0048'

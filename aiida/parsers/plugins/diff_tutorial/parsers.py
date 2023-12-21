@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Parsers for DiffCalculation of plugin tutorial.
+"""Parsers for DiffCalculation of plugin tutorial.
 
 Register parsers via the "aiida.parsers" entry point in the pyproject.toml file.
 """
@@ -16,17 +15,13 @@ DiffCalculation = CalculationFactory('diff-tutorial')
 
 class DiffParser(Parser):
     # END PARSER HEAD
-    """
-    Parser class for DiffCalculation.
-    """
+    """Parser class for DiffCalculation."""
 
     def parse(self, **kwargs):
-        """
-        Parse outputs, store results in database.
+        """Parse outputs, store results in database.
 
         :returns: non-zero exit code, if parsing fails
         """
-
         output_filename = self.node.get_option('output_filename')
 
         # Check that folder content is as expected
@@ -47,15 +42,10 @@ class DiffParser(Parser):
 
 
 class DiffParserSimple(Parser):
-    """
-    Simple Parser class for DiffCalculation.
-    """
+    """Simple Parser class for DiffCalculation."""
 
     def parse(self, **kwargs):
-        """
-        Parse outputs, store results in database.
-        """
-
+        """Parse outputs, store results in database."""
         output_filename = self.node.get_option('output_filename')
 
         # add output file

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name
 """Tests for the `TrajectoryData` class."""
 import numpy as np
 import pytest
@@ -15,7 +14,7 @@ def trajectory_data():
     times = stepids * 0.01
     positions = np.arange(6000, dtype=float).reshape((200, 10, 3))
     velocities = -np.arange(6000, dtype=float).reshape((200, 10, 3))
-    cell = [[[3., 0.1, 0.3], [-0.05, 3., -0.2], [0.02, -0.08, 3.]]]
+    cell = [[[3.0, 0.1, 0.3], [-0.05, 3.0, -0.2], [0.02, -0.08, 3.0]]]
     cells = np.array(cell * 200) + np.arange(0, 0.2, 0.001)[:, np.newaxis, np.newaxis]
     return {
         'symbols': symbols,
@@ -23,7 +22,7 @@ def trajectory_data():
         'stepids': stepids,
         'cells': cells,
         'times': times,
-        'velocities': velocities
+        'velocities': velocities,
     }
 
 
@@ -31,9 +30,8 @@ class TestTrajectory:
     """Test for the `TrajectoryData` class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         n_atoms = 5
         n_steps = 30
 
@@ -41,8 +39,7 @@ class TestTrajectory:
         self.positions = np.array(np.arange(n_steps * n_atoms * 3).reshape(n_steps, n_atoms, 3), dtype=float)
 
     def test_get_attribute_tryexcept_default(self):
-        """
-        Test whether the try_except statement on the get_attribute calls for units in
+        """Test whether the try_except statement on the get_attribute calls for units in
         the `show_mpl_*` functions except the correct exception type (for setting defaults).
 
         Added for PR #5015 (behavior of BackendEntityAttributes.get changed

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,missing-function-docstring,invalid-name,missing-class-docstring
+# ruff: noqa: N806
 """Tests for the `WorkChain` class."""
 import asyncio
 import inspect
@@ -26,7 +26,7 @@ from aiida.orm import Bool, Float, Int, Str, load_node
 
 
 def run_until_paused(proc):
-    """ Set up a future that will be resolved when process is paused"""
+    """Set up a future that will be resolved when process is paused"""
     listener = plumpy.ProcessListener()
     paused = plumpy.Future()
 
@@ -45,7 +45,7 @@ def run_until_paused(proc):
 
 
 def run_until_waiting(proc):
-    """ Set up a future that will be resolved on entering the WAITING state """
+    """Set up a future that will be resolved on entering the WAITING state"""
     from aiida.engine import ProcessState
 
     listener = plumpy.ProcessListener()
@@ -66,8 +66,7 @@ def run_until_waiting(proc):
 
 
 def run_and_check_success(process_class, **kwargs):
-    """
-    Instantiates the process class and executes it followed by a check
+    """Instantiates the process class and executes it followed by a check
     that it is finished successfully
 
     :returns: instance of process
@@ -80,7 +79,7 @@ def run_and_check_success(process_class, **kwargs):
 
 
 class Wf(WorkChain):
-    """"Dummy work chain implementation with various steps and logical constructs in the outline."""
+    """ "Dummy work chain implementation with various steps and logical constructs in the outline."""
 
     # Keep track of which steps were completed by the workflow
     finished_steps: dict = {}
@@ -93,18 +92,28 @@ class Wf(WorkChain):
         spec.outputs.dynamic = True
         spec.outline(
             cls.step1,
-            if_(cls.is_a)(cls.step2).elif_(cls.is_b)(cls.step3).else_(cls.step4), # pylint: disable=no-member
+            if_(cls.is_a)(cls.step2).elif_(cls.is_b)(cls.step3).else_(cls.step4),
             cls.step5,
-            while_(cls.larger_then_n)(cls.step6,),
+            while_(cls.larger_then_n)(
+                cls.step6,
+            ),
         )
 
     def on_create(self):
         super().on_create()
         # Reset the finished step
         self.finished_steps = {
-            k: False for k in [
-                self.step1.__name__, self.step2.__name__, self.step3.__name__, self.step4.__name__, self.step5.__name__,
-                self.step6.__name__, self.is_a.__name__, self.is_b.__name__, self.larger_then_n.__name__
+            k: False
+            for k in [
+                self.step1.__name__,
+                self.step2.__name__,
+                self.step3.__name__,
+                self.step4.__name__,
+                self.step5.__name__,
+                self.step6.__name__,
+                self.is_a.__name__,
+                self.is_b.__name__,
+                self.larger_then_n.__name__,
             ]
         }
 
@@ -147,7 +156,6 @@ class Wf(WorkChain):
 
 
 class CalcFunctionWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)
@@ -161,7 +169,7 @@ class CalcFunctionWorkChain(WorkChain):
         )
 
     @calcfunction
-    def add_member(a, b):  # pylint: disable=no-self-argument
+    def add_member(a, b):  # noqa: N805
         return a + b
 
     @staticmethod
@@ -203,7 +211,7 @@ class PotentialFailureWorkChain(WorkChain):
             if self.inputs.through_exit_code.value is False:
                 return self.EXIT_STATUS
 
-            return self.exit_codes.EXIT_STATUS  # pylint: disable=no-member
+            return self.exit_codes.EXIT_STATUS
 
         # Returning 0 or ExitCode with zero status should *not* terminate the workchain
         if self.inputs.through_exit_code.value is False:
@@ -217,8 +225,7 @@ class PotentialFailureWorkChain(WorkChain):
 
 @pytest.mark.requires_rmq
 class TestExitStatus:
-    """
-    This class should test the various ways that one can exit from the outline flow of a WorkChain, other than
+    """This class should test the various ways that one can exit from the outline flow of a WorkChain, other than
     it running it all the way through. Currently this can be done directly in the outline by calling the `return_`
     construct, or from an outline step function by returning a non-zero integer or an ExitCode with a non-zero status
     """
@@ -248,8 +255,10 @@ class TestExitStatus:
         assert node.is_finished_ok is True
         assert node.is_failed is False
         assert PotentialFailureWorkChain.OUTPUT_LABEL in node.base.links.get_outgoing().all_link_labels()
-        assert node.base.links.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL) == \
-            PotentialFailureWorkChain.OUTPUT_VALUE
+        assert (
+            node.base.links.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL)
+            == PotentialFailureWorkChain.OUTPUT_VALUE
+        )
 
     def test_successful_workchain_through_exit_code(self):
         _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_exit_code=Bool(True))
@@ -258,8 +267,10 @@ class TestExitStatus:
         assert node.is_finished_ok is True
         assert node.is_failed is False
         assert PotentialFailureWorkChain.OUTPUT_LABEL in node.base.links.get_outgoing().all_link_labels()
-        assert node.base.links.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL) == \
-            PotentialFailureWorkChain.OUTPUT_VALUE
+        assert (
+            node.base.links.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL)
+            == PotentialFailureWorkChain.OUTPUT_VALUE
+        )
 
     def test_return_out_of_outline(self):
         _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_return=Bool(True))
@@ -271,7 +282,6 @@ class TestExitStatus:
 
 
 class IfTest(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)
@@ -295,7 +305,6 @@ class IfTest(WorkChain):
 
 @pytest.mark.requires_rmq
 class TestContext:
-
     def test_attributes(self):
         wc = IfTest()
         wc.ctx.new_attr = 5
@@ -303,7 +312,7 @@ class TestContext:
 
         del wc.ctx.new_attr
         with pytest.raises(AttributeError):
-            wc.ctx.new_attr  # pylint: disable=pointless-statement
+            wc.ctx.new_attr
 
     def test_dict(self):
         wc = IfTest()
@@ -312,16 +321,13 @@ class TestContext:
 
         del wc.ctx['new_attr']
         with pytest.raises(KeyError):
-            wc.ctx['new_attr']  # pylint: disable=pointless-statement
+            wc.ctx['new_attr']
 
 
 @pytest.mark.requires_rmq
 class TestWorkchain:
-
-    # pylint: disable=too-many-public-methods
-
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -372,9 +378,7 @@ class TestWorkchain:
                 assert finished, f'Step {step} was not called by workflow'
 
     def test_incorrect_outline(self):
-
         class IncorrectOutline(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -388,7 +392,6 @@ class TestWorkchain:
         """A `WorkChain` that does not call super in `define` classmethod should raise."""
 
         class IncompleteDefineWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 pass
@@ -404,7 +407,6 @@ class TestWorkchain:
         """
 
         class IllegalWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -417,18 +419,14 @@ class TestWorkchain:
         with pytest.raises(ValueError):
             _, node = launch.run_get_node(IllegalWorkChain)
 
-        node = orm.QueryBuilder().append(orm.ProcessNode, tag='node').order_by({
-            'node': {
-                'id': 'desc'
-            }
-        }).first(flat=True)
+        node = (
+            orm.QueryBuilder().append(orm.ProcessNode, tag='node').order_by({'node': {'id': 'desc'}}).first(flat=True)
+        )
         assert node.is_excepted
         assert 'ValueError: Workflow<IllegalWorkChain> tried returning an unstored `Data` node.' in node.exception
 
     def test_same_input_node(self):
-
         class SimpleWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -449,7 +447,6 @@ class TestWorkchain:
         B = Str('b').store()
 
         class ReturnA(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -460,7 +457,6 @@ class TestWorkchain:
                 self.out('res', A)
 
         class ReturnB(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -471,7 +467,6 @@ class TestWorkchain:
                 self.out('res', B)
 
         class OverrideContextWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -494,9 +489,7 @@ class TestWorkchain:
         run_and_check_success(OverrideContextWorkChain)
 
     def test_unstored_nodes_in_context(self):
-
         class TestWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -518,7 +511,6 @@ class TestWorkchain:
         """Test that workchain raises if the predicate of an ``if_`` condition does not return a boolean."""
 
         class TestWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -538,7 +530,6 @@ class TestWorkchain:
         """Test that workchain raises if the predicate of an ``while_`` condition does not return a boolean."""
 
         class TestWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -556,9 +547,7 @@ class TestWorkchain:
         assert any('The conditional predicate `predicate` returned `true`' in str(r.message) for r in recwarn)
 
     def test_malformed_outline(self):
-        """
-        Test some malformed outlines
-        """
+        """Test some malformed outlines"""
         from aiida.engine.processes.workchains.workchain import WorkChainSpec
 
         spec = WorkChainSpec()
@@ -598,9 +587,7 @@ class TestWorkchain:
                 assert finished, f'Step {step} was not called by workflow'
 
     def test_return(self):
-
         class WcWithReturn(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -619,7 +606,6 @@ class TestWorkchain:
 
     def test_call_link_label(self):
         """Test that the `call_link_label` metadata input is properly used and set."""
-
         label_workchain = 'some_not_default_call_link_label'
         label_calcfunction = 'call_link_label_for_calcfunction'
 
@@ -628,7 +614,6 @@ class TestWorkchain:
             return
 
         class MainWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -637,7 +622,7 @@ class TestWorkchain:
             def do_launch(self):
                 # "Call" a calculation function simply by running it
                 inputs = {'metadata': {'call_link_label': label_calcfunction}}
-                calculation_function(**inputs)  # pylint: disable=unexpected-keyword-arg
+                calculation_function(**inputs)
 
                 # Call a sub work chain
                 inputs = {'metadata': {'call_link_label': label_workchain}}
@@ -661,9 +646,7 @@ class TestWorkchain:
         assert isinstance(link_triple.node, orm.WorkChainNode)
 
     def test_tocontext_submit_workchain_no_daemon(self):
-
         class MainWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -677,7 +660,6 @@ class TestWorkchain:
                 assert self.ctx.subwc.outputs.value == Int(5)
 
         class SubWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -690,11 +672,9 @@ class TestWorkchain:
         run_and_check_success(MainWorkChain)
 
     def test_tocontext_schedule_workchain(self):
-
         node = Int(5).store()
 
         class MainWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -708,7 +688,6 @@ class TestWorkchain:
                 assert self.ctx.subwc.outputs.value == node
 
         class SubWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -724,7 +703,6 @@ class TestWorkchain:
         """Test that process status is set on node when waiting for sub processes."""
 
         class MainWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -742,7 +720,6 @@ class TestWorkchain:
                 assert str(pks[1]) in self.node.process_status
 
         class SubWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -763,7 +740,6 @@ class TestWorkchain:
         runner.schedule(wc)
 
         async def run_async(workchain):
-
             # run the original workchain until paused
             await run_until_paused(workchain)
             assert workchain.ctx.s1
@@ -797,15 +773,13 @@ class TestWorkchain:
         runner.loop.run_until_complete(run_async(wc))
 
     def test_report_dbloghandler(self):
-        """
-        Test whether the WorkChain, through its Process, has a logger
+        """Test whether the WorkChain, through its Process, has a logger
         set for which the DbLogHandler has been attached. Because if this
         is not the case, the 'report' method will not actually hit the
         DbLogHandler and the message will not be stored in the database
         """
 
         class TestWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -825,7 +799,6 @@ class TestWorkchain:
         val = Int(5).store()
 
         class SimpleWc(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -836,7 +809,6 @@ class TestWorkchain:
                 self.out('result', val)
 
         class Workchain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -856,7 +828,6 @@ class TestWorkchain:
         val = Int(5).store()
 
         class SimpleWc(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -867,7 +838,6 @@ class TestWorkchain:
                 self.out('result', val)
 
         class Workchain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -888,7 +858,6 @@ class TestWorkchain:
         val2 = Int(6).store()
 
         class SimpleWc1(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -899,7 +868,6 @@ class TestWorkchain:
                 self.out('result', val1)
 
         class SimpleWc2(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -910,7 +878,6 @@ class TestWorkchain:
                 self.out('result', val2)
 
         class Workchain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -930,7 +897,6 @@ class TestWorkchain:
         val = Int(5).store()
 
         class SimpleWc(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -941,7 +907,6 @@ class TestWorkchain:
                 self.out('result', val)
 
         class Workchain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -962,7 +927,6 @@ class TestWorkchain:
         val = Int(5).store()
 
         class SimpleWc(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -973,7 +937,6 @@ class TestWorkchain:
                 self.out('result', val)
 
         class Workchain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -994,7 +957,6 @@ class TestWorkchain:
         val = Int(5).store()
 
         class SimpleWc(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -1005,7 +967,6 @@ class TestWorkchain:
                 self.out('result', val)
 
         class Workchain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -1025,13 +986,10 @@ class TestWorkchain:
             launch.run(process)
 
     def test_namespace_nondb_mapping(self):
-        """
-        Regression test for a bug in _flatten_inputs
-        """
+        """Regression test for a bug in _flatten_inputs"""
         value = {'a': 1, 'b': {'c': 2}}
 
         class TestWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -1045,13 +1003,10 @@ class TestWorkchain:
         run_and_check_success(TestWorkChain, namespace={'sub': value})
 
     def test_nondb_dynamic(self):
-        """
-        Test that non-db inputs can be passed in a dynamic input namespace.
-        """
+        """Test that non-db inputs can be passed in a dynamic input namespace."""
         value = [1, 2, {'a': 1}]
 
         class TestWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -1069,7 +1024,6 @@ class TestWorkchain:
         message = 'I am a teapot'
 
         class ExitCodeWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -1079,21 +1033,21 @@ class TestWorkchain:
         wc = ExitCodeWorkChain()
 
         # The exit code can be gotten by calling it with the status or label, as well as using attribute dereferencing
-        assert wc.exit_codes(status).status == status  # pylint: disable=too-many-function-args
-        assert wc.exit_codes(label).status == status  # pylint: disable=too-many-function-args
-        assert wc.exit_codes.SOME_EXIT_CODE.status == status  # pylint: disable=no-member
+        assert wc.exit_codes(status).status == status
+        assert wc.exit_codes(label).status == status
+        assert wc.exit_codes.SOME_EXIT_CODE.status == status
 
         with pytest.raises(AttributeError):
-            wc.exit_codes.NON_EXISTENT_ERROR  # pylint: disable=no-member,pointless-statement
+            wc.exit_codes.NON_EXISTENT_ERROR
 
-        assert ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status == status  # pylint: disable=no-member
-        assert ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message == message  # pylint: disable=no-member
+        assert ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status == status
+        assert ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message == message
 
-        assert ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].status == status  # pylint: disable=unsubscriptable-object
-        assert ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].message == message  # pylint: disable=unsubscriptable-object
+        assert ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].status == status
+        assert ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].message == message
 
-        assert ExitCodeWorkChain.exit_codes[label].status == status  # pylint: disable=unsubscriptable-object
-        assert ExitCodeWorkChain.exit_codes[label].message == message  # pylint: disable=unsubscriptable-object
+        assert ExitCodeWorkChain.exit_codes[label].status == status
+        assert ExitCodeWorkChain.exit_codes[label].message == message
 
     @staticmethod
     def _run_with_checkpoints(wf_class, inputs=None):
@@ -1146,19 +1100,16 @@ class TestWorkchain:
 
 @pytest.mark.requires_rmq
 class TestWorkChainAbort:
-    """
-    Test the functionality to abort a workchain
-    """
+    """Test the functionality to abort a workchain"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
         assert Process.current() is None
         yield
         assert Process.current() is None
 
     class AbortableWorkChain(WorkChain):
-
         @classmethod
         def define(cls, spec):
             super().define(spec)
@@ -1171,8 +1122,7 @@ class TestWorkChainAbort:
             raise RuntimeError('should have been aborted by now')
 
     def test_simple_run(self):
-        """
-        Run the workchain which should hit the exception and therefore end
+        """Run the workchain which should hit the exception and therefore end
         up in the EXCEPTED state
         """
         runner = get_manager().get_runner()
@@ -1195,8 +1145,7 @@ class TestWorkChainAbort:
         assert process.node.is_killed is False
 
     def test_simple_kill_through_process(self):
-        """
-        Run the workchain for one step and then kill it by calling kill
+        """Run the workchain for one step and then kill it by calling kill
         on the workchain itself. This should have the workchain end up
         in the KILLED state.
         """
@@ -1222,20 +1171,18 @@ class TestWorkChainAbort:
 
 @pytest.mark.requires_rmq
 class TestWorkChainAbortChildren:
-    """
-    Test the functionality to abort a workchain and verify that children
+    """Test the functionality to abort a workchain and verify that children
     are also aborted appropriately
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
         assert Process.current() is None
         yield
         assert Process.current() is None
 
     class SubWorkChain(WorkChain):
-
         @classmethod
         def define(cls, spec):
             super().define(spec)
@@ -1243,9 +1190,7 @@ class TestWorkChainAbortChildren:
             spec.outline(cls.begin, cls.check)
 
         def begin(self):
-            """
-            If the Main should be killed, pause the child to give the Main a chance to call kill on its children
-            """
+            """If the Main should be killed, pause the child to give the Main a chance to call kill on its children"""
             if self.inputs.kill:
                 self.pause()
 
@@ -1253,7 +1198,6 @@ class TestWorkChainAbortChildren:
             raise RuntimeError('should have been aborted by now')
 
     class MainWorkChain(WorkChain):
-
         @classmethod
         def define(cls, spec):
             super().define(spec)
@@ -1267,8 +1211,7 @@ class TestWorkChainAbortChildren:
             raise RuntimeError('should have been aborted by now')
 
     def test_simple_run(self):
-        """
-        Run the workchain which should hit the exception and therefore end
+        """Run the workchain which should hit the exception and therefore end
         up in the EXCEPTED state
         """
         process = TestWorkChainAbortChildren.MainWorkChain()
@@ -1282,8 +1225,7 @@ class TestWorkChainAbortChildren:
         assert process.node.is_killed is False
 
     def test_simple_kill_through_process(self):
-        """
-        Run the workchain for one step and then kill it. This should have the
+        """Run the workchain for one step and then kill it. This should have the
         workchain and its children end up in the KILLED state.
         """
         runner = get_manager().get_runner()
@@ -1314,24 +1256,19 @@ class TestWorkChainAbortChildren:
 
 @pytest.mark.requires_rmq
 class TestImmutableInputWorkchain:
-    """
-    Test that inputs cannot be modified
-    """
+    """Test that inputs cannot be modified"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
         assert Process.current() is None
         yield
         assert Process.current() is None
 
     def test_immutable_input(self):
-        """
-        Check that from within the WorkChain self.inputs returns an AttributesFrozendict which should be immutable
-        """
+        """Check that from within the WorkChain self.inputs returns an AttributesFrozendict which should be immutable"""
 
         class FrozenDictWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -1361,12 +1298,9 @@ class TestImmutableInputWorkchain:
         run_and_check_success(FrozenDictWorkChain, a=Int(1), b=Int(2))
 
     def test_immutable_input_groups(self):
-        """
-        Check that namespaced inputs also return AttributeFrozendicts and are hence immutable
-        """
+        """Check that namespaced inputs also return AttributeFrozendicts and are hence immutable"""
 
         class ImmutableGroups(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -1396,7 +1330,6 @@ class TestImmutableInputWorkchain:
 
 
 class SerializeWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)
@@ -1417,12 +1350,10 @@ class SerializeWorkChain(WorkChain):
 
 @pytest.mark.requires_rmq
 class TestSerializeWorkChain:
-    """
-    Test workchains with serialized input / output.
-    """
+    """Test workchains with serialized input / output."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -1430,16 +1361,12 @@ class TestSerializeWorkChain:
 
     @staticmethod
     def test_serialize():
-        """
-        Test a simple serialization of a class to its identifier.
-        """
+        """Test a simple serialization of a class to its identifier."""
         run_and_check_success(SerializeWorkChain, test=Int, reference=Str(ObjectLoader().identify_object(Int)))
 
     @staticmethod
     def test_serialize_builder():
-        """
-        Test serailization when using a builder.
-        """
+        """Test serailization when using a builder."""
         builder = SerializeWorkChain.get_builder()
         builder.test = Int
         builder.reference = Str(ObjectLoader().identify_object(Int))
@@ -1447,7 +1374,6 @@ class TestSerializeWorkChain:
 
 
 class GrandParentExposeWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)
@@ -1467,7 +1393,6 @@ class GrandParentExposeWorkChain(WorkChain):
 
 
 class ParentExposeWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)
@@ -1500,13 +1425,14 @@ class ParentExposeWorkChain(WorkChain):
         child_1 = self.submit(
             ChildExposeWorkChain,
             a=self.exposed_inputs(ChildExposeWorkChain)['a'],
-            **self.exposed_inputs(ChildExposeWorkChain, namespace='sub_1', agglomerate=False)
+            **self.exposed_inputs(ChildExposeWorkChain, namespace='sub_1', agglomerate=False),
         )
         child_2 = self.submit(
-            ChildExposeWorkChain, **self.exposed_inputs(
+            ChildExposeWorkChain,
+            **self.exposed_inputs(
                 ChildExposeWorkChain,
                 namespace='sub_2.sub_3',
-            )
+            ),
         )
         return ToContext(child_1=child_1, child_2=child_2)
 
@@ -1518,7 +1444,6 @@ class ParentExposeWorkChain(WorkChain):
 
 
 class ChildExposeWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)
@@ -1543,37 +1468,19 @@ class ChildExposeWorkChain(WorkChain):
 
 @pytest.mark.requires_rmq
 class TestWorkChainExpose:
-    """
-    Test the expose inputs / outputs functionality
-    """
+    """Test the expose inputs / outputs functionality"""
 
     def test_expose(self):
         res = launch.run(
             ParentExposeWorkChain,
             a=Int(1),
-            sub_1={
-                'b': Float(2.3),
-                'c': Bool(True)
-            },
-            sub_2={
-                'b': Float(1.2),
-                'sub_3': {
-                    'c': Bool(False)
-                }
-            },
+            sub_1={'b': Float(2.3), 'c': Bool(True)},
+            sub_2={'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
         )
         assert res == {
             'a': Float(2.2),
-            'sub_1': {
-                'b': Float(2.3),
-                'c': Bool(True)
-            },
-            'sub_2': {
-                'b': Float(1.2),
-                'sub_3': {
-                    'c': Bool(False)
-                }
-            }
+            'sub_1': {'b': Float(2.3), 'c': Bool(True)},
+            'sub_2': {'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
         }
 
     def test_nested_expose(self):
@@ -1582,33 +1489,17 @@ class TestWorkChainExpose:
             sub={
                 'sub': {
                     'a': Int(1),
-                    'sub_1': {
-                        'b': Float(2.3),
-                        'c': Bool(True)
-                    },
-                    'sub_2': {
-                        'b': Float(1.2),
-                        'sub_3': {
-                            'c': Bool(False)
-                        }
-                    },
+                    'sub_1': {'b': Float(2.3), 'c': Bool(True)},
+                    'sub_2': {'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
                 }
-            }
+            },
         )
         assert res == {
             'sub': {
                 'sub': {
                     'a': Float(2.2),
-                    'sub_1': {
-                        'b': Float(2.3),
-                        'c': Bool(True)
-                    },
-                    'sub_2': {
-                        'b': Float(1.2),
-                        'sub_3': {
-                            'c': Bool(False)
-                        }
-                    }
+                    'sub_1': {'b': Float(2.3), 'c': Bool(True)},
+                    'sub_2': {'b': Float(1.2), 'sub_3': {'c': Bool(False)}},
                 }
             }
         }
@@ -1624,7 +1515,6 @@ class TestWorkChainExpose:
         """
 
         class Parent(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -1635,7 +1525,6 @@ class TestWorkChainExpose:
                 pass
 
         class Child(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -1651,7 +1540,7 @@ class TestWorkChainExpose:
         """Test that process functions can be exposed and the port attributes are preserved."""
 
         @calcfunction  # type: ignore[misc]
-        def test_function(a: str, b: int):  # pylint: disable=unused-argument
+        def test_function(a: str, b: int):
             """Some calcfunction.
 
             :param a: A string argument.
@@ -1659,7 +1548,6 @@ class TestWorkChainExpose:
             """
 
         class ExposeProcessFunctionWorkChain(WorkChain):
-
             @classmethod
             def define(cls, spec):
                 super().define(spec)
@@ -1676,9 +1564,7 @@ class TestWorkChainExpose:
 
 @pytest.mark.requires_rmq
 class TestWorkChainMisc:
-
     class PointlessWorkChain(WorkChain):
-
         @classmethod
         def define(cls, spec):
             super().define(spec)
@@ -1689,7 +1575,6 @@ class TestWorkChainMisc:
             return {}
 
     class IllegalSubmitWorkChain(WorkChain):
-
         @classmethod
         def define(cls, spec):
             super().define(spec)
@@ -1698,6 +1583,7 @@ class TestWorkChainMisc:
         def illegal_submit(self):
             """Only return a dictionary, which should be allowed, even though it accomplishes nothing."""
             from aiida.engine import submit
+
             submit(TestWorkChainMisc.PointlessWorkChain)
 
     @staticmethod
@@ -1716,7 +1602,6 @@ class TestDefaultUniqueness:
     """Test that default inputs of exposed nodes will get unique UUIDS."""
 
     class Parent(WorkChain):
-
         @classmethod
         def define(cls, spec):
             super().define(spec)
@@ -1732,7 +1617,6 @@ class TestDefaultUniqueness:
             return ToContext(workchain_child_one=child_one, workchain_child_two=child_two)
 
     class Child(WorkChain):
-
         @classmethod
         def define(cls, spec):
             super().define(spec)
@@ -1742,9 +1626,8 @@ class TestDefaultUniqueness:
             pass
 
     def test_unique_default_inputs(self):
-        """
-        The default value for the Child will be constructed at import time, which will be an unstored Bool node with a
-        given ID. When `expose_inputs` is called on the ProcessSpec of the Parent workchain, for the Child workchain,
+        """The default value for the Child will be constructed at import time, which will be an unstored Bool node with
+        a given ID. When `expose_inputs` is called on the ProcessSpec of the Parent workchain, for the Child workchain,
         the ports of the Child will be deepcopied into the portnamespace of the Parent, in this case twice, into
         different namespaces. The port in each namespace will have a deepcopied version of the unstored Bool node. When
         the Parent workchain is now called without inputs, both those nodes will be stored and used as inputs, but they
@@ -1767,7 +1650,7 @@ def test_illegal_override_run():
     """Test that overriding a protected workchain method raises a ``RuntimeError``."""
     with pytest.raises(RuntimeError, match='the method `run` is protected cannot be overridden.'):
 
-        class IllegalWorkChain(WorkChain):  # pylint: disable=unused-variable
+        class IllegalWorkChain(WorkChain):
             """Work chain that illegally overrides the ``run`` method."""
 
             @classmethod

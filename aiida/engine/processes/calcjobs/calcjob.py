@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines
 """Implementation of the CalcJob process."""
 from __future__ import annotations
 
@@ -39,7 +38,7 @@ from .tasks import UPLOAD_COMMAND, Waiting
 __all__ = ('CalcJob',)
 
 
-def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:  # pylint: disable=too-many-return-statements
+def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
     """Validate the entire set of inputs passed to the `CalcJob` constructor.
 
     Reasons that will cause this validation to raise an `InputValidationError`:
@@ -82,9 +81,7 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:  # pyli
     if computer_from_code and computer_from_metadata and computer_from_code.uuid != computer_from_metadata.uuid:
         return (
             'Computer<{}> explicitly defined in `metadata.computer` is different from Computer<{}> which is the '
-            'computer of Code<{}> defined as the `code` input.'.format(
-                computer_from_metadata, computer_from_code, code
-            )
+            'computer of Code<{}> defined as the `code` input.'.format(computer_from_metadata, computer_from_code, code)
         )
 
     try:
@@ -124,9 +121,8 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     if not isinstance(target_base, str) or not os.path.isabs(target_base):
         return f'`metadata.options.stash.target_base` should be an absolute filepath, got: {target_base}'
 
-    if (
-        not isinstance(source_list, (list, tuple)) or
-        any(not isinstance(src, str) or os.path.isabs(src) for src in source_list)
+    if not isinstance(source_list, (list, tuple)) or any(
+        not isinstance(src, str) or os.path.isabs(src) for src in source_list
     ):
         port = 'metadata.options.stash.source_list'
         return f'`{port}` should be a list or tuple of relative filepaths, got: {source_list}'
@@ -212,7 +208,7 @@ class CalcJob(Process):
             valid_type=orm.AbstractCode,
             required=False,
             help='The `Code` to use for this job. This input is required, unless the `remote_folder` input is '
-            'specified, which means an existing job is being imported and no code will actually be run.'
+            'specified, which means an existing job is being imported and no code will actually be run.',
         )
         spec.input_namespace(
             'monitors',
@@ -220,7 +216,7 @@ class CalcJob(Process):
             required=False,
             validator=validate_monitors,
             help='Add monitoring functions that can inspect output files while the job is running and decide to '
-            'prematurely terminate the job.'
+            'prematurely terminate the job.',
         )
         spec.input(
             'remote_folder',
@@ -230,50 +226,50 @@ class CalcJob(Process):
             'inputs should be passed to the `CalcJob` as normal but instead of launching the actual job, the '
             'engine will recreate the input files and then proceed straight to the retrieve step where the files '
             'of this `RemoteData` will be retrieved as if it had been actually launched through AiiDA. If a '
-            'parser is defined in the inputs, the results are parsed and attached as output nodes as usual.'
+            'parser is defined in the inputs, the results are parsed and attached as output nodes as usual.',
         )
         spec.input(
             'metadata.dry_run',
             valid_type=bool,
             default=False,
-            help='When set to `True` will prepare the calculation job for submission but not actually launch it.'
+            help='When set to `True` will prepare the calculation job for submission but not actually launch it.',
         )
         spec.input(
             'metadata.computer',
             valid_type=orm.Computer,
             required=False,
-            help='When using a "local" code, set the computer on which the calculation should be run.'
+            help='When using a "local" code, set the computer on which the calculation should be run.',
         )
         spec.input_namespace(f'{spec.metadata_key}.{spec.options_key}', required=False)
         spec.input(
             'metadata.options.input_filename',
             valid_type=str,
             required=False,
-            help='Filename to which the input for the code that is to be run is written.'
+            help='Filename to which the input for the code that is to be run is written.',
         )
         spec.input(
             'metadata.options.output_filename',
             valid_type=str,
             required=False,
-            help='Filename to which the content of stdout of the code that is to be run is written.'
+            help='Filename to which the content of stdout of the code that is to be run is written.',
         )
         spec.input(
             'metadata.options.submit_script_filename',
             valid_type=str,
             default='_aiidasubmit.sh',
-            help='Filename to which the job submission script is written.'
+            help='Filename to which the job submission script is written.',
         )
         spec.input(
             'metadata.options.scheduler_stdout',
             valid_type=str,
             default='_scheduler-stdout.txt',
-            help='Filename to which the content of stdout of the scheduler is written.'
+            help='Filename to which the content of stdout of the scheduler is written.',
         )
         spec.input(
             'metadata.options.scheduler_stderr',
             valid_type=str,
             default='_scheduler-stderr.txt',
-            help='Filename to which the content of stderr of the scheduler is written.'
+            help='Filename to which the content of stderr of the scheduler is written.',
         )
         spec.input(
             'metadata.options.resources',
@@ -281,13 +277,13 @@ class CalcJob(Process):
             required=True,
             help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
             'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
-            'scheduler for more details.'
+            'scheduler for more details.',
         )
         spec.input(
             'metadata.options.max_wallclock_seconds',
             valid_type=int,
             required=False,
-            help='Set the wallclock in seconds asked to the scheduler'
+            help='Set the wallclock in seconds asked to the scheduler',
         )
         spec.input(
             'metadata.options.custom_scheduler_commands',
@@ -296,31 +292,31 @@ class CalcJob(Process):
             help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
             'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
             'the scheduler submission file where such text is inserted: with this option, the string is '
-            'inserted before any non-scheduler command'
+            'inserted before any non-scheduler command',
         )
         spec.input(
             'metadata.options.queue_name',
             valid_type=str,
             required=False,
-            help='Set the name of the queue on the remote computer'
+            help='Set the name of the queue on the remote computer',
         )
         spec.input(
             'metadata.options.rerunnable',
             valid_type=bool,
             required=False,
-            help='Determines if the calculation can be requeued / rerun.'
+            help='Determines if the calculation can be requeued / rerun.',
         )
         spec.input(
             'metadata.options.account',
             valid_type=str,
             required=False,
-            help='Set the account to use in for the queue on the remote computer'
+            help='Set the account to use in for the queue on the remote computer',
         )
         spec.input(
             'metadata.options.qos',
             valid_type=str,
             required=False,
-            help='Set the quality of service to use in for the queue on the remote computer'
+            help='Set the quality of service to use in for the queue on the remote computer',
         )
         spec.input(
             'metadata.options.withmpi',
@@ -355,16 +351,13 @@ class CalcJob(Process):
             'specified in ``environment_variables``.',
         )
         spec.input(
-            'metadata.options.priority',
-            valid_type=str,
-            required=False,
-            help='Set the priority of the job to be queued'
+            'metadata.options.priority', valid_type=str, required=False, help='Set the priority of the job to be queued'
         )
         spec.input(
             'metadata.options.max_memory_kb',
             valid_type=int,
             required=False,
-            help='Set the maximum memory (in KiloBytes) to be asked to the scheduler'
+            help='Set the maximum memory (in KiloBytes) to be asked to the scheduler',
         )
         spec.input(
             'metadata.options.prepend_text',
@@ -385,66 +378,66 @@ class CalcJob(Process):
             valid_type=str,
             required=False,
             validator=validate_parser,
-            help='Set a string for the output parser. Can be None if no output plugin is available or needed'
+            help='Set a string for the output parser. Can be None if no output plugin is available or needed',
         )
         spec.input(
             'metadata.options.additional_retrieve_list',
             required=False,
             valid_type=(list, tuple),
             validator=validate_additional_retrieve_list,
-            help='List of relative file paths that should be retrieved in addition to what the plugin specifies.'
+            help='List of relative file paths that should be retrieved in addition to what the plugin specifies.',
         )
         spec.input_namespace(
             'metadata.options.stash',
             required=False,
             populate_defaults=False,
             validator=validate_stash_options,
-            help='Optional directives to stash files after the calculation job has completed.'
+            help='Optional directives to stash files after the calculation job has completed.',
         )
         spec.input(
             'metadata.options.stash.target_base',
             valid_type=str,
             required=False,
             help='The base location to where the files should be stashd. For example, for the `copy` stash mode, this '
-            'should be an absolute filepath on the remote computer.'
+            'should be an absolute filepath on the remote computer.',
         )
         spec.input(
             'metadata.options.stash.source_list',
             valid_type=(tuple, list),
             required=False,
-            help='Sequence of relative filepaths representing files in the remote directory that should be stashed.'
+            help='Sequence of relative filepaths representing files in the remote directory that should be stashed.',
         )
         spec.input(
             'metadata.options.stash.stash_mode',
             valid_type=str,
             required=False,
-            help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode`.'
+            help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode`.',
         )
 
         spec.output(
             'remote_folder',
             valid_type=orm.RemoteData,
-            help='Input files necessary to run the process will be stored in this folder node.'
+            help='Input files necessary to run the process will be stored in this folder node.',
         )
         spec.output(
             'remote_stash',
             valid_type=orm.RemoteStashData,
             required=False,
-            help='Contents of the `stash.source_list` option are stored in this remote folder after job completion.'
+            help='Contents of the `stash.source_list` option are stored in this remote folder after job completion.',
         )
         spec.output(
             cls.link_label_retrieved,
             valid_type=orm.FolderData,
             pass_to_parser=True,
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
-            'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.'
+            'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.',
         )
 
         spec.exit_code(
             100,
             'ERROR_NO_RETRIEVED_FOLDER',
             invalidates_cache=True,
-            message='The process did not have the required `retrieved` output.'
+            message='The process did not have the required `retrieved` output.',
         )
         spec.exit_code(
             110, 'ERROR_SCHEDULER_OUT_OF_MEMORY', invalidates_cache=True, message='The job ran out of memory.'
@@ -461,13 +454,13 @@ class CalcJob(Process):
         spec.exit_code(150, 'STOPPED_BY_MONITOR', invalidates_cache=True, message='{message}')
 
     @classproperty
-    def spec_options(cls):  # pylint: disable=no-self-argument
+    def spec_options(cls):  # noqa: N805
         """Return the metadata options port namespace of the process specification of this process.
 
         :return: options dictionary
         :rtype: dict
         """
-        return cls.spec_metadata['options']  # pylint: disable=unsubscriptable-object
+        return cls.spec_metadata['options']
 
     @classmethod
     def get_importer(cls, entry_point_name: str | None = None) -> CalcJobImporter:
@@ -556,7 +549,7 @@ class CalcJob(Process):
             # this case, the parser will not be called. The outputs will already have been added to the process node
             # though, so all that needs to be done here is just also assign them to the process instance. This such that
             # when the process returns its results, it returns the actual outputs and not an empty dictionary.
-            self._outputs = self.node.get_outgoing(link_type=LinkType.CREATE).nested()  # pylint: disable=attribute-defined-outside-init
+            self._outputs = self.node.get_outgoing(link_type=LinkType.CREATE).nested()
             return self.node.exit_status
 
         # Launch the upload operation
@@ -618,7 +611,7 @@ class CalcJob(Process):
                 upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
                 self.node.dry_run_info = {  # type: ignore[attr-defined]
                     'folder': folder.abspath,
-                    'script_filename': self.node.get_option('submit_script_filename')
+                    'script_filename': self.node.get_option('submit_script_filename'),
                 }
 
     def _perform_import(self):
@@ -659,7 +652,7 @@ class CalcJob(Process):
         try:
             retrieved = self.node.outputs.retrieved
         except exceptions.NotExistent:
-            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER  # pylint: disable=no-member
+            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
         # Call the scheduler output parser
         exit_code_scheduler = self.parse_scheduler_output(retrieved)
@@ -763,7 +756,7 @@ class CalcJob(Process):
         except exceptions.FeatureNotAvailable:
             self.logger.info(f'`{scheduler.__class__.__name__}` does not implement scheduler output parsing')
             return None
-        except Exception as exception:  # pylint: disable=broad-except
+        except Exception as exception:
             self.logger.error(f'the `parse_output` method of the scheduler excepted: {exception}')
             return None
 
@@ -793,7 +786,7 @@ class CalcJob(Process):
                 self.out(link_label, node)
             except ValueError as exception:
                 self.logger.error(f'invalid value {node} specified with label {link_label}: {exception}')
-                exit_code = self.exit_codes.ERROR_INVALID_OUTPUT  # pylint: disable=no-member
+                exit_code = self.exit_codes.ERROR_INVALID_OUTPUT
                 break
 
         if exit_code is not None and not isinstance(exit_code, ExitCode):
@@ -810,7 +803,6 @@ class CalcJob(Process):
         :return calcinfo: the CalcInfo object containing the information needed by the daemon to handle operations.
 
         """
-        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
@@ -856,10 +848,10 @@ class CalcJob(Process):
 
         # Set retrieve path, add also scheduler STDOUT and STDERR
         retrieve_list = calc_info.retrieve_list or []
-        if (job_tmpl.sched_output_path is not None and job_tmpl.sched_output_path not in retrieve_list):
+        if job_tmpl.sched_output_path is not None and job_tmpl.sched_output_path not in retrieve_list:
             retrieve_list.append(job_tmpl.sched_output_path)
         if not job_tmpl.sched_join_files:
-            if (job_tmpl.sched_error_path is not None and job_tmpl.sched_error_path not in retrieve_list):
+            if job_tmpl.sched_error_path is not None and job_tmpl.sched_error_path not in retrieve_list:
                 retrieve_list.append(job_tmpl.sched_error_path)
         retrieve_list.extend(self.node.get_option('additional_retrieve_list') or [])
         self.node.set_retrieve_list(retrieve_list)
@@ -881,14 +873,18 @@ class CalcJob(Process):
         # - most importantly, skips the cases in which one of the methods
         #   would return None, in which case the join method would raise
         #   an exception
-        prepend_texts = [computer.get_prepend_text()] + \
-            [code.prepend_text for code in codes] + \
-            [calc_info.prepend_text, self.node.get_option('prepend_text')]
+        prepend_texts = (
+            [computer.get_prepend_text()]
+            + [code.prepend_text for code in codes]
+            + [calc_info.prepend_text, self.node.get_option('prepend_text')]
+        )
         job_tmpl.prepend_text = '\n\n'.join(prepend_text for prepend_text in prepend_texts if prepend_text)
 
-        append_texts = [self.node.get_option('append_text'), calc_info.append_text] + \
-            [code.append_text for code in codes] + \
-            [computer.get_append_text()]
+        append_texts = (
+            [self.node.get_option('append_text'), calc_info.append_text]
+            + [code.append_text for code in codes]
+            + [computer.get_append_text()]
+        )
         job_tmpl.append_text = '\n\n'.join(append_text for append_text in append_texts if append_text)
 
         # Set resources, also with get_default_mpiprocs_per_machine
@@ -909,7 +905,6 @@ class CalcJob(Process):
 
         tmpl_codes_info = []
         for code_info in calc_info.codes_info:
-
             if not isinstance(code_info, CodeInfo):
                 raise PluginInternalError('Invalid codes_info, must be a list of CodeInfo objects')
 
@@ -1050,9 +1045,9 @@ class CalcJob(Process):
                 f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exception}'
             ) from exception
 
-        for (remote_computer_uuid, _, dest_rel_path) in remote_copy_list:
+        for remote_computer_uuid, _, dest_rel_path in remote_copy_list:
             try:
-                Computer.collection.get(uuid=remote_computer_uuid)  # pylint: disable=unused-variable
+                Computer.collection.get(uuid=remote_computer_uuid)
             except exceptions.NotExistent as exception:
                 raise PluginInternalError(
                     '[presubmission of calc {}] '
@@ -1062,9 +1057,9 @@ class CalcJob(Process):
                 ) from exception
             if os.path.isabs(dest_rel_path):
                 raise PluginInternalError(
-                    '[presubmission of calc {}] '
-                    'The destination path of the remote copy '
-                    'is absolute! ({})'.format(this_pk, dest_rel_path)
+                    '[presubmission of calc {}] ' 'The destination path of the remote copy ' 'is absolute! ({})'.format(
+                        this_pk, dest_rel_path
+                    )
                 )
 
         return calc_info

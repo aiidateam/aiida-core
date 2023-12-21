@@ -48,7 +48,6 @@ class SinglefileData(Data):
             Hint: Pass io.BytesIO(b"my string") to construct the SinglefileData directly from a string.
         :param filename: specify filename to use (defaults to name of provided file).
         """
-        # pylint: disable=redefined-builtin
         super().__init__(**kwargs)
 
         if file is not None:
@@ -85,9 +84,9 @@ class SinglefileData(Data):
         ...
 
     @contextlib.contextmanager
-    def open(self,
-             path: FilePath | None = None,
-             mode: t.Literal['r', 'rb'] = 'r') -> t.Iterator[t.BinaryIO] | t.Iterator[t.TextIO]:
+    def open(
+        self, path: FilePath | None = None, mode: t.Literal['r', 'rb'] = 'r'
+    ) -> t.Iterator[t.BinaryIO] | t.Iterator[t.TextIO]:
         """Return an open file handle to the content of this data node.
 
         :param path: the relative path of the object within the repository.
@@ -128,8 +127,6 @@ class SinglefileData(Data):
             Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
         :param filename: specify filename to use (defaults to name of provided file).
         """
-        # pylint: disable=redefined-builtin
-
         if isinstance(file, (str, pathlib.Path)):
             is_filelike = False
 

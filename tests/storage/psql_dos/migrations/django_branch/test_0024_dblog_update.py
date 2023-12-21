@@ -15,7 +15,7 @@ from aiida.common.utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_dblog_update(perform_migrations: PsqlDosMigrator):  # pylint: disable=too-many-locals
+def test_dblog_update(perform_migrations: PsqlDosMigrator):
     """Test the update to the ``DbLog`` table."""
     # starting revision
     perform_migrations.migrate_up('django@django_0023')
@@ -81,17 +81,19 @@ def test_dblog_update(perform_migrations: PsqlDosMigrator):  # pylint: disable=t
             objpk=calc_1.id,
             objname='node.calculation.job.quantumespresso.pw.',
             message='calculation node 1',
-            metadata=json.dumps({
-                'msecs': 719.0849781036377,
-                'objpk': calc_1.id,
-                'lineno': 350,
-                'thread': 140011612940032,
-                'asctime': '10/21/2018 12:39:51 PM',
-                'created': 1540118391.719085,
-                'levelno': 23,
-                'message': 'calculation node 1',
-                'objname': 'node.calculation.job.quantumespresso.pw.',
-            })
+            metadata=json.dumps(
+                {
+                    'msecs': 719.0849781036377,
+                    'objpk': calc_1.id,
+                    'lineno': 350,
+                    'thread': 140011612940032,
+                    'asctime': '10/21/2018 12:39:51 PM',
+                    'created': 1540118391.719085,
+                    'levelno': 23,
+                    'message': 'calculation node 1',
+                    'objname': 'node.calculation.job.quantumespresso.pw.',
+                }
+            ),
         )
         log_2 = log_model(
             loggername='something.else logger',
@@ -100,7 +102,7 @@ def test_dblog_update(perform_migrations: PsqlDosMigrator):  # pylint: disable=t
             objpk=param.id,
             objname='something.else.',
             message='parameter data with log message',
-            metadata='{}'
+            metadata='{}',
         )
         log_3 = log_model(
             loggername='TopologicalWorkflow logger',
@@ -109,7 +111,7 @@ def test_dblog_update(perform_migrations: PsqlDosMigrator):  # pylint: disable=t
             objpk=leg_workf.id,
             objname='aiida.workflows.user.topologicalworkflows.topo.TopologicalWorkflow',
             message='parameter data with log message',
-            metadata='{}'
+            metadata='{}',
         )
         log_4 = log_model(
             loggername='CalculationNode logger',
@@ -118,14 +120,16 @@ def test_dblog_update(perform_migrations: PsqlDosMigrator):  # pylint: disable=t
             objpk=calc_2.id,
             objname='node.calculation.job.quantumespresso.pw.',
             message='calculation node 2',
-            metadata=json.dumps({
-                'msecs': 719.0849781036377,
-                'objpk': calc_2.id,
-                'lineno': 360,
-                'levelno': 23,
-                'message': 'calculation node 1',
-                'objname': 'node.calculation.job.quantumespresso.pw.',
-            })
+            metadata=json.dumps(
+                {
+                    'msecs': 719.0849781036377,
+                    'objpk': calc_2.id,
+                    'lineno': 360,
+                    'levelno': 23,
+                    'message': 'calculation node 1',
+                    'objname': 'node.calculation.job.quantumespresso.pw.',
+                }
+            ),
         )
         # Creating two more log records that don't correspond to a node
         log_5 = log_model(
@@ -135,14 +139,16 @@ def test_dblog_update(perform_migrations: PsqlDosMigrator):  # pylint: disable=t
             objpk=(calc_2.id + 1000),
             objname='node.calculation.job.quantumespresso.pw.',
             message='calculation node 1000',
-            metadata=json.dumps({
-                'msecs': 718,
-                'objpk': (calc_2.id + 1000),
-                'lineno': 361,
-                'levelno': 25,
-                'message': 'calculation node 1000',
-                'objname': 'node.calculation.job.quantumespresso.pw.',
-            })
+            metadata=json.dumps(
+                {
+                    'msecs': 718,
+                    'objpk': (calc_2.id + 1000),
+                    'lineno': 361,
+                    'levelno': 25,
+                    'message': 'calculation node 1000',
+                    'objname': 'node.calculation.job.quantumespresso.pw.',
+                }
+            ),
         )
         log_6 = log_model(
             loggername='CalculationNode logger',
@@ -151,14 +157,16 @@ def test_dblog_update(perform_migrations: PsqlDosMigrator):  # pylint: disable=t
             objpk=(calc_2.id + 1001),
             objname='node.calculation.job.quantumespresso.pw.',
             message='calculation node 10001',
-            metadata=json.dumps({
-                'msecs': 722,
-                'objpk': (calc_2.id + 1001),
-                'lineno': 362,
-                'levelno': 24,
-                'message': 'calculation node 1001',
-                'objname': 'node.calculation.job.quantumespresso.pw.',
-            })
+            metadata=json.dumps(
+                {
+                    'msecs': 722,
+                    'objpk': (calc_2.id + 1001),
+                    'lineno': 362,
+                    'levelno': 24,
+                    'message': 'calculation node 1001',
+                    'objname': 'node.calculation.job.quantumespresso.pw.',
+                }
+            ),
         )
         session.add_all([log_1, log_2, log_3, log_4, log_5, log_6])
         session.commit()

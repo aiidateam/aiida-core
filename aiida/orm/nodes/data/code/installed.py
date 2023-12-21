@@ -49,7 +49,7 @@ class InstalledCode(Code):
 
         :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.  # pylint: disable=bad-super-call
+        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.
 
         if not self.computer:  # type: ignore[truthy-bool]
             raise exceptions.ValidationError('The `computer` is undefined.')
@@ -78,7 +78,7 @@ class InstalledCode(Code):
             with override_log_level():  # Temporarily suppress noisy logging
                 with self.computer.get_transport() as transport:
                     file_exists = transport.isfile(str(self.filepath_executable))
-        except Exception as exception:  # pylint: disable=broad-except
+        except Exception as exception:
             raise exceptions.ValidationError(
                 'Could not connect to the configured computer to determine whether the specified executable exists.'
             ) from exception
@@ -196,7 +196,7 @@ class InstalledCode(Code):
                 'type': click.Path(exists=False),
                 'prompt': 'Absolute filepath executable',
                 'help': 'Absolute filepath of the executable on the remote computer.',
-            }
+            },
         }
         options.update(**super()._get_cli_options())
 

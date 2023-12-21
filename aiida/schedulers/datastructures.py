@@ -17,10 +17,10 @@ the data structure that is returned when querying for jobs in the scheduler
 from __future__ import annotations
 
 import abc
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
 import enum
 import json
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from aiida.common import AIIDA_LOGGER, CodeRunMode
@@ -30,7 +30,13 @@ from aiida.common.timezone import make_aware, timezone_from_name
 SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
 
 __all__ = (
-    'JobState', 'JobResource', 'JobTemplate', 'JobInfo', 'NodeNumberJobResource', 'ParEnvJobResource', 'MachineInfo'
+    'JobState',
+    'JobResource',
+    'JobTemplate',
+    'JobInfo',
+    'NodeNumberJobResource',
+    'ParEnvJobResource',
+    'MachineInfo',
 )
 
 
@@ -67,6 +73,7 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
     The constructor should take care of checking the values.
     The init should raise only ValueError or TypeError on invalid parameters.
     """
+
     _default_fields = tuple()
 
     @classmethod
@@ -236,8 +243,7 @@ class ParEnvJobResource(JobResource):
         return resources
 
     def __init__(self, **kwargs):
-        """
-        Initialize the job resources from the passed arguments (the valid keys can be
+        """Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
 
         :raises ValueError: if the resources are invalid or incomplete
@@ -255,7 +261,7 @@ class ParEnvJobResource(JobResource):
         return self.tot_num_mpiprocs
 
 
-class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-attributes
+class JobTemplate(DefaultFieldsAttributeDict):
     """A template for submitting jobs to a scheduler.
 
     This contains all required information to create the job header.
@@ -408,8 +414,7 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
 
 @dataclass
 class JobTemplateCodeInfo:
-    """
-    Data structure to communicate to a `Scheduler` how a code should be run in submit script.
+    """Data structure to communicate to a `Scheduler` how a code should be run in submit script.
 
     `Scheduler.get_submit_script` will pass a list of these objects to `Scheduler._get_run_line` which
     should build up the code execution line based on the parameters specified in this dataclass.
@@ -427,6 +432,7 @@ class JobTemplateCodeInfo:
     :param stderr_name: filename of the the `stderr` file descriptor.
     :param join_files: boolean, if true, `stderr` should be redirected to `stdout`.
     """
+
     prepend_cmdline_params: list[str] = field(default_factory=list)
     cmdline_params: list[str] = field(default_factory=list)
     use_double_quotes: list[bool] = field(default_factory=lambda: [False, False])
@@ -438,8 +444,7 @@ class JobTemplateCodeInfo:
 
 
 class MachineInfo(DefaultFieldsAttributeDict):
-    """
-    Similarly to what is defined in the DRMAA v.2 as SlotInfo; this identifies
+    """Similarly to what is defined in the DRMAA v.2 as SlotInfo; this identifies
     each machine (also called 'node' on some schedulers)
     on which a job is running, and how many CPUs are being used. (Some of them
     could be undefined)
@@ -448,6 +453,7 @@ class MachineInfo(DefaultFieldsAttributeDict):
     * ``num_cpus``: number of cores used by the job on this machine
     * ``num_mpiprocs``: number of MPI processes used by the job on this machine
     """
+
     _default_fields = (
         'name',
         'num_mpiprocs',
@@ -455,9 +461,8 @@ class MachineInfo(DefaultFieldsAttributeDict):
     )
 
 
-class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-attributes
-    """
-    Contains properties for a job in the queue.
+class JobInfo(DefaultFieldsAttributeDict):
+    """Contains properties for a job in the queue.
     Most of the fields are taken from DRMAA v.2.
 
     Note that default fields may be undefined. This
@@ -507,10 +512,27 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
     """
 
     _default_fields = (
-        'job_id', 'title', 'exit_status', 'terminating_signal', 'annotation', 'job_state', 'job_substate',
-        'allocated_machines', 'job_owner', 'num_mpiprocs', 'num_cpus', 'num_machines', 'queue_name', 'account', 'qos',
-        'wallclock_time_seconds', 'requested_wallclock_time_seconds', 'cpu_time', 'submission_time', 'dispatch_time',
-        'finish_time'
+        'job_id',
+        'title',
+        'exit_status',
+        'terminating_signal',
+        'annotation',
+        'job_state',
+        'job_substate',
+        'allocated_machines',
+        'job_owner',
+        'num_mpiprocs',
+        'num_cpus',
+        'num_machines',
+        'queue_name',
+        'account',
+        'qos',
+        'wallclock_time_seconds',
+        'requested_wallclock_time_seconds',
+        'cpu_time',
+        'submission_time',
+        'dispatch_time',
+        'finish_time',
     )
 
     if TYPE_CHECKING:
@@ -561,8 +583,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
 
     @staticmethod
     def _serialize_date(value):
-        """
-        Serialise a data value
+        """Serialise a data value
         :param value: The value to serialise
         :return: The serialised value
         """
@@ -580,8 +601,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
 
     @staticmethod
     def _deserialize_date(value):
-        """
-        Deserialise a date
+        """Deserialise a date
         :param value: The date vlue
         :return: The deserialised date
         """
@@ -601,14 +621,12 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
 
     @classmethod
     def serialize_field(cls, value, field_type):
-        """
-        Serialise a particular field value
+        """Serialise a particular field value
 
         :param value: The value to serialise
         :param field_type: The field type
         :return: The serialised value
         """
-
         if field_type is None:
             return value
 
@@ -618,8 +636,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
 
     @classmethod
     def deserialize_field(cls, value, field_type):
-        """
-        Deserialise the value of a particular field with a type
+        """Deserialise the value of a particular field with a type
         :param value: The value
         :param field_type: The field type
         :return: The deserialised value
@@ -632,16 +649,14 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         return deserializer_method(value)
 
     def serialize(self):
-        """
-        Serialize the current data (as obtained by ``self.get_dict()``) into a JSON string.
+        """Serialize the current data (as obtained by ``self.get_dict()``) into a JSON string.
 
         :return: A string with serialised representation of the current data.
         """
         return json.dumps(self.get_dict())
 
     def get_dict(self):
-        """
-        Serialise the current data into a dictionary that is JSON-serializable.
+        """Serialise the current data into a dictionary that is JSON-serializable.
 
         :return: A dictionary
         """
@@ -649,8 +664,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
 
     @classmethod
     def load_from_dict(cls, data):
-        """
-        Create a new instance loading the values from serialised data in dictionary form
+        """Create a new instance loading the values from serialised data in dictionary form
 
         :param data: The dictionary with the data to load from
         """
@@ -661,8 +675,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
 
     @classmethod
     def load_from_serialized(cls, data):
-        """
-        Create a new instance loading the values from JSON-serialised data as a string
+        """Create a new instance loading the values from JSON-serialised data as a string
 
         :param data: The string with the JSON-serialised data to load from
         """

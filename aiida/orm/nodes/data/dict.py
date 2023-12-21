@@ -82,7 +82,7 @@ class Dict(Data):
         """Return whether the node contains a key."""
         return key in self.base.attributes
 
-    def get(self, key: str, default: t.Any | None = None, /):  # type: ignore[override]  # pylint: disable=arguments-differ
+    def get(self, key: str, default: t.Any | None = None, /):  # type: ignore[override]
         """Return the value for key if key is in the dictionary, else default.
 
         :param key: The key whose value to return.
@@ -102,7 +102,7 @@ class Dict(Data):
             # Clear existing attributes and set the new dictionary
             self.base.attributes.clear()
             self.update_dict(dictionary)
-        except exceptions.ModificationNotAllowed:  # pylint: disable=try-except-raise
+        except exceptions.ModificationNotAllowed:
             # I reraise here to avoid to go in the generic 'except' below that would raise the same exception again
             raise
         except Exception:
@@ -150,6 +150,7 @@ class Dict(Data):
         :return: an instance of the `AttributeResultManager`.
         """
         from aiida.orm.utils.managers import AttributeManager
+
         return AttributeManager(self)
 
 

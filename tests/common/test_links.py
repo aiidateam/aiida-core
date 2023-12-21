@@ -15,7 +15,6 @@ from aiida.common.links import validate_link_label
 
 def test_validate_link_label():
     """Test that illegal link labels will raise a `ValueError`."""
-
     illegal_link_labels = [
         '_leading_underscore',
         'trailing_underscore_',

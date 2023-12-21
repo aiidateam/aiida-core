@@ -19,12 +19,13 @@ from aiida.cmdline.utils import echo
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.log import override_log_level
 
-from ..utils.echo import ExitCode  # pylint: disable=import-error,no-name-in-module
+from ..utils.echo import ExitCode
 
 
 class ServiceStatus(enum.IntEnum):
     """Describe status of services for 'verdi status' command."""
-    UP = 0  # pylint: disable=invalid-name
+
+    UP = 0
     ERROR = 1
     WARNING = 2
     DOWN = 3
@@ -55,7 +56,6 @@ STATUS_SYMBOLS = {
 @click.option('--no-rmq', is_flag=True, help='Do not check RabbitMQ status')
 def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
-    # pylint: disable=broad-except,too-many-statements,too-many-branches,too-many-locals,
     from aiida import __version__
     from aiida.common.utils import Capturing
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
@@ -92,10 +92,10 @@ def verdi_status(print_traceback, no_rmq):
             storage_head_version = storage_cls.version_head()
             storage_backend = storage_cls(profile)
     except UnreachableStorage as exc:
-        message = 'Unable to connect to profile\'s storage.'
+        message = "Unable to connect to profile's storage."
         print_status(ServiceStatus.DOWN, 'storage', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
-    except IncompatibleStorageSchema as exc:
+    except IncompatibleStorageSchema:
         message = (
             f'Storage schema version is incompatible with the code version {storage_head_version!r}. '
             'Run `verdi storage migrate` to solve this.'
@@ -107,7 +107,7 @@ def verdi_status(print_traceback, no_rmq):
         print_status(ServiceStatus.DOWN, 'storage', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     except Exception as exc:
-        message = 'Unable to instatiate profile\'s storage.'
+        message = "Unable to instatiate profile's storage."
         print_status(ServiceStatus.ERROR, 'storage', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     else:
@@ -171,4 +171,5 @@ def print_status(status, service, msg='', exception=None, print_traceback=False)
 
     if print_traceback:
         import traceback
+
         traceback.print_exc()

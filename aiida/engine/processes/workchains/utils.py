@@ -10,7 +10,7 @@
 """Utilities for `WorkChain` implementations."""
 from functools import partial
 from inspect import getfullargspec
-from types import FunctionType  # pylint: disable=no-name-in-module
+from types import FunctionType
 from typing import List, NamedTuple, Optional, Union
 
 from wrapt import decorator
@@ -37,6 +37,7 @@ class ProcessHandlerReport(NamedTuple):
         which has status `0` meaning that the work chain step will be considered
         successful and the work chain will continue to the next step.
     """
+
     do_break: bool = False
     exit_code: ExitCode = ExitCode()
 
@@ -46,7 +47,7 @@ def process_handler(
     *,
     priority: int = 0,
     exit_codes: Union[None, ExitCode, List[ExitCode]] = None,
-    enabled: bool = True
+    enabled: bool = True,
 ) -> FunctionType:
     """Decorator to register a :class:`~aiida.engine.BaseRestartWorkChain` instance method as a process handler.
 
@@ -78,9 +79,7 @@ def process_handler(
         basis through the input `handler_overrides`.
     """
     if wrapped is None:
-        return partial(
-            process_handler, priority=priority, exit_codes=exit_codes, enabled=enabled
-        )  # type: ignore[return-value]
+        return partial(process_handler, priority=priority, exit_codes=exit_codes, enabled=enabled)  # type: ignore[return-value]
 
     if not isinstance(wrapped, FunctionType):
         raise TypeError('first argument can only be an instance method, use keywords for decorator arguments.')
@@ -108,7 +107,6 @@ def process_handler(
 
     @decorator
     def wrapper(wrapped, instance, args, kwargs):
-
         # When the handler will be called by the `BaseRestartWorkChain` it will pass the node as the only argument
         node = args[0]
 
@@ -119,7 +117,7 @@ def process_handler(
 
         # Append the name and return value of the current process handler to the `considered_handlers` extra.
         try:
-            considered_handlers = instance.node.base.extras.get(instance._considered_handlers_extra, [])  # pylint: disable=protected-access
+            considered_handlers = instance.node.base.extras.get(instance._considered_handlers_extra, [])
             current_process = considered_handlers[-1]
         except IndexError:
             # The extra was never initialized, so we skip this functionality
@@ -130,8 +128,8 @@ def process_handler(
             if isinstance(serialized, ProcessHandlerReport):
                 serialized = {'do_break': serialized.do_break, 'exit_status': serialized.exit_code.status}
             current_process.append((wrapped.__name__, serialized))
-            instance.node.base.extras.set(instance._considered_handlers_extra, considered_handlers)  # pylint: disable=protected-access
+            instance.node.base.extras.set(instance._considered_handlers_extra, considered_handlers)
 
         return result
 
-    return wrapper(wrapped)  # pylint: disable=no-value-for-parameter
+    return wrapper(wrapped)

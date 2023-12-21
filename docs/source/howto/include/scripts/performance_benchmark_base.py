@@ -110,7 +110,6 @@ def main(code, number, daemon):
     else:
         echo.echo_success('All calculations finished successfully.')
 
-
     time_end = time.time()
     echo.echo(f'Elapsed time: {(time_end - time_start):.2f} seconds.')
 

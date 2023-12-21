@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name,invalid-name
 """Tests for the :mod:`aiida.repository.backend.sandbox` module."""
 import io
 import pathlib

@@ -20,7 +20,6 @@ class TestInputPort:
 
     def test_with_non_db(self):
         """Test the functionality of the `non_db` attribute upon construction and setting."""
-
         # When not specifying, it should get the default value and `non_db_explicitly_set` should be `False`
         port = InputPort('port')
         assert port.non_db is False

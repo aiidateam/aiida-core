@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This module provides list functionality to all data types.
+"""This module provides list functionality to all data types.
 """
 
 from aiida.cmdline.params import options
@@ -30,9 +29,7 @@ def list_options(func):
 
 
 def query(datatype, project, past_days, group_pks, all_users):
-    """
-    Perform the query
-    """
+    """Perform the query"""
     import datetime
 
     from aiida import orm
@@ -79,11 +76,8 @@ def query(datatype, project, past_days, group_pks, all_users):
     return results
 
 
-# pylint: disable=unused-argument,too-many-arguments
 def data_list(datatype, columns, elements, elements_only, formula_mode, past_days, groups, all_users):
-    """
-    List stored objects
-    """
+    """List stored objects"""
     columns_dict = {
         'ID': 'id',
         'Id': 'id',

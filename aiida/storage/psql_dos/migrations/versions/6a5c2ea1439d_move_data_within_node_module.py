@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Change type string for `Data` nodes, from `data.*` to `node.data.*`
 
 Note, this is identical to django_0025
@@ -17,7 +16,6 @@ Revises: 375c2db70663
 Create Date: 2019-01-18 19:44:32.156083
 
 """
-# pylint: disable=invalid-name,no-member,import-error,no-name-in-module
 from alembic import op
 from sqlalchemy.sql import text
 

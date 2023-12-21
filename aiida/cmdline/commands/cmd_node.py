@@ -48,7 +48,7 @@ def repo_cat(node, relative_path):
 
     if not relative_path:
         if not isinstance(node, SinglefileData):
-            raise click.BadArgumentUsage('Missing argument \'RELATIVE_PATH\'.')
+            raise click.BadArgumentUsage("Missing argument 'RELATIVE_PATH'.")
 
         relative_path = node.filename
 
@@ -102,9 +102,8 @@ def repo_dump(node, output_directory):
     except FileExistsError:
         echo.echo_critical(f'Invalid value for "OUTPUT_DIRECTORY": Path "{output_directory}" exists.')
 
-    def _copy_tree(key, output_dir):  # pylint: disable=too-many-branches
-        """
-        Recursively copy the content at the ``key`` path in the given node to
+    def _copy_tree(key, output_dir):
+        """Recursively copy the content at the ``key`` path in the given node to
         the ``output_dir``.
         """
         for file in node.base.repository.list_objects(key):
@@ -140,7 +139,6 @@ def node_label(nodes, label, raw, force):
 
     if label is None:
         for node in nodes:
-
             if raw:
                 table.append([node.label])
             else:
@@ -174,7 +172,6 @@ def node_description(nodes, description, force, raw):
 
     if description is None:
         for node in nodes:
-
             if raw:
                 table.append([node.description])
             else:
@@ -205,17 +202,15 @@ def node_show(nodes, print_groups):
     from aiida.cmdline.utils.common import get_node_info
 
     for node in nodes:
-        # pylint: disable=fixme
         # TODO: Add a check here on the node type, otherwise it might try to access
         # attributes such as code which are not necessarily there
         echo.echo(get_node_info(node))
 
         if print_groups:
-            from aiida.orm import Node  # pylint: disable=redefined-outer-name
+            from aiida.orm import Node
             from aiida.orm.groups import Group
             from aiida.orm.querybuilder import QueryBuilder
 
-            # pylint: disable=invalid-name
             qb = QueryBuilder()
             qb.append(Node, tag='node', filters={'id': {'==': node.pk}})
             qb.append(Group, tag='groups', with_node='node', project=['id', 'label', 'type_string'])
@@ -332,7 +327,7 @@ def node_delete(identifier, dry_run, force, **traversal_rules):
     '--entry-point',
     type=PluginParamType(group=('aiida.calculations', 'aiida.data', 'aiida.node', 'aiida.workflows'), load=True),
     default=None,
-    help='Only include nodes that are class or sub class of the class identified by this entry point.'
+    help='Only include nodes that are class or sub class of the class identified by this entry point.',
 )
 @options.FORCE()
 @with_dbenv()
@@ -377,7 +372,7 @@ def rehash(nodes, entry_point, force):
         echo.echo_critical('no matching nodes found')
 
     with click.progressbar(to_hash, label='Rehashing Nodes:') as iter_hash:
-        for node, in iter_hash:
+        for (node,) in iter_hash:
             node.base.caching.rehash()
 
     echo.echo_success(f'{num_nodes} nodes re-hashed.')
@@ -399,57 +394,63 @@ def verdi_graph():
         "'logic' includes only 'input_work' and 'return' links (logical provenance only)."
     ),
     default='all',
-    type=click.Choice(['all', 'data', 'logic'])
+    type=click.Choice(['all', 'data', 'logic']),
 )
 @click.option(
     '--identifier',
     help='the type of identifier to use within the node text',
     default='uuid',
-    type=click.Choice(['pk', 'uuid', 'label'])
+    type=click.Choice(['pk', 'uuid', 'label']),
 )
 @click.option(
     '-a',
     '--ancestor-depth',
     help='The maximum depth when recursing upwards, if not set it will recurse to the end.',
-    type=click.IntRange(min=0)
+    type=click.IntRange(min=0),
 )
 @click.option(
     '-d',
     '--descendant-depth',
     help='The maximum depth when recursing through the descendants. If not set it will recurse to the end.',
-    type=click.IntRange(min=0)
+    type=click.IntRange(min=0),
 )
 @click.option('-o', '--process-out', is_flag=True, help='Show outgoing links for all processes.')
 @click.option('-i', '--process-in', is_flag=True, help='Show incoming links for all processes.')
 @click.option(
     '-e',
     '--engine',
-    help="The graphviz engine, e.g. 'dot', 'circo', ... "
-    '(see http://www.graphviz.org/doc/info/output.html)',
-    default='dot'
+    help="The graphviz engine, e.g. 'dot', 'circo', ... " '(see http://www.graphviz.org/doc/info/output.html)',
+    default='dot',
 )
 @click.option('-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
 @click.option(
     '-c',
     '--highlight-classes',
-    help=
-    "Only color nodes of specific class label (as displayed in the graph, e.g. 'StructureData', 'FolderData', etc.).",
+    help='Only color nodes of specific class label (as displayed in the graph e.g. StructureData, FolderData, etc.).',
     type=click.STRING,
     default=None,
-    multiple=True
+    multiple=True,
 )
 @click.option('-s', '--show', is_flag=True, help='Open the rendered result with the default application.')
 @arguments.OUTPUT_FILE(required=False)
 @decorators.with_dbenv()
 def graph_generate(
-    root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, output_format,
-    highlight_classes, show, output_file
+    root_node,
+    link_types,
+    identifier,
+    ancestor_depth,
+    descendant_depth,
+    process_out,
+    process_in,
+    engine,
+    output_format,
+    highlight_classes,
+    show,
+    output_file,
 ):
-    """
-    Generate a graph from a ROOT_NODE (specified by pk or uuid).
-    """
-    # pylint: disable=too-many-arguments
+    """Generate a graph from a ROOT_NODE (specified by pk or uuid)."""
     from aiida.tools.visualization import Graph
+
     link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
 
     echo.echo_info(f'Initiating graphviz engine: {engine}')

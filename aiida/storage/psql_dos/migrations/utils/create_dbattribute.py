@@ -20,7 +20,7 @@ from aiida.common.exceptions import ValidationError
 from aiida.common.timezone import make_aware
 
 
-def create_rows(key: str, value, node_id: int) -> list[dict]:  # pylint: disable=too-many-branches
+def create_rows(key: str, value, node_id: int) -> list[dict]:
     """Create an old style node attribute/extra, via the `db_dbattribute`/`db_dbextra` tables.
 
     :note: No hits are done on the DB, in particular no check is done
@@ -65,12 +65,10 @@ def create_rows(key: str, value, node_id: int) -> list[dict]:  # pylint: disable
         columns['tval'] = value
 
     elif isinstance(value, datetime.datetime):
-
         columns['datatype'] = 'date'
         columns['dval'] = make_aware(value)
 
     elif isinstance(value, (list, tuple)):
-
         columns['datatype'] = 'list'
         columns['ival'] = len(value)
 
@@ -82,7 +80,6 @@ def create_rows(key: str, value, node_id: int) -> list[dict]:  # pylint: disable
             list_to_return.extend(create_rows(f'{key}.{i:d}', subv, node_id))
 
     elif isinstance(value, dict):
-
         columns['datatype'] = 'dict'
         columns['ival'] = len(value)
 

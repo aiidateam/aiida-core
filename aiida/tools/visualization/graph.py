@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-""" provides functionality to create graphs of the AiiDa data providence,
+"""provides functionality to create graphs of the AiiDa data providence,
 *via* graphviz.
 """
 from __future__ import annotations
@@ -45,32 +45,31 @@ def default_link_styles(link_pair: LinkPair, add_label: bool, add_type: bool) ->
     :param add_label: include link label
     :param add_type: include link type
     """
-
     style = {
         LinkType.INPUT_CALC: {
             'style': 'solid',
-            'color': '#000000'  # black
+            'color': '#000000',  # black
         },
         LinkType.INPUT_WORK: {
             'style': 'dashed',
-            'color': '#000000'  # black
+            'color': '#000000',  # black
         },
         LinkType.CALL_CALC: {
             'style': 'dotted',
-            'color': '#000000'  # black
+            'color': '#000000',  # black
         },
         LinkType.CALL_WORK: {
             'style': 'dotted',
-            'color': '#000000'  # black
+            'color': '#000000',  # black
         },
         LinkType.CREATE: {
             'style': 'solid',
-            'color': '#000000'  # black
+            'color': '#000000',  # black
         },
         LinkType.RETURN: {
             'style': 'dashed',
-            'color': '#000000'  # black
-        }
+            'color': '#000000',  # black
+        },
     }[link_pair.link_type]
 
     if add_label and not add_type:
@@ -88,7 +87,6 @@ def default_node_styles(node: orm.Node) -> dict:
 
     :param node: the node to map
     """
-
     class_node_type = node.class_node_type
 
     try:
@@ -98,7 +96,7 @@ def default_node_styles(node: orm.Node) -> dict:
             'shape': 'ellipse',
             'style': 'filled',
             'fillcolor': '#8cd499ff',  # green,
-            'penwidth': 0
+            'penwidth': 0,
         }
 
     node_type_map = {
@@ -106,32 +104,32 @@ def default_node_styles(node: orm.Node) -> dict:
             'shape': 'ellipse',
             'style': 'filled',
             'fillcolor': '#4ca4b9aa',  # blue
-            'penwidth': 0
+            'penwidth': 0,
         },
         'process.calculation.calcjob.CalcJobNode.': {
             'shape': 'rectangle',
             'style': 'filled',
             'fillcolor': '#de707fff',  # red
-            'penwidth': 0
+            'penwidth': 0,
         },
         'process.calculation.calcfunction.CalcFunctionNode.': {
             'shape': 'rectangle',
             'style': 'filled',
             'fillcolor': '#de707f77',  # red
-            'penwidth': 0
+            'penwidth': 0,
         },
         'process.workflow.workchain.WorkChainNode.': {
             'shape': 'rectangle',
             'style': 'filled',
             'fillcolor': '#e38851ff',  # orange
-            'penwidth': 0
+            'penwidth': 0,
         },
         'process.workflow.workfunction.WorkFunctionNode.': {
             'shape': 'rectangle',
             'style': 'filled',
             'fillcolor': '#e38851ff',  # orange
-            'penwidth': 0
-        }
+            'penwidth': 0,
+        },
     }
 
     node_style = node_type_map.get(class_node_type, default)
@@ -144,7 +142,6 @@ def pstate_node_styles(node: orm.Node) -> dict:
 
     :param node: the node to map
     """
-
     class_node_type = node.class_node_type
 
     default = {'shape': 'rectangle', 'pencolor': 'black'}
@@ -154,28 +151,28 @@ def pstate_node_styles(node: orm.Node) -> dict:
             'shape': 'ellipse',
             'style': 'filled',
             'penwidth': 0,
-            'fillcolor': '#ffffffff'
+            'fillcolor': '#ffffffff',
         },
         'process.calculation.calcfunction.CalcFunctionNode.': {
             'shape': 'ellipse',
             'style': 'filled',
             'penwidth': 0,
-            'fillcolor': '#ffffffff'
+            'fillcolor': '#ffffffff',
         },
         'process.workflow.workchain.WorkChainNode.': {
             'shape': 'polygon',
             'sides': '6',
             'style': 'filled',
             'penwidth': 0,
-            'fillcolor': '#ffffffff'
+            'fillcolor': '#ffffffff',
         },
         'process.workflow.workfunction.WorkFunctionNode.': {
             'shape': 'polygon',
             'sides': '6',
             'style': 'filled',
             'penwidth': 0,
-            'fillcolor': '#ffffffff'
-        }
+            'fillcolor': '#ffffffff',
+        },
     }
 
     node_style = process_map.get(class_node_type, default)
@@ -216,8 +213,6 @@ def default_node_sublabels(node: orm.Node) -> str:
 
     :param node: the node to map
     """
-    # pylint: disable=too-many-branches
-
     class_node_type = node.class_node_type
     if class_node_type == 'data.core.int.Int.':
         sublabel = f"value: {node.base.attributes.get('value', '')}"
@@ -261,7 +256,7 @@ def default_node_sublabels(node: orm.Node) -> str:
 
 
 def get_node_id_label(node: orm.Node, id_type: Literal['pk', 'uuid', 'label']) -> str:
-    """Return an identifier str for the node """
+    """Return an identifier str for the node"""
     if id_type == 'pk':
         return str(node.pk)
     if id_type == 'uuid':
@@ -278,7 +273,7 @@ def _get_node_label(node: orm.Node, id_type: Literal['pk', 'uuid', 'label'] = 'p
     elif isinstance(node, orm.ProcessNode):
         label = '{} ({})'.format(
             node.__class__.__name__ if node.process_label is None else node.process_label,
-            get_node_id_label(node, id_type)
+            get_node_id_label(node, id_type),
         )
     else:
         raise TypeError(f'Unknown type: {type(node)}')
@@ -293,7 +288,7 @@ def _add_graphviz_node(
     node_sublabel_func,
     style_override: None | dict = None,
     include_sublabels: bool = True,
-    id_type: Literal['pk', 'uuid', 'label'] = 'pk'
+    id_type: Literal['pk', 'uuid', 'label'] = 'pk',
 ):
     """Create a node in the graph
 
@@ -317,7 +312,6 @@ def _add_graphviz_node(
     For subclasses of ProcessNode, we choose styles to distinguish between
     types, and also color the nodes for successful/failed processes
     """
-    # pylint: disable=too-many-arguments
     node_style = node_style_func(node)
     label_list = [_get_node_label(node, id_type)]
 
@@ -345,7 +339,6 @@ def _add_graphviz_edge(graph: Digraph, in_node: orm.Node, out_node: orm.Node, st
     :param out_node: the tail node
     :param style: the graphviz style
     """
-
     if style is None:
         style = {}
 
@@ -369,7 +362,7 @@ class Graph:
         node_style_fn: Callable[[orm.Node], dict] | None = None,
         node_sublabel_fn: Callable[[orm.Node], str] | None = None,
         node_id_type: Literal['pk', 'uuid', 'label'] = 'pk',
-        backend: StorageBackend | None = None
+        backend: StorageBackend | None = None,
     ):
         """A class to create graphviz graphs of the AiiDA node provenance
 
@@ -390,8 +383,6 @@ class Graph:
             node_sublabel_fn(node) -> str
         :param node_id_type: the type of identifier to within the node text
         """
-        # pylint: disable=too-many-arguments
-
         self._graph = Digraph(engine=engine, graph_attr=graph_attr)
         self._nodes: set[int] = set()
         self._edges: set[tuple[int, int, None | LinkPair]] = set()
@@ -459,7 +450,7 @@ class Graph:
                 node_sublabel_func=self._node_sublabels,
                 style_override=style,
                 include_sublabels=self._include_sublabels,
-                id_type=self._node_id_type
+                id_type=self._node_id_type,
             )
             self._nodes.add(node.pk)
         return node
@@ -470,7 +461,7 @@ class Graph:
         out_node: int | str | orm.Node,
         link_pair: LinkPair | None = None,
         style: dict | None = None,
-        overwrite: bool = False
+        overwrite: bool = False,
     ) -> None:
         """Add single node to the graph
 
@@ -504,21 +495,25 @@ class Graph:
         link_types_list: Sequence[LinkType] | Sequence[str]
         if not link_types:
             link_types_list = [
-                LinkType.CREATE, LinkType.RETURN, LinkType.INPUT_CALC, LinkType.INPUT_WORK, LinkType.CALL_CALC,
-                LinkType.CALL_WORK
+                LinkType.CREATE,
+                LinkType.RETURN,
+                LinkType.INPUT_CALC,
+                LinkType.INPUT_WORK,
+                LinkType.CALL_CALC,
+                LinkType.CALL_WORK,
             ]
         elif isinstance(link_types, (str, LinkType)):
             link_types_list = [link_types]  # type: ignore[assignment]
         else:
             link_types_list = link_types
-        return tuple(getattr(LinkType, l.upper()) if isinstance(l, str) else l for l in link_types_list)
+        return tuple(getattr(LinkType, link.upper()) if isinstance(link, str) else link for link in link_types_list)
 
     def add_incoming(
         self,
         node: int | str | orm.Node,
         link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
         annotate_links: LinkAnnotateType = None,
-        return_pks: bool = True
+        return_pks: bool = True,
     ) -> list[int] | list[orm.Node]:
         """Add nodes and edges for incoming links to a node
 
@@ -547,9 +542,7 @@ class Graph:
 
         query = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
-            filters={'id': {
-                'in': traversed_graph['nodes']
-            }},
+            filters={'id': {'in': traversed_graph['nodes']}},
             project=['id', '*'],
             tag='node',
         )
@@ -558,7 +551,7 @@ class Graph:
         for _, traversed_node in traversed_nodes.items():
             self.add_node(traversed_node, style_override=None)
 
-        for link in (traversed_graph['links'] or []):
+        for link in traversed_graph['links'] or []:
             source_node = traversed_nodes[link.source_id]
             target_node = traversed_nodes[link.target_id]
             link_pair = LinkPair(self._convert_link_types(link.link_type)[0], link.link_label)
@@ -577,7 +570,7 @@ class Graph:
         node: int | str | orm.Node,
         link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
         annotate_links: LinkAnnotateType = None,
-        return_pks: bool = True
+        return_pks: bool = True,
     ) -> list[int] | list[orm.Node]:
         """Add nodes and edges for outgoing links to a node
 
@@ -606,9 +599,7 @@ class Graph:
 
         query = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
-            filters={'id': {
-                'in': traversed_graph['nodes']
-            }},
+            filters={'id': {'in': traversed_graph['nodes']}},
             project=['id', '*'],
             tag='node',
         )
@@ -617,7 +608,7 @@ class Graph:
         for _, traversed_node in traversed_nodes.items():
             self.add_node(traversed_node, style_override=None)
 
-        for link in (traversed_graph['links'] or []):
+        for link in traversed_graph['links'] or []:
             source_node = traversed_nodes[link.source_id]
             target_node = traversed_nodes[link.target_id]
             link_pair = LinkPair(self._convert_link_types(link.link_type)[0], link.link_label)
@@ -653,7 +644,6 @@ class Graph:
         :param highlight_classes: target class in exported graph expected to be highlight and
             other nodes are decolorized
         """
-        # pylint: disable=too-many-arguments,too-many-locals
         # Get graph traversal rules where the given link types and direction are all set to True,
         # and all others are set to False
         origin_pk = self._load_node(origin).pk
@@ -675,7 +665,7 @@ class Graph:
                 max_iterations=1,
                 get_links=True,
                 backend=self.backend,
-                links_backward=[LinkType.INPUT_WORK, LinkType.INPUT_CALC]
+                links_backward=[LinkType.INPUT_WORK, LinkType.INPUT_CALC],
             )
             traversed_graph['nodes'] = traversed_graph['nodes'].union(traversed_outputs['nodes'])
             traversed_graph['links'] = (traversed_graph['links'] or set()).union(traversed_outputs['links'] or set())
@@ -683,9 +673,7 @@ class Graph:
         # Do one central query for all nodes in the Graph and generate a {id: Node} dictionary
         query = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
-            filters={'id': {
-                'in': traversed_graph['nodes']
-            }},
+            filters={'id': {'in': traversed_graph['nodes']}},
             project=['id', '*'],
             tag='node',
         )
@@ -698,7 +686,7 @@ class Graph:
         # Add all traversed nodes to the graph with default styling
         for _, traversed_node in traversed_nodes.items():
             node_label = _get_node_label(traversed_node)
-            if highlight_classes and not node_label.split()[0] in highlight_classes:
+            if highlight_classes and node_label.split()[0] not in highlight_classes:
                 self.add_node(traversed_node, style_override=self._ignore_node_style)
             else:
                 self.add_node(traversed_node, style_override=None)
@@ -708,7 +696,7 @@ class Graph:
 
         # Add all links to the Graph, using the {id: Node} dictionary for queryless Node retrieval, applying
         # appropriate styling
-        for link in (traversed_graph['links'] or []):
+        for link in traversed_graph['links'] or []:
             source_node = traversed_nodes[link.source_id]
             target_node = traversed_nodes[link.target_id]
             link_pair = LinkPair(self._convert_link_types(link.link_type)[0], link.link_label)
@@ -739,7 +727,6 @@ class Graph:
         :param highlight_classes:  class label (as displayed in the graph, e.g. 'StructureData', 'FolderData', etc.)
             to be highlight and other nodes are decolorized
         """
-        # pylint: disable=too-many-arguments,too-many-locals
         # Get graph traversal rules where the given link types and direction are all set to True,
         # and all others are set to False
         origin_pk = self._load_node(origin).pk
@@ -761,7 +748,7 @@ class Graph:
                 max_iterations=1,
                 get_links=True,
                 backend=self.backend,
-                links_forward=[LinkType.CREATE, LinkType.RETURN]
+                links_forward=[LinkType.CREATE, LinkType.RETURN],
             )
             traversed_graph['nodes'] = traversed_graph['nodes'].union(traversed_outputs['nodes'])
             traversed_graph['links'] = (traversed_graph['links'] or set()).union(traversed_outputs['links'] or set())
@@ -769,9 +756,7 @@ class Graph:
         # Do one central query for all nodes in the Graph and generate a {id: Node} dictionary
         query = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
-            filters={'id': {
-                'in': traversed_graph['nodes']
-            }},
+            filters={'id': {'in': traversed_graph['nodes']}},
             project=['id', '*'],
             tag='node',
         )
@@ -784,7 +769,7 @@ class Graph:
         # Add all traversed nodes to the graph with default styling
         for _, traversed_node in traversed_nodes.items():
             node_label = _get_node_label(traversed_node)
-            if highlight_classes and not node_label.split()[0] in highlight_classes:
+            if highlight_classes and node_label.split()[0] not in highlight_classes:
                 self.add_node(traversed_node, style_override=self._ignore_node_style)
             else:
                 self.add_node(traversed_node, style_override=None)
@@ -794,7 +779,7 @@ class Graph:
 
         # Add all links to the Graph, using the {id: Node} dictionary for queryless Node retrieval, applying
         # appropriate styling
-        for link in (traversed_graph['links'] or []):
+        for link in traversed_graph['links'] or []:
             source_node = traversed_nodes[link.source_id]
             target_node = traversed_nodes[link.target_id]
             link_pair = LinkPair(self._convert_link_types(link.link_type)[0], link.link_label)
@@ -811,7 +796,7 @@ class Graph:
         include_target_inputs: bool = False,
         include_target_outputs: bool = False,
         origin_style: Mapping[str, Any] | None = None,
-        annotate_links: LinkAnnotateType = None
+        annotate_links: LinkAnnotateType = None,
     ) -> None:
         """Add nodes and edges from an origin node to all nodes of a target node class.
 
@@ -823,7 +808,6 @@ class Graph:
         :param origin_style: node style map for origin node
         :param annotate_links: label edges with the link 'label', 'type' or 'both'
         """
-        # pylint: disable=too-many-arguments
         origin_node = self._load_node(origin)
 
         if target_filters is None:
@@ -833,19 +817,16 @@ class Graph:
 
         query = orm.QueryBuilder(
             backend=self.backend,
-            path=[{
-                'cls': origin_node.__class__,
-                'filters': {
-                    'id': origin_node.pk
+            path=[
+                {'cls': origin_node.__class__, 'filters': {'id': origin_node.pk}, 'tag': 'origin'},
+                {
+                    'cls': target_cls,
+                    'filters': target_filters,
+                    'with_ancestors': 'origin',
+                    'tag': 'target',
+                    'project': '*',
                 },
-                'tag': 'origin'
-            }, {
-                'cls': target_cls,
-                'filters': target_filters,
-                'with_ancestors': 'origin',
-                'tag': 'target',
-                'project': '*'
-            }]
+            ],
         )
 
         for (target_node,) in query.iterall():
@@ -867,7 +848,7 @@ class Graph:
         include_target_inputs: bool = False,
         include_target_outputs: bool = False,
         origin_style: Mapping[str, Any] | None = None,
-        annotate_links: LinkAnnotateType = None
+        annotate_links: LinkAnnotateType = None,
     ) -> None:
         """Add nodes and edges from all nodes of an origin class to all node of a target node class.
 
@@ -880,18 +861,11 @@ class Graph:
         :param origin_style: node style map for origin node
         :param annotate_links: label edges with the link 'label', 'type' or 'both'
         """
-        # pylint: disable=too-many-arguments
         if origin_filters is None:
             origin_filters = {}
 
         query = orm.QueryBuilder(
-            backend=self.backend,
-            path=[{
-                'cls': origin_cls,
-                'filters': origin_filters,
-                'tag': 'origin',
-                'project': '*'
-            }]
+            backend=self.backend, path=[{'cls': origin_cls, 'filters': origin_filters, 'tag': 'origin', 'project': '*'}]
         )
 
         for (node,) in query.iterall():
@@ -902,5 +876,5 @@ class Graph:
                 include_target_inputs=include_target_inputs,
                 include_target_outputs=include_target_outputs,
                 origin_style=origin_style,
-                annotate_links=annotate_links
+                annotate_links=annotate_links,
             )

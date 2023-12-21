@@ -16,7 +16,8 @@ from aiida.manage import get_manager
 from . import entities
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import BackendUser, StorageBackend
+    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation.users import BackendUser  # noqa: F401
 
 __all__ = ('User',)
 
@@ -57,10 +58,9 @@ class User(entities.Entity['BackendUser', UserCollection]):
         first_name: str = '',
         last_name: str = '',
         institution: str = '',
-        backend: Optional['StorageBackend'] = None
+        backend: Optional['StorageBackend'] = None,
     ):
         """Create a new `User`."""
-        # pylint: disable=too-many-arguments
         backend = backend or get_manager().get_profile_storage()
         email = self.normalize_email(email)
         backend_entity = backend.users.create(
@@ -125,8 +125,7 @@ class User(entities.Entity['BackendUser', UserCollection]):
         self._backend_entity.institution = institution
 
     def get_full_name(self) -> str:
-        """
-        Return the user full name
+        """Return the user full name
 
         :return: the user full name
         """
@@ -142,8 +141,7 @@ class User(entities.Entity['BackendUser', UserCollection]):
         return full_name
 
     def get_short_name(self) -> str:
-        """
-        Return the user short name (typically, this returns the email)
+        """Return the user short name (typically, this returns the email)
 
         :return: The short name
         """
@@ -151,7 +149,5 @@ class User(entities.Entity['BackendUser', UserCollection]):
 
     @property
     def uuid(self) -> None:
-        """
-        For now users do not have UUIDs so always return None
-        """
+        """For now users do not have UUIDs so always return None"""
         return None

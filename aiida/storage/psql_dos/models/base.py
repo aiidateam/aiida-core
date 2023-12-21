@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Base SQLAlchemy models."""
 from sqlalchemy import MetaData, event, inspect
 from sqlalchemy.orm import declarative_base
@@ -19,7 +18,7 @@ class Model:
     def __repr__(self) -> str:
         """Return a representation of the row columns"""
         string = f'<{self.__class__.__name__}'
-        for col in self.__table__.columns:  # type: ignore[attr-defined] # pylint: disable=no-member
+        for col in self.__table__.columns:  # type: ignore[attr-defined]
             col_name = col.name
             if col_name == 'metadata':
                 col_name = '_metadata'
@@ -78,21 +77,12 @@ naming_convention = (
     # https://github.com/sqlalchemy/sqlalchemy/issues/5350
 )
 
-Base = declarative_base(cls=Model, name='Model', metadata=MetaData(naming_convention=dict(naming_convention)))  # pylint: disable=invalid-name
+Base = declarative_base(cls=Model, name='Model', metadata=MetaData(naming_convention=dict(naming_convention)))
 event.listen(Base, 'init', instant_defaults_listener, propagate=True)
 
 
 def get_orm_metadata() -> MetaData:
     """Return the populated metadata object."""
     # we must load all models, to populate the ORM metadata
-    from aiida.storage.psql_dos.models import (  # pylint: disable=unused-import
-        authinfo,
-        comment,
-        computer,
-        group,
-        log,
-        node,
-        settings,
-        user,
-    )
+
     return Base.metadata

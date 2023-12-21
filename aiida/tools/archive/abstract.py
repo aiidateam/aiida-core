@@ -34,7 +34,7 @@ class ArchiveWriterAbstract(ABC):
         *,
         mode: Literal['x', 'w', 'a'] = 'x',
         compression: int = 6,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         """Initialise the writer.
 
@@ -118,7 +118,7 @@ class ArchiveWriterAbstract(ABC):
 class ArchiveReaderAbstract(ABC):
     """Reader of an archive, that will be used as a context manager."""
 
-    def __init__(self, path: Union[str, Path], **kwargs: Any):  # pylint: disable=unused-argument
+    def __init__(self, path: Union[str, Path], **kwargs: Any):
         """Initialise the reader.
 
         :param path: archive path
@@ -153,6 +153,7 @@ class ArchiveReaderAbstract(ABC):
     def querybuilder(self, **kwargs: Any) -> 'QueryBuilder':
         """Return a ``QueryBuilder`` instance, initialised with the archive backend."""
         from aiida.orm import QueryBuilder
+
         return QueryBuilder(backend=self.get_backend(), **kwargs)
 
     def get(self, entity_cls: Type[EntityType], **filters: Any) -> EntityType:
@@ -172,6 +173,7 @@ class ArchiveReaderAbstract(ABC):
     def graph(self, **kwargs: Any) -> 'Graph':
         """Return a provenance graph generator for the archive."""
         from aiida.tools.visualization.graph import Graph
+
         return Graph(backend=self.get_backend(), **kwargs)
 
 
@@ -203,47 +205,27 @@ class ArchiveFormatAbstract(ABC):
     @overload
     @abstractmethod
     def open(
-        self,
-        path: Union[str, Path],
-        mode: Literal['r'],
-        *,
-        compression: int = 6,
-        **kwargs: Any
+        self, path: Union[str, Path], mode: Literal['r'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveReaderAbstract:
         ...
 
     @overload
     @abstractmethod
     def open(
-        self,
-        path: Union[str, Path],
-        mode: Literal['x', 'w'],
-        *,
-        compression: int = 6,
-        **kwargs: Any
+        self, path: Union[str, Path], mode: Literal['x', 'w'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveWriterAbstract:
         ...
 
     @overload
     @abstractmethod
     def open(
-        self,
-        path: Union[str, Path],
-        mode: Literal['a'],
-        *,
-        compression: int = 6,
-        **kwargs: Any
+        self, path: Union[str, Path], mode: Literal['a'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveWriterAbstract:
         ...
 
     @abstractmethod
     def open(
-        self,
-        path: Union[str, Path],
-        mode: Literal['r', 'x', 'w', 'a'] = 'r',
-        *,
-        compression: int = 6,
-        **kwargs: Any
+        self, path: Union[str, Path], mode: Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: Any
     ) -> Union[ArchiveReaderAbstract, ArchiveWriterAbstract]:
         """Open an archive (latest version only).
 
@@ -262,7 +244,7 @@ class ArchiveFormatAbstract(ABC):
         version: str,
         *,
         force: bool = False,
-        compression: int = 6
+        compression: int = 6,
     ) -> None:
         """Migrate an archive to a specific version.
 
@@ -283,4 +265,5 @@ def get_format(name: str = 'sqlite_zip') -> ArchiveFormatAbstract:
     # to-do entry point for archive formats?
     assert name == 'sqlite_zip'
     from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
+
     return ArchiveFormatSqlZip()

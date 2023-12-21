@@ -39,10 +39,9 @@ def get_nodes_delete(
     get_links: bool = False,
     missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
     backend: Optional['StorageBackend'] = None,
-    **traversal_rules: bool
+    **traversal_rules: bool,
 ) -> TraverseGraphOutput:
-    """
-    This function will return the set of all nodes that can be connected
+    """This function will return the set of all nodes that can be connected
     to a list of initial nodes through any sequence of specified authorized
     links and directions for deletion.
 
@@ -52,7 +51,7 @@ def get_nodes_delete(
         Pass True to also return the links between all nodes (found + initial).
 
     :param missing_callback: A callback to handle missing starting_pks or if None raise NotExistent
-    	For example to ignore them: ``missing_callback=lambda missing_pks: None``
+        For example to ignore them: ``missing_callback=lambda missing_pks: None``
 
     :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
         are toggleable and what the defaults are.
@@ -72,7 +71,7 @@ def get_nodes_delete(
     function_output: TraverseGraphOutput = {
         'nodes': traverse_output['nodes'],
         'links': traverse_output['links'],
-        'rules': traverse_links['rules_applied']
+        'rules': traverse_links['rules_applied'],
     }
 
     return function_output
@@ -82,10 +81,9 @@ def get_nodes_export(
     starting_pks: Iterable[int],
     get_links: bool = False,
     backend: Optional['StorageBackend'] = None,
-    **traversal_rules: bool
+    **traversal_rules: bool,
 ) -> TraverseGraphOutput:
-    """
-    This function will return the set of all nodes that can be connected
+    """This function will return the set of all nodes that can be connected
     to a list of initial nodes through any sequence of specified authorized
     links and directions for export. This will also return the links and
     the traversal rules parsed.
@@ -109,13 +107,13 @@ def get_nodes_export(
         get_links=get_links,
         backend=backend,
         links_forward=traverse_links['forward'],
-        links_backward=traverse_links['backward']
+        links_backward=traverse_links['backward'],
     )
 
     function_output: TraverseGraphOutput = {
         'nodes': traverse_output['nodes'],
         'links': traverse_output['links'],
-        'rules': traverse_links['rules_applied']
+        'rules': traverse_links['rules_applied'],
     }
 
     return function_output
@@ -124,8 +122,7 @@ def get_nodes_export(
 def validate_traversal_rules(
     ruleset: GraphTraversalRules = GraphTraversalRules.DEFAULT, **traversal_rules: bool
 ) -> dict:
-    """
-    Validates the keywords with a ruleset template and returns a parsed dictionary
+    """Validates the keywords with a ruleset template and returns a parsed dictionary
     ready to be used.
 
     :param ruleset: Ruleset template used to validate the set of rules.
@@ -152,11 +149,9 @@ def validate_traversal_rules(
     links_backward: List[LinkType] = []
 
     for name, rule in ruleset.value.items():
-
         follow = rule.default
 
         if name in traversal_rules:
-
             if not rule.toggleable:
                 raise ValueError(f'input rule {name} is not toggleable for ruleset {ruleset}')
 
@@ -166,7 +161,6 @@ def validate_traversal_rules(
                 raise ValueError(f'the value of rule {name} must be boolean, but it is: {follow}')
 
         if follow:
-
             if rule.direction == 'forward':
                 links_forward.append(rule.link_type)
             elif rule.direction == 'backward':
@@ -196,10 +190,9 @@ def traverse_graph(
     links_forward: Iterable[LinkType] = (),
     links_backward: Iterable[LinkType] = (),
     missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
-    backend: Optional['StorageBackend'] = None
+    backend: Optional['StorageBackend'] = None,
 ) -> TraverseGraphOutput:
-    """
-    This function will return the set of all nodes that can be connected
+    """This function will return the set of all nodes that can be connected
     to a list of initial nodes through any sequence of specified links.
     Optionally, it may also return the links that connect these nodes.
 
@@ -216,8 +209,6 @@ def traverse_graph(
 
     :param missing_callback: A callback to handle missing starting_pks or if None raise NotExistent
     """
-    # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-
     if max_iterations is None:
         max_iterations = cast(int, inf)
     elif not (isinstance(max_iterations, int) or max_iterations is inf):
@@ -237,7 +228,7 @@ def traverse_graph(
         linktype_list.append(linktype.value)
     filters_backwards = {'type': {'in': linktype_list}}
 
-    if not isinstance(starting_pks, Iterable):  # pylint: disable=isinstance-second-argument-not-valid-type
+    if not isinstance(starting_pks, Iterable):
         raise TypeError(f'starting_pks must be an iterable\ninstead, it is {type(starting_pks)}')
 
     if any(not isinstance(pk, int) for pk in starting_pks):

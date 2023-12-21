@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module to define custom click param type for multiple values
+"""Module to define custom click param type for multiple values
 """
 import click
 
@@ -16,9 +15,7 @@ __all__ = ('MultipleValueParamType',)
 
 
 class MultipleValueParamType(click.ParamType):
-    """
-    An extension of click.ParamType that can parse multiple values for a given ParamType
-    """
+    """An extension of click.ParamType that can parse multiple values for a given ParamType"""
 
     def __init__(self, param_type):
         """Construct a new instance."""

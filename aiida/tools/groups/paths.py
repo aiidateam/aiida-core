@@ -8,11 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Provides functionality for managing large numbers of AiiDA Groups, via label delimitation."""
+import re
+import warnings
 from collections import namedtuple
 from functools import total_ordering
-import re
 from typing import Any, Iterator, List, Optional, Tuple
-import warnings
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
@@ -22,7 +22,7 @@ __all__ = ('GroupPath', 'InvalidPath', 'GroupNotFoundError', 'GroupNotUniqueErro
 REGEX_ATTR = re.compile('^[a-zA-Z][\\_a-zA-Z0-9]*$')
 
 
-class InvalidPath(Exception):
+class InvalidPath(Exception):  # noqa: N818
     """An exception to indicate that a path is not valid."""
 
 
@@ -83,7 +83,7 @@ class GroupPath:
             return ''
         if self._delimiter * 2 in path:
             raise InvalidPath(f"The path may not contain a duplicate delimiter '{self._delimiter}': {path}")
-        if (path.startswith(self._delimiter) or path.endswith(self._delimiter)):
+        if path.startswith(self._delimiter) or path.endswith(self._delimiter):
             raise InvalidPath(f"The path may not start/end with the delimiter '{self._delimiter}': {path}")
         return path
 
@@ -147,7 +147,7 @@ class GroupPath:
         child = GroupPath(
             path=self.path + self.delimiter + path if self.path else path,
             cls=self.cls,
-            warn_invalid_child=self._warn_invalid_child
+            warn_invalid_child=self._warn_invalid_child,
         )
         return child
 
@@ -214,14 +214,14 @@ class GroupPath:
             path = label.split(self._delimiter)
             if len(path) <= len(self._path_list):
                 continue
-            path_string = self._delimiter.join(path[:len(self._path_list) + 1])
-            if (path_string not in yielded and path[:len(self._path_list)] == self._path_list):
+            path_string = self._delimiter.join(path[: len(self._path_list) + 1])
+            if path_string not in yielded and path[: len(self._path_list)] == self._path_list:
                 yielded.append(path_string)
                 try:
                     yield GroupPath(path=path_string, cls=self.cls, warn_invalid_child=self._warn_invalid_child)
                 except InvalidPath:
                     if self._warn_invalid_child:
-                        warnings.warn(f'invalid path encountered: {path_string}')  # pylint: disable=no-member
+                        warnings.warn(f'invalid path encountered: {path_string}')
 
     def __iter__(self) -> Iterator['GroupPath']:
         """Iterate through all (direct) children of this path."""
@@ -248,10 +248,7 @@ class GroupPath:
                     yield sub_child
 
     def walk_nodes(
-        self,
-        filters: Optional[dict] = None,
-        node_class: Optional[orm.Node] = None,
-        query_batch: Optional[int] = None
+        self, filters: Optional[dict] = None, node_class: Optional[orm.Node] = None, query_batch: Optional[int] = None
     ) -> Iterator[WalkNodeResult]:
         """Recursively iterate through all nodes of this path and its children.
 
@@ -272,7 +269,7 @@ class GroupPath:
             filters=filters,
             project=['*'],
         )
-        for (label, node) in query.iterall(query_batch) if query_batch else query.all():
+        for label, node in query.iterall(query_batch) if query_batch else query.all():
             yield WalkNodeResult(GroupPath(label, cls=self.cls), node)
 
     @property

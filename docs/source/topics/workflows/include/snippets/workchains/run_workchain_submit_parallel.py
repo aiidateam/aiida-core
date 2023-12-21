@@ -3,7 +3,6 @@ from aiida.engine import WorkChain
 
 
 class SomeWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)

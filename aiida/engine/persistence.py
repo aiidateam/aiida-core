@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=global-statement
 """Definition of AiiDA's process persister and the necessary object loaders."""
 
 import importlib
@@ -15,9 +14,9 @@ import logging
 import traceback
 from typing import TYPE_CHECKING, Any, Hashable, Optional
 
-from plumpy.exceptions import PersistenceError
 import plumpy.loaders
 import plumpy.persistence
+from plumpy.exceptions import PersistenceError
 
 from aiida.orm.utils import serialize
 
@@ -61,7 +60,7 @@ def get_object_loader() -> ObjectLoader:
     :return: The global object loader
 
     """
-    global OBJECT_LOADER
+    global OBJECT_LOADER  # noqa: PLW0603
     if OBJECT_LOADER is None:
         OBJECT_LOADER = ObjectLoader()
     return OBJECT_LOADER
@@ -140,7 +139,7 @@ class AiiDAPersister(plumpy.persistence.Persister):
         :return: list of PersistedCheckpoint tuples with element containing the process id and optional checkpoint tag.
         """
 
-    def delete_checkpoint(self, pid: Hashable, tag: Optional[str] = None) -> None:  # pylint: disable=unused-argument
+    def delete_checkpoint(self, pid: Hashable, tag: Optional[str] = None) -> None:
         """Delete a persisted process checkpoint, where no error will be raised if the checkpoint does not exist.
 
         :param pid: the process id of the :class:`plumpy.Process`

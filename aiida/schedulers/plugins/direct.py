@@ -7,12 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Plugin for direct execution.
+"""Plugin for direct execution.
 """
 
-from aiida.common.escaping import escape_for_bash
 import aiida.schedulers
+from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError
 from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
 
@@ -69,9 +68,7 @@ _MAP_STATUS_PS = {
 
 
 class DirectJobResource(NodeNumberJobResource):
-    """
-    An implementation of JobResource for the direct excution bypassing schedulers.
-    """
+    """An implementation of JobResource for the direct excution bypassing schedulers."""
 
     @classmethod
     def accepts_default_memory_per_machine(cls):
@@ -80,10 +77,9 @@ class DirectJobResource(NodeNumberJobResource):
 
 
 class DirectScheduler(aiida.schedulers.Scheduler):
-    """
-    Support for the direct execution bypassing schedulers.
-    """
-    _logger = aiida.schedulers.Scheduler._logger.getChild('direct')  # pylint: disable=protected-access
+    """Support for the direct execution bypassing schedulers."""
+
+    _logger = aiida.schedulers.Scheduler._logger.getChild('direct')
 
     # Query only by list of jobs and not by user
     _features = {
@@ -94,8 +90,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
     _job_resource_class = DirectJobResource
 
     def _get_joblist_command(self, jobs=None, user=None):
-        """
-        The command to report full information on existing jobs.
+        """The command to report full information on existing jobs.
 
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
@@ -120,15 +115,13 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         return command
 
     def _get_submit_script_header(self, job_tmpl):
-        """
-        Return the submit script header, using the parameters from the
+        """Return the submit script header, using the parameters from the
         job_tmpl.
 
         Args:
+        -----
            job_tmpl: an JobTemplate instance with relevant parameters set.
         """
-        # pylint: disable=too-many-branches
-
         lines = []
         empty_line = ''
 
@@ -138,7 +131,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             lines.append(f'exec > {job_tmpl.sched_output_path}')
 
         if job_tmpl.sched_join_files:
-            # TODO: manual says:  # pylint: disable=fixme
+            # TODO: manual says:
             # By  default both standard output and standard error are directed
             # to a file of the name "slurm-%j.out", where the "%j" is replaced
             # with  the  job  allocation  number.
@@ -146,12 +139,11 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             # I specify a different --output file
             if job_tmpl.sched_error_path:
                 self.logger.info('sched_join_files is True, but sched_error_path is set; ignoring sched_error_path')
+        elif job_tmpl.sched_error_path:
+            lines.append(f'exec 2> {job_tmpl.sched_error_path}')
         else:
-            if job_tmpl.sched_error_path:
-                lines.append(f'exec 2> {job_tmpl.sched_error_path}')
-            else:
-                # To avoid automatic join of files
-                lines.append('exec 2>&1')
+            # To avoid automatic join of files
+            lines.append('exec 2>&1')
 
         if job_tmpl.max_memory_kb:
             self.logger.warning('Physical memory limiting is not supported by the direct scheduler.')
@@ -189,8 +181,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         return '\n'.join(lines)
 
     def _get_submit_command(self, submit_script):
-        """
-        Return the string to execute to submit a given script.
+        """Return the string to execute to submit a given script.
 
         .. note:: One needs to redirect stdout and stderr to /dev/null
            otherwise the daemon remains hanging for the script to run
@@ -206,8 +197,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         return submit_command
 
     def _parse_joblist_output(self, retval, stdout, stderr):
-        """
-        Parse the queue output string, as returned by executing the
+        """Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command (qstat -f).
 
         Return a list of JobInfo objects, one of each job,
@@ -221,7 +211,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         """
         import re
 
-        filtered_stderr = '\n'.join(l for l in stderr.split('\n'))
+        filtered_stderr = '\n'.join(line for line in stderr.split('\n'))
         if filtered_stderr.strip():
             self.logger.warning(f"Warning in _parse_joblist_output, non-empty (filtered) stderr='{filtered_stderr}'")
             if retval != 0:
@@ -233,7 +223,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             if re.search(r'^\s*PID', line) or line == '':
                 # Skip the header if present
                 continue
-            line = re.sub(r'^\s+', '', line)
+            line = re.sub(r'^\s+', '', line)  # noqa: PLW2901
             job = re.split(r'\s+', line)
             this_job = JobInfo()
             this_job.job_id = job[0]
@@ -248,8 +238,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                 this_job.job_state = JobState.UNDETERMINED
             else:
                 try:
-                    this_job.job_state = \
-                        _MAP_STATUS_PS[job_state_string]
+                    this_job.job_state = _MAP_STATUS_PS[job_state_string]
                 except KeyError:
                     self.logger.warning(f"Unrecognized job_state '{job_state_string}' for job id {this_job.job_id}")
                     this_job.job_state = JobState.UNDETERMINED
@@ -274,8 +263,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         return job_list
 
     def get_jobs(self, jobs=None, user=None, as_dict=False):
-        """
-        Overrides original method from DirectScheduler in order to list
+        """Overrides original method from DirectScheduler in order to list
         missing processes as DONE.
         """
         job_stats = super().get_jobs(jobs=jobs, user=user, as_dict=as_dict)
@@ -302,9 +290,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         return job_stats
 
     def _convert_time(self, string):
-        """
-        Convert a string in the format HH:MM:SS to a number of seconds.
-        """
+        """Convert a string in the format HH:MM:SS to a number of seconds."""
         import re
 
         pieces = re.split('[:.]', string)
@@ -346,8 +332,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         return days * 86400 + hours * 3600 + mins * 60 + secs
 
     def _parse_submit_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the submit command, as returned by executing the
+        """Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
 
         To be implemented by the plugin.
@@ -360,7 +345,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
 
         if stderr.strip():
             self.logger.warning(
-                f'in _parse_submit_output for {str(self.transport)}: there was some text in stderr: {stderr}'
+                f'in _parse_submit_output for {self.transport!s}: there was some text in stderr: {stderr}'
             )
 
         if not stdout.strip():
@@ -370,9 +355,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         return stdout.strip()
 
     def _get_kill_command(self, jobid):
-        """
-        Return the command to kill the job with specified jobid.
-        """
+        """Return the command to kill the job with specified jobid."""
         submit_command = f'kill {jobid}'
 
         self.logger.info(f'killing job {jobid}')
@@ -380,8 +363,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         return submit_command
 
     def _parse_kill_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the kill command.
+        """Parse the output of the kill command.
 
         To be implemented by the plugin.
 
@@ -393,12 +375,12 @@ class DirectScheduler(aiida.schedulers.Scheduler):
 
         if stderr.strip():
             self.logger.warning(
-                f'in _parse_kill_output for {str(self.transport)}: there was some text in stderr: {stderr}'
+                f'in _parse_kill_output for {self.transport!s}: there was some text in stderr: {stderr}'
             )
 
         if stdout.strip():
             self.logger.warning(
-                f'in _parse_kill_output for {str(self.transport)}: there was some text in stdout: {stdout}'
+                f'in _parse_kill_output for {self.transport!s}: there was some text in stdout: {stdout}'
             )
 
         return True

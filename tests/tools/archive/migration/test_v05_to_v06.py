@@ -32,7 +32,7 @@ def test_migrate_v5_to_v6_calc_states(core_archive, migrate_from_func):
     """
     # Get metadata.json and data.json as dicts from v0.5 file archive
     archive_path = get_archive_file('export_0.5_simple.aiida', **core_archive)
-    metadata, data = read_json_files(archive_path)  # pylint: disable=unbalanced-tuple-unpacking
+    metadata, data = read_json_files(archive_path)
 
     verify_metadata_version(metadata, version='0.5')
 
@@ -52,7 +52,6 @@ def test_migrate_v5_to_v6_calc_states(core_archive, migrate_from_func):
 
     # The export archive contains a single `CalcJobNode` that had `state=FINISHED`.
     for pk, state in calc_jobs.items():
-
         attributes = node_attributes[pk]
 
         if STATE_MAPPING[state].exit_status is not None:
@@ -77,7 +76,7 @@ def test_migrate_v5_to_v6_datetime(core_archive, migrate_from_func):
     """
     # Get metadata.json and data.json as dicts from v0.5 file archive
     archive_path = get_archive_file('export_0.5_simple.aiida', **core_archive)
-    metadata, data = read_json_files(archive_path)  # pylint: disable=unbalanced-tuple-unpacking
+    metadata, data = read_json_files(archive_path)
 
     verify_metadata_version(metadata, version='0.5')
 

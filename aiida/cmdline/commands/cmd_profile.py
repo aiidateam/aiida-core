@@ -27,13 +27,8 @@ def verdi_profile():
 
 
 def command_create_profile(
-    ctx: click.Context,
-    storage_cls,
-    non_interactive: bool,
-    profile: Profile,
-    set_as_default: bool = True,
-    **kwargs
-):  # pylint: disable=unused-argument
+    ctx: click.Context, storage_cls, non_interactive: bool, profile: Profile, set_as_default: bool = True, **kwargs
+):
     """Create a new profile, initialise its storage and create a default user.
 
     :param ctx: The context of the CLI command.
@@ -70,7 +65,7 @@ def command_create_profile(
         setup.SETUP_USER_FIRST_NAME(),
         setup.SETUP_USER_LAST_NAME(),
         setup.SETUP_USER_INSTITUTION(),
-    ]
+    ],
 )
 def profile_setup():
     """Set up a new profile."""
@@ -86,6 +81,7 @@ def profile_list():
         # to be able to see the configuration directory, for instance for those who have set `AIIDA_PATH`. This way
         # they can at least verify that it is correctly set.
         from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+
         echo.echo_report(f'configuration folder: {AIIDA_CONFIG_FOLDER}')
         echo.echo_critical(str(exception))
     else:
@@ -94,8 +90,8 @@ def profile_list():
     if not config.profiles:
         echo.echo_warning('no profiles configured: run `verdi setup` to create one')
     else:
-        sort = lambda profile: profile.name  # pylint: disable=unnecessary-lambda-assignment
-        highlight = lambda profile: profile.name == config.default_profile_name  # pylint: disable=unnecessary-lambda-assignment
+        sort = lambda profile: profile.name  # noqa: E731
+        highlight = lambda profile: profile.name == config.default_profile_name  # noqa: E731
         echo.echo_formatted_list(config.profiles, ['name'], sort=sort, highlight=highlight)
 
 
@@ -112,7 +108,6 @@ def _strip_private_keys(dct: dict):
 @arguments.PROFILE(default=defaults.get_default_profile)
 def profile_show(profile):
     """Show details for a profile."""
-
     if profile is None:
         echo.echo_critical('no profile to show')
 
@@ -139,7 +134,7 @@ def profile_setdefault(profile):
 @click.option(
     '--delete-data/--keep-data',
     default=None,
-    help='Whether to delete the storage with all its data or not. This flag has to be explicitly specified'
+    help='Whether to delete the storage with all its data or not. This flag has to be explicitly specified',
 )
 @arguments.PROFILES(required=True)
 def profile_delete(force, delete_data, profiles):

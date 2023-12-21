@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Delete trajectory symbols array from the repository and the reference in the attributes.
 
 Note, this is similar to the sqlalchemy migration ce56d84bcc35
@@ -16,8 +15,8 @@ Revision ID: django_0027
 Revises: django_0026
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.expression import delete
 
@@ -32,7 +31,6 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    # pylint: disable=unused-variable
     connection = op.get_bind()
     repo_path = get_filepath_container(op.get_context().opts['aiida_profile']).parent
 

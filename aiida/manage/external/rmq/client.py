@@ -32,6 +32,7 @@ class RabbitmqManagementClient:
         :param virtual_host: The virtual host.
         """
         import requests
+
         self._username = username
         self._password = password
         self._hostname = hostname
@@ -73,6 +74,7 @@ class RabbitmqManagementClient:
         :raises `ManagementApiConnectionError`: If connection to the API cannot be made.
         """
         import requests
+
         url = self.format_url(url, url_params)
         try:
             return requests.request(method, url, auth=self._authentication, params=params or {}, timeout=5)

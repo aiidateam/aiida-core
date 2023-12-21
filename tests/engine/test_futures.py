@@ -20,6 +20,7 @@ from tests.utils import processes as test_processes
 @pytest.mark.requires_rmq
 class TestWf:
     """Test process futures."""
+
     TIMEOUT = 5.0  # seconds
 
     def test_calculation_future_broadcasts(self):
@@ -40,7 +41,6 @@ class TestWf:
 
     def test_calculation_future_polling(self):
         """Test calculation future polling."""
-
         runner = get_manager().get_runner()
         process = test_processes.DummyProcess()
 

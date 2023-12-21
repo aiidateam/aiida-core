@@ -9,9 +9,9 @@
 ###########################################################################
 """AiiDA profile related code"""
 import collections
-from copy import deepcopy
 import os
 import pathlib
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, Type
 
 from aiida.common import exceptions
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 __all__ = ('Profile',)
 
 
-class Profile:  # pylint: disable=too-many-public-methods
+class Profile:
     """Class that models a profile as it is stored in the configuration file of an AiiDA instance."""
 
     KEY_UUID = 'PROFILE_UUID'
@@ -59,6 +59,7 @@ class Profile:  # pylint: disable=too-many-public-methods
         # Create a default UUID if not specified
         if self._attributes.get(self.KEY_UUID, None) is None:
             from uuid import uuid4
+
             self._attributes[self.KEY_UUID] = uuid4().hex
 
     def __repr__(self) -> str:
@@ -114,6 +115,7 @@ class Profile:  # pylint: disable=too-many-public-methods
     def storage_cls(self) -> Type['StorageBackend']:
         """Return the storage backend class for this profile."""
         from aiida.plugins import StorageFactory
+
         return StorageFactory(self.storage_backend)
 
     @property
@@ -263,10 +265,10 @@ class Profile:  # pylint: disable=too-many-public-methods
                     'controller': 'circus.c.sock',
                     'pubsub': 'circus.p.sock',
                     'stats': 'circus.s.sock',
-                }
+                },
             },
             'daemon': {
                 'log': str(DAEMON_LOG_DIR / f'aiida-{self.name}.log'),
                 'pid': str(DAEMON_DIR / f'aiida-{self.name}.pid'),
-            }
+            },
         }

@@ -7,15 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Change UUID type and add uniqueness constraints.
 
 Revision ID: django_0018
 Revises: django_0017
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 from aiida.storage.psql_dos.migrations.utils import ReflectMigrations
@@ -45,7 +44,7 @@ def upgrade():
             existing_type=sa.VARCHAR(length=36),
             type_=postgresql.UUID(as_uuid=True),
             nullable=False,
-            postgresql_using='uuid::uuid'
+            postgresql_using='uuid::uuid',
         )
         if unique:
             verify_uuid_uniqueness(table, op.get_bind())

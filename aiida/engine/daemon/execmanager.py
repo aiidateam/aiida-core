@@ -7,23 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This file contains the main routines to submit, check and retrieve calculation
+"""This file contains the main routines to submit, check and retrieve calculation
 results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
-from logging import LoggerAdapter
 import os
 import pathlib
 import shutil
+from collections.abc import Mapping
+from logging import LoggerAdapter
 from tempfile import NamedTemporaryFile
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 from typing import Mapping as MappingType
-from typing import Optional, Tuple, Union
-from typing import TYPE_CHECKING, Any, List
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
@@ -70,7 +68,7 @@ def upload_calculation(
     calc_info: CalcInfo,
     folder: SandboxFolder,
     inputs: Optional[MappingType[str, Any]] = None,
-    dry_run: bool = False
+    dry_run: bool = False,
 ) -> None:
     """Upload a `CalcJob` instance
 
@@ -79,8 +77,6 @@ def upload_calculation(
     :param calc_info: the calculation info datastructure returned by `CalcJob.presubmit`
     :param folder: temporary local file system folder containing the inputs written by `CalcJob.prepare_for_submission`
     """
-    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-
     # If the calculation already has a `remote_folder`, simply return. The upload was apparently already completed
     # before, which can happen if the daemon is restarted and it shuts down after uploading but before getting the
     # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the upload.
@@ -216,7 +212,6 @@ def upload_calculation(
         if data_node is None:
             logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
         else:
-
             # If no explicit source filename is defined, we assume the top-level directory
             filename_source = filename or '.'
             filename_target = target or ''
@@ -246,7 +241,7 @@ def upload_calculation(
             logger.debug(f'[submission of calculation {node.pk}] copying file/folder {filename}...')
             transport.put(folder.get_abs_path(filename), filename)
 
-        for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
+        for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
             if remote_computer_uuid == computer.uuid:
                 logger.debug(
                     f'[submission of calculation {node.pk}] copying {dest_rel_path} '
@@ -271,7 +266,7 @@ def upload_calculation(
                     'not implemented yet'
                 )
 
-        for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_symlink_list:
+        for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
             if remote_computer_uuid == computer.uuid:
                 logger.debug(
                     f'[submission of calculation {node.pk}] copying {dest_rel_path} remotely, '
@@ -292,7 +287,6 @@ def upload_calculation(
                     f'It is not possible to create a symlink between two different machines for calculation {node.pk}'
                 )
     else:
-
         if remote_copy_list:
             filepath = os.path.join(workdir, '_aiida_remote_copy_list.txt')
             with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
@@ -339,12 +333,12 @@ def upload_calculation(
                 dirname not in provenance_exclude_list for dirname in dirnames
             ):
                 with open(filepath, 'rb') as handle:  # type: ignore[assignment]
-                    node.base.repository._repository.put_object_from_filelike(handle, relpath)  # pylint: disable=protected-access
+                    node.base.repository._repository.put_object_from_filelike(handle, relpath)
 
     # Since the node is already stored, we cannot use the normal repository interface since it will raise a
     # `ModificationNotAllowed` error. To bypass it, we go straight to the underlying repository instance to store the
     # files, however, this means we have to manually update the node's repository metadata.
-    node.base.repository._update_repository_metadata()  # pylint: disable=protected-access
+    node.base.repository._update_repository_metadata()
 
     if not dry_run:
         # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest
@@ -423,7 +417,6 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     target_basepath = pathlib.Path(stash_options['target_base']) / uuid[:2] / uuid[2:4] / uuid[4:]
 
     for source_filename in source_list:
-
         if transport.has_magic(source_filename):
             copy_instructions = []
             for globbed_filename in transport.glob(str(source_basepath / source_filename)):
@@ -505,7 +498,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
             for filename in os.listdir(retrieved_temporary_folder):
                 EXEC_LOGGER.debug(
                     f"[retrieval of calc {calculation.pk}] Retrieved temporary file or folder '{filename}'",
-                    extra=logger_extra
+                    extra=logger_extra,
                 )
 
         # Store everything
@@ -523,8 +516,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
 
 
 def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
-    """
-    Kill the calculation through the scheduler
+    """Kill the calculation through the scheduler
 
     :param calculation: the instance of CalcJobNode to kill.
     :param transport: an already opened transport to use to address the scheduler
@@ -543,7 +535,6 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     result = scheduler.kill(job_id)
 
     if result is not True:
-
         # Failed to kill because the job might have already been completed
         running_jobs = scheduler.get_jobs(jobs=[job_id], as_dict=True)
         job = running_jobs.get(job_id, None)
@@ -558,11 +549,12 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
 
 
 def retrieve_files_from_list(
-    calculation: CalcJobNode, transport: Transport, folder: str, retrieve_list: List[Union[str, Tuple[str, str, int],
-                                                                                           list]]
+    calculation: CalcJobNode,
+    transport: Transport,
+    folder: str,
+    retrieve_list: List[Union[str, Tuple[str, str, int], list]],
 ) -> None:
-    """
-    Retrieve all the files in the retrieve_list from the remote into the
+    """Retrieve all the files in the retrieve_list from the remote into the
     local folder instance through the transport. The entries in the retrieve_list
     can be of two types:
 
@@ -584,7 +576,6 @@ def retrieve_files_from_list(
     :param folder: an absolute path to a folder that contains the files to copy.
     :param retrieve_list: the list of files to retrieve.
     """
-    # pylint: disable=too-many-branches
     for item in retrieve_list:
         if isinstance(item, (list, tuple)):
             tmp_rname, tmp_lname, depth = item
@@ -607,13 +598,12 @@ def retrieve_files_from_list(
                     new_folder = os.path.join(folder, os.path.split(this_local_file)[0])
                     if not os.path.exists(new_folder):
                         os.makedirs(new_folder)
-        else:  # it is a string
-            if transport.has_magic(item):
-                remote_names = transport.glob(item)
-                local_names = [os.path.split(rem)[1] for rem in remote_names]
-            else:
-                remote_names = [item]
-                local_names = [os.path.split(item)[1]]
+        elif transport.has_magic(item):  # it is a string
+            remote_names = transport.glob(item)
+            local_names = [os.path.split(rem)[1] for rem in remote_names]
+        else:
+            remote_names = [item]
+            local_names = [os.path.split(item)[1]]
 
         for rem, loc in zip(remote_names, local_names):
             transport.logger.debug(f"[retrieval of calc {calculation.pk}] Trying to retrieve remote item '{rem}'")

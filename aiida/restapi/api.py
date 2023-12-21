@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Implementation of RESTful API for AiiDA based on flask and flask_restful.
+"""Implementation of RESTful API for AiiDA based on flask and flask_restful.
 
 Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 """
@@ -19,12 +18,9 @@ from werkzeug.exceptions import HTTPException
 
 
 class App(Flask):
-    """
-    Basic Flask App customized for this REST Api purposes
-    """
+    """Basic Flask App customized for this REST Api purposes"""
 
     def __init__(self, *args, **kwargs):
-
         # Decide whether or not to catch the internal server exceptions (default is True)
         catch_internal_server = kwargs.pop('catch_internal_server', True)
 
@@ -42,9 +38,7 @@ class App(Flask):
 
             @self.errorhandler(Exception)
             def error_handler(error):
-                # pylint: disable=unused-variable
                 """Error handler to return customized error messages from rest api"""
-
                 if isinstance(error, RestValidationError):
                     response = jsonify({'message': str(error)})
                     response.status_code = 400
@@ -60,10 +54,12 @@ class App(Flask):
                 elif isinstance(error, HTTPException) and error.code == 404:
                     from aiida.restapi.common.utils import list_routes
 
-                    response = jsonify({
-                        'message': 'The requested URL is not found on the server.',
-                        'available_endpoints': list_routes()
-                    })
+                    response = jsonify(
+                        {
+                            'message': 'The requested URL is not found on the server.',
+                            'available_endpoints': list_routes(),
+                        }
+                    )
                     response.status_code = 404
 
                 # Generic server-side error (not to make the api crash if an
@@ -79,20 +75,16 @@ class App(Flask):
 
 
 class AiidaApi(Api):
-    """
-    AiiDA customized version of the flask_restful Api class
-    """
+    """AiiDA customized version of the flask_restful Api class"""
 
     def __init__(self, app=None, **kwargs):
-        """
-        The need to have a special constructor is to include directly the
+        """The need to have a special constructor is to include directly the
         addition of resources with the parameters required to initialize the
         resource classes.
 
         :param kwargs: parameters to be passed to the resources for
           configuration and PREFIX
         """
-
         from aiida.restapi.common.config import CLI_DEFAULTS
         from aiida.restapi.resources import (
             CalcJobNode,
@@ -118,7 +110,7 @@ class AiidaApi(Api):
             '/server/endpoints/',
             endpoint='server',
             strict_slashes=False,
-            resource_class_kwargs=kwargs
+            resource_class_kwargs=kwargs,
         )
 
         if posting:
@@ -141,7 +133,7 @@ class AiidaApi(Api):
             '/computers/projectable_properties/',
             endpoint='computers',
             strict_slashes=False,
-            resource_class_kwargs=kwargs
+            resource_class_kwargs=kwargs,
         )
 
         self.add_resource(
@@ -171,7 +163,7 @@ class AiidaApi(Api):
             '/nodes/<id>/download/',
             endpoint='nodes',
             strict_slashes=False,
-            resource_class_kwargs=kwargs
+            resource_class_kwargs=kwargs,
         )
 
         self.add_resource(
@@ -180,7 +172,7 @@ class AiidaApi(Api):
             '/processes/<id>/report/',
             endpoint='processes',
             strict_slashes=False,
-            resource_class_kwargs=kwargs
+            resource_class_kwargs=kwargs,
         )
 
         self.add_resource(
@@ -189,7 +181,7 @@ class AiidaApi(Api):
             '/calcjobs/<id>/output_files/',
             endpoint='calcjobs',
             strict_slashes=False,
-            resource_class_kwargs=kwargs
+            resource_class_kwargs=kwargs,
         )
 
         self.add_resource(
@@ -201,7 +193,7 @@ class AiidaApi(Api):
             '/users/<id>/',
             endpoint='users',
             strict_slashes=False,
-            resource_class_kwargs=kwargs
+            resource_class_kwargs=kwargs,
         )
 
         self.add_resource(
@@ -213,12 +205,11 @@ class AiidaApi(Api):
             '/groups/<id>/',
             endpoint='groups',
             strict_slashes=False,
-            resource_class_kwargs=kwargs
+            resource_class_kwargs=kwargs,
         )
 
     def handle_error(self, e):
-        """
-        this method handles the 404 "URL not found" exception and return custom message
+        """This method handles the 404 "URL not found" exception and return custom message
         :param e: raised exception
         :return: list of available endpoints
         """

@@ -110,6 +110,7 @@ def devel_run_sql(sql):
     from sqlalchemy import text
 
     from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
+
     assert get_profile().storage_backend == 'core.psql_dos'
     with create_sqlalchemy_engine(get_profile().storage_config).connect() as connection:
         result = connection.execute(text(sql)).fetchall()
@@ -125,6 +126,7 @@ def devel_run_sql(sql):
 def devel_play():
     """Play the Aida triumphal march by Giuseppe Verdi."""
     import webbrowser
+
     webbrowser.open_new('http://upload.wikimedia.org/wikipedia/commons/3/32/Triumphal_March_from_Aida.ogg')
 
 
@@ -155,7 +157,7 @@ def devel_launch_arithmetic_add(code, daemon, sleep):
                 label='bash',
                 computer=localhost,
                 filepath_executable=which('bash'),
-                default_calc_job_plugin=default_calc_job_plugin
+                default_calc_job_plugin=default_calc_job_plugin,
             ).store()
         else:
             assert code.default_calc_job_plugin == default_calc_job_plugin
@@ -203,8 +205,8 @@ def prepare_localhost():
             scheduler_type='core.direct',
             workdir=tempfile.gettempdir(),
         ).store()
-        computer.configure(safe_interval=0.)
-        computer.set_minimum_job_poll_interval(0.)
+        computer.configure(safe_interval=0.0)
+        computer.set_minimum_job_poll_interval(0.0)
 
     if not computer.is_configured:
         computer.configure()

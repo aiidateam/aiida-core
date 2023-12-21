@@ -36,7 +36,7 @@ class CliHandler(logging.Handler):
         try:
             msg = self.format(record)
             click.echo(msg, err=err, nl=nl)
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             self.handleError(record)
 
 

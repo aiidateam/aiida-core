@@ -55,7 +55,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         :param kwargs: parameters for the initialisation.
         """
         # Merely calling the property will cause the sandbox folder to be initialised.
-        self.sandbox  # pylint: disable=pointless-statement
+        self.sandbox
 
     @property
     def is_initialised(self) -> bool:
@@ -111,7 +111,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
     def iter_object_streams(self, keys: list[str]) -> t.Iterator[tuple[str, t.BinaryIO]]:
         for key in keys:
-            with self.open(key) as handle:  # pylint: disable=not-context-manager
+            with self.open(key) as handle:
                 yield key, handle
 
     def delete_objects(self, keys: list[str]) -> None:

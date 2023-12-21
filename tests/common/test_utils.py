@@ -14,9 +14,7 @@ from aiida.common import escaping, utils
 
 
 class UniqueTest(unittest.TestCase):
-    """
-    Tests for the get_unique_filename function.
-    """
+    """Tests for the get_unique_filename function."""
 
     def test_unique_1(self):
         filename = 'different.txt'
@@ -52,13 +50,10 @@ class UniqueTest(unittest.TestCase):
 
 
 class PrettifierTest(unittest.TestCase):
-    """
-    Tests for the Prettifier class methods.
-    """
+    """Tests for the Prettifier class methods."""
 
     def test_prettifier(self):
-        """
-        Check that the prettified strings work as expected for
+        """Check that the prettified strings work as expected for
         a number of different labels and different codes that should
         show them
         """
@@ -102,29 +97,30 @@ class PrettifierTest(unittest.TestCase):
 
 
 class SqlStringMatchTest(unittest.TestCase):
-    """"
+    """ "
     Test the functions to convert SQL to regex patterns
     """
 
     def test_patterns(self):
-        """"
+        """ "
         Test complex patterns to see if the logic of conversion is correct
         """
         for pattern, match_true, match_false in [
             (r'aa\_a%a_b', ['aa_abbbaab', 'aa_aa_b', 'aa_abaa_b', 'aa_aaxb', 'aa_abaaxb'], ['aaaba_b', 'aa_abab_b']),
             (r'^aa[\_%]b', ['^aa[_aaa]b', '^aa[_]b', '^aa[_1]b'], ['^aa[]b', 'aa[1]b', '^aa_b']),
             (
-                r'z^aa^a\sd[\__%]*sa$dfa&s\%d$a', [r'z^aa^a\sd[_d]*sa$dfa&s%d$a', r'z^aa^a\sd[_aaa]*sa$dfa&s%d$a'],
-                [r'z^aa^a\sd[_]*sa$dfa&s%d$a', 'zaa^asd[_aa]*sa$a']
-            )
+                r'z^aa^a\sd[\__%]*sa$dfa&s\%d$a',
+                [r'z^aa^a\sd[_d]*sa$dfa&s%d$a', r'z^aa^a\sd[_aaa]*sa$dfa&s%d$a'],
+                [r'z^aa^a\sd[_]*sa$dfa&s%d$a', 'zaa^asd[_aa]*sa$a'],
+            ),
         ]:
             for sample in match_true:
                 self.assertTrue(
                     escaping.sql_string_match(string=sample, pattern=pattern),
-                    f"String '{sample}' should have matched pattern '{pattern}'"
+                    f"String '{sample}' should have matched pattern '{pattern}'",
                 )
             for sample in match_false:
                 self.assertFalse(
                     escaping.sql_string_match(string=sample, pattern=pattern),
-                    f"String '{sample}' should not have matched pattern '{pattern}'"
+                    f"String '{sample}' should not have matched pattern '{pattern}'",
                 )

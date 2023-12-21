@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .backend import *
 from .common import *
@@ -27,4 +26,4 @@ __all__ = (
     'SandboxRepositoryBackend',
 )
 
-# yapf: enable
+# fmt: on

@@ -19,7 +19,7 @@ from aiida.common import exceptions
 @pytest.fixture(autouse=True)
 def groups():
     """Delete all groups first, then recreate a fixed set."""
-    [orm.Group.collection.delete(group.pk) for group in orm.Group.collection.all()]  # pylint: disable=expression-not-assigned
+    [orm.Group.collection.delete(group.pk) for group in orm.Group.collection.all()]
     for group in ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4']:
         orm.Group(label=group).store()
 
@@ -87,17 +87,17 @@ class TestVerdiGroup:
 
         options = []
         result = run_cli_command(cmd_group.group_list, options, suppress_warnings=True, use_subprocess=True)
-        group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
+        group_ordering = [line.split()[1] for line in result.output.split('\n')[3:] if line]
         assert ['agroup', 'dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4'] == group_ordering
 
         options = ['--order-by', 'id']
         result = run_cli_command(cmd_group.group_list, options, suppress_warnings=True, use_subprocess=True)
-        group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
+        group_ordering = [line.split()[1] for line in result.output.split('\n')[3:] if line]
         assert ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4', 'agroup'] == group_ordering
 
         options = ['--order-by', 'id', '--order-direction', 'desc']
         result = run_cli_command(cmd_group.group_list, options, suppress_warnings=True, use_subprocess=True)
-        group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
+        group_ordering = [line.split()[1] for line in result.output.split('\n')[3:] if line]
         assert ['agroup', 'dummygroup4', 'dummygroup3', 'dummygroup2', 'dummygroup1'] == group_ordering
 
     def test_copy(self, run_cli_command):
@@ -157,7 +157,12 @@ class TestVerdiGroup:
         """Test `verdi group show` command."""
         result = run_cli_command(cmd_group.group_show, ['dummygroup1'], use_subprocess=True)
         for grpline in [
-            'Group label', 'dummygroup1', 'Group type_string', 'core', 'Group description', '<no description>'
+            'Group label',
+            'dummygroup1',
+            'Group type_string',
+            'core',
+            'Group description',
+            '<no description>',
         ]:
             assert grpline in result.output
 
@@ -278,20 +283,22 @@ class TestVerdiGroup:
 
         # Try to remove two nodes, one that isn't in the group, but abort
         result = run_cli_command(
-            cmd_group.group_remove_nodes, ['--group=dummygroup1', node_01.uuid, node_02.uuid],
+            cmd_group.group_remove_nodes,
+            ['--group=dummygroup1', node_01.uuid, node_02.uuid],
             user_input='N',
             raises=True,
-            use_subprocess=True
+            use_subprocess=True,
         )
         assert 'Warning' in result.output
         assert group.count() == 1
 
         # Try to clear all nodes from the group, but abort
         result = run_cli_command(
-            cmd_group.group_remove_nodes, ['--group=dummygroup1', '--clear'],
+            cmd_group.group_remove_nodes,
+            ['--group=dummygroup1', '--clear'],
             user_input='N',
             raises=True,
-            use_subprocess=True
+            use_subprocess=True,
         )
         assert 'Are you sure you want to remove ALL' in result.output
         assert 'Aborted' in result.output
@@ -310,9 +317,10 @@ class TestVerdiGroup:
 
         # Moving the nodes to the same group
         result = run_cli_command(
-            cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup1', node_01.uuid, node_02.uuid],
+            cmd_group.group_move_nodes,
+            ['-s', 'dummygroup1', '-t', 'dummygroup1', node_01.uuid, node_02.uuid],
             raises=True,
-            use_subprocess=True
+            use_subprocess=True,
         )
         assert 'Source and target group are the same:' in result.output
 
@@ -324,23 +332,26 @@ class TestVerdiGroup:
 
         # Moving the nodes from the empty group
         result = run_cli_command(
-            cmd_group.group_move_nodes, ['-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid, node_02.uuid],
+            cmd_group.group_move_nodes,
+            ['-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid, node_02.uuid],
             raises=True,
-            use_subprocess=True
+            use_subprocess=True,
         )
         assert 'None of the specified nodes are in' in result.output
 
         # Move two nodes to the second dummy group, but specify a missing uuid
         result = run_cli_command(
-            cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_03.uuid],
+            cmd_group.group_move_nodes,
+            ['-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_03.uuid],
             raises=True,
-            use_subprocess=True
+            use_subprocess=True,
         )
         assert f'1 nodes with PK {{{node_03.pk}}} are not in' in result.output
         # Check that the node that is present is actually moved
         result = run_cli_command(
-            cmd_group.group_move_nodes, ['-f', '-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_03.uuid],
-            use_subprocess=True
+            cmd_group.group_move_nodes,
+            ['-f', '-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_03.uuid],
+            use_subprocess=True,
         )
         assert node_01 not in group1.nodes
         assert node_01 in group2.nodes
@@ -348,22 +359,25 @@ class TestVerdiGroup:
         # Add the first node back to the first group, and try to move it from the second one
         group1.add_nodes(node_01)
         result = run_cli_command(
-            cmd_group.group_move_nodes, ['-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid],
+            cmd_group.group_move_nodes,
+            ['-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid],
             raises=True,
-            use_subprocess=True
+            use_subprocess=True,
         )
         assert f'1 nodes with PK {{{node_01.pk}}} are already' in result.output
         # Check that it is still removed from the second group
         result = run_cli_command(
-            cmd_group.group_move_nodes, ['-f', '-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid],
-            use_subprocess=True
+            cmd_group.group_move_nodes,
+            ['-f', '-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid],
+            use_subprocess=True,
         )
         assert node_01 not in group2.nodes
 
         # Force move the two nodes to the second dummy group
         result = run_cli_command(
-            cmd_group.group_move_nodes, ['-f', '-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_02.uuid],
-            use_subprocess=True
+            cmd_group.group_move_nodes,
+            ['-f', '-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_02.uuid],
+            use_subprocess=True,
         )
         assert node_01 in group2.nodes
         assert node_02 in group2.nodes
@@ -392,8 +406,10 @@ class TestVerdiGroup:
         # Copy using `verdi group copy` - making sure all is successful
         options = [source_label, dest_label]
         result = run_cli_command(cmd_group.group_copy, options, use_subprocess=True)
-        assert f'Success: Nodes copied from {source_group} to {source_group.__class__.__name__}<{dest_label}>.' in \
-            result.output, result.exception
+        assert (
+            f'Success: Nodes copied from {source_group} to {source_group.__class__.__name__}<{dest_label}>.'
+            in result.output
+        ), result.exception
 
         # Check destination group exists with source group's nodes
         dest_group = orm.load_group(label=dest_label)

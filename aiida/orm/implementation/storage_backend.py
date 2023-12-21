@@ -32,10 +32,10 @@ if TYPE_CHECKING:
 
 __all__ = ('StorageBackend',)
 
-TransactionType = TypeVar('TransactionType')  # pylint: disable=invalid-name
+TransactionType = TypeVar('TransactionType')
 
 
-class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
+class StorageBackend(abc.ABC):
     """Abstraction for a backend to read/write persistent data for a profile's provenance graph.
 
     AiiDA splits data storage into two sources:
@@ -103,6 +103,7 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         :raises: :raises: :class:`aiida.common.exceptions.CorruptStorage` if the storage is internally inconsistent
         """
         from aiida.orm.autogroup import AutogroupManager
+
         self._profile = profile
         self._default_user: Optional['User'] = None
         self._autogroup = AutogroupManager(self)
@@ -143,6 +144,7 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         .. warning:: This is a destructive operation, and should only be used for testing purposes.
         """
         from aiida.orm.autogroup import AutogroupManager
+
         self.reset_default_user()
         self._autogroup = AutogroupManager(self)
 
@@ -208,8 +210,7 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
 
     @abc.abstractmethod
     def transaction(self) -> ContextManager[Any]:
-        """
-        Get a context manager that can be used as a transaction context for a series of backend operations.
+        """Get a context manager that can be used as a transaction context for a series of backend operations.
         If there is an exception within the context then the changes will be rolled back and the state will
         be as before entering.  Transactions can be nested.
 
@@ -325,29 +326,33 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         query_user = QueryBuilder(self).append(User, project=['email'])
         data['Users'] = {'count': query_user.count()}
         if detailed:
-            data['Users']['emails'] = sorted({email for email, in query_user.iterall() if email is not None})
+            data['Users']['emails'] = sorted({email for (email,) in query_user.iterall() if email is not None})
 
         query_comp = QueryBuilder(self).append(Computer, project=['label'])
         data['Computers'] = {'count': query_comp.count()}
         if detailed:
-            data['Computers']['labels'] = sorted({comp for comp, in query_comp.iterall() if comp is not None})
+            data['Computers']['labels'] = sorted({comp for (comp,) in query_comp.iterall() if comp is not None})
 
         count = QueryBuilder(self).append(Node).count()
         data['Nodes'] = {'count': count}
         if detailed:
-            node_types = sorted({
-                typ for typ, in QueryBuilder(self).append(Node, project=['node_type']).iterall() if typ is not None
-            })
+            node_types = sorted(
+                {typ for (typ,) in QueryBuilder(self).append(Node, project=['node_type']).iterall() if typ is not None}
+            )
             data['Nodes']['node_types'] = node_types
-            process_types = sorted({
-                typ for typ, in QueryBuilder(self).append(Node, project=['process_type']).iterall() if typ is not None
-            })
+            process_types = sorted(
+                {
+                    typ
+                    for (typ,) in QueryBuilder(self).append(Node, project=['process_type']).iterall()
+                    if typ is not None
+                }
+            )
             data['Nodes']['process_types'] = [p for p in process_types if p]
 
         query_group = QueryBuilder(self).append(Group, project=['type_string'])
         data['Groups'] = {'count': query_group.count()}
         if detailed:
-            data['Groups']['type_strings'] = sorted({typ for typ, in query_group.iterall() if typ is not None})
+            data['Groups']['type_strings'] = sorted({typ for (typ,) in query_group.iterall() if typ is not None})
 
         count = QueryBuilder(self).append(Comment).count()
         data['Comments'] = {'count': count}

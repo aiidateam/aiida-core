@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This module provides export functionality to all data types
+"""This module provides export functionality to all data types
 """
 
 import click
@@ -22,7 +21,7 @@ EXPORT_OPTIONS = [
         'reduce_symmetry',
         is_flag=True,
         default=None,
-        help='Do (default) or do not perform symmetry reduction.'
+        help='Do (default) or do not perform symmetry reduction.',
     ),
     click.option(
         '--parameter-data',
@@ -34,29 +33,28 @@ EXPORT_OPTIONS = [
         ' Dict in the output, aforementioned'
         ' Dict is picked automatically. Instead, the'
         ' option is used in the case the calculation produces'
-        ' more than a single instance of Dict.'
+        ' more than a single instance of Dict.',
     ),
     click.option(
         '--dump-aiida-database/--no-dump-aiida-database',
         'dump_aiida_database',
         is_flag=True,
         default=None,
-        help='Export (default) or do not export AiiDA database to the CIF file.'
+        help='Export (default) or do not export AiiDA database to the CIF file.',
     ),
     click.option(
         '--exclude-external-contents/--no-exclude-external-contents',
         'exclude_external_contents',
         is_flag=True,
         default=None,
-        help='Do not (default) or do save the contents for external resources even if URIs are provided'
+        help='Do not (default) or do save the contents for external resources even if URIs are provided',
     ),
     click.option('--gzip/--no-gzip', is_flag=True, default=None, help='Do or do not (default) gzip large files.'),
     click.option(
         '--gzip-threshold',
         type=click.INT,
         default=None,
-        help='Specify the minimum size of exported file which should'
-        ' be gzipped.'
+        help='Specify the minimum size of exported file which should' ' be gzipped.',
     ),
     click.option(
         '-o',
@@ -65,7 +63,7 @@ EXPORT_OPTIONS = [
         default=None,
         help='If present, store the output directly on a file '
         'with the given name. It is essential to use this option '
-        'if more than one file needs to be created.'
+        'if more than one file needs to be created.',
     ),
     options.FORCE(help='Overwrite files without checking.'),
 ]
@@ -79,8 +77,7 @@ def export_options(func):
 
 
 def data_export(node, output_fname, fileformat, other_args=None, overwrite=False):
-    """
-    Depending on the parameters, either print the (single) output file on
+    """Depending on the parameters, either print the (single) output file on
     screen, or store the file(s) on disk.
 
     :param node: the Data node to print or store on disk
@@ -97,7 +94,6 @@ def data_export(node, output_fname, fileformat, other_args=None, overwrite=False
     if other_args is None:
         other_args = {}
     try:
-        # pylint: disable=protected-access
         if output_fname:
             try:
                 node.export(output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)

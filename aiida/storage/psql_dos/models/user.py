@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Module to manage users for the SQLA backend."""
 
 from sqlalchemy.schema import Column
@@ -24,9 +23,10 @@ class DbUser(Base):
 
     The user information consists of the most basic personal contact details.
     """
+
     __tablename__ = 'db_dbuser'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     email = Column(String(254), nullable=False, unique=True)
     first_name = Column(String(254), default='', nullable=False)
     last_name = Column(String(254), default='', nullable=False)

@@ -32,7 +32,7 @@ def return_stored_calcfunction():
 
 @calcfunction
 def execution_counter_calcfunction(data):
-    global EXECUTION_COUNTER  # pylint: disable=global-statement
+    global EXECUTION_COUNTER  # noqa: PLW0603
     EXECUTION_COUNTER += 1
     return Int(data.value + 1)
 
@@ -45,9 +45,8 @@ class TestCalcFunction:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
         self.default_int = Int(256)
         self.test_calcfunction = add_calcfunction
@@ -68,7 +67,6 @@ class TestCalcFunction:
 
     def test_calcfunction_return_stored(self):
         """Verify that a calcfunction will raise when a stored node is returned."""
-
         with pytest.raises(ValueError):
             return_stored_calcfunction.run_get_node()
 
@@ -82,7 +80,6 @@ class TestCalcFunction:
 
     def test_calcfunction_caching(self):
         """Verify that a calcfunction can be cached."""
-
         assert EXECUTION_COUNTER == 0
         _, original = execution_counter_calcfunction.run_get_node(Int(5))
         assert EXECUTION_COUNTER == 1
@@ -106,7 +103,7 @@ class TestCalcFunction:
         a different module, because we cannot define it in the same module (as the name clashes, on purpose) and we
         cannot inline the calcfunction in this test, since inlined process functions are not valid cache sources.
         """
-        from .calcfunctions import add_calcfunction  # pylint: disable=redefined-outer-name
+        from .calcfunctions import add_calcfunction
 
         result_original = self.test_calcfunction(self.default_int)
 
@@ -125,7 +122,7 @@ class TestCalcFunction:
     def test_calcfunction_do_not_store_provenance(self):
         """Run the function without storing the provenance."""
         data = Int(1)
-        result, node = self.test_calcfunction.run_get_node(data, metadata={'store_provenance': False})  # pylint: disable=unexpected-keyword-arg
+        result, node = self.test_calcfunction.run_get_node(data, metadata={'store_provenance': False})
         assert not result.is_stored
         assert not data.is_stored
         assert not node.is_stored
@@ -141,12 +138,12 @@ class TestCalcFunction:
         with pytest.raises(exceptions.InvalidOperation):
             test_calcfunction_caller(self.default_int)
 
-    def test_calculation_call_store_provenance_false(self):  # pylint: disable=invalid-name
+    def test_calculation_call_store_provenance_false(self):
         """Verify that a `calcfunction` can call another calcfunction as long as `store_provenance`  is False."""
 
         @calcfunction
         def test_calcfunction_caller(data):
-            return self.test_calcfunction(data, metadata={'store_provenance': False})  # pylint: disable=unexpected-keyword-arg
+            return self.test_calcfunction(data, metadata={'store_provenance': False})
 
         result, node = test_calcfunction_caller.run_get_node(self.default_int)
 

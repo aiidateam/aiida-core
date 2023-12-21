@@ -7,4 +7,5 @@ from aiida.orm import Float, Int
 def add(x: Int, y: Int):
     return x + y
 
+
 add(Int(1), Float(1.0))

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Utility functions specific to the SqlAlchemy backend."""
 import json
 from typing import TypedDict
@@ -15,6 +14,7 @@ from typing import TypedDict
 
 class PsqlConfig(TypedDict, total=False):
     """Configuration to connect to a PostgreSQL database."""
+
     database_hostname: str
     database_port: int
     database_username: str
@@ -58,6 +58,7 @@ def create_sqlalchemy_engine(config: PsqlConfig):
 def create_scoped_session_factory(engine, **kwargs):
     """Create scoped SQLAlchemy session factory"""
     from sqlalchemy.orm import scoped_session, sessionmaker
+
     return scoped_session(sessionmaker(bind=engine, **kwargs))
 
 
@@ -74,15 +75,13 @@ def flag_modified(instance, key):
     from aiida.storage.psql_dos.orm.utils import ModelWrapper
 
     if isinstance(instance, ModelWrapper):
-        instance = instance._model  # pylint: disable=protected-access
+        instance = instance._model
 
     flag_modified_sqla(instance, key)
 
 
 def install_tc(session):
-    """
-    Install the transitive closure table with SqlAlchemy.
-    """
+    """Install the transitive closure table with SqlAlchemy."""
     from sqlalchemy import text
 
     links_table_name = 'db_dblink'
@@ -95,20 +94,26 @@ def install_tc(session):
     session.execute(
         text(
             get_pg_tc(
-                links_table_name, links_table_input_field, links_table_output_field, closure_table_name,
-                closure_table_parent_field, closure_table_child_field
+                links_table_name,
+                links_table_input_field,
+                links_table_output_field,
+                closure_table_name,
+                closure_table_parent_field,
+                closure_table_child_field,
             )
         )
     )
 
 
 def get_pg_tc(
-    links_table_name, links_table_input_field, links_table_output_field, closure_table_name, closure_table_parent_field,
-    closure_table_child_field
+    links_table_name,
+    links_table_input_field,
+    links_table_output_field,
+    closure_table_name,
+    closure_table_parent_field,
+    closure_table_child_field,
 ):
-    """
-    Return the transitive closure table template
-    """
+    """Return the transitive closure table template"""
     from string import Template
 
     pg_tc = Template(
@@ -283,5 +288,5 @@ CREATE TRIGGER autoupdate_tc
         links_table_output_field=links_table_output_field,
         closure_table_name=closure_table_name,
         closure_table_parent_field=closure_table_parent_field,
-        closure_table_child_field=closure_table_child_field
+        closure_table_child_field=closure_table_child_field,
     )

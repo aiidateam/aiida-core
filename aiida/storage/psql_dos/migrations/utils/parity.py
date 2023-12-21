@@ -28,8 +28,16 @@ def synchronize_schemas(alembic_op: alembic.op) -> None:
 
     # drop all current non-unique indexes, then add the new ones
     for tbl_name in (
-        'db_dbauthinfo', 'db_dbcomment', 'db_dbcomputer', 'db_dbgroup', 'db_dbgroup_dbnodes', 'db_dblink', 'db_dblog',
-        'db_dbnode', 'db_dbsetting', 'db_dbuser'
+        'db_dbauthinfo',
+        'db_dbcomment',
+        'db_dbcomputer',
+        'db_dbgroup',
+        'db_dbgroup_dbnodes',
+        'db_dblink',
+        'db_dblog',
+        'db_dbnode',
+        'db_dbsetting',
+        'db_dbuser',
     ):
         reflect.drop_all_indexes(tbl_name)
     for name, tbl_name, column, psql_op in (
@@ -76,8 +84,16 @@ def synchronize_schemas(alembic_op: alembic.op) -> None:
 
     # drop all current unique constraints, then add the new ones
     for tbl_name in (
-        'db_dbauthinfo', 'db_dbcomment', 'db_dbcomputer', 'db_dbgroup', 'db_dbgroup_dbnodes', 'db_dblink', 'db_dblog',
-        'db_dbnode', 'db_dbsetting', 'db_dbuser'
+        'db_dbauthinfo',
+        'db_dbcomment',
+        'db_dbcomputer',
+        'db_dbgroup',
+        'db_dbgroup_dbnodes',
+        'db_dblink',
+        'db_dblog',
+        'db_dbnode',
+        'db_dbsetting',
+        'db_dbuser',
     ):
         reflect.drop_all_unique_constraints(tbl_name)
     reflect.reset_cache()
@@ -99,8 +115,16 @@ def synchronize_schemas(alembic_op: alembic.op) -> None:
 
     # drop all current foreign key constraints, then add the new ones
     for tbl_name in (
-        'db_dbauthinfo', 'db_dbcomment', 'db_dbcomputer', 'db_dbgroup', 'db_dbgroup_dbnodes', 'db_dblink', 'db_dblog',
-        'db_dbnode', 'db_dbsetting', 'db_dbuser'
+        'db_dbauthinfo',
+        'db_dbcomment',
+        'db_dbcomputer',
+        'db_dbgroup',
+        'db_dbgroup_dbnodes',
+        'db_dblink',
+        'db_dblog',
+        'db_dbnode',
+        'db_dbsetting',
+        'db_dbuser',
     ):
         reflect.drop_all_foreign_keys(tbl_name)
 

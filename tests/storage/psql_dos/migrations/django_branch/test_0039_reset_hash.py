@@ -38,10 +38,7 @@ def test_reset_hash(perform_migrations: PsqlDosMigrator):
             label='test',
             description='',
             node_type='data.',
-            extras={
-                'something': 123,
-                '_aiida_hash': 'abcd'
-            }
+            extras={'something': 123, '_aiida_hash': 'abcd'},
         )
         session.add(node)
         session.commit()

@@ -22,10 +22,7 @@ DELETE_LOGGER = AIIDA_LOGGER.getChild('delete')
 
 
 def delete_nodes(
-    pks: Iterable[int],
-    dry_run: Union[bool, Callable[[Set[int]], bool]] = True,
-    backend=None,
-    **traversal_rules: bool
+    pks: Iterable[int], dry_run: Union[bool, Callable[[Set[int]], bool]] = True, backend=None, **traversal_rules: bool
 ) -> Tuple[Set[int], bool]:
     """Delete nodes given a list of "starting" PKs.
 
@@ -65,8 +62,6 @@ def delete_nodes(
     """
     backend = backend or get_manager().get_profile_storage()
 
-    # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
-
     def _missing_callback(_pks: Iterable[int]):
         for _pk in _pks:
             DELETE_LOGGER.warning(f'warning: node with pk<{_pk}> does not exist, skipping')
@@ -78,11 +73,9 @@ def delete_nodes(
     DELETE_LOGGER.report('%s Node(s) marked for deletion', len(pks_set_to_delete))
 
     if pks_set_to_delete and DELETE_LOGGER.level == logging.DEBUG:
-        builder = QueryBuilder(
-            backend=backend
-        ).append(Node, filters={'id': {
-            'in': pks_set_to_delete
-        }}, project=('uuid', 'id', 'node_type', 'label'))
+        builder = QueryBuilder(backend=backend).append(
+            Node, filters={'id': {'in': pks_set_to_delete}}, project=('uuid', 'id', 'node_type', 'label')
+        )
         DELETE_LOGGER.debug('Node(s) to delete:')
         for uuid, pk, type_string, label in builder.iterall():
             try:
@@ -112,10 +105,7 @@ def delete_nodes(
 
 
 def delete_group_nodes(
-    pks: Iterable[int],
-    dry_run: Union[bool, Callable[[Set[int]], bool]] = True,
-    backend=None,
-    **traversal_rules: bool
+    pks: Iterable[int], dry_run: Union[bool, Callable[[Set[int]], bool]] = True, backend=None, **traversal_rules: bool
 ) -> Tuple[Set[int], bool]:
     """Delete nodes contained in a list of groups (not the groups themselves!).
 
@@ -151,15 +141,15 @@ def delete_group_nodes(
     :returns: (node pks to delete, whether they were deleted)
 
     """
-    group_node_query = QueryBuilder(backend=backend).append(
-        Group,
-        filters={
-            'id': {
-                'in': list(pks)
-            }
-        },
-        tag='groups',
-    ).append(Node, project='id', with_group='groups')
+    group_node_query = (
+        QueryBuilder(backend=backend)
+        .append(
+            Group,
+            filters={'id': {'in': list(pks)}},
+            tag='groups',
+        )
+        .append(Node, project='id', with_group='groups')
+    )
     group_node_query.distinct()
     node_pks = group_node_query.all(flat=True)
     return delete_nodes(node_pks, dry_run=dry_run, backend=backend, **traversal_rules)

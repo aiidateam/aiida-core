@@ -52,7 +52,6 @@ def group_remove_nodes(group, nodes, clear, force):
         )
 
     if not force:
-
         if nodes:
             node_pks = [node.pk for node in nodes]
 
@@ -138,8 +137,7 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
 
     if not force:
         click.confirm(
-            f'Are you sure you want to move {len(nodes)} nodes from {source_group} '
-            f'to {target_group}?', abort=True
+            f'Are you sure you want to move {len(nodes)} nodes from {source_group} ' f'to {target_group}?', abort=True
         )
 
     source_group.remove_nodes(nodes)
@@ -222,7 +220,7 @@ def group_description(group, description):
     '--uuid',
     is_flag=True,
     default=False,
-    help='Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but only UUIDs.'
+    help='Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but only UUIDs.',
 )
 @arguments.GROUP()
 @with_dbenv()
@@ -277,12 +275,7 @@ def group_show(group, raw, limit, uuid):
 @options.ALL(help='Show groups of all types.')
 @options.TYPE_STRING()
 @click.option(
-    '-d',
-    '--with-description',
-    'with_description',
-    is_flag=True,
-    default=False,
-    help='Show also the group description.'
+    '-d', '--with-description', 'with_description', is_flag=True, default=False, help='Show also the group description.'
 )
 @click.option('-C', '--count', is_flag=True, default=False, help='Show also the number of nodes in the group.')
 @options.PAST_DAYS(help='Add a filter to show only groups created in the past N days.', default=None)
@@ -291,32 +284,42 @@ def group_show(group, raw, limit, uuid):
     '--startswith',
     type=click.STRING,
     default=None,
-    help='Add a filter to show only groups for which the label begins with STRING.'
+    help='Add a filter to show only groups for which the label begins with STRING.',
 )
 @click.option(
     '-e',
     '--endswith',
     type=click.STRING,
     default=None,
-    help='Add a filter to show only groups for which the label ends with STRING.'
+    help='Add a filter to show only groups for which the label ends with STRING.',
 )
 @click.option(
     '-c',
     '--contains',
     type=click.STRING,
     default=None,
-    help='Add a filter to show only groups for which the label contains STRING.'
+    help='Add a filter to show only groups for which the label contains STRING.',
 )
 @options.ORDER_BY(type=click.Choice(['id', 'label', 'ctime']), default='label')
 @options.ORDER_DIRECTION()
 @options.NODE(help='Show only the groups that contain the node.')
 @with_dbenv()
 def group_list(
-    all_users, user, all_entries, type_string, with_description, count, past_days, startswith, endswith, contains,
-    order_by, order_dir, node
+    all_users,
+    user,
+    all_entries,
+    type_string,
+    with_description,
+    count,
+    past_days,
+    startswith,
+    endswith,
+    contains,
+    order_by,
+    order_dir,
+    node,
 ):
     """Show a list of existing groups."""
-    # pylint: disable=too-many-branches,too-many-arguments,too-many-locals,too-many-statements
     import datetime
 
     from tabulate import tabulate
@@ -378,7 +381,7 @@ def group_list(
         'type_string': lambda group: group.type_string,
         'count': lambda group: group.count(),
         'user': lambda group: group.user.email.strip(),
-        'description': lambda group: group.description
+        'description': lambda group: group.description,
     }
 
     table = []
@@ -428,7 +431,8 @@ def group_copy(source_group, destination_group):
     """Duplicate a group.
 
     More in detail, add all nodes from the source group to the destination group.
-    Note that the destination group may not exist."""
+    Note that the destination group may not exist.
+    """
     from aiida import orm
 
     dest_group, created = orm.Group.collection.get_or_create(label=destination_group)
@@ -454,24 +458,18 @@ def verdi_group_path():
 @click.option('-R', '--recursive', is_flag=True, default=False, help='Recursively list sub-paths encountered.')
 @click.option('-l', '--long', 'as_table', is_flag=True, default=False, help='List as a table, with sub-group count.')
 @click.option(
-    '-d',
-    '--with-description',
-    'with_description',
-    is_flag=True,
-    default=False,
-    help='Show also the group description.'
+    '-d', '--with-description', 'with_description', is_flag=True, default=False, help='Show also the group description.'
 )
 @click.option(
     '--no-virtual',
     'no_virtual',
     is_flag=True,
     default=False,
-    help='Only show paths that fully correspond to an existing group.'
+    help='Only show paths that fully correspond to an existing group.',
 )
 @click.option('--no-warn', is_flag=True, default=False, help='Do not issue a warning if any paths are invalid.')
 @with_dbenv()
 def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_description, no_warn):
-    # pylint: disable=too-many-arguments,too-many-branches
     """Show a list of existing group paths."""
     from aiida.plugins import GroupFactory
     from aiida.tools.groups.paths import GroupPath, InvalidPath
@@ -488,6 +486,7 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
 
     if as_table or with_description:
         from tabulate import tabulate
+
         headers = ['Path', 'Sub-Groups']
         if with_description:
             headers.append('Description')
@@ -497,7 +496,7 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
                 continue
             row = [
                 child.path if child.is_virtual else click.style(child.path, bold=True),
-                len([c for c in child.walk() if not c.is_virtual])
+                len([c for c in child.walk() if not c.is_virtual]),
             ]
             if with_description:
                 row.append('-' if child.is_virtual else child.get_group().description)

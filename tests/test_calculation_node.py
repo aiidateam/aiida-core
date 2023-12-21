@@ -16,9 +16,8 @@ from aiida.orm import CalcJobNode, CalculationNode
 
 
 class TestProcessNode:
-    """
-    These tests check the features of process nodes that differ from the base Node type
-    """
+    """These tests check the features of process nodes that differ from the base Node type"""
+
     boolval = True
     intval = 123
     floatval = 4.56
@@ -33,13 +32,8 @@ class TestProcessNode:
             'boolean': True,
             'float': 1.2,
             'list': [1, 2, None],
-            'dictionary': {
-                'string': 'z',
-                'none': None,
-                'empty_dictionary': {},
-                'empty_list': []
-            }
-        }
+            'dictionary': {'string': 'z', 'none': None, 'empty_dictionary': {}, 'empty_list': []},
+        },
     }
     stateval = 'RUNNING'
     emptydict = {}
@@ -48,7 +42,6 @@ class TestProcessNode:
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.calcjob = CalcJobNode()
         self.calcjob.computer = aiida_localhost
         self.calcjob.set_options({'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}})
@@ -56,9 +49,7 @@ class TestProcessNode:
 
     @staticmethod
     def test_process_state():
-        """
-        Check the properties of a newly created bare CalculationNode
-        """
+        """Check the properties of a newly created bare CalculationNode"""
         process_node = CalculationNode()
 
         assert process_node.is_terminated is False
@@ -78,7 +69,7 @@ class TestProcessNode:
             'string': self.stringval,
             'dict': self.dictval,
             'list': self.listval,
-            'state': self.stateval
+            'state': self.stateval,
         }
 
         for key, value in attrs_to_set.items():
@@ -124,11 +115,13 @@ class TestProcessNode:
     def test_get_authinfo(self):
         """Test that we can get the AuthInfo object from the calculation instance."""
         from aiida.orm import AuthInfo
+
         authinfo = self.calcjob.get_authinfo()
         assert isinstance(authinfo, AuthInfo)
 
     def test_get_transport(self):
         """Test that we can get the Transport object from the calculation instance."""
         from aiida.transports import Transport
+
         transport = self.calcjob.get_transport()
         assert isinstance(transport, Transport)

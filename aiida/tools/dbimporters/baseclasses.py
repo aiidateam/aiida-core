@@ -61,15 +61,13 @@ class DbImporter:
         raise NotImplementedError('not implemented in base class')
 
     def setup_db(self, **kwargs):
-        """
-        Sets the database parameters. The method should reconnect to the
+        """Sets the database parameters. The method should reconnect to the
         database using updated parameters, if already connected.
         """
         raise NotImplementedError('not implemented in base class')
 
     def get_supported_keywords(self):
-        """
-        Returns the list of all supported query keywords.
+        """Returns the list of all supported query keywords.
 
         :return: list of strings
         """
@@ -77,8 +75,7 @@ class DbImporter:
 
 
 class DbSearchResults:
-    """
-    Base class for database results.
+    """Base class for database results.
 
     All classes, inheriting this one and overriding ``at()``, are able to
     benefit from having functions ``__iter__``, ``__len__`` and
@@ -102,15 +99,14 @@ class DbSearchResults:
         def __next__(self):
             """Return the next entry in the iterator."""
             pos = self._position
-            if pos >= 0 and pos < len(self._results):  # pylint: disable=chained-comparison
+            if pos >= 0 and pos < len(self._results):
                 self._position = self._position + self._increment
                 return self._results[pos]
 
             raise StopIteration()
 
     def __iter__(self):
-        """
-        Instances of
+        """Instances of
         :py:class:`aiida.tools.dbimporters.baseclasses.DbSearchResults` can
         be used as iterators.
         """
@@ -123,8 +119,7 @@ class DbSearchResults:
         return self.at(key)
 
     def fetch_all(self):
-        """
-        Returns all query results as an array of
+        """Returns all query results as an array of
         :py:class:`aiida.tools.dbimporters.baseclasses.DbEntry`.
         """
         results = []
@@ -133,17 +128,15 @@ class DbSearchResults:
         return results
 
     def next(self):
-        """
-        Returns the next result of the query (instance of
+        """Returns the next result of the query (instance of
         :py:class:`aiida.tools.dbimporters.baseclasses.DbEntry`).
 
         :raise StopIteration: when the end of result array is reached.
         """
         raise NotImplementedError('not implemented in base class')
 
-    def at(self, position):  # pylint: disable=invalid-name
-        """
-        Returns ``position``-th result as
+    def at(self, position):
+        """Returns ``position``-th result as
         :py:class:`aiida.tools.dbimporters.baseclasses.DbEntry`.
 
         :param position: zero-based index of a result.
@@ -155,12 +148,11 @@ class DbSearchResults:
         if position not in self._entries:
             source_dict = self._get_source_dict(self._results[position])
             url = self._get_url(self._results[position])
-            self._entries[position] = self._return_class(url, **source_dict)  # pylint: disable=not-callable
+            self._entries[position] = self._return_class(url, **source_dict)
         return self._entries[position]
 
     def _get_source_dict(self, result_dict):
-        """
-        Returns a dictionary, which is passed as kwargs to the created
+        """Returns a dictionary, which is passed as kwargs to the created
         DbEntry instance, describing the source of the entry.
 
         :param result_dict: dictionary, describing an entry in the results.
@@ -168,8 +160,7 @@ class DbSearchResults:
         raise NotImplementedError('not implemented in base class')
 
     def _get_url(self, result_dict):
-        """
-        Returns an URL of an entry CIF file.
+        """Returns an URL of an entry CIF file.
 
         :param result_dict: dictionary, describing an entry in the results.
         """
@@ -177,14 +168,12 @@ class DbSearchResults:
 
 
 class DbEntry:
-    """
-    Represents an entry from external database.
-    """
+    """Represents an entry from external database."""
+
     _license: Optional[str] = None
 
-    def __init__(self, db_name=None, db_uri=None, id=None, version=None, extras=None, uri=None):  # pylint: disable=too-many-arguments,redefined-builtin,invalid-name
-        """
-        Sets the basic parameters for the database entry:
+    def __init__(self, db_name=None, db_uri=None, id=None, version=None, extras=None, uri=None):
+        """Sets the basic parameters for the database entry:
 
         :param db_name: name of the source database
         :param db_uri: URI of the source database
@@ -208,18 +197,21 @@ class DbEntry:
 
     def __repr__(self):
         return '{}({})'.format(
-            self.__class__.__name__, ','.join([
-                '{}={}'.format(
-                    k, '"{}"'.format(self.source[k]) if issubclass(self.source[k].__class__, str) else self.source[k]
-                ) for k in sorted(self.source.keys())
-            ])
+            self.__class__.__name__,
+            ','.join(
+                [
+                    '{}={}'.format(
+                        k,
+                        '"{}"'.format(self.source[k]) if issubclass(self.source[k].__class__, str) else self.source[k],
+                    )
+                    for k in sorted(self.source.keys())
+                ]
+            ),
         )
 
     @property
     def contents(self):
-        """
-        Returns raw contents of a file as string.
-        """
+        """Returns raw contents of a file as string."""
         if self._contents is None:
             from hashlib import md5
             from urllib.request import urlopen
@@ -231,55 +223,45 @@ class DbEntry:
 
     @contents.setter
     def contents(self, contents):
-        """
-        Sets raw contents of a file as string.
-        """
+        """Sets raw contents of a file as string."""
         from hashlib import md5
+
         self._contents = contents
         self.source['source_md5'] = md5(self._contents.encode('utf-8')).hexdigest()
 
 
 class CifEntry(DbEntry):
-    """
-    Represents an entry from the structure database (COD, ICSD, ...).
-    """
+    """Represents an entry from the structure database (COD, ICSD, ...)."""
 
     @property
     def cif(self):
-        """
-        Returns raw contents of a CIF file as string.
-        """
+        """Returns raw contents of a CIF file as string."""
         return self.contents
 
     @cif.setter
     def cif(self, cif):
-        """
-        Sets raw contents of a CIF file as string.
-        """
+        """Sets raw contents of a CIF file as string."""
         self.contents = cif
 
     def get_raw_cif(self):
-        """
-        Returns raw contents of a CIF file as string.
+        """Returns raw contents of a CIF file as string.
 
         :return: contents of a file as string
         """
         return self.cif
 
     def get_ase_structure(self):
-        """
-        Returns ASE representation of the CIF.
+        """Returns ASE representation of the CIF.
 
         .. note:: To be removed, as it is duplicated in
             :py:class:`aiida.orm.nodes.data.cif.CifData`.
         """
         from aiida.orm import CifData
+
         return CifData.read_cif(io.StringIO(self.cif))
 
     def get_cif_node(self, store=False, parse_policy='lazy'):
-        """
-
-        Creates a CIF node, that can be used in AiiDA workflow.
+        """Creates a CIF node, that can be used in AiiDA workflow.
 
         :return: :py:class:`aiida.orm.nodes.data.cif.CifData` object
         """
@@ -302,15 +284,12 @@ class CifEntry(DbEntry):
         return cifnode
 
     def get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
-        """
-        :return: AiiDA structure corresponding to the CIF file.
-        """
+        """:return: AiiDA structure corresponding to the CIF file."""
         cif = self.get_cif_node(store=store, parse_policy='lazy')
         return cif.get_structure(converter=converter, store=store, **kwargs)
 
     def get_parsed_cif(self):
-        """
-        Returns data structure, representing the CIF file. Can be created
+        """Returns data structure, representing the CIF file. Can be created
         using PyCIFRW or any other open-source parser.
 
         :return: list of lists
@@ -319,13 +298,10 @@ class CifEntry(DbEntry):
 
 
 class UpfEntry(DbEntry):
-    """
-    Represents an entry from the pseudopotential database.
-    """
+    """Represents an entry from the pseudopotential database."""
 
     def get_upf_node(self, store=False):
-        """
-        Creates an UPF node, that can be used in AiiDA workflow.
+        """Creates an UPF node, that can be used in AiiDA workflow.
 
         :return: :py:class:`aiida.orm.nodes.data.upf.UpfData` object
         """

@@ -15,8 +15,8 @@ The class ``Color`` is an enumeration (or enum). The attributes ``Color.RED`` an
 members (or enum members) and are functionally constants. The enum members have names and values: the name of
 ``Color.RED`` is ``RED`` and the value of ``Color.RED`` is ``1``.
 """
-from enum import Enum
 import typing as t
+from enum import Enum
 
 from plumpy.loaders import get_object_loader
 
@@ -57,7 +57,7 @@ class EnumData(Data):
         data = {
             self.KEY_NAME: member.name,
             self.KEY_VALUE: member.value,
-            self.KEY_IDENTIFIER: get_object_loader().identify_object(member.__class__)
+            self.KEY_IDENTIFIER: get_object_loader().identify_object(member.__class__),
         }
 
         self.base.attributes.set_many(data)

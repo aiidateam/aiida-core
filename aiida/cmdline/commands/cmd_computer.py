@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-many-statements,too-many-branches
 """`verdi computer` command."""
 from copy import deepcopy
 from functools import partial
@@ -30,10 +29,9 @@ def verdi_computer():
 
 
 def get_computer_names():
-    """
-    Retrieve the list of computers in the DB.
-    """
+    """Retrieve the list of computers in the DB."""
     from aiida.orm.querybuilder import QueryBuilder
+
     builder = QueryBuilder()
     builder.append(entity_type='computer', project=['label'])
     if builder.count() > 0:
@@ -42,11 +40,11 @@ def get_computer_names():
     return []
 
 
-def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argument
+def prompt_for_computer_configuration(computer):
     pass
 
 
-def _computer_test_get_jobs(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
+def _computer_test_get_jobs(transport, scheduler, authinfo, computer):
     """Internal test to check if it is possible to check the queue state.
 
     :param transport: an open transport
@@ -58,7 +56,7 @@ def _computer_test_get_jobs(transport, scheduler, authinfo, computer):  # pylint
     return True, f'{len(found_jobs)} jobs found in the queue'
 
 
-def _computer_test_no_unexpected_output(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
+def _computer_test_no_unexpected_output(transport, scheduler, authinfo, computer):
     """Test that there is no unexpected output from the connection.
 
     This can happen if e.g. there is some spurious command in the
@@ -93,7 +91,7 @@ in this troubleshooting section of the online documentation: https://bit.ly/2FCR
     return True, None
 
 
-def _computer_get_remote_username(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
+def _computer_get_remote_username(transport, scheduler, authinfo, computer):
     """Internal test to check if it is possible to determine the username on the remote.
 
     :param transport: an open transport
@@ -105,9 +103,8 @@ def _computer_get_remote_username(transport, scheduler, authinfo, computer):  # 
     return True, remote_user
 
 
-def _computer_create_temp_file(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
-    """
-    Internal test to check if it is possible to create a temporary file
+def _computer_create_temp_file(transport, scheduler, authinfo, computer):
+    """Internal test to check if it is possible to create a temporary file
     and then delete it in the work directory
 
     :note: exceptions could be raised
@@ -187,7 +184,7 @@ def time_use_login_shell(authinfo, auth_params, use_login_shell: bool, iteration
     return sum(timings) / iterations
 
 
-def _computer_use_login_shell_performance(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
+def _computer_use_login_shell_performance(transport, scheduler, authinfo, computer):
     """Execute a command over the transport with and without the ``use_login_shell`` option enabled.
 
     By default, AiiDA uses a login shell when connecting to a computer in order to operate in the same environment as a
@@ -232,8 +229,7 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo, comput
 
 
 def get_parameter_default(parameter, ctx):
-    """
-    Get the value for a specific parameter from the computer_builder or the default value of that option
+    """Get the value for a specific parameter from the computer_builder or the default value of that option
 
     :param parameter: parameter name
     :param ctx: click context of the command
@@ -255,10 +251,10 @@ def get_parameter_default(parameter, ctx):
     return value
 
 
-# pylint: disable=unused-argument
 def set_computer_builder(ctx, param, value):
     """Set the computer spec for defaults of following options."""
     from aiida.orm.utils.builders.computer import ComputerBuilder
+
     ctx.computer_builder = ComputerBuilder.from_computer(value)
     return value
 
@@ -398,7 +394,8 @@ def computer_enable(computer, user):
 def computer_disable(computer, user):
     """Disable the computer for the given user.
 
-    Thi can be useful, for example, when a computer is under maintenance."""
+    Thi can be useful, for example, when a computer is under maintenance.
+    """
     from aiida.common.exceptions import NotExistent
 
     try:
@@ -433,9 +430,9 @@ def computer_list(all_entries, raw):
     if not computers:
         echo.echo_report("No computers configured yet. Use 'verdi computer setup'")
 
-    sort = lambda computer: computer.label
-    highlight = lambda comp: comp.is_configured and comp.is_user_enabled(user)
-    hide = lambda comp: not (comp.is_configured and comp.is_user_enabled(user)) and not all_entries
+    sort = lambda computer: computer.label  # noqa: E731
+    highlight = lambda comp: comp.is_configured and comp.is_user_enabled(user)  # noqa: E731
+    hide = lambda comp: not (comp.is_configured and comp.is_user_enabled(user)) and not all_entries  # noqa: E731
     echo.echo_formatted_list(computers, ['label'], sort=sort, highlight=highlight, hide=hide)
 
 
@@ -499,8 +496,7 @@ def computer_relabel(computer, label):
 @arguments.COMPUTER()
 @with_dbenv()
 def computer_test(user, print_traceback, computer):
-    """
-    Test the connection to a computer.
+    """Test the connection to a computer.
 
     It tries to connect, to get the list of calculations on the queue and
     to perform other tests.
@@ -551,20 +547,19 @@ def computer_test(user, print_traceback, computer):
             scheduler.set_transport(transport)
 
             for test, test_label in tests.items():
-
                 echo.echo(f'* {test_label}... ', nl=False)
                 num_tests += 1
                 try:
                     success, message = test(
                         transport=transport, scheduler=scheduler, authinfo=authinfo, computer=computer
                     )
-                except Exception as exception:  # pylint:disable=broad-except
+                except Exception as exception:
                     success = False
-                    message = f'{exception.__class__.__name__}: {str(exception)}'
+                    message = f'{exception.__class__.__name__}: {exception!s}'
 
                     if print_traceback:
                         message += '\n  Full traceback:\n'
-                        message += '\n'.join([f'  {l}' for l in traceback.format_exc().splitlines()])
+                        message += '\n'.join([f'  {line}' for line in traceback.format_exc().splitlines()])
                     else:
                         message += '\n  Use the `--print-traceback` option to see the full traceback.'
 
@@ -575,25 +570,24 @@ def computer_test(user, print_traceback, computer):
                         echo.echo(message)
                     else:
                         echo.echo('[Failed]', fg=echo.COLORS['error'])
+                elif message:
+                    echo.echo('[OK]: ', fg=echo.COLORS['success'], nl=False)
+                    echo.echo(message)
                 else:
-                    if message:
-                        echo.echo('[OK]: ', fg=echo.COLORS['success'], nl=False)
-                        echo.echo(message)
-                    else:
-                        echo.echo('[OK]', fg=echo.COLORS['success'])
+                    echo.echo('[OK]', fg=echo.COLORS['success'])
 
         if num_failures:
             echo.echo_warning(f'{num_failures} out of {num_tests} tests failed')
         else:
             echo.echo_success(f'all {num_tests} tests succeeded')
 
-    except Exception:  # pylint:disable=broad-except
+    except Exception:
         echo.echo('[FAILED]: ', fg=echo.COLORS['error'], nl=False)
         message = 'Error while trying to connect to the computer'
 
         if print_traceback:
             message += '\n  Full traceback:\n'
-            message += '\n'.join([f'  {l}' for l in traceback.format_exc().splitlines()])
+            message += '\n'.join([f'  {line}' for line in traceback.format_exc().splitlines()])
         else:
             message += '\n  Use the `--print-traceback` option to see the full traceback.'
 
@@ -605,8 +599,7 @@ def computer_test(user, print_traceback, computer):
 @arguments.COMPUTER()
 @with_dbenv()
 def computer_delete(computer):
-    """
-    Delete a computer.
+    """Delete a computer.
 
     Note that it is not possible to delete the computer if there are calculations that are using it.
     """
@@ -631,8 +624,9 @@ class LazyConfigureGroup(VerdiCommandGroup):
         subcommands.extend(get_entry_point_names('aiida.transports'))
         return subcommands
 
-    def get_command(self, ctx, name):  # pylint: disable=arguments-renamed
+    def get_command(self, ctx, name):
         from aiida.transports import cli as transport_cli
+
         try:
             command = transport_cli.create_configure_cmd(name)
         except EntryPointError:
@@ -661,7 +655,8 @@ def computer_config_show(computer, user, defaults, as_option_string):
 
     transport_cls = computer.get_transport_class()
     option_list = [
-        param for param in transport_cli.create_configure_cmd(computer.transport_type).params
+        param
+        for param in transport_cli.create_configure_cmd(computer.transport_type).params
         if isinstance(param, click.core.Option)
     ]
     option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
@@ -677,12 +672,13 @@ def computer_config_show(computer, user, defaults, as_option_string):
             t_opt = transport_cls.auth_options[option.name]
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
-                    option_value = option.opts[-1] if config.get(
-                        option.name
-                    ) else f"--no-{option.name.replace('_', '-')}"
+                    option_value = (
+                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"
+                    )
                 elif t_opt.get('is_flag'):
-                    is_default = config.get(option.name
-                                            ) == transport_cli.transport_option_default(option.name, computer)
+                    is_default = config.get(option.name) == transport_cli.transport_option_default(
+                        option.name, computer
+                    )
                     option_value = option.opts[-1] if is_default else ''
                 else:
                     option_value = f'{option.opts[-1]}={option.type(config[option.name])}'

@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Local transport
+"""Local transport
 """
 
 ###
@@ -32,10 +31,8 @@ from aiida.transports.transport import Transport, TransportInternalError
 
 
 # refactor or raise the limit: issue #1784
-# pylint: disable=too-many-public-methods
 class LocalTransport(Transport):
-    """
-    Support copy and command execution on the same host on which AiiDA is running via direct file copy and
+    """Support copy and command execution on the same host on which AiiDA is running via direct file copy and
     execution commands.
 
     Note that the environment variables are copied from the submitting process, so you might need to clean it
@@ -67,8 +64,7 @@ class LocalTransport(Transport):
             self.logger.debug('machine was passed, but it is not localhost')
 
     def open(self):
-        """
-        Opens a local transport channel
+        """Opens a local transport channel
 
         :raise aiida.common.InvalidOperation: if the channel is already open
         """
@@ -82,8 +78,7 @@ class LocalTransport(Transport):
         return self
 
     def close(self):
-        """
-        Closes the local transport channel
+        """Closes the local transport channel
 
         :raise aiida.common.InvalidOperation: if the channel is already open
         """
@@ -94,15 +89,12 @@ class LocalTransport(Transport):
         self._is_open = False
 
     def __str__(self):
-        """
-        Return a description as a string.
-        """
+        """Return a description as a string."""
         return f"local [{'OPEN' if self._is_open else 'CLOSED'}]"
 
     @property
     def curdir(self):
-        """
-        Returns the _internal_dir, if the channel is open.
+        """Returns the _internal_dir, if the channel is open.
         If possible, use getcwd() instead!
         """
         if self._is_open:
@@ -111,8 +103,7 @@ class LocalTransport(Transport):
         raise TransportInternalError('Error, local method called for LocalTransport without opening the channel first')
 
     def chdir(self, path):
-        """
-        Changes directory to path, emulated internally.
+        """Changes directory to path, emulated internally.
         :param path: path to cd into
         :raise OSError: if the directory does not have read attributes.
         """
@@ -128,16 +119,13 @@ class LocalTransport(Transport):
         os.chown(path, uid, gid)
 
     def normalize(self, path='.'):
-        """
-        Normalizes path, eliminating double slashes, etc..
+        """Normalizes path, eliminating double slashes, etc..
         :param path: path to normalize
         """
         return os.path.realpath(os.path.join(self.curdir, path))
 
     def getcwd(self):
-        """
-        Returns the current working directory, emulated by the transport
-        """
+        """Returns the current working directory, emulated by the transport"""
         return self.curdir
 
     @staticmethod
@@ -157,8 +145,7 @@ class LocalTransport(Transport):
         return parts
 
     def makedirs(self, path, ignore_existing=False):
-        """
-        Super-mkdir; create a leaf directory and all intermediate ones.
+        """Super-mkdir; create a leaf directory and all intermediate ones.
         Works like mkdir, except that any intermediate path segment (not
         just the rightmost) will be created if it does not exist.
 
@@ -184,8 +171,7 @@ class LocalTransport(Transport):
                 os.mkdir(this_dir)
 
     def mkdir(self, path, ignore_existing=False):
-        """
-        Create a folder (directory) named path.
+        """Create a folder (directory) named path.
 
         :param path: name of the folder to create
         :param ignore_existing: if True, does not give any error if the
@@ -199,15 +185,13 @@ class LocalTransport(Transport):
         os.mkdir(os.path.join(self.curdir, path))
 
     def rmdir(self, path):
-        """
-        Removes a folder at location path.
+        """Removes a folder at location path.
         :param path: path to remove
         """
         os.rmdir(os.path.join(self.curdir, path))
 
     def isdir(self, path):
-        """
-        Checks if 'path' is a directory.
+        """Checks if 'path' is a directory.
         :return: a boolean
         """
         if not path:
@@ -216,8 +200,7 @@ class LocalTransport(Transport):
         return os.path.isdir(os.path.join(self.curdir, path))
 
     def chmod(self, path, mode):
-        """
-        Changes permission bits of object at path
+        """Changes permission bits of object at path
         :param path: path to modify
         :param mode: permission bits
 
@@ -232,10 +215,9 @@ class LocalTransport(Transport):
             os.chmod(real_path, mode)
 
     # please refactor: issue #1782
-    # pylint: disable=too-many-branches
+
     def put(self, localpath, remotepath, *args, **kwargs):
-        """
-        Copies a file or a folder from localpath to remotepath.
+        """Copies a file or a folder from localpath to remotepath.
         Automatically redirects to putfile or puttree.
 
         :param localpath: absolute path to local file
@@ -291,25 +273,22 @@ class LocalTransport(Transport):
                 else:
                     self.puttree(source_path, remotepath, dereference, overwrite)
 
-        else:
-            if os.path.isdir(localpath):
-                self.puttree(localpath, remotepath, dereference, overwrite)
-            elif os.path.isfile(localpath):
-                if self.isdir(remotepath):
-                    full_destination = os.path.join(remotepath, os.path.split(localpath)[1])
-                else:
-                    full_destination = remotepath
-
-                self.putfile(localpath, full_destination, overwrite)
+        elif os.path.isdir(localpath):
+            self.puttree(localpath, remotepath, dereference, overwrite)
+        elif os.path.isfile(localpath):
+            if self.isdir(remotepath):
+                full_destination = os.path.join(remotepath, os.path.split(localpath)[1])
             else:
-                if ignore_nonexisting:
-                    pass
-                else:
-                    raise OSError(f'The local path {localpath} does not exist')
+                full_destination = remotepath
+
+            self.putfile(localpath, full_destination, overwrite)
+        elif ignore_nonexisting:
+            pass
+        else:
+            raise OSError(f'The local path {localpath} does not exist')
 
     def putfile(self, localpath, remotepath, *args, **kwargs):
-        """
-        Copies a file from localpath to remotepath.
+        """Copies a file from localpath to remotepath.
         Automatically redirects to putfile or puttree.
 
         :param localpath: absolute path to local file
@@ -340,8 +319,7 @@ class LocalTransport(Transport):
         shutil.copyfile(localpath, the_destination)
 
     def puttree(self, localpath, remotepath, *args, **kwargs):
-        """
-        Copies a folder recursively from localpath to remotepath.
+        """Copies a folder recursively from localpath to remotepath.
         Automatically redirects to putfile or puttree.
 
         :param localpath: absolute path to local file
@@ -381,8 +359,7 @@ class LocalTransport(Transport):
         shutil.copytree(localpath, the_destination, symlinks=not dereference)
 
     def rmtree(self, path):
-        """
-        Remove tree as rm -r would do
+        """Remove tree as rm -r would do
 
         :param path: a string to path
         """
@@ -398,10 +375,9 @@ class LocalTransport(Transport):
                 raise IOError(exception)
 
     # please refactor: issue #1781
-    # pylint: disable=too-many-branches
+
     def get(self, remotepath, localpath, *args, **kwargs):
-        """
-        Copies a folder or a file recursively from 'remote' remotepath to
+        """Copies a folder or a file recursively from 'remote' remotepath to
         'local' localpath.
         Automatically redirects to getfile or gettree.
 
@@ -453,24 +429,21 @@ class LocalTransport(Transport):
                 else:
                     self.gettree(source, localpath, dereference, overwrite)
 
-        else:
-            if self.isdir(remotepath):
-                self.gettree(remotepath, localpath, dereference, overwrite)
-            elif self.isfile(remotepath):
-                if os.path.isdir(localpath):
-                    subpath = os.path.join(localpath, os.path.split(remotepath)[1])
-                    self.getfile(remotepath, subpath, overwrite)
-                else:
-                    self.getfile(remotepath, localpath, overwrite)
+        elif self.isdir(remotepath):
+            self.gettree(remotepath, localpath, dereference, overwrite)
+        elif self.isfile(remotepath):
+            if os.path.isdir(localpath):
+                subpath = os.path.join(localpath, os.path.split(remotepath)[1])
+                self.getfile(remotepath, subpath, overwrite)
             else:
-                if ignore_nonexisting:
-                    pass
-                else:
-                    raise IOError(f'The remote path {remotepath} does not exist')
+                self.getfile(remotepath, localpath, overwrite)
+        elif ignore_nonexisting:
+            pass
+        else:
+            raise IOError(f'The remote path {remotepath} does not exist')
 
     def getfile(self, remotepath, localpath, *args, **kwargs):
-        """
-        Copies a file recursively from 'remote' remotepath to
+        """Copies a file recursively from 'remote' remotepath to
         'local' localpath.
 
         :param remotepath: path to local file
@@ -498,8 +471,7 @@ class LocalTransport(Transport):
         shutil.copyfile(the_source, localpath)
 
     def gettree(self, remotepath, localpath, *args, **kwargs):
-        """
-        Copies a folder recursively from 'remote' remotepath to
+        """Copies a folder recursively from 'remote' remotepath to
         'local' localpath.
 
         :param remotepath: path to local file
@@ -536,10 +508,9 @@ class LocalTransport(Transport):
         shutil.copytree(the_source, localpath, symlinks=not dereference)
 
     # please refactor: issue #1780 on github
-    # pylint: disable=too-many-branches
+
     def copy(self, remotesource, remotedestination, dereference=False, recursive=True):
-        """
-        Copies a file or a folder from 'remote' remotesource to 'remote' remotedestination.
+        """Copies a file or a folder from 'remote' remotesource to 'remote' remotedestination.
         Automatically redirects to copyfile or copytree.
 
         :param remotesource: path to local file
@@ -599,8 +570,7 @@ class LocalTransport(Transport):
                 self.copytree(remotesource, remotedestination, dereference)
 
     def copyfile(self, remotesource, remotedestination, dereference=False):
-        """
-        Copies a file from 'remote' remotesource to
+        """Copies a file from 'remote' remotesource to
         'remote' remotedestination.
 
         :param remotesource: path to local file
@@ -626,8 +596,7 @@ class LocalTransport(Transport):
             shutil.copyfile(the_source, the_destination)
 
     def copytree(self, remotesource, remotedestination, dereference=False):
-        """
-        Copies a folder from 'remote' remotesource to
+        """Copies a folder from 'remote' remotesource to
         'remote' remotedestination.
 
         :param remotesource: path to local file
@@ -653,8 +622,7 @@ class LocalTransport(Transport):
         shutil.copytree(the_source, the_destination, symlinks=not dereference)
 
     def get_attribute(self, path):
-        """
-        Returns an object FileAttribute,
+        """Returns an object FileAttribute,
         as specified in aiida.transports.
         :param path: the path of the given file.
         """
@@ -664,7 +632,7 @@ class LocalTransport(Transport):
         aiida_attr = FileAttribute()
         # map the paramiko class into the aiida one
         # note that paramiko object contains more informations than the aiida
-        for key in aiida_attr._valid_fields:  # pylint: disable=protected-access
+        for key in aiida_attr._valid_fields:
             aiida_attr[key] = getattr(os_attr, key)
         return aiida_attr
 
@@ -686,8 +654,7 @@ class LocalTransport(Transport):
         return [re.sub(base_dir, '', i) for i in filtered_list]
 
     def listdir(self, path='.', pattern=None):
-        """
-        :return: a list containing the names of the entries in the directory.
+        """:return: a list containing the names of the entries in the directory.
         :param path: default ='.'
         :param pattern: if set, returns the list of files matching pattern.
                      Unix only. (Use to emulate ls * for example)
@@ -709,14 +676,11 @@ class LocalTransport(Transport):
             return [re.sub(the_path, '', i) for i in filtered_list]
 
     def remove(self, path):
-        """
-        Removes a file at position path.
-        """
+        """Removes a file at position path."""
         os.remove(os.path.join(self.curdir, path))
 
     def isfile(self, path):
-        """
-        Checks if object at path is a file.
+        """Checks if object at path is a file.
         Returns a boolean.
         """
         if not path:
@@ -724,9 +688,8 @@ class LocalTransport(Transport):
         return os.path.isfile(os.path.join(self.curdir, path))
 
     @contextlib.contextmanager
-    def _exec_command_internal(self, command, **kwargs):  # pylint: disable=unused-argument
-        """
-        Executes the specified command in bash login shell.
+    def _exec_command_internal(self, command, **kwargs):
+        """Executes the specified command in bash login shell.
 
         Before the command is executed, changes directory to the current
         working directory as returned by self.getcwd().
@@ -746,7 +709,6 @@ class LocalTransport(Transport):
             proc is the process object as returned by the
             subprocess.Popen() class.
         """
-        # pylint: disable=subprocess-popen-preexec-fn
         from aiida.common.escaping import escape_for_bash
 
         # Note: The outer shell will eat one level of escaping, while
@@ -762,13 +724,12 @@ class LocalTransport(Transport):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=self.getcwd(),
-            start_new_session=True
+            start_new_session=True,
         ) as process:
             yield process
 
     def exec_command_wait_bytes(self, command, stdin=None, **kwargs):
-        """
-        Executes the specified command and waits for it to finish.
+        """Executes the specified command and waits for it to finish.
 
         :param command: the command to execute
 
@@ -776,7 +737,6 @@ class LocalTransport(Transport):
             are both bytes and the return_value is an int.
         """
         with self._exec_command_internal(command) as process:
-
             if stdin is not None:
                 # Implicitly assume that the desired encoding is 'utf-8' if I receive a string.
                 # Also, if I get a StringIO, I just read it all in memory and put it into a BytesIO.
@@ -792,7 +752,8 @@ class LocalTransport(Transport):
                         """Encode the iterator item by item (i.e., line by line).
 
                         This only wraps iterating over it and not all other methods, but it's enough for its
-                        use below."""
+                        use below.
+                        """
                         for line in iterator:
                             yield line.encode(encoding)
 
@@ -818,8 +779,7 @@ class LocalTransport(Transport):
         return retval, output_text, stderr_text
 
     def gotocomputer_command(self, remotedir):
-        """
-        Return a string to be run using os.system in order to connect
+        """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
         Expected behaviors:
@@ -834,8 +794,7 @@ class LocalTransport(Transport):
         return cmd
 
     def rename(self, oldpath, newpath):
-        """
-        Rename a file or folder from oldpath to newpath.
+        """Rename a file or folder from oldpath to newpath.
 
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
@@ -855,8 +814,7 @@ class LocalTransport(Transport):
         shutil.move(oldpath, newpath)
 
     def symlink(self, remotesource, remotedestination):
-        """
-        Create a symbolic link between the remote source and the remote
+        """Create a symbolic link between the remote source and the remote
         remotedestination
 
         :param remotesource: remote source. Can contain a pattern.
@@ -883,9 +841,7 @@ class LocalTransport(Transport):
                 raise OSError(f'!!: {remotesource}, {self.curdir}, {remotedestination}')
 
     def path_exists(self, path):
-        """
-        Check if path exists
-        """
+        """Check if path exists"""
         return os.path.exists(os.path.join(self.curdir, path))
 
 

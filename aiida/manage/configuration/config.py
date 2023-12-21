@@ -20,10 +20,10 @@ import contextlib
 import io
 import json
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type
 import uuid
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type
 
-from pydantic import (  # pylint: disable=no-name-in-module
+from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
@@ -64,8 +64,7 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
     )
     daemon__timeout: int = Field(
         2,
-        description=
-        'Used to set default timeout in the :class:`aiida.engine.daemon.client.DaemonClient` for calls to the daemon.'
+        description='Used to set default timeout in the `DaemonClient` for calls to the daemon.',
     )
     daemon__worker_process_slots: int = Field(
         200, description='Maximum number of concurrent process tasks that each daemon worker can handle.'
@@ -74,11 +73,11 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
     db__batch_size: int = Field(
         100000,
         description='Batch size for bulk CREATE operations in the database. Avoids hitting MaxAllocSize of PostgreSQL '
-        '(1GB) when creating large numbers of database records in one go.'
+        '(1GB) when creating large numbers of database records in one go.',
     )
     verdi__shell__auto_import: str = Field(
         ':',
-        description='Additional modules/functions/classes to be automatically loaded in `verdi shell`, split by `:`.'
+        description='Additional modules/functions/classes to be automatically loaded in `verdi shell`, split by `:`.',
     )
     logging__aiida_loglevel: LogLevels = Field(
         'REPORT', description='Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger.'
@@ -131,6 +130,7 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
     def validate_caching_identifier_pattern(cls, value: List[str]) -> List[str]:
         """Validate the caching identifier patterns."""
         from aiida.manage.caching import _validate_identifier_pattern
+
         for identifier in value:
             _validate_identifier_pattern(identifier=identifier, strict=True)
         return value
@@ -138,6 +138,7 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
 
 class GlobalOptionsSchema(ProfileOptionsSchema, defer_build=True):
     """Schema for the global options of an AiiDA instance."""
+
     autofill__user__email: Optional[str] = Field(
         None, description='Default user email to use when creating new profiles.'
     )
@@ -155,7 +156,7 @@ class GlobalOptionsSchema(ProfileOptionsSchema, defer_build=True):
     )
     warnings__development_version: bool = Field(
         True,
-        description='Whether to print a warning when a profile is loaded while a development version is installed.'
+        description='Whether to print a warning when a profile is loaded while a development version is installed.',
     )
 
 
@@ -175,8 +176,9 @@ class ProcessControlConfig(BaseModel, defer_build=True):
     broker_host: str = Field('127.0.0.1', description='Hostname of the message broker.')
     broker_port: int = Field(5432, description='Port of the message broker.')
     broker_virtual_host: str = Field('', description='Virtual host to use for the message broker.')
-    broker_parameters: dict[
-        str, Any] = Field(default_factory=dict, description='Arguments to be encoded as query parameters.')
+    broker_parameters: dict[str, Any] = Field(
+        default_factory=dict, description='Arguments to be encoded as query parameters.'
+    )
 
 
 class ProfileSchema(BaseModel, defer_build=True):
@@ -203,7 +205,7 @@ class ConfigSchema(BaseModel, defer_build=True):
     default_profile: Optional[str] = None
 
 
-class Config:  # pylint: disable=too-many-public-methods
+class Config:
     """Object that represents the configuration file of an AiiDA instance."""
 
     KEY_VERSION = 'CONFIG_VERSION'
@@ -279,7 +281,7 @@ class Config:  # pylint: disable=too-many-public-methods
         try:
             ConfigSchema(**config)
         except ValidationError as exception:
-            raise ConfigurationError(f'invalid config schema: {filepath}: {str(exception)}')
+            raise ConfigurationError(f'invalid config schema: {filepath}: {exception!s}')
 
     def __init__(self, filepath: str, config: dict, validate: bool = True):
         """Instantiate a configuration object from a configuration dictionary and its filepath.
@@ -340,6 +342,7 @@ class Config:  # pylint: disable=too-many-public-methods
         :param message: a string message to echo with describing the infraction
         """
         from aiida.cmdline.utils import echo
+
         filepath_backup = self._backup(self.filepath)
         echo.echo_warning(message)
         echo.echo_warning(f'backup of the original config file written to: `{filepath_backup}`')
@@ -385,7 +388,7 @@ class Config:  # pylint: disable=too-many-public-methods
     def version_settings(self):
         return {
             self.KEY_VERSION_CURRENT: self.version,
-            self.KEY_VERSION_OLDEST_COMPATIBLE: self.version_oldest_compatible
+            self.KEY_VERSION_OLDEST_COMPATIBLE: self.version_oldest_compatible,
         }
 
     @property
@@ -482,7 +485,8 @@ class Config:  # pylint: disable=too-many-public-methods
             raise EntryPointError(f'`{storage_cls}` does not have a registered entry point.')
 
         profile = Profile(
-            name, {
+            name,
+            {
                 'storage': {
                     'backend': storage_entry_point.name,
                     'config': storage_config,
@@ -495,17 +499,17 @@ class Config:  # pylint: disable=too-many-public-methods
                         'broker_password': 'guest',
                         'broker_host': '127.0.0.1',
                         'broker_port': 5672,
-                        'broker_virtual_host': ''
-                    }
+                        'broker_virtual_host': '',
+                    },
                 },
-            }
+            },
         )
 
         LOGGER.report('Initialising the storage backend.')
         try:
             with contextlib.redirect_stdout(io.StringIO()):
                 profile.storage_cls.initialise(profile)
-        except Exception as exception:  # pylint: disable=broad-except
+        except Exception as exception:
             raise StorageMigrationError(
                 f'Storage backend initialisation failed, probably because the configuration is incorrect:\n{exception}'
             )
@@ -635,9 +639,8 @@ class Config:  # pylint: disable=too-many-public-methods
 
         if not option.global_only and scope is not None:
             self.get_profile(scope).set_option(option.name, value, override=override)
-        else:
-            if option.name not in self.options or override:
-                self.options[option.name] = value
+        elif option.name not in self.options or override:
+            self.options[option.name] = value
 
         return value
 

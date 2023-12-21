@@ -24,8 +24,7 @@ class BackendUser(BackendEntity):
     @property
     @abc.abstractmethod
     def email(self) -> str:
-        """
-        Get the email address of the user
+        """Get the email address of the user
 
         :return: the email address
         """
@@ -33,8 +32,7 @@ class BackendUser(BackendEntity):
     @email.setter
     @abc.abstractmethod
     def email(self, val: str) -> None:
-        """
-        Set the email address of the user
+        """Set the email address of the user
 
         :param val: the new email address
         """
@@ -42,8 +40,7 @@ class BackendUser(BackendEntity):
     @property
     @abc.abstractmethod
     def first_name(self) -> str:
-        """
-        Get the user's first name
+        """Get the user's first name
 
         :return: the first name
         """
@@ -51,8 +48,7 @@ class BackendUser(BackendEntity):
     @first_name.setter
     @abc.abstractmethod
     def first_name(self, val: str) -> None:
-        """
-        Set the user's first name
+        """Set the user's first name
 
         :param val: the new first name
         """
@@ -60,8 +56,7 @@ class BackendUser(BackendEntity):
     @property
     @abc.abstractmethod
     def last_name(self) -> str:
-        """
-        Get the user's last name
+        """Get the user's last name
 
         :return: the last name
         """
@@ -69,8 +64,7 @@ class BackendUser(BackendEntity):
     @last_name.setter
     @abc.abstractmethod
     def last_name(self, val: str) -> None:
-        """
-        Set the user's last name
+        """Set the user's last name
 
         :param val: the new last name
         """
@@ -78,8 +72,7 @@ class BackendUser(BackendEntity):
     @property
     @abc.abstractmethod
     def institution(self) -> str:
-        """
-        Get the user's institution
+        """Get the user's institution
 
         :return: the institution
         """
@@ -87,13 +80,11 @@ class BackendUser(BackendEntity):
     @institution.setter
     @abc.abstractmethod
     def institution(self, val: str) -> None:
-        """
-        Set the user's institution
+        """Set the user's institution
 
         :param val: the new institution
         """
 
 
 class BackendUserCollection(BackendCollection[BackendUser]):
-
     ENTITY_CLASS = BackendUser

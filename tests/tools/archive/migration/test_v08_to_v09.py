@@ -16,13 +16,16 @@ def test_migrate_external(migrate_from_func):
     _, data = migrate_from_func('export_v0.8_manual.aiida', '0.8', '0.9', migrate_v8_to_v9)
 
     for attributes in data.get('export_data', {}).get('Group', {}).values():
-        assert attributes['type_string'] in ['core', 'core.upf', 'core.import', 'core.auto'
-                                             ], (f"encountered illegal type string `{attributes['type_string']}`")
+        assert attributes['type_string'] in [
+            'core',
+            'core.upf',
+            'core.import',
+            'core.auto',
+        ], f"encountered illegal type string `{attributes['type_string']}`"
 
 
 def test_migration_dbgroup_type_string():
     """Test the `migration_dbgroup_type_string` function directly."""
-
     data = {
         'export_data': {
             'Group': {
@@ -37,7 +40,7 @@ def test_migration_dbgroup_type_string():
                 },
                 '53': {
                     'type_string': 'auto.run',
-                }
+                },
             }
         }
     }
@@ -58,7 +61,7 @@ def test_migration_dbgroup_type_string():
                 },
                 '53': {
                     'type_string': 'core.auto',
-                }
+                },
             }
         }
     }

@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .graph import *
 
@@ -24,4 +23,4 @@ __all__ = (
     'pstate_node_styles',
 )
 
-# yapf: enable
+# fmt: on

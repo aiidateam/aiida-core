@@ -7,12 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-arguments,import-error,too-many-locals,broad-except
 """`verdi archive` command."""
-from enum import Enum
 import logging
-from pathlib import Path
 import traceback
+from enum import Enum
+from pathlib import Path
 from typing import List, Tuple
 
 import click
@@ -43,6 +42,7 @@ def archive_version(path):
     # note: this mirrors `cmd_storage:storage_version`
     # it is currently hardcoded to the `SqliteZipBackend`, but could be generalized in the future
     from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+
     storage_cls = SqliteZipBackend
     profile = storage_cls.create_profile(path)
     head_version = storage_cls.version_head()
@@ -62,6 +62,7 @@ def archive_info(path, detailed):
     # note: this mirrors `cmd_storage:storage_info`
     # it is currently hardcoded to the `SqliteZipBackend`, but could be generalized in the future
     from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+
     try:
         storage = SqliteZipBackend(SqliteZipBackend.create_profile(path))
     except (UnreachableStorage, CorruptStorage) as exc:
@@ -87,7 +88,7 @@ def archive_info(path, detailed):
     'Please call `verdi archive version` or `verdi archive info` instead.\n'
 )
 @click.pass_context
-def inspect(ctx, archive, version, meta_data, database):  # pylint: disable=unused-argument
+def inspect(ctx, archive, version, meta_data, database):
     """Inspect contents of an archive without importing it.
 
     .. deprecated:: v2.0.0, use `verdi archive version` or `verdi archive info` instead.
@@ -113,19 +114,19 @@ def inspect(ctx, archive, version, meta_data, database):  # pylint: disable=unus
     '--include-logs/--exclude-logs',
     default=True,
     show_default=True,
-    help='Include or exclude logs for node(s) in export.'
+    help='Include or exclude logs for node(s) in export.',
 )
 @click.option(
     '--include-comments/--exclude-comments',
     default=True,
     show_default=True,
-    help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).'
+    help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).',
 )
 @click.option(
     '--include-authinfos/--exclude-authinfos',
     default=False,
     show_default=True,
-    help='Include or exclude authentication information for computer(s) in export.'
+    help='Include or exclude authentication information for computer(s) in export.',
 )
 @click.option('--compress', default=6, show_default=True, type=int, help='Level of compression to use (0-9).')
 @click.option(
@@ -134,9 +135,25 @@ def inspect(ctx, archive, version, meta_data, database):  # pylint: disable=unus
 @click.option('--test-run', is_flag=True, help='Determine entities to export, but do not create the archive.')
 @decorators.with_dbenv()
 def create(
-    output_file, all_entries, codes, computers, groups, nodes, force, input_calc_forward, input_work_forward,
-    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs,
-    include_authinfos, compress, batch_size, test_run
+    output_file,
+    all_entries,
+    codes,
+    computers,
+    groups,
+    nodes,
+    force,
+    input_calc_forward,
+    input_work_forward,
+    create_backward,
+    return_backward,
+    call_calc_backward,
+    call_work_backward,
+    include_comments,
+    include_logs,
+    include_authinfos,
+    compress,
+    batch_size,
+    test_run,
 ):
     """Create an archive from all or part of a profiles's data.
 
@@ -146,7 +163,6 @@ def create(
     their provenance, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
-    # pylint: disable=too-many-branches
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.archive.abstract import get_format
     from aiida.tools.archive.create import create_archive
@@ -184,10 +200,10 @@ def create(
         'overwrite': force,
         'compression': compress,
         'batch_size': batch_size,
-        'test_run': test_run
+        'test_run': test_run,
     }
 
-    if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
+    if AIIDA_LOGGER.level <= logging.REPORT:
         set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
@@ -230,7 +246,7 @@ def migrate(input_file, output_file, force, in_place, version):
             'no output file specified. Please add --in-place flag if you would like to migrate in place.'
         )
 
-    if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
+    if AIIDA_LOGGER.level <= logging.REPORT:
         set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
@@ -242,7 +258,7 @@ def migrate(input_file, output_file, force, in_place, version):
 
     try:
         archive_format.migrate(input_file, output_file, version, force=force, compression=6)
-    except Exception as error:  # pylint: disable=broad-except
+    except Exception as error:
         if AIIDA_LOGGER.level <= logging.DEBUG:
             raise
         echo.echo_critical(
@@ -255,7 +271,7 @@ def migrate(input_file, output_file, force, in_place, version):
 
 class ExtrasImportCode(Enum):
     """Exit codes for the verdi command line."""
-    # pylint: disable=invalid-name
+
     keep_existing = ('k', 'c', 'l')
     update_existing = ('k', 'c', 'u')
     mirror = ('n', 'c', 'u')
@@ -270,18 +286,18 @@ class ExtrasImportCode(Enum):
     type=click.STRING,
     cls=options.MultipleValueOption,
     help='Discover all URL targets pointing to files with the .aiida extension for these HTTP addresses. '
-    'Automatically discovered archive URLs will be downloaded and added to ARCHIVES for importing.'
+    'Automatically discovered archive URLs will be downloaded and added to ARCHIVES for importing.',
 )
 @click.option(
     '--import-group/--no-import-group',
     default=True,
     show_default=True,
-    help='Add all imported nodes to the specified group, or an automatically created one'
+    help='Add all imported nodes to the specified group, or an automatically created one',
 )
 @options.GROUP(
     type=GroupParamType(create_if_not_exist=True),
     help='Specify group to which all the import nodes will be added. If such a group does not exist, it will be'
-    ' created automatically.'
+    ' created automatically.',
 )
 @click.option(
     '-e',
@@ -293,16 +309,14 @@ class ExtrasImportCode(Enum):
     'none: do not import any extras.'
     'keep_existing: import all extras and keep original value of existing extras. '
     'update_existing: import all extras and overwrite value of existing extras. '
-    'mirror: import all extras and remove any existing extras that are not present in the archive. '
+    'mirror: import all extras and remove any existing extras that are not present in the archive. ',
 )
 @click.option(
     '-n',
     '--extras-mode-new',
     type=click.Choice(EXTRAS_MODE_NEW),
     default='import',
-    help='Specify whether to import extras of new nodes: '
-    'import: import extras. '
-    'none: do not import extras.'
+    help='Specify whether to import extras of new nodes: ' 'import: import extras. ' 'none: do not import extras.',
 )
 @click.option(
     '--comment-mode',
@@ -311,19 +325,19 @@ class ExtrasImportCode(Enum):
     help='Specify the way to import Comments with identical UUIDs: '
     'leave: Leave the existing Comments in the database (default).'
     'newest: Use only the newest Comments (based on mtime).'
-    'overwrite: Replace existing Comments with those from the import file.'
+    'overwrite: Replace existing Comments with those from the import file.',
 )
 @click.option(
     '--include-authinfos/--exclude-authinfos',
     default=False,
     show_default=True,
-    help='Include or exclude authentication information for computer(s) in import.'
+    help='Include or exclude authentication information for computer(s) in import.',
 )
 @click.option(
     '--migration/--no-migration',
     default=True,
     show_default=True,
-    help='Force migration of archive file archives, if needed.'
+    help='Force migration of archive file archives, if needed.',
 )
 @click.option(
     '-b', '--batch-size', default=1000, type=int, help='Stream database rows in batches, to reduce memory usage.'
@@ -332,17 +346,26 @@ class ExtrasImportCode(Enum):
 @decorators.with_dbenv()
 @click.pass_context
 def import_archive(
-    ctx, archives, webpages, extras_mode_existing, extras_mode_new, comment_mode, include_authinfos, migration,
-    batch_size, import_group, group, test_run
+    ctx,
+    archives,
+    webpages,
+    extras_mode_existing,
+    extras_mode_new,
+    comment_mode,
+    include_authinfos,
+    migration,
+    batch_size,
+    import_group,
+    group,
+    test_run,
 ):
     """Import archived data to a profile.
 
     The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """
-    # pylint: disable=unused-argument
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
 
-    if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
+    if AIIDA_LOGGER.level <= logging.REPORT:
         set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
@@ -378,7 +401,8 @@ def _echo_exception(msg: str, exception, warn_only: bool = False):
 
     """
     from aiida.tools.archive.imports import IMPORT_LOGGER
-    message = f'{msg}: {exception.__class__.__name__}: {str(exception)}'
+
+    message = f'{msg}: {exception.__class__.__name__}: {exception!s}'
     if warn_only:
         echo.echo_warning(message)
     else:
@@ -441,7 +465,6 @@ def _import_archive_and_migrate(
     filepath = ctx.obj['config'].get_option('storage.sandbox') or None
 
     with SandboxFolder(filepath=filepath) as temp_folder:
-
         archive_path = archive
 
         if web_based:
@@ -460,7 +483,6 @@ def _import_archive_and_migrate(
             _import_archive(archive_path, archive_format=archive_format, **import_kwargs)
         except IncompatibleStorageSchema as exception:
             if try_migration:
-
                 echo.echo_report(f'incompatible version detected for {archive}, trying migration')
                 try:
                     new_path = temp_folder.get_abs_path('migrated_archive.aiida')

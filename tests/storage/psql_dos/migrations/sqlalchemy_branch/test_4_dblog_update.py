@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Tests DbLog migration: 7ca08c391c49 -> 375c2db70663"""
 import json
 
@@ -26,7 +27,7 @@ class TestDbLogMigrationRecordCleaning:
     migrator: PsqlDosMigrator
 
     @pytest.fixture(autouse=True)
-    def setup_db(self, perform_migrations: PsqlDosMigrator):  # pylint: disable=too-many-locals,too-many-statements
+    def setup_db(self, perform_migrations: PsqlDosMigrator):
         """Setup the database schema."""
         from aiida.storage.psql_dos.migrations.utils.utils import dumps_json
 
@@ -35,13 +36,12 @@ class TestDbLogMigrationRecordCleaning:
         # starting revision
         perform_migrations.migrate_up('sqlalchemy@7ca08c391c49')  # 7ca08c391c49_calc_job_option_attribute_keys
 
-        DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
-        DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-        DbWorkflow = perform_migrations.get_current_table('db_dbworkflow')  # pylint: disable=invalid-name
-        DbLog = perform_migrations.get_current_table('db_dblog')  # pylint: disable=invalid-name
+        DbUser = perform_migrations.get_current_table('db_dbuser')
+        DbNode = perform_migrations.get_current_table('db_dbnode')
+        DbWorkflow = perform_migrations.get_current_table('db_dbworkflow')
+        DbLog = perform_migrations.get_current_table('db_dblog')
 
         with perform_migrations.session() as session:
-
             user = DbUser(email='user@aiida.net', is_superuser=True)
             session.add(user)
             session.commit()
@@ -72,19 +72,19 @@ class TestDbLogMigrationRecordCleaning:
                     'levelno': 23,
                     'message': 'calculation node 1',
                     'objname': 'node.calculation.job.quantumespresso.pw.',
-                }
+                },
             )
             log_2 = DbLog(
                 loggername='something.else logger',
                 objpk=param.id,
                 objname='something.else.',
-                message='parameter data with log message'
+                message='parameter data with log message',
             )
             log_3 = DbLog(
                 loggername='TopologicalWorkflow logger',
                 objpk=leg_workf.id,
                 objname='aiida.workflows.user.topologicalworkflows.topo.TopologicalWorkflow',
-                message='parameter data with log message'
+                message='parameter data with log message',
             )
             log_4 = DbLog(
                 loggername='CalculationNode logger',
@@ -98,7 +98,7 @@ class TestDbLogMigrationRecordCleaning:
                     'levelno': 23,
                     'message': 'calculation node 1',
                     'objname': 'node.calculation.job.quantumespresso.pw.',
-                }
+                },
             )
             # Creating two more log records that don't correspond to a node
             log_5 = DbLog(
@@ -113,7 +113,7 @@ class TestDbLogMigrationRecordCleaning:
                     'levelno': 25,
                     'message': 'calculation node 1000',
                     'objname': 'node.calculation.job.quantumespresso.pw.',
-                }
+                },
             )
             log_6 = DbLog(
                 loggername='CalculationNode logger',
@@ -127,7 +127,7 @@ class TestDbLogMigrationRecordCleaning:
                     'levelno': 24,
                     'message': 'calculation node 1001',
                     'objname': 'node.calculation.job.quantumespresso.pw.',
-                }
+                },
             )
 
             session.add(log_1)
@@ -140,7 +140,7 @@ class TestDbLogMigrationRecordCleaning:
             session.commit()
 
             # Storing temporarily information needed for the check at the test
-            self.to_check: dict = {}  # pylint: disable=attribute-defined-outside-init
+            self.to_check: dict = {}
 
             # Keeping calculation & calculation log ids
             self.to_check['CalculationNode'] = (
@@ -156,9 +156,13 @@ class TestDbLogMigrationRecordCleaning:
                 cols_to_project.append(getattr(DbLog, val))
 
             # Getting the serialized Dict logs
-            param_data = session.query(DbLog).filter(DbLog.objpk == param.id
-                                                     ).filter(DbLog.objname == 'something.else.'
-                                                              ).with_entities(*cols_to_project).one()
+            param_data = (
+                session.query(DbLog)
+                .filter(DbLog.objpk == param.id)
+                .filter(DbLog.objname == 'something.else.')
+                .with_entities(*cols_to_project)
+                .one()
+            )
             serialized_param_data = dumps_json([param_data._asdict()])
             # Getting the serialized logs for the unknown entity logs (as the export migration fuction
             # provides them) - this should coincide to the above
@@ -168,21 +172,25 @@ class TestDbLogMigrationRecordCleaning:
             self.to_check['Dict'] = (serialized_param_data, serialized_unknown_exp_logs, unknown_exp_logs_number)
 
             # Getting the serialized legacy workflow logs
-            # yapf: disable
-            leg_wf = session.query(DbLog).filter(DbLog.objpk == leg_workf.id).filter(
-                DbLog.objname == 'aiida.workflows.user.topologicalworkflows.topo.TopologicalWorkflow'
-            ).with_entities(*cols_to_project).one()
+
+            leg_wf = (
+                session.query(DbLog)
+                .filter(DbLog.objpk == leg_workf.id)
+                .filter(DbLog.objname == 'aiida.workflows.user.topologicalworkflows.topo.TopologicalWorkflow')
+                .with_entities(*cols_to_project)
+                .one()
+            )
             serialized_leg_wf_logs = dumps_json([leg_wf._asdict()])
             # Getting the serialized logs for the legacy workflow logs (as the export migration function
             # provides them) - this should coincide to the above
             serialized_leg_wf_exp_logs = dblog_update.get_serialized_legacy_workflow_logs(session)
             eg_wf_exp_logs_number = dblog_update.get_legacy_workflow_log_number(session)
-            self.to_check['WorkflowNode'] = (serialized_leg_wf_logs, serialized_leg_wf_exp_logs,
-                                                eg_wf_exp_logs_number)
+            self.to_check['WorkflowNode'] = (serialized_leg_wf_logs, serialized_leg_wf_exp_logs, eg_wf_exp_logs_number)
 
             # Getting the serialized logs that don't correspond to a DbNode record
-            logs_no_node = session.query(DbLog).filter(
-                DbLog.id.in_([log_5.id, log_6.id])).with_entities(*cols_to_project)
+            logs_no_node = (
+                session.query(DbLog).filter(DbLog.id.in_([log_5.id, log_6.id])).with_entities(*cols_to_project)
+            )
             logs_no_node_list = [log_no_node._asdict() for log_no_node in logs_no_node]
             serialized_logs_no_node = dumps_json(logs_no_node_list)
 
@@ -202,36 +210,44 @@ class TestDbLogMigrationRecordCleaning:
         # base class. To prevent foreign keys from other tables still referencing these tables, we have to make sure to
         # clean them here manually, before we call the parent, which will call the standard reset database methods.
 
-        DbWorkflow = perform_migrations.get_current_table('db_dbworkflow')  # pylint: disable=invalid-name
+        DbWorkflow = perform_migrations.get_current_table('db_dbworkflow')
 
         with perform_migrations.session() as session:
             session.query(DbWorkflow).delete()
             session.commit()
 
     def test_dblog_calculation_node(self):
-        """
-        Verify that after the migration there is only two log records left and verify that they corresponds to
+        """Verify that after the migration there is only two log records left and verify that they corresponds to
         the CalculationNodes.
         """
-        DbLog = self.migrator.get_current_table('db_dblog')  # pylint: disable=invalid-name
+        DbLog = self.migrator.get_current_table('db_dblog')
 
         with self.migrator.session() as session:
             # Check that only two log records exist
             assert session.query(DbLog).count() == 2, 'There should be two log records left'
 
             # Get the node id of the log record referencing the node and verify that it is the correct one
-            dbnode_id_1 = session.query(DbLog).filter(
-                DbLog.id == self.to_check['CalculationNode'][1]).with_entities(column('dbnode_id')).one()[0]
-            assert dbnode_id_1 == self.to_check['CalculationNode'][0], 'The the referenced node is not ' \
-                                'the expected one'
-            dbnode_id_2 = session.query(DbLog).filter(
-                DbLog.id == self.to_check['CalculationNode'][3]).with_entities(column('dbnode_id')).one()[0]
-            assert dbnode_id_2 == self.to_check['CalculationNode'][2], 'The the referenced node is not ' \
-                                'the expected one'
+            dbnode_id_1 = (
+                session.query(DbLog)
+                .filter(DbLog.id == self.to_check['CalculationNode'][1])
+                .with_entities(column('dbnode_id'))
+                .one()[0]
+            )
+            assert dbnode_id_1 == self.to_check['CalculationNode'][0], (
+                'The the referenced node is not ' 'the expected one'
+            )
+            dbnode_id_2 = (
+                session.query(DbLog)
+                .filter(DbLog.id == self.to_check['CalculationNode'][3])
+                .with_entities(column('dbnode_id'))
+                .one()[0]
+            )
+            assert dbnode_id_2 == self.to_check['CalculationNode'][2], (
+                'The the referenced node is not ' 'the expected one'
+            )
 
     def test_dblog_correct_export_of_logs(self):
-        """
-        Verify that export log methods for legacy workflows, unknown entities and log records that
+        """Verify that export log methods for legacy workflows, unknown entities and log records that
         don't correspond to nodes, work as expected
         """
         assert self.to_check['Dict'][0] == self.to_check['Dict'][1]
@@ -240,15 +256,14 @@ class TestDbLogMigrationRecordCleaning:
         assert self.to_check['WorkflowNode'][0] == self.to_check['WorkflowNode'][1]
         assert self.to_check['WorkflowNode'][2] == 1
 
-        assert sorted(list(json.loads(self.to_check['NoNode'][0])), key=lambda k: k['id']) == \
-                          sorted(list(json.loads(self.to_check['NoNode'][1])), key=lambda k: k['id'])
+        assert sorted(list(json.loads(self.to_check['NoNode'][0])), key=lambda k: k['id']) == sorted(
+            list(json.loads(self.to_check['NoNode'][1])), key=lambda k: k['id']
+        )
         assert self.to_check['NoNode'][2] == 2
 
     def test_metadata_correctness(self):
-        """
-        Verify that the metadata of the remaining records don't have an objpk and objmetadata values.
-        """
-        DbLog = self.migrator.get_current_table('db_dblog')  # pylint: disable=invalid-name
+        """Verify that the metadata of the remaining records don't have an objpk and objmetadata values."""
+        DbLog = self.migrator.get_current_table('db_dblog')
 
         with self.migrator.session() as session:
             metadata = list(session.query(DbLog).with_entities(getattr(DbLog, 'metadata')).all())
@@ -267,9 +282,9 @@ def test_dblog_uuid_addition(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@041a79fc615f')  # 041a79fc615f_dblog_cleaning
 
     # setup the database
-    DbLog = perform_migrations.get_current_table('db_dblog')  # pylint: disable=invalid-name
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbLog = perform_migrations.get_current_table('db_dblog')
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net', is_superuser=True)
         session.add(user)
@@ -294,7 +309,7 @@ def test_dblog_uuid_addition(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@375c2db70663')  # 375c2db70663_dblog_uuid_uniqueness_constraint
 
     # perform some checks
-    DbLog = perform_migrations.get_current_table('db_dblog')  # pylint: disable=invalid-name
+    DbLog = perform_migrations.get_current_table('db_dblog')
     with perform_migrations.session() as session:
         l_uuids = list(session.query(DbLog).with_entities(getattr(DbLog, 'uuid')).all())
         s_uuids = set(l_uuids)

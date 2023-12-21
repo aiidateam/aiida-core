@@ -14,8 +14,7 @@ from aiida.orm import Dict, KpointsData
 
 
 def get_explicit_kpoints_path(structure, parameters):
-    """
-    Return the kpoint path for band structure (in scaled and absolute
+    """Return the kpoint path for band structure (in scaled and absolute
     coordinates), given a crystal structure,
     using the paths proposed in the various publications (see description
     of the 'recipe' input parameter). The parameters are the same
@@ -53,7 +52,6 @@ def get_explicit_kpoints_path(structure, parameters):
 
         - ``conv_structure``: A StructureData with the primitive structure
     """
-    # pylint: disable=too-many-locals
     from aiida.tools.data.structure import spglib_tuple_to_structure, structure_to_spglib_tuple
 
     structure_tuple, kind_info, kinds = structure_to_spglib_tuple(structure)
@@ -95,8 +93,7 @@ def get_explicit_kpoints_path(structure, parameters):
 
 
 def get_kpoints_path(structure, parameters):
-    """
-    Return the kpoint path information for band structure given a
+    """Return the kpoint path information for band structure given a
     crystal structure, using the paths from the chosen recipe/reference.
     The parameters are the same
     as get get_path in __init__, but here all structures are
@@ -148,7 +145,8 @@ def get_kpoints_path(structure, parameters):
     primitive_lattice = rawdict.pop('primitive_lattice')
     primitive_positions = rawdict.pop('primitive_positions')
     primitive_types = rawdict.pop('primitive_types')
-    result['primitive_structure'] = spglib_tuple_to_structure((primitive_lattice, primitive_positions, primitive_types),
-                                                              kind_info, kinds)
+    result['primitive_structure'] = spglib_tuple_to_structure(
+        (primitive_lattice, primitive_positions, primitive_types), kind_info, kinds
+    )
 
     return result

@@ -24,8 +24,7 @@ VISUALIZATION_FORMATS = ['ase', 'jmol', 'vesta', 'vmd', 'xcrysden']
 
 
 def _store_structure(new_structure, dry_run):
-    """
-    Store a structure and print a message (or don't store it if it's a dry_run)
+    """Store a structure and print a message (or don't store it if it's a dry_run)
 
     This is a utility function to avoid code duplication.
 
@@ -46,7 +45,6 @@ def structure():
     """Manipulate StructureData objects (crystal structures)."""
 
 
-# pylint: disable=too-many-locals,too-many-branches
 @structure.command('list')
 @options.FORMULA_MODE()
 @options.WITH_ELEMENTS()
@@ -60,8 +58,14 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
 
     elements_only = False
     lst = data_list(
-        StructureData, ['Id', 'Label', 'Kinds', 'Sites'], elements, elements_only, formula_mode, past_days, groups,
-        all_users
+        StructureData,
+        ['Id', 'Label', 'Kinds', 'Sites'],
+        elements,
+        elements_only,
+        formula_mode,
+        past_days,
+        groups,
+        all_users,
     )
 
     entry_list = []
@@ -164,14 +168,14 @@ def structure_import():
     type=click.FLOAT,
     show_default=True,
     default=1.0,
-    help='The factor by which the cell accomodating the structure should be increased (angstrom).'
+    help='The factor by which the cell accomodating the structure should be increased (angstrom).',
 )
 @click.option(
     '--vacuum-addition',
     type=click.FLOAT,
     show_default=True,
     default=10.0,
-    help='The distance to add to the unit cell after vacuum factor was applied to expand in each dimension (angstrom).'
+    help='The distance to add to the unit cell after vacuum factor was applied to expand in each dimension (angstrom).',
 )
 @click.option(
     '--pbc',
@@ -179,16 +183,14 @@ def structure_import():
     nargs=3,
     show_default=True,
     default=[0, 0, 0],
-    help='Set periodic boundary conditions for each lattice direction, where 0 means periodic and 1 means periodic.'
+    help='Set periodic boundary conditions for each lattice direction, where 0 means periodic and 1 means periodic.',
 )
 @click.option('--label', type=click.STRING, show_default=False, help='Set the structure node label (empty by default)')
 @options.GROUP()
 @options.DRY_RUN()
 @decorators.with_dbenv()
 def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, group, dry_run):
-    """
-    Import structure in XYZ format using AiiDA's internal importer
-    """
+    """Import structure in XYZ format using AiiDA's internal importer"""
     from aiida.orm import StructureData
 
     with open(filename, encoding='utf8') as fobj:
@@ -205,11 +207,8 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, group
             raise click.BadParameter('values for pbc must be either 0 or 1', param_hint='pbc')
 
     try:
-        new_structure._parse_xyz(xyz_txt)  # pylint: disable=protected-access
-        new_structure._adjust_default_cell(  # pylint: disable=protected-access
-            vacuum_addition=vacuum_addition,
-            vacuum_factor=vacuum_factor,
-            pbc=pbc_bools)
+        new_structure._parse_xyz(xyz_txt)
+        new_structure._adjust_default_cell(vacuum_addition=vacuum_addition, vacuum_factor=vacuum_factor, pbc=pbc_bools)
 
     except (ValueError, TypeError) as err:
         echo.echo_critical(str(err))
@@ -230,9 +229,7 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, group
 @options.DRY_RUN()
 @decorators.with_dbenv()
 def import_ase(filename, label, group, dry_run):
-    """
-    Import structure with the ase library that supports a number of different formats
-    """
+    """Import structure with the ase library that supports a number of different formats"""
     from aiida.orm import StructureData
 
     try:

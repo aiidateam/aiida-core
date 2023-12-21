@@ -49,6 +49,7 @@ class Option:
     @property
     def global_only(self) -> bool:
         from .config import ProfileOptionsSchema
+
         return self._name.replace('.', '__') not in ProfileOptionsSchema.model_fields
 
     def validate(self, value: Any) -> Any:
@@ -87,12 +88,14 @@ class Option:
 def get_option_names() -> List[str]:
     """Return a list of available option names."""
     from .config import GlobalOptionsSchema
+
     return [key.replace('__', '.') for key in GlobalOptionsSchema.model_fields]
 
 
 def get_option(name: str) -> Option:
     """Return option."""
     from .config import GlobalOptionsSchema
+
     options = GlobalOptionsSchema.model_fields
     option_name = name.replace('.', '__')
     if option_name not in options:

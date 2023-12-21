@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .orbital import *
 from .realhydrogen import *
@@ -22,4 +21,4 @@ __all__ = (
     'RealhydrogenOrbital',
 )
 
-# yapf: enable
+# fmt: on

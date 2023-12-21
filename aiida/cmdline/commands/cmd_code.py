@@ -27,7 +27,7 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls, non_interactive: bool, **kwargs):  # pylint: disable=unused-argument
+def create_code(ctx: click.Context, cls, non_interactive: bool, **kwargs):
     """Create a new `Code` instance."""
     try:
         instance = cls(**kwargs)
@@ -47,15 +47,14 @@ def create_code(ctx: click.Context, cls, non_interactive: bool, **kwargs):  # py
     cls=DynamicEntryPointCommandGroup,
     command=create_code,
     entry_point_group='aiida.data',
-    entry_point_name_filter=r'core\.code\..*'
+    entry_point_name_filter=r'core\.code\..*',
 )
 def code_create():
     """Create a new code."""
 
 
 def get_default(key, ctx):
-    """
-    Get the default argument using a user instance property
+    """Get the default argument using a user instance property
     :param value: The name of the property to use
     :param ctx: The click context (which will be used to get the user)
     :return: The default value, or None
@@ -78,10 +77,10 @@ def get_on_computer(ctx):
     return not getattr(ctx.code_builder, 'is_local')()
 
 
-# pylint: disable=unused-argument
 def set_code_builder(ctx, param, value):
     """Set the code spec for defaults of following options."""
     from aiida.orm.utils.builders.code import CodeBuilder
+
     ctx.code_builder = CodeBuilder.from_code(value)
     return value
 
@@ -131,7 +130,7 @@ def setup_code(ctx, non_interactive, **kwargs):
 
     try:
         code.store()
-    except Exception as exception:  # pylint: disable=broad-except
+    except Exception as exception:
         echo.echo_critical(f'Unable to store the Code: {exception}')
 
     echo.echo_success(f'Code<{code.pk}> {code.full_label} created')
@@ -339,7 +338,7 @@ VALID_PROJECTIONS = {
     '-d',
     '--default-calc-job-plugin',
     type=types.PluginParamType(group='calculations', load=False),
-    help='Filter codes by their optional default calculation job plugin.'
+    help='Filter codes by their optional default calculation job plugin.',
 )
 @options.ALL(help='Include hidden codes.')
 @options.ALL_USERS(help='Include codes from all users.')
@@ -348,7 +347,6 @@ VALID_PROJECTIONS = {
 @click.option('-o', '--show-owner', 'show_owner', is_flag=True, default=False, help='Show owners of codes.')
 @with_dbenv()
 def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, show_owner, project):
-    # pylint: disable=too-many-branches,too-many-locals
     """List the available codes."""
     from aiida import orm
     from aiida.orm.utils.node import load_node_class
@@ -388,14 +386,10 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
         tag='computer',
         with_node='code',
         project=projections.get('computer', None),
-        filters=filters.get('computer', None)
+        filters=filters.get('computer', None),
     )
     query.append(
-        orm.User,
-        tag='user',
-        with_node='code',
-        project=projections.get('user', None),
-        filters=filters.get('user', None)
+        orm.User, tag='user', with_node='code', project=projections.get('user', None), filters=filters.get('user', None)
     )
     query.order_by({'code': {'id': 'asc'}})
 

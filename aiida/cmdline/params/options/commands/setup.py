@@ -18,7 +18,7 @@ from aiida.manage.configuration import Profile, get_config, get_config_option
 from aiida.manage.external.postgres import DEFAULT_DBINFO
 from aiida.manage.external.rmq import BROKER_DEFAULTS
 
-PASSWORD_UNCHANGED = '***'  # noqa
+PASSWORD_UNCHANGED = '***'
 
 
 def validate_profile_parameter(ctx):
@@ -71,7 +71,7 @@ def get_repository_uri_default(ctx):
     return os.path.join(AIIDA_CONFIG_FOLDER, 'repository', ctx.params['profile'].name)
 
 
-def get_quicksetup_repository_uri(ctx, param, value):  # pylint: disable=unused-argument
+def get_quicksetup_repository_uri(ctx, param, value):
     """Return the repository URI to be used as default in `verdi quicksetup`
 
     :param ctx: click context which should contain the contextual parameters
@@ -80,7 +80,7 @@ def get_quicksetup_repository_uri(ctx, param, value):  # pylint: disable=unused-
     return get_repository_uri_default(ctx)
 
 
-def get_quicksetup_database_name(ctx, param, value):  # pylint: disable=unused-argument
+def get_quicksetup_database_name(ctx, param, value):
     """Determine the database name to be used as default for the Postgres connection in `verdi quicksetup`
 
     If a value is explicitly passed, that value is returned unchanged.
@@ -106,7 +106,7 @@ def get_quicksetup_database_name(ctx, param, value):  # pylint: disable=unused-a
     return database_name
 
 
-def get_quicksetup_username(ctx, param, value):  # pylint: disable=unused-argument
+def get_quicksetup_username(ctx, param, value):
     """Determine the username to be used as default for the Postgres connection in `verdi quicksetup`
 
     If a value is explicitly passed, that value is returned. If there is no value, the name will be based on the
@@ -127,7 +127,7 @@ def get_quicksetup_username(ctx, param, value):  # pylint: disable=unused-argume
     return username
 
 
-def get_quicksetup_password(ctx, param, value):  # pylint: disable=unused-argument
+def get_quicksetup_password(ctx, param, value):
     """Determine the password to be used as default for the Postgres connection in `verdi quicksetup`
 
     If a value is explicitly passed, that value is returned. If there is no value, the current username in the context
@@ -165,7 +165,7 @@ SETUP_PROFILE_UUID = options.OverridableOption(
     required=False,
     hidden=True,
     type=str,
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_PROFILE = options.OverridableOption(
@@ -174,7 +174,7 @@ SETUP_PROFILE = options.OverridableOption(
     help='The name of the new profile.',
     required=True,
     type=types.ProfileParamType(cannot_exist=True),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_PROFILE_SET_AS_DEFAULT = options.OverridableOption(
@@ -183,35 +183,35 @@ SETUP_PROFILE_SET_AS_DEFAULT = options.OverridableOption(
     help='Whether to set the profile as the default.',
     is_flag=True,
     default=True,
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_USER_EMAIL = options.USER_EMAIL.clone(
     prompt='Email Address (for sharing data)',
     default=functools.partial(get_config_option, 'autofill.user.email'),
     required=True,
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_USER_FIRST_NAME = options.USER_FIRST_NAME.clone(
     prompt='First name',
     default=lambda: get_config_option('autofill.user.first_name') or 'John',
     required=True,
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_USER_LAST_NAME = options.USER_LAST_NAME.clone(
     prompt='Last name',
     default=lambda: get_config_option('autofill.user.last_name') or 'Doe',
     required=True,
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_USER_INSTITUTION = options.USER_INSTITUTION.clone(
     prompt='Institution',
     default=lambda: get_config_option('autofill.user.institution') or 'Unknown',
     required=True,
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 QUICKSETUP_DATABASE_ENGINE = options.DB_ENGINE
@@ -226,7 +226,7 @@ QUICKSETUP_DATABASE_NAME = options.OverridableOption(
     '--db-name',
     help='Name of the database to create.',
     type=types.NonEmptyStringParamType(),
-    callback=get_quicksetup_database_name
+    callback=get_quicksetup_database_name,
 )
 
 QUICKSETUP_DATABASE_USERNAME = options.DB_USERNAME.clone(
@@ -243,7 +243,7 @@ QUICKSETUP_SUPERUSER_DATABASE_NAME = options.OverridableOption(
     '--su-db-name',
     help='Name of the template database to connect to as the database superuser.',
     type=click.STRING,
-    default=DEFAULT_DBINFO['database']
+    default=DEFAULT_DBINFO['database'],
 )
 
 QUICKSETUP_SUPERUSER_DATABASE_PASSWORD = options.OverridableOption(
@@ -275,13 +275,13 @@ SETUP_DATABASE_ENGINE = QUICKSETUP_DATABASE_ENGINE.clone(
     contextual_default=functools.partial(
         get_profile_attribute_default, ('storage.config.database_engine', 'postgresql_psycopg2')
     ),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_DATABASE_BACKEND = QUICKSETUP_DATABASE_BACKEND.clone(
     prompt='Database backend',
     contextual_default=functools.partial(get_profile_attribute_default, ('storage_backend', 'core.psql_dos')),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_DATABASE_HOSTNAME = QUICKSETUP_DATABASE_HOSTNAME.clone(
@@ -289,7 +289,7 @@ SETUP_DATABASE_HOSTNAME = QUICKSETUP_DATABASE_HOSTNAME.clone(
     contextual_default=functools.partial(
         get_profile_attribute_default, ('storage.config.database_hostname', 'localhost')
     ),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_DATABASE_PORT = QUICKSETUP_DATABASE_PORT.clone(
@@ -297,28 +297,28 @@ SETUP_DATABASE_PORT = QUICKSETUP_DATABASE_PORT.clone(
     contextual_default=functools.partial(
         get_profile_attribute_default, ('storage.config.database_port', DEFAULT_DBINFO['port'])
     ),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_DATABASE_NAME = QUICKSETUP_DATABASE_NAME.clone(
     prompt='Database name',
     required=True,
     contextual_default=functools.partial(get_profile_attribute_default, ('storage.config.database_name', None)),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_DATABASE_USERNAME = QUICKSETUP_DATABASE_USERNAME.clone(
     prompt='Database username',
     required=True,
     contextual_default=functools.partial(get_profile_attribute_default, ('storage.config.database_username', None)),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
     prompt='Database password',
     required=True,
     contextual_default=functools.partial(get_profile_attribute_default, ('storage.config.database_password', None)),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_BROKER_PROTOCOL = QUICKSETUP_BROKER_PROTOCOL.clone(
@@ -327,7 +327,7 @@ SETUP_BROKER_PROTOCOL = QUICKSETUP_BROKER_PROTOCOL.clone(
     contextual_default=functools.partial(
         get_profile_attribute_default, ('process_control.config.broker_protocol', BROKER_DEFAULTS.protocol)
     ),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_BROKER_USERNAME = QUICKSETUP_BROKER_USERNAME.clone(
@@ -336,7 +336,7 @@ SETUP_BROKER_USERNAME = QUICKSETUP_BROKER_USERNAME.clone(
     contextual_default=functools.partial(
         get_profile_attribute_default, ('process_control.config.broker_username', BROKER_DEFAULTS.username)
     ),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_BROKER_PASSWORD = QUICKSETUP_BROKER_PASSWORD.clone(
@@ -345,7 +345,7 @@ SETUP_BROKER_PASSWORD = QUICKSETUP_BROKER_PASSWORD.clone(
     contextual_default=functools.partial(
         get_profile_attribute_default, ('process_control.config.broker_password', BROKER_DEFAULTS.password)
     ),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_BROKER_HOST = QUICKSETUP_BROKER_HOST.clone(
@@ -354,7 +354,7 @@ SETUP_BROKER_HOST = QUICKSETUP_BROKER_HOST.clone(
     contextual_default=functools.partial(
         get_profile_attribute_default, ('process_control.config.broker_host', BROKER_DEFAULTS.host)
     ),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_BROKER_PORT = QUICKSETUP_BROKER_PORT.clone(
@@ -363,7 +363,7 @@ SETUP_BROKER_PORT = QUICKSETUP_BROKER_PORT.clone(
     contextual_default=functools.partial(
         get_profile_attribute_default, ('process_control.config.broker_port', BROKER_DEFAULTS.port)
     ),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_BROKER_VIRTUAL_HOST = QUICKSETUP_BROKER_VIRTUAL_HOST.clone(
@@ -372,7 +372,7 @@ SETUP_BROKER_VIRTUAL_HOST = QUICKSETUP_BROKER_VIRTUAL_HOST.clone(
     contextual_default=functools.partial(
         get_profile_attribute_default, ('process_control.config.broker_virtual_host', BROKER_DEFAULTS.virtual_host)
     ),
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_REPOSITORY_URI = QUICKSETUP_REPOSITORY_URI.clone(
@@ -380,7 +380,7 @@ SETUP_REPOSITORY_URI = QUICKSETUP_REPOSITORY_URI.clone(
     required=True,
     callback=None,  # Unset the `callback` to define the default, which is instead done by the `contextual_default`
     contextual_default=get_repository_uri_default,
-    cls=options.interactive.InteractiveOption
+    cls=options.interactive.InteractiveOption,
 )
 
 SETUP_TEST_PROFILE = options.OverridableOption(

@@ -7,4 +7,5 @@ from aiida.orm import Int
 def divide(x, y):
     return x / y
 
+
 result = divide(Int(1), Int(0))

@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Plugin for SGE.
+"""Plugin for SGE.
 This has been tested on GE 6.2u3.
 
 Plugin originally written by Marco Dorigo.
@@ -17,8 +16,8 @@ Email: marco(DOT)dorigo(AT)rub(DOT)de
 import xml.dom.minidom
 import xml.parsers.expat
 
-from aiida.common.escaping import escape_for_bash
 import aiida.schedulers
+from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import JobInfo, JobState, ParEnvJobResource
 
@@ -81,7 +80,7 @@ _MAP_STATUS_SGE = {
     'dRs': JobState.UNDETERMINED,
     'Eqw': JobState.UNDETERMINED,
     'Ehqw': JobState.UNDETERMINED,
-    'EhRqw': JobState.UNDETERMINED
+    'EhRqw': JobState.UNDETERMINED,
 }
 
 
@@ -90,10 +89,9 @@ class SgeJobResource(ParEnvJobResource):
 
 
 class SgeScheduler(aiida.schedulers.Scheduler):
-    """
-    Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, Oracle Grid Engine, ...)
-    """
-    _logger = aiida.schedulers.Scheduler._logger.getChild('sge')  # pylint: disable=protected-access
+    """Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, Oracle Grid Engine, ...)"""
+
+    _logger = aiida.schedulers.Scheduler._logger.getChild('sge')
 
     # For SGE, we can have a good qstat xml output by querying by
     # user, but not by job id
@@ -105,8 +103,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
     _job_resource_class = SgeJobResource
 
     def _get_joblist_command(self, jobs=None, user=None):
-        """
-        The command to report full information on existing jobs.
+        """The command to report full information on existing jobs.
 
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
@@ -123,7 +120,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         command = 'qstat -ext -urg -xml '
 
         if user:
-            command += f'-u {str(user)}'
+            command += f'-u {user!s}'
         else:
             # All users if no user is specified
             command += "-u '*'"
@@ -137,16 +134,15 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         return command
 
     def _get_submit_script_header(self, job_tmpl):
-        """
-        Return the submit script header, using the parameters from the
+        """Return the submit script header, using the parameters from the
         job_tmpl.
 
         Args:
+        -----
            job_tmpl: an JobTemplate instance with relevant parameters set.
 
         TODO: truncate the title if too long
         """
-        # pylint: disable=too-many-statements,too-many-branches
         import re
         import string
 
@@ -221,12 +217,10 @@ class SgeScheduler(aiida.schedulers.Scheduler):
             lines.append('#$ -j y')
             if job_tmpl.sched_error_path:
                 self.logger.info(
-                    'sched_join_files is True, but sched_error_path is set in '
-                    'SGE script; ignoring sched_error_path'
+                    'sched_join_files is True, but sched_error_path is set in ' 'SGE script; ignoring sched_error_path'
                 )
-        else:
-            if job_tmpl.sched_error_path:
-                lines.append(f'#$ -e {job_tmpl.sched_error_path}')
+        elif job_tmpl.sched_error_path:
+            lines.append(f'#$ -e {job_tmpl.sched_error_path}')
 
         if job_tmpl.queue_name:
             lines.append(f'#$ -q {job_tmpl.queue_name}')
@@ -243,7 +237,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         if not job_tmpl.job_resource:
             raise ValueError('Job resources (as the tot_num_mpiprocs) are required for the SGE scheduler plugin')
         # Setting up the parallel environment
-        lines.append(f'#$ -pe {str(job_tmpl.job_resource.parallel_env)} {int(job_tmpl.job_resource.tot_num_mpiprocs)}')
+        lines.append(f'#$ -pe {job_tmpl.job_resource.parallel_env!s} {int(job_tmpl.job_resource.tot_num_mpiprocs)}')
 
         if job_tmpl.max_wallclock_seconds is not None:
             try:
@@ -252,9 +246,9 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    'max_wallclock_seconds must be '
-                    "a positive integer (in seconds)! It is instead '{}'"
-                    ''.format((job_tmpl.max_wallclock_seconds))
+                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
+                        (job_tmpl.max_wallclock_seconds)
+                    )
                 )
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600
@@ -268,15 +262,14 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         return '\n'.join(lines)
 
     def _get_submit_command(self, submit_script):
-        """
-        Return the string to execute to submit a given script.
+        """Return the string to execute to submit a given script.
 
         Args:
+        -----
             submit_script: the path of the submit script relative to the working
                 directory.
                 IMPORTANT: submit_script should be already escaped.
         """
-        # pylint: disable=too-many-statements,too-many-branches
         submit_command = f'qsub -terse {submit_script}'
 
         self.logger.info(f'submitting with: {submit_command}')
@@ -284,14 +277,13 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         return submit_command
 
     def _parse_joblist_output(self, retval, stdout, stderr):
-        # pylint: disable=too-many-statements,too-many-branches
         if retval != 0:
             self.logger.error(f'Error in _parse_joblist_output: retval={retval}; stdout={stdout}; stderr={stderr}')
             raise SchedulerError(f'Error during joblist retrieval, retval={retval}')
 
         if stderr.strip():
             self.logger.warning(
-                f'in _parse_joblist_output for {str(self.transport)}: there was some text in stderr: {stderr}'
+                f'in _parse_joblist_output for {self.transport!s}: there was some text in stderr: {stderr}'
             )
 
         if stdout:
@@ -305,10 +297,9 @@ class SgeScheduler(aiida.schedulers.Scheduler):
             raise SchedulerError('Error during joblist retrieval, no stdout produced')
 
         try:
-            first_child = xmldata.firstChild  # pylint: disable=no-member
+            first_child = xmldata.firstChild
             second_childs = first_child.childNodes
-            tag_names_sec = [elem.tagName for elem in second_childs \
-                             if elem.nodeType == 1]
+            tag_names_sec = [elem.tagName for elem in second_childs if elem.nodeType == 1]
             if 'queue_info' not in tag_names_sec:
                 self.logger.error(f'Error in sge._parse_joblist_output: no queue_info: {stdout}')
                 raise SchedulerError
@@ -426,8 +417,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         return joblist
 
     def _parse_submit_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the submit command, as returned by executing the
+        """Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
 
         To be implemented by the plugin.
@@ -440,14 +430,13 @@ class SgeScheduler(aiida.schedulers.Scheduler):
 
         if stderr.strip():
             self.logger.warning(
-                f'in _parse_submit_output for {str(self.transport)}: there was some text in stderr: {stderr}'
+                f'in _parse_submit_output for {self.transport!s}: there was some text in stderr: {stderr}'
             )
 
         return stdout.strip()
 
     def _parse_time_string(self, string, fmt='%Y-%m-%dT%H:%M:%S'):
-        """
-        Parse a time string in the format returned from qstat -xml -ext and
+        """Parse a time string in the format returned from qstat -xml -ext and
         returns a datetime object.
         Example format: 2013-06-13T11:53:11
         """
@@ -466,9 +455,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         return datetime.datetime.fromtimestamp(time.mktime(time_struct))
 
     def _get_kill_command(self, jobid):
-        """
-        Return the command to kill the job with specified jobid.
-        """
+        """Return the command to kill the job with specified jobid."""
         submit_command = f'qdel {jobid}'
 
         self.logger.info(f'killing job {jobid}')
@@ -476,8 +463,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         return submit_command
 
     def _parse_kill_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the kill command.
+        """Parse the output of the kill command.
 
         To be implemented by the plugin.
 
@@ -489,12 +475,10 @@ class SgeScheduler(aiida.schedulers.Scheduler):
 
         if stderr.strip():
             self.logger.warning(
-                f'in _parse_kill_output for {str(self.transport)}: there was some text in stderr: {stderr}'
+                f'in _parse_kill_output for {self.transport!s}: there was some text in stderr: {stderr}'
             )
 
         if stdout.strip():
-            self.logger.info(
-                f'in _parse_kill_output for {str(self.transport)}: there was some text in stdout: {stdout}'
-            )
+            self.logger.info(f'in _parse_kill_output for {self.transport!s}: there was some text in stdout: {stdout}')
 
         return True

@@ -8,11 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for GroupPath command line interface"""
-# pylint: disable=redefined-outer-name,unused-argument
 from textwrap import dedent
 
-from click.testing import CliRunner
 import pytest
+from click.testing import CliRunner
 
 from aiida import orm
 from aiida.cmdline.commands.cmd_group import group_path_ls
@@ -30,7 +29,6 @@ def setup_groups(aiida_profile_clean):
 
 def test_with_no_opts(setup_groups):
     """Test ``verdi group path ls``"""
-
     cli_runner = CliRunner()
 
     result = cli_runner.invoke(group_path_ls)
@@ -48,7 +46,6 @@ def test_with_no_opts(setup_groups):
 
 def test_recursive(setup_groups):
     """Test ``verdi group path ls --recursive``"""
-
     cli_runner = CliRunner()
 
     for tag in ['-R', '--recursive']:
@@ -64,7 +61,6 @@ def test_recursive(setup_groups):
 @pytest.mark.parametrize('tag', ['-l', '--long'])
 def test_long(setup_groups, tag):
     """Test ``verdi group path ls --long``"""
-
     cli_runner = CliRunner()
 
     result = cli_runner.invoke(group_path_ls, [tag])
@@ -109,7 +105,6 @@ def test_long(setup_groups, tag):
 @pytest.mark.parametrize('tag', ['--no-virtual'])
 def test_groups_only(setup_groups, tag):
     """Test ``verdi group path ls --no-virtual``"""
-
     cli_runner = CliRunner()
 
     result = cli_runner.invoke(group_path_ls, [tag, '-l', '-R', '--with-description'])

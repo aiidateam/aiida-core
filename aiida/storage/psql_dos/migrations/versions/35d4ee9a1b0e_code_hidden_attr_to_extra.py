@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Migrating 'hidden' properties from DbAttribute to DbExtra for code.Code. nodes
 
 Revision ID: 35d4ee9a1b0e

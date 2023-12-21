@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi database` commands."""
-# pylint: disable=unused-argument
 
 import click
 
@@ -52,6 +51,7 @@ def database_migrate(ctx, force):
     .. deprecated:: v2.0.0
     """
     from aiida.cmdline.commands.cmd_storage import storage_migrate
+
     ctx.forward(storage_migrate)
 
 
@@ -69,7 +69,7 @@ def verdi_database_integrity():
     '--table',
     default='db_dbnode',
     type=click.Choice(('db_dbcomment', 'db_dbcomputer', 'db_dbgroup', 'db_dbnode')),
-    help='The database table to operate on.'
+    help='The database table to operate on.',
 )
 @click.option(
     '-a', '--apply-patch', is_flag=True, help='Actually apply the proposed changes instead of performing a dry run.'

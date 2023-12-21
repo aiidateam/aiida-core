@@ -10,8 +10,8 @@
 """Module for the ProfileAccessManager that tracks process access to the profile."""
 import contextlib
 import os
-from pathlib import Path
 import typing
+from pathlib import Path
 
 import psutil
 
@@ -62,8 +62,7 @@ class ProfileAccessManager:
         :raises ~aiida.common.exceptions.LockedProfileError: if the profile is locked.
         """
         error_message = (
-            f'process {self.process.pid} cannot access profile `{self.profile.name}` '
-            f'because it is being locked.'
+            f'process {self.process.pid} cannot access profile `{self.profile.name}` ' f'because it is being locked.'
         )
         self._raise_if_locked(error_message)
 
@@ -82,8 +81,7 @@ class ProfileAccessManager:
             # Check again in case a lock was created in the time between the first check and creating the
             # access record file.
             error_message = (
-                f'profile `{self.profile.name}` was locked while process '
-                f'{self.process.pid} was requesting access.'
+                f'profile `{self.profile.name}` was locked while process ' f'{self.process.pid} was requesting access.'
             )
             self._raise_if_locked(error_message)
 
@@ -104,16 +102,14 @@ class ProfileAccessManager:
         :raises ~aiida.common.exceptions.LockedProfileError: if there currently already is a lock on the profile.
         """
         error_message = (
-            f'process {self.process.pid} cannot lock profile `{self.profile.name}` '
-            f'because it is already locked.'
+            f'process {self.process.pid} cannot lock profile `{self.profile.name}` ' f'because it is already locked.'
         )
         self._raise_if_locked(error_message)
 
         self._clear_stale_pid_files()
 
         error_message = (
-            f'process {self.process.pid} cannot lock profile `{self.profile.name}` '
-            f'because it is being accessed.'
+            f'process {self.process.pid} cannot lock profile `{self.profile.name}` ' f'because it is being accessed.'
         )
         self._raise_if_active(error_message)
 

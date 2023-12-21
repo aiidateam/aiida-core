@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member,line-too-long
 """Finalise parity of the legacy django branch with the sqlalchemy branch.
 
 1. Remove and recreate all (non-unique) indexes, with standard names and postgresql ops.
@@ -38,7 +37,11 @@ def upgrade():
     synchronize_schemas(op)
 
     for tbl_name in (
-        'auth_group_permissions', 'auth_permission', 'auth_group', 'django_content_type', 'django_migrations'
+        'auth_group_permissions',
+        'auth_permission',
+        'auth_group',
+        'django_content_type',
+        'django_migrations',
     ):
         op.execute(f'DROP TABLE IF EXISTS {tbl_name} CASCADE')
 

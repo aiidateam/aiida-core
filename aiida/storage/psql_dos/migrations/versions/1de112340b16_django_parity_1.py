@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Parity with Django backend (rev: 0048),
 part 1: Ensure fields to make non-nullable are not currently null
 
@@ -16,8 +15,8 @@ Revises: 34a831f4286d
 Create Date: 2021-08-24 18:52:45.882712
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from aiida.common import timezone
@@ -30,7 +29,7 @@ branch_labels = None
 depends_on = None
 
 
-def upgrade():  # pylint: disable=too-many-statements
+def upgrade():
     """Convert null values to default values.
 
     This migration is performed in preparation for the next migration,

@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-An IPython extension that provides a magic command to load
+"""An IPython extension that provides a magic command to load
 basic aiida commands.
 
 This makes it much easier to start.
@@ -41,8 +40,7 @@ from IPython.core import magic
 
 
 def add_to_ns(local_ns, name, obj):
-    """
-    Add a new variable with name ``name`` and value ``obj`` to the
+    """Add a new variable with name ``name`` and value ``obj`` to the
     namespace ``local_ns``, optionally showing a warning if we are
     hiding an existing variable.
 
@@ -65,7 +63,7 @@ class AiiDALoaderMagics(magic.Magics):
 
     @magic.needs_local_scope
     @magic.line_magic
-    def verdi(self, line='', local_ns=None):  # pylint: disable=unused-argument
+    def verdi(self, line='', local_ns=None):
         """Run the AiiDA command line tool, using the currently loaded configuration and profile.
 
         Invoking ``verdi`` normally through the command line follows a different code path, compared to calling it
@@ -114,11 +112,11 @@ class AiiDALoaderMagics(magic.Magics):
         if command is None:
             raise RuntimeError(f'command `{command_name}` not found.')
 
-        return command(  # pylint: disable=too-many-function-args,unexpected-keyword-arg
+        return command(
             cmdline_arguments[1:],
             prog_name='%verdi',
             obj=AttributeDict({'config': config, 'profile': profile}),
-            standalone_mode=False
+            standalone_mode=False,
         )
 
     @magic.needs_local_scope
@@ -134,7 +132,6 @@ class AiiDALoaderMagics(magic.Magics):
 
         .. todo:: implement parameters, e.g. for the profile to load.
         """
-        # pylint: disable=unused-argument,attribute-defined-outside-init
         from aiida.cmdline.utils.shell import get_start_namespace
         from aiida.manage.configuration import load_profile
 
@@ -154,9 +151,7 @@ class AiiDALoaderMagics(magic.Magics):
         return self
 
     def _repr_json_(self):
-        """
-        Output in JSON format.
-        """
+        """Output in JSON format."""
         obj = {'current_state': self.current_state}
         if version_info[0] >= 3:
             return obj
@@ -164,9 +159,7 @@ class AiiDALoaderMagics(magic.Magics):
         return json.dumps(obj)
 
     def _repr_html_(self):
-        """
-        Output in HTML format.
-        """
+        """Output in HTML format."""
         html = '<p>'
         if self.is_warning:
             html += '<strong>'
@@ -178,9 +171,7 @@ class AiiDALoaderMagics(magic.Magics):
         return html
 
     def _repr_latex_(self):
-        """
-        Output in LaTeX format.
-        """
+        """Output in LaTeX format."""
         if self.is_warning:
             latex = '\\emph{%s}\n' % self.current_state
         else:
@@ -188,10 +179,8 @@ class AiiDALoaderMagics(magic.Magics):
 
         return latex
 
-    def _repr_pretty_(self, pretty_print, cycle):  # pylint: disable=unused-argument
-        """
-        Output in text format.
-        """
+    def _repr_pretty_(self, pretty_print, cycle):
+        """Output in text format."""
         if self.is_warning:
             warning_str = '** '
         else:
@@ -202,8 +191,7 @@ class AiiDALoaderMagics(magic.Magics):
 
 
 def load_ipython_extension(ipython):
-    """
-    Registers the %aiida IPython extension.
+    """Registers the %aiida IPython extension.
 
     .. deprecated:: v3.0.0
         Use :py:func:`~aiida.tools.ipython.ipython_magics.register_ipython_extension` instead.
@@ -212,8 +200,7 @@ def load_ipython_extension(ipython):
 
 
 def register_ipython_extension(ipython=None):
-    """
-    Registers the %aiida IPython extension.
+    """Registers the %aiida IPython extension.
 
     The %aiida IPython extension provides the same environment as the `verdi shell`.
 

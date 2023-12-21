@@ -34,8 +34,7 @@ and these revisions are handled by the `version_profile` and `migrate` backend m
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .backend import *
 
@@ -43,4 +42,4 @@ __all__ = (
     'SqliteZipBackend',
 )
 
-# yapf: enable
+# fmt: on

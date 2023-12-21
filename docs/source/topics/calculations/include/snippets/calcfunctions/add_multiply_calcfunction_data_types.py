@@ -7,8 +7,10 @@ from aiida.orm import Int
 def add(x, y):
     return x + y
 
+
 @calcfunction
 def multiply(x, y):
     return x * y
+
 
 result = multiply(add(Int(1), Int(2)), Int(3))

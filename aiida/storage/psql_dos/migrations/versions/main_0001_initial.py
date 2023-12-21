@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Initial main branch schema
 
 This revision is compatible with the heads of the django and sqlalchemy branches.
@@ -17,8 +16,8 @@ Revises:
 Create Date: 2021-02-02
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = 'main_0001'
@@ -42,10 +41,11 @@ def upgrade():
     )
     op.create_index(
         'ix_pat_db_dbcomputer_label',
-        'db_dbcomputer', ['label'],
+        'db_dbcomputer',
+        ['label'],
         unique=False,
         postgresql_using='btree',
-        postgresql_ops={'label': 'varchar_pattern_ops'}
+        postgresql_ops={'label': 'varchar_pattern_ops'},
     )
     op.create_table(
         'db_dbsetting',

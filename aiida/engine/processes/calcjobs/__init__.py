@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .calcjob import *
 from .importer import *
@@ -25,4 +24,4 @@ __all__ = (
     'JobsList',
 )
 
-# yapf: enable
+# fmt: on

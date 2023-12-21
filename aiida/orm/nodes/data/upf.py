@@ -24,20 +24,26 @@ def emit_deprecation():
     warn_deprecation(
         'The `aiida.orm.nodes.data.upf` module is deprecated. For details how to replace it, please see '
         'https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core.',
-        version=3
+        version=3,
     )
 
 
-REGEX_UPF_VERSION = re.compile(r"""
+REGEX_UPF_VERSION = re.compile(
+    r"""
     \s*<UPF\s+version\s*="
     (?P<version>.*)">
-    """, re.VERBOSE)
+    """,
+    re.VERBOSE,
+)
 
-REGEX_ELEMENT_V1 = re.compile(r"""
+REGEX_ELEMENT_V1 = re.compile(
+    r"""
     (?P<element_name>[a-zA-Z]{1,2})
     \s+
     Element
-    """, re.VERBOSE)
+    """,
+    re.VERBOSE,
+)
 
 REGEX_ELEMENT_V2 = re.compile(
     r"""
@@ -45,7 +51,8 @@ REGEX_ELEMENT_V2 = re.compile(
     element\s*=\s*(?P<quote_symbol>['"])\s*
     (?P<element_name>[a-zA-Z]{1,2})\s*
     (?P=quote_symbol)
-    """, re.VERBOSE
+    """,
+    re.VERBOSE,
 )
 
 
@@ -93,7 +100,6 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
     :param stop_if_existing: if True, check for the md5 of the files and, if the file already exists in the DB, raises a
         MultipleObjectsError. If False, simply adds the existing UPFData node to the group.
     """
-    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     import os
 
     from aiida import orm
@@ -196,15 +202,13 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
 
 
 def parse_upf(fname, check_filename=True, encoding='utf-8'):
-    """
-    Try to get relevant information from the UPF. For the moment, only the
+    """Try to get relevant information from the UPF. For the moment, only the
     element name. Note that even UPF v.2 cannot be parsed with the XML minidom!
     (e.g. due to the & characters in the human-readable section).
 
     If check_filename is True, raise a ParsingError exception if the filename
     does not start with the element name.
     """
-    # pylint: disable=too-many-branches
     import os
 
     from aiida.common import AIIDA_LOGGER
@@ -260,9 +264,9 @@ def parse_upf(fname, check_filename=True, encoding='utf-8'):
     if check_filename:
         if not os.path.basename(fname).lower().startswith(element.lower()):
             raise ParsingError(
-                'Filename {0} was recognized for element '
-                '{1}, but the filename does not start '
-                'with {1}'.format(fname, element)
+                'Filename {0} was recognized for element ' '{1}, but the filename does not start ' 'with {1}'.format(
+                    fname, element
+                )
             )
 
     parsed_data['element'] = element
@@ -316,7 +320,7 @@ class UpfData(SinglefileData):
         emit_deprecation()
         super().__init__(*args, **kwargs)
 
-    def store(self, *args, **kwargs):  # pylint: disable=signature-differs
+    def store(self, *args, **kwargs):
         """Store the node, reparsing the file so that the md5 and the element are correctly reset."""
         from aiida.common.exceptions import ParsingError
         from aiida.common.files import md5_from_filelike
@@ -356,6 +360,7 @@ class UpfData(SinglefileData):
         :return: list of existing `UpfData` nodes that have the same md5 hash
         """
         from aiida.orm.querybuilder import QueryBuilder
+
         builder = QueryBuilder(backend=backend)
         builder.append(cls, filters={'attributes.md5': {'==': md5}})
         return builder.all(flat=True)
@@ -367,7 +372,6 @@ class UpfData(SinglefileData):
             Hint: Pass io.BytesIO(b"my string") to construct the file directly from a string.
         :param filename: specify filename to use (defaults to name of provided file).
         """
-        # pylint: disable=redefined-builtin
         from aiida.common.exceptions import ParsingError
         from aiida.common.files import md5_file, md5_from_filelike
 
@@ -454,10 +458,7 @@ class UpfData(SinglefileData):
             raise ValidationError(f"Attribute 'md5' says '{attr_md5}' but '{md5}' was parsed instead.")
 
     def _prepare_upf(self, main_file_name=''):
-        """
-        Return UPF content.
-        """
-        # pylint: disable=unused-argument
+        """Return UPF content."""
         return_string = self.get_content()
 
         return return_string.encode('utf-8'), {}
@@ -502,11 +503,8 @@ class UpfData(SinglefileData):
 
         return builder.all(flat=True)
 
-    # pylint: disable=unused-argument
     def _prepare_json(self, main_file_name=''):
-        """
-        Returns UPF PP in json format.
-        """
+        """Returns UPF PP in json format."""
         with self.open() as file_handle:
             upf_json = upf_to_json(file_handle.read(), fname=self.filename)
         return json.dumps(upf_json).encode('utf-8'), {}

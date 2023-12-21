@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """Template for a scheduler plugin."""
-import datetime
 import logging
 
-from aiida.common.escaping import escape_for_bash
-from aiida.schedulers import Scheduler, SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
+from aiida.common import exceptions
+from aiida.schedulers import Scheduler, SchedulerError
+from aiida.schedulers.datastructures import JobResource, JobState
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,6 +22,7 @@ _MAP_SCHEDULER_AIIDA_STATUS = {
 class TemplateJobResource(JobResource):
     """Template class for job resources."""
 
+    @classmethod
     def validate_resources(cls, **kwargs):
         """Validate the resources against the job resource class of this scheduler.
 
@@ -31,6 +31,7 @@ class TemplateJobResource(JobResource):
         :return: optional tuple of parsed resource settings
         """
 
+    @classmethod
     def accepts_default_mpiprocs_per_machine(cls):
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
 
@@ -46,8 +47,8 @@ class TemplateScheduler(Scheduler):
         'can_query_by_user': False,
     }
 
-    # The class to be used for the job resource.
-    _job_resource_class =   # This needs to be set to a subclass of :class:`~aiida.schedulers.datastructures.JobResource`
+    # Class to be used for job resources, Should be a subclass of :class:`~aiida.schedulers.datastructures.JobResource`
+    _job_resource_class = JobResource
 
     _map_status = _MAP_SCHEDULER_AIIDA_STATUS
 
@@ -65,7 +66,8 @@ class TemplateScheduler(Scheduler):
 
         The output text is just retrieved, and returned for logging purposes.
         """
-        raise exceptions.FeatureNotAvailable('Retrieving detailed job info is not implemented') # for instance f'tracejob -v {escape_for_bash(job_id)}'
+        # for instance f'tracejob -v {escape_for_bash(job_id)}'
+        raise exceptions.FeatureNotAvailable('Retrieving detailed job info is not implemented')
 
     def _get_submit_script_header(self, job_tmpl):
         """Return the submit script final part, using the parameters from the job template.
@@ -82,7 +84,7 @@ class TemplateScheduler(Scheduler):
         :param submit_script: the path of the submit script relative to the working directory.
         :return: the string to execute to submit a given script.
         """
-        submit_command = '' # for instance f'qsub {submit_script}'
+        submit_command = ''  # for instance f'qsub {submit_script}'
 
         _LOGGER.info(f'submitting with: {submit_command}')
 

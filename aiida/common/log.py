@@ -35,7 +35,6 @@ def report(self: logging.Logger, msg, *args, **kwargs):
 
 
 class AiidaLoggerType(logging.Logger):
-
     def report(self, msg: str, *args, **kwargs) -> None:
         """Log a message at the ``REPORT`` level."""
 
@@ -76,26 +75,20 @@ def get_logging_config():
         'disable_existing_loggers': False,
         'formatters': {
             'verbose': {
-                'format': '%(levelname)s %(asctime)s %(module)s %(process)d '
-                '%(thread)d %(message)s',
+                'format': '%(levelname)s %(asctime)s %(module)s %(process)d ' '%(thread)d %(message)s',
             },
             'halfverbose': {
                 'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
                 'datefmt': '%m/%d/%Y %I:%M:%S %p',
             },
-            'cli': {
-                'class': 'aiida.cmdline.utils.log.CliFormatter'
-            }
+            'cli': {'class': 'aiida.cmdline.utils.log.CliFormatter'},
         },
         'handlers': {
             'console': {
                 'class': 'logging.StreamHandler',
                 'formatter': 'halfverbose',
             },
-            'cli': {
-                'class': 'aiida.cmdline.utils.log.CliHandler',
-                'formatter': 'cli'
-            },
+            'cli': {'class': 'aiida.cmdline.utils.log.CliHandler', 'formatter': 'cli'},
         },
         'loggers': {
             'aiida': {
@@ -158,7 +151,7 @@ def evaluate_logging_configuration(dictionary):
     for key, value in dictionary.items():
         if isinstance(value, collections.abc.Mapping):
             result[key] = evaluate_logging_configuration(value)
-        elif isinstance(value, types.LambdaType):  # pylint: disable=no-member
+        elif isinstance(value, types.LambdaType):
             result[key] = value()
         else:
             result[key] = value
@@ -167,8 +160,7 @@ def evaluate_logging_configuration(dictionary):
 
 
 def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
-    """
-    Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
+    """Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
     daemon, set the argument 'daemon' to True and specify the path to the log file. This
     will cause a 'daemon_handler' to be added to all the configured loggers, that is a
@@ -189,7 +181,6 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
 
     # Add the daemon file handler to all loggers if daemon=True
     if daemon is True:
-
         # Daemon always needs to run with ORM enabled
         with_orm = True
 
@@ -233,9 +224,10 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:
         from aiida.manage.configuration import get_config_option
+
         config['handlers']['db_logger'] = {
             'level': get_config_option('logging.db_loglevel'),
-            'class': 'aiida.orm.utils.log.DBLogHandler'
+            'class': 'aiida.orm.utils.log.DBLogHandler',
         }
         config['loggers']['aiida']['handlers'].append('db_logger')
 

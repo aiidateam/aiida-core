@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Alter columns to be non-nullable (to bring inline with psql_dos main_0001).
 
 Revision ID: main_0000b
@@ -15,8 +14,8 @@ Revises: main_0000a
 Create Date: 2022-03-04
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'main_0000b'

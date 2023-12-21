@@ -27,10 +27,10 @@ class TestPath:
     def test_timeout_checks(self):
         """Test that timeout check handles different values.
 
-         * valid
-         * none
-         * wrong type
-         * outside range
+        * valid
+        * none
+        * wrong type
+        * outside range
         """
         valid_values = [42, '42']
 

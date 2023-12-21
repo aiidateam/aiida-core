@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :class:`~aiida.cmdline.params.options.main.VERBOSITY` option."""
 import functools
 import logging
@@ -72,7 +71,7 @@ def test_default(run_cli_command):
     The default log level is ``REPORT`` so its messages and everything above should show and the rest not.
     """
     result = run_cli_command(cmd, raises=True)
-    verify_log_output(result.output, logging.REPORT, logging.REPORT)  # pylint: disable=no-member
+    verify_log_output(result.output, logging.REPORT, logging.REPORT)
 
 
 @pytest.mark.parametrize('option_log_level', [level for level in LOG_LEVELS.values() if level != logging.NOTSET])

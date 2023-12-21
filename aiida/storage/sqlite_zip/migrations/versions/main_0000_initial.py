@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Initial main branch schema
 
 This schema is mainly equivalent to the `main_0001` schema of the `psql_dos` backend.
@@ -22,8 +21,8 @@ Revises:
 Create Date: 2021-02-02
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.sqlite import JSON
 
 revision = 'main_0000'

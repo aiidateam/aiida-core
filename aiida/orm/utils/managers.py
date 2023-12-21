@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Contain utility classes for "managers", i.e., classes that allow
+"""Contain utility classes for "managers", i.e., classes that allow
 to access members of other classes via TAB-completable attributes
 (e.g. the class underlying `calculation.inputs` to allow to do `calculation.inputs.<label>`).
 """
@@ -21,16 +20,14 @@ __all__ = ('NodeLinksManager', 'AttributeManager')
 
 
 class NodeLinksManager:
-    """
-    A manager that allows to inspect, with tab-completion, nodes linked to a given one.
+    """A manager that allows to inspect, with tab-completion, nodes linked to a given one.
     See an example of its use in `CalculationNode.inputs`.
     """
 
     _namespace_separator = '__'
 
     def __init__(self, node, link_type, incoming):
-        """
-        Initialise the link manager.
+        """Initialise the link manager.
 
         :param node: the reference node object
         :param link_type: the link_type to inspect
@@ -93,18 +90,18 @@ class NodeLinksManager:
             # Check whether the label contains a double underscore, in which case we want to warn the user that this is
             # deprecated. However, we need to exclude labels that corresponds to dunder methods, i.e., those that start
             # and end with a double underscore.
-            if (
-                self._namespace_separator in label and
-                not (label.startswith(self._namespace_separator) and label.endswith(self._namespace_separator))
+            if self._namespace_separator in label and not (
+                label.startswith(self._namespace_separator) and label.endswith(self._namespace_separator)
             ):
                 import functools
+
                 warn_deprecation(
                     'dereferencing nodes with links containing double underscores is deprecated, simply replace '
                     'the double underscores with a single dot instead. For example: \n'
                     '`node.inputs.some__label` can be written as `node.inputs.some.label` instead.\n',
                     stacklevel=4,
-                    version=3
-                )  # pylint: disable=no-member
+                    version=3,
+                )
                 namespaces = label.split(self._namespace_separator)
                 try:
                     return functools.reduce(lambda d, namespace: d.get(namespace), namespaces, attribute_dict)
@@ -121,9 +118,7 @@ class NodeLinksManager:
         return node
 
     def __dir__(self):
-        """
-        Allow to list all valid input links
-        """
+        """Allow to list all valid input links"""
         node_attributes = self._get_keys()
         return sorted(set(list(dir(type(self))) + list(node_attributes)))
 
@@ -133,9 +128,7 @@ class NodeLinksManager:
             yield k
 
     def __getattr__(self, name):
-        """
-        :param name: name of the attribute to be asked to the parser results.
-        """
+        """:param name: name of the attribute to be asked to the parser results."""
         try:
             return self._get_node_by_link_label(label=name)
         except NotExistent as exception:
@@ -153,7 +146,7 @@ class NodeLinksManager:
             warn_deprecation(
                 'The use of double underscores in keys is deprecated. Please expand the namespaces manually:\n'
                 'instead of `nested__key in node.inputs`, use `nested in node.inputs and `key in node.inputs.nested`.',
-                version=3
+                version=3,
             )
             namespaces = key.split(self._namespace_separator)
             leaf = namespaces.pop()
@@ -168,8 +161,7 @@ class NodeLinksManager:
         return key in self._get_keys()
 
     def __getitem__(self, name):
-        """
-        interface to get to the parser results as a dictionary.
+        """Interface to get to the parser results as a dictionary.
 
         :param name: name of the attribute to be asked to the parser results.
         """
@@ -190,12 +182,11 @@ class NodeLinksManager:
         return f'Manager for {prefix} {self._link_type.value.upper()} links for node pk={self._node.pk}'
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}: {str(self)}>'
+        return f'<{self.__class__.__name__}: {self!s}>'
 
 
 class AttributeManager:
-    """
-    An object used internally to return the attributes as a dictionary.
+    """An object used internally to return the attributes as a dictionary.
     This is currently used in :py:class:`~aiida.orm.nodes.data.dict.Dict`,
     for instance.
 
@@ -204,9 +195,7 @@ class AttributeManager:
     """
 
     def __init__(self, node):
-        """
-        :param node: the node object.
-        """
+        """:param node: the node object."""
         # Possibly add checks here
         # We cannot set `self._node` because it would go through the __setattr__ method
         # which uses said _node by calling `self._node.base.attributes.set(name, value)`.
@@ -214,27 +203,20 @@ class AttributeManager:
         self.__dict__['_node'] = node
 
     def __dir__(self):
-        """
-        Allow to list the keys of the dictionary
-        """
+        """Allow to list the keys of the dictionary"""
         return sorted(self._node.base.attributes.keys())
 
     def __iter__(self):
-        """
-        Return the keys as an iterator
-        """
+        """Return the keys as an iterator"""
         for k in self._node.base.attributes.keys():
             yield k
 
     def _get_dict(self):
-        """
-        Return the internal dictionary
-        """
+        """Return the internal dictionary"""
         return dict(self._node.base.attributes.items())
 
     def __getattr__(self, name):
-        """
-        Interface to get to dictionary values, using the key as an attribute.
+        """Interface to get to dictionary values, using the key as an attribute.
 
         :note: it works only for attributes that only contain letters, numbers
           and underscores, and do not start with a number.
@@ -247,8 +229,7 @@ class AttributeManager:
         self._node.base.attributes.set(name, value)
 
     def __getitem__(self, name):
-        """
-        Interface to get to dictionary values as a dictionary.
+        """Interface to get to dictionary values as a dictionary.
 
         :param name: name of the key whose value is required.
         """

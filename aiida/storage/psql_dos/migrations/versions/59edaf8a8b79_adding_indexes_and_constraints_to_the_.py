@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Adding indexes and constraints to the dbnode-dbgroup relationship table
 
 Revision ID: 59edaf8a8b79
@@ -15,8 +14,8 @@ Revises: a514d673c163
 Create Date: 2018-06-22 14:50:18.447211
 
 """
-from alembic import op
 import sqlalchemy
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '59edaf8a8b79'

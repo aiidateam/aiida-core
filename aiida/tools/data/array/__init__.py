@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .kpoints import *
 
@@ -21,4 +20,4 @@ __all__ = (
     'get_kpoints_path',
 )
 
-# yapf: enable
+# fmt: on

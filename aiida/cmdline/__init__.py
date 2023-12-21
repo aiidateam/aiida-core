@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .groups import *
 from .params import *
@@ -61,4 +60,4 @@ __all__ = (
     'with_dbenv',
 )
 
-# yapf: enable
+# fmt: on

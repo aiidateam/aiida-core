@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Template for a scheduler plugin."""
 import logging
 

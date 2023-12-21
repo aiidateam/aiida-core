@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Interface to the file repository of a node instance."""
 from __future__ import annotations
 

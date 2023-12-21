@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from aiida.engine import calcfunction, run
 from aiida.orm import Int
 

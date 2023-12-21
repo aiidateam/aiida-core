@@ -1,5 +1,4 @@
 #!/usr/bin/env runaiida
-# -*- coding: utf-8 -*-
 
 from simple_parent import SimpleParentWorkChain
 

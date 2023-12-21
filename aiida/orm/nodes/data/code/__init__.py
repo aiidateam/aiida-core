@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Data plugins that represent an executable code."""
 
 # AUTO-GENERATED

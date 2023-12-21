@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Subclass of :class:`click.Group` that loads subcommands dynamically from entry points."""
 from __future__ import annotations
 

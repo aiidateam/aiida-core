@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module with utilities."""
 from collections.abc import Mapping
 

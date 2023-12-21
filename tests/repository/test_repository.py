@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.repository.repository` module."""
 import contextlib
 import io

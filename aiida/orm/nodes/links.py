@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Interface for links of a node instance."""
 from __future__ import annotations
 

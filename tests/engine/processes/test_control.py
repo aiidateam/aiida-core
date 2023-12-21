@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.engine.processes.control` module."""
 import pytest
 from plumpy.process_comms import RemoteProcessThreadController

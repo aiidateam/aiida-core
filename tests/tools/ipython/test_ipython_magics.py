@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for :mod:`aiida.tools.ipython.ipython_magics`."""
 import textwrap
 

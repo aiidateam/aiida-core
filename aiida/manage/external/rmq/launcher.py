@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """A sub class of ``plumpy.ProcessLauncher`` to launch a ``Process``."""
 import asyncio
 import logging

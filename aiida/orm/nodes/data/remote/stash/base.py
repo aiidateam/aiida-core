@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Data plugin that models an archived folder on a remote computer."""
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check

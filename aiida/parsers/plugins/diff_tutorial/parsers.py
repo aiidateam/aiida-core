@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Parsers for DiffCalculation of plugin tutorial.
 
 Register parsers via the "aiida.parsers" entry point in the pyproject.toml file.

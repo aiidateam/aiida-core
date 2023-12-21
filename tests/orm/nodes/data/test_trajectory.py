@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the `TrajectoryData` class."""
 import numpy as np
 import pytest

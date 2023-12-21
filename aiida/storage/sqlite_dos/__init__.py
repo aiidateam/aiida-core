@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Storage implementation using Sqlite database and disk-objectstore container."""
 
 # AUTO-GENERATED

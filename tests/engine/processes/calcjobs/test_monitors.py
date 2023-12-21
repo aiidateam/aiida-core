@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.engine.processes.calcjobs.monitors` module."""
 import time
 

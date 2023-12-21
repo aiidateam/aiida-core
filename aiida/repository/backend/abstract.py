@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Class that defines the abstract interface for an object repository.
 
 The scope of this class is intentionally very narrow. Any backend implementation should merely provide the methods to

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from aiida import orm, plugins
 from aiida.engine import run
 

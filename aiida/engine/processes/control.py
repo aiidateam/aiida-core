@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functions to control and interact with running processes."""
 from __future__ import annotations
 

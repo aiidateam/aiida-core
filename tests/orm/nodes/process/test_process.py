@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for :mod:`aiida.orm.nodes.process.process`."""
 import pytest
 

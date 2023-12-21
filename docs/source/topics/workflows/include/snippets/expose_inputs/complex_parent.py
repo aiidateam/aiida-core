@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from child import ChildWorkChain
 
 from aiida.engine import ToContext, WorkChain

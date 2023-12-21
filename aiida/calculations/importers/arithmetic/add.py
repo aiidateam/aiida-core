@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Importer for the :class:`aiida.calculations.arithmetic.add.ArithmeticAddCalculation` plugin."""
 from pathlib import Path
 from re import match

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Data plugin that models a stashed folder on a remote computer."""
 import typing
 

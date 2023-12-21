@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.repository.backend.abstract` module."""
 import io
 import tempfile

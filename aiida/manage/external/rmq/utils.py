@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Utilites for RabbitMQ."""
 
 from . import defaults

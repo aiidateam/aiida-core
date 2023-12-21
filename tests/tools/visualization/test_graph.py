@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for creating graphs (using graphviz)"""
 import pytest
-
 from aiida import orm
 from aiida.common import AttributeDict
 from aiida.common.links import LinkType

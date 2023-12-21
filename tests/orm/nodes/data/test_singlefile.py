@@ -14,7 +14,6 @@ import pathlib
 import tempfile
 
 import pytest
-
 from aiida.orm import SinglefileData, load_node
 
 

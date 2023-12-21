@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for the `verdi plugin list` command."""
 import pytest
-
 from aiida.cmdline.commands import cmd_plugin
 from aiida.plugins import CalculationFactory, WorkflowFactory
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP

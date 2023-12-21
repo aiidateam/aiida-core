@@ -10,7 +10,6 @@
 import uuid
 
 import pytest
-
 from aiida.cmdline.params.types import DataParamType
 from aiida.orm import Data
 from aiida.orm.utils.loaders import OrmEntityLoader

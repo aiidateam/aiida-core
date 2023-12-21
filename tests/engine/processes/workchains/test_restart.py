@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for `aiida.engine.processes.workchains.restart` module."""
 import pytest
-
 from aiida import engine, orm
 from aiida.engine.processes.workchains.awaitable import Awaitable
 

@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-
 from aiida.common import exceptions
 from aiida.manage.caching import _validate_identifier_pattern, disable_caching, enable_caching, get_use_cache
 

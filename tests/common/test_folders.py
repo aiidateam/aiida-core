@@ -13,7 +13,6 @@ import sys
 import tempfile
 
 import pytest
-
 from aiida.common.folders import Folder, SandboxFolder
 
 

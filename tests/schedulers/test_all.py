@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 import pytest
-
 from aiida.common.datastructures import CodeRunMode
 from aiida.plugins import SchedulerFactory, entry_point
 from aiida.schedulers import Scheduler

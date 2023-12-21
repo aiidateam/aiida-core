@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for `aiida.engine.processes.workchains.utils` module."""
 import pytest
-
 from aiida.engine import ExitCode, ProcessState
 from aiida.engine.processes.workchains.restart import BaseRestartWorkChain
 from aiida.engine.processes.workchains.utils import ProcessHandlerReport, process_handler

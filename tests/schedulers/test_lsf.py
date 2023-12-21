@@ -11,7 +11,6 @@ import logging
 import uuid
 
 import pytest
-
 from aiida.common.exceptions import ConfigurationError
 from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.plugins.lsf import LsfScheduler

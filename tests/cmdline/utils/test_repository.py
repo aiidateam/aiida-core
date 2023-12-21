@@ -10,7 +10,6 @@
 import io
 
 import pytest
-
 from aiida.cmdline.utils.repository import list_repository_contents
 from aiida.orm import FolderData
 

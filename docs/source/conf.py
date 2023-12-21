@@ -205,7 +205,7 @@ def run_apidoc(_):
     """
     source_dir = os.path.abspath(os.path.dirname(__file__))
     apidoc_dir = os.path.join(source_dir, 'reference', 'apidoc')
-    package_dir = os.path.join(source_dir, os.pardir, os.pardir, 'aiida')
+    package_dir = os.path.join(source_dir, os.pardir, os.pardir, 'src', 'aiida')
     exclude_api_patterns = [
         os.path.join(package_dir, 'storage', 'psql_dos', 'migrations', 'versions'),
     ]

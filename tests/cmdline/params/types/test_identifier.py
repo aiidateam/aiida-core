@@ -9,7 +9,6 @@
 """Tests for the `IdentifierParamType`."""
 import click
 import pytest
-
 from aiida.cmdline.params.types import IdentifierParamType, NodeParamType
 from aiida.orm import Bool, Float, Int
 

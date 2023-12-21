@@ -8,9 +8,8 @@
 ###########################################################################
 """Tests for the :mod:`aiida.cmdline.params.options.callable` module."""
 import pytest
-from click.shell_completion import ShellComplete
-
 from aiida.cmdline.commands.cmd_verdi import verdi
+from click.shell_completion import ShellComplete
 
 
 def _get_completions(cli, args, incomplete):

@@ -29,5 +29,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     assert args.GITHUB_REF.startswith('refs/tags/v'), f'GITHUB_REF should start with "refs/tags/v": {args.GITHUB_REF}'
     tag_version = args.GITHUB_REF[11:]
-    pypi_version = get_version_from_module(Path('aiida/__init__.py').read_text(encoding='utf-8'))
+    pypi_version = get_version_from_module(Path('src/aiida/__init__.py').read_text(encoding='utf-8'))
     assert tag_version == pypi_version, f'The tag version {tag_version} != {pypi_version} specified in `pyproject.toml`'

@@ -10,9 +10,8 @@
 import uuid
 
 import pytest
-from sqlalchemy.orm import sessionmaker
-
 from aiida.storage.psql_dos.utils import create_scoped_session_factory
+from sqlalchemy.orm import sessionmaker
 
 
 class TestSessionSqla:

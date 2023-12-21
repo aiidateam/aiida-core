@@ -14,11 +14,11 @@ import uuid
 
 import numpy
 import pytest
-from numpy import array, isclose
-
 from aiida import orm
 from aiida.common.exceptions import ParsingError
 from aiida.orm.nodes.data.upf import parse_upf
+from numpy import array, isclose
+
 from tests.static import STATIC_DIR
 
 

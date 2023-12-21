@@ -11,7 +11,6 @@ import asyncio
 import time
 
 import pytest
-
 from aiida.engine.processes.calcjobs.manager import JobManager, JobsList
 from aiida.engine.transports import TransportQueue
 from aiida.orm import User

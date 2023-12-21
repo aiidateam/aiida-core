@@ -2,7 +2,6 @@
 import time
 
 import pytest
-
 from aiida.calculations.monitors import base
 from aiida.common.exceptions import EntryPointError
 from aiida.engine import run_get_node

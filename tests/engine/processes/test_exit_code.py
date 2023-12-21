@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for `aiida.engine.processes.exit_code.ExitCode`."""
 import pytest
-
 from aiida.engine import ExitCode
 
 

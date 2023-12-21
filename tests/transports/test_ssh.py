@@ -11,7 +11,6 @@ import logging
 
 import paramiko
 import pytest
-
 from aiida.transports.plugins.ssh import SshTransport
 from aiida.transports.transport import TransportInternalError
 

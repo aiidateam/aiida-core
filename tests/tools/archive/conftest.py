@@ -10,7 +10,6 @@
 import logging
 
 import pytest
-
 from aiida.tools.archive import EXPORT_LOGGER, IMPORT_LOGGER
 
 

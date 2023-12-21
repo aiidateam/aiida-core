@@ -11,7 +11,6 @@ from threading import Thread
 
 import pytest
 import requests
-
 from aiida import orm
 from aiida.restapi.common.identifiers import FULL_TYPE_CONCATENATOR, LIKE_OPERATOR_CHARACTER, get_full_type_filters
 

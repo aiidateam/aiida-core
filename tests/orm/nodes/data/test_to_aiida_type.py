@@ -9,7 +9,6 @@
 """Test the :meth:`aiida.orm.data.base.to_aiida_type` serializer."""
 import numpy
 import pytest
-
 from aiida import orm
 from aiida.common.links import LinkType
 

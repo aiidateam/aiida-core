@@ -13,7 +13,6 @@ import pathlib
 import uuid
 
 import pytest
-
 from aiida.common import exceptions
 from aiida.manage.configuration import Config, Profile, settings
 from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION

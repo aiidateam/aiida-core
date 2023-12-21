@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for GroupPath"""
 import pytest
-
 from aiida import orm
 from aiida.tools.groups.paths import GroupAttr, GroupNotFoundError, GroupPath, InvalidPath, NoGroupsInPathError
 

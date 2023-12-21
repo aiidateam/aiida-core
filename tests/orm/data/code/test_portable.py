@@ -11,7 +11,6 @@ import io
 import pathlib
 
 import pytest
-
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 from aiida.orm.nodes.data.code.portable import PortableCode
 

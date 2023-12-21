@@ -1,6 +1,5 @@
-from child import ChildWorkChain
-
 from aiida.engine import ToContext, WorkChain
+from child import ChildWorkChain
 
 
 class ComplexParentWorkChain(WorkChain):

@@ -10,7 +10,6 @@
 import asyncio
 
 import pytest
-
 from aiida import orm
 from aiida.engine.transports import TransportQueue
 

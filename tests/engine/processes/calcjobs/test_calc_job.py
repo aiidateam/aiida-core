@@ -18,7 +18,6 @@ from functools import partial
 from unittest.mock import patch
 
 import pytest
-
 from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch

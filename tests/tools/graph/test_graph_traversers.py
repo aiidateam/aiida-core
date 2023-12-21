@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for aiida.tools.graph.graph_traversers"""
 import pytest
-
 from aiida.common.links import LinkType
 from aiida.tools.graph.graph_traversers import get_nodes_delete, traverse_graph
 

@@ -2,7 +2,6 @@
 import pathlib
 
 import pytest
-
 from aiida.storage.sqlite_dos.backend import SqliteDosStorage
 
 

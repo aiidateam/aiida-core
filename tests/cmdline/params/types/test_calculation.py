@@ -10,7 +10,6 @@
 import uuid
 
 import pytest
-
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.orm import CalculationNode
 from aiida.orm.utils.loaders import OrmEntityLoader

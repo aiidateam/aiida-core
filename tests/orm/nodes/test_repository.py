@@ -2,7 +2,6 @@
 import pathlib
 
 import pytest
-
 from aiida.common import exceptions
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.engine import ProcessState

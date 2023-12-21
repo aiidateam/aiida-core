@@ -11,7 +11,6 @@ import io
 import tempfile
 
 import pytest
-
 from aiida import get_profile, orm
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType

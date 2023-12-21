@@ -11,6 +11,7 @@ from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
 from aiida.tools.archive import ArchiveFormatSqlZip, create_archive, import_archive
+
 from tests.tools.archive.utils import get_all_node_links
 
 

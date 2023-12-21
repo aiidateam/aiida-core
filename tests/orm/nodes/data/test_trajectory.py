@@ -1,7 +1,6 @@
 """Tests for the `TrajectoryData` class."""
 import numpy as np
 import pytest
-
 from aiida.orm import StructureData, TrajectoryData, load_node
 
 

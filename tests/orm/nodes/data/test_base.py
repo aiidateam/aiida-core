@@ -11,7 +11,6 @@
 import operator
 
 import pytest
-
 from aiida.orm import Bool, Float, Int, NumericType, Str, load_node
 
 

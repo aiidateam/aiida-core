@@ -4,7 +4,6 @@ import tempfile
 from typing import BinaryIO, Iterable, List, Optional
 
 import pytest
-
 from aiida.repository.backend import AbstractRepositoryBackend
 
 

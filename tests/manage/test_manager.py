@@ -1,8 +1,7 @@
 """Tests for the :mod:`aiida.manage.manager` module."""
 import pytest
-from packaging.version import parse
-
 from aiida.manage import manager
+from packaging.version import parse
 
 
 @pytest.mark.parametrize(

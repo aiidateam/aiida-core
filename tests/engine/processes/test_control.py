@@ -1,11 +1,11 @@
 """Tests for the :mod:`aiida.engine.processes.control` module."""
 import pytest
-from plumpy.process_comms import RemoteProcessThreadController
-
 from aiida.engine import ProcessState
 from aiida.engine.launch import submit
 from aiida.engine.processes import control
 from aiida.orm import Int
+from plumpy.process_comms import RemoteProcessThreadController
+
 from tests.utils.processes import WaitProcess
 
 

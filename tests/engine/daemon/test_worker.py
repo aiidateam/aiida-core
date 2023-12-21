@@ -8,7 +8,6 @@
 ###########################################################################
 """Unit tests for the :mod:`aiida.engine.daemon.worker` module."""
 import pytest
-
 from aiida.engine.daemon.worker import shutdown_worker
 
 

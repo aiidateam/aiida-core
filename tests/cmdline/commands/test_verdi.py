@@ -9,7 +9,6 @@
 """Tests for `verdi`."""
 import click
 import pytest
-
 from aiida import get_version
 from aiida.cmdline.commands import cmd_verdi
 

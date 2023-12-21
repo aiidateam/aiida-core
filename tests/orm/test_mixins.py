@@ -9,7 +9,6 @@
 """Tests for the ORM mixin classes."""
 
 import pytest
-
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.orm import CalculationNode, Int

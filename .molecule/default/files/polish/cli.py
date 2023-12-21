@@ -13,7 +13,6 @@ import sys
 import time
 
 import click
-
 from aiida.cmdline.params import options, types
 from aiida.cmdline.utils import decorators
 

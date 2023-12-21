@@ -9,7 +9,6 @@
 """Utilities for testing components from the workflow engine"""
 
 import plumpy
-
 from aiida.engine import Process
 from aiida.orm import Bool, CalcJobNode, Data, WorkflowNode
 

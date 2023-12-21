@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for the ``DirectScheduler`` plugin."""
 import pytest
-
 from aiida.common.datastructures import CodeRunMode
 from aiida.schedulers import SchedulerError
 from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo

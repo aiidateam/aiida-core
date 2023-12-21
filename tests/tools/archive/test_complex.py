@@ -12,7 +12,6 @@ import string
 from datetime import datetime
 
 import numpy as np
-
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.common.hashing import make_hash

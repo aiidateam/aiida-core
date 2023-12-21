@@ -11,7 +11,6 @@ import itertools
 import secrets
 
 import pytest
-
 from aiida import orm
 from aiida.cmdline.commands import cmd_user
 

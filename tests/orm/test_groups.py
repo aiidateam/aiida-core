@@ -10,7 +10,6 @@
 import uuid
 
 import pytest
-
 from aiida import orm
 from aiida.common import exceptions
 from aiida.tools.graph.deletions import delete_nodes

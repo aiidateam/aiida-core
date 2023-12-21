@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for the configuration options from `aiida.restapi.common.config` when running the REST API."""
 import pytest
-
 from aiida import orm
 from aiida.manage import get_manager
 

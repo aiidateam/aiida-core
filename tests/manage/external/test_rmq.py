@@ -12,11 +12,10 @@ import uuid
 
 import pytest
 import requests
-from kiwipy.rmq import RmqThreadCommunicator
-
 from aiida.engine.processes import ProcessState, control
 from aiida.manage.external import rmq
 from aiida.orm import Int
+from kiwipy.rmq import RmqThreadCommunicator
 
 
 @pytest.mark.parametrize(

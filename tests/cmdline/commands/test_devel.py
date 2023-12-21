@@ -10,7 +10,6 @@
 import re
 
 import pytest
-
 from aiida.cmdline.commands import cmd_devel
 from aiida.orm import Node, ProcessNode, QueryBuilder
 

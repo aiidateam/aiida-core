@@ -13,7 +13,6 @@ import tempfile
 
 import numpy as np
 import pytest
-
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.utils import Capturing
 from aiida.orm import ArrayData, BandsData, CifData, Dict, KpointsData, StructureData, TrajectoryData, load_node

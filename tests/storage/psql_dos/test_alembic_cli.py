@@ -7,9 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Basic tests for the alembic_cli module."""
-from click.testing import CliRunner
-
 from aiida.storage.psql_dos.alembic_cli import alembic_cli
+from click.testing import CliRunner
 
 
 def test_history():

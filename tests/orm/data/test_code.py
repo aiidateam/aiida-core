@@ -10,7 +10,6 @@
 import uuid
 
 import pytest
-
 from aiida.common.exceptions import ValidationError
 from aiida.orm import Code, Computer
 

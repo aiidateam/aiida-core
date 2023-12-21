@@ -3,10 +3,9 @@ import datetime
 import math
 
 import pytest
-from pymatgen.core import Molecule
-
 from aiida.orm import load_node
 from aiida.orm.nodes.data.jsonable import JsonableData
+from pymatgen.core import Molecule
 
 
 class JsonableClass:

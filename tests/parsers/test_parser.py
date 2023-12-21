@@ -10,7 +10,6 @@
 import io
 
 import pytest
-
 from aiida import orm
 from aiida.common import LinkType
 from aiida.engine import CalcJob

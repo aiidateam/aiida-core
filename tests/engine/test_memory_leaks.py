@@ -10,10 +10,10 @@
 import sys
 
 import pytest
-
 from aiida import orm
 from aiida.engine import processes, run_get_node
 from aiida.plugins import CalculationFactory
+
 from tests.utils import processes as test_processes
 from tests.utils.memory import get_instances
 

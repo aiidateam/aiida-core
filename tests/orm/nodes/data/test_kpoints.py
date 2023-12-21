@@ -9,7 +9,6 @@
 """Tests for the `KpointsData` class."""
 import numpy as np
 import pytest
-
 from aiida.orm import KpointsData, StructureData, load_node
 
 

@@ -1,7 +1,6 @@
 """Tests for the :mod:`aiida.manage.configuration` module."""
-import pytest
-
 import aiida
+import pytest
 from aiida.manage.configuration import Profile, create_profile, get_profile, profile_context
 from aiida.manage.manager import get_manager
 from aiida.storage.sqlite_dos.backend import SqliteDosStorage

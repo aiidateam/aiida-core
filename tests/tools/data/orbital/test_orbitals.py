@@ -9,7 +9,6 @@
 # ruff: noqa: N806
 """Test for the `Orbital` class and subclasses."""
 import pytest
-
 from aiida.common.exceptions import ValidationError
 from aiida.plugins import OrbitalFactory
 from aiida.tools.data.orbital import Orbital

@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for the :mod:`aiida.orm.nodes.data.remote.base.RemoteData` module."""
 import pytest
-
 from aiida.orm import RemoteData
 
 

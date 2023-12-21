@@ -10,7 +10,6 @@
 import math
 
 import pytest
-
 from aiida.common import exceptions
 from aiida.orm.implementation.utils import FIELD_SEPARATOR, clean_value, validate_attribute_extra_key
 

@@ -11,7 +11,6 @@ import functools
 
 import click
 import pytest
-
 from aiida.cmdline.params.options import NON_INTERACTIVE
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.types.plugin import PluginParamType

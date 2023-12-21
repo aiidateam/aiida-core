@@ -14,7 +14,6 @@ from subprocess import PIPE, Popen
 
 import psutil
 import pytest
-
 from aiida.common.exceptions import LockedProfileError, LockingProfileError
 from aiida.manage.profile_access import ProfileAccessManager
 

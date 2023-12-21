@@ -11,10 +11,10 @@ import asyncio
 
 import plumpy
 import pytest
-
 from aiida.engine import ProcessState
 from aiida.manage import get_manager
 from aiida.orm import Int
+
 from tests.utils import processes as test_processes
 
 

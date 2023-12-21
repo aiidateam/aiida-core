@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for the export and import routines"""
 import numpy as np
-
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 

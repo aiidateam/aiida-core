@@ -15,7 +15,6 @@ from datetime import date, datetime, timedelta
 from itertools import chain
 
 import pytest
-
 from aiida import orm, plugins
 from aiida.common.links import LinkType
 from aiida.orm.querybuilder import _get_ormclass

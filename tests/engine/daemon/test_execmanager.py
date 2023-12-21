@@ -13,7 +13,6 @@ import pathlib
 import typing
 
 import pytest
-
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, SinglefileData

@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for the various node managers (.inputs, .outputs, .dict, ...)."""
 import pytest
-
 from aiida import orm
 from aiida.common import AttributeDict, LinkType
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError

@@ -13,7 +13,6 @@ import textwrap
 from collections import OrderedDict
 
 import pytest
-
 from aiida import orm
 from aiida.cmdline.commands.cmd_computer import (
     computer_configure,

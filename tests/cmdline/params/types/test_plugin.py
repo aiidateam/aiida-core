@@ -9,7 +9,6 @@
 """Tests for the `PluginParamType`."""
 import click
 import pytest
-
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.plugins.entry_point import get_entry_point_from_string
 

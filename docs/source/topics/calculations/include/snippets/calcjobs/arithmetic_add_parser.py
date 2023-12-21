@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from aiida.orm import Int
 from aiida.parsers.parser import Parser
 

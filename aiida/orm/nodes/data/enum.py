@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Data plugin that allows to easily wrap an :class:`enum.Enum` member.
 
 Nomenclature is taken from Python documentation: https://docs.python.org/3/library/enum.html

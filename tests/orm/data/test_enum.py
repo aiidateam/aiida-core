@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the :class:`aiida.orm.nodes.data.enum.Enum` data plugin."""
 import enum
 

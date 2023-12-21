@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Interface for comments of a node instance."""
 from __future__ import annotations
 

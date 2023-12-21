@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Data plugin that allows to easily wrap objects that are JSON-able."""
 import importlib
 import json

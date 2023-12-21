@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for the implementation of a file repository."""
 import contextlib
 import pathlib

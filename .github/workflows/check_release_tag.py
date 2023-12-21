@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Check that the GitHub release tag matches the package version."""
 import argparse
 import ast

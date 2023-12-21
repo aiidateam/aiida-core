@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.manage.manager` module."""
 import pytest
 from packaging.version import parse

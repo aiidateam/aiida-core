@@ -6,6 +6,8 @@ repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.4.0
   hooks:
+  - id: check-merge-conflict
+  - id: check-yaml
   - id: double-quote-string-fixer
   - id: end-of-file-fixer
     exclude: &exclude_pre_commit_hooks >
@@ -15,10 +17,11 @@ repos:
         CHANGELOG.md|
       )$
   - id: fix-encoding-pragma
+    args: [--remove]
   - id: mixed-line-ending
+    args: [--fix=lf]
   - id: trailing-whitespace
     exclude: *exclude_pre_commit_hooks
-  - id: check-yaml
 
 - repo: https://github.com/ikamensh/flynt/
   rev: 1.0.1
@@ -204,8 +207,8 @@ repos:
     pass_filenames: false
     files: >-
       (?x)^(
-          pyproject.toml|
-          utils/dependency_management.py
+        pyproject.toml|
+        utils/dependency_management.py
       )$
 
   - id: dependencies

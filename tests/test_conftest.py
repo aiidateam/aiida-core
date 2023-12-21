@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for fixtures in the ``conftest.py``."""
 import pytest
 from importlib_metadata import EntryPoint

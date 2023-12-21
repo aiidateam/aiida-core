@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test fixtures for the :mod:`aiida.repository` module."""
 import os
 import pathlib

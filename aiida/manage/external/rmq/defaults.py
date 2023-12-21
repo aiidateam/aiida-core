@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Defaults related to RabbitMQ."""
 from aiida.common.extendeddicts import AttributeDict
 

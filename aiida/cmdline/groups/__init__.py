@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module with custom implementations of :class:`click.Group`."""
 
 # AUTO-GENERATED

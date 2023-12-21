@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Abstract utility class that helps to import calculation jobs completed outside of AiiDA."""
 from abc import ABC, abstractmethod
 from typing import Dict, Union

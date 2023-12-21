@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for file repository backend implementations."""
 
 # AUTO-GENERATED

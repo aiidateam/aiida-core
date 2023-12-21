@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Utilities to define monitor functions for ``CalcJobs``."""
 from __future__ import annotations
 

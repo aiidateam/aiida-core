@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Client for RabbitMQ Management HTTP API."""
 from __future__ import annotations
 

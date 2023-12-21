@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for :mod:`aiida.cmdline.groups.dynamic`."""
 import typing as t
 

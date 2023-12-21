@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Definition of a calculation function used in ``test_calcfunctions.py``."""
 from aiida.engine import calcfunction
 from aiida.orm import Int

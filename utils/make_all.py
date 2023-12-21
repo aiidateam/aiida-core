@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Pre-commit hook to add ``__all__`` imports to ``__init__`` files."""
 import ast
 import sys

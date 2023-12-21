@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import typing as t
 
 from aiida.engine import calcfunction

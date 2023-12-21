@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Calculations provided by aiida_diff tutorial plugin.
 
 Register calculations via the "aiida.calculations" entry point in the pyproject.toml file.

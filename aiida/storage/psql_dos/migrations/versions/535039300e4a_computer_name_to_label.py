@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Rename `db_dbcomputer.name` to `db_dbcomputer.label`
 
 Revision ID: 535039300e4a

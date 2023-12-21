@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Script to benchmark the performance of the AiiDA workflow engine on a given installation."""
 import click
 

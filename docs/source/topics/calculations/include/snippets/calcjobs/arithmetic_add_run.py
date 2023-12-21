@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from aiida.engine import run
 from aiida.orm import Int, load_code
 from aiida.plugins import CalculationFactory

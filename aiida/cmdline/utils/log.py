@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Utilities for logging in the command line interface context."""
 import logging
 

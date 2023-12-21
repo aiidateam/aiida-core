@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Launch a calculation using the 'diff-tutorial' plugin"""
 from pathlib import Path
 

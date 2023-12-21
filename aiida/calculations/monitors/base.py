@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Monitors for the :class:`aiida.calculations.arithmetic.add.ArithmeticAddCalculation` plugin."""
 from __future__ import annotations
 

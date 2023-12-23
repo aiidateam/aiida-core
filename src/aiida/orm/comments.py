@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, List, Optional, Type
 from aiida.manage import get_manager
 
 from . import entities, users
+from .fields import QbField
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
@@ -62,6 +63,15 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
     """Base class to map a DbComment that represents a comment attached to a certain Node."""
 
     _CLS_COLLECTION = CommentCollection
+
+    __qb_fields__ = (
+        QbField('uuid', dtype=str, doc='The UUID of the comment'),
+        QbField('ctime', dtype=datetime, doc='Creation time of the comment'),
+        QbField('mtime', dtype=datetime, doc='Modified time of the comment'),
+        QbField('content', dtype=str, doc='Content of the comment'),
+        QbField('user_pk', 'user_id', dtype=int, doc='User PK that created the comment'),
+        QbField('node_pk', 'dbnode_id', dtype=int, doc='Node PK that the comment is attached to'),
+    )
 
     def __init__(
         self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['StorageBackend'] = None

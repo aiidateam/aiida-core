@@ -17,6 +17,7 @@ from .comments import *
 from .computers import *
 from .entities import *
 from .extras import *
+from .fields import *
 from .groups import *
 from .logs import *
 from .nodes import *
@@ -82,6 +83,10 @@ __all__ = (
     'PortableCode',
     'ProcessNode',
     'ProjectionData',
+    'QbAttrField',
+    'QbField',
+    'QbFieldFilters',
+    'QbFields',
     'QueryBuilder',
     'RemoteData',
     'RemoteStashData',

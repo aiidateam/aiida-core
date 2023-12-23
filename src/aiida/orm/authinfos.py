@@ -14,6 +14,7 @@ from aiida.manage import get_manager
 from aiida.plugins import TransportFactory
 
 from . import entities, users
+from .fields import QbField
 
 if TYPE_CHECKING:
     from aiida.orm import Computer, User
@@ -43,6 +44,14 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
     _CLS_COLLECTION = AuthInfoCollection
+
+    __qb_fields__ = (
+        QbField('enabled', dtype=bool, doc='Whether the instance is enabled'),
+        QbField('auth_params', dtype=Dict[str, Any], doc='Dictionary of authentication parameters'),
+        QbField('metadata', dtype=Dict[str, Any], doc='Dictionary of metadata'),
+        QbField('computer_pk', 'dbcomputer_id', dtype=int, doc='The PK of the computer'),
+        QbField('user_pk', 'aiidauser_id', dtype=int, doc='The PK of the user'),
+    )
 
     PROPERTY_WORKDIR = 'workdir'
 

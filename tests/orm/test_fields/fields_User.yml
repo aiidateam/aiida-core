@@ -1,0 +1,5 @@
+email: QbField('email', dtype=str)
+first_name: QbField('first_name', dtype=str)
+institution: QbField('institution', dtype=str)
+last_name: QbField('last_name', dtype=str)
+pk: QbField('pk', 'id', dtype=int)

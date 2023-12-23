@@ -15,6 +15,7 @@ from aiida.common import timezone
 from aiida.manage import get_manager
 
 from . import entities
+from .fields import QbField
 
 if TYPE_CHECKING:
     from aiida.orm import Node
@@ -126,6 +127,16 @@ class Log(entities.Entity['BackendLog', LogCollection]):
     """An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node."""
 
     _CLS_COLLECTION = LogCollection
+
+    __qb_fields__ = (
+        QbField('uuid', dtype=str, doc='The UUID of the node'),
+        QbField('loggername', dtype=str, doc='The name of the logger'),
+        QbField('levelname', dtype=str, doc='The name of the log level'),
+        QbField('message', dtype=str, doc='The message of the log'),
+        QbField('time', dtype=datetime, doc='The time at which the log was created'),
+        QbField('metadata', dtype=Dict[str, Any], doc='The metadata of the log'),
+        QbField('node_pk', 'dbnode_id', dtype=int, doc='The PK for the node'),
+    )
 
     def __init__(
         self,

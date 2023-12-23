@@ -13,6 +13,7 @@ from aiida.common import exceptions
 from aiida.manage import get_manager
 
 from . import entities
+from .fields import QbField
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
@@ -50,6 +51,13 @@ class User(entities.Entity['BackendUser', UserCollection]):
     """AiiDA User"""
 
     _CLS_COLLECTION = UserCollection
+
+    __qb_fields__ = (
+        QbField('email', dtype=str, doc='The user email'),
+        QbField('first_name', dtype=str, doc='The user first name'),
+        QbField('last_name', dtype=str, doc='The user last name'),
+        QbField('institution', dtype=str, doc='The user institution'),
+    )
 
     def __init__(
         self,

@@ -9,7 +9,7 @@
 """AiiDA Group entites"""
 import warnings
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
@@ -17,6 +17,7 @@ from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from . import convert, entities, extras, users
+from .fields import QbField
 
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
@@ -105,6 +106,16 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     """An AiiDA ORM implementation of group of nodes."""
 
     __type_string: ClassVar[Optional[str]]
+
+    __qb_fields__ = (
+        QbField('uuid', dtype=str, doc='The UUID of the group'),
+        QbField('type_string', dtype=str, doc='The type of the group'),
+        QbField('label', dtype=str, doc='The group label'),
+        QbField('description', dtype=str, doc='The group description'),
+        QbField('time', dtype=str, doc='The time of the group creation'),
+        QbField('extras', dtype=Dict[str, Any], doc='The group extras'),
+        QbField('user_pk', 'user_id', dtype=int, doc='The PK for the creating user'),
+    )
 
     _CLS_COLLECTION = GroupCollection
 

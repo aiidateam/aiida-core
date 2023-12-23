@@ -1,8 +1,9 @@
 """Data plugin that models a stashed folder on a remote computer."""
-import typing
+from typing import List, Tuple, Union
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
+from aiida.orm.fields import QbAttrField
 
 from .base import RemoteStashData
 
@@ -17,7 +18,12 @@ class RemoteStashFolderData(RemoteStashData):
 
     _storable = True
 
-    def __init__(self, stash_mode: StashMode, target_basepath: str, source_list: typing.List, **kwargs):
+    __qb_fields__ = (
+        QbAttrField('target_basepath', dtype=str, doc='The the target basepath'),
+        QbAttrField('source_list', dtype=List[str], doc='The list of source files that were stashed'),
+    )
+
+    def __init__(self, stash_mode: StashMode, target_basepath: str, source_list: List, **kwargs):
         """Construct a new instance
 
         :param stash_mode: the stashing mode with which the data was stashed on the remote.
@@ -49,7 +55,7 @@ class RemoteStashFolderData(RemoteStashData):
         self.base.attributes.set('target_basepath', value)
 
     @property
-    def source_list(self) -> typing.Union[typing.List, typing.Tuple]:
+    def source_list(self) -> Union[List, Tuple]:
         """Return the list of source files that were stashed.
 
         :return: the list of source files.
@@ -57,7 +63,7 @@ class RemoteStashFolderData(RemoteStashData):
         return self.base.attributes.get('source_list')
 
     @source_list.setter
-    def source_list(self, value: typing.Union[typing.List, typing.Tuple]):
+    def source_list(self, value: Union[List, Tuple]):
         """Set the list of source files that were stashed.
 
         :param value: the list of source files.

@@ -1,0 +1,8 @@
+description: QbField('description', dtype=str)
+extras: QbField('extras', dtype=typing.Dict[str, typing.Any])
+label: QbField('label', dtype=str)
+pk: QbField('pk', 'id', dtype=int)
+time: QbField('time', dtype=str)
+type_string: QbField('type_string', dtype=str)
+user_pk: QbField('user_pk', 'user_id', dtype=int)
+uuid: QbField('uuid', dtype=str)

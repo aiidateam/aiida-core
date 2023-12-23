@@ -1,0 +1,8 @@
+levelname: QbField('levelname', dtype=str)
+loggername: QbField('loggername', dtype=str)
+message: QbField('message', dtype=str)
+metadata: QbField('metadata', dtype=typing.Dict[str, typing.Any])
+node_pk: QbField('node_pk', 'dbnode_id', dtype=int)
+pk: QbField('pk', 'id', dtype=int)
+time: QbField('time', dtype=datetime)
+uuid: QbField('uuid', dtype=str)

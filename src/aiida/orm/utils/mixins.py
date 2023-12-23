@@ -14,6 +14,7 @@ import inspect
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, override, type_check
 from aiida.common.warnings import warn_deprecation
+from aiida.orm.fields import QbAttrField
 
 
 class FunctionCalculationMixin:
@@ -178,6 +179,8 @@ class Sealable:
     """Mixin to mark a Node as `sealable`."""
 
     SEALED_KEY = 'sealed'
+
+    __qb_fields__ = (QbAttrField(SEALED_KEY, dtype=bool, doc='Whether the node is sealed'),)
 
     @classproperty
     def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805

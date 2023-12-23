@@ -10,7 +10,11 @@
 lists and meshes of k-points (i.e., points in the reciprocal space of a
 periodic crystal structure).
 """
+from typing import List
+
 import numpy
+
+from aiida.orm.fields import QbAttrField
 
 from .array import ArrayData
 
@@ -32,6 +36,17 @@ class KpointsData(ArrayData):
     PRIMITIVE unit cell is provided in input to the set_cell or
     set_cell_from_structure methods.
     """
+
+    __qb_fields__ = (
+        QbAttrField('labels', dtype=List[str], doc='Labels associated with the list of kpoints'),
+        QbAttrField('label_numbers', dtype=List[int], doc='Index of the labels in the list of kpoints'),
+        QbAttrField('mesh', dtype=List[int], doc='Mesh of kpoints'),
+        QbAttrField('offset', dtype=List[float], doc='Offset of kpoints'),
+        QbAttrField('cell', dtype=List[List[float]], doc='Unit cell of the crystal, in Angstroms'),
+        QbAttrField('pbc1', dtype=bool, doc='True if the first lattice vector is periodic'),
+        QbAttrField('pbc2', dtype=bool, doc='True if the second lattice vector is periodic'),
+        QbAttrField('pbc3', dtype=bool, doc='True if the third lattice vector is periodic'),
+    )
 
     def get_description(self):
         """Returns a string with infos retrieved from  kpoints node's properties.

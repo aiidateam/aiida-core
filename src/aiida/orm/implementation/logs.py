@@ -9,11 +9,14 @@
 """Backend group module"""
 import abc
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from .entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendLog', 'BackendLogCollection')
+
+if TYPE_CHECKING:
+    from aiida.orm.querybuilder import FilterType
 
 
 class BackendLog(BackendEntity):
@@ -81,7 +84,7 @@ class BackendLogCollection(BackendCollection[BackendLog]):
         """
 
     @abc.abstractmethod
-    def delete_many(self, filters: dict) -> List[int]:
+    def delete_many(self, filters: 'FilterType') -> List[int]:
         """Delete Logs based on ``filters``
 
         :param filters: similar to QueryBuilder filter

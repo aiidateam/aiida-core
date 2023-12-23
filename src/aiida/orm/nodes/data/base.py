@@ -9,6 +9,8 @@
 """`Data` sub class to be used as a base for data containers that represent base python data types."""
 from functools import singledispatch
 
+from aiida.orm.fields import QbAttrField
+
 from .data import Data
 
 __all__ = ('BaseType', 'to_aiida_type')
@@ -22,6 +24,8 @@ def to_aiida_type(value):
 
 class BaseType(Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
+
+    __qb_fields__ = (QbAttrField('value', doc='The value of the data'),)
 
     def __init__(self, value=None, **kwargs):
         try:

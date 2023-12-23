@@ -9,6 +9,9 @@
 """AiiDA class to deal with crystal structure trajectories.
 """
 import collections.abc
+from typing import List
+
+from aiida.orm.fields import QbAttrField
 
 from .array import ArrayData
 
@@ -19,6 +22,12 @@ class TrajectoryData(ArrayData):
     """Stores a trajectory (a sequence of crystal structures with timestamps, and
     possibly with velocities).
     """
+
+    __qb_fields__ = (
+        QbAttrField('units_positions', 'units|positions', dtype=str),
+        QbAttrField('units_times', 'units|times', dtype=str),
+        QbAttrField('symbols', dtype=List[str], doc='list of symbols'),
+    )
 
     def __init__(self, structurelist=None, **kwargs):
         super().__init__(**kwargs)
@@ -249,7 +258,7 @@ class TrajectoryData(ArrayData):
             return None
 
     @property
-    def symbols(self):
+    def symbols(self) -> List[str]:
         """Return the array of symbols, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.

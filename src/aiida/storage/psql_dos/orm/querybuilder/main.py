@@ -72,6 +72,18 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             'db_dblog': {'metadata': '_metadata'},
         }
 
+        # data generated from front-end
+        self._data: QueryDictType = {
+            'path': [],
+            'filters': {},
+            'project': {},
+            'project_map': {},
+            'order_by': [],
+            'offset': None,
+            'limit': None,
+            'distinct': False,
+        }
+
         # Hashing the internal query representation avoids rebuilding a query
         self._query_cache: Optional[BuiltQuery] = None
         self._query_hash: Optional[str] = None
@@ -195,7 +207,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                                 attrkey,
                                 self.inner_to_outer_schema,
                             )
-                            yield_result[tag][field_name] = self.to_backend(row[project_index])
+                            key = self._data['project_map'].get(tag, {}).get(field_name, field_name)
+                            yield_result[tag][key] = self.to_backend(row[project_index])
                     yield yield_result
 
     def get_query(self, data: QueryDictType) -> BuiltQuery:

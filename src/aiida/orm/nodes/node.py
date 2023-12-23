@@ -7,10 +7,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Package for node ORM classes."""
-import datetime
+from datetime import datetime
 from functools import cached_property
 from logging import Logger
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterator, List, Optional, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterator, List, Optional, Sequence, Tuple, Type, TypeVar
 from uuid import UUID
 
 from aiida.common import exceptions
@@ -28,6 +28,7 @@ from ..computers import Computer
 from ..entities import Collection as EntityCollection
 from ..entities import Entity, from_backend_entity
 from ..extras import EntityExtras
+from ..fields import QbField
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .attributes import NodeAttributes
@@ -183,6 +184,20 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     # Flag that determines whether the class can be stored.
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
+
+    __qb_fields__: Sequence[QbField] = (
+        QbField('uuid', dtype=str, doc='The UUID of the node'),
+        QbField('label', dtype=str, doc='The node label'),
+        QbField('description', dtype=str, doc='The node description'),
+        QbField('node_type', dtype=str, doc='The type of the node'),
+        QbField('ctime', dtype=datetime, doc='The creation time of the node'),
+        QbField('mtime', dtype=datetime, doc='The modification time of the node'),
+        QbField('repository_metadata', dtype=Dict[str, Any], doc='The repository virtual file system'),
+        QbField('extras', dtype=Dict[str, Any], subscriptable=True, doc='The node extras'),
+        QbField('user_pk', 'user_id', dtype=int, doc='The PK of the user who owns the node'),
+        # Subclasses denote specific keys in the attributes dict
+        # QbField('attributes', dtype=Dict[str, Any], subscriptable=True, doc='The node attributes'),
+    )
 
     def __init__(
         self,
@@ -405,7 +420,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         self.backend_entity.user = user.backend_entity
 
     @property
-    def ctime(self) -> datetime.datetime:
+    def ctime(self) -> datetime:
         """Return the node ctime.
 
         :return: the ctime
@@ -413,7 +428,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         return self.backend_entity.ctime
 
     @property
-    def mtime(self) -> datetime.datetime:
+    def mtime(self) -> datetime:
         """Return the node mtime.
 
         :return: the mtime

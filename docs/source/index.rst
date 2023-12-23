@@ -171,7 +171,7 @@ If you use AiiDA for your research, please cite the following work:
 
 If the ADES concepts are referenced, please also cite:
 
-.. highlights:: Martin Uhrin, Sebastiaan. P. Huber, Jusong Yu, Nicola Marzari, and Giovanni Pizzi, *Workflows in AiiDA: Engineering a high-throughput, event-based engine for robust and modular computational workflows*, Computational Materials Science **187**, 110086 (2021); DOI: `10.1016/j.commatsci.2020.110086 <https://doi.org/10.1016/j.commatsci.2020.110086>`
+.. highlights:: Pizzi, Giovanni, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky. *AiiDA: automated interactive infrastructure and database for computational science*, Computational Materials Science **111**, 218-230 (2016); DOI: `10.1016/j.commatsci.2015.09.013 <https://doi.org/10.1016/j.commatsci.2015.09.013 >`_
 
 
 ****************

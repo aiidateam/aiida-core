@@ -286,7 +286,7 @@ The exit status is also displayed by ``verdi process list``:
       PK  Created    State             Process label    Process status
     ----  ---------  ----------------  ---------------  ----------------
       10  2m ago     ⨯ Excepted        divide
-     773  21s ago    ⏹ Finished [100]  divide
+     773  21s ago    ⏹ Finished [300]  divide
 
     Total results: 2
 

@@ -488,7 +488,7 @@ class Graph:
 
     @staticmethod
     def _convert_link_types(
-        link_types: None | str | LinkType | Sequence[str] | Sequence[LinkType]
+        link_types: None | str | LinkType | Sequence[str] | Sequence[LinkType],
     ) -> tuple[LinkType, ...]:
         """Convert link types, which may be strings, to a member of LinkType"""
         link_types_list: Sequence[LinkType] | Sequence[str]

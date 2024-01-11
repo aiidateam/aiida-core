@@ -10,6 +10,7 @@
 
 import os
 
+from aiida.common.pydantic import MetadataField
 from aiida.orm import AuthInfo
 from aiida.orm.fields import add_field
 
@@ -31,6 +32,9 @@ class RemoteData(Data):
             dtype=str,
         ),
     ]
+
+    class Model(Data.Model):
+        remote_path: str = MetadataField(description='Filepath on the remote computer.')
 
     def __init__(self, remote_path=None, **kwargs):
         super().__init__(**kwargs)

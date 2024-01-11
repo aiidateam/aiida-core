@@ -6,7 +6,7 @@ Run AiiDA via a Docker image
 ****************************
 
 The AiiDA team maintains a `Docker <https://www.docker.com/>`__ image on `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core-with-services>`__.
-This image contains a fully pre-configured AiiDA environment which makes it particularly useful for learning and testing purposes.
+This image contains a fully pre-configured AiiDA environment which makes it particularly useful for learning and developing purposes.
 
 .. caution::
 
@@ -15,23 +15,85 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 .. grid:: 1
    :gutter: 3
 
-   .. grid-item-card:: Install Docker on your workstation or laptop
+   .. grid-item-card:: Install Docker on your PC
 
-      To install Docker, please refer to the `official documentation <https://docs.docker.com/get-docker/>`__.
+      Docker is available for Windows, Mac and Linux and can be installed in different ways.
 
-   .. grid-item-card:: Start container and use AiiDA interactively
+      .. tab-set::
 
-      Start the container with (replace ``latest`` with the version you want to use, check the `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core-with-services/tags>`__ for available tags/versions):
+         .. tab-item:: Docker Desktop
 
-      .. parsed-literal::
+            Docker Desktop is available for Windows and Mac and includes everything you need to run Docker on your computer.
+            It is a virtual machine + Graphical user interface with some extra features like the new extensions.
+            `Docker Desktop <https://www.docker.com/products/docker-desktop/>`_ is the easiest way to get started with Docker.
+            You just need to download the installer and follow the instructions.
 
-         $ docker run -it aiidateam/aiida-core-with-services:latest bash
+         .. tab-item:: Colima on MacOS and Linux
 
-      You can specify a name for the container with the ``--name`` option for easier reference later on:
+            `Colima <https://github.com/abiosoft/colima>`_ is a new open-source project that makes it easy to run Docker on MacOS and Linux.
+            It is a lightweight alternative to Docker Desktop with a focus on simplicity and performance.
+            If you need multiple Docker environments, Colima is the recommended way.
+            With colima, you can have multiple Docker environments running at the same time, each with its own Docker daemon and resource allocation thus avoiding conflicts.
 
-      .. parsed-literal::
+         .. tab-item:: Docker CE on Linux
 
-         $ docker run -it --name aiida-container aiidateam/aiida-core-with-services:latest bash
+            The bare minimum to run Docker on Linux is to install the `Docker Engine <https://docs.docker.com/engine/install/>`_.
+            If you don't need a graphical user interface, this is the recommended way to install Docker.
+
+            .. note::
+
+               You will need `root` privileges to perform the `post-installation steps <https://docs.docker.com/engine/install/linux-postinstall/>`_.
+               Otherwise, you will need to use `sudo` for every Docker command.
+
+
+
+   .. grid-item-card:: Start/stop container and use AiiDA interactively
+
+      Start the image within Docker desktop or with docker CLI.
+      The ``latest`` tag is the most recent stable version.
+      You can replace ``latest`` tag with the version you want to use, check the `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core-with-services/tags>`__ for available tags/versions.
+
+      .. tab-set::
+
+         .. tab-item:: Docker Desktop
+
+            1. Open Docker Desktop
+            1. Click on the ``+`` button on the top left corner
+            1. Select ``Image`` tab
+            1. Search for ``aiidateam/aiida-core-with-services``
+            1. Select the ``latest`` tag
+            1. Click on ``Run``
+
+         .. tab-item:: Docker CLI
+
+            No matter how you installed Docker, you can always use the Docker CLI to run the image.
+
+            .. parsed-literal::
+
+               $ docker run -it aiidateam/aiida-core-with-services:latest bash
+
+            You can specify a name for the container with the ``--name`` option for easier reference later on:
+
+            .. parsed-literal::
+
+               $ docker run -it --name aiida-container aiidateam/aiida-core-with-services:latest bash
+
+            The ``-it`` option is used to run the container in interactive mode and to allocate a pseudo-TTY.
+            You will be dropped into a bash shell inside the container.
+
+            To exit the container, type ``exit`` or press ``Ctrl+D``, the container will be stopped.
+
+            To start the container again, run:
+
+            .. parsed-literal::
+
+               $ docker start -i aiida-container
+
+            If you need another shell inside the container, run:
+
+            .. parsed-literal::
+
+               $ docker exec -it aiida-container bash
 
       By default, an AiiDA profile is automatically set up inside the container.
       To disable this default profile being created, set the ``SETUP_DEFAULT_AIIDA_PROFILE`` environment variable to ``false``.
@@ -54,7 +116,7 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
       The profile named ``default`` is created under the ``aiida`` user.
 
-      For example, to check the verdi status, execute the following command inside the container:
+      To check the verdi status, execute the following command inside the container:
 
       .. code-block:: console
 
@@ -66,56 +128,86 @@ This image contains a fully pre-configured AiiDA environment which makes it part
          ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
          ✓ daemon:      Daemon is running as PID 1795 since 2020-05-20 02:54:00
 
-   .. grid-item-card:: Copy files from your computer to the container
 
-      To copy files from your computer to the container, use the ``docker cp`` command.
+Advanced usage
+==============
 
-      For example, to copy a file named ``test.txt`` from your current working directory to the ``/home/aiida`` path in the container, run:
+Congratulations! You have a working AiiDA environment, you can start using it.
 
-      .. code-block:: console
+If you use the Docker image for the development or for the production environment, you are likely to need some extra settings to make it work as you expect.
 
-         $ docker cp test.txt aiida-container:/home/aiida
+.. drowpdown:: Copy files from your computer to the container
 
-   .. grid-item-card:: Persist data across different containers
+   .. tab-set::
 
-      If you stop the container (`docker stop` or simply `Ctrl+D` from the container) and start it again, any data you created will persist.
+      .. tab-item:: Docker Desktop
 
-      .. code-block:: console
+         1. !!! test me in windows !!!
+         2. Open Docker Desktop
+         3. Click on the ``Containers/Apps`` button on the left sidebar
+         4. Click on the ``aiida-container`` container
+         5. Click on the ``CLI`` button on the top right corner
+         6. Click on the ``+`` button on the top left corner
+         7. Select ``File/Folder`` tab
+         8. Select the file/folder you want to copy
+         9. Select the destination path in the container
+         10. Click on ``Copy``
 
-         $ docker start -i aiida-container
+      .. tab-item:: Docker CLI
 
-      However, if you remove the container, **all data will be removed as well**.
+         Use the ``docker cp`` command if you need to copy files from your computer to the container or vice versa.
 
-      .. code-block:: console
+         For example, to copy a file named ``test.txt`` from your current working directory to the ``/home/aiida`` path in the container, run:
 
-         $ docker stop aiida-container
-         $ docker rm aiida-container
+         .. code-block:: console
 
-      The preferred way to persistently store data is to `create a volume <https://docs.docker.com/storage/volumes/>`__.
+            $ docker cp test.txt aiida-container:/home/aiida
 
-      To create a simple volume, run:
 
-      .. code-block:: console
+.. dropdown:: Persist data across different containers
 
-         $ docker volume create container-home-data
+   The lifetime of the data stored in a container is limited to the lifetime of that particular container.
+   If you stop the container (`docker stop` or simply `Ctrl+D` from the container) and start it again, any data you created will persist.
+   However, if you remove the container, **all data will be removed as well**.
+   
+   .. code-block:: console
+   
+      $ docker rm aiida-container
+   
+   The preferred way to persistently store data is to `create a volume <https://docs.docker.com/storage/volumes/>`__.
+   
+   .. tab-set::
+   
+      .. tab-item:: Docker Desktop
+      
+         1. Open Docker Desktop
+         1. ???
+   
+      .. tab-item:: Docker CLI
+      
+         To create a simple volume, run:
+   
+         .. code-block:: console
+         
+            $ docker volume create container-home-data
+   
+         Then make sure to mount that volume when the first time launching the aiida container:
+   
+         .. parsed-literal::
+         
+            $ docker run -it --name aiida-container -v container-home-data:/home/aiida aiidateam/aiida-core:latest bash
+   
+         Starting the container with the above command, ensures that any data stored in the ``/home/aiida`` path within the container is stored in the ``conatiner-home-data`` volume and therefore persists even if the container is removed.
+   
+         To persistently store the Python packages installed in the container, use `--user` flag when installing packages with pip, the packages will be installed in the ``/home/aiida/.local`` path which is mounted to the ``container-home-data`` volume.
+   
+         You can also mount a local directory instead of a volume and to other container paths, please refer to the `Docker documentation <https://docs.docker.com/storage/bind-mounts/>`__ for more information.
 
-      Then make sure to mount that volume when running the aiida container:
+.. button-ref:: intro:get_started:next
+   :ref-type: ref
+   :expand:
+   :color: primary
+   :outline:
+   :class: sd-font-weight-bold
 
-      .. parsed-literal::
-
-         $ docker run -it --name aiida-container -v container-home-data:/home/aiida aiidateam/aiida-core:latest
-
-      Starting the container with the above command, ensures that any data stored in the ``/home/aiida`` path within the container is stored in the ``conatiner-home-data`` volume and therefore persists even if the container is removed.
-
-      To persistently store the Python packages installed in the container, use `--user` flag when installing packages with pip, the packages will be installed in the ``/home/aiida/.local`` path which is mounted to the ``container-home-data`` volume.
-
-      You can also mount a local directory instead of a volume and to other container paths, please refer to the `Docker documentation <https://docs.docker.com/storage/bind-mounts/>`__ for more information.
-
-      .. button-ref:: intro:get_started:next
-         :ref-type: ref
-         :expand:
-         :color: primary
-         :outline:
-         :class: sd-font-weight-bold
-
-         What's next?
+   What's next?

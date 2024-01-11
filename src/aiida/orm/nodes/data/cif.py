@@ -9,10 +9,10 @@
 """Tools for handling Crystallographic Information Files (CIF)"""
 
 import re
-from typing import List
+import typing as t
 
+from aiida.common.pydantic import MetadataField
 from aiida.common.utils import Capturing
-from aiida.orm.fields import add_field
 
 from .singlefile import SinglefileData
 
@@ -250,20 +250,16 @@ class CifData(SinglefileData):
     _values = None
     _ase = None
 
-    __qb_fields__ = [
-        add_field(
-            'formulae',
-            dtype=List[str],
-        ),
-        add_field(
-            'spacegroup_numbers',
-            dtype=List[str],
-        ),
-        add_field(
-            'md5',
-            dtype=str,
-        ),
-    ]
+    class Model(SinglefileData.Model):
+        formulae: t.Optional[t.List[str]] = MetadataField(
+            None, description='List of formulae contained in the CIF file.', exclude_to_orm=True
+        )
+        spacegroup_numbers: t.Optional[t.List[str]] = MetadataField(
+            None, description='List of space group numbers of the structure.', exclude_to_orm=True
+        )
+        md5: t.Optional[str] = MetadataField(
+            None, description='MD5 checksum of the file contents.', exclude_to_orm=True
+        )
 
     def __init__(self, ase=None, file=None, filename=None, values=None, scan_type=None, parse_policy=None, **kwargs):
         """Construct a new instance and set the contents to that of the file.
@@ -382,6 +378,18 @@ class CifData(SinglefileData):
             )
 
         return cifs[0], False
+
+    @property
+    def formulae(self):
+        return self.base.attributes.get('formulae')
+
+    @property
+    def spacegroup_numbers(self):
+        return self.base.attributes.get('spacegroup_numbers')
+
+    @property
+    def md5(self):
+        return self.base.attributes.get('md5')
 
     @property
     def ase(self):

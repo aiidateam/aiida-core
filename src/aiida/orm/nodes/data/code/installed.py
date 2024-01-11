@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pathlib
 
-from pydantic import field_validator, model_validator
+from pydantic import field_serializer, field_validator
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -37,14 +37,16 @@ class InstalledCode(Code):
     """Data plugin representing an executable code on a remote computer."""
 
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
+    _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
 
-        computer: str = MetadataField(
+        computer: str = MetadataField(  # type: ignore[assignment]
             ...,
             title='Computer',
             description='The remote computer on which the executable resides.',
+            orm_to_model=lambda node: node.computer.label,
             short_name='-Y',
             priority=2,
         )
@@ -52,6 +54,7 @@ class InstalledCode(Code):
             ...,
             title='Filepath executable',
             description='Filepath of the executable on the remote computer.',
+            orm_to_model=lambda node: str(node.filepath_executable),  # type: ignore[attr-defined]
             short_name='-X',
             priority=1,
         )
@@ -73,21 +76,25 @@ class InstalledCode(Code):
             except exceptions.NotExistent as exception:
                 raise ValueError(exception) from exception
 
-        @model_validator(mode='after')  # type: ignore[misc]
-        def validate_full_label_uniqueness(self) -> AbstractCode.Model:
-            """Validate that the full label does not already exist."""
-            from aiida.orm import load_code
+        @field_serializer('computer')
+        def serialize_computer(self, computer: Computer, _info):
+            return computer.label
 
-            full_label = f'{self.label}@{self.computer.label}'  # type: ignore[attr-defined]
+        # @model_validator(mode='after')  # type: ignore[misc]
+        # def validate_full_label_uniqueness(self) -> AbstractCode.Model:
+        #     """Validate that the full label does not already exist."""
+        #     from aiida.orm import load_code
 
-            try:
-                load_code(full_label)
-            except exceptions.NotExistent:
-                return self
-            except exceptions.MultipleObjectsError as exception:
-                raise ValueError(f'Multiple codes with the label `{full_label}` already exist.') from exception
-            else:
-                raise ValueError(f'A code with the label `{full_label}` already exists.')
+        #     full_label = f'{self.label}@{self.computer.label}'  # type: ignore[attr-defined]
+
+        #     try:
+        #         load_code(full_label)
+        #     except exceptions.NotExistent:
+        #         return self
+        #     except exceptions.MultipleObjectsError as exception:
+        #         raise ValueError(f'Multiple codes with the label `{full_label}` already exist.') from exception
+        #     else:
+        #         raise ValueError(f'A code with the label `{full_label}` already exists.')
 
     def __init__(self, computer: Computer, filepath_executable: str, **kwargs):
         """Construct a new instance.

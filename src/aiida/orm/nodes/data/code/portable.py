@@ -39,6 +39,7 @@ class PortableCode(Code):
     """Data plugin representing an executable code stored in AiiDA's storage."""
 
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
+    _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""

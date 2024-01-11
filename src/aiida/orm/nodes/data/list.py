@@ -7,7 +7,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a list."""
+import typing as t
 from collections.abc import MutableSequence
+
+from aiida.common.pydantic import MetadataField
 
 from .base import to_aiida_type
 from .data import Data
@@ -19,6 +22,11 @@ class List(Data, MutableSequence):
     """`Data` sub class to represent a list."""
 
     _LIST_KEY = 'list'
+
+    class Model(Data.Model):
+        value: t.List[t.Any] = MetadataField(
+            description='Content of the data',
+        )
 
     def __init__(self, value=None, **kwargs):
         """Initialise a ``List`` node instance.
@@ -107,6 +115,14 @@ class List(Data, MutableSequence):
         data.reverse()
         if not self._using_list_reference():
             self.set_list(data)
+
+    @property
+    def value(self) -> list[t.Any]:
+        """Return the value of this node, which is the list content.
+
+        :return: The list content.
+        """
+        return self.get_list()
 
     def get_list(self):
         """Return the contents of this node.

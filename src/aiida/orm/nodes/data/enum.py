@@ -20,6 +20,7 @@ from enum import Enum
 from plumpy.loaders import get_object_loader
 
 from aiida.common.lang import type_check
+from aiida.common.pydantic import MetadataField
 
 from .base import to_aiida_type
 from .data import Data
@@ -47,6 +48,12 @@ class EnumData(Data):
     KEY_NAME = 'name'
     KEY_VALUE = 'value'
     KEY_IDENTIFIER = 'identifier'
+
+    class Model(Data.Model):
+        member: Enum = MetadataField(
+            description='The member name.',
+            orm_to_model=lambda node: node.get_member(),  # type: ignore[attr-defined]
+        )
 
     def __init__(self, member: Enum, *args, **kwargs):
         """Construct the node for the to enum member that is to be wrapped."""

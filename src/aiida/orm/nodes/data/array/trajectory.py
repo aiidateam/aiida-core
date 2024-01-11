@@ -11,7 +11,7 @@
 import collections.abc
 from typing import List
 
-from aiida.orm.fields import add_field
+from aiida.common.pydantic import MetadataField
 
 from .array import ArrayData
 
@@ -23,23 +23,10 @@ class TrajectoryData(ArrayData):
     possibly with velocities).
     """
 
-    __qb_fields__ = [
-        add_field(
-            'units_positions',
-            'units|positions',
-            dtype=str,
-        ),
-        add_field(
-            'units_times',
-            'units|times',
-            dtype=str,
-        ),
-        add_field(
-            'symbols',
-            dtype=List[str],
-            doc='list of symbols',
-        ),
-    ]
+    class Model(ArrayData.Model):
+        units_positions: str = MetadataField(alias='units|positions', description='Unit of positions')
+        units_times: str = MetadataField(alias='units|times', description='Unit of time')
+        symbols: List[str] = MetadataField(description='List of symbols')
 
     def __init__(self, structurelist=None, **kwargs):
         super().__init__(**kwargs)

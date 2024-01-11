@@ -16,7 +16,7 @@ from plumpy.process_states import ProcessState
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
-from aiida.orm.fields import add_field
+from aiida.common.pydantic import MetadataField
 from aiida.orm.utils.mixins import Sealable
 
 from ..caching import NodeCaching
@@ -187,53 +187,14 @@ class ProcessNode(Sealable, Node):
             cls.PROCESS_STATUS_KEY,
         )
 
-    __qb_fields__ = [
-        add_field(
-            'process_type',
-            dtype=Optional[str],
-            doc='The process type string',
-        ),
-        add_field(
-            'computer_pk',
-            dtype=Optional[int],
-            doc='The computer PK',
-        ),
-        add_field(
-            PROCESS_LABEL_KEY,
-            dtype=Optional[str],
-            doc='The process label',
-        ),
-        add_field(
-            PROCESS_STATE_KEY,
-            dtype=Optional[str],
-            doc='The process state enum',
-        ),
-        add_field(
-            PROCESS_STATUS_KEY,
-            dtype=Optional[str],
-            doc='The process status is a generic status message',
-        ),
-        add_field(
-            EXIT_STATUS_KEY,
-            dtype=Optional[int],
-            doc='The process exit status',
-        ),
-        add_field(
-            EXIT_MESSAGE_KEY,
-            dtype=Optional[str],
-            doc='The process exit message',
-        ),
-        add_field(
-            EXCEPTION_KEY,
-            dtype=Optional[str],
-            doc='The process exception message',
-        ),
-        add_field(
-            PROCESS_PAUSED_KEY,
-            dtype=bool,
-            doc='Whether the process is paused',
-        ),
-    ]
+    class Model(Node.Model, Sealable.Model):
+        process_label: Optional[str] = MetadataField(description='The process label')
+        process_state: Optional[str] = MetadataField(description='The process state enum')
+        process_status: Optional[str] = MetadataField(description='The process status is a generic status message')
+        exit_status: Optional[int] = MetadataField(description='The process exit status')
+        exit_message: Optional[str] = MetadataField(description='The process exit message')
+        exception: Optional[str] = MetadataField(description='The process exception message')
+        paused: bool = MetadataField(description='Whether the process is paused')
 
     def set_metadata_inputs(self, value: Dict[str, Any]) -> None:
         """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""

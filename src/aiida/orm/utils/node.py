@@ -94,7 +94,7 @@ def get_type_string_from_class(class_module, class_name):
     else:
         type_string = f'{class_module}.{class_name}.'
 
-    prefixes = ('aiida.orm.nodes.',)
+    prefixes = ('aiida.orm.nodes.', 'aiida.orm.core.')
 
     # Sequentially and **in order** strip the prefixes if present
     for prefix in prefixes:

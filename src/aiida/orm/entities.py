@@ -13,16 +13,19 @@ from __future__ import annotations
 import abc
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, Optional, Sequence, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, Union, cast
 
 from plumpy.base.utils import call_with_super_check, super_check
+from pydantic import BaseModel
+from pydantic.fields import FieldInfo
 
-from aiida.common.exceptions import InvalidOperation
+from aiida.common.exceptions import EntryPointError, InvalidOperation, NotExistent
 from aiida.common.lang import classproperty, type_check
+from aiida.common.pydantic import MetadataField, get_metadata
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
-from .fields import EntityFieldMeta, QbField, QbFields, add_field
+from .fields import EntityFieldMeta
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -175,16 +178,78 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
 
-    fields: QbFields = QbFields()
-
-    __qb_fields__: Sequence[QbField] = [
-        add_field(
-            'pk',
-            dtype=int,
+    class Model(BaseModel):
+        pk: Optional[int] = MetadataField(
+            None,
+            description='The primary key of the entity. Can be `None` if the entity is not yet stored.',
             is_attribute=False,
-            doc='The primary key of the entity',
-        ),
-    ]
+            exclude_to_orm=True,
+            exclude_from_cli=True,
+        )
+
+    @classmethod
+    def model_to_orm_fields(cls) -> dict[str, FieldInfo]:
+        return {
+            key: field for key, field in cls.Model.model_fields.items() if not get_metadata(field, 'exclude_to_orm')
+        }
+
+    @classmethod
+    def model_to_orm_field_values(cls, model: Model) -> dict[str, Any]:
+        from aiida.plugins.factories import BaseFactory
+
+        fields = {}
+
+        for key, field in cls.model_to_orm_fields().items():
+            field_value = getattr(model, key)
+
+            if field_value is None:
+                continue
+
+            if orm_class := get_metadata(field, 'orm_class'):
+                if isinstance(orm_class, str):
+                    try:
+                        orm_class = BaseFactory('aiida.orm', orm_class)
+                    except EntryPointError as exception:
+                        raise EntryPointError(
+                            f'The `orm_class` of `{cls.__name__}.Model.{key} is invalid: {exception}'
+                        ) from exception
+                try:
+                    fields[key] = orm_class.collection.get(id=field_value)
+                except NotExistent as exception:
+                    raise NotExistent(f'No `{orm_class}` found with pk={field_value}') from exception
+            elif model_to_orm := get_metadata(field, 'model_to_orm'):
+                fields[key] = model_to_orm(model)
+            else:
+                fields[key] = field_value
+
+        return fields
+
+    def to_model(self) -> Model:
+        """Return the entity instance as an instance of its model."""
+        fields = {}
+
+        for key, field in self.Model.model_fields.items():
+            if orm_to_model := get_metadata(field, 'orm_to_model'):
+                fields[key] = orm_to_model(self)
+            else:
+                fields[key] = getattr(self, key)
+
+        return self.Model(**fields)
+
+    @classmethod
+    def from_model(cls, model: Model) -> 'Entity':
+        """Return an entity instance from an instance of its model."""
+        fields = cls.model_to_orm_field_values(model)
+        return cls(**fields)
+
+    def serialize(self) -> dict[str, Any]:
+        """Serialize the entity instance to JSON."""
+        return self.to_model().model_dump()
+
+    @classmethod
+    def from_serialized(cls, **kwargs: dict[str, Any]) -> 'Entity':
+        """Construct an entity instance from JSON serialized data."""
+        return cls.from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
 
     @classproperty
     def objects(cls: EntityType) -> CollectionType:  # noqa: N805
@@ -235,6 +300,15 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         """:param backend_entity: the backend model supporting this entity"""
         self._backend_entity = backend_entity
         call_with_super_check(self.initialize)
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+
+        if hasattr(self, 'uuid'):
+            return self.uuid == other.uuid  # type: ignore[attr-defined]
+
+        return super().__eq__(other)
 
     def __getstate__(self):
         """Prevent an ORM entity instance from being pickled."""

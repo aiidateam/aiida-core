@@ -134,6 +134,20 @@ class NodeRepository:
         """
         self._repository.clone(repo._repository)
 
+    def serialize_content(self) -> dict[str, bytes]:
+        """Serialize the content of the repository content into a JSON-serializable format.
+
+        :return: dictionary with the content metadata.
+        """
+        serialized = {}
+
+        for dirpath, _, filenames in self.walk():
+            for filename in filenames:
+                filepath = dirpath / filename
+                serialized[str(filepath)] = self.get_object_content(str(filepath), mode='rb')
+
+        return serialized
+
     def serialize(self) -> dict:
         """Serialize the metadata of the repository content into a JSON-serializable format.
 

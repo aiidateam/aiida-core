@@ -9,6 +9,7 @@
 """Backend group module"""
 
 import abc
+import datetime
 from typing import TYPE_CHECKING, List, Optional, Protocol, Sequence, Union
 
 from .entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
@@ -87,6 +88,11 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
     @abc.abstractmethod
     def uuid(self) -> str:
         """Return the UUID of the group."""
+
+    @property
+    @abc.abstractmethod
+    def time(self) -> datetime.datetime:
+        """Return the creation timestamp of the group."""
 
     @property
     @abc.abstractmethod

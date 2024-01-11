@@ -15,13 +15,13 @@ import functools
 import pathlib
 import typing as t
 
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
 
 from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
-from aiida.common.pydantic import MetadataField
+from aiida.common.pydantic import MetadataField, get_metadata
 from aiida.orm import Computer
 from aiida.plugins import CalculationFactory
 
@@ -45,7 +45,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
     _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
 
-    class Model(BaseModel, defer_build=True):
+    class Model(Data.Model, defer_build=True):
         """Model describing required information to create an instance."""
 
         label: str = MetadataField(
@@ -386,18 +386,13 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Export code to a YAML file."""
         import yaml
 
-        code_data = {}
-        sort = kwargs.get('sort', False)
+        data = self.serialize()
 
-        for key in self.Model.model_fields.keys():
-            value = getattr(self, key).label if key == 'computer' else getattr(self, key)
+        for key, field in self.Model.model_fields.items():
+            if get_metadata(field, 'exclude_from_cli'):
+                data.pop(key)
 
-            # If the attribute is not set, for example ``with_mpi`` do not export it
-            # so that there are no null-values in the resulting YAML file
-            if value is not None:
-                code_data[key] = str(value)
-
-        return yaml.dump(code_data, sort_keys=sort, encoding='utf-8'), {}
+        return yaml.dump(data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}
 
     def _prepare_yml(self, *args, **kwargs):
         """Also allow for export as .yml"""

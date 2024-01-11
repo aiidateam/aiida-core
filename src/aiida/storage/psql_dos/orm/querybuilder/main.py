@@ -48,7 +48,6 @@ PROJECT_MAP = {
     },
     'db_dbnode': {
         'pk': 'id',
-        'dict': 'attributes',
         'computer_pk': 'dbcomputer_id',
         'user_pk': 'user_id',
     },

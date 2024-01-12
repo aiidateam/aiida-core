@@ -38,15 +38,15 @@ This image contains a fully pre-configured AiiDA environment which makes it part
             With colima, you can have multiple Docker environments running at the same time, each with its own Docker daemon and resource allocation thus avoiding conflicts.
 
             To install the colima, on MacOS run:
-            
+
             .. parsed-literal::
 
                $ brew install colima
-               
+
             Or check Check `here <https://github.com/abiosoft/colima/blob/main/docs/INSTALL.md>`__ for other installation options.
 
             After installation, start the docker daemon by:
-           
+
             .. parsed-literal::
 
                $ colima start
@@ -216,7 +216,7 @@ If you use the Docker image for development or production, you will likely need 
 
          Starting the container with the above command ensures that any data stored in the ``/home/aiida`` path within the container is also stored in the ``conatiner-home-data`` volume and therefore persists even if the container is removed.
 
-         To persist store the Python packages installed in the container, use `--user` flag when installing packages with pip. 
+         To persist store the Python packages installed in the container, use `--user` flag when installing packages with pip.
          The packages will be installed in the ``/home/aiida/.local`` path which is mounted to the ``container-home-data`` volume.
 
          You can mount a folder in container to a local directory, please refer to the `Docker documentation <https://docs.docker.com/storage/bind-mounts/>`__ for more information.

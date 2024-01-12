@@ -525,9 +525,14 @@ class PsqlDosBackend(StorageBackend):
             env = os.environ.copy()
             env['PGPASSWORD'] = cfg['database_password']
             cmd = [
-                pg_dump_exe, f'--host={cfg["database_hostname"]}', f'--port={cfg["database_port"]}',
-                f'--dbname={cfg["database_name"]}', f'--username={cfg["database_username"]}', '--no-password',
-                '--format=p', f'--file={str(psql_temp_loc)}'
+                pg_dump_exe,
+                f'--host={cfg["database_hostname"]}',
+                f'--port={cfg["database_port"]}',
+                f'--dbname={cfg["database_name"]}',
+                f'--username={cfg["database_username"]}',
+                '--no-password',
+                '--format=p',
+                f'--file={psql_temp_loc!s}',
             ]
             try:
                 subprocess.run(cmd, check=True, env=env)
@@ -535,9 +540,9 @@ class PsqlDosBackend(StorageBackend):
                 raise backup_utils.BackupError(f'pg_dump: {exc}')
 
             if psql_temp_loc.is_file():
-                STORAGE_LOGGER.info(f'Dumped the PostgreSQL database to {str(psql_temp_loc)}')
+                STORAGE_LOGGER.info(f'Dumped the PostgreSQL database to {psql_temp_loc!s}')
             else:
-                raise backup_utils.BackupError(f"'{str(psql_temp_loc)}' was not created.")
+                raise backup_utils.BackupError(f"'{psql_temp_loc!s}' was not created.")
 
             # step 3: transfer the PostgreSQL database file
             manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)
@@ -560,7 +565,6 @@ class PsqlDosBackend(StorageBackend):
         keep: int,
         exes: dict,
     ) -> bool:
-
         try:
             backup_manager = backup_utils.BackupManager(dest, STORAGE_LOGGER, exes=exes, keep=keep)
             backup_manager.backup_auto_folders(lambda path, prev: self._backup(backup_manager, path, prev))

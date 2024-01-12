@@ -185,9 +185,14 @@ def profile_dbdump(profile, output_file):
     db_config = profile.dictionary['storage']['config']
 
     cmd = [
-        'pg_dump', f'--host={db_config["database_hostname"]}', f'--port={db_config["database_port"]}',
-        f'--dbname={db_config["database_name"]}', f'--username={db_config["database_username"]}', '--no-password',
-        '--format=p', f'--file={output_file}'
+        'pg_dump',
+        f'--host={db_config["database_hostname"]}',
+        f'--port={db_config["database_port"]}',
+        f'--dbname={db_config["database_name"]}',
+        f'--username={db_config["database_username"]}',
+        '--no-password',
+        '--format=p',
+        f'--file={output_file}',
     ]
 
     env = os.environ.copy()

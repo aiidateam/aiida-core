@@ -182,7 +182,7 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
     '--rsync_exe',
     type=click.STRING,
     default='rsync',
-    help="Specify the 'rsync' executable, if not in PATH. Used for both local and remote destinations"
+    help="Specify the 'rsync' executable, if not in PATH. Used for both local and remote destinations",
 )
 @decorators.with_dbenv()
 def storage_backup(dest: str, keep: int, pg_dump_exe: str, rsync_exe: str):

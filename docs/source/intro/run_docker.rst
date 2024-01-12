@@ -59,12 +59,12 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
          .. tab-item:: Docker Desktop
 
-            1. Open Docker Desktop
-            1. Click on the ``+`` button on the top left corner
-            1. Select ``Image`` tab
-            1. Search for ``aiidateam/aiida-core-with-services``
-            1. Select the ``latest`` tag
-            1. Click on ``Run``
+            #. Open Docker Desktop
+            #. Click on the ``+`` button on the top left corner
+            #. Select ``Image`` tab
+            #. Search for ``aiidateam/aiida-core-with-services``
+            #. Select the ``latest`` tag
+            #. Click on ``Run``
 
          .. tab-item:: Docker CLI
 
@@ -144,16 +144,16 @@ If you use the Docker image for the development or for the production environmen
 
       .. tab-item:: Docker Desktop
 
-         1. !!! test me in windows !!!
-         2. Open Docker Desktop
-         3. Click on the ``Containers/Apps`` button on the left sidebar
-         4. Click on the ``aiida-container`` container
-         5. Click on the ``CLI`` button on the top right corner
-         6. Click on the ``+`` button on the top left corner
-         7. Select ``File/Folder`` tab
-         8. Select the file/folder you want to copy
-         9. Select the destination path in the container
-         10. Click on ``Copy``
+         #. !!! test me in windows !!!
+         #. Open Docker Desktop
+         #. Click on the ``Containers/Apps`` button on the left sidebar
+         #. Click on the ``aiida-container`` container
+         #. Click on the ``CLI`` button on the top right corner
+         #. Click on the ``+`` button on the top left corner
+         #. Select ``File/Folder`` tab
+         #. Select the file/folder you want to copy
+         #. Select the destination path in the container
+         #. Click on ``Copy``
 
       .. tab-item:: Docker CLI
 

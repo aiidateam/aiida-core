@@ -7,7 +7,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi storage` commands."""
-import sys
 
 import click
 from click_spinner import spinner
@@ -169,7 +168,7 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
 
 
 @verdi_storage.command('backup')
-@click.argument('dest', type=click.Path(), nargs=1)
+@click.argument('dest', type=click.Path(file_okay=False), nargs=1)
 @click.option(
     '--keep',
     default=1,
@@ -184,16 +183,21 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
     default='rsync',
     help="Specify the 'rsync' executable, if not in PATH. Used for both local and remote destinations",
 )
-@decorators.with_dbenv()
-def storage_backup(dest: str, keep: int, pg_dump_exe: str, rsync_exe: str):
-    """Create a backup of the profile data to destination location DEST, in a subfolder
-    backup_<timestamp>_<randstr> and point a symlink called `last-backup` to it.
+@decorators.with_manager
+@click.pass_context
+def storage_backup(ctx, manager, dest: str, keep: int, pg_dump_exe: str, rsync_exe: str):
+    """Backup the data storage of a profile.
+
+    The backup is created in the destination `DEST`, in a subfolder that follows the naming convention
+    backup_<timestamp>_<randstr> and a symlink called `last-backup` is pointed to it.
 
     NOTE: This is safe to run while the AiiDA profile is being used.
 
     Destination (DEST) can either be a local path, or a remote destination (reachable via ssh).
     In the latter case, remote destination needs to have the following syntax:
-       [<remote_user>@]<remote_host>:<path>
+
+        [<remote_user>@]<remote_host>:<path>
+
     i.e., contain the remote host name and the remote path, separated by a colon (and optionally the
     remote user separated by an @ symbol). You can tune SSH parameters using the standard options given
     by OpenSSH, such as adding configuration options to ~/.ssh/config (e.g. to allow for passwordless
@@ -203,14 +207,9 @@ def storage_backup(dest: str, keep: int, pg_dump_exe: str, rsync_exe: str):
     non-UNIX environments.
     """
 
-    from aiida.manage.manager import get_manager
-
-    manager = get_manager()
     storage = manager.get_profile_storage()
-
-    success = storage.backup(dest, keep, exes={'rsync': rsync_exe, 'pg_dump': pg_dump_exe})
-    if not success:
-        click.echo('Backup was not successful.')
-        sys.exit(1)
-
-    click.echo(f'Success! Profile backed up to {dest}')
+    try:
+        storage.backup(dest, keep, exes={'rsync': rsync_exe, 'pg_dump': pg_dump_exe})
+    except (ValueError, exceptions.StorageBackupError) as exception:
+        echo.echo_criticial(f'An error occurred during the backup: {exception}')
+    click.echo(f'Data storage of profile `{ctx.obj.profile.name}` backed up to `{dest}`')

@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
+from aiida.common import exceptions
 from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration.profile import Profile
@@ -499,20 +500,18 @@ class PsqlDosBackend(StorageBackend):
         import subprocess
         import tempfile
 
-        from aiida.common import exceptions
-        from aiida.common.exceptions import LockedProfileError
         from aiida.manage.configuration import get_config
         from aiida.manage.profile_access import ProfileAccessManager
 
         cfg = self._profile.storage_config
-        container = Container(str(get_filepath_container(self.profile)))
+        container = Container(get_filepath_container(self.profile))
 
         # check that the AiiDA profile is not locked and request access for the duration of this backup process
         # (locked means that possibly a maintenance operation is running that could interfere with the backup)
         try:
             ProfileAccessManager(self._profile).request_access()
-        except LockedProfileError:
-            raise backup_utils.BackupError('The profile is locked!')
+        except exceptions.LockedProfileError as exc:
+            raise exceptions.StorageBackupError('The profile is locked!') from exc
 
         # step 1: first run the storage maintenance version that can safely be performed while aiida is running
         self.maintain(full=False, compress=True)
@@ -564,12 +563,9 @@ class PsqlDosBackend(StorageBackend):
         dest: str,
         keep: int,
         exes: dict,
-    ) -> bool:
+    ):
         try:
             backup_manager = backup_utils.BackupManager(dest, STORAGE_LOGGER, exes=exes, keep=keep)
             backup_manager.backup_auto_folders(lambda path, prev: self._backup(backup_manager, path, prev))
         except backup_utils.BackupError as exc:
-            STORAGE_LOGGER.error(f'Error: {exc}')
-            return False
-
-        return True
+            raise exceptions.StorageBackupError from exc

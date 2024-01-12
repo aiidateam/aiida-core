@@ -500,7 +500,7 @@ class PsqlDosBackend(StorageBackend):
         import subprocess
         import tempfile
 
-        from aiida.manage.configuration import get_config
+        from aiida.manage.configuration import Config, get_config
         from aiida.manage.profile_access import ProfileAccessManager
 
         cfg = self._profile.storage_config
@@ -551,10 +551,16 @@ class PsqlDosBackend(StorageBackend):
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
 
-        # step 5: back up aiida config.json file
+        # step 5: back up aiida config.json file (strip other profiles!)
         try:
             config = get_config()
-            manager.call_rsync(pathlib.Path(config.filepath), path)
+            profile = config.get_profile(self.profile.name)  # Get the profile being backed up
+            with tempfile.TemporaryDirectory() as tmpdir:
+                filepath_config = pathlib.Path(tmpdir) / 'config.json'
+                backup_config = Config(str(filepath_config), {})  # Create empty config at temporary file location
+                backup_config.add_profile(profile)  # Add the profile being backed up
+                backup_config.store()  # Write the contents to disk
+                manager.call_rsync(filepath_config, path)
         except (exceptions.MissingConfigurationError, exceptions.ConfigurationError):
             STORAGE_LOGGER.warning('aiida config.json not found!')
 

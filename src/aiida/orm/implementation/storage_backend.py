@@ -310,11 +310,15 @@ class StorageBackend(abc.ABC):
         dest: str,
         keep: int,
         exes: dict,
-    ) -> bool:
+    ):
         """Create a backup of the storage contents.
 
-        :return:
-            True is successful and False if unsuccessful.
+        :param dest: The path to the destination folder.
+        :param keep: The number of backups to keep in the target destination.
+        :param exes: Dictionary of absolute paths to executables that are required during the backup
+            but that are not present in the `PATH`.
+        :raises ValueError: If the input parameters are invalid.
+        :raises StorageBackupError: If an error occurred during the backup procedure.
         """
         raise NotImplementedError
 

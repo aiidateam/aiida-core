@@ -5,28 +5,19 @@
 # Environment.
 export SHELL=/bin/bash
 
-# If the environment variable `SETUP_DEFAULT_AIIDA_PROFILE` is not set, set it to `true`.
-export SETUP_DEFAULT_AIIDA_PROFILE="${SETUP_DEFAULT_AIIDA_PROFILE:-true}"
-
 # Check if user requested to set up AiiDA profile (and if it exists already)
-if [[ ${SETUP_DEFAULT_AIIDA_PROFILE} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
-
-    export AIIDA_PROFILE_NAME="${AIIDA_PROFILE_NAME:-default}"
-    export AIIDA_USER_EMAIL="${AIIDA_USER_EMAIL:-aiida@localhost}"
-    export AIIDA_USER_FIRST_NAME="${AIIDA_USER_FIRST_NAME:-Giuseppe}"
-    export AIIDA_USER_LAST_NAME="${AIIDA_USER_LAST_NAME:-Verdi}"
-    export AIIDA_USER_INSTITUTION="${AIIDA_USER_INSTITUTION:-Khedivial}"
-    export AIIDA_PROFILE_PATH="${AIIDA_PROFILE_PATH:-/aiida/assets/config-quick-setup.yaml}"
+# If the environment variable `SETUP_DEFAULT_AIIDA_PROFILE` is not set, set it to `true`.
+if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
 
     # Create AiiDA profile.
     verdi quicksetup              \
         --non-interactive                            \
-        --profile "${AIIDA_PROFILE_NAME}"            \
-        --email "${AIIDA_USER_EMAIL}"                \
-        --first-name "${AIIDA_USER_FIRST_NAME}"      \
-        --last-name "${AIIDA_USER_LAST_NAME}"        \
-        --institution "${AIIDA_USER_INSTITUTION}"    \
-        --config "${AIIDA_PROFILE_PATH}"
+        --profile "${AIIDA_PROFILE_NAME:-default}"            \
+        --email "${AIIDA_USER_EMAIL:-aiida@localhost}"                \
+        --first-name "${AIIDA_USER_FIRST_NAME:-Giuseppe}"      \
+        --last-name "${AIIDA_USER_LAST_NAME:-Verdi}"        \
+        --institution "${AIIDA_USER_INSTITUTION:-Khedivial}"    \
+        --config /aiida/assets/config-quick-setup.yaml
 
     # Supress verdi version warning because we are using a development version
     verdi config set warnings.development_version False

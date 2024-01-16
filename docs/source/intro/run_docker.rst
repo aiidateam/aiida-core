@@ -33,6 +33,17 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
          $ docker run -it --name aiida-container aiidateam/aiida-core-with-services:latest bash
 
+      The following environment variables are able to be set to configure the AiiDA profile:
+      - ``AIIDA_PROFILE_NAME`` the name of the profile to be created (default: ``default``)
+      - ``AIIDA_USER_EMAIL`` the email of the user to be created (default: ``aiida@localhost``)
+      - ``AIIDA_USER_FIRST_NAME`` the first name of the user to be created (default: ``Giuseppe``)
+      - ``AIIDA_USER_LAST_NAME`` the last name of the user to be created (default: ``Verdi``) 
+      - ``AIIDA_USER_INSTITUTION`` the institution of the user to be created (default: ``AiiDA Team``)
+
+      You can set these environment variables when starting the container with the ``-e`` option.
+
+      If you don't want the profile to be created automatically, you can set the ``SETUP_DEFAULT_AIIDA_PROFILE`` environment variable to ``false``.
+
    .. grid-item-card:: Check setup
 
       The profile named ``default`` is created under the ``aiida`` user.

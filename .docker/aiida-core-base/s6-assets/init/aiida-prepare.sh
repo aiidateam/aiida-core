@@ -6,20 +6,17 @@
 export SHELL=/bin/bash
 
 # If the environment variable `SETUP_DEFAULT_AIIDA_PROFILE` is not set, set it to `true`.
-if [ -z ${SETUP_DEFAULT_AIIDA_PROFILE+x} ]; then
-    # Configure AiiDA.
-    export SETUP_DEFAULT_AIIDA_PROFILE=true;
-fi
+export SETUP_DEFAULT_AIIDA_PROFILE="${SETUP_DEFAULT_AIIDA_PROFILE:-true}"
 
 # Check if user requested to set up AiiDA profile (and if it exists already)
 if [[ ${SETUP_DEFAULT_AIIDA_PROFILE} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
 
-    export AIIDA_PROFILE_NAME=default
-    export AIIDA_USER_EMAIL=aiida@localhost
-    export AIIDA_USER_FIRST_NAME=Giuseppe
-    export AIIDA_USER_LAST_NAME=Verdi
-    export AIIDA_USER_INSTITUTION=Khedivial
-    export AIIDA_PROFILE_PATH=/aiida/assets/config-quick-setup.yaml
+    export AIIDA_PROFILE_NAME="${AIIDA_PROFILE_NAME:-default}"
+    export AIIDA_USER_EMAIL="${AIIDA_USER_EMAIL:-aiida@localhost}"
+    export AIIDA_USER_FIRST_NAME="${AIIDA_USER_FIRST_NAME:-Giuseppe}"
+    export AIIDA_USER_LAST_NAME="${AIIDA_USER_LAST_NAME:-Verdi}"
+    export AIIDA_USER_INSTITUTION="${AIIDA_USER_INSTITUTION:-Khedivial}"
+    export AIIDA_PROFILE_PATH="${AIIDA_PROFILE_PATH:-/aiida/assets/config-quick-setup.yaml}"
 
     # Create AiiDA profile.
     verdi quicksetup              \

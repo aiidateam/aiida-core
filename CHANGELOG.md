@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.4.3 - 2024-01-16
+
+### Fixes
+- `CalcJob`: Fix MPI behavior if `withmpi` option default is `True`` [[3cbd4cebd]](https://github.com//commit/3cbd4cebded7cc2ec36c81b2346b79fe43fc6779)
+
+### Dependencies
+- Add upper limits to sphinxcontrib packages [[26971d60b]](https://github.com//commit/26971d60b2b963354f61df49f8b9684b2db8c82c)
+
+
 ## v2.4.2 - 2023-11-30
 
 ### Docker

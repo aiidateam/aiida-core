@@ -369,3 +369,8 @@ Practically, it is almost impossible to never import code into process functions
 However, there is still a difference between importing code from the ``aiida-core`` library or the repository in which the process function is hosted, and the importing of a local python file.
 Even though for both cases there can no be guarantee of reproducibility, the former stands a better chance by far, as the version number of the plugin package should be recorded.
 The rule of thumb then is to keep the importing of code to a minimum, but if you have to, make sure to make it part of a plugin package with a well-defined version number.
+
+Finally, as mentioned in the introduction, the source file of a process function is stored as a file in the repository for *each execution*.
+Currently there is no automatic deduplication for identical files by the engine, so these files may occupy quite a bit of space.
+For this reason it is advisable to keep each process function in its own separate file.
+This not only improves readability, but it also minimizes the impact on the size of the file repository.

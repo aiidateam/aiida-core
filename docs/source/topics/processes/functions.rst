@@ -371,5 +371,5 @@ Even though for both cases there can no be guarantee of reproducibility, the for
 The rule of thumb then is to keep the importing of code to a minimum, but if you have to, make sure to make it part of a plugin package with a well-defined version number.
 
 Finally, as mentioned in the introduction, the source file of a process function is stored as a file in the repository for *each execution*.
-The default storage backend ``psql_dos`` uses ``disk-objecstore`` package for file storage, where the files are automatically deduplicated. However, this might not hold for other storage backends such as ``aiida-s3``, where these files may occupy quite a bit of space.
+The default storage backend ``core.psql_dos`` uses the ``disk-objecstore`` package for file storage, which automatically deduplicates files. However, this might not necessarily hold for other storage backends, where these files may occupy quite a bit of space.
 For this reason it is advisable to keep each process function in its own separate file.

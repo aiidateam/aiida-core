@@ -286,7 +286,7 @@ The exit status is also displayed by ``verdi process list``:
       PK  Created    State             Process label    Process status
     ----  ---------  ----------------  ---------------  ----------------
       10  2m ago     ⨯ Excepted        divide
-     773  21s ago    ⏹ Finished [100]  divide
+     773  21s ago    ⏹ Finished [300]  divide
 
     Total results: 2
 
@@ -371,6 +371,5 @@ Even though for both cases there can no be guarantee of reproducibility, the for
 The rule of thumb then is to keep the importing of code to a minimum, but if you have to, make sure to make it part of a plugin package with a well-defined version number.
 
 Finally, as mentioned in the introduction, the source file of a process function is stored as a file in the repository for *each execution*.
-Currently there is no automatic deduplication for identical files by the engine, so these files may occupy quite a bit of space.
+The default storage backend ``core.psql_dos`` uses the ``disk-objecstore`` package for file storage, which automatically deduplicates files. However, this might not necessarily hold for other storage backends, where these files may occupy quite a bit of space.
 For this reason it is advisable to keep each process function in its own separate file.
-This not only improves readability, but it also minimizes the impact on the size of the file repository.

@@ -70,9 +70,7 @@ def aiida_caplog(caplog):
 
 
 @pytest.fixture(scope='session')
-def postgres_cluster(
-    database_name: str | None = None, database_username: str | None = None, database_password: str | None = None
-) -> t.Generator[dict[str, str], None, None]:
+def postgres_cluster():
     """Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yield.
 
     :param database_name: Name of the database.
@@ -82,27 +80,35 @@ def postgres_cluster(
     """
     from pgtest.pgtest import PGTest
 
-    from aiida.manage.external.postgres import Postgres
+    def create_database(
+        database_name: str | None = None, database_username: str | None = None, database_password: str | None = None
+    ) -> t.Generator[dict[str, str], None, None]:
+        from aiida.manage.external.postgres import Postgres
 
-    postgres_config = {
-        'database_engine': 'postgresql_psycopg2',
-        'database_name': database_name or str(uuid.uuid4()),
-        'database_username': database_username or 'guest',
-        'database_password': database_password or 'guest',
-    }
-
-    cluster = None
-    try:
-        cluster = PGTest()
+        postgres_config = {
+            'database_engine': 'postgresql_psycopg2',
+            'database_name': database_name or str(uuid.uuid4()),
+            'database_username': database_username or 'guest',
+            'database_password': database_password or 'guest',
+        }
 
         postgres = Postgres(interactive=False, quiet=True, dbinfo=cluster.dsn)
-        postgres.create_dbuser(postgres_config['database_username'], postgres_config['database_password'], 'CREATEDB')
+        if not postgres.dbuser_exists(postgres_config['database_username']):
+            postgres.create_dbuser(
+                postgres_config['database_username'], postgres_config['database_password'], 'CREATEDB'
+            )
         postgres.create_db(postgres_config['database_username'], postgres_config['database_name'])
 
         postgres_config['database_hostname'] = postgres.host_for_psycopg2
         postgres_config['database_port'] = postgres.port_for_psycopg2
 
-        yield postgres_config
+        return postgres_config
+
+    cluster = None
+    try:
+        cluster = PGTest()
+        cluster.create_database = create_database
+        yield cluster
     finally:
         if cluster is not None:
             cluster.close()
@@ -194,16 +200,26 @@ def config_psql_dos(
         :param custom_configuration: Custom configuration to override default profile configuration.
         :returns: The profile configuration.
         """
+        custom_configuration = custom_configuration or {}
+        custom_configuration.setdefault('storage', {}).setdefault('config', {})
+        custom_storage_config = custom_configuration['storage']['config']
+
+        storage_config = postgres_cluster.create_database(
+            database_name=custom_storage_config.get('database_name'),
+            database_username=custom_storage_config.get('database_username'),
+            database_password=custom_storage_config.get('database_password'),
+        )
+        recursive_merge(custom_storage_config, storage_config)
+
         configuration = {
             'storage': {
                 'backend': 'core.psql_dos',
                 'config': {
-                    **postgres_cluster,
                     'repository_uri': f'file://{tmp_path_factory.mktemp("repository")}',
                 },
             }
         }
-        recursive_merge(configuration, custom_configuration or {})
+        recursive_merge(configuration, custom_configuration)
         return configuration
 
     return factory
@@ -242,7 +258,7 @@ def aiida_profile_factory(
     contains and recreate the default user, making the profile ready for use.
     """
 
-    def factory(custom_configuration: dict[str, t.Any]) -> Profile:
+    def factory(custom_configuration: dict[str, t.Any] | None = None) -> Profile:
         """Create an isolated AiiDA instance with a temporary and fully loaded profile.
 
         :param custom_configuration: Custom configuration to override default profile configuration.

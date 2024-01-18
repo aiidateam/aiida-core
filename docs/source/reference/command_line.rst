@@ -573,21 +573,6 @@ Below is a list with all available subcommands.
       version    Print the current version of the storage schema.
 
 
-.. _reference:command-line:verdi-tui:
-
-``verdi tui``
--------------
-
-.. code:: console
-
-    Usage:  [OPTIONS]
-
-      Open Textual TUI.
-
-    Options:
-      --help  Show this message and exit.
-
-
 .. _reference:command-line:verdi-user:
 
 ``verdi user``
@@ -606,6 +591,24 @@ Below is a list with all available subcommands.
       configure    Configure a new or existing user.
       list         Show a list of all users.
       set-default  Set a user as the default user for the profile.
+
+
+.. _reference:command-line:verdi-workchain:
+
+``verdi workchain``
+-------------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect and manage workchains.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      inputsave  Save input files of a workchain.
 
 
 

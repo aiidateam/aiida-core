@@ -33,19 +33,21 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
          $ docker run -it --name aiida-container aiidateam/aiida-core-with-services:latest bash
 
-      The following environment variables are able to be set to configure the AiiDA profile:
-      - ``AIIDA_PROFILE_NAME`` the name of the profile to be created (default: ``default``)
-      - ``AIIDA_USER_EMAIL`` the email of the user to be created (default: ``aiida@localhost``)
-      - ``AIIDA_USER_FIRST_NAME`` the first name of the user to be created (default: ``Giuseppe``)
-      - ``AIIDA_USER_LAST_NAME`` the last name of the user to be created (default: ``Verdi``)
-      - ``AIIDA_USER_INSTITUTION`` the institution of the user to be created (default: ``Khedivial``)
-      - ``AIIDA_CONFIG_FILE`` the path to the AiiDA configuration file (default: ``/aiida/assets/config-quick-setup.yaml``).
+      By default, an AiiDA profile is automatically set up inside the container.
+      To disable this default profile being created, set the ``SETUP_DEFAULT_AIIDA_PROFILE`` environment variable to ``false``.
 
-      You can set these environment variables when starting the container with the ``-e`` option.
+      The following environment variables can be set to configure the default AiiDA profile:
+      - ``AIIDA_PROFILE_NAME``: the name of the profile to be created (default: ``default``)
+      - ``AIIDA_USER_EMAIL``: the email of the default user to be created (default: ``aiida@localhost``)
+      - ``AIIDA_USER_FIRST_NAME``: the first name of the default user to be created (default: ``Giuseppe``)
+      - ``AIIDA_USER_LAST_NAME``: the last name of the default user to be created (default: ``Verdi``)
+      - ``AIIDA_USER_INSTITUTION``: the institution of the default user to be created (default: ``Khedivial``)
+      - ``AIIDA_CONFIG_FILE``: the path to the AiiDA configuration file used for other profile configuration parameters (default: ``/aiida/assets/config-quick-setup.yaml``).
 
-      If you don't want the profile to be created automatically, you can set the ``SETUP_DEFAULT_AIIDA_PROFILE`` environment variable to ``false``.
+      These environment variables can be set when starting the container with the ``-e`` option.
 
-      Please not that ``AIIDA_CONFIG_FILE`` point to the path inside the container, if you want to use a custom configuration file, you need to mount it from host path to the container path.
+      Please note that the ``AIIDA_CONFIG_FILE`` variable points to a path inside the container.
+      Therefore, if you want to use a custom configuration file, it needs to be mounted from the host path to the container path.
 
    .. grid-item-card:: Check setup
 

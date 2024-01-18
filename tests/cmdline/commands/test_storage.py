@@ -7,6 +7,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi storage`."""
+import tempfile
+from pathlib import Path
+
 import pytest
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_storage
@@ -176,3 +179,13 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     assert ' > full: True' in message_list
     assert ' > do_repack: False' in message_list
     assert ' > dry_run: False' in message_list
+
+
+def tests_storage_backup(run_cli_command):
+    """Test the ``verdi storage backup`` command."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        result = run_cli_command(cmd_storage.storage_backup, parameters=[tmpdir])
+        assert ' backed up to ' in result.output
+        assert result.exit_code == 0
+        last_backup = Path(tmpdir) / 'last-backup'
+        assert last_backup.is_symlink()

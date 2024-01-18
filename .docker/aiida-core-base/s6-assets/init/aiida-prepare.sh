@@ -5,34 +5,19 @@
 # Environment.
 export SHELL=/bin/bash
 
-# Configure AiiDA.
-export SETUP_DEFAULT_AIIDA_PROFILE=true
-export AIIDA_PROFILE_NAME=default
-export AIIDA_USER_EMAIL=aiida@localhost
-export AIIDA_USER_FIRST_NAME=Giuseppe
-export AIIDA_USER_LAST_NAME=Verdi
-export AIIDA_USER_INSTITUTION=Khedivial
-export AIIDA_PROFILE_PATH=/aiida/assets/config-quick-setup.yaml
-
 # Check if user requested to set up AiiDA profile (and if it exists already)
-if [[ ${SETUP_DEFAULT_AIIDA_PROFILE} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
-    NEED_SETUP_PROFILE=true;
-else
-    NEED_SETUP_PROFILE=false;
-fi
-
-# Setup AiiDA profile if needed.
-if [[ ${NEED_SETUP_PROFILE} == true ]]; then
+# If the environment variable `SETUP_DEFAULT_AIIDA_PROFILE` is not set, set it to `true`.
+if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
 
     # Create AiiDA profile.
     verdi quicksetup              \
         --non-interactive                            \
-        --profile "${AIIDA_PROFILE_NAME}"            \
-        --email "${AIIDA_USER_EMAIL}"                \
-        --first-name "${AIIDA_USER_FIRST_NAME}"      \
-        --last-name "${AIIDA_USER_LAST_NAME}"        \
-        --institution "${AIIDA_USER_INSTITUTION}"    \
-        --config "${AIIDA_PROFILE_PATH}"
+        --profile "${AIIDA_PROFILE_NAME:-default}"            \
+        --email "${AIIDA_USER_EMAIL:-aiida@localhost}"                \
+        --first-name "${AIIDA_USER_FIRST_NAME:-Giuseppe}"      \
+        --last-name "${AIIDA_USER_LAST_NAME:-Verdi}"        \
+        --institution "${AIIDA_USER_INSTITUTION:-Khedivial}"    \
+        --config "${AIIDA_CONFIG_FILE:-/aiida/assets/config-quick-setup.yaml}"
 
     # Supress verdi version warning because we are using a development version
     verdi config set warnings.development_version False
@@ -76,11 +61,11 @@ if [[ ${NEED_SETUP_PROFILE} == true ]]; then
     verdi computer configure core.local "${computer_name}" \
         --non-interactive                                               \
         --safe-interval 0.0
+
+    # Migration will run for the default profile.
+    verdi storage migrate --force
 fi
 
 
 # Show the default profile
 verdi profile show || echo "The default profile is not set."
-
-# Migration will run for the default profile.
-verdi storage migrate --force

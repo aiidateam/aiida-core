@@ -17,7 +17,7 @@ if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${
         --first-name "${AIIDA_USER_FIRST_NAME:-Giuseppe}"      \
         --last-name "${AIIDA_USER_LAST_NAME:-Verdi}"        \
         --institution "${AIIDA_USER_INSTITUTION:-Khedivial}"    \
-        --config /aiida/assets/config-quick-setup.yaml
+        --config "${AIIDA_CONFIG_FILE:-/aiida/assets/config-quick-setup.yaml}"
 
     # Supress verdi version warning because we are using a development version
     verdi config set warnings.development_version False

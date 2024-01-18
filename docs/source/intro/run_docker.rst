@@ -39,10 +39,13 @@ This image contains a fully pre-configured AiiDA environment which makes it part
       - ``AIIDA_USER_FIRST_NAME`` the first name of the user to be created (default: ``Giuseppe``)
       - ``AIIDA_USER_LAST_NAME`` the last name of the user to be created (default: ``Verdi``)
       - ``AIIDA_USER_INSTITUTION`` the institution of the user to be created (default: ``Khedivial``)
+      - ``AIIDA_CONFIG_FILE`` the path to the AiiDA configuration file (default: ``/aiida/assets/config-quick-setup.yaml``).
 
       You can set these environment variables when starting the container with the ``-e`` option.
 
       If you don't want the profile to be created automatically, you can set the ``SETUP_DEFAULT_AIIDA_PROFILE`` environment variable to ``false``.
+
+      Please not that ``AIIDA_CONFIG_FILE`` point to the path inside the container, if you want to use a custom configuration file, you need to mount it from host path to the container path.
 
    .. grid-item-card:: Check setup
 

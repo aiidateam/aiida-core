@@ -517,7 +517,7 @@ class PsqlDosBackend(StorageBackend):
         self.maintain(full=False, compress=True)
 
         # step 2: dump the PostgreSQL database into a temporary directory
-        pg_dump_exe = manager.exes['pg_dump']
+        pg_dump_exe = manager.exes.get('pg_dump', 'pg_dump')
         with tempfile.TemporaryDirectory() as temp_dir_name:
             psql_temp_loc = pathlib.Path(temp_dir_name) / 'db.psql'
 
@@ -567,8 +567,8 @@ class PsqlDosBackend(StorageBackend):
     def backup(
         self,
         dest: str,
-        keep: int,
-        exes: dict,
+        keep: int = 1,
+        exes: Optional[dict] = None,
     ):
         try:
             backup_manager = backup_utils.BackupManager(dest, STORAGE_LOGGER, exes=exes, keep=keep)

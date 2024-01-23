@@ -308,8 +308,8 @@ class StorageBackend(abc.ABC):
     def backup(
         self,
         dest: str,
-        keep: int,
-        exes: dict,
+        keep: int = 1,
+        exes: Optional[dict] = None,
     ):
         """Create a backup of the storage contents.
 
@@ -320,7 +320,6 @@ class StorageBackend(abc.ABC):
         :raises ValueError: If the input parameters are invalid.
         :raises StorageBackupError: If an error occurred during the backup procedure.
         """
-        raise NotImplementedError
 
     def get_info(self, detailed: bool = False) -> dict:
         """Return general information on the storage.

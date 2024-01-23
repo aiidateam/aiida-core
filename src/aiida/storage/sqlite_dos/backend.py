@@ -12,7 +12,7 @@ from __future__ import annotations
 from functools import cached_property
 from pathlib import Path
 from shutil import rmtree
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from uuid import uuid4
 
 from disk_objectstore import Container
@@ -200,3 +200,11 @@ class SqliteDosStorage(PsqlDosBackend):
     @cached_property
     def users(self):
         return orm.SqliteUserCollection(self)
+
+    def backup(
+        self,
+        dest: str,
+        keep: int = 1,
+        exes: Optional[dict] = None,
+    ):
+        raise NotImplementedError

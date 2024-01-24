@@ -181,11 +181,10 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     assert ' > dry_run: False' in message_list
 
 
-def tests_storage_backup(run_cli_command):
+def tests_storage_backup(run_cli_command, tmp_path):
     """Test the ``verdi storage backup`` command."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        result = run_cli_command(cmd_storage.storage_backup, parameters=[tmpdir])
-        assert ' backed up to ' in result.output
-        assert result.exit_code == 0
-        last_backup = Path(tmpdir) / 'last-backup'
-        assert last_backup.is_symlink()
+    result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)])
+    assert ' backed up to ' in result.output
+    assert result.exit_code == 0
+    last_backup = tmp_path / 'last-backup'
+    assert last_backup.is_symlink()

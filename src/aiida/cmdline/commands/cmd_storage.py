@@ -212,4 +212,4 @@ def storage_backup(ctx, manager, dest: str, keep: int, pg_dump_exe: str, rsync_e
         storage.backup(dest, keep, exes={'rsync': rsync_exe, 'pg_dump': pg_dump_exe})
     except (ValueError, exceptions.StorageBackupError) as exception:
         echo.echo_criticial(f'An error occurred during the backup: {exception}')
-    click.echo(f'Data storage of profile `{ctx.obj.profile.name}` backed up to `{dest}`')
+    echo.echo_success(f'Data storage of profile `{ctx.obj.profile.name}` backed up to `{dest}`')

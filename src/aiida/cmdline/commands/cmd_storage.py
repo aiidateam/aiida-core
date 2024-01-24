@@ -191,8 +191,6 @@ def storage_backup(ctx, manager, dest: str, keep: int, pg_dump_exe: str, rsync_e
     The backup is created in the destination `DEST`, in a subfolder that follows the naming convention
     backup_<timestamp>_<randstr> and a symlink called `last-backup` is pointed to it.
 
-    NOTE: This is safe to run while the AiiDA profile is being used.
-
     Destination (DEST) can either be a local path, or a remote destination (reachable via ssh).
     In the latter case, remote destination needs to have the following syntax:
 

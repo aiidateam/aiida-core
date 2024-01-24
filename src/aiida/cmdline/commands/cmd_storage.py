@@ -178,7 +178,7 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
     '--pg-dump-exe', type=click.STRING, default='pg_dump', help="Specify the 'pg_dump' executable, if not in PATH."
 )
 @click.option(
-    '--rsync_exe',
+    '--rsync-exe',
     type=click.STRING,
     default='rsync',
     help="Specify the 'rsync' executable, if not in PATH. Used for both local and remote destinations",

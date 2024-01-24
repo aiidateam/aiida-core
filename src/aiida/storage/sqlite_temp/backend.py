@@ -16,7 +16,7 @@ import shutil
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any, BinaryIO, Iterator, Optional, Sequence
+from typing import Any, BinaryIO, Iterator, Sequence
 
 from pydantic import BaseModel, Field
 from sqlalchemy import column, insert, update
@@ -285,14 +285,6 @@ class SqliteTempBackend(StorageBackend):
         self._repo.erase()
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
-        raise NotImplementedError
-
-    def backup(
-        self,
-        dest: str,
-        keep: int = 1,
-        exes: Optional[dict] = None,
-    ):
         raise NotImplementedError
 
 

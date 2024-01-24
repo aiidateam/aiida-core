@@ -153,24 +153,18 @@ def test_unload_profile():
         manager.load_profile(profile_name)
 
 
-def test_backup():
+def test_backup(tmp_path):
     """Test that the backup function creates all the necessary files and folders"""
-
-    import tempfile
-    from pathlib import Path
-
     storage_backend = get_manager().get_profile_storage()
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # note: this assumes that rsync and pg_dump are in PATH
-        storage_backend.backup(tmpdir)
+    # note: this assumes that rsync and pg_dump are in PATH
+    storage_backend.backup(str(tmp_path))
 
-        last_backup = Path(tmpdir) / 'last-backup'
-        assert last_backup.is_symlink()
+    last_backup = tmp_path / 'last-backup'
+    assert last_backup.is_symlink()
 
-        # make sure the necessary files are there
-        # note: disk-objectstore container backup is already
-        # tested in its own repo
-        contents = [c.name for c in last_backup.iterdir()]
-        for name in ['config.json', 'container', 'db.psql']:
-            assert name in contents
+    # make sure the necessary files are there
+    # note: disk-objectstore container backup is already tested in its own repo
+    contents = [c.name for c in last_backup.iterdir()]
+    for name in ['config.json', 'container', 'db.psql']:
+        assert name in contents

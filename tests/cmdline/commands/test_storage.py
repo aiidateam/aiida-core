@@ -7,8 +7,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi storage`."""
-import tempfile
-from pathlib import Path
 
 import pytest
 from aiida import get_profile

@@ -312,14 +312,6 @@ class SqliteZipBackend(StorageBackend):
             results['repository'] = self.get_repository().get_info(detailed)
         return results
 
-    def backup(
-        self,
-        dest: str,
-        keep: int = 1,
-        exes: Optional[dict] = None,
-    ):
-        raise NotImplementedError
-
 
 class _RoBackendRepository(AbstractRepositoryBackend):
     """A backend abstract for a read-only folder or zip file."""

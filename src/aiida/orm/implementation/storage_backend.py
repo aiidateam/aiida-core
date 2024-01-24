@@ -304,7 +304,6 @@ class StorageBackend(abc.ABC):
         :param dry_run: flag to only print the actions that would be taken without actually executing them.
         """
 
-    @abc.abstractmethod
     def backup(
         self,
         dest: str,
@@ -320,6 +319,7 @@ class StorageBackend(abc.ABC):
         :raises ValueError: If the input parameters are invalid.
         :raises StorageBackupError: If an error occurred during the backup procedure.
         """
+        raise NotImplementedError
 
     def get_info(self, detailed: bool = False) -> dict:
         """Return general information on the storage.

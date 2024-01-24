@@ -486,15 +486,15 @@ class PsqlDosBackend(StorageBackend):
     ) -> None:
         """Create a backup of the postgres database and disk-objectstore to the provided path.
 
+        :param manager:
+            BackupManager from backup_utils containing utilities such as for calling the rsync.
+
         :param path:
             Path to where the backup will be created.
 
         :param prev_backup:
             Path to the previous backup. Rsync calls will be hard-linked to this path, making the backup
             incremental and efficient.
-
-        :return:
-            True is successful and False if unsuccessful.
         """
         import os
         import subprocess
@@ -513,10 +513,23 @@ class PsqlDosBackend(StorageBackend):
         except exceptions.LockedProfileError as exc:
             raise exceptions.StorageBackupError('The profile is locked!') from exc
 
-        # step 1: first run the storage maintenance version that can safely be performed while aiida is running
+        # step 1: back up aiida config.json file (strip other profiles!)
+        try:
+            config = get_config()
+            profile = config.get_profile(self.profile.name)  # Get the profile being backed up
+            with tempfile.TemporaryDirectory() as tmpdir:
+                filepath_config = pathlib.Path(tmpdir) / 'config.json'
+                backup_config = Config(str(filepath_config), {})  # Create empty config at temporary file location
+                backup_config.add_profile(profile)  # Add the profile being backed up
+                backup_config.store()  # Write the contents to disk
+                manager.call_rsync(filepath_config, path)
+        except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exc:
+            raise exceptions.StorageBackupError('aiida config.json not found!') from exc
+
+        # step 2: first run the storage maintenance version that can safely be performed while aiida is running
         self.maintain(full=False, compress=True)
 
-        # step 2: dump the PostgreSQL database into a temporary directory
+        # step 3: dump the PostgreSQL database into a temporary directory
         pg_dump_exe = manager.exes.get('pg_dump', 'pg_dump')
         with tempfile.TemporaryDirectory() as temp_dir_name:
             psql_temp_loc = pathlib.Path(temp_dir_name) / 'db.psql'
@@ -543,26 +556,13 @@ class PsqlDosBackend(StorageBackend):
             else:
                 raise backup_utils.BackupError(f"'{psql_temp_loc!s}' was not created.")
 
-            # step 3: transfer the PostgreSQL database file
+            # step 4: transfer the PostgreSQL database file
             manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)
 
-        # step 4: back up the disk-objectstore
+        # step 5: back up the disk-objectstore
         backup_utils.backup_container(
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
-
-        # step 5: back up aiida config.json file (strip other profiles!)
-        try:
-            config = get_config()
-            profile = config.get_profile(self.profile.name)  # Get the profile being backed up
-            with tempfile.TemporaryDirectory() as tmpdir:
-                filepath_config = pathlib.Path(tmpdir) / 'config.json'
-                backup_config = Config(str(filepath_config), {})  # Create empty config at temporary file location
-                backup_config.add_profile(profile)  # Add the profile being backed up
-                backup_config.store()  # Write the contents to disk
-                manager.call_rsync(filepath_config, path)
-        except (exceptions.MissingConfigurationError, exceptions.ConfigurationError):
-            STORAGE_LOGGER.warning('aiida config.json not found!')
 
     def backup(
         self,

@@ -550,15 +550,14 @@ See the :doc:`../reference/_changelog` for a list of breaking changes.
 Backing up your data
 ============================
 
+General information
+-----------------
+
 The most convenient way to back up the data of a single AiiDA profile is to use
 
 .. code:: bash
 
     $ verdi --profile <profile_name> storage backup /path/to/destination
-
-This command is safe to use when AiiDA is running and it automatically manages a subfolder structure
-of previous backups at the destination. The primary underlying tool is ``rsync``, which is used such that
-a new backup is hard-linked to the previous one, keeping the process incremental and efficient.
 
 This command is safe to use when AiiDA is running, it automatically manages a subfolder structure of previous backups, and new backups are done in an efficient way (using ``rsync`` hard-link functionality to the previous backup).
 The command backs up everything that's needed to restore the profile later:
@@ -566,10 +565,12 @@ The command backs up everything that's needed to restore the profile later:
 * the AiiDA configuration file ``.aiida/config.json``, from which other profiles are removed (see ``verdi status`` for exact location);
 * all the data of the backed up profile (which depends on the storage backend).
 
-Alternatively, one can also manually create a backup. This requires a backup of the configuration file  ``.aiida/config.json`` and the storage backend. The panels below provide instructions for storage backends provided by ``aiida-core``. To determine what storage backend a profile uses, call ``verdi profile show``.
+The specific procedure and whether it is even implemented depends on the storage backend.
 
-The panels below provide instructions for storage backends provided by ``aiida-core``.
-To determine what storage backend a profile uses, call ``verdi profile show``.
+Storage backend specific information
+-----------------
+
+Alternatively to the CLI command, one can also manually create a backup. This requires a backup of the configuration file  ``.aiida/config.json`` and the storage backend. The panels below provide instructions for storage backends provided by ``aiida-core``. To determine what storage backend a profile uses, call ``verdi profile show``.
 
 .. tip:: Before creating a backup, it is recommended to run ``verdi storage maintain``.
     This will optimize the storage which can significantly reduce the time required to create the backup.

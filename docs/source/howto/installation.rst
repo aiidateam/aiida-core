@@ -626,7 +626,7 @@ Restoring a backed up AiiDA profile requires:
 
 The panels below provide instructions for storage backends provided by ``aiida-core``.
 To determine what storage backend a profile uses, call ``verdi profile show``.
-To test if the restoration worked, run ``verdi profile list`` to verify that the profile is displayed.
+To test if the restoration worked, run ``verdi -p <profile-name> status`` to verify that AiiDA can successfully connect to the data storage.
 
 .. tab-set::
 

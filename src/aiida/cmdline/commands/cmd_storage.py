@@ -175,7 +175,10 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
     help='Number of previous backups to keep in the destination. (default: 1)',
 )
 @click.option(
-    '--pg-dump-exe', type=click.STRING, default='pg_dump', help="Specify the 'pg_dump' executable, if not in PATH."
+    '--pg-dump-exe',
+    type=click.STRING,
+    default='pg_dump',
+    help="Specify the 'pg_dump' executable, if not in PATH. Only needed for a PostgreSQL-based backend",
 )
 @click.option(
     '--rsync-exe',

@@ -1,5 +1,7 @@
 ci:
   autofix_prs: true
+  autoupdate_commit_msg: 'DevOps: Update pre-commit dependencies'
+  autoupdate_schedule: quarterly
   skip: [mypy, dm-generate-all, dependencies, verdi-autodocs]
 
 repos:

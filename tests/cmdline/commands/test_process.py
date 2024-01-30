@@ -46,6 +46,7 @@ class TestVerdiProcess:
         assert 'Total results:' in result.output
         assert 'Last time an entry changed state' in result.output
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_list(self, run_cli_command):
         """Test the list command."""
         calcs = []

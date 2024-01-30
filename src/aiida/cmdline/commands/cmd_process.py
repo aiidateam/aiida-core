@@ -397,19 +397,18 @@ def process_repair(ctx, manager, dry_run):
         echo.echo_warning('There are active processes without process task: ', nl=False)
         echo.echo(set_active_processes.difference(set_process_tasks))
 
-    if state_inconsistent:
-        echo.echo_critical('Inconsistencies detected between database and RabbitMQ.')
-
     if not state_inconsistent:
         echo.echo_success('No inconsistencies detected between database and RabbitMQ.')
         return
 
+    echo.echo_warning('Inconsistencies detected between database and RabbitMQ.')
+
     if dry_run:
-        return
+        echo.echo_critical('This was a dry-run, no changes will be made.')
 
     # At this point we have either exited because of inconsistencies and ``--dry-run`` was passed, or we returned
     # because there were no inconsistencies, so all that is left is to address inconsistencies
-    echo.echo_info('Attempting to fix inconsistencies')
+    echo.echo_report('Attempting to fix inconsistencies')
 
     # Eliminate duplicate tasks and tasks that correspond to terminated process
     for task in iterate_process_tasks(ctx.obj.profile, manager.get_communicator()):

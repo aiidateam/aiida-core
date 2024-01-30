@@ -508,7 +508,7 @@ def test_process_repair_duplicate_tasks(monkeypatch, run_cli_command):
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2])
     monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 2])
 
-    result = run_cli_command(cmd_process.process_repair, raises=True, use_subprocess=False)
+    result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
     assert 'There are duplicates process tasks:' in result.output
     assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
 
@@ -519,9 +519,10 @@ def test_process_repair_additional_tasks(monkeypatch, run_cli_command):
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2])
     monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 3])
 
-    result = run_cli_command(cmd_process.process_repair, raises=True, use_subprocess=False)
+    result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
     assert 'There are process tasks for terminated processes:' in result.output
     assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'Attempting to fix inconsistencies' in result.output
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')
@@ -530,9 +531,21 @@ def test_process_repair_missing_tasks(monkeypatch, run_cli_command):
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3])
     monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
 
-    result = run_cli_command(cmd_process.process_repair, raises=True, use_subprocess=False)
+    result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
     assert 'There are active processes without process task:' in result.output
     assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'Attempting to fix inconsistencies' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_dry_run(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command with ``--dry-run```."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3, 4])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
+
+    result = run_cli_command(cmd_process.process_repair, ['--dry-run'], raises=True, use_subprocess=False)
+    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'This was a dry-run, no changes will be made.' in result.output
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')
@@ -541,6 +554,6 @@ def test_process_repair_verbosity(monkeypatch, run_cli_command):
     monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3, 4])
     monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
 
-    result = run_cli_command(cmd_process.process_repair, ['-v', 'INFO'], raises=True, use_subprocess=False)
+    result = run_cli_command(cmd_process.process_repair, ['-v', 'INFO'], use_subprocess=False)
     assert 'Active processes: [1, 2, 3, 4]' in result.output
     assert 'Process tasks: [1, 2]' in result.output

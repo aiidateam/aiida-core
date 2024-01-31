@@ -1,5 +1,34 @@
 # Changelog
 
+
+## v2.5.1 - 2024-01-31
+
+This is a patch release with a few bug fixes, but mostly devops changes related to the package structure.
+
+### Fixes
+- CLI: Fix `verdi process repair` not actually repairing [[784ad6488]](https://github.com/aiidateam/aiida-core/commit/784ad64885e23c8c93fb21554dc3c7d1f6bdde0f)
+- Docker: Allow default profile parameters to be configured through env variables [[06ea130df]](https://github.com/aiidateam/aiida-core/commit/06ea130df8854f621e25853af6ac723c37397ed0)
+
+### Dependencies
+- Dependencies: Fix incompatibility with `spglib>=2.3` [[fa8b9275e]](https://github.com/aiidateam/aiida-core/commit/fa8b9275e74d16df7df4884b7c2eff4ad0cca1ce)
+
+### Devops
+- Devops: Move the source directory into `src/` [[53748d4de]](https://github.com/aiidateam/aiida-core/commit/53748d4de609c79b37cf9c7e0170c913e8d6dd0d)
+- Devops: Remove post release action for uploading pot to transifex [[9feda35eb]](https://github.com/aiidateam/aiida-core/commit/9feda35ebac0101c7fa16629cefcd411ed994425)
+- Pre-commit: Add `ruff` as the new linter and formatter [[64c5e6a82]](https://github.com/aiidateam/aiida-core/commit/64c5e6a82d8bb515d07fea84b611dc35cce1263b)
+- Pre-commit: Update a number of pre-commit hooks [[a4ced7a67]](https://github.com/aiidateam/aiida-core/commit/a4ced7a67e10e0e88a2fe09a4f5c5c597789d43a)
+- Pre-commit: Add YAML and TOML formatters [[c27aa33f3]](https://github.com/aiidateam/aiida-core/commit/c27aa33f33a7417da5d0b571b1927668f6505707)
+- Update pre-commit CI configuration [[cb95f0c4c]](https://github.com/aiidateam/aiida-core/commit/cb95f0c4cb5ac0f56b0a3ec6654409cb6f22b5ba)
+- Update pre-commit dependencies [[8dfab0e09]](https://github.com/aiidateam/aiida-core/commit/8dfab0e0928da5b8bbe5182e97825a701ca0130b)
+- Dependencies: Pin `mypy` to minor version `mypy~=1.7.1` [[d65fa3d2d]](https://github.com/aiidateam/aiida-core/commit/d65fa3d2d724b126c26631771fa7840a2583d1a4)
+
+### Documentation
+- Streamline and fix typos in `docs/topics/processes/usage.rst` [[45ba27732]](https://github.com/aiidateam/aiida-core/commit/45ba27732bb8ff8d6714c6a6114bc2c00d14c18c)
+- Update process function section on file deduplication [[f35d7ae98]](https://github.com/aiidateam/aiida-core/commit/f35d7ae9801423c55e04fca22500ca23bca90739)
+- Correct a typo in `docs/source/topics/data_types.rst` [[6ee278ceb]](https://github.com/aiidateam/aiida-core/commit/6ee278cebe8fb58cd6e69517d678b97570d0d661)
+- Fix the ADES paper citation [[80117f8f7]](https://github.com/aiidateam/aiida-core/commit/80117f8f7b36a0932bb8a2ec843d37f28bd41f87)
+
+
 ## v2.5.0 - 2023-12-20
 
 This minor release comes with a number of features that are focused on user friendliness of the CLI and the API.

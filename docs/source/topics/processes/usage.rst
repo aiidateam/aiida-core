@@ -692,9 +692,9 @@ When a runner starts to run a process, it will also add listeners for incoming m
 
 .. note::
 
-    This does not just apply to daemon runners, but also normal runners.
-    That is to say that if you were to launch a process in a local runner, that interpreter will be blocked, but it will still setup the listeners for that process on RabbitMQ.
-    This means that you can manipulate the process from another terminal, just as if you would do with a process that is being run by a daemon runner.
+    This does not just apply to daemon runners, but also local runners.
+    If you were to launch a process in a local runner, that interpreter will be blocked, but it will still setup the listeners for that process on RabbitMQ.
+    This means that you can manipulate the process from another terminal, just as you would do with a process that is being run by a daemon runner.
 
 In the case of 'pause', 'play' and 'kill', one is sending what is called a Remote Procedure Call (RPC) over RabbitMQ.
 The RPC will include the process identifier for which the action is intended and RabbitMQ will send it to whoever registered itself to be listening for that specific process, in this case the runner that is running the process.
@@ -708,14 +708,13 @@ Whenever a process is unreachable for an RPC, the command will return an error:
     Error: Process<100> is unreachable
 
 Depending on the cause of the process being unreachable, the problem may resolve itself automatically over time and one can try again at a later time, as for example in the case of the runner being too busy to respond.
-However, to prevent this from happening, the runner has been designed to have the communication happen over a separate thread and to schedule callbacks for any necessary actions on the main thread, which performs all the heavy lifting.
-This should make occurrences of the runner being too busy to respond very rare.
-However, there is unfortunately no way of telling what the actual problem is for the process not being reachable.
+To minimize these issues, the runner has been designed to have the communication happen over a separate thread and to schedule callbacks for any necessary actions on the main thread, which performs all the heavy lifting.
+Unfortunately, there is no easy way of telling what the actual problem is for the process not being reachable.
 The problem will manifest itself identically if the runner just could not respond in time or if the task has accidentally been lost forever due to a bug, even though these are two completely separate situations.
 
 This brings us to another potential unintuitive aspect of interacting with processes.
 The previous paragraph already mentioned it in passing, but when a remote procedure call is sent, it first needs to be answered by the responsible runner, if applicable, but it will not *directly execute* the call.
-This is because the call will be incoming on the communcation thread who is not allowed to have direct access to the process instance, but instead it will schedule a callback on the main thread who can perform the action.
+This is because the call will be incoming on the communication thread which is not allowed to have direct access to the process instance, but instead it will schedule a callback on the main thread which can perform the action.
 The callback will however not necessarily be executed directly, as there may be other actions waiting to be performed.
 So when you pause, play or kill a process, you are not doing so directly, but rather you are *scheduling* a request to do so.
 If the runner has successfully received the request and scheduled the callback, the command will therefore show something like the following:
@@ -728,9 +727,8 @@ The 'scheduled' indicates that the actual killing might not necessarily have hap
 This means that even after having called ``verdi process kill`` and getting the success message, the corresponding process may still be listed as active in the output of ``verdi process list``.
 
 By default, the ``pause``, ``play`` and ``kill`` commands will only ask for the confirmation of the runner that the request has been scheduled and not actually wait for the command to have been executed.
-This is because, as explained, the actual action being performed might not be instantaneous as the runner may be busy working with other processes, which would mean that the command would block for a long time.
-If you want to send multiple requests to a lot of processes in one go, this would be ineffective, as each one would have to wait for the previous one to be completed.
-To change the default and actually wait for the action to be completed and await its response, you can use the ``--wait`` flag.
+To change this behavior, you can use the ``--wait`` flag to actually wait for the action to be completed.
+If workers are under heavy load, it may take some time for them to respond to the request and for the command to finish.
 If you know that your daemon runners may be experiencing a heavy load, you can also increase the time that the command waits before timing out, with the ``-t/--timeout`` flag.
 
 

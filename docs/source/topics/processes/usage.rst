@@ -728,6 +728,7 @@ This means that even after having called ``verdi process kill`` and getting the 
 
 By default, the ``pause``, ``play`` and ``kill`` commands will only ask for the confirmation of the runner that the request has been scheduled and not actually wait for the command to have been executed.
 To change this behavior, you can use the ``--wait`` flag to actually wait for the action to be completed.
+If workers are under heavy load, it may take some time for them to respond to the request and for the command to finish.
 If you know that your daemon runners may be experiencing a heavy load, you can also increase the time that the command waits before timing out, with the ``-t/--timeout`` flag.
 
 

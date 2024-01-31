@@ -595,18 +595,26 @@ def ase_refine_cell(aseatoms, **kwargs):
     from ase.atoms import Atoms
     from spglib import get_symmetry_dataset, refine_cell
 
-    cell, positions, numbers = refine_cell(aseatoms, **kwargs)
+    spglib_tuple = (
+        aseatoms.get_cell(),
+        aseatoms.get_scaled_positions(),
+        aseatoms.get_atomic_numbers(),
+    )
+    cell, positions, numbers = refine_cell(spglib_tuple, **kwargs)
 
-    refined_atoms = Atoms(numbers, scaled_positions=positions, cell=cell, pbc=True)
-
+    refined_atoms = (
+        cell,
+        positions,
+        numbers,
+    )
     sym_dataset = get_symmetry_dataset(refined_atoms, **kwargs)
 
     unique_numbers = []
     unique_positions = []
 
     for i in set(sym_dataset['equivalent_atoms']):
-        unique_numbers.append(refined_atoms.numbers[i])
-        unique_positions.append(refined_atoms.get_scaled_positions()[i])
+        unique_numbers.append(numbers[i])
+        unique_positions.append(positions[i])
 
     unique_atoms = Atoms(unique_numbers, scaled_positions=unique_positions, cell=cell, pbc=True)
 

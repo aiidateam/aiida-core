@@ -68,4 +68,4 @@ def process_nodes():
 def test_is_valid_cache(process_nodes):
     """Test the :meth:`aiida.orm.nodes.process.process.ProcessNode.is_valid_cache` property."""
     for node, is_valid_cache in process_nodes:
-        assert node.is_valid_cache == is_valid_cache, node
+        assert node.base.caching.is_valid_cache == is_valid_cache, node

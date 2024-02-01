@@ -7,11 +7,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the functionality that reads and modifies the caching configuration file."""
-
-
 import contextlib
 import json
-from pathlib import Path
+import pathlib
 
 import pytest
 import yaml
@@ -60,7 +58,7 @@ def test_merge_deprecated_yaml(tmp_path):
         # Create a temporary folder, set it as the current config directory path
         settings.AIIDA_CONFIG_FOLDER = str(tmp_path)
         config_dictionary = json.loads(
-            Path(__file__)
+            pathlib.Path(__file__)
             .parent.joinpath('configuration/migrations/test_samples/reference/6.json')
             .read_text(encoding='utf-8')
         )
@@ -146,19 +144,19 @@ def test_default(configure_caching):
         (
             {
                 'default_enabled': True,
-                'enabled_for': ['aiida.calculations:arithmetic.add'],
+                'enabled_for': ['aiida.calculations:core.arithmetic.add'],
                 'disabled_for': ['aiida.calculations:core.templatereplacer'],
             },
-            ['some_identifier', 'aiida.calculations:arithmetic.add', 'aiida.calculations:TEMPLATEREPLACER'],
+            ['some_identifier', 'aiida.calculations:core.arithmetic.add', 'aiida.calculations:TEMPLATEREPLACER'],
             ['aiida.calculations:core.templatereplacer'],
         ),
         (
             {
                 'default_enabled': False,
-                'enabled_for': ['aiida.calculations:arithmetic.add'],
+                'enabled_for': ['aiida.calculations:core.arithmetic.add'],
                 'disabled_for': ['aiida.calculations:core.templatereplacer'],
             },
-            ['aiida.calculations:arithmetic.add'],
+            ['aiida.calculations:core.arithmetic.add'],
             ['aiida.calculations:core.templatereplacer', 'some_identifier'],
         ),
         (
@@ -166,7 +164,7 @@ def test_default(configure_caching):
                 'default_enabled': False,
                 'enabled_for': ['aiida.calculations:*'],
             },
-            ['aiida.calculations:core.templatereplacer', 'aiida.calculations:arithmetic.add'],
+            ['aiida.calculations:core.templatereplacer', 'aiida.calculations:core.arithmetic.add'],
             ['some_identifier'],
         ),
         (
@@ -174,25 +172,25 @@ def test_default(configure_caching):
                 'default_enabled': False,
                 'enabled_for': ['aiida.calcul*'],
             },
-            ['aiida.calculations:core.templatereplacer', 'aiida.calculations:arithmetic.add'],
+            ['aiida.calculations:core.templatereplacer', 'aiida.calculations:core.arithmetic.add'],
             ['some_identifier'],
         ),
         (
             {
                 'default_enabled': False,
                 'enabled_for': ['aiida.calculations:*'],
-                'disabled_for': ['aiida.calculations:arithmetic.add'],
+                'disabled_for': ['aiida.calculations:core.arithmetic.add'],
             },
-            ['aiida.calculations:core.templatereplacer', 'aiida.calculations:ARIthmetic.add'],
-            ['some_identifier', 'aiida.calculations:arithmetic.add'],
+            ['aiida.calculations:core.templatereplacer', 'aiida.calculations:core.ARIthmetic.add'],
+            ['some_identifier', 'aiida.calculations:core.arithmetic.add'],
         ),
         (
             {
                 'default_enabled': False,
-                'enabled_for': ['aiida.calculations:ar*thmetic.add'],
+                'enabled_for': ['aiida.calculations:core.ar*thmetic.add'],
                 'disabled_for': ['aiida.calculations:*'],
             },
-            ['aiida.calculations:arithmetic.add', 'aiida.calculations:arblarghthmetic.add'],
+            ['aiida.calculations:core.arithmetic.add', 'aiida.calculations:core.arblarghthmetic.add'],
             ['some_identifier', 'aiida.calculations:core.templatereplacer'],
         ),
     ],
@@ -221,11 +219,11 @@ def test_configuration(configure_caching, config_dict, enabled_for, disabled_for
         (
             {
                 'default_enabled': False,
-                'enabled_for': ['aiida.calculations:arithmetic.add'],
-                'disabled_for': ['aiida.calculations:arithmetic.add'],
+                'enabled_for': ['aiida.calculations:core.arithmetic.add'],
+                'disabled_for': ['aiida.calculations:core.arithmetic.add'],
             },
             ['some_identifier', 'aiida.calculations:core.templatereplacer'],
-            ['aiida.calculations:arithmetic.add'],
+            ['aiida.calculations:core.arithmetic.add'],
         ),
     ],
 )

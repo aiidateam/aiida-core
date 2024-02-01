@@ -93,7 +93,7 @@ def test_run_return_value_cached(aiida_local_code_factory):
         'y': Int(-2),
     }
     results_source, node_source = launch.run_get_node(ArithmeticAddCalculation, **inputs)
-    assert node_source.is_valid_cache
+    assert node_source.base.caching.is_valid_cache
 
     with enable_caching():
         results_cached, node_cached = launch.run_get_node(ArithmeticAddCalculation, **inputs)

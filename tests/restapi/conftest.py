@@ -80,7 +80,7 @@ def populate_restapi_database():
     """Populates the database with a considerable set of nodes to test the restAPI"""
     from aiida import orm
 
-    struct_forcif = orm.StructureData(pbc=False).store()
+    struct_forcif = orm.StructureData(pbc=False, cell=[[1, 0, 0], [0, 1, 0], [0, 0, 1]]).store()
     orm.StructureData(pbc=False).store()
     orm.StructureData(pbc=False).store()
 

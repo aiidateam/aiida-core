@@ -345,7 +345,7 @@ They can be accessed through the corresponding properties on the process node as
     :code: python
 
 The source code of the file in which the function is defined is also stored, but since it can be quite big, it is stored as a raw file in the repository of the process node.
-It can be retrieved through the :py:meth:`~aiida.orm.utils.mixins.FunctionCalculationMixin.get_function_source_code` method.
+It can be retrieved through the :py:meth:`~aiida.orm.utils.mixins.FunctionCalculationMixin.get_source_code_file` method.
 
 The attributes give some querability to the process functions stored in the provenance graph and by storing the source code of the function that was executed, there will be some reference in the future to track how the function created its output nodes.
 Note, however, that just storing the source file of the function does not guarantee that one can reproduce the exact result.

@@ -477,7 +477,7 @@ class TestNotRequiredNoneProcess(Process):
         spec.input('any_type', required=False)
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_not_required_accepts_none():
     """Test that a port that is not required, accepts ``None``."""
     from aiida.engine.utils import instantiate_process

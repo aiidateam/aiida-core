@@ -1474,7 +1474,7 @@ class TestConsistency:
             node.base.extras.set('key', 'value')
 
         for pk in pks:
-            assert orm.load_node(pk).get_extra('key') == 'value'
+            assert orm.load_node(pk).base.extras.get('key') == 'value'
 
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_iterall_with_store(self):

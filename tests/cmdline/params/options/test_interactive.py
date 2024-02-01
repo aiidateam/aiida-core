@@ -295,7 +295,6 @@ def test_default_value_prompt(run_cli_command):
     returns.append(result)
     expected = 'Opt [default]: TEST\nTEST\n'
     assert expected in result.output
-    return returns
 
 
 def test_default_value_empty_opt(run_cli_command):

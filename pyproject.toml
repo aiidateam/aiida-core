@@ -356,8 +356,11 @@ filterwarnings = [
   'ignore::DeprecationWarning:pymatgen:',
   'ignore::DeprecationWarning:jsonbackend:',
   'ignore::DeprecationWarning:pkg_resources:',
-  'ignore:Object of type .* not in session, .* operation along .* will not proceed:sqlalchemy.exc.SAWarning',
   'ignore::pytest.PytestCollectionWarning',
+  'ignore:Creating AiiDA configuration folder.*:UserWarning',
+  'ignore:Object of type .* not in session, .* operation along .* will not proceed:sqlalchemy.exc.SAWarning',
+  'ignore:The `aiida.orm.nodes.data.upf` module is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
+  'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   'default::ResourceWarning'
 ]
 markers = [

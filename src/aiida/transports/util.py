@@ -64,6 +64,14 @@ class _DetachedProxyCommand(ProxyCommand):
                     break
                 time.sleep(0.2)
 
+        for f in [self.process.stdout, self.process.stderr, self.process.stdin]:
+            if f is None:
+                continue
+            try:
+                f.close()
+            except ValueError:
+                pass
+
 
 def copy_from_remote_to_remote(transportsource, transportdestination, remotesource, remotedestination, **kwargs):
     """Copy files or folders from a remote computer to another remote computer.

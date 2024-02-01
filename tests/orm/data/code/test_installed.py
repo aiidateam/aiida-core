@@ -11,6 +11,7 @@ import pathlib
 
 import pytest
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import Computer
 from aiida.orm.nodes.data.code.installed import InstalledCode
 
@@ -128,4 +129,5 @@ def test_full_label(aiida_localhost):
 def test_get_execname(aiida_localhost):
     """Test the deprecated :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.get_execname` method."""
     code = InstalledCode(label='some-label', computer=aiida_localhost, filepath_executable='/usr/bin/bash')
-    assert code.get_execname() == '/usr/bin/bash'
+    with pytest.warns(AiidaDeprecationWarning):
+        assert code.get_execname() == '/usr/bin/bash'

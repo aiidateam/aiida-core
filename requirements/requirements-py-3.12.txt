@@ -34,7 +34,7 @@ click==8.1.7
 click-spinner==0.1.10
 comm==0.1.4
 contourpy==1.1.1
-coverage==6.5.0
+coverage==7.4.1
 cryptography==41.0.5
 cycler==0.12.1
 debugpy==1.8.0
@@ -133,15 +133,15 @@ pydantic==2.4.0
 pydata-sphinx-theme==0.13.3
 pygments==2.16.1
 pymatgen==2023.10.11
-pympler==0.9
+pympler==1.0.1
 pymysql==0.9.3
 pynacl==1.5.0
-pyparsing==2.4.7
+pyparsing==3.1.1
 pyrsistent==0.19.3
 pytest==7.4.2
 pytest-asyncio==0.16.0
 pytest-benchmark==4.0.0
-pytest-cov==2.10.1
+pytest-cov==4.1.0
 pytest-datadir==1.5.0
 pytest-regressions==2.5.0
 pytest-rerunfailures==12.0.0

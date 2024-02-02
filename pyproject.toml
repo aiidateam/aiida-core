@@ -218,7 +218,7 @@ rest = [
   'flask-cors~=3.0',
   'flask-restful~=0.3.7',
   'flask~=2.2',
-  'pyparsing~=2.4',
+  'pyparsing~=3.0',
   'python-memcached~=1.59',
   'seekpath~=1.9,>=1.9.3'
 ]
@@ -233,12 +233,12 @@ tests = [
   'pytest~=7.0',
   'pytest-asyncio~=0.12,<0.17',
   'pytest-timeout~=2.0',
-  'pytest-cov~=2.7,<2.11',
+  'pytest-cov~=4.1',
   'pytest-rerunfailures~=12.0',
   'pytest-benchmark~=4.0',
   'pytest-regressions~=2.2',
-  'pympler~=0.9',
-  'coverage~=6.0',
+  'pympler~=1.0',
+  'coverage~=7.0',
   'sphinx~=7.2',
   'docutils~=0.20'
 ]

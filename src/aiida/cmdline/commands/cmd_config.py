@@ -131,7 +131,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
         echo.echo_critical('Cannot flag both append and remove')
 
     config: Config = ctx.obj.config
-    profile: Profile | None = ctx.obj.profile
+    profile: Profile | None = ctx.obj.get('profile', None)
 
     if option.global_only:
         globally = True

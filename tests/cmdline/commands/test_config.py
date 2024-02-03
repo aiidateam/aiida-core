@@ -29,6 +29,10 @@ def test_config_set_option_no_profile(run_cli_command, empty_config):
     run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
     assert str(config.get_option(option_name, scope=None)) == option_value
 
+    # Issue xxx: profile attribute not exist for an actual empty config
+    result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=True)
+    assert 'Success: ' in result.output
+
 
 @pytest.mark.parametrize(
     'option_name, is_list',

@@ -37,8 +37,6 @@ from aiida.common.log import AIIDA_LOGGER, LogLevels
 from .options import Option, get_option, get_option_names, parse_option
 from .profile import Profile
 
-__all__ = ('Config',)
-
 if TYPE_CHECKING:
     from aiida.orm.implementation.storage_backend import StorageBackend
 

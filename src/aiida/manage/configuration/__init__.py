@@ -56,7 +56,7 @@ from typing import TYPE_CHECKING, Any, Optional
 from aiida.common.warnings import AiidaDeprecationWarning
 
 if TYPE_CHECKING:
-    from aiida.manage.configuration import Config, Profile
+    from .config import Config
 
 # global variables for aiida
 CONFIG: Optional['Config'] = None

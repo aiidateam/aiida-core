@@ -21,18 +21,10 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
       .. tab-set::
 
-         .. tab-item:: Docker Desktop
-
-            Docker Desktop is available for Windows and Mac and includes everything you need to run Docker on your computer.
-            It is a virtual machine + Graphical user interface with some extra features e.g. use third-party tool, namely `docker extensions <https://docs.docker.com/desktop/extensions/>`_ to extend its functionality.
-
-            `Docker Desktop <https://www.docker.com/products/docker-desktop/>`_ is the easiest way to get started with Docker.
-            You just need to download the installer and follow the instructions.
-
          .. tab-item:: Colima on MacOS and Linux
 
             `Colima <https://github.com/abiosoft/colima>`_ is a new open-source project that makes it easy to run Docker on MacOS and Linux.
-            It is a lightweight alternative to Docker Desktop with a focus on simplicity and performance.
+            It is a lightweight alternative to Docker Engine with a focus on simplicity and performance.
 
             If you need multiple Docker environments, Colima is the recommended way.
             With colima, you can have multiple Docker environments running at the same time, each with its own Docker daemon and resource allocation thus avoiding conflicts.
@@ -65,21 +57,12 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
    .. grid-item-card:: Start/stop container and use AiiDA interactively
 
-      Start the image within Docker desktop or with the `docker command line (docker CLI) <https://docs.docker.com/engine/reference/commandline/cli/>`_.
+      Start the image with the `docker command line (docker CLI) <https://docs.docker.com/engine/reference/commandline/cli/>`_.
 
       The ``latest`` tag is the image with the most recent stable version of ``aiida-core`` installed in the container.
       You can replace the ``latest`` tag with the version you want to use, check the `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core-with-services/tags>`_ for available tags.
 
       .. tab-set::
-
-         .. tab-item:: Docker Desktop
-
-            #. Open Docker Desktop
-            #. Click on the ``+`` button on the top left corner
-            #. Select ``Image`` tab
-            #. Search for ``aiidateam/aiida-core-with-services``
-            #. Select the ``latest`` tag
-            #. Click on ``Run``
 
          .. tab-item:: Docker CLI
 
@@ -156,19 +139,6 @@ If you use the Docker image for development or production, you will likely need 
 
    .. tab-set::
 
-      .. tab-item:: Docker Desktop
-
-         #. !!! test me in windows !!!
-         #. Open Docker Desktop
-         #. Click on the ``Containers/Apps`` button on the left sidebar
-         #. Click on the ``aiida-container-demo`` container
-         #. Click on the ``CLI`` button on the top right corner
-         #. Click on the ``+`` button on the top left corner
-         #. Select ``File/Folder`` tab
-         #. Select the file/folder you want to copy
-         #. Select the destination path in the container
-         #. Click on ``Copy``
-
       .. tab-item:: Docker CLI
 
          Use the ``docker cp`` command if you need to copy files from your computer to the container or vice versa.
@@ -194,11 +164,6 @@ If you use the Docker image for development or production, you will likely need 
    The preferred way to persistently store data is to `create a volume <https://docs.docker.com/storage/volumes/>`__.
 
    .. tab-set::
-
-      .. tab-item:: Docker Desktop
-
-         1. Open Docker Desktop
-         2. ???
 
       .. tab-item:: Docker CLI
 
@@ -253,13 +218,6 @@ If you use the Docker image for development or production, you will likely need 
    If you used a `named volume <https://docs.docker.com/storage/volumes/#backup-a-containerhttps://docs.docker.com/storage/#more-details-about-mount-types>`__, you can backup the volume.
 
    .. tab-set::
-
-      .. tab-item:: Docker Desktop
-
-         Docker Desktop provides a `Volumes Backup & Share extension <https://hub.docker.com/extensions/docker/volumes-backup-extension>`__ which allows you to backup and restore volumes effortlessly.
-
-         The extension can be found in the Marketplace in the Docker Desktop GUI.
-         Install the extension and follow the instructions to backup and restore volumes.
 
       .. tab-item:: Docker CLI
 

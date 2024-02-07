@@ -37,3 +37,30 @@ def test_callable_default_resilient_parsing():
     completions = [c.value for c in _get_completions(verdi, [], '')]
     assert 'help' in completions
     assert configuration.CONFIG is None
+
+
+@pytest.mark.usefixtures('unload_config')
+def test_undesired_imports_during_tab_completion():
+    """Check that verdi does not import certain python modules
+    that would make tab-completion slow.
+
+    NOTE: This is analogous to `verdi devel check-undesired-imports`
+    """
+    import sys
+
+    for modulename in [
+        'asyncio',
+        'requests',
+        'plumpy',
+        'disk_objectstore',
+        'paramiko',
+        'seekpath',
+        'CifFile',
+        'ase',
+        'pymatgen',
+        'spglib',
+        'pydantic',
+        'pymysql',
+        'yaml',
+    ]:
+        assert modulename not in sys.modules, f'Detected loaded module {modulename} during tab-completion'

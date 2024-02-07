@@ -504,6 +504,8 @@ class PsqlDosBackend(StorageBackend):
         from aiida.manage.configuration import Config, get_config
         from aiida.manage.profile_access import ProfileAccessManager
 
+        STORAGE_LOGGER.report('Starting backup...')
+
         # This command calls `rsync` and `pg_dump` executables. check that they are in PATH
         for exe in ['rsync', 'pg_dump']:
             if shutil.which(exe) is None:
@@ -520,6 +522,7 @@ class PsqlDosBackend(StorageBackend):
             raise exceptions.StorageBackupError('The profile is locked!') from exc
 
         # step 1: back up aiida config.json file (strip other profiles!)
+        STORAGE_LOGGER.report('Backing up config.json...')
         try:
             config = get_config()
             profile = config.get_profile(self.profile.name)  # Get the profile being backed up
@@ -533,9 +536,11 @@ class PsqlDosBackend(StorageBackend):
             raise exceptions.StorageBackupError('aiida config.json not found!') from exc
 
         # step 2: first run the storage maintenance version that can safely be performed while aiida is running
+        STORAGE_LOGGER.report('Running basic maintenance...')
         self.maintain(full=False, compress=False)
 
         # step 3: dump the PostgreSQL database into a temporary directory
+        STORAGE_LOGGER.report('Backing up PostgreSQL...')
         pg_dump_exe = manager.exes.get('pg_dump', 'pg_dump')
         with tempfile.TemporaryDirectory() as temp_dir_name:
             psql_temp_loc = pathlib.Path(temp_dir_name) / 'db.psql'
@@ -566,6 +571,7 @@ class PsqlDosBackend(StorageBackend):
             manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)
 
         # step 5: back up the disk-objectstore
+        STORAGE_LOGGER.report('Backing up DOS container...')
         backup_utils.backup_container(
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )

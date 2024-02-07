@@ -574,4 +574,4 @@ class PsqlDosBackend(StorageBackend):
             backup_manager = backup_utils.BackupManager(dest, STORAGE_LOGGER, exes=exes, keep=keep)
             backup_manager.backup_auto_folders(lambda path, prev: self._backup(backup_manager, path, prev))
         except backup_utils.BackupError as exc:
-            raise exceptions.StorageBackupError from exc
+            raise exceptions.StorageBackupError(*exc.args) from exc

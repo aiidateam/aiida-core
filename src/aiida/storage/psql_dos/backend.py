@@ -527,7 +527,7 @@ class PsqlDosBackend(StorageBackend):
             raise exceptions.StorageBackupError('aiida config.json not found!') from exc
 
         # step 2: first run the storage maintenance version that can safely be performed while aiida is running
-        self.maintain(full=False, compress=True)
+        self.maintain(full=False, compress=False)
 
         # step 3: dump the PostgreSQL database into a temporary directory
         pg_dump_exe = manager.exes.get('pg_dump', 'pg_dump')

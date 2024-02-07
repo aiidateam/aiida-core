@@ -522,7 +522,7 @@ class PsqlDosBackend(StorageBackend):
                 backup_config = Config(str(filepath_config), {})  # Create empty config at temporary file location
                 backup_config.add_profile(profile)  # Add the profile being backed up
                 backup_config.store()  # Write the contents to disk
-                manager.call_rsync(filepath_config, path)
+                manager.call_rsync(filepath_config, path, dest_trailing_slash=True)
         except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exc:
             raise exceptions.StorageBackupError('aiida config.json not found!') from exc
 

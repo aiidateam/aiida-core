@@ -174,21 +174,9 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
     default=1,
     help='Number of previous backups to keep in the destination. (default: 1)',
 )
-@click.option(
-    '--pg-dump-exe',
-    type=click.STRING,
-    default='pg_dump',
-    help="Specify the 'pg_dump' executable, if not in PATH. Only needed for a PostgreSQL-based backend",
-)
-@click.option(
-    '--rsync-exe',
-    type=click.STRING,
-    default='rsync',
-    help="Specify the 'rsync' executable, if not in PATH. Used for both local and remote destinations",
-)
 @decorators.with_manager
 @click.pass_context
-def storage_backup(ctx, manager, dest: str, keep: int, pg_dump_exe: str, rsync_exe: str):
+def storage_backup(ctx, manager, dest: str, keep: int):
     """Backup the data storage of a profile.
 
     The backup is created in the destination `DEST`, in a subfolder that follows the naming convention
@@ -205,12 +193,12 @@ def storage_backup(ctx, manager, dest: str, keep: int, pg_dump_exe: str, rsync_e
     login - recommended, since this script might ask multiple times for the password).
 
     NOTE: 'rsync' and other UNIX-specific commands are called, thus the command will not work on
-    non-UNIX environments.
+    non-UNIX environments. What other executables are called, depend on the storage backend.
     """
 
     storage = manager.get_profile_storage()
     try:
-        storage.backup(dest, keep, exes={'rsync': rsync_exe, 'pg_dump': pg_dump_exe})
+        storage.backup(dest, keep)
     except (ValueError, exceptions.StorageBackupError) as exception:
         echo.echo_critical(str(exception))
     echo.echo_success(f'Data storage of profile `{ctx.obj.profile.name}` backed up to `{dest}`')

@@ -497,11 +497,17 @@ class PsqlDosBackend(StorageBackend):
             incremental and efficient.
         """
         import os
+        import shutil
         import subprocess
         import tempfile
 
         from aiida.manage.configuration import Config, get_config
         from aiida.manage.profile_access import ProfileAccessManager
+
+        # This command calls `rsync` and `pg_dump` executables. check that they are in PATH
+        for exe in ['rsync', 'pg_dump']:
+            if shutil.which(exe) is None:
+                raise exceptions.StorageBackupError(f"Required executable '{exe}' not found in PATH, please add it.")
 
         cfg = self._profile.storage_config
         container = Container(get_filepath_container(self.profile))
@@ -568,10 +574,9 @@ class PsqlDosBackend(StorageBackend):
         self,
         dest: str,
         keep: int = 1,
-        exes: Optional[dict] = None,
     ):
         try:
-            backup_manager = backup_utils.BackupManager(dest, STORAGE_LOGGER, exes=exes, keep=keep)
+            backup_manager = backup_utils.BackupManager(dest, STORAGE_LOGGER, keep=keep)
             backup_manager.backup_auto_folders(lambda path, prev: self._backup(backup_manager, path, prev))
         except backup_utils.BackupError as exc:
             raise exceptions.StorageBackupError(*exc.args) from exc

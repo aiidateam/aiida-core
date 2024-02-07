@@ -308,7 +308,6 @@ class StorageBackend(abc.ABC):
         self,
         dest: str,
         keep: int = 1,
-        exes: Optional[dict] = None,
     ):
         """Create a backup of the storage contents.
 

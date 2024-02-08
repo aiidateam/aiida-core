@@ -2,5 +2,5 @@
 
 with-contenv
 
-foreground { s6-echo "Calling /etc/init/aiida-stop" }
-/etc/init/aiida-stop.sh
+foreground { s6-echo "Calling /etc/init/aiida-daemon-stop" }
+/etc/init/aiida-daemon-stop.sh

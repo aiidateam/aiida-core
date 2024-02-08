@@ -34,33 +34,39 @@ GIU = (
 )
 
 
-class LazyConfigAttributeDict(AttributeDict):
-    """Subclass of ``AttributeDict`` that lazily calls :meth:`aiida.manage.configuration.get_config`."""
+class LazyVerdiObjAttributeDict(AttributeDict):
+    """Subclass of ``AttributeDict`` that lazily initializes the ``config`` and ``profile`` attributes.
 
-    _LAZY_KEY = 'config'
+    This class guarantees that the ``config`` and ``profile`` attributes never raise an ``AttributeError``. When the
+    attributes are accessed when they are not set, ``config`` is initialized by the value returned by the method
+    :meth:`aiida.manage.configuration.get_config`. The ``profile`` attribute is initialized to ``None``.
+    """
+
+    _KEY_CONFIG = 'config'
+    _KEY_PROFILE = 'profile'
 
     def __init__(self, ctx: click.Context, dictionary: dict[str, t.Any] | None = None):
         super().__init__(dictionary)
         self.ctx = ctx
 
     def __getattr__(self, attr: str) -> t.Any:
-        """Override of ``AttributeDict.__getattr__`` for lazily loading the config key.
+        """Override of ``AttributeDict.__getattr__`` to lazily initialize the ``config`` and ``profile`` attributes.
 
         :param attr: The attribute to return.
         :returns: The value of the attribute.
         :raises AttributeError: If the attribute does not correspond to an existing key.
         :raises click.exceptions.UsageError: If loading of the configuration fails.
         """
-        if attr != self._LAZY_KEY:
-            return super().__getattr__(attr)
+        if attr == self._KEY_PROFILE:
+            self.setdefault(self._KEY_PROFILE, None)
 
-        if self._LAZY_KEY not in self:
+        elif attr == self._KEY_CONFIG and self._KEY_CONFIG not in self:
             try:
-                self[self._LAZY_KEY] = get_config(create=True)
+                self[self._KEY_CONFIG] = get_config(create=True)
             except ConfigurationError as exception:
                 self.ctx.fail(str(exception))
 
-        return self[self._LAZY_KEY]
+        return super().__getattr__(attr)
 
 
 class VerdiContext(click.Context):
@@ -69,7 +75,7 @@ class VerdiContext(click.Context):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.obj is None:
-            self.obj = LazyConfigAttributeDict(self)
+            self.obj = LazyVerdiObjAttributeDict(self)
 
 
 class VerdiCommandGroup(click.Group):

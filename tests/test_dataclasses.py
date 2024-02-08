@@ -2269,7 +2269,9 @@ class TestPymatgenFromStructureData:
     """
 
     @skip_pymatgen
-    @pytest.mark.parametrize('pbc', ((True, True, True), (True, True, False), (True, False, False), (False, False, False)))
+    @pytest.mark.parametrize(
+        'pbc', ((True, True, True), (True, True, False), (True, False, False), (False, False, False))
+    )
     def test_1(self, pbc):
         """Tests the check of periodic boundary conditions."""
         import numpy as np

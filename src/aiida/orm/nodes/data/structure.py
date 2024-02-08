@@ -1741,7 +1741,7 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
         """
-        if self.pbc == (True, True, True):
+        if any(self.pbc):
             return self._get_object_pymatgen_structure(**kwargs)
 
         return self._get_object_pymatgen_molecule(**kwargs)
@@ -1769,13 +1769,13 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
         """
+        from pymatgen.core.lattice import Lattice
         from pymatgen.core.structure import Structure
-
-        if self.pbc != (True, True, True):
-            raise ValueError('Periodic boundary conditions must apply in all three dimensions of real space')
 
         species = []
         additional_kwargs = {}
+
+        lattice = Lattice(matrix=self.cell, pbc=self.pbc)
 
         if kwargs.pop('add_spin', False) and any(n.endswith('1') or n.endswith('2') for n in self.get_kind_names()):
             # case when spins are defined -> no partial occupancy allowed
@@ -1813,7 +1813,7 @@ class StructureData(Data):
             raise ValueError(f'Unrecognized parameters passed to pymatgen converter: {kwargs.keys()}')
 
         positions = [list(x.position) for x in self.sites]
-        return Structure(self.cell, species, positions, coords_are_cartesian=True, **additional_kwargs)
+        return Structure(lattice, species, positions, coords_are_cartesian=True, **additional_kwargs)
 
     def _get_object_pymatgen_molecule(self, **kwargs):
         """Converts

@@ -2269,16 +2269,28 @@ class TestPymatgenFromStructureData:
     """
 
     @skip_pymatgen
-    def test_1(self):
+    @pytest.mark.parametrize('pbc', ((True, True, True), (True, True, False), (True, False, False), (False, False, False)))
+    def test_1(self, pbc):
         """Tests the check of periodic boundary conditions."""
-        struct = StructureData()
-        struct.set_cell([[1, 0, 0], [0, 1, 2], [3, 4, 5]])
-        struct.pbc = [True, True, True]
-        struct.get_pymatgen_structure()
+        import numpy as np
 
-        struct.pbc = [True, True, False]
-        with pytest.raises(ValueError):
-            struct.get_pymatgen_structure()
+        cell = np.diag((1, 1, 1)).tolist()
+        symbols = ['Ba', 'Ba', 'Zr', 'Zr', 'O', 'O', 'O', 'O', 'O', 'O']
+        structure = StructureData(cell=cell)
+        structure.set_pbc(pbc)
+
+        for symbol in symbols:
+            structure.append_atom(name=symbol, symbols=[symbol], position=[0, 0, 0])
+
+        assert structure.pbc == pbc
+
+        pymatgen = structure.get_pymatgen_structure()
+
+        assert pymatgen.lattice.pbc == pbc
+        assert pymatgen.lattice.matrix.tolist() == cell
+
+        for site_pymat, site_aiida in zip(pymatgen.sites, structure.sites):
+            assert structure.get_kind(site_aiida.kind_name).symbol == site_pymat.specie.name
 
     @skip_ase
     @skip_pymatgen

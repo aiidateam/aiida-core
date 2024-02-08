@@ -37,12 +37,13 @@ This image contains a fully pre-configured AiiDA environment which makes it part
       To disable this default profile being created, set the ``SETUP_DEFAULT_AIIDA_PROFILE`` environment variable to ``false``.
 
       The following environment variables can be set to configure the default AiiDA profile:
-      - ``AIIDA_PROFILE_NAME``: the name of the profile to be created (default: ``default``)
-      - ``AIIDA_USER_EMAIL``: the email of the default user to be created (default: ``aiida@localhost``)
-      - ``AIIDA_USER_FIRST_NAME``: the first name of the default user to be created (default: ``Giuseppe``)
-      - ``AIIDA_USER_LAST_NAME``: the last name of the default user to be created (default: ``Verdi``)
-      - ``AIIDA_USER_INSTITUTION``: the institution of the default user to be created (default: ``Khedivial``)
-      - ``AIIDA_CONFIG_FILE``: the path to the AiiDA configuration file used for other profile configuration parameters (default: ``/aiida/assets/config-quick-setup.yaml``).
+
+      * ``AIIDA_PROFILE_NAME``: the name of the profile to be created (default: ``default``)
+      * ``AIIDA_USER_EMAIL``: the email of the default user to be created (default: ``aiida@localhost``)
+      * ``AIIDA_USER_FIRST_NAME``: the first name of the default user to be created (default: ``Giuseppe``)
+      * ``AIIDA_USER_LAST_NAME``: the last name of the default user to be created (default: ``Verdi``)
+      * ``AIIDA_USER_INSTITUTION``: the institution of the default user to be created (default: ``Khedivial``)
+      * ``AIIDA_CONFIG_FILE``: the path to the AiiDA configuration file used for other profile configuration parameters (default: ``/aiida/assets/config-quick-setup.yaml``).
 
       These environment variables can be set when starting the container with the ``-e`` option.
 

@@ -5,6 +5,15 @@
 # Environment.
 export SHELL=/bin/bash
 
+# Supress rabbitmq version warning
+# If it is built using RMQ version > 3.8.15 (as we did for the `aiida-core-with-services` image) which has the issue as described in
+# https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use
+# We explicitly set consumer_timeout to disabled in /etc/rabbitmq/rabbitmq.conf
+verdi config set warnings.rabbitmq_version False
+
+# Supress verdi version warning because we are using a development version
+verdi config set warnings.development_version False
+
 # Check if user requested to set up AiiDA profile (and if it exists already)
 # If the environment variable `SETUP_DEFAULT_AIIDA_PROFILE` is not set, set it to `true`.
 if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
@@ -18,15 +27,6 @@ if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${
         --last-name "${AIIDA_USER_LAST_NAME:-Verdi}"        \
         --institution "${AIIDA_USER_INSTITUTION:-Khedivial}"    \
         --config "${AIIDA_CONFIG_FILE:-/aiida/assets/config-quick-setup.yaml}"
-
-    # Supress verdi version warning because we are using a development version
-    verdi config set warnings.development_version False
-
-    # Supress rabbitmq version warning
-    # If it is built using RMQ version > 3.8.15 (as we did for the `aiida-core` image) which has the issue as described in
-    # https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use
-    # We explicitly set consumer_timeout to 100 hours in /etc/rabbitmq/rabbitmq.conf
-    verdi config set warnings.rabbitmq_version False
 
     # Setup and configure local computer.
     computer_name=localhost
@@ -65,7 +65,3 @@ if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${
     # Migration will run for the default profile.
     verdi storage migrate --force
 fi
-
-
-# Show the default profile
-verdi profile show || echo "The default profile is not set."

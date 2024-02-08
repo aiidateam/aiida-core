@@ -99,8 +99,7 @@ def submit(
     :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
         point the function returns the calculation node.
     :param wait_interval: the number of seconds to wait between checking the state of the process when ``wait=True``.
-    :param kwargs: inputs to be passed to the process. This is deprecated and the inputs should instead be passed as a
-        dictionary to the ``inputs`` argument.
+    :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
     """
     inputs = prepare_inputs(inputs, **kwargs)

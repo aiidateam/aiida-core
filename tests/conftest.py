@@ -176,10 +176,10 @@ def isolated_config(monkeypatch):
     changing it in tests maybe necessary if a command is invoked that will be reading the config from disk in another
     Python process and so doesn't have access to the loaded config in memory in the process that is running the test.
     """
-    import aiida.manage.configuration.config as _config
+    from aiida.manage.configuration.config import Config
     from aiida.manage import configuration
 
-    monkeypatch.setattr(_config.Config, '_backup', lambda *args, **kwargs: None)
+    monkeypatch.setattr(Config, '_backup', lambda *args, **kwargs: None)
 
     current_config = configuration.CONFIG
     configuration.CONFIG = copy.deepcopy(current_config)

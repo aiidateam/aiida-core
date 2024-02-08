@@ -34,10 +34,9 @@ def unload_config():
 
 @pytest.fixture
 def unimport_slow_imports():
-    """Pretend that pydantic has not been imported yet."""
-
-    for modulename in SLOW_IMPORTS:
-        del sys.modules['pydantic']
+    """Remove modules in ``SLOW_IMPORTS`` from ``sys.modules``."""
+    for module in SLOW_IMPORTS:
+        del sys.modules[module]
 
 
 @pytest.mark.usefixtures('unload_config')
@@ -54,15 +53,14 @@ def test_callable_default_resilient_parsing():
 @pytest.mark.usefixtures('unload_config')
 @pytest.mark.usefixtures('unimport_slow_imports')
 def test_slow_imports_during_tab_completion():
-    """Check that verdi does not import certain python modules
-    that would make tab-completion slow.
+    """Check that verdi does not import certain python modules that would make tab-completion slow.
 
     NOTE: This is analogous to `verdi devel check-undesired-imports`
     """
 
     # Let's double check that the undesired imports are not already loaded
     for modulename in SLOW_IMPORTS:
-        assert modulename not in sys.modules, f'Detected loaded module {modulename}'
+        assert modulename not in sys.modules, f'Module `{modulename}` was not properly unloaded'
 
     completions = [c.value for c in _get_completions(verdi, [], '')]
     assert 'help' in completions

@@ -1220,7 +1220,7 @@ class StructureData(Data):
 
     def get_pymatgen(self, **kwargs):
         """Get pymatgen object. Returns Structure for structures with
-        periodic boundary conditions (in three dimensions) and Molecule
+        periodic boundary conditions (in 1,2,3D) and Molecule
         otherwise.
         :param add_spin: True to add the spins to the pymatgen structure.
         Default is False (no spin added).
@@ -1762,18 +1762,22 @@ class StructureData(Data):
         :return: a pymatgen Structure object corresponding to this
           :py:class:`StructureData <aiida.orm.nodes.data.structure.StructureData>`
           object
-        :raise ValueError: if periodic boundary conditions does not hold
-          in at least one dimension of real space; if there are partial occupancies
-          together with spins (defined by kind names ending with '1' or '2').
+        :raise ValueError: if the cell is not set (i.e. is the default one);
+          if there are partial occupancies together with spins
+          (defined by kind names ending with '1' or '2').
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
         """
+        import numpy as np
         from pymatgen.core.lattice import Lattice
         from pymatgen.core.structure import Structure
 
         species = []
         additional_kwargs = {}
+
+        if np.isclose(self.cell, _DEFAULT_CELL, 1e-10).all():
+            raise ValueError('Cannot instantiate pymatgen `Structure` without a cell')
 
         lattice = Lattice(matrix=self.cell, pbc=self.pbc)
 

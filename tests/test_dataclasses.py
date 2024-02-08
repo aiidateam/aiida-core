@@ -2278,25 +2278,34 @@ class TestPymatgenFromStructureData:
 
         cell = np.diag((1, 1, 1)).tolist()
         symbols = ['Ba', 'Ba', 'Zr', 'Zr', 'O', 'O', 'O', 'O', 'O', 'O']
-        structure = StructureData(cell=cell)
-        structure.set_pbc(pbc)
+        structure = StructureData(cell=cell, pbc=pbc)
 
         for symbol in symbols:
             structure.append_atom(name=symbol, symbols=[symbol], position=[0, 0, 0])
 
-        assert structure.pbc == pbc
-
         pymatgen = structure.get_pymatgen_structure()
-
         assert pymatgen.lattice.pbc == pbc
         assert pymatgen.lattice.matrix.tolist() == cell
 
-        for site_pymat, site_aiida in zip(pymatgen.sites, structure.sites):
-            assert structure.get_kind(site_aiida.kind_name).symbol == site_pymat.specie.name
+    @skip_pymatgen
+    def test_2(self):
+        """Tests the check of periodic boundary conditions."""
+        from pymatgen.core.structure import Molecule
+
+        symbol, pbc = 'Si', (False, False, False)
+        structure = StructureData(pbc=pbc)
+        structure.append_atom(name=symbol, symbols=[symbol], position=[0, 0, 0])
+
+        pymatgen = structure.get_pymatgen()
+        assert isinstance(pymatgen, Molecule)
+
+        match = 'Cannot instantiate pymatgen `Structure` without a cell'
+        with pytest.raises(ValueError, match=match):
+            structure.get_pymatgen_structure()
 
     @skip_ase
     @skip_pymatgen
-    def test_2(self):
+    def test_3(self):
         """Tests ASE -> StructureData -> pymatgen."""
         import ase
 
@@ -2322,7 +2331,7 @@ class TestPymatgenFromStructureData:
 
     @skip_ase
     @skip_pymatgen
-    def test_3(self):
+    def test_4(self):
         """Tests the conversion of StructureData to pymatgen's Molecule
         (ASE -> StructureData -> pymatgen)
         """

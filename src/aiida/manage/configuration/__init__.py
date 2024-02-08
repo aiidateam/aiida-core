@@ -13,14 +13,12 @@
 
 # fmt: off
 
-from .config import *
 from .migrations import *
 from .options import *
 from .profile import *
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',
-    'Config',
     'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
     'Option',
@@ -58,7 +56,7 @@ from typing import TYPE_CHECKING, Any, Optional
 from aiida.common.warnings import AiidaDeprecationWarning
 
 if TYPE_CHECKING:
-    from aiida.manage.configuration import Config, Profile
+    from .config import Config
 
 # global variables for aiida
 CONFIG: Optional['Config'] = None
@@ -197,7 +195,7 @@ def profile_context(profile: Optional[str] = None, allow_switch=False) -> 'Profi
 
 
 def create_profile(
-    config: Config,
+    config: 'Config',
     storage_cls,
     *,
     name: str,

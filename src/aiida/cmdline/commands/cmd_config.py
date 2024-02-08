@@ -38,7 +38,8 @@ def verdi_config_list(ctx, prefix, description: bool):
     """
     from tabulate import tabulate
 
-    from aiida.manage.configuration import Config, Profile
+    from aiida.manage.configuration import Profile
+    from aiida.manage.configuration.config import Config
 
     config: Config = ctx.obj.config
     profile: Profile | None = ctx.obj.get('profile', None)
@@ -79,7 +80,8 @@ def verdi_config_list(ctx, prefix, description: bool):
 @click.pass_context
 def verdi_config_show(ctx, option):
     """Show details of an AiiDA option for the current profile."""
-    from aiida.manage.configuration import Config, Profile
+    from aiida.manage.configuration import Profile
+    from aiida.manage.configuration.config import Config
 
     config: Config = ctx.obj.config
     profile: Profile | None = ctx.obj.profile
@@ -125,7 +127,10 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
     import typing
 
     from aiida.common.exceptions import ConfigurationError
-    from aiida.manage.configuration import Config, Profile
+
+    if typing.TYPE_CHECKING:
+        from aiida.manage.configuration import Profile
+        from aiida.manage.configuration.config import Config
 
     if append and remove:
         echo.echo_critical('Cannot flag both append and remove')
@@ -170,7 +175,8 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
 @click.pass_context
 def verdi_config_unset(ctx, option, globally):
     """Unset an AiiDA option."""
-    from aiida.manage.configuration import Config, Profile
+    from aiida.manage.configuration import Profile
+    from aiida.manage.configuration.config import Config
 
     config: Config = ctx.obj.config
     profile: Profile | None = ctx.obj.profile

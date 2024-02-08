@@ -24,7 +24,10 @@ import warnings
 import click
 import pytest
 from aiida import get_profile
-from aiida.manage.configuration import Config, Profile, get_config, load_profile
+from aiida.manage.configuration import Profile, get_config, load_profile
+
+if t.TYPE_CHECKING:
+    from aiida.manage.configuration.config import Config
 
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']
 
@@ -174,8 +177,9 @@ def isolated_config(monkeypatch):
     Python process and so doesn't have access to the loaded config in memory in the process that is running the test.
     """
     from aiida.manage import configuration
+    from aiida.manage.configuration.config import Config
 
-    monkeypatch.setattr(configuration.Config, '_backup', lambda *args, **kwargs: None)
+    monkeypatch.setattr(Config, '_backup', lambda *args, **kwargs: None)
 
     current_config = configuration.CONFIG
     configuration.CONFIG = copy.deepcopy(current_config)

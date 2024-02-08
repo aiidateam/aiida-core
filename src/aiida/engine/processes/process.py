@@ -7,6 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The AiiDA process class"""
+from __future__ import annotations
+
 import asyncio
 import collections
 import copy
@@ -517,14 +519,14 @@ class Process(plumpy.processes.Process):
         super().set_status(status)
         self.node.set_process_status(status)
 
-    def submit(self, process: Type['Process'], **kwargs) -> orm.ProcessNode:
+    def submit(self, process: Type['Process'], inputs: dict[str, Any] | None = None, **kwargs) -> orm.ProcessNode:
         """Submit process for execution.
 
-        :param process: process
-        :return: the calculation node of the process
-
+        :param process: The process class.
+        :param inputs: The dictionary of process inputs.
+        :return: The process node.
         """
-        return self.runner.submit(process, **kwargs)
+        return self.runner.submit(process, inputs, **kwargs)
 
     @property
     def runner(self) -> 'Runner':

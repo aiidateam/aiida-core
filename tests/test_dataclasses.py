@@ -2272,8 +2272,8 @@ class TestPymatgenFromStructureData:
     @pytest.mark.parametrize(
         'pbc', ((True, True, True), (True, True, False), (True, False, False), (False, False, False))
     )
-    def test_1(self, pbc):
-        """Tests the check of periodic boundary conditions."""
+    def test_get_pymatgen_structure_pbc(self, pbc):
+        """Tests the check of periodic boundary conditions when using the `get_pymatgen_structure` method."""
         import numpy as np
 
         cell = np.diag((1, 1, 1)).tolist()
@@ -2288,8 +2288,12 @@ class TestPymatgenFromStructureData:
         assert pymatgen.lattice.matrix.tolist() == cell
 
     @skip_pymatgen
-    def test_2(self):
-        """Tests the check of periodic boundary conditions."""
+    def test_no_pbc(self):
+        """Tests the `get_pymatgen*` methods for a 0D system, i.e. no periodic boundary conditions.
+
+        We expect `get_pymatgen` to return a `pymatgen.core.structure.Molecule` instance, and
+        `get_pymatgen_structure` to except since we did not set a cell, i.e. singular matrix is given.
+        """
         from pymatgen.core.structure import Molecule
 
         symbol, pbc = 'Si', (False, False, False)
@@ -2299,13 +2303,13 @@ class TestPymatgenFromStructureData:
         pymatgen = structure.get_pymatgen()
         assert isinstance(pymatgen, Molecule)
 
-        match = 'Cannot instantiate pymatgen `Structure` without a cell'
+        match = 'Singular cell detected. Probably the cell was not set?'
         with pytest.raises(ValueError, match=match):
             structure.get_pymatgen_structure()
 
     @skip_ase
     @skip_pymatgen
-    def test_3(self):
+    def test_roundtrip_ase_aiida_pymatgen_structure(self):
         """Tests ASE -> StructureData -> pymatgen."""
         import ase
 
@@ -2331,7 +2335,7 @@ class TestPymatgenFromStructureData:
 
     @skip_ase
     @skip_pymatgen
-    def test_4(self):
+    def test_roundtrip_ase_aiida_pymatgen_molecule(self):
         """Tests the conversion of StructureData to pymatgen's Molecule
         (ASE -> StructureData -> pymatgen)
         """
@@ -2359,7 +2363,7 @@ class TestPymatgenFromStructureData:
         ]
 
     @skip_pymatgen
-    def test_roundtrip(self):
+    def test_roundtrip_aiida_pymatgen_aiida(self):
         """Tests roundtrip StructureData -> pymatgen -> StructureData
         (no spins)
         """

@@ -199,6 +199,19 @@ class ProcessNode(Sealable, Node):
 
         return create_logger_adapter(self._logger, self)
 
+    @classmethod
+    def recursive_merge(cls, left: dict[Any, Any], right: dict[Any, Any]) -> None:
+        """Recursively merge the ``right`` dictionary into the ``left`` dictionary.
+
+        :param left: Base dictionary.
+        :param right: Dictionary to recurisvely merge on top of ``left`` dictionary.
+        """
+        for key, value in right.items():
+            if key in left and isinstance(left[key], dict) and isinstance(value, dict):
+                cls.recursive_merge(left[key], value)
+            else:
+                left[key] = value
+
     def get_builder_restart(self) -> 'ProcessBuilder':
         """Return a `ProcessBuilder` that is ready to relaunch the process that created this node.
 
@@ -209,9 +222,9 @@ class ProcessNode(Sealable, Node):
         :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
         """
         builder = self.process_class.get_builder()
-        builder._update(self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested())
-        builder._merge(self.get_metadata_inputs() or {})
-
+        inputs = self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested()
+        self.recursive_merge(inputs, self.get_metadata_inputs() or {})
+        builder._update(inputs)
         return builder
 
     @property

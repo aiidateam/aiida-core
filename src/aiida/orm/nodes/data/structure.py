@@ -1219,9 +1219,11 @@ class StructureData(Data):
         return self._get_object_ase()
 
     def get_pymatgen(self, **kwargs):
-        """Get pymatgen object. Returns Structure for structures with
-        periodic boundary conditions (in 1,2,3D) and Molecule
-        otherwise.
+        """Get pymatgen object.
+        
+        Returns Structure for structures with periodic boundary conditions
+        (in 1,2,3D) and Molecule otherwise.
+
         :param add_spin: True to add the spins to the pymatgen structure.
         Default is False (no spin added).
 
@@ -1237,7 +1239,8 @@ class StructureData(Data):
         return self._get_object_pymatgen(**kwargs)
 
     def get_pymatgen_structure(self, **kwargs):
-        """Get the pymatgen Structure object.
+        """Get the pymatgen Structure object with any pbc, provided the cell is not singular.
+
         :param add_spin: True to add the spins to the pymatgen structure.
         Default is False (no spin added).
 
@@ -1253,8 +1256,8 @@ class StructureData(Data):
         :return: a pymatgen Structure object corresponding to this
           :py:class:`StructureData <aiida.orm.nodes.data.structure.StructureData>`
           object.
-        :raise ValueError: if periodic boundary conditions do not hold
-          in at least one dimension of real space.
+        :raise ValueError: if the cell is singular, e.g. when it has not been set.
+            Use `get_pymatgen_molecule` instead, or set a proper cell.
         """
         return self._get_object_pymatgen_structure(**kwargs)
 

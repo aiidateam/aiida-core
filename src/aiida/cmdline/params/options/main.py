@@ -69,6 +69,7 @@ __all__ = (
     'INPUT_PLUGIN',
     'LABEL',
     'LIMIT',
+    'MOST_RECENT_NODE',
     'NODE',
     'NODES',
     'NON_INTERACTIVE',
@@ -590,6 +591,13 @@ OLDER_THAN = OverridableOption(
     type=click.INT,
     metavar='OLDER_THAN',
     help='Only include entries created before OLDER_THAN days ago.',
+)
+
+MOST_RECENT_NODE = OverridableOption(
+    '-M',
+    '--most-recent-node',
+    is_flag=True,
+    help='Select the most recently created node.',
 )
 
 ALL = OverridableOption(

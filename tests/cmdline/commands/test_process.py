@@ -557,3 +557,41 @@ def test_process_repair_verbosity(monkeypatch, run_cli_command):
     result = run_cli_command(cmd_process.process_repair, ['-v', 'INFO'], use_subprocess=False)
     assert 'Active processes: [1, 2, 3, 4]' in result.output
     assert 'Process tasks: [1, 2]' in result.output
+
+
+@pytest.fixture
+def process_nodes():
+    """Return a list of two stored ``CalcJobNode`` instances with a finished process state."""
+    nodes = [CalcJobNode(), CalcJobNode()]
+    for node in nodes:
+        node.set_process_state(ProcessState.FINISHED)
+        node.store()
+    return nodes
+
+
+def test_process_report_most_recent_node(run_cli_command, process_nodes):
+    """Test ``verdi process report --most-recent-node``."""
+    result = run_cli_command(cmd_process.process_report, ['--most-recent-node'])
+    assert f'*** {process_nodes[0].pk}:' not in result.output
+    assert f'*** {process_nodes[1].pk}:' in result.output
+
+
+def test_process_show_most_recent_node(run_cli_command, process_nodes):
+    """Test ``verdi process show --most-recent-node``."""
+    result = run_cli_command(cmd_process.process_show, ['--most-recent-node'])
+    assert process_nodes[0].uuid not in result.output
+    assert process_nodes[1].uuid in result.output
+
+
+def test_process_status_most_recent_node(run_cli_command, process_nodes):
+    """Test ``verdi process status --most-recent-node``."""
+    result = run_cli_command(cmd_process.process_status, ['--most-recent-node'])
+    assert f'<{process_nodes[0].pk}>' not in result.output
+    assert f'<{process_nodes[1].pk}>' in result.output
+
+
+@pytest.mark.parametrize('command', (cmd_process.process_report, cmd_process.process_show, cmd_process.process_status))
+def test_process_most_recent_node_exclusive(run_cli_command, process_nodes, command):
+    """Test command raises if ``-M`` is specified as well as explicit process nodes."""
+    result = run_cli_command(command, ['-M', str(process_nodes[0].pk)], raises=True)
+    assert 'cannot specify individual processes and the `-M/--most-recent-node` flag at the same time.' in result.output

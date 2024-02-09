@@ -1220,7 +1220,7 @@ class StructureData(Data):
 
     def get_pymatgen(self, **kwargs):
         """Get pymatgen object.
-        
+
         Returns Structure for structures with periodic boundary conditions
         (in 1,2,3D) and Molecule otherwise.
 

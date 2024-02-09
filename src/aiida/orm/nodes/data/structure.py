@@ -1769,15 +1769,11 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
         """
-        import numpy as np
         from pymatgen.core.lattice import Lattice
         from pymatgen.core.structure import Structure
 
         species = []
         additional_kwargs = {}
-
-        if np.isclose(self.cell, _DEFAULT_CELL, 1e-10).all():
-            raise ValueError('Cannot instantiate pymatgen `Structure` without a cell')
 
         lattice = Lattice(matrix=self.cell, pbc=self.pbc)
 
@@ -1817,7 +1813,11 @@ class StructureData(Data):
             raise ValueError(f'Unrecognized parameters passed to pymatgen converter: {kwargs.keys()}')
 
         positions = [list(x.position) for x in self.sites]
-        return Structure(lattice, species, positions, coords_are_cartesian=True, **additional_kwargs)
+
+        try:
+            return Structure(lattice, species, positions, coords_are_cartesian=True, **additional_kwargs)
+        except ValueError as err:
+            raise ValueError('Singular cell detected. Probably the cell was not set?') from err
 
     def _get_object_pymatgen_molecule(self, **kwargs):
         """Converts

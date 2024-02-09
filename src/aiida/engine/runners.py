@@ -162,6 +162,8 @@ class Runner:
         """Close the runner by stopping the loop."""
         assert not self._closed
         self.stop()
+        if not self._loop.is_running():
+            self._loop.close()
         reset_event_loop_policy()
         self._closed = True
 

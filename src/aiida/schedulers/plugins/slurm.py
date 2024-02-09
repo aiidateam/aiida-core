@@ -150,59 +150,6 @@ class SlurmScheduler(Scheduler):
         'can_query_by_user': False,
     }
 
-    _detailed_job_info_fields = [
-        'AllocCPUS',
-        'Account',
-        'AssocID',
-        'AveCPU',
-        'AvePages',
-        'AveRSS',
-        'AveVMSize',
-        'Cluster',
-        'Comment',
-        'CPUTime',
-        'CPUTimeRAW',
-        'DerivedExitCode',
-        'Elapsed',
-        'Eligible',
-        'End',
-        'ExitCode',
-        'GID',
-        'Group',
-        'JobID',
-        'JobName',
-        'MaxRSS',
-        'MaxRSSNode',
-        'MaxRSSTask',
-        'MaxVMSize',
-        'MaxVMSizeNode',
-        'MaxVMSizeTask',
-        'MinCPU',
-        'MinCPUNode',
-        'MinCPUTask',
-        'NCPUS',
-        'NNodes',
-        'NodeList',
-        'NTasks',
-        'Priority',
-        'Partition',
-        'QOSRAW',
-        'ReqCPUS',
-        'Reserved',
-        'ResvCPU',
-        'ResvCPURAW',
-        'Start',
-        'State',
-        'Submit',
-        'Suspended',
-        'SystemCPU',
-        'Timelimit',
-        'TotalCPU',
-        'UID',
-        'User',
-        'UserCPU',
-    ]
-
     # The class to be used for the job resource.
     _job_resource_class = SlurmJobResource
 
@@ -288,8 +235,7 @@ class SlurmScheduler(Scheduler):
         --parsable split the fields with a pipe (|), adding a pipe also at
         the end.
         """
-        fields = ','.join(self._detailed_job_info_fields)
-        return f'sacct --format={fields} --parsable --jobs={job_id}'
+        return f"sacct --format=$(sacct --helpformat | tr -s '\n' ' ' | tr ' ' ',') --parsable --jobs={job_id}"
 
     def _get_submit_script_header(self, job_tmpl):
         """Return the submit script header, using the parameters from the
@@ -770,24 +716,19 @@ stderr='{stderr.strip()}'"""
             # the entire job. Any additional lines correspond to those values for any additional tasks that were run.
             lines = detailed_stdout.splitlines()
 
-            try:
-                master = lines[1]
-            except IndexError:
+            if len(lines) < 2:
                 raise ValueError('the `detailed_job_info.stdout` contained less than two lines.')
 
-            attributes = master.split('|')
+            fields = lines[0].split('|')
+            attributes = lines[1].split('|')
 
-            # Pop the last element if it is empty. This happens if the `master` string just finishes with a pipe
-            if not attributes[-1]:
-                attributes.pop()
-
-            if len(self._detailed_job_info_fields) != len(attributes):
+            if len(fields) != len(attributes):
                 raise ValueError(
-                    'second line in `detailed_job_info.stdout` differs in length with the `_detailed_job_info_fields '
-                    'attribute of the scheduler.'
+                    'first and second line in `detailed_job_info.stdout` differ in length: '
+                    f'{len(fields)} vs {len(attributes)}'
                 )
 
-            data = dict(zip(self._detailed_job_info_fields, attributes))
+            data = dict(zip(fields, attributes))
 
             if data['State'] == 'OUT_OF_MEMORY':
                 return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY

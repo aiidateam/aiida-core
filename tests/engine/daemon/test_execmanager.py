@@ -13,9 +13,10 @@ import pathlib
 import typing
 
 import pytest
-from aiida.common.datastructures import CalcInfo, CodeInfo
+from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
+from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
-from aiida.orm import CalcJobNode, FolderData, SinglefileData
+from aiida.orm import CalcJobNode, FolderData, RemoteData, SinglefileData
 from aiida.transports.plugins.local import LocalTransport
 
 
@@ -190,8 +191,8 @@ def test_upload_local_copy_list(
     # through the ``local_copy_list``.
     assert node.base.repository.list_object_names() == []
 
-    # Now check that all contents were successfully written to the sandbox
-    written_hierarchy = serialize_file_hierarchy(pathlib.Path(fixture_sandbox.abspath))
+    # Now check that all contents were successfully written to the remote work directory
+    written_hierarchy = serialize_file_hierarchy(pathlib.Path(node.get_remote_workdir()))
     assert written_hierarchy == expected_hierarchy
 
 
@@ -225,8 +226,8 @@ def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_calc_inf
     # through the ``local_copy_list``.
     assert node.base.repository.list_object_names() == []
 
-    # Now check that all contents were successfully written to the sandbox
-    written_hierarchy = serialize_file_hierarchy(pathlib.Path(fixture_sandbox.abspath))
+    # Now check that all contents were successfully written to the remote working directory
+    written_hierarchy = serialize_file_hierarchy(pathlib.Path(node.get_remote_workdir()))
     expected_hierarchy = file_hierarchy
     expected_hierarchy['files'] = {}
     expected_hierarchy['files']['file_x'] = 'content_x'
@@ -255,3 +256,62 @@ def test_upload_remote_symlink_list(fixture_sandbox, node_and_calc_info, file_hi
     assert (filepath_workdir / 'path' / 'sub').is_symlink()
     assert (filepath_workdir / 'file_a.txt').read_text() == 'file_a'
     assert (filepath_workdir / 'path' / 'sub' / 'file_c.txt').read_text() == 'file_c'
+
+
+@pytest.mark.parametrize(
+    'order, expected',
+    (
+        (None, 'remote'),  # Default order should have remote last
+        (
+            [
+                FileCopyOperation.SANDBOX,
+                FileCopyOperation.REMOTE,
+                FileCopyOperation.LOCAL,
+            ],
+            'local',
+        ),
+        (
+            [
+                FileCopyOperation.REMOTE,
+                FileCopyOperation.LOCAL,
+                FileCopyOperation.SANDBOX,
+            ],
+            'sandbox',
+        ),
+    ),
+)
+def test_upload_file_copy_operation_order(node_and_calc_info, aiida_localhost, tmp_path, order, expected):
+    """Test the ``CalcInfo.file_copy_operation_order`` controls the copy order."""
+    dirpath_remote = tmp_path / 'remote'
+    dirpath_remote.mkdir()
+    dirpath_local = tmp_path / 'local'
+    dirpath_local.mkdir()
+    dirpath_sandbox = tmp_path / 'sandbox'
+    dirpath_sandbox.mkdir()
+
+    filepath_remote = dirpath_remote / 'file.txt'
+    filepath_remote.write_text('remote')
+    filepath_local = dirpath_local / 'file.txt'
+    filepath_local.write_text('local')
+
+    remote_data = RemoteData(remote_path=str(dirpath_remote), computer=aiida_localhost)
+    folder_data = FolderData(tree=dirpath_local)
+    sandbox = SandboxFolder(dirpath_sandbox)
+    sandbox.create_file_from_filelike(io.BytesIO(b'sandbox'), 'file.txt')
+
+    inputs = {
+        'local': folder_data,
+        'remote': remote_data,
+    }
+    node, calc_info = node_and_calc_info
+    calc_info.remote_copy_list = ((aiida_localhost.uuid, str(filepath_remote), 'file.txt'),)
+    calc_info.local_copy_list = ((folder_data.uuid, 'file.txt', 'file.txt'),)
+
+    if order is not None:
+        calc_info.file_copy_operation_order = order
+
+    with LocalTransport() as transport:
+        execmanager.upload_calculation(node, transport, calc_info, sandbox, inputs)
+        filepath = pathlib.Path(node.get_remote_workdir()) / 'file.txt'
+        assert filepath.is_file()
+        assert filepath.read_text() == expected

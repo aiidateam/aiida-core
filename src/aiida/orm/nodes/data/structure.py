@@ -1239,7 +1239,7 @@ class StructureData(Data):
         return self._get_object_pymatgen(**kwargs)
 
     def get_pymatgen_structure(self, **kwargs):
-        """Get the pymatgen Structure object with any pbc, provided the cell is not singular.
+        """Get the pymatgen Structure object with any PBC, provided the cell is not singular.
 
         :param add_spin: True to add the spins to the pymatgen structure.
         Default is False (no spin added).

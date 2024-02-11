@@ -1219,11 +1219,8 @@ class StructureData(Data):
         return self._get_object_ase()
 
     def get_pymatgen(self, **kwargs):
-        """Get pymatgen object.
-
-        Returns pymatgen Structure for structures with periodic boundary conditions
+        """Get pymatgen object. Returns pymatgen Structure for structures with periodic boundary conditions
         (in 1D, 2D, 3D) and Molecule otherwise.
-
         :param add_spin: True to add the spins to the pymatgen structure.
         Default is False (no spin added).
 
@@ -1240,7 +1237,6 @@ class StructureData(Data):
 
     def get_pymatgen_structure(self, **kwargs):
         """Get the pymatgen Structure object with any PBC, provided the cell is not singular.
-
         :param add_spin: True to add the spins to the pymatgen structure.
         Default is False (no spin added).
 

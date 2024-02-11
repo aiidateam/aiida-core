@@ -1222,7 +1222,7 @@ class StructureData(Data):
         """Get pymatgen object.
 
         Returns Structure for structures with periodic boundary conditions
-        (in 1,2,3D) and Molecule otherwise.
+        (in 1D, 2D, 3D) and Molecule otherwise.
 
         :param add_spin: True to add the spins to the pymatgen structure.
         Default is False (no spin added).

@@ -44,6 +44,18 @@ def default_projections():
     return CalculationQueryBuilder.default_projections
 
 
+def get_most_recent_node():
+    """Return the most recent process node.
+
+    :returns: The ``ProcessNode`` with the latest ``ctime``.
+    """
+    from aiida.orm import ProcessNode, QueryBuilder
+
+    process = QueryBuilder().append(ProcessNode, tag='n').order_by({'n': {'ctime': 'desc'}}).first(flat=True)
+    echo.echo_info(f'Most recent node matched: `{process}`.')
+    return process
+
+
 @verdi.group('process')
 def verdi_process():
     """Inspect and manage processes."""
@@ -156,10 +168,20 @@ def process_list(
 
 @verdi_process.command('show')
 @arguments.PROCESSES()
+@options.MOST_RECENT_NODE()
 @decorators.with_dbenv()
-def process_show(processes):
+def process_show(processes, most_recent_node):
     """Show details for one or multiple processes."""
     from aiida.cmdline.utils.common import get_node_info
+
+    if processes and most_recent_node:
+        raise click.BadOptionUsage(
+            'most_recent_node',
+            'cannot specify individual processes and the `-M/--most-recent-node` flag at the same time.',
+        )
+
+    if most_recent_node:
+        processes = [get_most_recent_node()]
 
     for process in processes:
         echo.echo(get_node_info(process))
@@ -190,6 +212,7 @@ def process_call_root(processes):
 
 @verdi_process.command('report')
 @arguments.PROCESSES()
+@options.MOST_RECENT_NODE()
 @click.option('-i', '--indent-size', type=int, default=2, help='Set the number of spaces to indent each level by.')
 @click.option(
     '-l',
@@ -202,10 +225,19 @@ def process_call_root(processes):
     '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
 )
 @decorators.with_dbenv()
-def process_report(processes, levelname, indent_size, max_depth):
+def process_report(processes, most_recent_node, levelname, indent_size, max_depth):
     """Show the log report for one or multiple processes."""
     from aiida.cmdline.utils.common import get_calcjob_report, get_process_function_report, get_workchain_report
     from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
+
+    if processes and most_recent_node:
+        raise click.BadOptionUsage(
+            'most_recent_node',
+            'cannot specify individual processes and the `-M/--most-recent-node` flag at the same time.',
+        )
+
+    if most_recent_node:
+        processes = [get_most_recent_node()]
 
     for process in processes:
         if isinstance(process, CalcJobNode):
@@ -219,14 +251,24 @@ def process_report(processes, levelname, indent_size, max_depth):
 
 
 @verdi_process.command('status')
+@options.MOST_RECENT_NODE()
 @click.option('-c', '--call-link-label', 'call_link_label', is_flag=True, help='Include the call link label if set.')
 @click.option(
     '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
 )
 @arguments.PROCESSES()
-def process_status(call_link_label, max_depth, processes):
+def process_status(call_link_label, most_recent_node, max_depth, processes):
     """Print the status of one or multiple processes."""
     from aiida.cmdline.utils.ascii_vis import format_call_graph
+
+    if processes and most_recent_node:
+        raise click.BadOptionUsage(
+            'most_recent_node',
+            'cannot specify individual processes and the `-M/--most-recent-node` flag at the same time.',
+        )
+
+    if most_recent_node:
+        processes = [get_most_recent_node()]
 
     for process in processes:
         graph = format_call_graph(process, max_depth=max_depth, call_link_label=call_link_label)

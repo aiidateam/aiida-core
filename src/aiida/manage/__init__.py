@@ -30,7 +30,6 @@ from .manager import *
 __all__ = (
     'BROKER_DEFAULTS',
     'CURRENT_CONFIG_VERSION',
-    'Config',
     'MIGRATIONS',
     'ManagementApiConnectionError',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',

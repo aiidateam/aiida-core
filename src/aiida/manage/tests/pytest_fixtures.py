@@ -42,9 +42,12 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
 from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException, DaemonTimeoutException
-from aiida.manage import Config, Profile, get_manager, get_profile
+from aiida.manage import Profile, get_manager, get_profile
 from aiida.manage.manager import Manager
 from aiida.orm import Computer, ProcessNode, User
+
+if t.TYPE_CHECKING:
+    from aiida.manage.configuration.config import Config
 
 
 def recursive_merge(left: dict[t.Any, t.Any], right: dict[t.Any, t.Any]) -> None:

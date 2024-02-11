@@ -415,8 +415,7 @@ def test_parse_out_of_memory():
     detailed_job_info = {
         'retval': 0,
         'stderr': '',
-        'stdout': """||||||||||||||||||||||||||||||||||||||||||||||||||
-        |||||||||||||||||||||||||||||||||||||||||OUT_OF_MEMORY|||||||||""",
+        'stdout': 'Account|State|\nroot|OUT_OF_MEMORY|\n',
     }
 
     exit_code = scheduler.parse_output(detailed_job_info, stdout, stderr)
@@ -429,8 +428,7 @@ def test_parse_node_failure():
     detailed_job_info = {
         'retval': 0,
         'stderr': '',
-        'stdout': """||||||||||||||||||||||||||||||||||||||||||||||||||
-        |||||||||||||||||||||||||||||||||||||||||NODE_FAIL|||||||||""",
+        'stdout': 'Account|State|\nroot|NODE_FAIL|\n',
     }
 
     exit_code = scheduler.parse_output(detailed_job_info, '', '')
@@ -444,7 +442,10 @@ def test_parse_node_failure():
         ({'stderr': ''}, ValueError),  # Key `stdout` missing
         ({'stdout': None}, TypeError),  # `stdout` is not a string
         ({'stdout': ''}, ValueError),  # `stdout` does not contain at least two lines
-        ({'stdout': 'Header\nValue'}, ValueError),  # `stdout` second line contains too few elements separated by pipe
+        (
+            {'stdout': 'Account|State|\nValue|'},
+            ValueError,
+        ),  # `stdout` second line contains too few elements separated by pipe
     ],
 )
 def test_parse_output_invalid(detailed_job_info, expected):
@@ -457,10 +458,8 @@ def test_parse_output_invalid(detailed_job_info, expected):
 
 def test_parse_output_valid():
     """Test `SlurmScheduler.parse_output` for valid arguments."""
-    number_of_fields = len(SlurmScheduler._detailed_job_info_fields)
-    detailed_job_info = {'stdout': f"Header\n{'|' * number_of_fields}"}
+    detailed_job_info = {'stdout': 'State|Account|\n||\n'}
     scheduler = SlurmScheduler()
-
     assert scheduler.parse_output(detailed_job_info, '', '') is None
 
 

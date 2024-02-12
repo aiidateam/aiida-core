@@ -1219,9 +1219,8 @@ class StructureData(Data):
         return self._get_object_ase()
 
     def get_pymatgen(self, **kwargs):
-        """Get pymatgen object. Returns Structure for structures with
-        periodic boundary conditions (in three dimensions) and Molecule
-        otherwise.
+        """Get pymatgen object. Returns pymatgen Structure for structures with periodic boundary conditions
+        (in 1D, 2D, 3D) and Molecule otherwise.
         :param add_spin: True to add the spins to the pymatgen structure.
         Default is False (no spin added).
 
@@ -1237,7 +1236,7 @@ class StructureData(Data):
         return self._get_object_pymatgen(**kwargs)
 
     def get_pymatgen_structure(self, **kwargs):
-        """Get the pymatgen Structure object.
+        """Get the pymatgen Structure object with any PBC, provided the cell is not singular.
         :param add_spin: True to add the spins to the pymatgen structure.
         Default is False (no spin added).
 
@@ -1253,8 +1252,8 @@ class StructureData(Data):
         :return: a pymatgen Structure object corresponding to this
           :py:class:`StructureData <aiida.orm.nodes.data.structure.StructureData>`
           object.
-        :raise ValueError: if periodic boundary conditions do not hold
-          in at least one dimension of real space.
+        :raise ValueError: if the cell is singular, e.g. when it has not been set.
+            Use `get_pymatgen_molecule` instead, or set a proper cell.
         """
         return self._get_object_pymatgen_structure(**kwargs)
 
@@ -1741,7 +1740,7 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
         """
-        if self.pbc == (True, True, True):
+        if any(self.pbc):
             return self._get_object_pymatgen_structure(**kwargs)
 
         return self._get_object_pymatgen_molecule(**kwargs)
@@ -1762,20 +1761,20 @@ class StructureData(Data):
         :return: a pymatgen Structure object corresponding to this
           :py:class:`StructureData <aiida.orm.nodes.data.structure.StructureData>`
           object
-        :raise ValueError: if periodic boundary conditions does not hold
-          in at least one dimension of real space; if there are partial occupancies
-          together with spins (defined by kind names ending with '1' or '2').
+        :raise ValueError: if the cell is not set (i.e. is the default one);
+          if there are partial occupancies together with spins
+          (defined by kind names ending with '1' or '2').
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
         """
+        from pymatgen.core.lattice import Lattice
         from pymatgen.core.structure import Structure
-
-        if self.pbc != (True, True, True):
-            raise ValueError('Periodic boundary conditions must apply in all three dimensions of real space')
 
         species = []
         additional_kwargs = {}
+
+        lattice = Lattice(matrix=self.cell, pbc=self.pbc)
 
         if kwargs.pop('add_spin', False) and any(n.endswith('1') or n.endswith('2') for n in self.get_kind_names()):
             # case when spins are defined -> no partial occupancy allowed
@@ -1813,7 +1812,11 @@ class StructureData(Data):
             raise ValueError(f'Unrecognized parameters passed to pymatgen converter: {kwargs.keys()}')
 
         positions = [list(x.position) for x in self.sites]
-        return Structure(self.cell, species, positions, coords_are_cartesian=True, **additional_kwargs)
+
+        try:
+            return Structure(lattice, species, positions, coords_are_cartesian=True, **additional_kwargs)
+        except ValueError as err:
+            raise ValueError('Singular cell detected. Probably the cell was not set?') from err
 
     def _get_object_pymatgen_molecule(self, **kwargs):
         """Converts

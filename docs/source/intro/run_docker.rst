@@ -21,9 +21,9 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
       .. tab-set::
 
-         .. tab-item:: Colima on MacOS and Linux
+         .. tab-item:: Colima on MacOS
 
-            `Colima <https://github.com/abiosoft/colima>`_ is a new open-source project that makes it easy to run Docker on MacOS and Linux.
+            `Colima <https://github.com/abiosoft/colima>`_ is a new open-source project that makes it easy to run Docker on MacOS.
             It is a lightweight alternative to Docker Engine with a focus on simplicity and performance.
 
             If you need multiple Docker environments, Colima is the recommended way.
@@ -82,7 +82,8 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
             To exit and stop the container, type ``exit`` or press ``Ctrl+D``, the container will be stopped.
 
-            To start the container again, since the container is already created from image, instead of using ``run`` sub-command, you should use ``start``, by running:
+            Please note ``run`` sub-command is used to create and start a container. 
+            In order to start a container which is already created, you should use ``start``, by running:
 
             .. parsed-literal::
 
@@ -133,7 +134,8 @@ Advanced usage
 
 Congratulations! You have a working AiiDA environment, and can start using it.
 
-If you use the Docker image for development or production, you will likely need additional settings to make it work as expected.
+If you use the Docker image for development or production, you will likely need additional settings such as clone the repository and install `aiida-core` in the editable mode to make it work as expected.
+See `developement wiki <https://github.com/aiidateam/aiida-core/wiki/Development-environment>`_ for more detalis.
 
 .. dropdown:: Copy files from your computer to the container
 
@@ -173,16 +175,16 @@ If you use the Docker image for development or production, you will likely need 
 
             $ docker volume create container-home-data
 
-         Make sure to mount the volume the first time you launch the aiida container:
+         In this case, one needs to specifically mount the volume very first time that the container is being created:
 
          .. parsed-literal::
 
             $ docker run -it --name aiida-container-demo -v container-home-data:/home/aiida aiidateam/aiida-core:latest bash
 
-         Starting the container with the above command ensures that any data stored in the ``/home/aiida`` path within the container is also stored in the ``conatiner-home-data`` volume and therefore persists even if the container is removed.
+         Starting the container with the above command ensures that any data stored in the ``/home/aiida`` path within the container is stored in the ``conatiner-home-data`` volume and therefore persists even if the container is removed.
 
-         To persist store the Python packages installed in the container, use `--user` flag when installing packages with pip.
-         The packages will be installed in the ``/home/aiida/.local`` path which is mounted to the ``container-home-data`` volume.
+         When installing packages with pip, use the ``--user`` flag to store the Python packages installed in the mounted volume (if you mount the home specifically to a volume as mentioned above) permanently.
+         The packages will be installed in the ``/home/aiida/.local`` directory, which is mounted on the ``container-home-data`` volume.
 
          You can mount a folder in container to a local directory, please refer to the `Docker documentation <https://docs.docker.com/storage/bind-mounts/>`__ for more information.
 
@@ -201,9 +203,7 @@ If you use the Docker image for development or production, you will likely need 
 
    The above command will create a new image named ``aiida-container-backup`` containing all the data and modifications you made in the container.
 
-   Use `docker push` to push the ``aiida-container-backup`` image to the registry if you want to share it with others.
-
-   Alternatively, you can export the container to a local tarball:
+   Then, you can export the container to a local tarball and store it permanently:
 
    .. parsed-literal::
 
@@ -215,7 +215,9 @@ If you use the Docker image for development or production, you will likely need 
 
       $ docker load -i aiida-container-backup.tar
 
-   If you used a `named volume <https://docs.docker.com/storage/volumes/#backup-a-containerhttps://docs.docker.com/storage/#more-details-about-mount-types>`__, you can backup the volume.
+   You'll find a container in the list and you can then start it with ``docker start``.
+
+   If you used a `named volume <https://docs.docker.com/storage/volumes/#backup-a-containerhttps://docs.docker.com/storage/#more-details-about-mount-types>`__, you can backup the volume independently.
 
    .. tab-set::
 

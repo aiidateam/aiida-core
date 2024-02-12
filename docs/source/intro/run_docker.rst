@@ -82,7 +82,7 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
             To exit and stop the container, type ``exit`` or press ``Ctrl+D``, the container will be stopped.
 
-            Please note ``run`` sub-command is used to create and start a container. 
+            Please note ``run`` sub-command is used to create and start a container.
             In order to start a container which is already created, you should use ``start``, by running:
 
             .. parsed-literal::

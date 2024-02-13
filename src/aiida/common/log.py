@@ -215,10 +215,13 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
             handlers.append('cli')
 
     # If ``CLI_LOG_LEVEL`` is set, a ``verdi`` command is being executed with the ``--verbosity`` option. In this case
-    # we override the log levels of all loggers with the specified log level.
+    # we override the log levels of the ``aiida`` and ``verdi`` loggers with the specified log level. The other loggers
+    # are left untouched as they can become very noisy for lower log levels and drown out the useful information. Users
+    # can still configure those manually beforehand through the config options.
     if CLI_LOG_LEVEL is not None:
-        for logger in config['loggers'].values():
-            logger['level'] = CLI_LOG_LEVEL
+        for name, logger in config['loggers'].items():
+            if name in ['aiida', 'verdi']:
+                logger['level'] = CLI_LOG_LEVEL
 
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:

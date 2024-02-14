@@ -169,10 +169,7 @@ class Code(AbstractCode):
 
         :return: string description of this Code instance
         """
-        warn_deprecation(
-            '`Code.get_description` method is deprecated, use the `description` property instead.', version=3
-        )
-        return f'{self.description}'
+        return self.full_label
 
     @classmethod
     def get_code_helper(cls, label, machinename=None, backend=None):

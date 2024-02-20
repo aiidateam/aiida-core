@@ -94,6 +94,15 @@ class NodeCaching:
         """
         return self.get_cache_source() is not None
 
+    def should_use_cache(self) -> bool:
+        """Return whether the cache should be considered when storing this node.
+
+        :returns: True if the cache should be considered, False otherwise.
+        """
+        from aiida.manage.caching import get_use_cache
+
+        return get_use_cache(identifier=self._node.process_type)
+
     def _get_same_node(self) -> 'Node' | None:
         """Returns a stored node from which the current Node can be cached or None if it does not exist
 

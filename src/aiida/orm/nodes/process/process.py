@@ -33,6 +33,19 @@ class ProcessNodeCaching(NodeCaching):
     # The link_type might not be correct while the object is being created.
     _hash_ignored_inputs = ['CALL_CALC', 'CALL_WORK']
 
+    def should_use_cache(self) -> bool:
+        """Return whether the cache should be considered when storing this node.
+
+        :returns: True if the cache should be considered, False otherwise.
+        """
+        metadata_inputs = self._node.get_metadata_inputs() or {}
+        disable_cache = metadata_inputs.get('metadata', {}).get('disable_cache', None)
+
+        if disable_cache:
+            return False
+
+        return super().should_use_cache()
+
     @property
     def is_valid_cache(self) -> bool:
         """Return whether the node is valid for caching
@@ -150,6 +163,10 @@ class ProcessNode(Sealable, Node):
             return f'{base} ({self.process_type})'
 
         return f'{base}'
+
+    @classproperty
+    def _hash_ignored_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
+        return super()._hash_ignored_attributes + ('metadata_inputs',)
 
     @classproperty
     def _updatable_attributes(cls) -> Tuple[str, ...]:  # noqa: N805

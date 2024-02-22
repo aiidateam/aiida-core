@@ -501,7 +501,8 @@ class PsqlDosBackend(StorageBackend):
         import subprocess
         import tempfile
 
-        from aiida.manage.configuration import Config, get_config
+        from aiida.manage.configuration import get_config
+        from aiida.manage.configuration.config import Config
         from aiida.manage.profile_access import ProfileAccessManager
 
         STORAGE_LOGGER.report('Starting backup...')
@@ -541,7 +542,7 @@ class PsqlDosBackend(StorageBackend):
 
         # step 3: dump the PostgreSQL database into a temporary directory
         STORAGE_LOGGER.report('Backing up PostgreSQL...')
-        pg_dump_exe = manager.exes.get('pg_dump', 'pg_dump')
+        pg_dump_exe = 'pg_dump'
         with tempfile.TemporaryDirectory() as temp_dir_name:
             psql_temp_loc = pathlib.Path(temp_dir_name) / 'db.psql'
 
@@ -582,7 +583,7 @@ class PsqlDosBackend(StorageBackend):
         keep: int = 1,
     ):
         try:
-            backup_manager = backup_utils.BackupManager(dest, STORAGE_LOGGER, keep=keep)
+            backup_manager = backup_utils.BackupManager(dest, keep=keep)
             backup_manager.backup_auto_folders(lambda path, prev: self._backup(backup_manager, path, prev))
         except backup_utils.BackupError as exc:
             raise exceptions.StorageBackupError(*exc.args) from exc

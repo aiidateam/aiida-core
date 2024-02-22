@@ -100,6 +100,11 @@ def get_logging_config():
                 'level': lambda: get_config_option('logging.verdi_loglevel'),
                 'propagate': False,
             },
+            'disk_objectstore': {
+                'handlers': ['console'],
+                'level': lambda: get_config_option('logging.disk_objectstore_loglevel'),
+                'propagate': False,
+            },
             'plumpy': {
                 'handlers': ['console'],
                 'level': lambda: get_config_option('logging.plumpy_loglevel'),

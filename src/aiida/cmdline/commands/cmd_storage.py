@@ -197,8 +197,14 @@ def storage_backup(ctx, manager, dest: str, keep: int):
     """
 
     storage = manager.get_profile_storage()
+    profile = ctx.obj.profile
     try:
         storage.backup(dest, keep)
+    except NotImplementedError:
+        echo.echo_critical(
+            f'Profile {profile.name} uses the storage plugin '
+            f'{profile.storage_backend} which does not implement a backup mechanism.'
+        )
     except (ValueError, exceptions.StorageBackupError) as exception:
         echo.echo_critical(str(exception))
-    echo.echo_success(f'Data storage of profile `{ctx.obj.profile.name}` backed up to `{dest}`')
+    echo.echo_success(f'Data storage of profile `{profile.name}` backed up to `{dest}`')

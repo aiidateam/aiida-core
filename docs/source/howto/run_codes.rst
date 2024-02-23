@@ -969,5 +969,16 @@ When ``strict`` is set to ``True``, the function will raise a ``ValueError`` if 
 Besides controlling which process classes are cached, it may be useful or necessary to control what already *stored* nodes are used as caching *sources*.
 Section :ref:`topics:provenance:caching:control-caching` provides details how AiiDA decides which stored nodes are equivalent to the node being stored and which are considered valid caching sources.
 
+Alternatively, if the cache should not be considered for a specific process, its ``metadata.disable_cache`` input can be set to ``True``:
+
+.. code-block:: python
+
+    from aiida.engine import submit
+    submit(SomeProcess, inputs={'metadata': {'disable_cache': True}})
+
+The advantage of this approach is that the ``disable_cache`` metadata input overrides all other configuration and controls of caching, so the process is guaranteed to not be taken from the cache.
+Unlike the ``enable_caching`` and ``disable_caching`` context managers which only affect the local interpreter, this approach is respected by all interpreters.
+This approach, therefore, is mostly useful when submitting processes to the daemon that should ignore the cache.
+
 .. |Computer| replace:: :py:class:`~aiida.orm.Computer`
 .. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`

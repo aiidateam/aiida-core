@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for verdi node"""
+import datetime
 import errno
 import gzip
 import io
@@ -17,6 +18,7 @@ import pytest
 from aiida import orm
 from aiida.cmdline.commands import cmd_node
 from aiida.cmdline.utils.echo import ExitCode
+from aiida.common import timezone
 
 
 def get_result_lines(result):
@@ -589,3 +591,46 @@ def test_node_delete_basics(run_cli_command, options):
 def test_node_delete_missing_pk(run_cli_command):
     """Check that no exception is raised when a non-existent pk is given (just warns)."""
     run_cli_command(cmd_node.node_delete, ['999'])
+
+
+@pytest.fixture(scope='class')
+def create_nodes_verdi_node_list(aiida_profile_clean_class):
+    return (
+        orm.Data().store(),
+        orm.Int(0).store(),
+        orm.Int(1).store(),
+        orm.Int(2).store(),
+        orm.ArrayData().store(),
+        orm.KpointsData().store(),
+        orm.WorkflowNode(ctime=timezone.now() - datetime.timedelta(days=3)).store(),
+    )
+
+
+@pytest.mark.usefixtures('create_nodes_verdi_node_list')
+class TestNodeList:
+    """Tests for the ``verdi node rehash`` command."""
+
+    @pytest.mark.parametrize(
+        'options, expected_nodes',
+        (
+            ([], [6, 0, 1, 2, 3, 4, 5]),
+            (['-e', 'core.int'], [1, 2, 3]),
+            (['-e', 'core.int', '--limit', '1'], [1]),
+            (['-e', 'core.int', '--order-direction', 'desc'], [3, 2, 1]),
+            (['-e', 'core.int', '--order-by', 'id'], [1, 2, 3]),
+            (['-e', 'core.array', '--no-subclassing'], [4]),
+            (['-e', 'core.int', '-P', 'uuid'], [1, 2, 3]),
+            (['-p', '1'], [0, 1, 2, 3, 4, 5]),
+        ),
+    )
+    def test_node_list(self, run_cli_command, options, expected_nodes):
+        """Test the ``verdi node list`` command."""
+        nodes = orm.QueryBuilder().append(orm.Node).order_by({orm.Node: ['id']}).all(flat=True)
+
+        if set(['-P', 'uuid']).issubset(set(options)):
+            expected_projections = [nodes[index].uuid for index in expected_nodes]
+        else:
+            expected_projections = [str(nodes[index].pk) for index in expected_nodes]
+
+        result = run_cli_command(cmd_node.node_list, ['--project', 'id', '--raw'] + options)
+        assert result.output.strip() == '\n'.join(expected_projections)

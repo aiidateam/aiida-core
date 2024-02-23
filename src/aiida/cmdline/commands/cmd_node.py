@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi node` command."""
+import datetime
 import pathlib
 
 import click
@@ -23,6 +24,46 @@ from aiida.common.links import GraphTraversalRules
 @verdi.group('node')
 def verdi_node():
     """Inspect, create and manage nodes."""
+
+
+@verdi_node.command('list')
+@click.option('-e', '--entry-point', type=str, required=False)
+@click.option(
+    '--subclassing/--no-subclassing',
+    default=True,
+    help='Pass `--no-subclassing` to disable matching subclasses of the specified `--entry-point`.',
+)
+@options.PROJECT(
+    type=click.Choice(
+        ('id', 'uuid', 'node_type', 'process_type', 'label', 'description', 'ctime', 'mtime', 'attributes', 'extras')
+    ),
+    default=('id', 'uuid', 'node_type'),
+)
+@options.PAST_DAYS()
+@options.ORDER_BY()
+@options.ORDER_DIRECTION()
+@options.LIMIT()
+@options.RAW()
+def node_list(entry_point, subclassing, project, past_days, order_by, order_dir, limit, raw):
+    """Query all nodes with optional filtering and ordering."""
+    from aiida.orm import Node
+    from aiida.plugins.factories import DataFactory
+
+    node_class = DataFactory(entry_point) if entry_point else Node
+
+    if past_days is not None:
+        filters = {'ctime': {'>': timezone.now() - datetime.timedelta(days=past_days)}}
+    else:
+        filters = {}
+
+    query = node_class.collection.query(
+        filters,
+        project=list(project),
+        limit=limit,
+        subclassing=subclassing,
+        order_by=[{order_by: order_dir}],
+    )
+    echo_tabulate(query.all(), headers=project if not raw else [], tablefmt='plain' if raw else None)
 
 
 @verdi_node.group('repo')

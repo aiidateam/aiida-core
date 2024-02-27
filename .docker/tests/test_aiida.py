@@ -1,4 +1,6 @@
 import json
+from importlib import import_module, metadata
+from pathlib import Path
 
 import pytest
 from packaging.version import parse
@@ -41,3 +43,49 @@ def test_computer_setup_success(aiida_exec, container_user):
 
     assert 'Success' in output
     assert 'Failed' not in output
+
+
+def test_clone_dir_exists(variant):
+    if variant != 'aiida-core-dev':
+        pytest.skip(f'aiida-core clone not available in {variant} image')
+
+    clone = Path('/home/aiida/aiida-core')
+
+    assert clone.exists()
+    assert clone.is_dir()
+
+
+def test_editable_install(variant):
+    if variant != 'aiida-core-dev':
+        pytest.skip(f'aiida-core clone not available in {variant} image')
+
+    package = 'aiida-core'
+    try:
+        distribution = metadata.distribution(package)
+        direct_url = json.loads(distribution.read_text('direct_url.json'))
+        assert direct_url['dir_info']['editable'] is True
+    except metadata.PackageNotFoundError:
+        pytest.fail(f'{package} is not installed.')
+    except (IOError, KeyError) as err:
+        pytest.fail(str(err))
+
+
+@pytest.mark.parametrize(
+    'package',
+    [
+        'ase',
+        'sphinx',
+        'pre-commit',
+        'flask',
+        'pytest',
+        'trogon',
+    ],
+)
+def test_optional_dependency_install(package, variant):
+    if variant != 'aiida-core-dev':
+        pytest.skip(f'optional dependencies are not installed in {variant} image')
+
+    try:
+        import_module(package)
+    except ImportError:
+        pytest.fail(f'{package} is not installed.')

@@ -1,11 +1,17 @@
 import json
-import time
 from pathlib import Path
 
 import pytest
 
 
-@pytest.fixture(scope='session', params=['aiida-core-base', 'aiida-core-with-services'])
+@pytest.fixture(
+    scope='session',
+    params=[
+        'aiida-core-base',
+        'aiida-core-with-services',
+        'aiida-core-dev',
+    ],
+)
 def variant(request):
     return request.param
 
@@ -20,15 +26,26 @@ def docker_compose(docker_services):
     return docker_services._docker_compose
 
 
-def is_container_ready(docker_compose):
-    output = docker_compose.execute('exec -T aiida verdi status').decode().strip()
-    return 'Connected to RabbitMQ' in output and 'Daemon is running' in output
-
-
 @pytest.fixture(scope='session', autouse=True)
 def _docker_service_wait(docker_services):
     """Container startup wait."""
-    time.sleep(30)
+
+    # using `docker_compose` fixture would
+    # trigger a separate container
+    docker_compose = docker_services._docker_compose
+
+    def is_container_ready():
+        try:
+            output = docker_compose.execute('exec -T aiida verdi status').decode().strip()
+        except Exception:
+            return False
+        return 'Connected to RabbitMQ' in output and 'Daemon is running' in output
+
+    docker_services.wait_until_responsive(
+        timeout=600.0,
+        pause=0.1,
+        check=lambda: is_container_ready(),
+    )
 
 
 @pytest.fixture

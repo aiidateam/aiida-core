@@ -1,6 +1,4 @@
 import json
-from importlib import import_module, metadata
-from pathlib import Path
 
 import pytest
 from packaging.version import parse
@@ -45,47 +43,44 @@ def test_computer_setup_success(aiida_exec, container_user):
     assert 'Failed' not in output
 
 
-def test_clone_dir_exists(variant):
+def test_clone_dir_exists(aiida_exec, variant):
+    """Test that the aiida-core repository is cloned in the aiida-core-dev image."""
     if variant != 'aiida-core-dev':
         pytest.skip(f'aiida-core clone not available in {variant} image')
 
-    clone = Path('/home/aiida/aiida-core')
+    output = aiida_exec('ls /home/aiida/').decode().strip()
 
-    assert clone.exists()
-    assert clone.is_dir()
+    assert 'aiida-core' in output
 
 
-def test_editable_install(variant):
+def test_editable_install(aiida_exec, variant):
+    """Test that the aiida-core repository is installed in editable mode in the aiida-core-dev image."""
     if variant != 'aiida-core-dev':
         pytest.skip(f'aiida-core clone not available in {variant} image')
 
     package = 'aiida-core'
-    try:
-        distribution = metadata.distribution(package)
-        direct_url = json.loads(distribution.read_text('direct_url.json'))
-        assert direct_url['dir_info']['editable'] is True
-    except metadata.PackageNotFoundError:
-        pytest.fail(f'{package} is not installed.')
-    except (IOError, KeyError) as err:
-        pytest.fail(str(err))
+
+    output = aiida_exec(f'pip show {package}').decode().strip()
+
+    assert f'Editable project location: /home/aiida/{package}' in output
 
 
 @pytest.mark.parametrize(
     'package',
     [
         'ase',
-        'sphinx',
+        'Sphinx',
         'pre-commit',
-        'flask',
+        'Flask',
         'pytest',
         'trogon',
     ],
 )
-def test_optional_dependency_install(package, variant):
+def test_optional_dependency_install(aiida_exec, package, variant):
+    """Test that optional dependencies are installed in the aiida-core-dev image."""
     if variant != 'aiida-core-dev':
         pytest.skip(f'optional dependencies are not installed in {variant} image')
 
-    try:
-        import_module(package)
-    except ImportError:
-        pytest.fail(f'{package} is not installed.')
+    output = aiida_exec(f'pip show {package}').decode().strip()
+
+    assert f'Name: {package}' in output

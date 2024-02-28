@@ -350,6 +350,7 @@ def get_remote_and_path(calcjob, path=None):
         'Please specify a path explicitly.'
     )
 
+
 @verdi_calcjob.command('dump')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 @click.option(

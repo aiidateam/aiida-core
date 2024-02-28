@@ -37,7 +37,6 @@ class ProcessNodeYamlDumper:
     def dump_yaml(
         self, process_node: ProcessNode, output_path: Path, output_filename: str = 'aiida_node_metadata.yaml'
     ) -> None:
-
         """
         Dump the selected `ProcessNode` properties, attributes, and extras to a yaml file.
 

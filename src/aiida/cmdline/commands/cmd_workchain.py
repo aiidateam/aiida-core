@@ -17,7 +17,6 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments
 from aiida.cmdline.params.types import WorkflowParamType
 from aiida.cmdline.utils import echo
-from aiida.orm.nodes import process
 from aiida.tools.dumping.processes import ProcessNodeYamlDumper, recursive_dump
 
 # TODO I have several other cli functions that are useful for
@@ -121,5 +120,5 @@ def workchain_dump(
         output_path=output_path,
         no_node_inputs=no_node_inputs,
         use_prepare_for_submission=use_prepare_for_submission,
-        node_dumper=processnode_dumper
+        node_dumper=processnode_dumper,
     )

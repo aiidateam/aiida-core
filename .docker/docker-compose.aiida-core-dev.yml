@@ -7,8 +7,3 @@ services:
     environment:
       TZ: Europe/Zurich
       SETUP_DEFAULT_AIIDA_PROFILE: 'true'
-        #volumes:
-        #    - aiida-home-folder:/home/aiida
-
-volumes:
-  aiida-home-folder:

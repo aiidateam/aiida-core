@@ -1,7 +1,7 @@
 #!/bin/bash
 
-cd ~ || exit
-git clone https://github.com/aiidateam/aiida-core.git --origin upstream
-cd aiida-core || exit
-pip install --user -e ."[pre-commit,atomic_tools,docs,rest,tests,tui]" tox
-cd || exit
+REPO_PATH=/home/aiida/aiida-core
+
+git clone https://github.com/aiidateam/aiida-core.git --origin upstream $REPO_PATH
+
+pip install --user -e "$REPO_PATH/[pre-commit,atomic_tools,docs,rest,tests,tui]" tox

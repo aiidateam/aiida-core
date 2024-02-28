@@ -8,6 +8,7 @@
 ###########################################################################
 """`verdi calcjob` commands."""
 import os
+from pathlib import Path
 
 import click
 
@@ -15,6 +16,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.cmdline.utils import decorators, echo
+from aiida.tools.dumping.processes import ProcessNodeYamlDumper, _calcjob_dump
 
 
 @verdi.group('calcjob')
@@ -346,4 +348,82 @@ def get_remote_and_path(calcjob, path=None):
         f'`CalcJobNode<{calcjob.pk}>` does not define a default output file (option "output_filename" not found) '
         f'nor does its associated process class `{calcjob.process_class.__class__.__name__}`\n'
         'Please specify a path explicitly.'
+    )
+
+@verdi_calcjob.command('dump')
+@arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
+@click.option(
+    '--path',
+    '-p',
+    type=click.Path(),
+    default='.',
+    show_default=True,
+    help='The main directory to save the files involved in the calcjob.',
+)
+@click.option(
+    '--no-node-inputs',
+    '-n',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Turn off dumping the input nodes of the `CalcJob`.',
+)
+@click.option(
+    '--include-attributes',
+    '-a',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Include attributes in the `aiida_node_metadata.yaml` written for the CalcJobNode.',
+)
+@click.option(
+    '--include-extras',
+    '-e',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Include extras in the `aiida_node_metadata.yaml` written for the CalcJobNode.',
+)
+@click.option(
+    '--use-prepare-for-submission',
+    '-u',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Use the `prepare_for_submission` method of the respective `CalcJobs`. Note: this requireds the corresponding aiida-plugin to be installed.',
+)
+def calcjob_dump(
+    calcjob,
+    path,
+    no_node_inputs,
+    include_attributes,
+    include_extras,
+    use_prepare_for_submission,
+) -> None:
+    """Dump files involved in the execution of a calcjob.
+
+    Note: This is for inspection only and does not guarantee that a direct resubmission of the simulations is possible.
+    """
+
+    # Set reasonable default path when path argument is omitted
+    if path == '.':
+        path = f'dump-{calcjob.pk}'
+    output_path = Path(path)
+
+    # Check if path already exists
+    try:
+        Path(output_path).mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        echo.echo_critical(f'Invalid value for "OUTPUT_PATH": Path "{output_path}" exists.')
+
+    # Write node_metadata
+    processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
+    processnode_dumper.dump_yaml(process_node=calcjob, output_path=output_path)
+
+    _calcjob_dump(
+        calcjob_node=calcjob,
+        output_path=output_path,
+        no_node_inputs=no_node_inputs,
+        use_prepare_for_submission=use_prepare_for_submission,
+        # node_dumper=processnode_dumper
     )

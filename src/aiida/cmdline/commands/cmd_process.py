@@ -399,8 +399,7 @@ def process_watch(processes):
 @options.DRY_RUN()
 @decorators.only_if_daemon_not_running()
 @decorators.with_manager
-@click.pass_context
-def process_repair(ctx, manager, dry_run):
+def process_repair(manager, dry_run):
     """Automatically repair all stuck processes.
 
     N.B.: This command requires the daemon to be stopped.
@@ -414,7 +413,7 @@ def process_repair(ctx, manager, dry_run):
     from aiida.engine.processes.control import get_active_processes, get_process_tasks, iterate_process_tasks
 
     active_processes = get_active_processes(project='id')
-    process_tasks = get_process_tasks(ctx.obj.profile, manager.get_communicator())
+    process_tasks = get_process_tasks(manager.get_broker())
 
     set_active_processes = set(active_processes)
     set_process_tasks = set(process_tasks)
@@ -453,7 +452,7 @@ def process_repair(ctx, manager, dry_run):
     echo.echo_report('Attempting to fix inconsistencies')
 
     # Eliminate duplicate tasks and tasks that correspond to terminated process
-    for task in iterate_process_tasks(ctx.obj.profile, manager.get_communicator()):
+    for task in iterate_process_tasks(manager.get_broker()):
         pid = task.body.get('args', {}).get('pid', None)
         if pid not in set_active_processes:
             with task.processing() as outcome:

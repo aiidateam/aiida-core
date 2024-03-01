@@ -29,7 +29,7 @@ def test_rmq_consumer_timeout_unset(aiida_exec, variant):
 
 def test_verdi_status(aiida_exec, container_user):
     output = aiida_exec('verdi status', user=container_user).decode().strip()
-    assert 'Connected to RabbitMQ' in output
+    assert '✔ broker:' in output
     assert 'Daemon is running' in output
 
     # check that we have suppressed the warnings

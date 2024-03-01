@@ -31,7 +31,7 @@ __all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
 
 @decorator
 def with_manager(wrapped, _, args, kwargs):
-    """Decorate a function injecting a :class:`kiwipy.rmq.communicator.RmqCommunicator`."""
+    """Decorate a function injecting a :class:`aiida.manage.manager.Manager` instance."""
     from aiida.manage import get_manager
 
     kwargs['manager'] = get_manager()

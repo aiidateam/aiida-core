@@ -16,6 +16,7 @@ from aiida.common.exceptions import InvalidEntryPointTypeError
 
 __all__ = (
     'BaseFactory',
+    'BrokerFactory',
     'CalculationFactory',
     'CalcJobImporterFactory',
     'DataFactory',
@@ -32,6 +33,7 @@ __all__ = (
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
+    from aiida.brokers import Broker
     from aiida.engine import CalcJob, CalcJobImporter, WorkChain
     from aiida.orm import Data, Group
     from aiida.orm.implementation import StorageBackend
@@ -72,6 +74,41 @@ def BaseFactory(group: str, name: str, load: bool = True) -> Union[EntryPoint, A
         return load_entry_point(group, name)
 
     return get_entry_point(group, name)
+
+
+@overload
+def BrokerFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Broker']:
+    ...
+
+
+@overload
+def BrokerFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def BrokerFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Broker'], Callable]:
+    """Return the `Broker` sub class registered under the given entry point.
+
+    :param entry_point_name: the entry point name.
+    :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
+    :return: sub class of :py:class:`~aiida.brokers.broker.Broker`
+    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    """
+    from inspect import isclass
+
+    from aiida.brokers import Broker
+
+    entry_point_group = 'aiida.brokers'
+    entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
+    valid_classes = (Broker,)
+
+    if not load:
+        return entry_point
+
+    if isclass(entry_point) and issubclass(entry_point, Broker):
+        return entry_point
+
+    raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
 @overload

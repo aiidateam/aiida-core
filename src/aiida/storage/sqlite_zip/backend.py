@@ -92,7 +92,7 @@ class SqliteZipBackend(StorageBackend):
             profile_name,
             {
                 'storage': {'backend': 'core.sqlite_zip', 'config': {'filepath': str(filepath)}},
-                'process_control': {'backend': 'null', 'config': {}},
+                'process_control': {'backend': 'core.no_comms', 'config': {}},
                 'options': options or {},
             },
         )

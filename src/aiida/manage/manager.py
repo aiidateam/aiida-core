@@ -7,7 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA manager for global settings"""
-import functools
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
     from plumpy.process_comms import RemoteProcessThreadController
 
+    from aiida.brokers.broker import Broker
     from aiida.engine.daemon.client import DaemonClient
     from aiida.engine.persistence import AiiDAPersister
     from aiida.engine.runners import Runner
@@ -66,10 +68,10 @@ class Manager:
     def __init__(self) -> None:
         """Construct a new instance."""
         # note: the config currently references the global variables
+        self._broker: Optional['Broker'] = None
         self._profile: Optional['Profile'] = None
         self._profile_storage: Optional['StorageBackend'] = None
         self._daemon_client: Optional['DaemonClient'] = None
-        self._communicator: Optional['RmqThreadCommunicator'] = None
         self._process_controller: Optional['RemoteProcessThreadController'] = None
         self._persister: Optional['AiiDAPersister'] = None
         self._runner: Optional['Runner'] = None
@@ -144,8 +146,8 @@ class Manager:
 
     def reset_profile(self) -> None:
         """Close and reset any associated resources for the current profile."""
+        self.reset_broker()
         self.reset_profile_storage()
-        self.reset_communicator()
         self.reset_runner()
 
         self._daemon_client = None
@@ -160,11 +162,11 @@ class Manager:
             self._profile_storage.close()
         self._profile_storage = None
 
-    def reset_communicator(self) -> None:
+    def reset_broker(self) -> None:
         """Reset the communicator."""
-        if self._communicator is not None:
-            self._communicator.close()
-        self._communicator = None
+        if self._broker is not None:
+            self._broker.close()
+        self._broker = None
         self._process_controller = None
 
     def reset_runner(self) -> None:
@@ -272,6 +274,31 @@ class Manager:
 
         return self._profile_storage
 
+    def get_broker(self) -> 'Broker' | None:
+        """Return an instance of :class:`aiida.brokers.broker.Broker` if the profile defines a broker.
+
+        :returns: The broker of the profile, or ``None`` if the profile doesn't define one.
+        """
+        from aiida.common import ConfigurationError
+
+        if self._profile is None:
+            raise ConfigurationError(
+                'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+            )
+
+        if self._broker is None:
+            from aiida.plugins import BrokerFactory
+
+            if self._profile.process_control_backend == 'rabbitmq':
+                entry_point = 'core.rabbitmq'
+            else:
+                entry_point = self._profile.process_control_backend  # type: ignore[assignment]
+
+            broker_cls = BrokerFactory(entry_point)
+            self._broker = broker_cls(self._profile)
+
+        return self._broker
+
     def get_persister(self) -> 'AiiDAPersister':
         """Return the persister
 
@@ -291,57 +318,15 @@ class Manager:
         :return: a global communicator instance
 
         """
-        if self._communicator is None:
-            self._communicator = self.create_communicator()
+        broker = self.get_broker()
 
-        return self._communicator
-
-    def create_communicator(self, task_prefetch_count: Optional[int] = None) -> 'RmqThreadCommunicator':
-        """Create a Communicator.
-
-        :param task_prefetch_count: optional specify how many tasks this communicator take simultaneously
-
-        :return: the communicator instance
-
-        """
-        import kiwipy.rmq
-
-        from aiida.common import ConfigurationError
-        from aiida.manage.external import rmq
-        from aiida.orm.utils import serialize
-
-        profile = self.get_profile()
-        if profile is None:
-            raise ConfigurationError(
-                'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+        if broker is None:
+            assert self._profile is not None
+            raise RuntimeError(
+                f'profile `{self._profile.name}` does not provide a communicator because it does not define a broker'
             )
 
-        if task_prefetch_count is None:
-            task_prefetch_count = self.get_option('daemon.worker_process_slots')
-
-        prefix = profile.rmq_prefix
-
-        encoder = functools.partial(serialize.serialize, encoding='utf-8')
-        decoder = serialize.deserialize_unsafe
-
-        communicator = kiwipy.rmq.RmqThreadCommunicator.connect(
-            connection_params={'url': profile.get_rmq_url()},
-            message_exchange=rmq.get_message_exchange_name(prefix),
-            encoder=encoder,
-            decoder=decoder,
-            task_exchange=rmq.get_task_exchange_name(prefix),
-            task_queue=rmq.get_launch_queue_name(prefix),
-            task_prefetch_count=task_prefetch_count,
-            async_task_timeout=self.get_option('rmq.task_timeout'),
-            # This is needed because the verdi commands will call this function and when called in unit tests the
-            # testing_mode cannot be set.
-            testing_mode=profile.is_test_profile,
-        )
-
-        # Check whether a compatible version of RabbitMQ is being used.
-        self.check_rabbitmq_version(communicator)
-
-        return communicator
+        return broker.get_communicator()
 
     def get_daemon_client(self) -> 'DaemonClient':
         """Return the daemon client for the current profile.
@@ -417,10 +402,10 @@ class Manager:
             )
         poll_interval = 0.0 if profile.is_test_profile else self.get_option('runner.poll.interval')
 
-        settings = {'rmq_submit': False, 'poll_interval': poll_interval}
+        settings = {'broker_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)
 
-        if profile.process_control_backend == 'rabbitmq' and 'communicator' not in settings:
+        if 'communicator' not in settings:
             # Only call get_communicator if we have to as it will lazily create
             settings['communicator'] = self.get_communicator()
 
@@ -442,9 +427,9 @@ class Manager:
         from plumpy.persistence import LoadSaveContext
 
         from aiida.engine import persistence
-        from aiida.manage.external.rmq.launcher import ProcessLauncher
+        from aiida.engine.processes.launcher import ProcessLauncher
 
-        runner = self.create_runner(rmq_submit=True, loop=loop)
+        runner = self.create_runner(broker_submit=True, loop=loop)
         runner_loop = runner.loop
 
         # Listen for incoming launch requests
@@ -460,21 +445,6 @@ class Manager:
 
         return runner
 
-    def check_rabbitmq_version(self, communicator: 'RmqThreadCommunicator'):
-        """Check the version of RabbitMQ that is being connected to and emit warning if it is not compatible."""
-        from aiida.cmdline.utils import echo
-
-        show_warning = self.get_option('warnings.rabbitmq_version')
-        version = get_rabbitmq_version(communicator)
-
-        if show_warning and not is_rabbitmq_version_supported(communicator):
-            echo.echo_warning(f'RabbitMQ v{version} is not supported and will cause unexpected problems!')
-            echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
-            echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')
-            return version, False
-
-        return version, True
-
     def check_version(self):
         """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
 
@@ -489,7 +459,8 @@ class Manager:
         from aiida.cmdline.utils import echo
 
         # Showing of the warning can be turned off by setting the following option to false.
-        show_warning = self.get_option('warnings.development_version')
+        assert self._profile is not None
+        show_warning = self._profile.get_option('warnings.development_version')
         version = parse(__version__)
 
         if version.is_postrelease and show_warning:
@@ -497,27 +468,3 @@ class Manager:
             echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
             echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
             echo.echo_warning('as you might not be able to automatically migrate your data.\n')
-
-
-def is_rabbitmq_version_supported(communicator: 'RmqThreadCommunicator') -> bool:
-    """Return whether the version of RabbitMQ configured for the current profile is supported.
-
-    Versions 3.5 and below are not supported at all, whereas versions 3.8.15 and above are not compatible with a default
-    configuration of the RabbitMQ server.
-
-    :return: boolean whether the current RabbitMQ version is supported.
-    """
-    from packaging.version import parse
-
-    version = get_rabbitmq_version(communicator)
-    return parse('3.6.0') <= version < parse('3.8.15')
-
-
-def get_rabbitmq_version(communicator: 'RmqThreadCommunicator'):
-    """Return the version of the RabbitMQ server that the current profile connects to.
-
-    :return: :class:`packaging.version.Version`
-    """
-    from packaging.version import parse
-
-    return parse(communicator.server_properties['version'].decode('utf-8'))

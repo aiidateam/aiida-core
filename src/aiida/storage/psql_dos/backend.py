@@ -577,7 +577,7 @@ class PsqlDosBackend(StorageBackend):
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
 
-    def backup(
+    def _backup_backend(
         self,
         dest: str,
         keep: Optional[int] = None,

@@ -304,6 +304,63 @@ class StorageBackend(abc.ABC):
         :param dry_run: flag to only print the actions that would be taken without actually executing them.
         """
 
+    def _backup_backend(
+        self,
+        dest: str,
+        keep: Optional[int] = None,
+    ):
+        raise NotImplementedError
+
+    def _validate_or_init_backup_folder(self, dest, keep):
+        import json
+        import pathlib
+        import tempfile
+
+        from disk_objectstore import backup_utils
+
+        from aiida.common import exceptions
+        from aiida.storage.log import STORAGE_LOGGER
+
+        backup_info_fname = 'aiida-backup.json'
+        backup_info = {
+            'PROFILE_NAME': self.profile.name,
+            'PROFILE_UUID': self.profile.uuid,
+            'STORAGE_BACKEND': self.profile.storage_backend,
+        }
+
+        try:
+            # this creates the dest folder if it doesn't exist
+            backup_manager = backup_utils.BackupManager(dest, keep=keep)
+
+            backup_info_path = backup_manager.path / backup_info_fname
+            if backup_manager.check_path_exists(backup_info_path):
+                success, stdout = backup_manager.run_cmd(['cat', str(backup_info_path)])
+                if not success:
+                    raise exceptions.StorageBackupError(f"Couldn't read {backup_info_path!s}.")
+                backup_info_existing = json.loads(stdout)
+                if backup_info_existing != backup_info:
+                    raise exceptions.StorageBackupError(
+                        'The chosen destination contains backups of a different profile! Aborting!'
+                    )
+            else:
+                STORAGE_LOGGER.warn('Initializing a new backup folder.')
+                # make sure the folder is empty
+                success, stdout = backup_manager.run_cmd(['ls', '-A', str(backup_manager.path)])
+                if not success:
+                    raise exceptions.StorageBackupError(f"Couldn't read {backup_info_path!s}.")
+                if stdout:
+                    raise exceptions.StorageBackupError("Can't initialize the backup folder, destination is not empty.")
+
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    tmp_path = pathlib.Path(tmpdir) / backup_info_fname
+                    with open(tmp_path, 'w', encoding='utf-8') as fhandle:
+                        json.dump(backup_info, fhandle, indent=4)
+                        fhandle.write('\n')
+                    backup_manager.call_rsync(tmp_path, backup_info_path)
+
+        except backup_utils.BackupError as exc:
+            raise exceptions.StorageBackupError(*exc.args) from exc
+
     def backup(
         self,
         dest: str,
@@ -316,7 +373,8 @@ class StorageBackend(abc.ABC):
         :raises ValueError: If the input parameters are invalid.
         :raises StorageBackupError: If an error occurred during the backup procedure.
         """
-        raise NotImplementedError
+        self._validate_or_init_backup_folder(dest, keep)
+        self._backup_backend(dest, keep)
 
     def get_info(self, detailed: bool = False) -> dict:
         """Return general information on the storage.

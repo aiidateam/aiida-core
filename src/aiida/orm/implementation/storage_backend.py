@@ -307,12 +307,12 @@ class StorageBackend(abc.ABC):
     def backup(
         self,
         dest: str,
-        keep: int = 1,
+        keep: Optional[int] = None,
     ):
         """Create a backup of the storage contents.
 
         :param dest: The path to the destination folder.
-        :param keep: The number of backups to keep in the target destination.
+        :param keep: The number of backups to keep in the target destination, if the backend supports it.
         :raises ValueError: If the input parameters are invalid.
         :raises StorageBackupError: If an error occurred during the backup procedure.
         """

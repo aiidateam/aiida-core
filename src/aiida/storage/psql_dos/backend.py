@@ -580,7 +580,7 @@ class PsqlDosBackend(StorageBackend):
     def backup(
         self,
         dest: str,
-        keep: int = 1,
+        keep: Optional[int] = None,
     ):
         try:
             backup_manager = backup_utils.BackupManager(dest, keep=keep)

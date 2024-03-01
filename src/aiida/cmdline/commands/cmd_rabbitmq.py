@@ -106,8 +106,8 @@ def echo_response(response: 'requests.Response', exit_on_error: bool = True) -> 
 @wrapt.decorator
 @click.pass_context
 def with_client(ctx, wrapped, _, args, kwargs):
-    """Decorate a function injecting a :class:`aiida.manage.external.rmq.client.RabbitmqManagementClient`."""
-    from aiida.manage.external.rmq.client import RabbitmqManagementClient
+    """Decorate a function injecting a :class:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient`."""
+    from aiida.brokers.rabbitmq.client import RabbitmqManagementClient
 
     config = ctx.obj.profile.process_control_config
     client = RabbitmqManagementClient(
@@ -206,10 +206,9 @@ def cmd_queues_delete(client, queues):
 
 
 @cmd_tasks.command('list')
-@decorators.with_manager
+@decorators.with_broker
 @decorators.only_if_daemon_not_running()
-@click.pass_context
-def cmd_tasks_list(ctx, manager):
+def cmd_tasks_list(broker):
     """List all active process tasks.
 
     This command prints a list of process pk's for which there is an active process task with RabbitMQ. Since tasks can
@@ -218,7 +217,7 @@ def cmd_tasks_list(ctx, manager):
     """
     from aiida.engine.processes.control import get_process_tasks
 
-    for pk in get_process_tasks(ctx.obj.profile, manager.get_communicator()):
+    for pk in get_process_tasks(broker):
         echo.echo(pk)
 
 

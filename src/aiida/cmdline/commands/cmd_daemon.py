@@ -47,9 +47,14 @@ def execute_client_command(command: str, daemon_not_running_ok: bool = False, **
         not treated as a failure.
     :param kwargs: Keyword arguments that are passed to the client method.
     """
+    from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException, get_daemon_client
 
-    client = get_daemon_client()
+    try:
+        client = get_daemon_client()
+    except ConfigurationError:
+        echo.echo('WARNING', fg=echo.COLORS['warning'], bold=True)
+        return None
 
     try:
         response = getattr(client, command)(**kwargs)
@@ -74,6 +79,7 @@ def execute_client_command(command: str, daemon_not_running_ok: bool = False, **
 @click.argument('number', required=False, type=int, callback=validate_daemon_workers)
 @options.TIMEOUT(default=None, required=False, type=int)
 @decorators.with_dbenv()
+@decorators.requires_broker
 @decorators.check_circus_zmq_version
 def start(foreground, number, timeout):
     """Start the daemon with NUMBER workers.
@@ -92,6 +98,7 @@ def start(foreground, number, timeout):
 @options.TIMEOUT(default=None, required=False, type=int)
 @click.pass_context
 @decorators.requires_loaded_profile()
+@decorators.requires_broker
 def status(ctx, all_profiles, timeout):
     """Print the status of the current daemon or all daemons.
 
@@ -151,6 +158,7 @@ def status(ctx, all_profiles, timeout):
 @verdi_daemon.command()
 @click.argument('number', default=1, type=int)
 @options.TIMEOUT(default=None, required=False, type=int)
+@decorators.requires_broker
 @decorators.only_if_daemon_running()
 def incr(number, timeout):
     """Add NUMBER [default=1] workers to the running daemon.
@@ -164,6 +172,7 @@ def incr(number, timeout):
 @verdi_daemon.command()
 @click.argument('number', default=1, type=int)
 @options.TIMEOUT(default=None, required=False, type=int)
+@decorators.requires_broker
 @decorators.only_if_daemon_running()
 def decr(number, timeout):
     """Remove NUMBER [default=1] workers from the running daemon.
@@ -189,6 +198,7 @@ def logshow():
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation.')
 @click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons.')
 @options.TIMEOUT(default=None, required=False, type=int)
+@decorators.requires_broker
 @click.pass_context
 def stop(ctx, no_wait, all_profiles, timeout):
     """Stop the daemon.
@@ -213,6 +223,7 @@ def stop(ctx, no_wait, all_profiles, timeout):
 @options.TIMEOUT(default=None, required=False, type=int)
 @click.pass_context
 @decorators.with_dbenv()
+@decorators.requires_broker
 @decorators.only_if_daemon_running()
 def restart(ctx, reset, no_wait, timeout):
     """Restart the daemon.
@@ -244,6 +255,7 @@ def restart(ctx, reset, no_wait, timeout):
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
 @click.argument('number', required=False, type=int, callback=validate_daemon_workers)
 @decorators.with_dbenv()
+@decorators.requires_broker
 @decorators.check_circus_zmq_version
 def start_circus(foreground, number):
     """This will actually launch the circus daemon, either daemonized in the background or in the foreground.
@@ -259,6 +271,7 @@ def start_circus(foreground, number):
 
 @verdi_daemon.command('worker')
 @decorators.with_dbenv()
+@decorators.requires_broker
 def worker():
     """Run a single daemon worker in the current interpreter."""
     from aiida.engine.daemon.worker import start_daemon_worker

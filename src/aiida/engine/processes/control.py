@@ -9,10 +9,10 @@ import kiwipy
 from kiwipy import communications
 from plumpy.futures import unwrap_kiwi_future
 
+from aiida.brokers import Broker
 from aiida.common.exceptions import AiidaException
 from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.daemon.client import DaemonException, get_daemon_client
-from aiida.manage.configuration.profile import Profile
 from aiida.manage.manager import get_manager
 from aiida.orm import ProcessNode, QueryBuilder
 from aiida.tools.query.calculation import CalculationQueryBuilder
@@ -36,29 +36,23 @@ def get_active_processes(paused: bool = False, project: str | list[str] = '*') -
     return builder.all(flat=True)
 
 
-def iterate_process_tasks(
-    profile: Profile, communicator: kiwipy.rmq.RmqCommunicator
-) -> collections.abc.Iterator[kiwipy.rmq.RmqIncomingTask]:
+def iterate_process_tasks(broker: Broker) -> collections.abc.Iterator[kiwipy.rmq.RmqIncomingTask]:
     """Return the list of process pks that have a process task in the RabbitMQ process queue.
 
     :returns: A list of process pks that have a corresponding process task with RabbitMQ.
     """
-    from aiida.manage.external.rmq import get_launch_queue_name
-
-    launch_queue = get_launch_queue_name(profile.rmq_prefix)
-
-    for task in communicator.task_queue(launch_queue):
+    for task in broker.iterate_tasks():
         yield task
 
 
-def get_process_tasks(profile: Profile, communicator: kiwipy.rmq.RmqCommunicator) -> list[int]:
+def get_process_tasks(broker: Broker) -> list[int]:
     """Return the list of process pks that have a process task in the RabbitMQ process queue.
 
     :returns: A list of process pks that have a corresponding process task with RabbitMQ.
     """
     pks = []
 
-    for task in iterate_process_tasks(profile, communicator):
+    for task in iterate_process_tasks(broker):
         try:
             pks.append(task.body.get('args', {})['pid'])
         except KeyError:

@@ -32,16 +32,18 @@ def create_sqlalchemy_engine(config: PsqlConfig):
         more info.
     """
     from sqlalchemy import create_engine
+    from urllib.parse import quote_plus
 
     # The hostname may be `None`, which is a valid value in the case of peer authentication for example. In this case
     # it should be converted to an empty string, because otherwise the `None` will be converted to string literal "None"
     hostname = config['database_hostname'] or ''
     separator = ':' if config['database_port'] else ''
+    password = quote_plus(config['database_password'])
 
     engine_url = 'postgresql://{user}:{password}@{hostname}{separator}{port}/{name}'.format(
         separator=separator,
         user=config['database_username'],
-        password=config['database_password'],
+        password=password,
         hostname=hostname,
         port=config['database_port'],
         name=config['database_name'],

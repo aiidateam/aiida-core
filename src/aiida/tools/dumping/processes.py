@@ -73,12 +73,12 @@ class ProcessNodeYamlDumper:
             with open(output_file, 'w') as handle:
                 yaml.dump(node_dict, handle, sort_keys=False)
         else:
-            echo.echo_critical(f'yaml file at path "{output_path}" already exists.')
+            echo.echo_warning(f'yaml file at path "{output_path}" already exists. Skipping.')
 
 
-def recursive_dump(
+def workchain_dump(
     process_node: Union[WorkChainNode, CalcJobNode],
-    output_path: Path,
+    output_path: Path = Path(),
     no_node_inputs: bool = False,
     use_prepare_for_submission: bool = False,
     node_dumper: ProcessNodeYamlDumper = None,
@@ -93,11 +93,19 @@ def recursive_dump(
     :param output_path: The main output path where the directory tree will be created.
     :param no_node_inputs: If True, do not include file or folder inputs in the dump. Defaults to False.
     :param use_prepare_for_submission: If True, use the `prepare_for_submission` method to get the inputs of the
-        CalcJobNode. Defaults to False.
+    CalcJobNode. Defaults to False.
     :param node_dumper: The ProcessNodeYamlDumper instance to use for dumping node metadata. If not provided, a new
         instance will be created. Defaults to None.
     :return: None
     """
+
+    # Dump node metadata as yaml
+    if node_dumper is None:
+        node_dumper = ProcessNodeYamlDumper()
+    if isinstance(process_node, WorkChainNode):
+        node_dumper.dump_yaml(process_node=process_node, output_path=output_path)
+
+    # node_dumper.dump_yaml(process_node=process_node, output_path=output_path)
     called_links = process_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
 
     # Don't increment index for `ProcessNodes`` that don't have file IO (`CalcFunctionNodes`/`WorkFunctionNodes`), such
@@ -109,27 +117,22 @@ def recursive_dump(
     ]
 
     for index, link_triple in enumerate(sorted(called_links, key=lambda link_triple: link_triple.node.ctime), start=1):
-        node = link_triple.node
+        child_node = link_triple.node
         link_label = link_triple.link_label
 
         # Generate directories with naming scheme akin to `verdi process status`
         if link_label != 'CALL' and not link_label.startswith('iteration_'):
-            label = f'{index:02d}-{link_label}-{node.process_label}'
+            label = f'{index:02d}-{link_label}-{child_node.process_label}'
         else:
-            label = f'{index:02d}-{node.process_label}'
+            label = f'{index:02d}-{child_node.process_label}'
 
         output_path_child = output_path.resolve() / label
         output_path_child.mkdir(exist_ok=True, parents=True)
 
-        # Dump node metadata as yaml
-        if node_dumper is None:
-            node_dumper = ProcessNodeYamlDumper()
-        node_dumper.dump_yaml(process_node=node, output_path=output_path_child)
-
         # Recursive function call for `WorkChainNode``
-        if isinstance(node, WorkChainNode):
-            recursive_dump(
-                process_node=node,
+        if isinstance(child_node, WorkChainNode):
+            workchain_dump(
+                process_node=child_node,
                 output_path=output_path_child,
                 no_node_inputs=no_node_inputs,
                 use_prepare_for_submission=use_prepare_for_submission,
@@ -137,22 +140,22 @@ def recursive_dump(
             )
 
         # Dump for `CalcJobNode`
-        elif isinstance(node, CalcJobNode):
-            _calcjob_dump(
-                calcjob_node=node,
+        elif isinstance(child_node, CalcJobNode):
+            calcjob_dump(
+                calcjob_node=child_node,
                 output_path=output_path_child,
                 no_node_inputs=no_node_inputs,
                 use_prepare_for_submission=use_prepare_for_submission,
+                node_dumper=node_dumper,
             )
 
 
-def _calcjob_dump(
+def calcjob_dump(
     calcjob_node: CalcJobNode,
     output_path: Path,
     no_node_inputs: bool = False,
     use_prepare_for_submission: bool = False,
-    # node_dumper: ProcessNodeDumper = None
-    # -> Actually run in `cmd_calcjob` and outside in loop in `cmd_workchain`. Necessary to actually pass here?
+    node_dumper: ProcessNodeYamlDumper = None,
 ):
     """
     Dump the contents of a CalcJobNode to a specified output path.
@@ -166,6 +169,10 @@ def _calcjob_dump(
     """
 
     output_path_abs = output_path.resolve()
+
+    if node_dumper is None:
+        node_dumper = ProcessNodeYamlDumper()
+    node_dumper.dump_yaml(process_node=calcjob_node, output_path=output_path)
 
     if use_prepare_for_submission is False:
         # Outputs obtained via retrieved and should not be present when using `prepare_for_submission` as it puts the
@@ -210,48 +217,3 @@ def _calcjob_dump(
             echo.echo_error(
                 'ValueError when trying to get a restart-builder. Do you have the relevant aiida-plugin installed?'
             )
-
-
-# def processnode_metadata_dump(
-#     node: Type[ProcessNode], output_path: Path, include_attributes: bool = False, include_extras: bool = False
-# ) -> None:
-#     """Dump selected `ProcessNode` properties, as well as optionally attributes and extras to a `yaml` file.
-
-#     Args:
-#         node (Type[ProcessNode]): Node of `ProcessNode` type for which the data should be dumped
-#         output_path (Path): Output path where the `yaml` file will be written.
-#         include_attributes (bool, optional): Dump node attributes? Defaults to False.
-#         include_extras (bool, optional): Dump node extras? Defaults to False.
-#     """
-
-#     _metadata_property_list = [
-#         'label',
-#         'description',
-#         'pk',
-#         'uuid',
-#         'ctime',
-#         'mtime',
-#         'node_type',
-#         'process_type',
-#         'is_finished_ok',
-#     ]
-
-#     node_dict = {}
-#     metadata_dict = {}
-
-#     for metadata_property in _metadata_property_list:
-#         metadata_dict[metadata_property] = getattr(node, metadata_property)
-
-#     node_dict['Node metadata'] = metadata_dict
-
-#     if include_attributes is True:
-#         node_attributes = node.base.attributes.all
-#         node_dict['Node attributes'] = node_attributes
-
-#     if include_extras is True:
-#         node_extras = node.base.extras.all
-#         if node_extras:
-#             node_dict['Node extras'] = node_extras
-
-#     with open(output_path / 'node_metadata.yaml', 'w') as handle:
-#         yaml.dump(node_dict, handle, sort_keys=False)

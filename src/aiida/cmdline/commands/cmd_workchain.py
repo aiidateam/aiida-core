@@ -8,16 +8,11 @@
 ###########################################################################
 """`verdi workchain` commands."""
 
-
-import pathlib
-
-import click
-
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import arguments
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import WorkflowParamType
-from aiida.cmdline.utils import echo
-from aiida.tools.dumping.processes import ProcessNodeYamlDumper, recursive_dump
+from aiida.cmdline.utils.defaults import make_default_dump_path
+from aiida.tools.dumping.processes import ProcessNodeYamlDumper, workchain_dump
 
 # TODO I have several other cli functions that are useful for
 # my own work, but somehow it's not easy to merge them
@@ -46,47 +41,12 @@ def verdi_workchain():
 
 @verdi_workchain.command('dump')
 @arguments.WORKFLOW('workchain', type=WorkflowParamType(sub_classes=('aiida.node:process.workflow.workchain',)))
-@click.option(
-    '--path',
-    '-p',
-    type=click.Path(),
-    default='.',
-    show_default=True,
-    help='The main directory to save the files involved in the workchain.',
-)
-@click.option(
-    '--no-node-inputs',
-    '-n',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Turn off dumping the input nodes of the `CalcJob`.',
-)
-@click.option(
-    '--include-attributes',
-    '-a',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Include attributes in the `aiida_node_metadata.yaml` which is written for each ProcessNode.',
-)
-@click.option(
-    '--include-extras',
-    '-e',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Include extras in the `aiida_node_metadata.yaml` which is written for each ProcessNode.',
-)
-@click.option(
-    '--use-prepare-for-submission',
-    '-u',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Use the `prepare_for_submission` method of the respective `CalcJobs`. Note: this requireds the corresponding aiida-plugin to be installed.',
-)
-def workchain_dump(
+@options.DUMP_PATH()
+@options.NO_NODE_INPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.USE_PREPARE_FOR_SUBMISSION()
+def dump(
     workchain,
     path,
     no_node_inputs,
@@ -94,28 +54,20 @@ def workchain_dump(
     include_extras,
     use_prepare_for_submission,
 ) -> None:
-    """Dump files involved in the execution of the workchain.
+    """Dump files involved in the execution of a `WorkChain`.
 
-    Note: This is for inspection only and does not guarantee tha a direct resubmission of the simulations is possible.
+    Note: This is for inspection only and not intended for direct resubmission of the simulations run by the
+    `WorkChain`, as intermediate files are likely missing.
     """
 
-    # Set reasonable default path when path argument is omitted
-    if path == '.':
-        path = f'dump-{workchain.pk}'
-    output_path = pathlib.Path(path)
-
-    # Check if path already exists
-    try:
-        pathlib.Path(output_path).mkdir(parents=True, exist_ok=False)
-    except FileExistsError:
-        echo.echo_critical(f'Invalid value for "OUTPUT_PATH": Path "{output_path}" exists.')
-
-    # Write parent node_metadata
+    # Instantiate YamlDumper
     processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
-    processnode_dumper.dump_yaml(process_node=workchain, output_path=output_path)
+
+    # Make output directory
+    output_path = make_default_dump_path(path=path, process_node=workchain)
 
     # Actual recursive function call
-    recursive_dump(
+    workchain_dump(
         process_node=workchain,
         output_path=output_path,
         no_node_inputs=no_node_inputs,

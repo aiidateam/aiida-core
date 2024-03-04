@@ -8,7 +8,6 @@
 ###########################################################################
 """`verdi calcjob` commands."""
 import os
-from pathlib import Path
 
 import click
 
@@ -16,7 +15,8 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.cmdline.utils import decorators, echo
-from aiida.tools.dumping.processes import ProcessNodeYamlDumper, _calcjob_dump
+from aiida.cmdline.utils.defaults import make_default_dump_path
+from aiida.tools.dumping.processes import ProcessNodeYamlDumper, calcjob_dump
 
 
 @verdi.group('calcjob')
@@ -353,47 +353,12 @@ def get_remote_and_path(calcjob, path=None):
 
 @verdi_calcjob.command('dump')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
-@click.option(
-    '--path',
-    '-p',
-    type=click.Path(),
-    default='.',
-    show_default=True,
-    help='The main directory to save the files involved in the calcjob.',
-)
-@click.option(
-    '--no-node-inputs',
-    '-n',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Turn off dumping the input nodes of the `CalcJob`.',
-)
-@click.option(
-    '--include-attributes',
-    '-a',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Include attributes in the `aiida_node_metadata.yaml` written for the CalcJobNode.',
-)
-@click.option(
-    '--include-extras',
-    '-e',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Include extras in the `aiida_node_metadata.yaml` written for the CalcJobNode.',
-)
-@click.option(
-    '--use-prepare-for-submission',
-    '-u',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Use the `prepare_for_submission` method of the respective `CalcJobs`. Note: this requireds the corresponding aiida-plugin to be installed.',
-)
-def calcjob_dump(
+@options.DUMP_PATH()
+@options.NO_NODE_INPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.USE_PREPARE_FOR_SUBMISSION()
+def dump(
     calcjob,
     path,
     no_node_inputs,
@@ -401,30 +366,21 @@ def calcjob_dump(
     include_extras,
     use_prepare_for_submission,
 ) -> None:
-    """Dump files involved in the execution of a calcjob.
+    """Dump files involved in the execution of a `CalcJob`.
 
-    Note: This is for inspection only and does not guarantee that a direct resubmission of the simulations is possible.
+    Note: This is for inspection only and does not guarantee that a direct resubmission of the simulation is possible.
     """
 
-    # Set reasonable default path when path argument is omitted
-    if path == '.':
-        path = f'dump-{calcjob.pk}'
-    output_path = Path(path)
-
-    # Check if path already exists
-    try:
-        Path(output_path).mkdir(parents=True, exist_ok=False)
-    except FileExistsError:
-        echo.echo_critical(f'Invalid value for "OUTPUT_PATH": Path "{output_path}" exists.')
-
-    # Write node_metadata
+    # Instantiate YamlDumper
     processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
-    processnode_dumper.dump_yaml(process_node=calcjob, output_path=output_path)
 
-    _calcjob_dump(
+    # Make output directory
+    output_path = make_default_dump_path(path=path, process_node=calcjob)
+
+    calcjob_dump(
         calcjob_node=calcjob,
         output_path=output_path,
         no_node_inputs=no_node_inputs,
         use_prepare_for_submission=use_prepare_for_submission,
-        # node_dumper=processnode_dumper
+        node_dumper=processnode_dumper
     )

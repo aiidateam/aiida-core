@@ -38,6 +38,7 @@ from .options import Option, get_option, get_option_names, parse_option
 from .profile import Profile
 
 if TYPE_CHECKING:
+    from aiida.brokers import Broker
     from aiida.orm.implementation.storage_backend import StorageBackend
 
 LOGGER = AIIDA_LOGGER.getChild(__file__)
@@ -452,12 +453,21 @@ class Config:
 
         return self._profiles[name]
 
-    def create_profile(self, name: str, storage_cls: Type['StorageBackend'], storage_config: dict[str, str]) -> Profile:
+    def create_profile(
+        self,
+        name: str,
+        storage_cls: Type['StorageBackend'],
+        storage_config: dict[str, str],
+        broker_cls: Type['Broker'] | None = None,
+        broker_config: dict[str, str] | None = None,
+    ) -> Profile:
         """Create a new profile and initialise its storage.
 
         :param name: The profile name.
         :param storage_cls: The :class:`aiida.orm.implementation.storage_backend.StorageBackend` implementation to use.
         :param storage_config: The configuration necessary to initialise and connect to the storage backend.
+        :param broker_cls: The :class:`aiida.brokers.Broker` implementation to use.
+        :param broker_config: The configuration necessary to initialise and connect to the broker.
         :returns: The created profile.
         :raises ValueError: If the profile already exists.
         :raises TypeError: If the ``storage_cls`` is not a subclass of
@@ -465,6 +475,8 @@ class Config:
         :raises EntryPointError: If the ``storage_cls`` does not have an associated entry point.
         :raises StorageMigrationError: If the storage cannot be initialised.
         """
+        from aiida.brokers import Broker
+        from aiida.brokers.rabbitmq import RabbitmqBroker
         from aiida.orm.implementation.storage_backend import StorageBackend
         from aiida.plugins.entry_point import get_entry_point_from_class
 
@@ -481,6 +493,27 @@ class Config:
         if storage_entry_point is None:
             raise EntryPointError(f'`{storage_cls}` does not have a registered entry point.')
 
+        if broker_cls is None:
+            broker_cls = RabbitmqBroker
+
+        if not issubclass(broker_cls, Broker):
+            raise TypeError(f'The `broker_cls={broker_cls}` is not subclass of `aiida.brokers.Broker`.')
+
+        _, broker_entry_point = get_entry_point_from_class(broker_cls.__module__, broker_cls.__name__)
+
+        if broker_entry_point is None:
+            raise EntryPointError(f'`{broker_cls}` does not have a registered entry point.')
+
+        if broker_config is None:
+            broker_config = {
+                'broker_protocol': 'amqp',
+                'broker_username': 'guest',
+                'broker_password': 'guest',
+                'broker_host': '127.0.0.1',
+                'broker_port': 5672,
+                'broker_virtual_host': '',
+            }
+
         profile = Profile(
             name,
             {
@@ -489,15 +522,8 @@ class Config:
                     'config': storage_config,
                 },
                 'process_control': {
-                    'backend': 'rabbitmq',
-                    'config': {
-                        'broker_protocol': 'amqp',
-                        'broker_username': 'guest',
-                        'broker_password': 'guest',
-                        'broker_host': '127.0.0.1',
-                        'broker_port': 5672,
-                        'broker_virtual_host': '',
-                    },
+                    'backend': broker_entry_point.name,
+                    'config': broker_config,
                 },
             },
         )

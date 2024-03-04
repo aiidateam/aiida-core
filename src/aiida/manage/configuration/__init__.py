@@ -8,11 +8,10 @@
 ###########################################################################
 # ruff: noqa: E402
 """Modules related to the configuration of an AiiDA instance."""
+from __future__ import annotations
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .migrations import *
 from .options import *
 from .profile import *
@@ -51,11 +50,14 @@ __all__ += (
 import os
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Type
 
 from aiida.common.warnings import AiidaDeprecationWarning
 
 if TYPE_CHECKING:
+    from aiida.brokers import Broker
+    from aiida.orm.implementation.storage_backend import StorageBackend
+
     from .config import Config
 
 # global variables for aiida
@@ -196,31 +198,41 @@ def profile_context(profile: Optional[str] = None, allow_switch=False) -> 'Profi
 
 def create_profile(
     config: 'Config',
-    storage_cls,
     *,
     name: str,
     email: str,
     first_name: Optional[str] = None,
     last_name: Optional[str] = None,
     institution: Optional[str] = None,
-    **kwargs,
+    storage_cls: Type['StorageBackend'] | None = None,
+    storage_config: dict[str, str] | None = None,
+    broker_cls: Type['Broker'] | None = None,
+    broker_config: dict[str, str] | None = None,
 ) -> Profile:
     """Create a new profile, initialise its storage and create a default user.
 
     :param config: The config instance.
-    :param storage_cls: The storage class obtained through loading the entry point from ``aiida.storage`` group.
     :param name: Name of the profile.
     :param email: Email for the default user.
     :param first_name: First name for the default user.
     :param last_name: Last name for the default user.
     :param institution: Institution for the default user.
-    :param kwargs: Arguments to initialise instance of the selected storage implementation.
+    :param storage_cls: The storage class obtained through loading the entry point from ``aiida.storage`` group.
+    :param storage_config: The configuration necessary to initialize the storage.
+    :param broker_cls: The broker class obtained through loading the entry point from ``aiida.brokers`` group.
+    :param broker_config: The configuration necessary to initialize the broker.
     """
     from aiida.manage import get_manager
     from aiida.orm import User
 
-    storage_config = storage_cls.Configuration(**{k: v for k, v in kwargs.items() if v is not None}).model_dump()
-    profile: Profile = config.create_profile(name=name, storage_cls=storage_cls, storage_config=storage_config)
+    storage_config = storage_cls.Configuration(**(storage_config or {})).model_dump()
+    profile: Profile = config.create_profile(
+        name=name,
+        storage_cls=storage_cls,
+        storage_config=storage_config,
+        broker_cls=broker_cls,
+        broker_config=broker_config,
+    )
 
     with profile_context(profile.name, allow_switch=True):
         manager = get_manager()

@@ -11,7 +11,13 @@ from aiida.storage.sqlite_temp.backend import SqliteTempBackend
 def test_create_profile(isolated_config, tmp_path, cls):
     """Test :func:`aiida.manage.configuration.tools.create_profile`."""
     profile_name = 'testing'
-    profile = create_profile(isolated_config, cls, name=profile_name, email='test@localhost', filepath=str(tmp_path))
+    profile = create_profile(
+        isolated_config,
+        name=profile_name,
+        email='test@localhost',
+        storage_cls=cls,
+        storage_config={'filepath': str(tmp_path)},
+    )
     assert isinstance(profile, Profile)
     assert profile_name in isolated_config.profile_names
 

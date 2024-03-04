@@ -13,6 +13,7 @@ The commands need to be imported here for them to be registered with the top-lev
 """
 from aiida.cmdline.commands import (
     cmd_archive,
+    cmd_blitz,
     cmd_calcjob,
     cmd_code,
     cmd_computer,

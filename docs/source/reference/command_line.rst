@@ -32,6 +32,27 @@ Below is a list with all available subcommands.
       version  Print the current version of an archive's schema.
 
 
+.. _reference:command-line:verdi-blitz:
+
+``verdi blitz``
+---------------
+
+.. code:: console
+
+    Usage:  [OPTIONS]
+
+      Set up a minimal ready-to-go version of AiiDA.
+
+      This command will create a profile that does not require any services like PostgreSQL
+      and RabbitMQ. This makes it very easy to set up and get started using AiiDA. However, it
+      will not provide all of AiiDA's functionality. The data storage is not designed for
+      high-throughput and production use, and processes can only be run locally and not
+      submitted to the daemon to allow AiiDA to scale with higher load.
+
+    Options:
+      --help  Show this message and exit.
+
+
 .. _reference:command-line:verdi-calcjob:
 
 ``verdi calcjob``

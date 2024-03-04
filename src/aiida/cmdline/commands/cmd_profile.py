@@ -41,8 +41,22 @@ def command_create_profile(
     if not storage_cls.read_only and kwargs.get('email', None) is None:
         raise click.BadParameter('The option is required for storages that are not read-only.', param_hint='--email')
 
+    email = kwargs.pop('email')
+    first_name = kwargs.pop('first_name')
+    last_name = kwargs.pop('last_name')
+    institution = kwargs.pop('institution')
+
     try:
-        profile = create_profile(ctx.obj.config, storage_cls, name=profile.name, **kwargs)
+        profile = create_profile(
+            ctx.obj.config,
+            name=profile.name,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            institution=institution,
+            storage_cls=storage_cls,
+            storage_config=kwargs,
+        )
     except (ValueError, TypeError, exceptions.EntryPointError, exceptions.StorageMigrationError) as exception:
         echo.echo_critical(str(exception))
 

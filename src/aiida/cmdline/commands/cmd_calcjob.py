@@ -382,5 +382,5 @@ def dump(
         output_path=output_path,
         no_node_inputs=no_node_inputs,
         use_prepare_for_submission=use_prepare_for_submission,
-        node_dumper=processnode_dumper
+        node_dumper=processnode_dumper,
     )

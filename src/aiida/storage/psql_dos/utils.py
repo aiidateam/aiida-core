@@ -31,6 +31,8 @@ def create_sqlalchemy_engine(config: PsqlConfig):
         See https://docs.sqlalchemy.org/en/13/core/engines.html?highlight=create_engine#sqlalchemy.create_engine for
         more info.
     """
+    from urllib.parse import quote_plus
+
     from sqlalchemy import create_engine
     from urllib.parse import quote_plus
 

@@ -33,8 +33,7 @@ def create_sqlalchemy_engine(config: PsqlConfig):
     """
     from urllib.parse import quote_plus
 
-    from sqlalchemy import create_engine
-    from urllib.parse import quote_plus
+    from sqlalchemy import create_engines
 
     # The hostname may be `None`, which is a valid value in the case of peer authentication for example. In this case
     # it should be converted to an empty string, because otherwise the `None` will be converted to string literal "None"

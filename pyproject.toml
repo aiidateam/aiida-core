@@ -191,7 +191,7 @@ bpython = [
   'bpython~=0.18.0'
 ]
 docs = [
-  'pydata-sphinx-theme~=0.13.3',
+  'pydata-sphinx-theme~=0.15.1',
   'sphinx~=7.2',
   'sphinx-copybutton~=0.5.0',
   'sphinx-design~=0.5.0',

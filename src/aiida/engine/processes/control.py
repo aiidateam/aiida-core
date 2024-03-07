@@ -245,7 +245,7 @@ def _perform_actions(
     _resolve_futures(futures, infinitive, present, wait, timeout)
 
 
-#pylint: disable=too-many-branches
+# pylint: disable=too-many-branches
 def _resolve_futures(
     futures: dict[concurrent.futures.Future, ProcessNode],
     infinitive: str,

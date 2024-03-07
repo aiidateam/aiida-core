@@ -51,11 +51,7 @@ class MultiplyAddWorkChain(WorkChain):
             'x': self.ctx.product,
             'y': self.inputs.z,
             'code': self.inputs.code,
-            'metadata': {
-                'options': {
-                    'sleep': self.inputs.t.value
-                }
-            }
+            'metadata': {'options': {'sleep': self.inputs.t.value}},
         }
         future = self.submit(ArithmeticAddCalculation, **inputs)
 

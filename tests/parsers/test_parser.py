@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -11,7 +10,6 @@
 import io
 
 import pytest
-
 from aiida import orm
 from aiida.common import LinkType
 from aiida.engine import CalcJob
@@ -19,8 +17,8 @@ from aiida.parsers import Parser
 from aiida.parsers.plugins.arithmetic.add import SimpleArithmeticAddParser  # for demonstration purposes only
 from aiida.plugins import CalculationFactory, ParserFactory
 
-ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
-ArithmeticAddParser = ParserFactory('core.arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
+ArithmeticAddParser = ParserFactory('core.arithmetic.add')
 
 
 class CustomCalcJob(CalcJob):
@@ -33,7 +31,7 @@ class CustomCalcJob(CalcJob):
         spec.output('output', pass_to_parser=True)
         spec.output_namespace('out.space', dynamic=True)
 
-    def prepare_for_submission(self):  # pylint: disable=arguments-differ
+    def prepare_for_submission(self):
         pass
 
 
@@ -61,15 +59,14 @@ class TestParser:
     """Test backend entities and their collections"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
 
     def test_abstract_parse_method(self):
         """Verify that trying to instantiate base class will raise `TypeError` because of abstract `parse` method."""
         with pytest.raises(TypeError):
-            Parser()  # pylint: disable=abstract-class-instantiated,no-value-for-parameter
+            Parser()
 
     def test_parser_retrieved(self):
         """Verify that the `retrieved` property returns the retrieved `FolderData` node."""

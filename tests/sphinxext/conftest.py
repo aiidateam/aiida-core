@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -29,7 +28,8 @@ class SphinxBuild:
     def build(self, assert_pass=True):
         """Build sphinx app.
 
-        :param assert_pass: if True, assert that no warnings are raised during build"""
+        :param assert_pass: if True, assert that no warnings are raised during build
+        """
         try:
             sys.path.append(str(WORKCHAIN_DIR.absolute()))
             self.app.build()
@@ -41,11 +41,11 @@ class SphinxBuild:
 
     @property
     def status(self):
-        return self.app._status.getvalue()  # pylint: disable=protected-access
+        return self.app._status.getvalue()
 
     @property
     def warnings(self):
-        return self.app._warning.getvalue()  # pylint: disable=protected-access
+        return self.app._warning.getvalue()
 
     @property
     def outdir(self):

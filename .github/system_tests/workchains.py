@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name
 """Work chain implementations for testing purposes."""
 from aiida.common import AttributeDict
 from aiida.engine import (
@@ -64,15 +62,15 @@ class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
     def sanity_check_not_too_big(self, node):
         """My puny brain cannot deal with numbers that I cannot count on my hand."""
         if node.is_finished_ok and node.outputs.sum > 10:
-            return ProcessHandlerReport(True, self.exit_codes.ERROR_TOO_BIG)  # pylint: disable=no-member
+            return ProcessHandlerReport(True, self.exit_codes.ERROR_TOO_BIG)
 
     @process_handler(priority=460, enabled=False)
-    def disabled_handler(self, node):  # pylint: disable=unused-argument
+    def disabled_handler(self, node):
         """By default this is not enabled and so should never be called, irrespective of exit codes of sub process."""
-        return ProcessHandlerReport(True, self.exit_codes.ERROR_ENABLED_DOOM)  # pylint: disable=no-member
+        return ProcessHandlerReport(True, self.exit_codes.ERROR_ENABLED_DOOM)
 
     @process_handler(priority=450, exit_codes=ExitCode(1000, 'Unicorn encountered'))
-    def a_magic_unicorn_appeared(self, node):  # pylint: disable=no-self-argument
+    def a_magic_unicorn_appeared(self, node):
         """As we all know unicorns do not exist so we should never have to deal with it."""
         raise RuntimeError('this handler should never even have been called')
 
@@ -85,9 +83,7 @@ class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
 
 
 class NestedWorkChain(WorkChain):
-    """
-    Nested workchain which creates a workflow where the nesting level is equal to its input.
-    """
+    """Nested workchain which creates a workflow where the nesting level is equal to its input."""
 
     @classmethod
     def define(cls, spec):
@@ -216,9 +212,7 @@ class DynamicMixedInput(WorkChain):
 
 
 class CalcFunctionRunnerWorkChain(WorkChain):
-    """
-    WorkChain which calls an InlineCalculation in its step.
-    """
+    """WorkChain which calls an InlineCalculation in its step."""
 
     @classmethod
     def define(cls, spec):
@@ -234,9 +228,7 @@ class CalcFunctionRunnerWorkChain(WorkChain):
 
 
 class WorkFunctionRunnerWorkChain(WorkChain):
-    """
-    WorkChain which calls a workfunction in its step
-    """
+    """WorkChain which calls a workfunction in its step"""
 
     @classmethod
     def define(cls, spec):

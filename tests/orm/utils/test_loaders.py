@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Module to test orm utilities to load nodes, codes etc."""
 import pytest
-
 from aiida.common.exceptions import NotExistent
 from aiida.orm import Data, Group, Node
 from aiida.orm.utils import load_code, load_computer, load_entity, load_group, load_node
@@ -20,9 +18,8 @@ class TestOrmUtils:
     """Test orm utils."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
 
     def test_load_entity(self):
@@ -101,7 +98,6 @@ class TestOrmUtils:
 
     def test_load_computer(self):
         """Test the functionality of load_group."""
-        # pylint: disable=no-member
         computer = self.computer
 
         # Load through label

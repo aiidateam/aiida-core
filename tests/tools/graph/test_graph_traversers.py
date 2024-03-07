@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,14 +8,12 @@
 ###########################################################################
 """Tests for aiida.tools.graph.graph_traversers"""
 import pytest
-
 from aiida.common.links import LinkType
 from aiida.tools.graph.graph_traversers import get_nodes_delete, traverse_graph
 
 
 def create_minimal_graph():
-    """
-    Creates a minimal graph which has one parent workflow (W2) that calls
+    """Creates a minimal graph which has one parent workflow (W2) that calls
     a child workflow (W1) which calls a calculation function (C0). There
     is one input (DI) and one output (DO). It has at least one link of
     each class:
@@ -96,88 +93,85 @@ class TestTraverseGraph:
         assert obtained_nodes == expected_nodes
 
     def test_traversal_individually(self):
-        """
-        This will go through all the rules and check one case in the graph
+        """This will go through all the rules and check one case in the graph
         where it can be applied.
         """
-
         nodes_dict = create_minimal_graph()
 
         self._single_test(
             starting_nodes=[nodes_dict['data_i'].pk],
             expanded_nodes=[nodes_dict['calc_0'].pk],
-            links_forward=[LinkType.INPUT_CALC]
+            links_forward=[LinkType.INPUT_CALC],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['calc_0'].pk],
             expanded_nodes=[nodes_dict['data_i'].pk],
-            links_backward=[LinkType.INPUT_CALC]
+            links_backward=[LinkType.INPUT_CALC],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['calc_0'].pk],
             expanded_nodes=[nodes_dict['data_o'].pk],
-            links_forward=[LinkType.CREATE]
+            links_forward=[LinkType.CREATE],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['data_o'].pk],
             expanded_nodes=[nodes_dict['calc_0'].pk],
-            links_backward=[LinkType.CREATE]
+            links_backward=[LinkType.CREATE],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['work_1'].pk],
             expanded_nodes=[nodes_dict['data_o'].pk],
-            links_forward=[LinkType.RETURN]
+            links_forward=[LinkType.RETURN],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['data_o'].pk],
             expanded_nodes=[nodes_dict['work_1'].pk, nodes_dict['work_2'].pk],
-            links_backward=[LinkType.RETURN]
+            links_backward=[LinkType.RETURN],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['data_i'].pk],
             expanded_nodes=[nodes_dict['work_1'].pk, nodes_dict['work_2'].pk],
-            links_forward=[LinkType.INPUT_WORK]
+            links_forward=[LinkType.INPUT_WORK],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['work_1'].pk],
             expanded_nodes=[nodes_dict['data_i'].pk],
-            links_backward=[LinkType.INPUT_WORK]
+            links_backward=[LinkType.INPUT_WORK],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['work_1'].pk],
             expanded_nodes=[nodes_dict['calc_0'].pk],
-            links_forward=[LinkType.CALL_CALC]
+            links_forward=[LinkType.CALL_CALC],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['calc_0'].pk],
             expanded_nodes=[nodes_dict['work_1'].pk],
-            links_backward=[LinkType.CALL_CALC]
+            links_backward=[LinkType.CALL_CALC],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['work_2'].pk],
             expanded_nodes=[nodes_dict['work_1'].pk],
-            links_forward=[LinkType.CALL_WORK]
+            links_forward=[LinkType.CALL_WORK],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['work_1'].pk],
             expanded_nodes=[nodes_dict['work_2'].pk],
-            links_backward=[LinkType.CALL_WORK]
+            links_backward=[LinkType.CALL_WORK],
         )
 
     def test_traversal_full_graph(self):
-        """
-        This will test that the traverser can get the full graph with the minimal traverse
+        """This will test that the traverser can get the full graph with the minimal traverse
         required keywords.
         """
         nodes_dict = create_minimal_graph()
@@ -188,96 +182,95 @@ class TestTraverseGraph:
             starting_nodes=[nodes_dict['data_i'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.CALL_CALC, LinkType.CALL_WORK],
-            links_forward=[LinkType.INPUT_CALC, LinkType.RETURN]
+            links_forward=[LinkType.INPUT_CALC, LinkType.RETURN],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['data_i'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.RETURN],
-            links_forward=[LinkType.INPUT_CALC, LinkType.CREATE]
+            links_forward=[LinkType.INPUT_CALC, LinkType.CREATE],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['data_i'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[],
-            links_forward=[LinkType.INPUT_WORK, LinkType.CALL_CALC, LinkType.CREATE]
+            links_forward=[LinkType.INPUT_WORK, LinkType.CALL_CALC, LinkType.CREATE],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['data_o'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.CREATE, LinkType.CALL_CALC, LinkType.INPUT_WORK, LinkType.CALL_WORK],
-            links_forward=[]
+            links_forward=[],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['data_o'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.CREATE, LinkType.INPUT_CALC],
-            links_forward=[LinkType.INPUT_WORK]
+            links_forward=[LinkType.INPUT_WORK],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['data_o'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.RETURN, LinkType.INPUT_CALC],
-            links_forward=[LinkType.CALL_CALC]
+            links_forward=[LinkType.CALL_CALC],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['calc_0'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.INPUT_CALC, LinkType.CALL_CALC, LinkType.CALL_WORK],
-            links_forward=[LinkType.CREATE]
+            links_forward=[LinkType.CREATE],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['calc_0'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.RETURN, LinkType.INPUT_WORK],
-            links_forward=[LinkType.CREATE]
+            links_forward=[LinkType.CREATE],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['calc_0'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.INPUT_CALC],
-            links_forward=[LinkType.RETURN, LinkType.INPUT_WORK]
+            links_forward=[LinkType.RETURN, LinkType.INPUT_WORK],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['work_1'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.INPUT_WORK, LinkType.CALL_WORK],
-            links_forward=[LinkType.RETURN, LinkType.CALL_CALC]
+            links_forward=[LinkType.RETURN, LinkType.CALL_CALC],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['work_2'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.INPUT_CALC],
-            links_forward=[LinkType.CREATE, LinkType.CALL_CALC, LinkType.CALL_WORK]
+            links_forward=[LinkType.CREATE, LinkType.CALL_CALC, LinkType.CALL_WORK],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['work_1'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.CREATE, LinkType.INPUT_CALC],
-            links_forward=[LinkType.RETURN, LinkType.INPUT_WORK]
+            links_forward=[LinkType.RETURN, LinkType.INPUT_WORK],
         )
 
         self._single_test(
             starting_nodes=[nodes_dict['work_1'].pk],
             expanded_nodes=expected_nodes,
             links_backward=[LinkType.INPUT_CALC, LinkType.RETURN],
-            links_forward=[LinkType.CREATE, LinkType.CALL_CALC]
+            links_forward=[LinkType.CREATE, LinkType.CALL_CALC],
         )
 
     def test_traversal_cycle(self):
-        """
-        This will test that cycles don't go into infinite loops by testing a
+        """This will test that cycles don't go into infinite loops by testing a
         graph with two data nodes data_take and data_drop and a work_select
         that takes both as input but returns only data_take
         """
@@ -308,20 +301,23 @@ class TestTraverseGraph:
         links_backward = []
 
         # Forward: data_drop to (input) work_select to (return) data_take
-        obtained_nodes = traverse_graph([data_drop], links_forward=links_forward,
-                                        links_backward=links_backward)['nodes']
+        obtained_nodes = traverse_graph([data_drop], links_forward=links_forward, links_backward=links_backward)[
+            'nodes'
+        ]
         expected_nodes = set(every_node)
         assert obtained_nodes == expected_nodes
 
         # Forward: data_take to (input) work_select (data_drop is not returned)
-        obtained_nodes = traverse_graph([data_take], links_forward=links_forward,
-                                        links_backward=links_backward)['nodes']
+        obtained_nodes = traverse_graph([data_take], links_forward=links_forward, links_backward=links_backward)[
+            'nodes'
+        ]
         expected_nodes = set([work_select, data_take])
         assert obtained_nodes == expected_nodes
 
         # Forward: work_select to (return) data_take (data_drop is not returned)
-        obtained_nodes = traverse_graph([work_select], links_forward=links_forward,
-                                        links_backward=links_backward)['nodes']
+        obtained_nodes = traverse_graph([work_select], links_forward=links_forward, links_backward=links_backward)[
+            'nodes'
+        ]
         assert obtained_nodes == expected_nodes
 
         links_forward = []
@@ -329,19 +325,22 @@ class TestTraverseGraph:
 
         # Backward: data_drop is not returned so it has no backward link
         expected_nodes = set([data_drop])
-        obtained_nodes = traverse_graph([data_drop], links_forward=links_forward,
-                                        links_backward=links_backward)['nodes']
+        obtained_nodes = traverse_graph([data_drop], links_forward=links_forward, links_backward=links_backward)[
+            'nodes'
+        ]
         assert obtained_nodes == expected_nodes
 
         # Backward: data_take to (return) work_select to (input) data_drop
         expected_nodes = set(every_node)
-        obtained_nodes = traverse_graph([data_take], links_forward=links_forward,
-                                        links_backward=links_backward)['nodes']
+        obtained_nodes = traverse_graph([data_take], links_forward=links_forward, links_backward=links_backward)[
+            'nodes'
+        ]
         assert obtained_nodes == expected_nodes
 
         # Backward: work_select to (input) data_take and data_drop
-        obtained_nodes = traverse_graph([work_select], links_forward=links_forward,
-                                        links_backward=links_backward)['nodes']
+        obtained_nodes = traverse_graph([work_select], links_forward=links_forward, links_backward=links_backward)[
+            'nodes'
+        ]
         assert obtained_nodes == expected_nodes
 
     def test_traversal_errors(self):
@@ -369,10 +368,13 @@ class TestTraverseGraph:
 
     def test_empty_input(self):
         """Testing empty input."""
-
         all_links = [
-            LinkType.INPUT_CALC, LinkType.CALL_CALC, LinkType.CREATE, LinkType.INPUT_WORK, LinkType.CALL_WORK,
-            LinkType.RETURN
+            LinkType.INPUT_CALC,
+            LinkType.CALL_CALC,
+            LinkType.CREATE,
+            LinkType.INPUT_WORK,
+            LinkType.CALL_WORK,
+            LinkType.RETURN,
         ]
 
         obtained_results = traverse_graph([], links_forward=all_links, links_backward=all_links)
@@ -385,7 +387,6 @@ class TestTraverseGraph:
 
     def test_delete_aux(self):
         """Tests for the get_nodes_delete function"""
-
         nodes_dict = create_minimal_graph()
         nodes_pklist = [value.pk for value in nodes_dict.values()]
 

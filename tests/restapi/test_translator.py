@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Tests for the `aiida.restapi.translator` module."""
 from aiida.orm import Data
-# pylint: disable=invalid-name
 from aiida.restapi.translator.nodes.node import NodeTranslator
 
 

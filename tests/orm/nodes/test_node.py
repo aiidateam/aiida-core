@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,15 +6,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=attribute-defined-outside-init,no-member,too-many-public-methods,too-many-lines
 """Tests for the Node ORM class."""
-from decimal import Decimal
-from io import BytesIO
 import logging
 import os
+from decimal import Decimal
+from io import BytesIO
 
 import pytest
-
 from aiida.common import LinkType, exceptions, timezone
 from aiida.manage import get_manager
 from aiida.orm import CalculationNode, Computer, Data, Int, Log, Node, User, WorkflowNode, load_node
@@ -33,7 +30,7 @@ class TestNode:
             description='localhost computer set up by test manager',
             hostname='localhost',
             transport_type='core.local',
-            scheduler_type='core.direct'
+            scheduler_type='core.direct',
         )
         self.computer.store()
 
@@ -51,7 +48,7 @@ class TestNode:
     def test_repository_garbage_collection(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""
         node = Data()
-        dirpath = node.base.repository._repository.backend.sandbox.abspath  # pylint: disable=protected-access
+        dirpath = node.base.repository._repository.backend.sandbox.abspath
 
         assert os.path.isdir(dirpath)
         del node.base.repository
@@ -88,13 +85,14 @@ class TestNode:
 
     @staticmethod
     @pytest.mark.parametrize(
-        'process_type, match', (
+        'process_type, match',
+        (
             (None, r'no process type for Node<.*>: cannot recreate process class'),
             ('aiida.calculations:core.non_existing', r'could not load process class for entry point `.*`.*'),
             ('invalid', r'could not load process class from `.*`.*'),
             ('aiida.orm.non-existing.some_function', r'could not load process class from `.*`.*'),
             ('aiida.orm.nodes.node.non-existing-function', r'could not load process class from `.*`.*'),
-        )
+        ),
     )
     def test_process_class_raises(process_type, match):
         """Test the ``ProcessNode.process_class`` property when it is expected to raise.
@@ -111,7 +109,7 @@ class TestNode:
         node = CalculationNode(process_type=process_type)
 
         with pytest.raises(ValueError, match=match):
-            node.process_class  # pylint: disable=pointless-statement
+            node.process_class
 
     def test_entry_point(self):
         """Test the :meth:`aiida.orm.nodes.node.Node.entry_point` property."""
@@ -758,7 +756,6 @@ class TestNodeLinks:
 
     def test_tab_completable_properties(self):
         """Test properties to go from one node to a neighboring one"""
-        # pylint: disable=too-many-statements
         input1 = Data().store()
         input2 = Data().store()
 
@@ -838,8 +835,6 @@ class TestNodeLinks:
 
 class TestNodeDelete:
     """Tests for deleting nodes."""
-
-    # pylint: disable=no-member
 
     def test_delete_through_backend(self):
         """Test deletion works correctly through the backend."""
@@ -980,7 +975,7 @@ class TestNodeCaching:
         data.store()
 
         clone = data.clone()
-        clone._store_from_cache(data)  # pylint: disable=protected-access
+        clone._store_from_cache(data)
 
         assert clone.is_stored
         assert clone.base.caching.get_cache_source() == data.uuid
@@ -1030,5 +1025,5 @@ def test_iter_repo_keys():
     assert set(Data.collection.iter_repo_keys()) == {
         '31cd97ebe10a80abe1b3f401824fc2040fb8b03aafd0d37acf6504777eddee11',
         '3c9683017f9e4bf33d0fbedd26bf143fd72de9b9dd145441b75f0604047ea28e',
-        '89dc6ae7f06a9f46b565af03eab0ece0bf6024d3659b7e3a1d03573cfeb0b59d'
+        '89dc6ae7f06a9f46b565af03eab0ece0bf6024d3659b7e3a1d03573cfeb0b59d',
     }

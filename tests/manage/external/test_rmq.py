@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,26 +6,27 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the `aiida.manage.external.rmq` module."""
 import pathlib
 import uuid
 
-from kiwipy.rmq import RmqThreadCommunicator
 import pytest
 import requests
-
 from aiida.engine.processes import ProcessState, control
 from aiida.manage.external import rmq
 from aiida.orm import Int
+from kiwipy.rmq import RmqThreadCommunicator
 
 
-@pytest.mark.parametrize(('args', 'kwargs', 'expected'), (
-    ((), {}, 'amqp://guest:guest@127.0.0.1:5672?'),
-    ((), {'heartbeat': 1}, 'amqp://guest:guest@127.0.0.1:5672?'),
-    ((), {'cafile': 'file', 'cadata': 'ab'}, 'amqp://guest:guest@127.0.0.1:5672?'),
-    (('amqps', 'jojo', 'rabbit', '192.168.0.1', 6783), {}, 'amqps://jojo:rabbit@192.168.0.1:6783?'),
-))  # yapf: disable
+@pytest.mark.parametrize(
+    ('args', 'kwargs', 'expected'),
+    (
+        ((), {}, 'amqp://guest:guest@127.0.0.1:5672?'),
+        ((), {'heartbeat': 1}, 'amqp://guest:guest@127.0.0.1:5672?'),
+        ((), {'cafile': 'file', 'cadata': 'ab'}, 'amqp://guest:guest@127.0.0.1:5672?'),
+        (('amqps', 'jojo', 'rabbit', '192.168.0.1', 6783), {}, 'amqps://jojo:rabbit@192.168.0.1:6783?'),
+    ),
+)
 def test_get_rmq_url(args, kwargs, expected):
     """Test the `get_rmq_url` method.
 

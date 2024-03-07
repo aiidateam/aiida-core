@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test fixtures for the :mod:`aiida.repository` module."""
 import os
 import pathlib
@@ -11,7 +10,7 @@ import pytest
 def generate_directory(tmp_path: pathlib.Path) -> typing.Callable:
     """Construct a temporary directory with some arbitrary file hierarchy in it."""
 
-    def _generate_directory(metadata: dict = None) -> pathlib.Path:
+    def _generate_directory(metadata: typing.Optional[dict] = None) -> pathlib.Path:
         """Construct the contents of the temporary directory based on the metadata mapping.
 
         :param: file object hierarchy to construct. Each key corresponds to either a directory or file to create. If the

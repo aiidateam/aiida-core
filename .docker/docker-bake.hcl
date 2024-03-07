@@ -51,6 +51,7 @@ target "aiida-core-base" {
   platforms = "${PLATFORMS}"
   args = {
     "PYTHON_VERSION" = "${PYTHON_VERSION}"
+    "MAMBA_VERSION" = "1.5.2"
   }
 }
 target "aiida-core-with-services" {

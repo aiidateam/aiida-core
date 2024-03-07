@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from aiida.engine import calcfunction
 
 
@@ -10,6 +9,7 @@ def add(x: int, y: int):
     :param y: Right hand operand.
     """
     return x + y
+
 
 assert add.spec().inputs['a'].help == 'Left hand operand.'
 assert add.spec().inputs['b'].help == 'Right hand operand.'

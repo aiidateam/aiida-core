@@ -1,5 +1,6 @@
 ### python builtins
 py:class _io.BufferedReader
+py:class _io.StringIO
 py:class AliasedClass
 py:class asyncio.events.AbstractEventLoop
 py:class AbstractContextManager
@@ -136,6 +137,7 @@ py:func click.shell_completion._start_of_option
 py:meth click.Option.get_default
 py:meth fail
 
+py:class ComputedFieldInfo
 py:class pydantic.main.BaseModel
 
 py:class requests.models.Response
@@ -205,6 +207,7 @@ py:class sqlalchemy.orm.decl_api.SqliteModel
 py:class sqlalchemy.orm.decl_api.Base
 py:class sqlalchemy.sql.compiler.TypeCompiler
 py:class sqlalchemy.sql.elements.BooleanClauseList
+py:meth sqlalchemy.orm.unitofwork.UOWTransaction.register_object
 
 py:class sphinx.ext.autodoc.ClassDocumenter
 py:class sphinx.util.docutils.SphinxDirective

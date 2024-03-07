@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -11,12 +10,12 @@
 import sys
 
 import pytest
-
 from aiida import orm
 from aiida.engine import processes, run_get_node
 from aiida.plugins import CalculationFactory
-from tests.utils import processes as test_processes  # pylint: disable=no-name-in-module,import-error
-from tests.utils.memory import get_instances  # pylint: disable=no-name-in-module,import-error
+
+from tests.utils import processes as test_processes
+from tests.utils.memory import get_instances
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,13 +7,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test using the archive backend directly."""
-# pylint: disable=redefined-outer-name
 import pytest
-
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation import StorageBackend
 from aiida.tools.archive import ArchiveFormatSqlZip, ArchiveReaderAbstract
+
 from tests.utils.archives import get_archive_file
 
 

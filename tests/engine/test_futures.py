@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -11,15 +10,16 @@
 import asyncio
 
 import pytest
-
 from aiida.engine import processes, run
 from aiida.manage import get_manager
+
 from tests.utils import processes as test_processes
 
 
 @pytest.mark.requires_rmq
 class TestWf:
     """Test process futures."""
+
     TIMEOUT = 5.0  # seconds
 
     def test_calculation_future_broadcasts(self):
@@ -40,7 +40,6 @@ class TestWf:
 
     def test_calculation_future_polling(self):
         """Test calculation future polling."""
-
         runner = get_manager().get_runner()
         process = test_processes.DummyProcess()
 

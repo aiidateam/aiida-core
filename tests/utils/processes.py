@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -10,7 +9,6 @@
 """Utilities for testing components from the workflow engine"""
 
 import plumpy
-
 from aiida.engine import Process
 from aiida.orm import Bool, CalcJobNode, Data, WorkflowNode
 
@@ -97,7 +95,7 @@ class InvalidateCaching(Process):
 
     def run(self):
         if self.inputs.return_exit_code:
-            return self.exit_codes.GENERIC_EXIT_CODE  # pylint: disable=no-member
+            return self.exit_codes.GENERIC_EXIT_CODE
 
 
 class IsValidCacheHook(Process):

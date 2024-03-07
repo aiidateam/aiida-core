@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Tests for the configuration options."""
 import pytest
-
 from aiida import get_profile
 from aiida.common.exceptions import ConfigurationError
 from aiida.manage.configuration import get_config, get_config_option
@@ -38,7 +36,6 @@ class TestConfigurationOptions:
 
     def test_parse_option(self):
         """Test `parse_option` function."""
-
         with pytest.raises(ConfigurationError):
             parse_option('logging.aiida_loglevel', 1)
 
@@ -51,8 +48,8 @@ class TestConfigurationOptions:
             option = get_option(option_name)
             assert option.name == option_name
             assert isinstance(option.description, str)
-            option.valid_type  # pylint: disable=pointless-statement
-            option.default  # pylint: disable=pointless-statement
+            option.valid_type
+            option.default
 
     def test_get_config_option_default(self):
         """Tests that `get_option` return option default if not specified globally or for current profile."""

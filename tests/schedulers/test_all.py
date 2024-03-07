@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,12 +6,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests run for all plugins in :mod:`aiida.schedulers.plugins`."""
 from __future__ import annotations
 
 import pytest
-
 from aiida.common.datastructures import CodeRunMode
 from aiida.plugins import SchedulerFactory, entry_point
 from aiida.schedulers import Scheduler

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -10,7 +9,6 @@
 """Tests for process spec ports."""
 
 import pytest
-
 from aiida.engine.processes.ports import InputPort, PortNamespace
 from aiida.orm import Dict, Int
 
@@ -20,7 +18,6 @@ class TestInputPort:
 
     def test_with_non_db(self):
         """Test the functionality of the `non_db` attribute upon construction and setting."""
-
         # When not specifying, it should get the default value and `non_db_explicitly_set` should be `False`
         port = InputPort('port')
         assert port.non_db is False

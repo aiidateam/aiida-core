@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -15,6 +14,7 @@ from tests.static import STATIC_DIR
 
 class TestCodDbImporter:
     """Test the CodDbImporter class."""
+
     from aiida.orm.nodes.data.cif import has_pycifrw  # type: ignore[misc]
 
     def test_query_construction_1(self):
@@ -36,7 +36,7 @@ class TestCodDbImporter:
             alpha=[10.0 / 6, 0],
             measurement_temp=[0, 10.5],
             measurement_pressure=[1000, 1001],
-            determination_method=['single crystal', None]
+            determination_method=['single crystal', None],
         )
 
         # Rounding errors occur in Python 3 thus they are averted using
@@ -44,53 +44,61 @@ class TestCodDbImporter:
         q_sql = re.sub(r'(\d\.\d{6})\d+', r'\1', q_sql)
         q_sql = re.sub(r'(120.00)39+', r'\g<1>4', q_sql)
 
-        assert q_sql == \
-                          'SELECT file, svnrevision FROM data WHERE ' \
-                          "(status IS NULL OR status != 'retracted') AND " \
-                          '(a BETWEEN 3.332333 AND 3.334333 OR ' \
-                          'a BETWEEN 0.999 AND 1.001) AND ' \
-                          '(alpha BETWEEN 1.665666 AND 1.667666 OR ' \
-                          'alpha BETWEEN -0.001 AND 0.001) AND ' \
-                          "(chemname LIKE '%caffeine%' OR " \
-                          "chemname LIKE '%serotonine%') AND " \
-                          "(method IN ('single crystal') OR method IS NULL) AND " \
-                          "(formula REGEXP ' C[0-9 ]' AND " \
-                          "formula REGEXP ' H[0-9 ]' AND " \
-                          "formula REGEXP ' Cl[0-9 ]') AND " \
-                          "(formula IN ('- C6 H6 -')) AND " \
-                          '(file IN (1000000, 3000000)) AND ' \
-                          '(cellpressure BETWEEN 999 AND 1001 OR ' \
-                          'cellpressure BETWEEN 1000 AND 1002) AND ' \
-                          '(celltemp BETWEEN -0.001 AND 0.001 OR ' \
-                          'celltemp BETWEEN 10.499 AND 10.501) AND ' \
-                          "(nel IN (5)) AND (sg IN ('P -1')) AND " \
-                          '(vol BETWEEN 99.999 AND 100.001 OR ' \
-                          'vol BETWEEN 120.004 AND 120.006)'
+        assert (
+            q_sql == 'SELECT file, svnrevision FROM data WHERE '
+            "(status IS NULL OR status != 'retracted') AND "
+            '(a BETWEEN 3.332333 AND 3.334333 OR '
+            'a BETWEEN 0.999 AND 1.001) AND '
+            '(alpha BETWEEN 1.665666 AND 1.667666 OR '
+            'alpha BETWEEN -0.001 AND 0.001) AND '
+            "(chemname LIKE '%caffeine%' OR "
+            "chemname LIKE '%serotonine%') AND "
+            "(method IN ('single crystal') OR method IS NULL) AND "
+            "(formula REGEXP ' C[0-9 ]' AND "
+            "formula REGEXP ' H[0-9 ]' AND "
+            "formula REGEXP ' Cl[0-9 ]') AND "
+            "(formula IN ('- C6 H6 -')) AND "
+            '(file IN (1000000, 3000000)) AND '
+            '(cellpressure BETWEEN 999 AND 1001 OR '
+            'cellpressure BETWEEN 1000 AND 1002) AND '
+            '(celltemp BETWEEN -0.001 AND 0.001 OR '
+            'celltemp BETWEEN 10.499 AND 10.501) AND '
+            "(nel IN (5)) AND (sg IN ('P -1')) AND "
+            '(vol BETWEEN 99.999 AND 100.001 OR '
+            'vol BETWEEN 120.004 AND 120.006)'
+        )
 
     def test_datatype_checks(self):
         """Rather complicated, but wide-coverage test for data types, accepted
-        and rejected by CodDbImporter._*_clause methods."""
+        and rejected by CodDbImporter._*_clause methods.
+        """
         from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 
         codi = CodDbImporter()
         messages = [
-            '', "incorrect value for keyword 'test' only integers and strings are accepted",
+            '',
+            "incorrect value for keyword 'test' only integers and strings are accepted",
             "incorrect value for keyword 'test' only strings are accepted",
             "incorrect value for keyword 'test' only integers and floats are accepted",
-            "invalid literal for int() with base 10: 'text'"
+            "invalid literal for int() with base 10: 'text'",
         ]
         values = [10, 'text', 'text', '10', 1.0 / 3, [1, 2, 3]]
         methods = [
-            # pylint: disable=protected-access
             codi._int_clause,
             codi._str_exact_clause,
             codi._formula_clause,
             codi._str_fuzzy_clause,
             codi._composition_clause,
-            codi._volume_clause
+            codi._volume_clause,
         ]
-        results = [[0, 4, 4, 0, 1, 1], [0, 0, 0, 0, 1, 1], [2, 0, 0, 0, 2, 2], [0, 0, 0, 0, 1, 1], [2, 0, 0, 0, 2, 2],
-                   [0, 3, 3, 3, 0, 3]]
+        results = [
+            [0, 4, 4, 0, 1, 1],
+            [0, 0, 0, 0, 1, 1],
+            [2, 0, 0, 0, 2, 2],
+            [0, 0, 0, 0, 1, 1],
+            [2, 0, 0, 0, 2, 2],
+            [0, 3, 3, 3, 0, 3],
+        ]
 
         for i, method in enumerate(methods):
             for j, value in enumerate(values):
@@ -105,16 +113,13 @@ class TestCodDbImporter:
         """Tests the creation of CodEntry from CodSearchResults."""
         from aiida.tools.dbimporters.plugins.cod import CodSearchResults
 
-        results = CodSearchResults([{
-            'id': '1000000',
-            'svnrevision': None
-        }, {
-            'id': '1000001',
-            'svnrevision': '1234'
-        }, {
-            'id': '2000000',
-            'svnrevision': '1234'
-        }])
+        results = CodSearchResults(
+            [
+                {'id': '1000000', 'svnrevision': None},
+                {'id': '1000001', 'svnrevision': '1234'},
+                {'id': '2000000', 'svnrevision': '1234'},
+            ]
+        )
         assert len(results) == 3
         assert results.at(1).source == {
             'db_name': 'Crystallography Open Database',
@@ -127,8 +132,9 @@ class TestCodDbImporter:
             'version': '1234',
         }
         assert [x.source['uri'] for x in results] == [
-            'http://www.crystallography.net/cod/1000000.cif', 'http://www.crystallography.net/cod/1000001.cif@1234',
-            'http://www.crystallography.net/cod/2000000.cif@1234'
+            'http://www.crystallography.net/cod/1000000.cif',
+            'http://www.crystallography.net/cod/1000001.cif@1234',
+            'http://www.crystallography.net/cod/2000000.cif@1234',
         ]
 
     @pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
@@ -162,16 +168,13 @@ class TestTcodDbImporter:
         """Tests the creation of TcodEntry from TcodSearchResults."""
         from aiida.tools.dbimporters.plugins.tcod import TcodSearchResults
 
-        results = TcodSearchResults([{
-            'id': '10000000',
-            'svnrevision': None
-        }, {
-            'id': '10000001',
-            'svnrevision': '1234'
-        }, {
-            'id': '20000000',
-            'svnrevision': '1234'
-        }])
+        results = TcodSearchResults(
+            [
+                {'id': '10000000', 'svnrevision': None},
+                {'id': '10000001', 'svnrevision': '1234'},
+                {'id': '20000000', 'svnrevision': '1234'},
+            ]
+        )
         assert len(results) == 3
         assert results.at(1).source == {
             'db_name': 'Theoretical Crystallography Open Database',
@@ -184,8 +187,9 @@ class TestTcodDbImporter:
             'version': '1234',
         }
         assert [x.source['uri'] for x in results] == [
-            'http://www.crystallography.net/tcod/10000000.cif', 'http://www.crystallography.net/tcod/10000001.cif@1234',
-            'http://www.crystallography.net/tcod/20000000.cif@1234'
+            'http://www.crystallography.net/tcod/10000000.cif',
+            'http://www.crystallography.net/tcod/10000001.cif@1234',
+            'http://www.crystallography.net/tcod/20000000.cif@1234',
         ]
 
 
@@ -248,7 +252,7 @@ class TestNnincDbImporter:
 
         path_pseudos = os.path.join(STATIC_DIR, 'pseudos')
         with open(os.path.join(path_pseudos, f'{upf}.UPF'), 'r', encoding='utf8') as fpntr:
-            entry._contents = fpntr.read()  # pylint: disable=protected-access
+            entry._contents = fpntr.read()
 
         upfnode = entry.get_upf_node()
         assert upfnode.element == 'Ba'

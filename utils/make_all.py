@@ -1,12 +1,10 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# pylint: disable=simplifiable-if-statement,too-many-branches
 """Pre-commit hook to add ``__all__`` imports to ``__init__`` files."""
 import ast
+import sys
 from collections import Counter
 from pathlib import Path
 from pprint import pprint
-import sys
 from typing import Dict, List, Optional, Tuple
 
 
@@ -20,7 +18,6 @@ def parse_all(folder_path: str) -> Tuple[dict, dict]:
     bad_all = {}
 
     for path in folder_path.glob('**/*.py'):
-
         # skip module files
         if path.name == '__init__.py':
             continue
@@ -61,10 +58,9 @@ def parse_all(folder_path: str) -> Tuple[dict, dict]:
     return all_dict, bad_all
 
 
-def gather_all(cur_path: List[str],
-               cur_dict: dict,
-               skip_children: dict,
-               all_list: Optional[List[str]] = None) -> List[str]:
+def gather_all(
+    cur_path: List[str], cur_dict: dict, skip_children: dict, all_list: Optional[List[str]] = None
+) -> List[str]:
     """Recursively gather __all__ names."""
     all_list = [] if all_list is None else all_list
     for key, val in cur_dict.items():
@@ -113,10 +109,14 @@ def write_inits(folder_path: str, all_dict: dict, skip_children: Dict[str, List[
             if len(alls + list(path_all_dict)) != len(set(alls + list(path_all_dict))):
                 non_unique[rel_path] = [k for k, v in Counter(alls + list(path_all_dict)).items() if v > 1]
 
-            auto_content = (['', '# AUTO-GENERATED'] +
-                            ['', '# yapf: disable', '# pylint: disable=wildcard-import', ''] +
-                            [f'from .{mod} import *' for mod in sorted(path_all_dict.keys())] + ['', '__all__ = ('] +
-                            [f'    {a!r},' for a in sorted(set(alls))] + [')', '', '# yapf: enable', ''])
+            auto_content = (
+                ['', '# AUTO-GENERATED']
+                + ['', '# fmt: off', '']
+                + [f'from .{mod} import *' for mod in sorted(path_all_dict.keys())]
+                + ['', '__all__ = (']
+                + [f'    {a!r},' for a in sorted(set(alls))]
+                + [')', '', '# fmt: on', '']
+            )
 
         start_content = []
         end_content = []
@@ -137,7 +137,7 @@ def write_inits(folder_path: str, all_dict: dict, skip_children: Dict[str, List[
                     in_docstring = True
                 else:
                     in_docstring = False
-            if in_start_content and not line.startswith('# pylint'):
+            if in_start_content:
                 start_content.append(line)
 
         new_content = start_content + auto_content + end_content

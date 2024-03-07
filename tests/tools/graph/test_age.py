@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,11 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-locals,too-many-statements
 """AGE tests"""
 import numpy as np
 import pytest
-
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.tools.graph.age_entities import AiidaEntitySet, Basket, DirectedEdgeSet, GroupNodeEdge
@@ -20,7 +17,6 @@ from aiida.tools.graph.age_rules import ReplaceRule, RuleSaveWalkers, RuleSequen
 
 def create_tree(max_depth=3, branching=3, starting_cls=orm.Data):
     """Auxiliary function to create a tree with a given depth and a given branching."""
-
     if starting_cls not in (orm.Data, orm.CalculationNode):
         raise TypeError('The starting_cls has to be either Data or CalculationNode')
 
@@ -42,7 +38,6 @@ def create_tree(max_depth=3, branching=3, starting_cls=orm.Data):
 
     counter = 1
     for depth in range(1, max_depth):
-
         depth_dict[depth] = set()
 
         current_indxs = []
@@ -51,9 +46,8 @@ def create_tree(max_depth=3, branching=3, starting_cls=orm.Data):
         current_links = LinkType.CREATE if current_class is orm.Data else LinkType.INPUT_CALC
 
         # For each previous node, link the requested number of branches
-        for (previous_node, previous_indx) in zip(previous_nodes, previous_indxs):
+        for previous_node, previous_indx in zip(previous_nodes, previous_indxs):
             for label_id in range(branching):
-
                 new_node = current_class()
                 new_node.base.links.add_incoming(previous_node, link_type=current_links, link_label=f'link{label_id}')
                 new_node.store()
@@ -84,8 +78,7 @@ class TestAiidaGraphExplorer:
 
     @staticmethod
     def _create_basic_graph():
-        """
-        Creates a basic graph which has one parent workflow (work_2) that calls
+        """Creates a basic graph which has one parent workflow (work_2) that calls
         a child workflow (work_1) which calls a calculation function (calc_0).
         There is one input (data_i) and one output (data_o). It has at least one
         link of each class:
@@ -148,14 +141,12 @@ class TestAiidaGraphExplorer:
         return output_dict
 
     def test_basic_graph(self):
-        """
-        Testing basic operations for the explorer:
+        """Testing basic operations for the explorer:
         - Selection of ascendants.
         - Selection of descendants.
         - Ascendants and descendants through specific links.
         - Ascendants and descendants of specific type.
         """
-
         nodes = self._create_basic_graph()
         basket_w1 = Basket(nodes=[nodes['work_1'].pk])
         basket_w2 = Basket(nodes=[nodes['work_2'].pk])
@@ -243,8 +234,7 @@ class TestAiidaGraphExplorer:
         assert obtained == expected
 
     def test_cycle(self):
-        """
-        Testing the case of a cycle (workflow node with a data node that is
+        """Testing the case of a cycle (workflow node with a data node that is
         both an input and an output):
         - Update rules with no max iterations should not get stuck.
         - Replace rules should return alternating results.
@@ -282,8 +272,7 @@ class TestAiidaGraphExplorer:
 
     @staticmethod
     def _create_branchy_graph():
-        """
-        Creates a basic branchy graph which has two concatenated calculations:
+        """Creates a basic branchy graph which has two concatenated calculations:
 
         * calc_1 takes data_0 as an input and returns data_1 and data_o.
         * calc_2 takes data_1 and data_i as inputs and returns data_2.
@@ -407,9 +396,7 @@ class TestAiidaGraphExplorer:
         queryb.append(
             orm.ProcessNode,
             with_incoming='predecessor',
-            edge_filters={'type': {
-                'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]
-            }}
+            edge_filters={'type': {'in': [LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value]}},
         )
         rules.append(UpdateRule(queryb))
 
@@ -419,9 +406,7 @@ class TestAiidaGraphExplorer:
         queryb.append(
             orm.Data,
             with_incoming='predecessor',
-            edge_filters={'type': {
-                'in': [LinkType.CREATE.value, LinkType.RETURN.value]
-            }}
+            edge_filters={'type': {'in': [LinkType.CREATE.value, LinkType.RETURN.value]}},
         )
         rules.append(UpdateRule(queryb))
 
@@ -431,9 +416,7 @@ class TestAiidaGraphExplorer:
         queryb.append(
             orm.ProcessNode,
             with_incoming='predecessor',
-            edge_filters={'type': {
-                'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]
-            }}
+            edge_filters={'type': {'in': [LinkType.CALL_CALC.value, LinkType.CALL_WORK.value]}},
         )
         rules.append(UpdateRule(queryb))
 
@@ -463,8 +446,7 @@ class TestAiidaGraphExplorer:
         assert expecting_set == resulting_set
 
     def test_groups(self):
-        """
-        Testing connection between (aiida-)groups and (aiida-)nodes, which are treated
+        """Testing connection between (aiida-)groups and (aiida-)nodes, which are treated
         as if they both were (graph-)nodes.
         """
         node1 = orm.Data().store()
@@ -589,9 +571,7 @@ class TestAiidaGraphExplorer:
         assert result == edges
 
     def test_edges(self):
-        """
-        Testing how the links are stored during traversal of the graph.
-        """
+        """Testing how the links are stored during traversal of the graph."""
         nodes = self._create_basic_graph()
 
         # Forward traversal (check all nodes and all links)
@@ -647,9 +627,7 @@ class TestAiidaGraphExplorer:
         assert obtained == expected
 
     def test_empty_input(self):
-        """
-        Testing empty input.
-        """
+        """Testing empty input."""
         basket = Basket(nodes=[])
         queryb = orm.QueryBuilder()
         queryb.append(orm.Node).append(orm.Node)
@@ -662,8 +640,7 @@ class TestAiidaEntitySet:
     """Tests for AiidaEntitySets"""
 
     def test_class_mismatch(self):
-        """
-        Test the case where an AiidaEntitySet is trying to be used in an operation
+        """Test the case where an AiidaEntitySet is trying to be used in an operation
         with another AiidaEntitySet and they contain mismatched aiida entities, or
         in an operation with a data type other than AiidaEntitySet.
         """
@@ -686,7 +663,6 @@ class TestAiidaEntitySet:
 
     def test_algebra(self):
         """Test simple addition, in-place addition, simple subtraction, in-place subtraction"""
-
         depth0 = 4
         branching0 = 2
         tree0 = create_tree(max_depth=depth0, branching=branching0)

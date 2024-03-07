@@ -7,7 +7,7 @@ name: release
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+*"
+    - v[0-9]+.[0-9]+.[0-9]+*
 
 jobs:
 
@@ -70,12 +70,12 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5432:5432
+        - 5432:5432
       rabbitmq:
         image: rabbitmq:3.8.14-management
         ports:
-          - 5672:5672
-          - 15672:15672
+        - 5672:5672
+        - 15672:15672
 
     steps:
     - uses: actions/checkout@v2

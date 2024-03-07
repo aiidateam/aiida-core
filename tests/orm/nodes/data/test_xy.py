@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -10,7 +9,6 @@
 """Tests for the :mod:`aiida.orm.nodes.data.array.xy` module."""
 import numpy
 import pytest
-
 from aiida.common.exceptions import NotExistent
 from aiida.orm import XyData, load_node
 

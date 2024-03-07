@@ -5,7 +5,7 @@ on:
     branches-ignore: [gh-pages]
   pull_request:
     branches-ignore: [gh-pages]
-    paths: ['docs/**']
+    paths: [docs/**]
 
 jobs:
 

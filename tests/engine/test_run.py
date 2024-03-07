@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,9 +8,9 @@
 ###########################################################################
 """Tests for the `run` functions."""
 import pytest
-
 from aiida.engine import run, run_get_node
 from aiida.orm import Int, ProcessNode, Str
+
 from tests.utils.processes import DummyProcess
 
 
@@ -28,5 +27,5 @@ class TestRun:
     def test_run_get_node(self):
         """Test the `run_get_node` function."""
         inputs = {'a': Int(2), 'b': Str('test')}
-        result, node = run_get_node(DummyProcess, **inputs)  # pylint: disable=unused-variable
+        result, node = run_get_node(DummyProcess, **inputs)
         assert isinstance(node, ProcessNode)

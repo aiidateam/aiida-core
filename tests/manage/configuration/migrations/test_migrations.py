@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the configuration migration functionality."""
 import copy
 import json
@@ -15,7 +13,6 @@ import pathlib
 import uuid
 
 import pytest
-
 from aiida.common.exceptions import ConfigurationError
 from aiida.manage.configuration.migrations import check_and_migrate_config
 from aiida.manage.configuration.migrations.migrations import MIGRATIONS, Initial, downgrade_config, upgrade_config
@@ -99,7 +96,7 @@ def test_merge_storage_backends_downgrade_profile(empty_config, profile_factory,
     profile_a = profile_factory('profile_a', test_profile=False)
     profile_b = profile_factory('profile_b', test_profile=False)
 
-    profile_a._attributes[profile_a.KEY_STORAGE]['_v6_backend'] = 'django'  # pylint: disable=protected-access
+    profile_a._attributes[profile_a.KEY_STORAGE]['_v6_backend'] = 'django'
 
     config.add_profile(profile_a)
     config.add_profile(profile_b)

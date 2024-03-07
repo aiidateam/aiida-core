@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -11,7 +10,6 @@
 import uuid
 
 import pytest
-
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm import load_group
@@ -19,8 +17,7 @@ from aiida.tools.archive import create_archive, import_archive
 
 
 def test_nodes_in_group(aiida_profile, tmp_path, aiida_localhost):
-    """
-    This test checks that nodes that belong to a specific group are
+    """This test checks that nodes that belong to a specific group are
     correctly imported and exported.
     """
     # Create another user
@@ -108,8 +105,7 @@ def test_group_export(tmp_path, aiida_profile):
 
 
 def test_group_import_existing(tmp_path, aiida_profile):
-    """
-    Testing what happens when I try to import a group that already exists in the
+    """Testing what happens when I try to import a group that already exists in the
     database. This should raise an appropriate exception
     """
     grouplabel = 'node_group_existing'
@@ -186,15 +182,16 @@ def test_import_to_group(tmp_path, aiida_profile):
 
     # Check Group for content
     builder = orm.QueryBuilder().append(orm.Group, filters={'label': group_label}, project='uuid')
-    assert builder.count() == \
-        1, \
-        f'There should be exactly one Group with label {group_label}. Instead {builder.count()} was found.'
+    assert (
+        builder.count() == 1
+    ), f'There should be exactly one Group with label {group_label}. Instead {builder.count()} was found.'
     imported_group = load_group(builder.all()[0][0])
     assert imported_group.uuid == group_uuid
-    assert imported_group.count() == \
-        len(node_uuids), \
-        '{} Nodes were found in the automatic import group, instead there should have been exactly {} ' \
-        'Nodes'.format(imported_group.count(), len(node_uuids))
+    assert imported_group.count() == len(node_uuids), (
+        '{} Nodes were found in the automatic import group, instead there should have been exactly {} ' 'Nodes'.format(
+            imported_group.count(), len(node_uuids)
+        )
+    )
     for node in imported_group.nodes:
         assert node.uuid in node_uuids
 
@@ -207,10 +204,11 @@ def test_import_to_group(tmp_path, aiida_profile):
 
     imported_group = load_group(label=group_label)
     assert imported_group.uuid == group_uuid
-    assert imported_group.count() == \
-        len(node_uuids), \
-        '{} Nodes were found in the automatic import group, instead there should have been exactly {} ' \
-        'Nodes'.format(imported_group.count(), len(node_uuids))
+    assert imported_group.count() == len(node_uuids), (
+        '{} Nodes were found in the automatic import group, instead there should have been exactly {} ' 'Nodes'.format(
+            imported_group.count(), len(node_uuids)
+        )
+    )
     for node in imported_group.nodes:
         assert node.uuid in node_uuids
 

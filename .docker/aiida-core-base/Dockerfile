@@ -104,6 +104,9 @@ USER ${SYSTEM_UID}
 # Pin python version here
 ARG PYTHON_VERSION
 
+# Pin mamba version here
+ARG MAMBA_VERSION
+
 # Download and install Micromamba, and initialize Conda prefix.
 #   <https://github.com/mamba-org/mamba#micromamba>
 #   Similar projects using Micromamba:
@@ -134,7 +137,7 @@ RUN set -x && \
         --prefix="${CONDA_DIR}" \
         --yes \
         "${PYTHON_SPECIFIER}" \
-        'mamba' && \
+        "mamba=${MAMBA_VERSION}" && \
     rm micromamba && \
     # Pin major.minor version of python
     mamba list python | grep '^python ' | tr -s ' ' | cut -d ' ' -f 1,2 >> "${CONDA_DIR}/conda-meta/pinned" && \
@@ -144,7 +147,7 @@ RUN set -x && \
 
 # Add ~/.local/bin to PATH where the dependencies get installed via pip
 # This require the package installed with `--user` flag in pip
-ENV PATH=${PATH}:/home/${NB_USER}/.local/bin
+ENV PATH=${PATH}:/home/${SYSTEM_USER}/.local/bin
 
 # Switch to root to install AiiDA and set AiiDA as service
 # Install AiiDA from source code

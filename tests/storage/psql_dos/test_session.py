@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,14 +6,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module,no-member,protected-access
 """Testing Session possible problems."""
 import uuid
 
 import pytest
-from sqlalchemy.orm import sessionmaker
-
 from aiida.storage.psql_dos.utils import create_scoped_session_factory
+from sqlalchemy.orm import sessionmaker
 
 
 class TestSessionSqla:
@@ -30,9 +27,8 @@ class TestSessionSqla:
     """
 
     @pytest.fixture(autouse=True)
-    def init_db(self, backend):  # pylint: disable=unused-argument
+    def init_db(self, backend):
         """Initialize the database."""
-        # pylint: disable=attribute-defined-outside-init
         self.backend = backend
 
     def set_connection(self, expire_on_commit=True):
@@ -49,8 +45,8 @@ class TestSessionSqla:
 
     def test_session_update_and_expiration_1(self):
         """expire_on_commit=True & adding manually and committing
-        computer and code objects."""
-
+        computer and code objects.
+        """
         self.set_connection(expire_on_commit=True)
         session = self.backend.get_session()
 
@@ -73,8 +69,8 @@ class TestSessionSqla:
 
     def test_session_update_and_expiration_2(self):
         """expire_on_commit=True & committing computer and code objects with
-        their built-in store function."""
-
+        their built-in store function.
+        """
         self.set_connection(expire_on_commit=True)
         session = self.backend.get_session()
 
@@ -91,8 +87,7 @@ class TestSessionSqla:
         self.drop_connection()
 
     def test_session_update_and_expiration_3(self):
-        """
-        expire_on_commit=False & adding manually and committing
+        """expire_on_commit=False & adding manually and committing
         computer and code objects.
         """
         self.set_connection(expire_on_commit=False)
@@ -118,8 +113,8 @@ class TestSessionSqla:
 
     def test_session_update_and_expiration_4(self):
         """expire_on_commit=False & committing computer and code objects with
-        their built-in store function."""
-
+        their built-in store function.
+        """
         self.set_connection(expire_on_commit=False)
 
         session = self.backend.get_session()
@@ -144,8 +139,8 @@ class TestSessionSqla:
 
         Tests for bug #1372
         """
-        from aiida.common import timezone
         import aiida.storage.psql_dos as sa
+        from aiida.common import timezone
 
         session = sessionmaker(bind=self.backend.get_session().bind, future=True)
         custom_session = session()
@@ -153,7 +148,7 @@ class TestSessionSqla:
         try:
             user = self.backend.users.create(email=uuid.uuid4().hex).store()
             node = self.backend.nodes.create(node_type='', user=user).store()
-            master_session = node.model.session  # pylint: disable=protected-access
+            master_session = node.model.session
             assert master_session is not custom_session
 
             # Manually load the DbNode in a different session

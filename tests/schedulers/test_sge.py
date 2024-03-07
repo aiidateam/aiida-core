@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,protected-access
 """Tests for the `SgeScheduler` plugin."""
 import logging
 import unittest
@@ -251,24 +249,20 @@ class TestCommand(unittest.TestCase):
 
         # Check if different job states are realized:
         job_running = 1
-        job_running_parsed = len([j for j in job_list if j.job_state \
-                                  and j.job_state == JobState.RUNNING])
+        job_running_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.RUNNING])
         self.assertEqual(job_running, job_running_parsed)
 
         job_held = 1
-        job_held_parsed = len([j for j in job_list if j.job_state \
-                               and j.job_state == JobState.QUEUED_HELD])
+        job_held_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED_HELD])
         self.assertEqual(job_held, job_held_parsed)
 
         job_queued = 1
-        job_queued_parsed = len([j for j in job_list if j.job_state \
-                                 and j.job_state == JobState.QUEUED])
+        job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
         self.assertEqual(job_queued, job_queued_parsed)
 
         # check if job id is recognized:
         running_jobs = ['1212299']
-        parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
-                               and j.job_state == JobState.RUNNING]
+        parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEqual(set(running_jobs), set(parsed_running_jobs))
 
         dispatch_time = [self._parse_time_string('2013-06-18T12:08:23')]
@@ -277,14 +271,13 @@ class TestCommand(unittest.TestCase):
 
         submission_times = [
             self._parse_time_string('2013-06-18T12:00:57'),
-            self._parse_time_string('2013-06-18T12:09:47')
+            self._parse_time_string('2013-06-18T12:09:47'),
         ]
         parsed_submission_times = [j.submission_time for j in job_list if j.submission_time]
         self.assertEqual(set(submission_times), set(parsed_submission_times))
 
         running_jobs = [test_raw_data]
-        parsed_running_jobs = [j.raw_data for j in job_list if j.job_state \
-                               and j.job_state == JobState.RUNNING]
+        parsed_running_jobs = [j.raw_data for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEqual(set(running_jobs), set(parsed_running_jobs))
 
         # job_list_raise=sge._parse_joblist_output(retval, \
@@ -363,8 +356,7 @@ class TestCommand(unittest.TestCase):
 
     @staticmethod
     def _parse_time_string(string, fmt='%Y-%m-%dT%H:%M:%S'):
-        """
-        Parse a time string in the format returned from qstat -xml -ext and
+        """Parse a time string in the format returned from qstat -xml -ext and
         returns a datetime object.
         Example format: 2013-06-13T11:53:11
         """

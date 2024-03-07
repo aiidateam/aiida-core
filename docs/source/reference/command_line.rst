@@ -289,6 +289,7 @@ Below is a list with all available subcommands.
       extras       Show the extras of one or more nodes.
       graph        Create visual representations of the provenance graph.
       label        View or set the label of one or more nodes.
+      list         Query all nodes with optional filtering and ordering.
       rehash       Recompute the hash for nodes in the database.
       repo         Inspect the content of a node repository folder.
       show         Show generic information on one or more nodes.
@@ -332,6 +333,7 @@ Below is a list with all available subcommands.
       list       Show a list of running or terminated processes.
       pause      Pause running processes.
       play       Play (unpause) paused processes.
+      repair     Automatically repair all stuck processes.
       report     Show the log report for one or multiple processes.
       show       Show details for one or multiple processes.
       status     Print the status of one or multiple processes.

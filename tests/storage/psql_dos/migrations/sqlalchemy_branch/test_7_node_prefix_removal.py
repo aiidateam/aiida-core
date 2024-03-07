@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,6 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Tests ce56d84bcc35 -> 61fc0913fae9"""
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
@@ -20,8 +20,8 @@ def test_node_prefix_removal(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@ce56d84bcc35')  # ce56d84bcc35_delete_trajectory_symbols_array
 
     # setup the database
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net', is_superuser=True)
         session.add(user)
@@ -41,7 +41,7 @@ def test_node_prefix_removal(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@61fc0913fae9')  # 61fc0913fae9_remove_node_prefix
 
     # perform some checks
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         # Verify that the `node.` prefix has been dropped from both the data as well as the process node
         node_data = session.query(DbNode).filter(DbNode.id == node_data_id).one()

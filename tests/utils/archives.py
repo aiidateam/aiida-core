@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -11,8 +10,8 @@
 import json
 import os
 import tarfile
-from typing import List
 import zipfile
+from typing import List
 
 from archive_path import read_file_in_tar, read_file_in_zip
 

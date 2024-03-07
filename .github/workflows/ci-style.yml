@@ -35,5 +35,4 @@ jobs:
         pip freeze
 
     - name: Run pre-commit
-      run:
-        pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+      run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )

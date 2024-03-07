@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,8 +8,8 @@
 ###########################################################################
 """Module with tests for export archive migrations."""
 import pytest
-
 from aiida.storage.sqlite_zip.migrations.utils import verify_metadata_version
+
 from tests.utils.archives import get_archive_file, read_json_files
 
 
@@ -42,12 +41,9 @@ def migrate_from_func():
         """
         archive_path = get_archive_file(
             filename_archive,
-            **(archive_kwargs or {
-                'filepath': 'archives',
-                'external_module': 'aiida-export-migration-tests'
-            })
+            **(archive_kwargs or {'filepath': 'archives', 'external_module': 'aiida-export-migration-tests'}),
         )
-        metadata, data = read_json_files(archive_path)  # pylint: disable=unbalanced-tuple-unpacking
+        metadata, data = read_json_files(archive_path)
         verify_metadata_version(metadata, version=version_old)
         migration_method(metadata, data)
         verify_metadata_version(metadata, version=version_new)

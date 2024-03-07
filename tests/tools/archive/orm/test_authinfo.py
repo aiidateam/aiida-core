@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """orm.AuthInfo tests for the export and import routines"""
 import pytest
-
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 from aiida.tools.archive.abstract import get_format
@@ -54,10 +52,10 @@ def test_import_authinfo(aiida_profile, tmp_path, aiida_localhost):
         hostname='localhost-other',
         workdir=str(tmp_path),
         transport_type='core.local',
-        scheduler_type='core.direct'
+        scheduler_type='core.direct',
     )
     computer.store()
-    computer.set_minimum_job_poll_interval(0.)
+    computer.set_minimum_job_poll_interval(0.0)
     computer.configure()
     assert orm.AuthInfo.collection.count() == 1
     import_archive(filename1, include_authinfos=False)

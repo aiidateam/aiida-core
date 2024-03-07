@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Tests for Path types"""
 import pytest
-
 from aiida.cmdline.params.types.path import PathOrUrl, check_timeout_seconds
 
 
@@ -27,10 +25,10 @@ class TestPath:
     def test_timeout_checks(self):
         """Test that timeout check handles different values.
 
-         * valid
-         * none
-         * wrong type
-         * outside range
+        * valid
+        * none
+        * wrong type
+        * outside range
         """
         valid_values = [42, '42']
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,13 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for ``verdi daemon``."""
 import textwrap
 from unittest.mock import patch
 
 import pytest
-
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_daemon
 from aiida.engine.daemon.client import DaemonClient
@@ -29,6 +26,7 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
     :param format_str: optional string format to pass to strftime
     """
     from datetime import datetime
+
     return datetime.utcfromtimestamp(timestamp).strftime(format_str)
 
 
@@ -141,7 +139,7 @@ def get_daemon_info(_):
             'pid': 111015,
             'create_time': 1576582938.75,
         },
-        'id': 'a1c0d76c94304d62adfb36e30d335dd0'
+        'id': 'a1c0d76c94304d62adfb36e30d335dd0',
     }
 
 
@@ -159,7 +157,7 @@ def get_worker_info(_):
                 'create_time': 1576585658.730482,
             }
         },
-        'id': '4e1d768a522a44b59f85039806f9af14'
+        'id': '4e1d768a522a44b59f85039806f9af14',
     }
 
 
@@ -172,10 +170,8 @@ def get_worker_info_broken(_):
         'status': 'ok',
         'time': 1576585659.221961,
         'name': 'aiida-production',
-        'info': {
-            '4990': 'No such process (stopped?)'
-        },
-        'id': '4e1d768a522a44b59f85039806f9af14'
+        'info': {'4990': 'No such process (stopped?)'},
+        'id': '4e1d768a522a44b59f85039806f9af14',
     }
 
 

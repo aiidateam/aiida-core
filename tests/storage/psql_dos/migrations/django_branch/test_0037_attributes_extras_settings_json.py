@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -10,15 +9,13 @@
 """Tests for the migrations of the attributes, extras and settings from EAV to JSONB."""
 from datetime import datetime
 
-from sqlalchemy import select
-
 from aiida.common import timezone
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
+from sqlalchemy import select
 
 
 def test_attr_extra_migration(perform_migrations: PsqlDosMigrator):
-    """
-    A "simple" test for the attributes and extra migration from EAV to JSONB.
+    """A "simple" test for the attributes and extra migration from EAV to JSONB.
     It stores a sample dictionary using the EAV deserialization of AiiDA Django
     for the attributes and extras. Then the test checks that they are correctly
     converted to JSONB.
@@ -54,22 +51,15 @@ def test_attr_extra_migration(perform_migrations: PsqlDosMigrator):
         session.commit()
         node_id = node.id
 
-        for idx, kwargs in enumerate(({
-            'datatype': 'txt',
-            'tval': 'test'
-        }, {
-            'datatype': 'int',
-            'ival': 1
-        }, {
-            'datatype': 'bool',
-            'bval': True
-        }, {
-            'datatype': 'float',
-            'fval': 1.0
-        }, {
-            'datatype': 'date',
-            'dval': datetime.fromisoformat('2022-01-01')
-        })):
+        for idx, kwargs in enumerate(
+            (
+                {'datatype': 'txt', 'tval': 'test'},
+                {'datatype': 'int', 'ival': 1},
+                {'datatype': 'bool', 'bval': True},
+                {'datatype': 'float', 'fval': 1.0},
+                {'datatype': 'date', 'dval': datetime.fromisoformat('2022-01-01')},
+            )
+        ):
             kwargs['tval'] = 'test'  # type: ignore[index]
             attr = attr_model(dbnode_id=node.id, key=f'attr_{idx}', **kwargs)
             session.add(attr)
@@ -94,8 +84,7 @@ def test_attr_extra_migration(perform_migrations: PsqlDosMigrator):
 
 
 def test_settings_migration(perform_migrations: PsqlDosMigrator):
-    """
-    This test checks the correct migration of the settings.
+    """This test checks the correct migration of the settings.
     Setting records were used as an example from a typical settings table of Django EAV.
     """
     # starting revision
@@ -105,30 +94,16 @@ def test_settings_migration(perform_migrations: PsqlDosMigrator):
     setting_model = perform_migrations.get_current_table('db_dbsetting')
 
     with perform_migrations.session() as session:
-
         kwargs: dict
-        for idx, kwargs in enumerate((  # type: ignore[assignment]
-            {
-                'datatype': 'txt',
-                'tval': 'test'
-            },
-            {
-                'datatype': 'int',
-                'ival': 1
-            },
-            {
-                'datatype': 'bool',
-                'bval': True
-            },
-            {
-                'datatype': 'float',
-                'fval': 1.0
-            },
-            {
-                'datatype': 'date',
-                'dval': datetime.fromisoformat('2022-01-01')
-            }
-        )):
+        for idx, kwargs in enumerate(  # type: ignore[assignment]
+            (
+                {'datatype': 'txt', 'tval': 'test'},
+                {'datatype': 'int', 'ival': 1},
+                {'datatype': 'bool', 'bval': True},
+                {'datatype': 'float', 'fval': 1.0},
+                {'datatype': 'date', 'dval': datetime.fromisoformat('2022-01-01')},
+            )
+        ):
             kwargs['tval'] = 'test'
             kwargs['description'] = 'description'
             kwargs['time'] = datetime.fromisoformat('2022-01-01')

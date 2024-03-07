@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -20,7 +19,7 @@ from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 REPOSITORY_UUID_KEY = 'repository|uuid'
 
 
-def test_node_repository(perform_migrations: PsqlDosMigrator):  # pylint: disable=too-many-locals
+def test_node_repository(perform_migrations: PsqlDosMigrator):
     """Test migration of the old file repository to the disk object store."""
     # starting revision
     perform_migrations.migrate_up('django@django_0046')
@@ -82,7 +81,6 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):  # pylint: disabl
     node_model = perform_migrations.get_current_table('db_dbnode')
     setting_model = perform_migrations.get_current_table('db_dbsetting')
     with perform_migrations.session() as session:
-
         # check that the repository uuid is set
         repository_uuid = session.query(setting_model).filter(setting_model.key == REPOSITORY_UUID_KEY).one()
         assert repository_uuid.val is not None
@@ -103,34 +101,18 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):  # pylint: disabl
             'o': {
                 'sub': {
                     'o': {
-                        'path': {
-                            'o': {
-                                'file_b.txt': {
-                                    'k': hashlib.sha256('b'.encode('utf-8')).hexdigest()
-                                }
-                            }
-                        },
-                        'file_a.txt': {
-                            'k': hashlib.sha256('a'.encode('utf-8')).hexdigest()
-                        }
+                        'path': {'o': {'file_b.txt': {'k': hashlib.sha256('b'.encode('utf-8')).hexdigest()}}},
+                        'file_a.txt': {'k': hashlib.sha256('a'.encode('utf-8')).hexdigest()},
                     }
                 }
             }
         }
         assert node_02.repository_metadata == {
-            'o': {
-                'output.txt': {
-                    'k': hashlib.sha256('output'.encode('utf-8')).hexdigest()
-                }
-            }
+            'o': {'output.txt': {'k': hashlib.sha256('output'.encode('utf-8')).hexdigest()}}
         }
         assert node_03.repository_metadata == {}
         assert node_04.repository_metadata == {
-            'o': {
-                'input.txt': {
-                    'k': hashlib.sha256('input'.encode('utf-8')).hexdigest()
-                }
-            }
+            'o': {'input.txt': {'k': hashlib.sha256('input'.encode('utf-8')).hexdigest()}}
         }
 
         for hashkey, content in (

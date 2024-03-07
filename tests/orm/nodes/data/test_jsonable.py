@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
 """Tests for the :class:`aiida.orm.nodes.data.jsonable.JsonableData` data type."""
 import datetime
 import math
 
-from pymatgen.core import Molecule
 import pytest
-
 from aiida.orm import load_node
 from aiida.orm.nodes.data.jsonable import JsonableData
+from pymatgen.core import Molecule
 
 
 class JsonableClass:
@@ -105,7 +103,6 @@ def test_obj():
     assert isinstance(node.obj, JsonableClass)
 
     for left, right in zip(loaded.obj.data, data):
-
         # Need this explicit case to compare NaN because of the peculiarity in Python where ``float(nan) != float(nan)``
         if isinstance(left, float) and math.isnan(left):
             assert math.isnan(right)

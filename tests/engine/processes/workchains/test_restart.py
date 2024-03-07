@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,9 +7,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `aiida.engine.processes.workchains.restart` module."""
-# pylint: disable=invalid-name,no-member
-import pytest
+import warnings
 
+import pytest
 from aiida import engine, orm
 from aiida.engine.processes.workchains.awaitable import Awaitable
 
@@ -50,22 +49,28 @@ def test_is_process_handler():
 
 def test_get_process_handlers():
     """Test the `BaseRestartWorkChain.get_process_handlers` class method."""
-    assert [handler.__name__ for handler in SomeWorkChain.get_process_handlers()
-            ] == ['handler_a', 'handler_b', 'handler_c']
+    assert [handler.__name__ for handler in SomeWorkChain.get_process_handlers()] == [
+        'handler_a',
+        'handler_b',
+        'handler_c',
+    ]
 
 
-# yapf: disable
-@pytest.mark.parametrize('inputs, priorities', (
-    ({}, [100, 200]),
-    ({'handler_overrides': {'handler_c': {'enabled': True}}}, [0, 100, 200]),
-    ({'handler_overrides': {'handler_a': {'priority': 50}}}, [50, 100]),
-    ({'handler_overrides': {'handler_a': {'enabled': False}}}, [100]),
-    ({'handler_overrides': {'handler_a': False}}, [100]),  # This notation is deprecated
-))
-# yapf: enable
+@pytest.mark.parametrize(
+    'inputs, priorities',
+    (
+        ({}, [100, 200]),
+        ({'handler_overrides': {'handler_c': {'enabled': True}}}, [0, 100, 200]),
+        ({'handler_overrides': {'handler_a': {'priority': 50}}}, [50, 100]),
+        ({'handler_overrides': {'handler_a': {'enabled': False}}}, [100]),
+        ({'handler_overrides': {'handler_a': False}}, [100]),  # This notation is deprecated
+    ),
+)
 def test_get_process_handlers_by_priority(generate_work_chain, inputs, priorities):
     """Test the `BaseRestartWorkChain.get_process_handlers_by_priority` method."""
-    process = generate_work_chain(SomeWorkChain, inputs)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        process = generate_work_chain(SomeWorkChain, inputs)
     process.setup()
     assert sorted([priority for priority, handler in process.get_process_handlers_by_priority()]) == priorities
 
@@ -110,8 +115,9 @@ def test_unhandled_failure(generate_work_chain, generate_calculation_node):
     assert process.ctx.unhandled_failure is True
 
     process.ctx.children.append(generate_calculation_node(exit_status=100))
-    assert process.inspect_process(
-    ) == engine.BaseRestartWorkChain.exit_codes.ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE  # pylint: disable=no-member
+    assert (
+        process.inspect_process() == engine.BaseRestartWorkChain.exit_codes.ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE
+    )
 
 
 @pytest.mark.requires_rmq
@@ -155,7 +161,7 @@ def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch
 
     def mock_submit(_, process_class, **kwargs):
         """Mock the submission to just return an empty `CalcJobNode`."""
-        assert process_class is SomeWorkChain._process_class  # pylint: disable=protected-access
+        assert process_class is SomeWorkChain._process_class
         assert 'metadata' in kwargs
         assert kwargs['metadata']['call_link_label'] == 'iteration_01'
         return generate_calculation_node()
@@ -168,7 +174,7 @@ def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch
 
     assert isinstance(result, engine.ToContext)
     assert isinstance(result['children'], Awaitable)
-    assert process.node.base.extras.get(SomeWorkChain._considered_handlers_extra) == [[]]  # pylint: disable=protected-access
+    assert process.node.base.extras.get(SomeWorkChain._considered_handlers_extra) == [[]]
 
 
 class OutputNamespaceWorkChain(engine.WorkChain):

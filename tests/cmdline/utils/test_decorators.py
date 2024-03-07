@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,12 +6,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :mod:`aiida.cmdline.utils.decorators` module."""
 from unittest import mock
 
 import pytest
-
 from aiida.cmdline.utils.decorators import load_backend_if_not_loaded
 from aiida.common.exceptions import InvalidOperation
 from aiida.manage import get_manager
@@ -43,7 +40,7 @@ def manager(monkeypatch):
 
     def get_profile_storage(self):
         """Set a mock version of the storage backend."""
-        self._profile_storage = StorageBackend()  # pylint: disable=protected-access
+        self._profile_storage = StorageBackend()
 
     monkeypatch.setattr(manager.__class__, 'get_profile_storage', get_profile_storage)
     yield manager

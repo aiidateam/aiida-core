@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -11,22 +10,20 @@
 from pathlib import Path
 from uuid import uuid4
 
-from pgtest.pgtest import PGTest
 import pytest
-from sqlalchemy import text
-
 from aiida.manage.configuration import Profile
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
+from pgtest.pgtest import PGTest
+from sqlalchemy import text
 
 
-def pytest_collection_modifyitems(config, items):  # pylint: disable=unused-argument
+def pytest_collection_modifyitems(config, items):
     """Dynamically add the ``nightly`` marker to all tests in ``django_branch`` and ``sqlalchemy_branch`` modules."""
     filepath_django = Path(__file__).parent / 'django_branch'
     filepath_sqla = Path(__file__).parent / 'sqlalchemy_branch'
 
     for item in items:
-
         filepath_item = Path(item.fspath)
 
         if filepath_item.is_relative_to(filepath_django) or filepath_item.is_relative_to(filepath_sqla):
@@ -42,7 +39,7 @@ def empty_pg_cluster():
 
 
 @pytest.fixture
-def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disable=redefined-outer-name
+def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):
     """Create a profile attached to an empty database and repository folder."""
     import psycopg2
     from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
@@ -60,7 +57,8 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
             conn.close()
 
     yield Profile(
-        'test_migrate', {
+        'test_migrate',
+        {
             'test_profile': True,
             'storage': {
                 'backend': 'core.psql_dos',
@@ -72,13 +70,10 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
                     'database_password': '',
                     'database_username': empty_pg_cluster.username,
                     'repository_uri': f'file:///{tmp_path}',
-                }
+                },
             },
-            'process_control': {
-                'backend': 'null',
-                'config': {}
-            }
-        }
+            'process_control': {'backend': 'null', 'config': {}},
+        },
     )
 
     conn = None
@@ -97,7 +92,7 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
 
 
 @pytest.fixture()
-def perform_migrations(uninitialised_profile):  # pylint: disable=redefined-outer-name
+def perform_migrations(uninitialised_profile):
     """A fixture to setup a database for migration tests."""
     yield PsqlDosMigrator(uninitialised_profile)
 

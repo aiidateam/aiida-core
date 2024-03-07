@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,13 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :mod:`aiida.orm.nodes.data.array.bands` module."""
-from argparse import Namespace
 import uuid
+from argparse import Namespace
 
 import pytest
-
 from aiida.common.exceptions import NotExistent
 from aiida.orm import BandsData, Group, User
 from aiida.orm.nodes.data.array.bands import get_bands_and_parents_structure

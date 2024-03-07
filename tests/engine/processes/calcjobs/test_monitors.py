@@ -1,9 +1,10 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.engine.processes.calcjobs.monitors` module."""
+from __future__ import annotations
+
 import time
 
 import pytest
-
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.calculations.monitors import base
 from aiida.common.exceptions import EntryPointError
 from aiida.engine import run_get_node
@@ -13,13 +14,39 @@ from aiida.engine.processes.calcjobs.monitors import (
     CalcJobMonitorResult,
     CalcJobMonitors,
 )
-from aiida.orm import Dict, Int
+from aiida.orm import Dict, Int, Str
+
+
+class StoreMessageCalculation(ArithmeticAddCalculation):
+    """Subclass of ``ArithmeticAddCalculation`` that just adds the ``messages`` output namespace."""
+
+    @classmethod
+    def define(cls, spec):
+        """Define the process specification, including its inputs, outputs and known exit codes.
+
+        :param spec: the calculation job process spec to define.
+        """
+        super().define(spec)
+        spec.output_namespace('messages', valid_type=Str)
+
+
+def monitor_store_message(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Test monitor that returns an output node."""
+    import datetime
+    import secrets
+
+    return CalcJobMonitorResult(
+        action=CalcJobMonitorAction.DISABLE_ALL,
+        outputs={
+            'messages': {'datetime_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S'): Str(secrets.token_hex(15))}
+        },
+    )
 
 
 def test_calc_job_monitor_result_constructor_invalid():
     """Test :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` constructor for invalid input."""
     with pytest.raises(TypeError, match=r'got an unexpected keyword argument .*'):
-        CalcJobMonitorResult(invalid_key='test')  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+        CalcJobMonitorResult(invalid_key='test')
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         CalcJobMonitorResult(key=[])
@@ -59,10 +86,10 @@ def test_calc_job_monitor_result_constructor_valid():
 def test_calc_job_monitor_constructor_invalid():
     """Test :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitor` constructor for invalid input."""
     with pytest.raises(TypeError, match=r'missing 1 required positional argument: .*'):
-        CalcJobMonitor()  # pylint: disable=no-value-for-parameter
+        CalcJobMonitor()
 
     with pytest.raises(TypeError, match=r'got an unexpected keyword argument .*'):
-        CalcJobMonitor(invalid_key='test')  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+        CalcJobMonitor(invalid_key='test')
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         CalcJobMonitor(entry_point=[])
@@ -101,17 +128,18 @@ def test_calc_job_monitor_load_entry_point():
     """Test the :meth:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitor.load_entry_point`."""
     entry_point = 'core.always_kill'
     monitor = CalcJobMonitor(entry_point)
-    assert monitor.load_entry_point() == base.always_kill  # pylint: disable=comparison-with-callable
+    assert monitor.load_entry_point() == base.always_kill
 
 
-# yapf: disable
-@pytest.mark.parametrize('monitors, expected', (
-    ({'a': {}, 'b': {}}, ['a', 'b']),
-    ({'a': {}, 'b': {'priority': 1}}, ['b', 'a']),
-    ({'a': {'priority': 2}, 'b': {'priority': 1}}, ['a', 'b']),
-    ({'b': {'priority': 3}, 'aab': {'priority': 2}, 'aaa': {'priority': 2}}, ['b', 'aaa', 'aab']),
-))
-# yapf: enable
+@pytest.mark.parametrize(
+    'monitors, expected',
+    (
+        ({'a': {}, 'b': {}}, ['a', 'b']),
+        ({'a': {}, 'b': {'priority': 1}}, ['b', 'a']),
+        ({'a': {'priority': 2}, 'b': {'priority': 1}}, ['a', 'b']),
+        ({'b': {'priority': 3}, 'aab': {'priority': 2}, 'aaa': {'priority': 2}}, ['b', 'aaa', 'aab']),
+    ),
+)
 def test_calc_job_monitors_monitors(monitors, expected):
     """Test the :meth:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitors.monitors` property."""
     monitors_full = {}
@@ -131,7 +159,7 @@ def test_calc_job_monitors_process_poll_interval(monkeypatch):
     """
     monitors = CalcJobMonitors({'always_kill': Dict({'entry_point': 'core.always_kill', 'minimum_poll_interval': 1})})
 
-    def always_kill(*args, **kwargs):  # pylint: disable=unused-argument
+    def always_kill(*args, **kwargs):
         return 'always_kill called'
 
     monkeypatch.setattr(base, 'always_kill', always_kill)
@@ -152,9 +180,10 @@ def test_calc_job_monitors_process_poll_interval(monkeypatch):
     assert result.message == 'always_kill called'
 
 
-def monitor_emit_warning(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_emit_warning(node, transport, **kwargs):
     """Test monitor that logs a warning when called."""
     from aiida.common.log import AIIDA_LOGGER
+
     AIIDA_LOGGER.warning('monitor_emit_warning monitor was called')
 
 
@@ -175,3 +204,24 @@ def test_calc_job_monitors_process_poll_interval_integrated(entry_points, aiida_
     # Check that the number of log messages emitted by the monitor is just 1 as it should have been called just once.
     logs = [rec.message for rec in aiida_caplog.records if rec.message == 'monitor_emit_warning monitor was called']
     assert len(logs) == 1
+
+
+def test_calc_job_monitors_outputs(entry_points, aiida_local_code_factory):
+    """Test a monitor that returns outputs to be attached to the node."""
+    entry_points.add(StoreMessageCalculation, 'aiida.calculations:core.store_message')
+    entry_points.add(monitor_store_message, 'aiida.calculations.monitors:core.store_message')
+
+    code = aiida_local_code_factory('core.store_message', '/bin/bash')
+    builder = code.get_builder()
+    builder.x = Int(1)
+    builder.y = Int(1)
+    builder.monitors = {'store_message': Dict({'entry_point': 'core.store_message', 'minimum_poll_interval': 1})}
+    builder.metadata = {'options': {'sleep': 3, 'resources': {'num_machines': 1}}}
+
+    _, node = run_get_node(builder)
+    assert node.is_finished_ok
+    assert 'messages' in node.outputs
+    assert len(node.outputs.messages)
+    for message in node.outputs.messages.values():
+        assert isinstance(message, Str)
+        assert len(message.value) == 30, message.value

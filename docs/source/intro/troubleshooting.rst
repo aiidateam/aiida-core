@@ -440,13 +440,13 @@ If you are experiencing a problem, you can increase the default minimum logging 
 
 .. code-block:: console
 
-    $ verdi config logging.aiida_loglevel DEBUG
+    $ verdi config set logging.aiida_loglevel DEBUG
 
 You might also be interested in reviewing the circus log messages (the ``circus`` library is the daemonizer that manages the daemon runners),
 
 .. code-block:: console
 
-    $ verdi config logging.circus_loglevel DEBUG
+    $ verdi config set logging.circus_loglevel DEBUG
 
 however those messages are usually only relevant to debug AiiDA internals.
 
@@ -470,10 +470,12 @@ When the problem is solved, we suggest to reset the default logging level, with:
 
 to avoid too much noise in the logfiles.
 
+.. tip::
+
+    It is also possible to temporarily change the log level for ``verdi`` commands using the ``--v/--verbosity`` options (see :ref:`this section <topics:cli:verbosity>` for more details).
+
 The config options set for the current profile can be viewed using
 
 .. code-block:: console
 
-    $ verdi profile show
-
-in the ``options`` row.
+    $ verdi config list

@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """Tests for :mod:`aiida.tools.ipython.ipython_magics`."""
 import textwrap
 
-from IPython.testing.globalipapp import get_ipython
-
 from aiida.tools.ipython.ipython_magics import register_ipython_extension
+from IPython.testing.globalipapp import get_ipython
 
 
 def test_ipython_magics():

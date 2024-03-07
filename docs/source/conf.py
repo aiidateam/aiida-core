@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -12,10 +11,21 @@ import os
 import sys
 
 import aiida
-from aiida.manage.configuration import load_documentation_profile
 
-# Load the dummy profile for sphinx autodoc to use when loading modules
-load_documentation_profile()
+# imports required for docs/source/reference/api/public.rst
+from aiida import (  # noqa: F401
+    cmdline,
+    common,
+    engine,
+    manage,
+    orm,
+    parsers,
+    plugins,
+    schedulers,
+    tools,
+    transports,
+)
+from aiida.cmdline.params import arguments, options  # noqa: F401
 
 # -- General configuration -----------------------------------------------------
 
@@ -59,10 +69,22 @@ numfig = True
 # -- Extension configuration -----------------------------------------------------
 
 extensions = [
-    'myst_nb', 'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode',
-    'sphinx.ext.coverage', 'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.todo',
-    'IPython.sphinxext.ipython_console_highlighting', 'IPython.sphinxext.ipython_directive', 'aiida.sphinxext',
-    'sphinx_design', 'sphinx_copybutton', 'sphinxext.rediraffe', 'notfound.extension'
+    'myst_nb',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.doctest',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.coverage',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.ifconfig',
+    'sphinx.ext.todo',
+    'IPython.sphinxext.ipython_console_highlighting',
+    'IPython.sphinxext.ipython_directive',
+    'aiida.sphinxext',
+    'sphinx_design',
+    'sphinx_copybutton',
+    'sphinxext.rediraffe',
+    'notfound.extension',
 ]
 
 intersphinx_mapping = {
@@ -124,7 +146,7 @@ html_theme_options = {
         {
             'name': 'Twitter',
             'url': 'https://www.twitter.com/aiidateam',
-            'icon': 'fa-brands fa-twitter-square',
+            'icon': 'fa-brands fa-square-x-twitter',
             'type': 'fontawesome',
         },
     ],
@@ -183,23 +205,24 @@ def run_apidoc(_):
     """
     source_dir = os.path.abspath(os.path.dirname(__file__))
     apidoc_dir = os.path.join(source_dir, 'reference', 'apidoc')
-    package_dir = os.path.join(source_dir, os.pardir, os.pardir, 'aiida')
+    package_dir = os.path.join(source_dir, os.pardir, os.pardir, 'src', 'aiida')
     exclude_api_patterns = [
         os.path.join(package_dir, 'storage', 'psql_dos', 'migrations', 'versions'),
     ]
 
     # In #1139, they suggest the route below, but for me this ended up
     # calling sphinx-build, not sphinx-apidoc
-    #from sphinx.apidoc import main
-    #main([None, '-e', '-o', apidoc_dir, package_dir, '--force'])
+    # from sphinx.apidoc import main
+    # main([None, '-e', '-o', apidoc_dir, package_dir, '--force'])
 
     import subprocess
+
     cmd_path = 'sphinx-apidoc'
     if hasattr(sys, 'real_prefix'):  # Check to see if we are in a virtualenv
         # If we are, assemble the path manually
         cmd_path = os.path.abspath(os.path.join(sys.prefix, 'bin', 'sphinx-apidoc'))
 
-    options = [
+    cli_options = [
         package_dir,
         *exclude_api_patterns,
         '-o',
@@ -215,9 +238,10 @@ def run_apidoc(_):
 
     # See https://stackoverflow.com/a/30144019
     env = os.environ.copy()
-    env['SPHINX_APIDOC_OPTIONS'
-        ] = 'members,special-members,private-members,undoc-members,show-inheritance,ignore-module-all'
-    subprocess.check_call([cmd_path] + options, env=env)
+    env[
+        'SPHINX_APIDOC_OPTIONS'
+    ] = 'members,special-members,private-members,undoc-members,show-inheritance,ignore-module-all'
+    subprocess.check_call([cmd_path] + cli_options, env=env)
 
 
 # Warnings to ignore when using the -n (nitpicky) option
@@ -239,8 +263,13 @@ man_pages = [('index', 'aiida', 'AiiDA documentation', [author], 1)]
 
 texinfo_documents = [
     (
-        'index', 'aiida', 'AiiDA documentation', author, 'aiida',
-        'Automated Interactive Infrastructure and Database for Computational Science', 'Miscellaneous'
+        'index',
+        'aiida',
+        'AiiDA documentation',
+        author,
+        'aiida',
+        'Automated Interactive Infrastructure and Database for Computational Science',
+        'Miscellaneous',
     ),
 ]
 
@@ -250,11 +279,11 @@ epub_publisher = author
 epub_copyright = copyright
 
 # -- Local extension --------------------------------------------------
-from sphinx.addnodes import pending_xref
-from sphinx.application import Sphinx
-from sphinx.domains.python import PythonDomain
-from sphinx.environment import BuildEnvironment
-from sphinx.transforms import SphinxTransform
+from sphinx.addnodes import pending_xref  # noqa: E402
+from sphinx.application import Sphinx  # noqa: E402
+from sphinx.domains.python import PythonDomain  # noqa: E402
+from sphinx.environment import BuildEnvironment  # noqa: E402
+from sphinx.transforms import SphinxTransform  # noqa: E402
 
 
 def setup(app: Sphinx):

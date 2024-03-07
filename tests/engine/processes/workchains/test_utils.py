@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,10 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument,unused-variable,function-redefined,missing-class-docstring,missing-function-docstring
 """Tests for `aiida.engine.processes.workchains.utils` module."""
 import pytest
-
 from aiida.engine import ExitCode, ProcessState
 from aiida.engine.processes.workchains.restart import BaseRestartWorkChain
 from aiida.engine.processes.workchains.utils import ProcessHandlerReport, process_handler
@@ -29,13 +26,11 @@ class TestRegisterProcessHandler:
         with pytest.raises(TypeError):
 
             class SomeWorkChain(BaseRestartWorkChain):
-
-                @process_handler(400)  # pylint: disable=too-many-function-args
+                @process_handler(400)
                 def _(self, node):
                     pass
 
-        class SomeWorkChain(BaseRestartWorkChain):
-
+        class SomeWorkChain(BaseRestartWorkChain):  # noqa: F811
             @process_handler(priority=400)
             def _(self, node):
                 pass
@@ -45,7 +40,6 @@ class TestRegisterProcessHandler:
         with pytest.raises(TypeError):
 
             class SomeWorkChain(BaseRestartWorkChain):
-
                 @process_handler(priority='400')
                 def _(self, node):
                     pass
@@ -111,13 +105,11 @@ class TestRegisterProcessHandler:
         with pytest.raises(TypeError):
 
             class SomeWorkChain(BaseRestartWorkChain):
-
-                @process_handler(ExitCode())  # pylint: disable=too-many-function-args
+                @process_handler(ExitCode())
                 def _(self, node):
                     pass
 
-        class SomeWorkChain(BaseRestartWorkChain):
-
+        class SomeWorkChain(BaseRestartWorkChain):  # noqa: F811
             @process_handler(exit_codes=ExitCode())
             def _(self, node):
                 pass
@@ -135,26 +127,22 @@ class TestRegisterProcessHandler:
             for incorrect_type in incorrect_types:
 
                 class SomeWorkChain(BaseRestartWorkChain):
-
-                    @process_handler(exit_codes=incorrect_type)  # pylint: disable=cell-var-from-loop
+                    @process_handler(exit_codes=incorrect_type)
                     def _(self, node):
                         pass
 
-        class SomeWorkChain(BaseRestartWorkChain):
-
+        class SomeWorkChain(BaseRestartWorkChain):  # noqa: F811
             @process_handler(exit_codes=ExitCode(400, 'Some exit code'))
             def _(self, node):
                 pass
 
-        class SomeWorkChain(BaseRestartWorkChain):
-
+        class SomeWorkChain(BaseRestartWorkChain):  # noqa: F811
             @process_handler(exit_codes=[ExitCode(400, 'a'), ExitCode(401, 'b')])
             def _(self, node):
                 pass
 
     def test_exit_codes_filter(self):
         """Test that the `exit_codes` argument properly filters, returning `None` if the `node` has different status."""
-
         exit_code_filter = ExitCode(400)
 
         # This process node should match the exit code filter of the error handler
@@ -190,13 +178,11 @@ class TestRegisterProcessHandler:
         with pytest.raises(TypeError):
 
             class SomeWorkChain(BaseRestartWorkChain):
-
-                @process_handler(True)  # pylint: disable=too-many-function-args
+                @process_handler(True)
                 def _(self, node):
                     pass
 
-        class SomeWorkChain(BaseRestartWorkChain):
-
+        class SomeWorkChain(BaseRestartWorkChain):  # noqa: F811
             @process_handler(enabled=False)
             def _(self, node):
                 pass
@@ -205,20 +191,18 @@ class TestRegisterProcessHandler:
         """The `enabled` should be keyword only."""
 
         class SomeWorkChain(BaseRestartWorkChain):
-
             @process_handler
             def enabled_handler(self, node):
                 pass
 
-        assert SomeWorkChain.enabled_handler.enabled  # pylint: disable=no-member
+        assert SomeWorkChain.enabled_handler.enabled
 
         class SomeWorkChain(BaseRestartWorkChain):
-
             @process_handler(enabled=False)
             def disabled_handler(self, node):
                 pass
 
-        assert not SomeWorkChain.disabled_handler.enabled  # pylint: disable=no-member
+        assert not SomeWorkChain.disabled_handler.enabled
 
     def test_empty_exit_codes_list(self):
         """A `process_handler` with an empty `exit_codes` list should not run."""

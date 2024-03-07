@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,13 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name,unused-variable
 """Tests for the `GroupParamType`."""
 import uuid
 
 import click
 import pytest
-
 from aiida.cmdline.params.types import GroupParamType
 from aiida.orm import AutoGroup, Group, ImportGroup
 from aiida.orm.utils.loaders import OrmEntityLoader
@@ -113,11 +110,14 @@ def test_create_if_not_exist():
         GroupParamType(create_if_not_exist=True, sub_classes=('aiida.groups:core.auto', 'aiida.groups:core.import'))
 
 
-@pytest.mark.parametrize(('sub_classes', 'expected'), (
-    (None, (True, True, True)),
-    (('aiida.groups:core.auto',), (False, True, False)),
-    (('aiida.groups:core.auto', 'aiida.groups:core.import'), (False, True, True)),
-))
+@pytest.mark.parametrize(
+    ('sub_classes', 'expected'),
+    (
+        (None, (True, True, True)),
+        (('aiida.groups:core.auto',), (False, True, False)),
+        (('aiida.groups:core.auto', 'aiida.groups:core.import'), (False, True, True)),
+    ),
+)
 def test_sub_classes(setup_groups, sub_classes, expected):
     """Test the `sub_classes` constructor argument."""
     entity_01, entity_02, entity_03 = setup_groups

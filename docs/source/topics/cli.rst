@@ -114,7 +114,7 @@ Verbosity
 =========
 All ``verdi`` commands have the ``-v/--verbosity`` option, which allows to control the verbosity of the output that is printed by the command.
 The option takes a value that is known as the log level and all messages that are emitted with an inferior log level will be suppressed.
-The valid values in order of increasing log level are: `NOTSET`, `DEBUG`, `INFO`, `REPORT`, `WARNING`, `ERROR` and `CRITICAL`.
+The valid values in order of increasing log level are: ``NOTSET``, ``DEBUG``, ``INFO``, ``REPORT``, ``WARNING``, ``ERROR`` and ``CRITICAL``.
 For example, if the log level is set to ``ERROR``, only messages with the ``ERROR`` and ``CRITICAL`` level will be shown.
 The choice for these log level values comes directly from `Python's built-in logging module <https://docs.python.org/3/library/logging.html>`_.
 The ``REPORT`` level is a log level that is defined and added by AiiDA that sits between the ``INFO`` and ``WARNING`` level, and is the default log level.
@@ -133,7 +133,11 @@ is identical to
     verdi --verbosity debug process list
 
 When the option is specified multiple times, only the last value will be considered.
-If the `--verbosity` option is specified, it overrides the log level of all the loggers configured by AiiDA, e.g. `logging.aiida_loglevel`.
+
+.. note::
+
+    The ``--verbosity`` option only overrides the log level of the ``aiida`` and ``verdi`` loggers.
+    To control the log level of other loggers, please use ``verdi config set`` (see :ref:`this section <intro:increase-logging-verbosity>`).
 
 
 .. _topics:cli:identifiers:

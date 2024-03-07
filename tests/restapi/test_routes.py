@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,37 +6,32 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,too-many-public-methods
 """Unittests for REST API."""
-from datetime import date
 import io
 import json
+from datetime import date
 
-from flask_cors.core import ACL_ORIGIN
 import numpy as np
 import pytest
-
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
 from aiida.orm.nodes.data.array.array import clean_array
 from aiida.restapi.run_api import configure_api
+from flask_cors.core import ACL_ORIGIN
 
 
 class TestRestApi:
-    """
-    Setup of the tests for the AiiDA RESTful-api
-    """
+    """Setup of the tests for the AiiDA RESTful-api"""
+
     _url_prefix = '/api/v4'
     _dummy_data: dict = {}
     _PERPAGE_DEFAULT = 20
     _LIMIT_DEFAULT = 400
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init,disable=too-many-locals,too-many-statements
-
         api = configure_api(catch_internal_server=True)
         self.app = api.app
         self.app.config['TESTING'] = True
@@ -45,9 +39,9 @@ class TestRestApi:
         self.user = orm.User.collection.get_default()
 
         # create test inputs
-        cell = ((2., 0., 0.), (0., 2., 0.), (0., 0., 2.))
+        cell = ((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0))
         structure = orm.StructureData(cell=cell)
-        structure.append_atom(position=(0., 0., 0.), symbols=['Ba'])
+        structure.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'])
         structure.store()
         structure.base.comments.add('This is test comment.')
         structure.base.comments.add('Add another comment.')
@@ -99,9 +93,7 @@ class TestRestApi:
             'levelname': logging.getLevelName(LOG_LEVEL_REPORT),
             'dbnode_id': calc.pk,
             'message': 'This is a template record message',
-            'metadata': {
-                'content': 'test'
-            },
+            'metadata': {'content': 'test'},
         }
         Log(**log_record)
 
@@ -117,27 +109,32 @@ class TestRestApi:
         calc1.set_option('resources', resources)
         calc1.store()
 
-        dummy_computers = [{
-            'label': 'test1',
-            'hostname': 'test1.epfl.ch',
-            'transport_type': 'core.ssh',
-            'scheduler_type': 'core.pbspro',
-        }, {
-            'label': 'test2',
-            'hostname': 'test2.epfl.ch',
-            'transport_type': 'core.ssh',
-            'scheduler_type': 'core.torque',
-        }, {
-            'label': 'test3',
-            'hostname': 'test3.epfl.ch',
-            'transport_type': 'core.local',
-            'scheduler_type': 'core.slurm',
-        }, {
-            'label': 'test4',
-            'hostname': 'test4.epfl.ch',
-            'transport_type': 'core.ssh',
-            'scheduler_type': 'core.slurm',
-        }]
+        dummy_computers = [
+            {
+                'label': 'test1',
+                'hostname': 'test1.epfl.ch',
+                'transport_type': 'core.ssh',
+                'scheduler_type': 'core.pbspro',
+            },
+            {
+                'label': 'test2',
+                'hostname': 'test2.epfl.ch',
+                'transport_type': 'core.ssh',
+                'scheduler_type': 'core.torque',
+            },
+            {
+                'label': 'test3',
+                'hostname': 'test3.epfl.ch',
+                'transport_type': 'core.local',
+                'scheduler_type': 'core.slurm',
+            },
+            {
+                'label': 'test4',
+                'hostname': 'test4.epfl.ch',
+                'transport_type': 'core.ssh',
+                'scheduler_type': 'core.slurm',
+            },
+        ]
 
         for dummy_computer in dummy_computers:
             computer = orm.Computer(**dummy_computer)
@@ -166,9 +163,7 @@ class TestRestApi:
         return self._url_prefix
 
     def process_dummy_data(self):
-        # pylint: disable=fixme
-        """
-        This functions prepare atomic chunks of typical responses from the
+        """This functions prepare atomic chunks of typical responses from the
         RESTapi and puts them into class attributes
 
         """
@@ -176,13 +171,12 @@ class TestRestApi:
         # by their list index is very fragile and a pain to debug.
         # Please change this!
         computer_projections = ['id', 'uuid', 'label', 'hostname', 'transport_type', 'scheduler_type']
-        computers = orm.QueryBuilder().append(orm.Computer, tag='comp', project=computer_projections).order_by({
-            'comp': [{
-                'id': {
-                    'order': 'asc'
-                }
-            }]
-        }).dict()
+        computers = (
+            orm.QueryBuilder()
+            .append(orm.Computer, tag='comp', project=computer_projections)
+            .order_by({'comp': [{'id': {'order': 'asc'}}]})
+            .dict()
+        )
 
         # Cast UUID into a string (e.g. in sqlalchemy it comes as a UUID object)
         computers = [_['comp'] for _ in computers]
@@ -192,14 +186,12 @@ class TestRestApi:
         self._dummy_data['computers'] = computers
 
         calculation_projections = ['id', 'uuid', 'user_id', 'node_type']
-        calculations = orm.QueryBuilder().append(orm.CalculationNode, tag='calc',
-                                                 project=calculation_projections).order_by({
-                                                     'calc': [{
-                                                         'id': {
-                                                             'order': 'desc'
-                                                         }
-                                                     }]
-                                                 }).dict()
+        calculations = (
+            orm.QueryBuilder()
+            .append(orm.CalculationNode, tag='calc', project=calculation_projections)
+            .order_by({'calc': [{'id': {'order': 'desc'}}]})
+            .dict()
+        )
 
         calculations = [_['calc'] for _ in calculations]
         for calc in calculations:
@@ -216,13 +208,12 @@ class TestRestApi:
             'arraydata': orm.ArrayData,
         }
         for label, dataclass in data_types.items():
-            data = orm.QueryBuilder().append(dataclass, tag='data', project=data_projections).order_by({
-                'data': [{
-                    'id': {
-                        'order': 'desc'
-                    }
-                }]
-            }).dict()
+            data = (
+                orm.QueryBuilder()
+                .append(dataclass, tag='data', project=data_projections)
+                .order_by({'data': [{'id': {'order': 'desc'}}]})
+                .dict()
+            )
             data = [_['data'] for _ in data]
 
             for datum in data:
@@ -232,8 +223,7 @@ class TestRestApi:
             self._dummy_data[label] = data
 
     def split_path(self, url):
-        """
-        Split the url with "?" to get url path and it's parameters
+        """Split the url with "?" to get url path and it's parameters
         :param url: Web url
         :return: url path and url parameters
         """
@@ -248,8 +238,7 @@ class TestRestApi:
         return path, query_string
 
     def compare_extra_response_data(self, node_type, url, response, uuid=None):
-        """
-        In url response, we pass some extra information/data along with the node
+        """In url response, we pass some extra information/data along with the node
         results. e.g. url method, node_type, path, pk, query_string, url,
         url_root,
         etc.
@@ -281,11 +270,9 @@ class TestRestApi:
         expected_errormsg=None,
         uuid=None,
         result_node_type=None,
-        result_name=None
+        result_name=None,
     ):
-        # pylint: disable=too-many-arguments
-        """
-        Check whether response matches expected values.
+        """Check whether response matches expected values.
 
         :param entity_type: url requested for the type of the node
         :param url: web url
@@ -298,7 +285,6 @@ class TestRestApi:
         :param result_node_type: node type in response data
         :param result_name: result name in response e.g. incoming, outgoing
         """
-
         if expected_list_ids is None:
             expected_list_ids = []
 
@@ -324,9 +310,10 @@ class TestRestApi:
                 elif expected_list_ids:
                     expected_data = [self._dummy_data[result_node_type][i] for i in expected_list_ids]
                 elif expected_range != []:
-                    expected_data = self._dummy_data[result_node_type][expected_range[0]:expected_range[1]]
+                    expected_data = self._dummy_data[result_node_type][expected_range[0] : expected_range[1]]
                 else:
                     from aiida.common.exceptions import InputValidationError
+
                     raise InputValidationError('Pass the expected range of the dummydata')
                 expected_node_uuids = [node['uuid'] for node in expected_data]
                 result_node_uuids = [node['uuid'] for node in response['data'][result_name]]
@@ -337,9 +324,7 @@ class TestRestApi:
     ############### generic endpoints ########################
 
     def test_server(self):
-        """
-        Test that /server endpoint returns AiiDA version
-        """
+        """Test that /server endpoint returns AiiDA version"""
         url = f'{self.get_url_prefix()}/server'
         from aiida import __version__
 
@@ -351,9 +336,7 @@ class TestRestApi:
             assert self.get_url_prefix() == data['API_prefix']
 
     def test_base_url(self):
-        """
-        Test that / returns list of endpoints
-        """
+        """Test that / returns list of endpoints"""
         with self.app.test_client() as client:
             data_base = json.loads(client.get(self.get_url_prefix() + '/').data)['data']
             data_server = json.loads(client.get(self.get_url_prefix() + '/server/endpoints').data)['data']
@@ -362,9 +345,7 @@ class TestRestApi:
             assert data_base == data_server
 
     def test_cors_headers(self):
-        """
-        Test that REST API sets cross-origin resource sharing headers
-        """
+        """Test that REST API sets cross-origin resource sharing headers"""
         url = f'{self.get_url_prefix()}/server'
 
         with self.app.test_client() as client:
@@ -375,21 +356,16 @@ class TestRestApi:
     ############### computers endpoint ########################
 
     def test_computers_details(self):
-        """
-        Requests the details of single computer
-        """
+        """Requests the details of single computer"""
         node_uuid = self.get_dummy_data()['computers'][1]['uuid']
-        self.process_test('computers', f'/computers/{str(node_uuid)}', expected_list_ids=[1], uuid=node_uuid)
+        self.process_test('computers', f'/computers/{node_uuid!s}', expected_list_ids=[1], uuid=node_uuid)
 
     def test_computers_list(self):
-        """
-        Get the full list of computers from database
-        """
+        """Get the full list of computers from database"""
         self.process_test('computers', '/computers?orderby=+id', full_list=True)
 
     def test_computers_list_limit_offset(self):
-        """
-        Get the list of computers from database using limit
+        """Get the list of computers from database using limit
         and offset parameter.
         It should return the no of rows specified in limit from
         database starting from the no. specified in offset
@@ -397,8 +373,7 @@ class TestRestApi:
         self.process_test('computers', '/computers?limit=2&offset=2&orderby=+id', expected_range=[2, 4])
 
     def test_computers_list_limit_only(self):
-        """
-        Get the list of computers from database using limit
+        """Get the list of computers from database using limit
         parameter.
         It should return the no of rows specified in limit from
         database.
@@ -406,8 +381,7 @@ class TestRestApi:
         self.process_test('computers', '/computers?limit=2&orderby=+id', expected_range=[None, 2])
 
     def test_computers_list_offset_only(self):
-        """
-        Get the list of computers from database using offset
+        """Get the list of computers from database using offset
         parameter
         It should return all the rows from database starting from
         the no. specified in offset
@@ -415,8 +389,7 @@ class TestRestApi:
         self.process_test('computers', '/computers?offset=2&orderby=+id', expected_range=[2, None])
 
     def test_computers_list_limit_offset_perpage(self):
-        """
-        If we pass the limit, offset and perpage at same time, it
+        """If we pass the limit, offset and perpage at same time, it
         would return the error message.
         """
         expected_error = 'perpage key is incompatible with limit and offset'
@@ -425,19 +398,16 @@ class TestRestApi:
         )
 
     def test_computers_list_page_limit_offset(self):
-        """
-        If we use the page, limit and offset at same time, it
+        """If we use the page, limit and offset at same time, it
         would return the error message.
         """
-        expected_error = 'requesting a specific page is incompatible with ' \
-                         'limit and offset'
+        expected_error = 'requesting a specific page is incompatible with ' 'limit and offset'
         self.process_test(
             'computers', '/computers/page/2?offset=2&limit=1&orderby=+id', expected_errormsg=expected_error
         )
 
     def test_complist_pagelimitoffset_perpage(self):
-        """
-        If we use the page, limit, offset and perpage at same time, it
+        """If we use the page, limit, offset and perpage at same time, it
         would return the error message.
         """
         expected_error = 'perpage key is incompatible with limit and offset'
@@ -446,8 +416,7 @@ class TestRestApi:
         )
 
     def test_computers_list_page_default(self):
-        """
-        it returns the no. of rows defined as default perpage option
+        """It returns the no. of rows defined as default perpage option
         from database.
 
         no.of pages = total no. of computers in database / perpage
@@ -457,66 +426,57 @@ class TestRestApi:
         self.process_test('computers', '/computers/page?orderby=+id', full_list=True)
 
     def test_computers_list_page_perpage(self):
-        """
-        no.of pages = total no. of computers in database / perpage
+        """no.of pages = total no. of computers in database / perpage
         Using this formula it returns the no. of rows for requested page
         """
         self.process_test('computers', '/computers/page/1?perpage=2&orderby=+id', expected_range=[None, 2])
 
     def test_computers_list_page_perpage_exceed(self):
-        """
-        no.of pages = total no. of computers in database / perpage
+        """no.of pages = total no. of computers in database / perpage
 
         If we request the page which exceeds the total no. of pages then
         it would return the error message.
         """
-        expected_error = 'Non existent page requested. The page range is [1 : ' \
-                         '3]'
+        expected_error = 'Non existent page requested. The page range is [1 : ' '3]'
         self.process_test('computers', '/computers/page/4?perpage=2&orderby=+id', expected_errormsg=expected_error)
 
     ############### list filters ########################
     def test_computers_filter_id1(self):
-        """
-        Add filter on the id of computer and get the filtered computer
+        """Add filter on the id of computer and get the filtered computer
         list (e.g. id=1)
         """
         node_pk = self.get_dummy_data()['computers'][1]['id']
 
-        self.process_test('computers', f'/computers?id={str(node_pk)}', expected_list_ids=[1])
+        self.process_test('computers', f'/computers?id={node_pk!s}', expected_list_ids=[1])
 
     def test_computers_filter_id2(self):
-        """
-        Add filter on the id of computer and get the filtered computer
+        """Add filter on the id of computer and get the filtered computer
         list (e.g. id > 2)
         """
         node_pk = self.get_dummy_data()['computers'][1]['id']
-        self.process_test('computers', f'/computers?id>{str(node_pk)}&orderby=+id', expected_range=[2, None])
+        self.process_test('computers', f'/computers?id>{node_pk!s}&orderby=+id', expected_range=[2, None])
 
     def test_computers_filter_pk(self):
-        """
-        Add filter on the id of computer and get the filtered computer
+        """Add filter on the id of computer and get the filtered computer
         list (e.g. id=1)
         """
         node_pk = self.get_dummy_data()['computers'][1]['id']
-        self.process_test('computers', f'/computers?pk={str(node_pk)}', expected_list_ids=[1])
+        self.process_test('computers', f'/computers?pk={node_pk!s}', expected_list_ids=[1])
 
     def test_computers_filter_name(self):
-        """
-        Add filter for the label of computer and get the filtered computer
+        """Add filter for the label of computer and get the filtered computer
         list
         """
         self.process_test('computers', '/computers?label="test1"', expected_list_ids=[1])
 
     def test_computers_filter_hostname(self):
-        """
-        Add filter for the hostname of computer and get the filtered computer
+        """Add filter for the hostname of computer and get the filtered computer
         list
         """
         self.process_test('computers', '/computers?hostname="test1.epfl.ch"', expected_list_ids=[1])
 
     def test_computers_filter_transport_type(self):
-        """
-        Add filter for the transport_type of computer and get the filtered
+        """Add filter for the transport_type of computer and get the filtered
         computer
         list
         """
@@ -526,112 +486,100 @@ class TestRestApi:
 
     ############### list orderby ########################
     def test_computers_orderby_id_asc(self):
-        """
-        Returns the computers list ordered by "id" in ascending
+        """Returns the computers list ordered by "id" in ascending
         order
         """
         self.process_test('computers', '/computers?orderby=id', full_list=True)
 
     def test_computers_orderby_id_asc_sign(self):
-        """
-        Returns the computers list ordered by "+id" in ascending
+        """Returns the computers list ordered by "+id" in ascending
         order
         """
         self.process_test('computers', '/computers?orderby=+id', full_list=True)
 
     def test_computers_orderby_id_desc(self):
-        """
-        Returns the computers list ordered by "id" in descending
+        """Returns the computers list ordered by "id" in descending
         order
         """
         self.process_test('computers', '/computers?orderby=-id', expected_list_ids=[4, 3, 2, 1, 0])
 
     def test_computers_orderby_label_asc(self):
-        """
-        Returns the computers list ordered by "label" in ascending
+        """Returns the computers list ordered by "label" in ascending
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        self.process_test('computers', f'/computers?pk>{str(node_pk)}&orderby=label', expected_list_ids=[1, 2, 3, 4])
+        self.process_test('computers', f'/computers?pk>{node_pk!s}&orderby=label', expected_list_ids=[1, 2, 3, 4])
 
     def test_computers_orderby_label_asc_sign(self):
-        """
-        Returns the computers list ordered by "+label" in ascending
+        """Returns the computers list ordered by "+label" in ascending
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        self.process_test('computers', f'/computers?pk>{str(node_pk)}&orderby=+label', expected_list_ids=[1, 2, 3, 4])
+        self.process_test('computers', f'/computers?pk>{node_pk!s}&orderby=+label', expected_list_ids=[1, 2, 3, 4])
 
     def test_computers_orderby_label_desc(self):
-        """
-        Returns the computers list ordered by "label" in descending
+        """Returns the computers list ordered by "label" in descending
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        self.process_test('computers', f'/computers?pk>{str(node_pk)}&orderby=-label', expected_list_ids=[4, 3, 2, 1])
+        self.process_test('computers', f'/computers?pk>{node_pk!s}&orderby=-label', expected_list_ids=[4, 3, 2, 1])
 
     def test_computers_orderby_scheduler_type_asc(self):
-        """
-        Returns the computers list ordered by "scheduler_type" in ascending
+        """Returns the computers list ordered by "scheduler_type" in ascending
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
             'computers',
-            f"/computers?transport_type=\"core.ssh\"&pk>{str(node_pk)}&orderby=scheduler_type",
-            expected_list_ids=[1, 4, 2]
+            f'/computers?transport_type="core.ssh"&pk>{node_pk!s}&orderby=scheduler_type',
+            expected_list_ids=[1, 4, 2],
         )
 
     def test_comp_orderby_scheduler_ascsign(self):
-        """
-        Returns the computers list ordered by "+scheduler_type" in ascending
+        """Returns the computers list ordered by "+scheduler_type" in ascending
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
             'computers',
-            f"/computers?transport_type=\"core.ssh\"&pk>{str(node_pk)}&orderby=+scheduler_type",
-            expected_list_ids=[1, 4, 2]
+            f'/computers?transport_type="core.ssh"&pk>{node_pk!s}&orderby=+scheduler_type',
+            expected_list_ids=[1, 4, 2],
         )
 
     def test_computers_orderby_schedulertype_desc(self):
-        """
-        Returns the computers list ordered by "scheduler_type" in descending
+        """Returns the computers list ordered by "scheduler_type" in descending
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
             'computers',
-            f"/computers?pk>{str(node_pk)}&transport_type=\"core.ssh\"&orderby=-scheduler_type",
-            expected_list_ids=[2, 4, 1]
+            f'/computers?pk>{node_pk!s}&transport_type="core.ssh"&orderby=-scheduler_type',
+            expected_list_ids=[2, 4, 1],
         )
 
     ############### list orderby combinations #######################
     def test_computers_orderby_mixed1(self):
-        """
-        Returns the computers list first order by "transport_type" in
+        """Returns the computers list first order by "transport_type" in
         ascending order and if it is having same transport_type, order it
         by "id"
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
-            'computers', f'/computers?pk>{str(node_pk)}&orderby=transport_type,id', expected_list_ids=[3, 1, 2, 4]
+            'computers', f'/computers?pk>{node_pk!s}&orderby=transport_type,id', expected_list_ids=[3, 1, 2, 4]
         )
 
     def test_computers_orderby_mixed2(self):
-        """
-        Returns the computers list first order by "scheduler_type" in
+        """Returns the computers list first order by "scheduler_type" in
         descending order and if it is having same scheduler_type, order it
         by "name"
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
-            'computers', f'/computers?pk>{str(node_pk)}&orderby=-scheduler_type,label', expected_list_ids=[2, 3, 4, 1]
+            'computers', f'/computers?pk>{node_pk!s}&orderby=-scheduler_type,label', expected_list_ids=[2, 3, 4, 1]
         )
 
     def test_computers_orderby_mixed3(self):
-        """
-        Returns the computers list first order by "scheduler_type" in
+        """Returns the computers list first order by "scheduler_type" in
         ascending order and if it is having same scheduler_type, order it
         by "hostname" descending order
 
@@ -659,61 +607,48 @@ class TestRestApi:
 
     ############### list filter combinations #######################
     def test_computers_filter_mixed1(self):
-        """
-        Add filter for the hostname and id of computer and get the
+        """Add filter for the hostname and id of computer and get the
         filtered computer list
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        self.process_test(
-            'computers', f"/computers?id>{str(node_pk)}&hostname=\"test1.epfl.ch\"", expected_list_ids=[1]
-        )
+        self.process_test('computers', f'/computers?id>{node_pk!s}&hostname="test1.epfl.ch"', expected_list_ids=[1])
 
     def test_computers_filter_mixed2(self):
-        """
-        Add filter for the id, hostname and transport_type of the computer
+        """Add filter for the id, hostname and transport_type of the computer
         and get the filtered computer list
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
             'computers',
-            f"/computers?id>{str(node_pk)}&hostname=\"test3.epfl.ch\"&transport_type=\"core.ssh\"",
-            empty_list=True
+            f'/computers?id>{node_pk!s}&hostname="test3.epfl.ch"&transport_type="core.ssh"',
+            empty_list=True,
         )
 
     ############### list all parameter combinations #######################
     def test_computers_mixed1(self):
-        """
-        url parameters: id, limit and offset
-        """
+        """Url parameters: id, limit and offset"""
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        self.process_test(
-            'computers', f'/computers?id>{str(node_pk)}&limit=2&offset=3&orderby=+id', expected_list_ids=[4]
-        )
+        self.process_test('computers', f'/computers?id>{node_pk!s}&limit=2&offset=3&orderby=+id', expected_list_ids=[4])
 
     def test_computers_mixed2(self):
-        """
-        url parameters: id, page, perpage
-        """
+        """Url parameters: id, page, perpage"""
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
-            'computers', f'/computers/page/2?id>{str(node_pk)}&perpage=2&orderby=+id', expected_list_ids=[3, 4]
+            'computers', f'/computers/page/2?id>{node_pk!s}&perpage=2&orderby=+id', expected_list_ids=[3, 4]
         )
 
     def test_computers_mixed3(self):
-        """
-        url parameters: id, transport_type, orderby
-        """
+        """Url parameters: id, transport_type, orderby"""
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
             'computers',
-            f"/computers?id>={str(node_pk)}&transport_type=\"core.ssh\"&orderby=-id&limit=2",
-            expected_list_ids=[4, 2]
+            f'/computers?id>={node_pk!s}&transport_type="core.ssh"&orderby=-id&limit=2',
+            expected_list_ids=[4, 2],
         )
 
     ########## pass unknown url parameter ###########
     def test_computers_unknown_param(self):
-        """
-        url parameters: id, limit and offset
+        """Url parameters: id, limit and offset
 
         from aiida.common.exceptions import InputValidationError
         self.node_exception("/computers?aa=bb&id=2", InputValidationError)
@@ -721,22 +656,18 @@ class TestRestApi:
 
     ############### calculation retrieved_inputs and retrieved_outputs  #############
     def test_calculation_retrieved_inputs(self):
-        """
-        Get the list of given calculation retrieved_inputs
-        """
+        """Get the list of given calculation retrieved_inputs"""
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = f'{self.get_url_prefix()}/calcjobs/{str(node_uuid)}/input_files'
+        url = f'{self.get_url_prefix()}/calcjobs/{node_uuid!s}/input_files'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
             assert response['data'] == [{'name': 'calcjob_inputs', 'type': 'DIRECTORY'}]
 
     def test_calculation_retrieved_outputs(self):
-        """
-        Get the list of given calculation retrieved_outputs
-        """
+        """Get the list of given calculation retrieved_outputs"""
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = f'{self.get_url_prefix()}/calcjobs/{str(node_uuid)}/output_files'
+        url = f'{self.get_url_prefix()}/calcjobs/{node_uuid!s}/output_files'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -744,39 +675,33 @@ class TestRestApi:
 
     ############### calculation incoming  #############
     def test_calculation_inputs(self):
-        """
-        Get the list of give calculation incoming
-        """
+        """Get the list of give calculation incoming"""
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
         self.process_test(
             'nodes',
-            f'/nodes/{str(node_uuid)}/links/incoming?orderby=id',
+            f'/nodes/{node_uuid!s}/links/incoming?orderby=id',
             expected_list_ids=[6, 4],
             uuid=node_uuid,
             result_node_type='data',
-            result_name='incoming'
+            result_name='incoming',
         )
 
     def test_calculation_input_filters(self):
-        """
-        Get filtered incoming list for given calculations
-        """
+        """Get filtered incoming list for given calculations"""
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
         self.process_test(
             'nodes',
-            f"/nodes/{str(node_uuid)}/links/incoming?node_type=\"data.core.dict.Dict.\"",
+            f'/nodes/{node_uuid!s}/links/incoming?node_type="data.core.dict.Dict."',
             expected_list_ids=[4],
             uuid=node_uuid,
             result_node_type='data',
-            result_name='incoming'
+            result_name='incoming',
         )
 
     def test_calculation_iotree(self):
-        """
-        Get filtered incoming list for given calculations
-        """
+        """Get filtered incoming list for given calculations"""
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}/links/tree?in_limit=1&out_limit=1'
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid!s}/links/tree?in_limit=1&out_limit=1'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -785,7 +710,15 @@ class TestRestApi:
             assert len(response['data']['nodes'][0]['outgoing']) == 1
             assert len(response['data']['metadata']) == 1
             expected_attr = [
-                'ctime', 'mtime', 'id', 'node_label', 'node_type', 'uuid', 'description', 'incoming', 'outgoing'
+                'ctime',
+                'mtime',
+                'id',
+                'node_label',
+                'node_type',
+                'uuid',
+                'description',
+                'incoming',
+                'outgoing',
             ]
             received_attr = response['data']['nodes'][0].keys()
             for attr in expected_attr:
@@ -794,19 +727,14 @@ class TestRestApi:
 
     ############### calculation attributes #############
     def test_calculation_attributes(self):
-        """
-        Get list of calculation attributes
-        """
+        """Get list of calculation attributes"""
         attributes = {
             'attr1': 'OK',
             'attr2': 'OK',
-            'resources': {
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            },
+            'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1},
         }
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}/contents/attributes'
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid!s}/contents/attributes'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -815,11 +743,9 @@ class TestRestApi:
             self.compare_extra_response_data('nodes', url, response, uuid=node_uuid)
 
     def test_contents_attributes_filter(self):
-        """
-        Get list of calculation attributes with filter attributes_filter
-        """
+        """Get list of calculation attributes with filter attributes_filter"""
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = f"{self.get_url_prefix()}/nodes/{str(node_uuid)}/contents/attributes?attributes_filter=\"attr1\""
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid!s}/contents/attributes?attributes_filter="attr1"'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -829,19 +755,14 @@ class TestRestApi:
 
     ############### calculation node attributes filter  #############
     def test_calculation_attributes_filter(self):
-        """
-        Get the list of given calculation attributes filtered
-        """
+        """Get the list of given calculation attributes filtered"""
         attributes = {
             'attr1': 'OK',
             'attr2': 'OK',
-            'resources': {
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1
-            },
+            'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1},
         }
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}?attributes=true'
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid!s}?attributes=true'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -849,12 +770,10 @@ class TestRestApi:
 
     ############### calculation node extras_filter  #############
     def test_calculation_extras_filter(self):
-        """
-        Get the list of given calculation extras filtered
-        """
+        """Get the list of given calculation extras filtered"""
         extras = {'extra1': False, 'extra2': 'extra_info'}
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}?extras=true&extras_filter=extra1,extra2'
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid!s}?extras=true&extras_filter=extra1,extra2'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -863,12 +782,10 @@ class TestRestApi:
 
     ############### structure node attributes filter #############
     def test_structure_attributes_filter(self):
-        """
-        Get the list of given calculation attributes filtered
-        """
-        cell = [[2., 0., 0.], [0., 2., 0.], [0., 0., 2.]]
+        """Get the list of given calculation attributes filtered"""
+        cell = [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]]
         node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
-        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}?attributes=true&attributes_filter=cell'
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid!s}?attributes=true&attributes_filter=cell'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -876,8 +793,7 @@ class TestRestApi:
 
     ############### node attributes_filter with pagination #############
     def test_node_attributes_filter_pagination(self):
-        """
-        Check that node attributes specified in attributes_filter are
+        """Check that node attributes specified in attributes_filter are
         returned as a dictionary when pagination is set
         """
         expected_attributes = ['resources', 'cell']
@@ -896,8 +812,7 @@ class TestRestApi:
 
     ############### node get one attributes_filter with pagination #############
     def test_node_single_attributes_filter(self):
-        """
-        Check that when only one node attribute is specified in attributes_filter
+        """Check that when only one node attribute is specified in attributes_filter
         only this attribute is returned as a dictionary when pagination is set
         """
         expected_attribute = ['resources']
@@ -911,8 +826,7 @@ class TestRestApi:
 
     ############### node extras_filter with pagination #############
     def test_node_extras_filter_pagination(self):
-        """
-        Check that node extras specified in extras_filter are
+        """Check that node extras specified in extras_filter are
         returned as a dictionary when pagination is set
         """
         expected_extras = ['extra1', 'extra2']
@@ -931,8 +845,7 @@ class TestRestApi:
 
     ############### node get one extras_filter with pagination #############
     def test_node_single_extras_filter(self):
-        """
-        Check that when only one node extra is specified in extras_filter
+        """Check that when only one node extra is specified in extras_filter
         only this extra is returned as a dictionary when pagination is set
         """
         expected_extra = ['extra2']
@@ -946,15 +859,13 @@ class TestRestApi:
 
     ############### node full_type filter #############
     def test_nodes_full_type_filter(self):
-        """
-        Get the list of nodes filtered by full_type
-        """
+        """Get the list of nodes filtered by full_type"""
         expected_node_uuids = []
         for calc in self.get_dummy_data()['calculations']:
             if calc['node_type'] == 'process.calculation.calcjob.CalcJobNode.':
                 expected_node_uuids.append(calc['uuid'])
 
-        url = f"{self.get_url_prefix()}/nodes/?full_type=\"process.calculation.calcjob.CalcJobNode.|\""
+        url = f'{self.get_url_prefix()}/nodes/?full_type="process.calculation.calcjob.CalcJobNode.|"'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -962,9 +873,7 @@ class TestRestApi:
                 assert node['uuid'] in expected_node_uuids
 
     def test_nodes_time_filters(self):
-        """
-        Get the list of node filtered by time
-        """
+        """Get the list of node filtered by time"""
         today = date.today().strftime('%Y-%m-%d')
 
         expected_node_uuids = []
@@ -973,7 +882,7 @@ class TestRestApi:
             expected_node_uuids.append(calc['uuid'])
 
         # ctime filter test
-        url = f"{self.get_url_prefix()}/nodes/?ctime={today}&full_type=\"process.calculation.calcjob.CalcJobNode.|\""
+        url = f'{self.get_url_prefix()}/nodes/?ctime={today}&full_type="process.calculation.calcjob.CalcJobNode.|"'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -981,7 +890,7 @@ class TestRestApi:
                 assert node['uuid'] in expected_node_uuids
 
         # mtime filter test
-        url = f"{self.get_url_prefix()}/nodes/?mtime={today}&full_type=\"process.calculation.calcjob.CalcJobNode.|\""
+        url = f'{self.get_url_prefix()}/nodes/?mtime={today}&full_type="process.calculation.calcjob.CalcJobNode.|"'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -990,11 +899,9 @@ class TestRestApi:
 
     ############### Structure visualization and download #############
     def test_structure_derived_properties(self):
-        """
-        Get the list of give calculation incoming
-        """
+        """Get the list of give calculation incoming"""
         node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
-        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}/contents/derived_properties'
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid!s}/contents/derived_properties'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -1002,28 +909,25 @@ class TestRestApi:
             assert response['data']['derived_properties']['dimensionality'] == {
                 'dim': 3,
                 'value': 8.0,
-                'label': 'volume'
+                'label': 'volume',
             }
             assert response['data']['derived_properties']['formula'] == 'Ba'
             self.compare_extra_response_data('nodes', url, response, uuid=node_uuid)
 
     def test_structure_download(self):
-        """
-        Test download of structure file
-        """
+        """Test download of structure file"""
         from aiida.orm import load_node
 
         node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
         url = f'{self.get_url_prefix()}/nodes/{node_uuid}/download?download_format=xsf'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
-        structure_data = load_node(node_uuid)._exportcontent('xsf')[0]  # pylint: disable=protected-access
+        structure_data = load_node(node_uuid)._exportcontent('xsf')[0]
         assert rv_obj.data == structure_data
 
     @pytest.mark.parametrize('download', ['false', 'False'])
     def test_structure_download_false(self, download):
-        """
-        Test download=false that displays the content in the browser instead
+        """Test download=false that displays the content in the browser instead
         of downloading the structure file
         """
         from aiida.orm import load_node
@@ -1033,27 +937,23 @@ class TestRestApi:
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
-        structure_data = load_node(node_uuid)._exportcontent('xsf')[0]  # pylint: disable=protected-access
+        structure_data = load_node(node_uuid)._exportcontent('xsf')[0]
         assert response['data']['download']['data'] == structure_data.decode('utf-8')
 
     def test_cif(self):
-        """
-        Test download of cif file
-        """
+        """Test download of cif file"""
         from aiida.orm import load_node
 
         node_uuid = self.get_dummy_data()['cifdata'][0]['uuid']
         url = f'{self.get_url_prefix()}/nodes/{node_uuid}/download?download_format=cif'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
-        cif = load_node(node_uuid)._prepare_cif()[0]  # pylint: disable=protected-access
+        cif = load_node(node_uuid)._prepare_cif()[0]
         assert rv_obj.data == cif
 
     ############### projectable_properties #############
     def test_projectable_properties(self):
-        """
-        test projectable_properties endpoint
-        """
+        """Test projectable_properties endpoint"""
         for nodetype in ['nodes', 'processes', 'computers', 'users', 'groups']:
             url = f'{self.get_url_prefix()}/{nodetype}/projectable_properties'
             with self.app.test_client() as client:
@@ -1075,9 +975,7 @@ class TestRestApi:
                     assert prop in available_properties
 
     def test_node_namespace(self):
-        """
-        Test the rest api call to get list of available node namespace
-        """
+        """Test the rest api call to get list of available node namespace"""
         endpoint_datakeys = {
             '/nodes/full_types': ['path', 'namespace', 'subspaces', 'label', 'full_type'],
             '/nodes/full_types_count': ['path', 'namespace', 'subspaces', 'label', 'full_type', 'counter'],
@@ -1094,11 +992,9 @@ class TestRestApi:
                 self.compare_extra_response_data('nodes', url, response)
 
     def test_comments(self):
-        """
-        Get the node comments
-        """
+        """Get the node comments"""
         node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
-        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}/contents/comments'
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid!s}/contents/comments'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)['data']['comments']
@@ -1108,30 +1004,26 @@ class TestRestApi:
             assert sorted(all_comments) == sorted(['This is test comment.', 'Add another comment.'])
 
     def test_repo(self):
-        """
-        Test to get repo list or repo file contents for given node
-        """
+        """Test to get repo list or repo file contents for given node"""
         from aiida.orm import load_node
 
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = f"{self.get_url_prefix()}/nodes/{str(node_uuid)}/repo/list?filename=\"calcjob_inputs\""
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid!s}/repo/list?filename="calcjob_inputs"'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
             assert response['data']['repo_list'] == [{'type': 'FILE', 'name': 'aiida.in'}]
 
-        url = f"{self.get_url_prefix()}/nodes/{str(node_uuid)}/repo/contents?filename=\"calcjob_inputs/aiida.in\""
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid!s}/repo/contents?filename="calcjob_inputs/aiida.in"'
         with self.app.test_client() as client:
             response_obj = client.get(url)
             input_file = load_node(node_uuid).base.repository.get_object_content('calcjob_inputs/aiida.in', mode='rb')
             assert response_obj.data == input_file
 
     def test_process_report(self):
-        """
-        Test process report
-        """
+        """Test process report"""
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = f'{self.get_url_prefix()}/processes/{str(node_uuid)}/report'
+        url = f'{self.get_url_prefix()}/processes/{node_uuid!s}/report'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -1145,9 +1037,7 @@ class TestRestApi:
                 assert key in expected_log_keys
 
     def test_download_formats(self):
-        """
-        test for download format endpoint
-        """
+        """Test for download format endpoint"""
         url = f'{self.get_url_prefix()}/nodes/download_formats'
         with self.app.test_client() as client:
             response_value = client.get(url)
@@ -1165,17 +1055,16 @@ class TestRestApi:
 
         This also checks that `full_type` is _not_ included in the result no matter the entity.
         """
-        query_dict = orm.QueryBuilder().append(
-            orm.CalculationNode,
-            tag='calc',
-            project=['id', 'uuid', 'user_id'],
-        ).order_by({
-            'calc': [{
-                'id': {
-                    'order': 'desc'
-                }
-            }]
-        }).as_dict()
+        query_dict = (
+            orm.QueryBuilder()
+            .append(
+                orm.CalculationNode,
+                tag='calc',
+                project=['id', 'uuid', 'user_id'],
+            )
+            .order_by({'calc': [{'id': {'order': 'desc'}}]})
+            .as_dict()
+        )
 
         expected_node_uuids = []
         # dummy data already ordered 'desc' by 'id'
@@ -1189,11 +1078,8 @@ class TestRestApi:
         assert response.get('method', '') == 'POST'
         assert response.get('resource_type', '') == 'QueryBuilder'
 
-        assert len(expected_node_uuids) == \
-            len(response.get('data', {}).get('calc', [])), \
-            json.dumps(response, indent=2)
-        assert expected_node_uuids == \
-            [_.get('uuid', '') for _ in response.get('data', {}).get('calc', [])]
+        assert len(expected_node_uuids) == len(response.get('data', {}).get('calc', [])), json.dumps(response, indent=2)
+        assert expected_node_uuids == [_.get('uuid', '') for _ in response.get('data', {}).get('calc', [])]
         for entities in response.get('data', {}).values():
             for entity in entities:
                 # All are Nodes, but neither `node_type` or `process_type` are requested,
@@ -1206,7 +1092,7 @@ class TestRestApi:
         This should return with 405 Method Not Allowed.
         Otherwise, a "conventional" JSON response should be returned with a helpful message.
         """
-        from aiida.restapi.resources import QueryBuilder as qb_api
+        from aiida.restapi.resources import QueryBuilder as qb_api  # noqa: N813
 
         with self.app.test_client() as client:
             response_value = client.get(f'{self.get_url_prefix()}/querybuilder')
@@ -1224,22 +1110,22 @@ class TestRestApi:
 
         This also checks that `full_type` is _not_ included in the result no matter the entity.
         """
-        query_dict = orm.QueryBuilder().append(
-            orm.CalculationNode,
-            tag='calc',
-            project=['id', 'user_id'],
-        ).append(
-            orm.User,
-            tag='users',
-            with_node='calc',
-            project=['id', 'email'],
-        ).order_by({
-            'calc': [{
-                'id': {
-                    'order': 'desc'
-                }
-            }]
-        }).as_dict()
+        query_dict = (
+            orm.QueryBuilder()
+            .append(
+                orm.CalculationNode,
+                tag='calc',
+                project=['id', 'user_id'],
+            )
+            .append(
+                orm.User,
+                tag='users',
+                with_node='calc',
+                project=['id', 'email'],
+            )
+            .order_by({'calc': [{'id': {'order': 'desc'}}]})
+            .as_dict()
+        )
 
         expected_user_ids = []
         for calc in self.get_dummy_data()['calculations']:
@@ -1252,13 +1138,9 @@ class TestRestApi:
         assert response.get('method', '') == 'POST'
         assert response.get('resource_type', '') == 'QueryBuilder'
 
-        assert len(expected_user_ids) == \
-            len(response.get('data', {}).get('users', [])), \
-            json.dumps(response, indent=2)
-        assert expected_user_ids == \
-            [_.get('id', '') for _ in response.get('data', {}).get('users', [])]
-        assert expected_user_ids == \
-            [_.get('user_id', '') for _ in response.get('data', {}).get('calc', [])]
+        assert len(expected_user_ids) == len(response.get('data', {}).get('users', [])), json.dumps(response, indent=2)
+        assert expected_user_ids == [_.get('id', '') for _ in response.get('data', {}).get('users', [])]
+        assert expected_user_ids == [_.get('user_id', '') for _ in response.get('data', {}).get('calc', [])]
         for entities in response.get('data', {}).values():
             for entity in entities:
                 # User is not a Node (no full_type)
@@ -1270,20 +1152,21 @@ class TestRestApi:
         Here "project" will use the wildcard (*).
         This should result in both CalculationNodes and Data to be returned.
         """
-        builder = orm.QueryBuilder().append(
-            orm.CalculationNode,
-            tag='calc',
-            project='*',
-        ).append(
-            orm.Data,
-            tag='data',
-            with_incoming='calc',
-            project='*',
-        ).order_by({'data': [{
-            'id': {
-                'order': 'desc'
-            }
-        }]})
+        builder = (
+            orm.QueryBuilder()
+            .append(
+                orm.CalculationNode,
+                tag='calc',
+                project='*',
+            )
+            .append(
+                orm.Data,
+                tag='data',
+                with_incoming='calc',
+                project='*',
+            )
+            .order_by({'data': [{'id': {'order': 'desc'}}]})
+        )
 
         expected_calc_uuids = []
         expected_data_uuids = []
@@ -1299,16 +1182,10 @@ class TestRestApi:
         assert response.get('method', '') == 'POST'
         assert response.get('resource_type', '') == 'QueryBuilder'
 
-        assert len(expected_calc_uuids) == \
-            len(response.get('data', {}).get('calc', [])), \
-            json.dumps(response, indent=2)
-        assert len(expected_data_uuids) == \
-            len(response.get('data', {}).get('data', [])), \
-            json.dumps(response, indent=2)
-        assert expected_calc_uuids == \
-            [_.get('uuid', '') for _ in response.get('data', {}).get('calc', [])]
-        assert expected_data_uuids == \
-            [_.get('uuid', '') for _ in response.get('data', {}).get('data', [])]
+        assert len(expected_calc_uuids) == len(response.get('data', {}).get('calc', [])), json.dumps(response, indent=2)
+        assert len(expected_data_uuids) == len(response.get('data', {}).get('data', [])), json.dumps(response, indent=2)
+        assert expected_calc_uuids == [_.get('uuid', '') for _ in response.get('data', {}).get('calc', [])]
+        assert expected_data_uuids == [_.get('uuid', '') for _ in response.get('data', {}).get('data', [])]
         for entities in response.get('data', {}).values():
             for entity in entities:
                 # All are Nodes, and all properties are projected, full_type should be present
@@ -1320,15 +1197,16 @@ class TestRestApi:
 
         Here "project" will be an empty list, resulting in only the Data node being returned.
         """
-        builder = orm.QueryBuilder().append(orm.CalculationNode, tag='calc').append(
-            orm.Data,
-            tag='data',
-            with_incoming='calc',
-        ).order_by({'data': [{
-            'id': {
-                'order': 'desc'
-            }
-        }]})
+        builder = (
+            orm.QueryBuilder()
+            .append(orm.CalculationNode, tag='calc')
+            .append(
+                orm.Data,
+                tag='data',
+                with_incoming='calc',
+            )
+            .order_by({'data': [{'id': {'order': 'desc'}}]})
+        )
 
         expected_data_uuids = []
         for data in builder.all(flat=True):
@@ -1343,11 +1221,8 @@ class TestRestApi:
         assert response.get('resource_type', '') == 'QueryBuilder'
 
         assert ['data'] == list(response.get('data', {}).keys())
-        assert len(expected_data_uuids) == \
-            len(response.get('data', {}).get('data', [])), \
-            json.dumps(response, indent=2)
-        assert expected_data_uuids == \
-            [_.get('uuid', '') for _ in response.get('data', {}).get('data', [])]
+        assert len(expected_data_uuids) == len(response.get('data', {}).get('data', [])), json.dumps(response, indent=2)
+        assert expected_data_uuids == [_.get('uuid', '') for _ in response.get('data', {}).get('data', [])]
         for entities in response.get('data', {}).values():
             for entity in entities:
                 # All are Nodes, and all properties are projected, full_type should be present
@@ -1355,9 +1230,7 @@ class TestRestApi:
                 assert 'attributes' in entity
 
     def test_array_download(self):
-        """
-        Test download of arraydata as a json file
-        """
+        """Test download of arraydata as a json file"""
         from aiida.orm import load_node
 
         node_uuid = self.get_dummy_data()['arraydata'][0]['uuid']

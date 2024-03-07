@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -98,13 +97,8 @@ def cli():
 @cli.command('verdi-autodocs')
 def validate_verdi_documentation():
     """Auto-generate the documentation for `verdi` through `click`."""
-    from click import Context
-
-    from aiida.manage.configuration import load_documentation_profile
-
-    load_documentation_profile()
-
     from aiida.cmdline.commands.cmd_verdi import verdi
+    from click import Context
 
     width = 90  # The maximum width of the formatted help strings in characters
 
@@ -149,4 +143,4 @@ def validate_verdi_documentation():
 
 
 if __name__ == '__main__':
-    cli()  # pylint: disable=no-value-for-parameter
+    cli()

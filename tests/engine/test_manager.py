@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -12,7 +11,6 @@ import asyncio
 import time
 
 import pytest
-
 from aiida.engine.processes.calcjobs.manager import JobManager, JobsList
 from aiida.engine.transports import TransportQueue
 from aiida.orm import User
@@ -22,9 +20,8 @@ class TestJobManager:
     """Test the `aiida.engine.processes.calcjobs.manager.JobManager` class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.collection.get_default()
@@ -50,9 +47,8 @@ class TestJobsList:
     """Test the `aiida.engine.processes.calcjobs.manager.JobsList` class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.collection.get_default()

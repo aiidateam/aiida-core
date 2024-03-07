@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Tests for creating graphs (using graphviz)"""
 import pytest
-
 from aiida import orm
 from aiida.common import AttributeDict
 from aiida.common.links import LinkType
@@ -22,14 +20,12 @@ class TestVisGraph:
     """Tests for verdi graph"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
 
     def create_provenance(self):
-        """create an example provenance graph
-        """
+        """Create an example provenance graph"""
         pd0 = orm.Dict()
         pd0.label = 'pd0'
         pd0.store()
@@ -89,25 +85,26 @@ class TestVisGraph:
         pd3.base.links.add_incoming(wc1, link_type=LinkType.RETURN, link_label='output1')
         fd1.base.links.add_incoming(wc1, link_type=LinkType.RETURN, link_label='output2')
 
-        return AttributeDict({
-            'pd0': pd0,
-            'pd1': pd1,
-            'calc1': calc1,
-            'rd1': rd1,
-            'pd2': pd2,
-            'calcf1': calcf1,
-            'pd3': pd3,
-            'fd1': fd1,
-            'wc1': wc1
-        })
+        return AttributeDict(
+            {
+                'pd0': pd0,
+                'pd1': pd1,
+                'calc1': calc1,
+                'rd1': rd1,
+                'pd2': pd2,
+                'calcf1': calcf1,
+                'pd3': pd3,
+                'fd1': fd1,
+                'wc1': wc1,
+            }
+        )
 
     def test_graph_init(self):
-        """ test initialisation of Graph"""
-
+        """Test initialisation of Graph"""
         graph_mod.Graph()
 
     def test_graph_add_node(self):
-        """ test adding a node to the graph """
+        """Test adding a node to the graph"""
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph()
@@ -124,7 +121,7 @@ class TestVisGraph:
         assert graph.nodes == set([nodes.pd0.pk, nodes.pd1.pk])
 
     def test_graph_add_edge(self):
-        """ test adding an edge to the graph """
+        """Test adding an edge to the graph"""
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph()
@@ -135,48 +132,57 @@ class TestVisGraph:
         assert graph.edges == set([(nodes.pd0.pk, nodes.rd1.pk, None)])
 
     def test_graph_add_incoming(self):
-        """ test adding a node and all its incoming nodes to a graph"""
+        """Test adding a node and all its incoming nodes to a graph"""
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph()
         graph.add_incoming(nodes.calc1)
 
         assert graph.nodes == set([nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk, nodes.wc1.pk])
-        assert graph.edges == \
-            set([(nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
-                 (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
-                 (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1'))])
+        assert graph.edges == set(
+            [
+                (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
+                (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
+                (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1')),
+            ]
+        )
 
     def test_graph_add_outgoing(self):
-        """ test adding a node and all its outgoing nodes to a graph"""
+        """Test adding a node and all its outgoing nodes to a graph"""
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph()
         graph.add_outgoing(nodes.calcf1)
 
         assert graph.nodes == set([nodes.calcf1.pk, nodes.pd3.pk, nodes.fd1.pk])
-        assert graph.edges == \
-            set([(nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
-                 (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2'))])
+        assert graph.edges == set(
+            [
+                (nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
+                (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2')),
+            ]
+        )
 
     def test_graph_recurse_ancestors(self):
-        """ test adding nodes and all its (recursed) incoming nodes to a graph"""
+        """Test adding nodes and all its (recursed) incoming nodes to a graph"""
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph()
         graph.recurse_ancestors(nodes.rd1)
 
         assert graph.nodes == set([nodes.rd1.pk, nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk, nodes.wc1.pk])
-        assert graph.edges == \
-            set([(nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
-                 (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
-                 (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
-                 (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1')),
-                 (nodes.pd0.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input1')),
-                 (nodes.pd1.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input2'))])
+        assert graph.edges == set(
+            [
+                (nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
+                (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
+                (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
+                (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1')),
+                (nodes.pd0.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input1')),
+                (nodes.pd1.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input2')),
+            ]
+        )
 
     def test_graph_recurse_spot_highlight_classes(self):
-        """ test adding nodes and all its (recursed) incoming nodes to a graph"""
+        """Test adding nodes and all its (recursed) incoming nodes to a graph"""
         import difflib
 
         nodes = self.create_provenance()
@@ -192,50 +198,53 @@ class TestVisGraph:
         diff = difflib.unified_diff(
             graph.graphviz.source.splitlines(keepends=True), graph_highlight.graphviz.source.splitlines(keepends=True)
         )
-        got_diff = ''.join([l for l in diff if l.startswith('+')])
+        got_diff = ''.join([line for line in diff if line.startswith('+')])
 
         expected_diff = """\
         +State: running" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
         +@localhost" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
         +Exit Code: 200" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
         +\tN{fd1} [label="FolderData ({fd1})" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
-        +++""".format(**{
-            k: v.pk for k, v in nodes.items()
-        })
+        +++""".format(**{k: v.pk for k, v in nodes.items()})
 
-        assert sorted([l.strip() for l in got_diff.splitlines()]
-                      ) == sorted([l.strip() for l in expected_diff.splitlines()])
+        assert sorted([line.strip() for line in got_diff.splitlines()]) == sorted(
+            [line.strip() for line in expected_diff.splitlines()]
+        )
 
     def test_graph_recurse_ancestors_filter_links(self):
-        """ test adding nodes and all its (recursed) incoming nodes to a graph, but filter link types"""
+        """Test adding nodes and all its (recursed) incoming nodes to a graph, but filter link types"""
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph()
         graph.recurse_ancestors(nodes.rd1, link_types=['create', 'input_calc'])
 
         assert graph.nodes == set([nodes.rd1.pk, nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk])
-        assert graph.edges == \
-            set([(nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
-                 (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
-                 (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2'))])
+        assert graph.edges == set(
+            [
+                (nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
+                (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
+                (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
+            ]
+        )
 
     def test_graph_recurse_descendants(self):
-        """ test adding nodes and all its (recursed) incoming nodes to a graph"""
+        """Test adding nodes and all its (recursed) incoming nodes to a graph"""
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph()
         graph.recurse_descendants(nodes.rd1)
 
         assert graph.nodes == set([nodes.rd1.pk, nodes.calcf1.pk, nodes.pd3.pk, nodes.fd1.pk])
-        assert graph.edges == \
-            set([
+        assert graph.edges == set(
+            [
                 (nodes.rd1.pk, nodes.calcf1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
                 (nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
                 (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2')),
-            ])
+            ]
+        )
 
     def test_graph_graphviz_source(self):
-        """ test the output of graphviz source """
+        """Test the output of graphviz source"""
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph()
@@ -266,16 +275,15 @@ class TestVisGraph:
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]
                 N{calcf1} -> N{fd1} [color="#000000" style=solid]
                 N{calcf1} -> N{pd3} [color="#000000" style=solid]
-        }}""".format(**{
-            k: v.pk for k, v in nodes.items()
-        })
+        }}""".format(**{k: v.pk for k, v in nodes.items()})
 
         # dedent before comparison
-        assert sorted([l.strip() for l in graph.graphviz.source.splitlines()]) == \
-            sorted([l.strip() for l in expected.splitlines()])
+        assert sorted([line.strip() for line in graph.graphviz.source.splitlines()]) == sorted(
+            [line.strip() for line in expected.splitlines()]
+        )
 
     def test_graph_graphviz_source_pstate(self):
-        """ test the output of graphviz source, with the `pstate_node_styles` function """
+        """Test the output of graphviz source, with the `pstate_node_styles` function"""
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph(node_style_fn=graph_mod.pstate_node_styles)
@@ -310,10 +318,9 @@ class TestVisGraph:
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]
                 N{calcf1} -> N{fd1} [color="#000000" style=solid]
                 N{calcf1} -> N{pd3} [color="#000000" style=solid]
-        }}""".format(**{
-            k: v.pk for k, v in nodes.items()
-        })
+        }}""".format(**{k: v.pk for k, v in nodes.items()})
 
         # dedent before comparison
-        assert sorted([l.strip() for l in graph.graphviz.source.splitlines()]) == \
-            sorted([l.strip() for l in expected.splitlines()])
+        assert sorted([line.strip() for line in graph.graphviz.source.splitlines()]) == sorted(
+            [line.strip() for line in expected.splitlines()]
+        )

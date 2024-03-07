@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,28 +8,25 @@
 ###########################################################################
 """Module that contains the class definitions necessary to offer support for queries to Materials Project."""
 import pytest
-
 from aiida.plugins import DbImporterFactory
 
 
 def run_materialsproject_api_tests():
     from aiida.manage.configuration import get_profile
+
     profile = get_profile()
     return profile.dictionary.get('run_materialsproject_api_tests', False)
 
 
 class TestMaterialsProject:
-    """
-    Contains the tests to verify the functionality of the Materials Project importer
+    """Contains the tests to verify the functionality of the Materials Project importer
     functions.
     """
 
     def test_invalid_api_key(self):
-        """
-        Test if Materials Project rejects an invalid API key and that we catch the error.
+        """Test if Materials Project rejects an invalid API key and that we catch the error.
         Please enable the test in the profile configurator.
         """
-
         if not run_materialsproject_api_tests():
             pytest.skip('MaterialsProject API tests not enabled')
 

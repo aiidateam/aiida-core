@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Unit tests for the :mod:`aiida.engine.daemon.worker` module."""
 import pytest
-
 from aiida.engine.daemon.worker import shutdown_worker
 
 
@@ -24,4 +22,4 @@ async def test_shutdown_worker(manager):
         assert runner.is_closed()
     finally:
         # Reset the runner of the manager, because once closed it cannot be reused by other tests.
-        manager._runner = None  # pylint: disable=protected-access
+        manager._runner = None

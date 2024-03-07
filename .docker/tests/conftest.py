@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=missing-docstring, redefined-outer-name
 import json
-from pathlib import Path
 import time
+from pathlib import Path
 
 import pytest
 
@@ -13,13 +11,12 @@ def variant(request):
 
 
 @pytest.fixture(scope='session')
-def docker_compose_file(pytestconfig, variant):  # pylint: disable=unused-argument
+def docker_compose_file(pytestconfig, variant):
     return f'docker-compose.{variant}.yml'
 
 
 @pytest.fixture(scope='session')
 def docker_compose(docker_services):
-    # pylint: disable=protected-access
     return docker_services._docker_compose
 
 
@@ -31,7 +28,6 @@ def is_container_ready(docker_compose):
 @pytest.fixture(scope='session', autouse=True)
 def _docker_service_wait(docker_services):
     """Container startup wait."""
-
     time.sleep(30)
 
 
@@ -42,7 +38,6 @@ def container_user():
 
 @pytest.fixture
 def aiida_exec(docker_compose):
-
     def execute(command, user=None, **kwargs):
         if user:
             command = f'exec -T --user={user} aiida {command}'

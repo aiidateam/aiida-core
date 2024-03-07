@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,13 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :mod:`aiida.cmdline.params.options.conditional` module."""
 import functools
 
 import click
 import pytest
-
 from aiida.cmdline.params.options.conditional import ConditionalOption
 
 
@@ -26,16 +23,15 @@ def run_cli_command(run_cli_command):
 def construct_simple_cmd(pname, required_fn=lambda ctx: ctx.params.get('on'), **kwargs):
     """Return a command with two options.
 
-        * an option created from the ``args`` and ``kwargs``
-        * --opt, ``ConditionalOption`` with ``required_fn`` from ``kwargs``.
+    * an option created from the ``args`` and ``kwargs``
+    * --opt, ``ConditionalOption`` with ``required_fn`` from ``kwargs``.
     """
 
     @click.command()
     @click.option(pname, **kwargs)
     @click.option('--opt', required_fn=required_fn, cls=ConditionalOption)
     def cmd(on, opt):
-        """dummy command for testing"""
-        # pylint: disable=unused-argument,invalid-name
+        """Dummy command for testing"""
         click.echo(opt)
 
     return cmd
@@ -48,17 +44,15 @@ def construct_simple_cmd(pname, required_fn=lambda ctx: ctx.params.get('on'), **
 def command_multi_non_eager(a_or_b, opt_a, opt_b):
     """Return a command that has two scenarios.
 
-        * flag a_or_b (--a/--b)
-        * opt-a required if a_or_b is True
-        * opt-b required if a_or_b  is False
+    * flag a_or_b (--a/--b)
+    * opt-a required if a_or_b is True
+    * opt-b required if a_or_b  is False
     """
-    # pylint: disable=unused-argument
     click.echo(f'{opt_a} / {opt_b}')
 
 
 def test_switch_off(run_cli_command):
-    """
-    scenario: switch --on/--off detrmines if option opt is required
+    """scenario: switch --on/--off detrmines if option opt is required
     action: invoke with no options
     behaviour: flag is off by default -> command runs without complaining
     """
@@ -67,8 +61,7 @@ def test_switch_off(run_cli_command):
 
 
 def test_switch_on(run_cli_command):
-    """
-    scenario: switch --on/--off detrmines if option opt is required
+    """scenario: switch --on/--off detrmines if option opt is required
     action: invoke with --on
     behaviour: fails with Missing option message
     """
@@ -78,8 +71,7 @@ def test_switch_on(run_cli_command):
 
 
 def test_flag_off(run_cli_command):
-    """
-    scenario: flag "--on" detrmines if option opt is required
+    """scenario: flag "--on" detrmines if option opt is required
     action: invoke without options
     behaviour: command runs without complaining
     """
@@ -88,8 +80,7 @@ def test_flag_off(run_cli_command):
 
 
 def test_flag_on(run_cli_command):
-    """
-    scenario: flag "--on" detrmines if option opt is required
+    """scenario: flag "--on" detrmines if option opt is required
     action: invoke with --on
     behaviour: fails with Missing option message
     """
@@ -99,8 +90,7 @@ def test_flag_on(run_cli_command):
 
 
 def test_aa(run_cli_command):
-    """
-    scenario = a-or-b
+    """Scenario = a-or-b
     action: require a, give a (+ reversed order)
     behaviour: command runs
     """
@@ -112,8 +102,7 @@ def test_aa(run_cli_command):
 
 
 def test_ab(run_cli_command):
-    """
-    scenario = a-or-b
+    """Scenario = a-or-b
     action: require a, give b (+ reversed order)
     behaviour: fail, Missing option
     """
@@ -125,8 +114,7 @@ def test_ab(run_cli_command):
 
 
 def test_ba(run_cli_command):
-    """
-    scenario = a-or-b
+    """Scenario = a-or-b
     action: require b, give a (+ reversed order)
     behaviour: fail, Missing option
     """
@@ -156,7 +144,6 @@ def construct_command_flag_conditional(**kwargs):
     @click.option('--opt-a', required_fn=lambda ctx: ctx.params.get('required'), cls=ConditionalOption, **kwargs)
     def cmd(required, opt_a):
         """A command with a flag and customizable options that depend on it."""
-        # pylint: disable=unused-argument
         click.echo(f'{opt_a}')
 
     return cmd

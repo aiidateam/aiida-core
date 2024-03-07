@@ -3,7 +3,7 @@
     login_host: localhost
     login_user: "{{ aiida_user | default('aiida') }}"
     login_password: ''
-    db: "{{ aiida_backend }}"
+    db: '{{ aiida_backend }}'
     query: |
       SELECT
         CAST(sum(calls) AS INTEGER) as calls,
@@ -21,7 +21,7 @@
     login_host: localhost
     login_user: "{{ aiida_user | default('aiida') }}"
     login_password: ''
-    db: "{{ aiida_backend }}"
+    db: '{{ aiida_backend }}'
     query: |
       SELECT
         to_char(total_time, '9.99EEEE') AS time_ms,
@@ -42,7 +42,7 @@
     login_host: localhost
     login_user: "{{ aiida_user | default('aiida') }}"
     login_password: ''
-    db: "{{ aiida_backend }}"
+    db: '{{ aiida_backend }}'
     query: |
       SELECT
         to_char(total_time, '9.99EEEE') AS time_ms,

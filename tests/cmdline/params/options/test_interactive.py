@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,13 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Unit tests for the InteractiveOption."""
 import functools
 
 import click
 import pytest
-
 from aiida.cmdline.params.options import NON_INTERACTIVE
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.types.plugin import PluginParamType
@@ -26,9 +23,8 @@ def run_cli_command(run_cli_command):
 
 
 class Only42IntParamType(click.types.IntParamType):
-    """
-    Param type that only accepts 42 as valid value
-    """
+    """Param type that only accepts 42 as valid value"""
+
     name = 'only42int'
 
     def convert(self, value, param, ctx):
@@ -42,8 +38,7 @@ class Only42IntParamType(click.types.IntParamType):
 
 
 def user_callback(_ctx, param, value):
-    """
-    A fake user callback ued for testing.
+    """A fake user callback ued for testing.
 
     :param _ctx: The click context
     :param param: The parameter name
@@ -59,7 +54,7 @@ def user_callback(_ctx, param, value):
     return value
 
 
-def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argument
+def validate_positive_number(ctx, param, value):
     """Validate that the number passed to this parameter is a positive number.
 
     :param ctx: the `click.Context`
@@ -69,12 +64,13 @@ def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argum
     """
     if not isinstance(value, (int, float)) or value < 0:
         from click import BadParameter
+
         raise BadParameter(f'{value} is not a valid positive number')
 
     return value
 
 
-def validate_positive_number_with_echo(ctx, param, value):  # pylint: disable=unused-argument
+def validate_positive_number_with_echo(ctx, param, value):
     """Validate that the number passed to this parameter is a positive number.
        Also echos a message to the terminal
 
@@ -86,6 +82,7 @@ def validate_positive_number_with_echo(ctx, param, value):  # pylint: disable=un
     click.echo(f'Validating {value}')
     if not isinstance(value, (int, float)) or value < 0:
         from click import BadParameter
+
         raise BadParameter(f'{value} is not a valid positive number')
 
     return value
@@ -97,8 +94,8 @@ def create_command(**kwargs):
     @click.command()
     @click.option('--opt', prompt='Opt', cls=InteractiveOption, **kwargs)
     @NON_INTERACTIVE()
-    def cmd(opt, non_interactive):  # pylint: disable=unused-argument
-        """test command for InteractiveOption"""
+    def cmd(opt, non_interactive):
+        """Test command for InteractiveOption"""
         click.echo(str(opt))
 
     return cmd
@@ -111,7 +108,7 @@ def create_command(**kwargs):
         ('!', False, None, 'None'),  # When passing ``!`` at the prompt, it should set ``None`` as the value
         ('?', True, None, '?'),  # When explicitly passing ``?`` it should simply be accepted
         ('?', False, '?\n100\n', '100'),  # When passing ``?`` at the prompt, it should print the help message
-    )
+    ),
 )
 def test_special_characters(run_cli_command, character, explicit, user_input, expected):
     """Test the behavior of special characters."""
@@ -140,7 +137,7 @@ def test_special_characters(run_cli_command, character, explicit, user_input, ex
     (
         ('!\n', 'None'),  # When explicitly passing ``!`` it should simply be accepted
         ('?\n100\n', '100'),  # When passing ``?`` at the prompt, it should print the help message
-    )
+    ),
 )
 def test_special_characters_validation(run_cli_command, user_input, expected):
     """Test that the special characters do not get through to the validation of the parameter."""
@@ -153,11 +150,14 @@ def test_special_characters_validation(run_cli_command, user_input, expected):
     ('options', 'user_input', 'expected'),
     (
         ([], '', 'default-value'),  # Simply entering at the prompt should return the default
-        (['--non-interactive'
-          ], None, 'default-value'),  # Specifying ``--non-interactive`` should not prompt and return default
+        (
+            ['--non-interactive'],
+            None,
+            'default-value',
+        ),  # Specifying ``--non-interactive`` should not prompt and return default
         ([], 'custom-value', 'custom-value'),  # Specifying value at the prompt
         (['--opt', 'custom-value'], None, 'custom-value'),  # Specifying value explicitly on the command line
-    )
+    ),
 )
 def test_default(run_cli_command, options, user_input, expected):
     """Test the behavior of defaults being specified for the interactive option."""
@@ -180,8 +180,7 @@ def prompt_output(cli_input, converted=None):
 
 
 def test_callback_prompt_twice(run_cli_command):
-    """
-    scenario: using InteractiveOption with type=float and callback that tests for positive number
+    """scenario: using InteractiveOption with type=float and callback that tests for positive number
     behaviour: should fail everytime either type validation or callback validation fails
     """
     cmd = create_command(type=float, callback=validate_positive_number)
@@ -193,8 +192,7 @@ def test_callback_prompt_twice(run_cli_command):
 
 
 def test_callback_prompt_only_once(run_cli_command):
-    """
-    scenario: using InteractiveOption with type=float and callback that echos an additional message
+    """scenario: using InteractiveOption with type=float and callback that echos an additional message
     behaviour: the callback should be called at most once per prompt
     """
     cmd = create_command(type=float, callback=validate_positive_number_with_echo)
@@ -207,8 +205,7 @@ def test_callback_prompt_only_once(run_cli_command):
 
 
 def test_prompt_str(run_cli_command):
-    """
-    scenario: using InteractiveOption with type=str
+    """scenario: using InteractiveOption with type=str
     behaviour: giving no option prompts, accepts a string
     """
     cmd = create_command(type=str)
@@ -218,8 +215,7 @@ def test_prompt_str(run_cli_command):
 
 
 def test_prompt_empty_input(run_cli_command):
-    """
-    scenario: using InteractiveOption with type=str and invoking without options
+    """scenario: using InteractiveOption with type=str and invoking without options
     behaviour: pressing enter on empty line at prompt repeats the prompt without a message
     """
     cmd = create_command(type=str)
@@ -229,8 +225,7 @@ def test_prompt_empty_input(run_cli_command):
 
 
 def test_prompt_help_default(run_cli_command):
-    """
-    scenario: using InteractiveOption with type=str and no help parameter and invoking without options
+    """scenario: using InteractiveOption with type=str and no help parameter and invoking without options
     behaviour: entering '?' leads to a default help message being printed and prompt repeated
     """
     cmd = create_command(type=str)
@@ -241,8 +236,7 @@ def test_prompt_help_default(run_cli_command):
 
 
 def test_prompt_help_custom(run_cli_command):
-    """
-    scenario: using InteractiveOption with type=str and help message and invoking without options
+    """scenario: using InteractiveOption with type=str and help message and invoking without options
     behaviour: entering '?' leads to the given help message being printed and the prompt repeated
     """
     cmd = create_command(type=str, help='Please enter some text')
@@ -253,8 +247,7 @@ def test_prompt_help_custom(run_cli_command):
 
 
 def test_prompt_simple(run_cli_command):
-    """
-    scenario: using InteractiveOption with type=bool
+    """scenario: using InteractiveOption with type=bool
     behaviour: giving no option prompts, accepts 'true'
     """
     cmd = create_command(type=bool, help='help msg')
@@ -264,8 +257,7 @@ def test_prompt_simple(run_cli_command):
 
 
 def test_prompt_simple_other_types(run_cli_command):
-    """
-    scenario: using InteractiveOption with type of int or float
+    """scenario: using InteractiveOption with type of int or float
     behaviour: giving no option prompts, accepts int or float
     """
     params = [(int, '98', '98'), (float, '3.14e-7', '3.14e-07')]
@@ -278,8 +270,7 @@ def test_prompt_simple_other_types(run_cli_command):
 
 @pytest.mark.parametrize('parameter_type', (click.File(), click.Path(exists=True)))
 def test_prompt_complex(run_cli_command, parameter_type):
-    """
-    scenario: using InteractiveOption with type of file or path
+    """scenario: using InteractiveOption with type of file or path
     behaviour: giving no option prompts, file
     """
     cmd = create_command(type=parameter_type, help='help msg')
@@ -291,8 +282,7 @@ def test_prompt_complex(run_cli_command, parameter_type):
 
 
 def test_default_value_prompt(run_cli_command):
-    """
-    scenario: using InteractiveOption with a default value, invoke without options
+    """scenario: using InteractiveOption with a default value, invoke without options
     behaviour: prompt, showing the default value, take default on empty cli_input.
     """
     returns = []
@@ -305,12 +295,10 @@ def test_default_value_prompt(run_cli_command):
     returns.append(result)
     expected = 'Opt [default]: TEST\nTEST\n'
     assert expected in result.output
-    return returns
 
 
 def test_default_value_empty_opt(run_cli_command):
-    """
-    scenario: InteractiveOption with default value, invoke with empty option (--opt=)
+    """scenario: InteractiveOption with default value, invoke with empty option (--opt=)
     behaviour: accept empty string as input
     """
     cmd = create_command(default='default')
@@ -319,8 +307,7 @@ def test_default_value_empty_opt(run_cli_command):
 
 
 def test_opt_given_valid(run_cli_command):
-    """
-    scenario: InteractiveOption, invoked with a valid value on the cmdline
+    """scenario: InteractiveOption, invoked with a valid value on the cmdline
     behaviour: accept valid value
     """
     cmd = create_command(type=int)
@@ -330,8 +317,7 @@ def test_opt_given_valid(run_cli_command):
 
 
 def test_opt_given_invalid(run_cli_command):
-    """
-    scenario: InteractiveOption, invoked with a valid value on the cmdline
+    """scenario: InteractiveOption, invoked with a valid value on the cmdline
     behaviour: accept valid value
     """
     cmd = create_command(type=int)
@@ -340,8 +326,7 @@ def test_opt_given_invalid(run_cli_command):
 
 
 def test_non_interactive(run_cli_command):
-    """
-    scenario: InteractiveOption, invoked with only --non-interactive (and the option is required)
+    """scenario: InteractiveOption, invoked with only --non-interactive (and the option is required)
     behaviout: fail
     """
     cmd = create_command(required=True)
@@ -351,8 +336,7 @@ def test_non_interactive(run_cli_command):
 
 
 def test_non_interactive_default(run_cli_command):
-    """
-    scenario: InteractiveOption, invoked with only --non-interactive
+    """scenario: InteractiveOption, invoked with only --non-interactive
     behaviour: success
     """
     cmd = create_command(default='default')
@@ -361,8 +345,7 @@ def test_non_interactive_default(run_cli_command):
 
 
 def test_after_callback_valid(run_cli_command):
-    """
-    scenario: InteractiveOption with a user callback
+    """scenario: InteractiveOption with a user callback
     action: invoke with valid value
     behaviour: user callback runs & succeeds
     """
@@ -372,8 +355,7 @@ def test_after_callback_valid(run_cli_command):
 
 
 def test_after_callback_invalid(run_cli_command):
-    """
-    scenario: InteractiveOption with a user callback
+    """scenario: InteractiveOption with a user callback
     action: invoke with invalid value of right type
     behaviour: user callback runs & succeeds
     """
@@ -383,8 +365,7 @@ def test_after_callback_invalid(run_cli_command):
 
 
 def test_after_callback_wrong_type(run_cli_command):
-    """
-    scenario: InteractiveOption with a user callback
+    """scenario: InteractiveOption with a user callback
     action: invoke with invalid value of wrong type
     behaviour: user callback does not run
     """
@@ -395,8 +376,7 @@ def test_after_callback_wrong_type(run_cli_command):
 
 
 def test_after_callback_empty(run_cli_command):
-    """
-    scenario: InteractiveOption with a user callback
+    """scenario: InteractiveOption with a user callback
     action: invoke with invalid value of wrong type
     behaviour: user callback does not run
     """
@@ -407,8 +387,7 @@ def test_after_callback_empty(run_cli_command):
 
 
 def test_after_validation_interactive(run_cli_command):
-    """
-    Test that the type validation gets called on values entered at a prompt.
+    """Test that the type validation gets called on values entered at a prompt.
 
     Scenario:
         * InteractiveOption with custom type and prompt set
@@ -428,8 +407,7 @@ def test_after_validation_interactive(run_cli_command):
 
 
 def test_after_callback_default_noninteractive(run_cli_command):
-    """
-    Test that the callback gets called on the default, in line with click 6 behaviour.
+    """Test that the callback gets called on the default, in line with click 6 behaviour.
 
     Scenario:
         * InteractiveOption with user callback and invalid default

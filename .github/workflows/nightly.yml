@@ -1,101 +1,100 @@
 name: nightly
 
 on:
-    schedule:
-    -   cron: '0 0 * * *'  # Run every day at midnight
-    pull_request:
-        paths:
-        - '.github/workflows/nightly.yml'
-        - '.github/workflows/setup.sh'
-        - '.github/system_tests/test_daemon.py'
-        - '.molecule/default/files/**'
-        - 'aiida/storage/psql_dos/migrations/**'
-        - 'tests/storage/psql_dos/migrations/**'
-    workflow_dispatch:
+  schedule:
+  - cron: 0 0 * * *        # Run every day at midnight
+  pull_request:
+    paths:
+    - .github/workflows/nightly.yml
+    - .github/workflows/setup.sh
+    - .github/system_tests/test_daemon.py
+    - .molecule/default/files/**
+    - aiida/storage/psql_dos/migrations/**
+    - tests/storage/psql_dos/migrations/**
+  workflow_dispatch:
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
     # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
 
-    tests:
+  tests:
 
-        if: github.repository == 'aiidateam/aiida-core'  # Prevent running the builds on forks as well
-        runs-on: ubuntu-latest
+    if: github.repository == 'aiidateam/aiida-core'      # Prevent running the builds on forks as well
+    runs-on: ubuntu-latest
 
-        strategy:
-            matrix:
-                python-version: ['3.10']
+    strategy:
+      matrix:
+        python-version: ['3.10']
 
-        services:
-            postgres:
-                image: postgres:12
-                env:
-                    POSTGRES_DB: test_aiida
-                    POSTGRES_PASSWORD: ''
-                    POSTGRES_HOST_AUTH_METHOD: trust
-                options: >-
-                    --health-cmd pg_isready
-                    --health-interval 10s
-                    --health-timeout 5s
-                    --health-retries 5
-                ports:
-                -   5432:5432
-            rabbitmq:
-                image: rabbitmq:3.8.14-management
-                ports:
-                -   5672:5672
-                -   15672:15672
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_DB: test_aiida
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+        - 5432:5432
+      rabbitmq:
+        image: rabbitmq:3.8.14-management
+        ports:
+        - 5672:5672
+        - 15672:15672
 
-        steps:
-        -   uses: actions/checkout@v2
-        -   uses: eWaterCycle/setup-singularity@v7  # for containerized code test
-            with:
-                singularity-version: 3.8.7
+    steps:
+    - uses: actions/checkout@v2
+    - uses: eWaterCycle/setup-singularity@v7        # for containerized code test
+      with:
+        singularity-version: 3.8.7
 
-        -   name: Cache Python dependencies
-            uses: actions/cache@v1
-            with:
-                path: ~/.cache/pip
-                key: pip-${{ matrix.python-version }}-tests-${{ hashFiles('**/setup.json') }}
-                restore-keys:
-                    pip-${{ matrix.python-version }}-tests
+    - name: Cache Python dependencies
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/pip
+        key: pip-${{ matrix.python-version }}-tests-${{ hashFiles('**/setup.json') }}
+        restore-keys: pip-${{ matrix.python-version }}-tests
 
-        -   name: Set up Python ${{ matrix.python-version }}
-            uses: actions/setup-python@v2
-            with:
-                python-version: ${{ matrix.python-version }}
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
 
-        -   name: Install system dependencies
-            run: sudo apt update && sudo apt install postgresql
+    - name: Install system dependencies
+      run: sudo apt update && sudo apt install postgresql
 
-        -   name: Install aiida-core
-            id: install
-            run: |
-                pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
-                pip install --no-deps -e .
-                pip freeze
+    - name: Install aiida-core
+      id: install
+      run: |
+        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
+        pip install --no-deps -e .
+        pip freeze
 
-        -   name: Setup environment
-            run: .github/workflows/setup.sh
+    - name: Setup environment
+      run: .github/workflows/setup.sh
 
-        -   name: Run tests
-            id: tests
-            run: .github/workflows/tests_nightly.sh
+    - name: Run tests
+      id: tests
+      run: .github/workflows/tests_nightly.sh
 
-        -   name: Slack notification
+    - name: Slack notification
             # Always run this step (otherwise it would be skipped if any of the previous steps fail) but only if the
             # `install` or `tests` steps failed, and the `SLACK_WEBHOOK` is available. The latter is not the case for
             # pull requests that come from forks. This is a limitation of secrets on GHA
-            if: always() && (steps.install.outcome == 'Failure' || steps.tests.outcome == 'Failure') && env.SLACK_WEBHOOK != null
-            uses: rtCamp/action-slack-notify@v2
-            env:
-                SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-                SLACK_ICON: https://www.materialscloud.org/discover/images/0ba0a17d.aiida-logo-128.png
-                SLACK_CHANNEL: dev-aiida-core
-                SLACK_COLOR: b60205
-                SLACK_TITLE: "Nightly build of `aiida-core/main` failed"
-                SLACK_MESSAGE: "The tests of the `nightly.yml` GHA worklow failed."
+      if: always() && (steps.install.outcome == 'Failure' || steps.tests.outcome == 'Failure') && env.SLACK_WEBHOOK != null
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_ICON: https://www.materialscloud.org/discover/images/0ba0a17d.aiida-logo-128.png
+        SLACK_CHANNEL: dev-aiida-core
+        SLACK_COLOR: b60205
+        SLACK_TITLE: Nightly build of `aiida-core/main` failed
+        SLACK_MESSAGE: The tests of the `nightly.yml` GHA worklow failed.

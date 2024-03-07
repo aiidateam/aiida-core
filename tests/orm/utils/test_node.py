@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Tests for the `Node` utils."""
 import pytest
-
 from aiida.orm import Data
 from aiida.orm.utils.node import load_node_class
 

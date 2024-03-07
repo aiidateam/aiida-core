@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Basic tests for all migrations"""
 import pytest
-
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
@@ -62,7 +60,7 @@ def test_django(version, uninitialised_profile, reflect_schema, data_regression)
 @pytest.mark.nightly
 @pytest.mark.parametrize(
     '_id,version',
-    enumerate(v for v in PsqlDosMigrator.get_schema_versions() if not (v.startswith('django') or v.startswith('main')))
+    enumerate(v for v in PsqlDosMigrator.get_schema_versions() if not (v.startswith('django') or v.startswith('main'))),
 )
 def test_sqla(_id, version, uninitialised_profile, reflect_schema, data_regression):
     """Test that the migrations produce the expected database schema."""

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,21 +6,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :class:`aiida.orm.nodes.data.code.portable.PortableCode` class."""
 import io
 import pathlib
 
 import pytest
-
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.nodes.data.code.portable import PortableCode
 
 
 def test_constructor_raises(tmp_path):
     """Test the constructor when it is supposed to raise."""
     with pytest.raises(TypeError, match=r'missing .* required positional argument'):
-        PortableCode()  # pylint: disable=no-value-for-parameter
+        PortableCode()
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         PortableCode(filepath_executable=pathlib.Path('/usr/bin/bash'), filepath_files=tmp_path)
@@ -45,7 +43,7 @@ def test_validate(tmp_path):
     filepath_executable = 'bash'
     code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
 
-    code.base.attributes.set(code._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)  # pylint: disable=protected-access
+    code.base.attributes.set(code._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)
 
     with pytest.raises(ValidationError, match='The `filepath_executable` is not set.'):
         code.store()
@@ -95,4 +93,5 @@ def test_full_label(tmp_path):
 def test_get_execname(tmp_path):
     """Test the deprecated :meth:`aiida.orm.nodes.data.code.portable.PortableCode.get_execname` method."""
     code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=tmp_path)
-    assert code.get_execname() == 'bash'
+    with pytest.warns(AiidaDeprecationWarning):
+        assert code.get_execname() == 'bash'

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,19 +6,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :class:`aiida.orm.nodes.data.code.containerized.ContainerizedCode` class."""
 import pathlib
 
 import pytest
-
 from aiida.orm.nodes.data.code.containerized import ContainerizedCode
 
 
 def test_constructor_raises(aiida_localhost):
     """Test the constructor when it is supposed to raise."""
     with pytest.raises(TypeError, match=r'missing .* required positional arguments'):
-        ContainerizedCode()  # pylint: disable=no-value-for-parameter
+        ContainerizedCode()
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         path = pathlib.Path('bash')
@@ -28,7 +25,7 @@ def test_constructor_raises(aiida_localhost):
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         ContainerizedCode(computer='computer', filepath_executable='bash', engine_command='docker', image_name='img')
 
-    with pytest.raises(ValueError, match='the \'{image_name}\' template field should be in engine command.'):
+    with pytest.raises(ValueError, match="the '{image_name}' template field should be in engine command."):
         ContainerizedCode(computer=aiida_localhost, filepath_executable='ls', engine_command='docker', image_name='img')
 
 
@@ -42,7 +39,7 @@ def test_constructor(aiida_localhost):
         computer=aiida_localhost,
         image_name=image_name,
         engine_command=engine_command,
-        filepath_executable=filepath_executable
+        filepath_executable=filepath_executable,
     )
     assert code.computer.pk == aiida_localhost.pk
     assert code.filepath_executable == pathlib.PurePath(filepath_executable)

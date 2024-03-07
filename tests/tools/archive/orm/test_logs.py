@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,13 +7,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm.Log tests for the export and import routines"""
-# pylint: disable=too-many-locals,too-many-statements
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 
 
 def test_critical_log_msg_and_metadata(tmp_path, aiida_profile):
-    """ Testing logging of critical message """
+    """Testing logging of critical message"""
     message = 'Testing logging of critical failure'
     calc = orm.CalculationNode()
 
@@ -209,8 +207,7 @@ def test_multiple_imports_for_single_node(tmp_path, aiida_profile_clean):
 
 
 def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile_clean):
-    """
-    When a node with logs already exist in the DB, and more logs are imported
+    """When a node with logs already exist in the DB, and more logs are imported
     for the same node (same UUID), test that only new log-entries are added.
 
     Part I:
@@ -242,7 +239,7 @@ def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile_clean):
     export_filenames = {
         'EXISTING': 'export_EXISTING_db.tar.gz',
         'FULL': 'export_FULL_db.tar.gz',
-        'NEW': 'export_NEW_db.tar.gz'
+        'NEW': 'export_NEW_db.tar.gz',
     }
 
     log_msgs = ['Life is like riding a bicycle.', 'To keep your balance,', 'you must keep moving.']

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -11,7 +10,6 @@
 import uuid
 
 import pytest
-
 from aiida.common import exceptions
 from aiida.orm import AuthInfo, Computer, User
 from aiida.plugins import TransportFactory
@@ -21,9 +19,7 @@ class TestComputer:
     """Tests for the `Computer` ORM class."""
 
     def test_get_transport(self):
-        """
-        Test the get_transport method of Computer
-        """
+        """Test the get_transport method of Computer"""
         import tempfile
 
         new_comp = Computer(
@@ -31,7 +27,7 @@ class TestComputer:
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir='/tmp/aiida'
+            workdir='/tmp/aiida',
         ).store()
 
         # Configure the computer - no parameters for local transport
@@ -50,11 +46,7 @@ class TestComputer:
     def test_delete(self):
         """Test the deletion of a `Computer` instance."""
         new_comp = Computer(
-            label='aaa',
-            hostname='aaa',
-            transport_type='core.local',
-            scheduler_type='core.pbspro',
-            workdir='/tmp/aiida'
+            label='aaa', hostname='aaa', transport_type='core.local', scheduler_type='core.pbspro', workdir='/tmp/aiida'
         ).store()
 
         comp_pk = new_comp.pk
@@ -77,7 +69,7 @@ class TestComputer:
         # Transport class defined: use default of the transport class.
         transport = TransportFactory('core.local')
         computer.transport_type = 'core.local'
-        assert computer.get_minimum_job_poll_interval() == transport.DEFAULT_MINIMUM_JOB_POLL_INTERVAL  # pylint: disable=protected-access
+        assert computer.get_minimum_job_poll_interval() == transport.DEFAULT_MINIMUM_JOB_POLL_INTERVAL
 
         # Explicit value defined: use value of the instance.
         interval = -10
@@ -89,9 +81,8 @@ class TestComputerConfigure:
     """Tests for the configuring of instance of the `Computer` ORM class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Prepare current user and computer builder with common properties."""
-        # pylint: disable=attribute-defined-outside-init
         from aiida.orm.utils.builders.computer import ComputerBuilder
 
         self.comp_builder = ComputerBuilder(label='test', description='computer', hostname='localhost')

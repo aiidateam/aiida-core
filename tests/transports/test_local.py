@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -11,7 +10,6 @@
 import getpass
 
 import pytest
-
 from aiida.transports.plugins.local import LocalTransport
 from aiida.transports.transport import TransportInternalError
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,13 +8,11 @@
 ###########################################################################
 """Tests for the links utilities."""
 import pytest
-
 from aiida.common.links import validate_link_label
 
 
 def test_validate_link_label():
     """Test that illegal link labels will raise a `ValueError`."""
-
     illegal_link_labels = [
         '_leading_underscore',
         'trailing_underscore_',

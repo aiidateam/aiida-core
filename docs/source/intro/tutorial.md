@@ -431,7 +431,7 @@ You can see the code below:
 
 :::{dropdown} MultiplyAddWorkChain code
 
-```{literalinclude} ../../../aiida/workflows/arithmetic/multiply_add.py
+```{literalinclude} ../../../src/aiida/workflows/arithmetic/multiply_add.py
 :language: python
 :start-after: start-marker
 ```

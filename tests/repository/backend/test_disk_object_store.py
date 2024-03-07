@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name,invalid-name
 """Tests for the :mod:`aiida.repository.backend.disk_object_store` module."""
 import io
 import pathlib
 
 import pytest
-
 from aiida.repository.backend.disk_object_store import DiskObjectStoreRepositoryBackend
 
 
@@ -17,6 +14,7 @@ def repository(tmp_path):
     container requires an empty folder to be initialized in.
     """
     from disk_objectstore import Container
+
     container = Container(tmp_path)
     yield DiskObjectStoreRepositoryBackend(container=container)
 
@@ -25,6 +23,7 @@ def repository(tmp_path):
 def populated_repository(repository):
     """Initializes the storage and database with minimal population."""
     from io import BytesIO
+
     repository.initialise()
 
     content = BytesIO(b'Packed file number 1')
@@ -170,7 +169,7 @@ def test_erase(repository, generate_directory):
 
     assert repository.has_object(key)
 
-    dirpath = pathlib.Path(repository._container.get_folder())  # pylint: disable=protected-access
+    dirpath = pathlib.Path(repository._container.get_folder())
     repository.erase()
 
     assert not dirpath.exists()
@@ -207,7 +206,7 @@ def test_list_objects(repository, generate_directory):
 def test_key_format(repository):
     """Test the ``key_format`` property."""
     repository.initialise()
-    assert repository.key_format == repository._container.hash_type  # pylint: disable=protected-access
+    assert repository.key_format == repository._container.hash_type
 
 
 def test_get_info(populated_repository):
@@ -237,40 +236,29 @@ def test_get_info(populated_repository):
     assert 'total_size_packed' in repository_info['Size (MB)']
 
 
-#yapf: disable
-@pytest.mark.parametrize(('kwargs', 'output_info'), (
+@pytest.mark.parametrize(
+    ('kwargs', 'output_info'),
     (
-        {'live': True},
-        {'unpacked': 0, 'packed': 4}
+        ({'live': True}, {'unpacked': 0, 'packed': 4}),
+        ({'live': False}, {'unpacked': 0, 'packed': 4}),
+        ({'live': False, 'compress': True}, {'unpacked': 0, 'packed': 4}),
+        ({'live': False, 'do_vacuum': False}, {'unpacked': 0, 'packed': 4}),
+        (
+            {
+                'live': False,
+                'pack_loose': False,
+                'do_repack': False,
+                'clean_storage': False,
+                'do_vacuum': False,
+            },
+            {'unpacked': 1, 'packed': 3},
+        ),
     ),
-    (
-        {'live': False},
-        {'unpacked': 0, 'packed': 4}
-    ),
-    (
-        {'live': False, 'compress': True},
-        {'unpacked': 0, 'packed': 4}
-    ),
-    (
-        {'live': False, 'do_vacuum': False},
-        {'unpacked': 0, 'packed': 4}
-    ),
-    (
-        {
-            'live': False,
-            'pack_loose': False,
-            'do_repack': False,
-            'clean_storage': False,
-            'do_vacuum': False,
-        },
-        {'unpacked': 1, 'packed': 3}
-    ),
-))
-# yapf: enable
+)
 def test_maintain(populated_repository, kwargs, output_info):
     """Test the ``maintain`` method."""
     populated_repository.maintain(**kwargs)
-    file_info = populated_repository._container.count_objects()  # pylint: disable=protected-access
+    file_info = populated_repository._container.count_objects()
     assert file_info.loose == output_info['unpacked']
     assert file_info.packed == output_info['packed']
 
@@ -299,6 +287,5 @@ def test_maintain_logging(caplog, populated_repository, do_vacuum):
 @pytest.mark.parametrize('kwargs', [{'do_repack': True}, {'clean_storage': True}, {'do_vacuum': True}])
 def test_maintain_live_overload(populated_repository, kwargs):
     """Test the ``maintain`` method."""
-
     with pytest.raises(ValueError):
         populated_repository.maintain(live=True, **kwargs)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,10 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for utilities dealing with plugins and entry points."""
 import pytest
-
 from aiida import __version__ as version_core
 from aiida.common.exceptions import EntryPointError
 from aiida.engine import WorkChain, calcfunction
@@ -36,7 +33,7 @@ def create_dynamic_plugin_module():
         # Create a new module with a unique name and add the `plugin` and `plugin_version` as attributes
         module_name = f'TestModule{str(uuid.uuid4())[:5]}'
         dynamic_module = types.ModuleType(module_name, 'Dynamically created module for testing purposes')
-        setattr(plugin, '__module__', dynamic_module.__name__)  # pylint: disable=no-member
+        setattr(plugin, '__module__', dynamic_module.__name__)
         setattr(dynamic_module, plugin.__name__, plugin)
 
         # For tests that need to fail, this flag can be set to `False`
@@ -48,7 +45,7 @@ def create_dynamic_plugin_module():
 
         # Make the dynamic module importable unless the test requests not to, to test an unimportable module
         if add_module_to_sys:
-            sys.modules[dynamic_module.__name__] = dynamic_module  # pylint: disable=no-member
+            sys.modules[dynamic_module.__name__] = dynamic_module
 
         return dynamic_plugin
 
@@ -61,7 +58,7 @@ class TestPluginVersionProvider:
     def test_external_module_import_fail(self, create_dynamic_plugin_module, provider):
         """Test that mapper does not except even if external module cannot be imported."""
 
-        class DummyCalcJob():
+        class DummyCalcJob:
             pass
 
         version_plugin = '0.1.01'
@@ -73,7 +70,7 @@ class TestPluginVersionProvider:
     def test_external_module_no_version_attribute(self, create_dynamic_plugin_module, provider):
         """Test that mapper does not except even if external module does not define `__version__` attribute."""
 
-        class DummyCalcJob():
+        class DummyCalcJob:
             pass
 
         version_plugin = '0.1.02'
@@ -85,7 +82,7 @@ class TestPluginVersionProvider:
     def test_external_module_class(self, create_dynamic_plugin_module, provider):
         """Test the mapper works for a class from an external module."""
 
-        class DummyCalcJob():
+        class DummyCalcJob:
             pass
 
         version_plugin = '0.1.17'
@@ -119,7 +116,7 @@ class TestPluginVersionProvider:
 
     def test_calc_job(self, provider):
         """Test the mapper for a `CalcJob`."""
-        AddArithmeticCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
+        AddArithmeticCalculation = CalculationFactory('core.arithmetic.add')  # noqa: N806
 
         expected_version = {'version': {'core': version_core, 'plugin': version_core}}
         assert provider.get_version_info(AddArithmeticCalculation) == expected_version

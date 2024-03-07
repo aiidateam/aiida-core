@@ -585,6 +585,33 @@ Finally, the monitor needs to be declared using an entry point in the ``aiida.ca
 The next section will show how this entry point is used to assign it to a calculation job.
 
 
+.. versionadded:: 2.5.0
+
+Monitors can also attach outputs to the calculation that it is monitoring.
+This can be useful to report outputs while the calculation is running that should still be stored permanently in the provenance graph.
+In the following example, a simple monitor is implemented that returns a ``CalcJobMonitorResult`` that defines a dictionary of output nodes:
+
+.. code-block:: python
+
+    from aiida.orm import CalcJobNode
+    from aiida.transports import Transport
+
+    def monitor(node: CalcJobNode, transport: Transport) -> CalcJobMonitorResult:
+        """Return a dictionary of output nodes to be attached to the calculation to which the monitor is attached."""
+        import secrets
+        return CalcJobMonitorResult(
+            outputs={
+                'some_output': Int(2),
+                'messages': {
+                    f'key_{secrets.token_hex(4)}': Str('some random message')
+                }
+            }
+        )
+
+Once the monitor returns, the engine will loop over the nodes in the ``outputs`` dictionary and attach them to the calculation node.
+Note that the ``CalcJob`` class of course needs to specify this output port in the output namespace, otherwise an exception is raised.
+
+
 How to assign a monitor
 -----------------------
 
@@ -844,7 +871,18 @@ Besides the on/off switch set by ``caching.default_enabled``, caching can be con
 In this example, caching is enabled by default, but explicitly disabled for calculations of the ``TemplatereplacerCalculation`` class, identified by its corresponding ``aiida.calculations:core.templatereplacer`` entry point string.
 It also shows how to enable caching for particular calculations (which has no effect here due to the profile-wide default).
 
+.. note::
+
+    It is also possible to provide the full import path of the class in case it does not have a registered entry point.
+    For example, if the class can be imported as ``from some.module.path import SomeClass``, it can be added as:
+
+    .. code-block:: console
+
+        verdi config set caching.enabled_for some.module.path.SomeClass
+
 .. tip:: To set multiple entry-points at once, use a ``,`` delimiter.
+
+.. warning:: If a specified value for ``verdi config set enabled_for/disabled_for`` is an entry point that cannot be loaded, or is a path that cannot be improted, an error is raised.
 
 For the available entry-points in your environment, you can list which are enabled/disabled using:
 
@@ -930,6 +968,17 @@ When ``strict`` is set to ``True``, the function will raise a ``ValueError`` if 
 
 Besides controlling which process classes are cached, it may be useful or necessary to control what already *stored* nodes are used as caching *sources*.
 Section :ref:`topics:provenance:caching:control-caching` provides details how AiiDA decides which stored nodes are equivalent to the node being stored and which are considered valid caching sources.
+
+Alternatively, if the cache should not be considered for a specific process, its ``metadata.disable_cache`` input can be set to ``True``:
+
+.. code-block:: python
+
+    from aiida.engine import submit
+    submit(SomeProcess, inputs={'metadata': {'disable_cache': True}})
+
+The advantage of this approach is that the ``disable_cache`` metadata input overrides all other configuration and controls of caching, so the process is guaranteed to not be taken from the cache.
+Unlike the ``enable_caching`` and ``disable_caching`` context managers which only affect the local interpreter, this approach is respected by all interpreters.
+This approach, therefore, is mostly useful when submitting processes to the daemon that should ignore the cache.
 
 .. |Computer| replace:: :py:class:`~aiida.orm.Computer`
 .. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`

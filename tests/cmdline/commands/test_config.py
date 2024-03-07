@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Tests for ``verdi config``."""
 import pytest
-
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_verdi
 
@@ -32,31 +30,37 @@ def test_config_set_option_no_profile(run_cli_command, empty_config):
     assert str(config.get_option(option_name, scope=None)) == option_value
 
 
-@pytest.mark.parametrize('option_name, is_list', (
-    ('storage.sandbox', False),
-    ('caching.enabled_for', True),
-))
+@pytest.mark.parametrize(
+    'option_name, is_list',
+    (
+        ('storage.sandbox', False),
+        ('caching.enabled_for', True),
+    ),
+)
 def test_config_set_option(run_cli_command, config_with_profile_factory, option_name, is_list):
     """Test the `verdi config set` command when setting an option."""
     config = config_with_profile_factory()
-
-    for option_value in ['value0', 'value1']:
-        options = ['config', 'set', option_name, option_value]
-        run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
-        if is_list:
-            assert config.get_option(option_name, scope=get_profile().name) == [option_value]
-        else:
-            assert str(config.get_option(option_name, scope=get_profile().name)) == option_value
+    option_value = 'aiida.calculations:core.arithmetic.add'
+    options = ['config', 'set', option_name, option_value]
+    run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
+    if is_list:
+        assert config.get_option(option_name, scope=get_profile().name) == [option_value]
+    else:
+        assert str(config.get_option(option_name, scope=get_profile().name)) == option_value
 
 
 def test_config_append_option(run_cli_command, config_with_profile_factory):
     """Test the `verdi config set --append` command when appending an option value."""
     config = config_with_profile_factory()
+    prefix = 'aiida.calculations:core.'
     option_name = 'caching.enabled_for'
-    for value in ['x', 'y', 'x', 'y']:
-        options = ['config', 'set', '--append', option_name, value]
+    for value in ['transfer', 'arithmetic.add', 'transfer', 'arithmetic.add']:
+        options = ['config', 'set', '--append', option_name, f'{prefix}{value}']
         run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
-    assert sorted(config.get_option(option_name, scope=get_profile().name)) == ['x', 'y']
+    assert sorted(config.get_option(option_name, scope=get_profile().name)) == [
+        f'{prefix}arithmetic.add',
+        f'{prefix}transfer',
+    ]
 
 
 def test_config_remove_option(run_cli_command, config_with_profile_factory):
@@ -64,11 +68,13 @@ def test_config_remove_option(run_cli_command, config_with_profile_factory):
     config = config_with_profile_factory()
 
     option_name = 'caching.disabled_for'
-    config.set_option(option_name, ['x', 'x', 'y', 'x'], scope=get_profile().name)
+    prefix = 'aiida.calculations:core.'
+    option_value = [f'{prefix}{value}' for value in ('transfer', 'transfer', 'arithmetic.add', 'transfer')]
+    config.set_option(option_name, option_value, scope=get_profile().name)
 
-    options = ['config', 'set', '--remove', option_name, 'x']
+    options = ['config', 'set', '--remove', option_name, f'{prefix}transfer']
     run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
-    assert config.get_option(option_name, scope=get_profile().name) == ['y']
+    assert config.get_option(option_name, scope=get_profile().name) == [f'{prefix}arithmetic.add']
 
 
 def test_config_get_option(run_cli_command, config_with_profile_factory):
@@ -172,6 +178,27 @@ def test_config_caching(run_cli_command, config_with_profile_factory):
 
     result = run_cli_command(cmd_verdi.verdi, ['config', 'caching', '--disabled'], use_subprocess=False)
     assert result.output.strip() == ''
+
+
+@pytest.mark.parametrize(
+    'value, raises',
+    (
+        ('aiida.calculations:core.arithmetic.add', False),
+        ('aiida.calculations:core.arithmetic.invalid', True),
+        ('core.arithmetic.invalid', True),
+        ('aiida.calculations.arithmetic.add.ArithmeticAddCalculation', False),
+        ('aiida.calculations.arithmetic.invalid.ArithmeticAddCalculation', True),
+    ),
+)
+def test_config_set_caching_enabled(run_cli_command, config_with_profile_factory, value, raises):
+    """Test `verdi config set caching.enabled_for`"""
+    config_with_profile_factory()
+    options = ['config', 'set', 'caching.enabled_for', value]
+    result = run_cli_command(cmd_verdi.verdi, options, raises=raises, use_subprocess=False)
+    if raises:
+        assert 'Critical: Invalid identifier pattern' in result.output
+    else:
+        assert "Success: 'caching.enabled_for' set to" in result.output
 
 
 def test_config_downgrade(run_cli_command, config_with_profile_factory):

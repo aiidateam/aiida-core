@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -10,7 +9,6 @@
 """Tests for the `PluginParamType`."""
 import click
 import pytest
-
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.plugins.entry_point import get_entry_point_from_string
 
@@ -19,8 +17,7 @@ class TestPluginParamType:
     """Tests for the `PluginParamType`."""
 
     def test_group_definition(self):
-        """
-        Test the various accepted syntaxes of defining supported entry point groups. Both single
+        """Test the various accepted syntaxes of defining supported entry point groups. Both single
         values as well as tuples should be allowed. The `aiida.` prefix should also be optional.
         """
         param = PluginParamType(group='calculations')
@@ -50,8 +47,7 @@ class TestPluginParamType:
         assert len(param.groups) == 2
 
     def test_get_entry_point_from_string(self):
-        """
-        Test the functionality of the get_entry_point_from_string which will take an entry point string
+        """Test the functionality of the get_entry_point_from_string which will take an entry point string
         and try to map it onto a valid entry point that is part of the groups defined for the parameter.
         """
         param = PluginParamType(group='transports')
@@ -93,8 +89,7 @@ class TestPluginParamType:
         assert param.get_entry_point_from_string('core.ssh').name == entry_point.name
 
     def test_get_entry_point_from_ambiguous(self):
-        """
-        Test the functionality of the get_entry_point_from_string which will take an entry point string
+        """Test the functionality of the get_entry_point_from_string which will take an entry point string
         and try to map it onto a valid entry point that is part of the groups defined for the parameter.
         """
         param = PluginParamType(group=('aiida.calculations', 'aiida.parsers'))
@@ -109,9 +104,7 @@ class TestPluginParamType:
         assert param.get_entry_point_from_string('calculations:core.arithmetic.add').name == entry_point.name
 
     def test_convert(self):
-        """
-        Test that the convert method returns the correct entry point
-        """
+        """Test that the convert method returns the correct entry point"""
         param = PluginParamType(group=('transports', 'data'))
 
         entry_point = param.convert('aiida.transports:core.ssh', None, None)
@@ -136,9 +129,7 @@ class TestPluginParamType:
             param.convert('not_existent', None, None)
 
     def test_convert_load(self):
-        """
-        Test that the convert method returns the loaded entry point if load=True at construction time of parameter
-        """
+        """Test that the convert method returns the loaded entry point if load=True at construction time of parameter"""
         param = PluginParamType(group=('transports', 'data'), load=True)
         entry_point_ssh = get_entry_point_from_string('aiida.transports:core.ssh')
         entry_point_structure = get_entry_point_from_string('aiida.data:core.structure')
@@ -165,8 +156,7 @@ class TestPluginParamType:
             param.convert('not_existent', None, None)
 
     def test_complete_single_group(self):
-        """
-        Test the complete method which is used for auto completion when there is only a single valid group, which
+        """Test the complete method which is used for auto completion when there is only a single valid group, which
         means there should never be ambiguity and specifying a full entry point string is not necessary, however,
         when the user decides to user either a FULL or PARTIAL string anyway, the completion should match that syntax
         """
@@ -194,8 +184,7 @@ class TestPluginParamType:
         assert entry_point_full in options
 
     def test_complete_amibguity(self):
-        """
-        Test the complete method which is used for auto completion when the supported groups share an entry point
+        """Test the complete method which is used for auto completion when the supported groups share an entry point
         with the same name, which can lead to ambiguity. In this case the autocomplete should always return the
         possibilites in the FULL entry point string format. When the user tries to autocomplete
         """

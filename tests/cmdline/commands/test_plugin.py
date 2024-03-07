@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Tests for the `verdi plugin list` command."""
 import pytest
-
 from aiida.cmdline.commands import cmd_plugin
 from aiida.plugins import CalculationFactory, WorkflowFactory
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
@@ -40,11 +38,12 @@ def test_plugin_list_non_existing(run_cli_command):
 
 
 @pytest.mark.parametrize(
-    'entry_point_string', (
+    'entry_point_string',
+    (
         'aiida.calculations:core.arithmetic.add',
         'aiida.workflows:core.arithmetic.multiply_add',
         'aiida.workflows:core.arithmetic.add_multiply',
-    )
+    ),
 )
 def test_plugin_list_detail(run_cli_command, entry_point_string):
     """Test the `verdi plugin list` command for specific entry points."""

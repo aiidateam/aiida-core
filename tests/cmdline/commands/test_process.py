@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -15,13 +14,14 @@ import typing as t
 import uuid
 
 import pytest
-
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
+from aiida.engine.processes import control as process_control
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
+
 from tests.utils.processes import WaitProcess
 
 
@@ -37,25 +37,23 @@ def await_condition(condition: t.Callable, timeout: int = 1):
 class TestVerdiProcess:
     """Tests for `verdi process`."""
 
-    TEST_TIMEOUT = 5.
+    TEST_TIMEOUT = 5.0
 
     def test_list_non_raw(self, run_cli_command):
         """Test the list command as the user would run it (e.g. without -r)."""
-
         result = run_cli_command(cmd_process.process_list)
 
         assert 'Total results:' in result.output
         assert 'Last time an entry changed state' in result.output
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_list(self, run_cli_command):
         """Test the list command."""
-        # pylint: disable=too-many-branches,too-many-statements
         calcs = []
         process_label = 'SomeDummyWorkFunctionNode'
 
         # Create 6 WorkFunctionNodes and WorkChainNodes (one for each ProcessState)
         for state in ProcessState:
-
             calc = WorkFunctionNode()
             calc.set_process_state(state)
 
@@ -104,7 +102,6 @@ class TestVerdiProcess:
 
         # but the orders should be inverse
         for flag in ['-D', '--order-direction']:
-
             flag_value = 'asc'
             result = run_cli_command(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
 
@@ -341,8 +338,7 @@ class TestVerdiProcess:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_list_worker_slot_warning(run_cli_command, monkeypatch):
-    """
-    Test that the if the number of used worker process slots exceeds a threshold,
+    """Test that the if the number of used worker process slots exceeds a threshold,
     that the warning message is displayed to the user when running `verdi process list`
     """
     from aiida.engine import DaemonClient
@@ -384,7 +380,6 @@ class TestVerdiProcessCallRoot:
     @pytest.fixture(autouse=True)
     def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.node_root = WorkflowNode()
         self.node_middle = WorkflowNode()
         self.node_terminal = WorkflowNode()
@@ -489,3 +484,115 @@ def test_process_kill_all(submit_and_await, run_cli_command):
     run_cli_command(cmd_process.process_kill, ['--all', '--wait'], user_input='y')
     await_condition(lambda: node.is_killed)
     assert node.process_status == 'Killed through `verdi process kill`'
+
+
+@pytest.mark.usefixtures('started_daemon_client')
+def test_process_repair_running_daemon(run_cli_command):
+    """Test the ``verdi process repair`` command excepts when the daemon is running."""
+    result = run_cli_command(cmd_process.process_repair, raises=True, use_subprocess=False)
+    assert 'The daemon needs to be stopped before running this command.' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_consistent(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command when everything is consistent."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 3])
+
+    result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
+    assert 'No inconsistencies detected between database and RabbitMQ.' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_duplicate_tasks(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command when there are duplicate tasks."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 2])
+
+    result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
+    assert 'There are duplicates process tasks:' in result.output
+    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_additional_tasks(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command when there are additional tasks."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 3])
+
+    result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
+    assert 'There are process tasks for terminated processes:' in result.output
+    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'Attempting to fix inconsistencies' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_missing_tasks(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command when there are missing tasks."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
+
+    result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
+    assert 'There are active processes without process task:' in result.output
+    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'Attempting to fix inconsistencies' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_dry_run(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command with ``--dry-run```."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3, 4])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
+
+    result = run_cli_command(cmd_process.process_repair, ['--dry-run'], raises=True, use_subprocess=False)
+    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'This was a dry-run, no changes will be made.' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_verbosity(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command with ``-v INFO```."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3, 4])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
+
+    result = run_cli_command(cmd_process.process_repair, ['-v', 'INFO'], use_subprocess=False)
+    assert 'Active processes: [1, 2, 3, 4]' in result.output
+    assert 'Process tasks: [1, 2]' in result.output
+
+
+@pytest.fixture
+def process_nodes():
+    """Return a list of two stored ``CalcJobNode`` instances with a finished process state."""
+    nodes = [CalcJobNode(), CalcJobNode()]
+    for node in nodes:
+        node.set_process_state(ProcessState.FINISHED)
+        node.store()
+    return nodes
+
+
+def test_process_report_most_recent_node(run_cli_command, process_nodes):
+    """Test ``verdi process report --most-recent-node``."""
+    result = run_cli_command(cmd_process.process_report, ['--most-recent-node'])
+    assert f'*** {process_nodes[0].pk}:' not in result.output
+    assert f'*** {process_nodes[1].pk}:' in result.output
+
+
+def test_process_show_most_recent_node(run_cli_command, process_nodes):
+    """Test ``verdi process show --most-recent-node``."""
+    result = run_cli_command(cmd_process.process_show, ['--most-recent-node'])
+    assert process_nodes[0].uuid not in result.output
+    assert process_nodes[1].uuid in result.output
+
+
+def test_process_status_most_recent_node(run_cli_command, process_nodes):
+    """Test ``verdi process status --most-recent-node``."""
+    result = run_cli_command(cmd_process.process_status, ['--most-recent-node'])
+    assert f'<{process_nodes[0].pk}>' not in result.output
+    assert f'<{process_nodes[1].pk}>' in result.output
+
+
+@pytest.mark.parametrize('command', (cmd_process.process_report, cmd_process.process_show, cmd_process.process_status))
+def test_process_most_recent_node_exclusive(run_cli_command, process_nodes, command):
+    """Test command raises if ``-M`` is specified as well as explicit process nodes."""
+    result = run_cli_command(command, ['-M', str(process_nodes[0].pk)], raises=True)
+    assert 'cannot specify individual processes and the `-M/--most-recent-node` flag at the same time.' in result.output

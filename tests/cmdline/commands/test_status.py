@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Tests for `verdi status`."""
 import pytest
-
 from aiida import __version__, get_profile
 from aiida.cmdline.commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode
@@ -55,7 +53,6 @@ def test_status_no_rmq(run_cli_command):
 
 def test_storage_unable_to_connect(run_cli_command):
     """Test `verdi status` when there is an unknown error while connecting to the storage."""
-    # pylint: disable=protected-access
     profile = get_profile()
 
     old_port = profile._attributes['storage']['config']['database_port']
@@ -63,7 +60,7 @@ def test_storage_unable_to_connect(run_cli_command):
 
     try:
         result = run_cli_command(cmd_status.verdi_status, raises=True, use_subprocess=False)
-        assert 'Unable to connect to profile\'s storage' in result.output
+        assert "Unable to connect to profile's storage" in result.output
         assert result.exit_code is ExitCode.CRITICAL
     finally:
         profile._attributes['storage']['config']['database_port'] = old_port
@@ -72,8 +69,9 @@ def test_storage_unable_to_connect(run_cli_command):
 def test_storage_incompatible(run_cli_command, monkeypatch):
     """Test `verdi status` when storage schema version is incompatible with that of the code."""
 
-    def storage_cls(*args, **kwargs):  # pylint: disable=unused-argument
+    def storage_cls(*args, **kwargs):
         from aiida.common.exceptions import IncompatibleStorageSchema
+
         raise IncompatibleStorageSchema()
 
     monkeypatch.setattr(migrator.PsqlDosMigrator, 'validate_storage', storage_cls)
@@ -86,8 +84,9 @@ def test_storage_incompatible(run_cli_command, monkeypatch):
 def test_storage_corrupted(run_cli_command, monkeypatch):
     """Test `verdi status` when the storage is found to be corrupt (e.g. non-matching repository UUIDs)."""
 
-    def storage_cls(*args, **kwargs):  # pylint: disable=unused-argument
+    def storage_cls(*args, **kwargs):
         from aiida.common.exceptions import CorruptStorage
+
         raise CorruptStorage()
 
     monkeypatch.setattr(migrator.PsqlDosMigrator, 'validate_storage', storage_cls)

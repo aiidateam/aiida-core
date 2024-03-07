@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,27 +6,28 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,protected-access
 """Tests for the `LsfScheduler` plugin."""
 import logging
 import uuid
 
 import pytest
-
 from aiida.common.exceptions import ConfigurationError
 from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.plugins.lsf import LsfScheduler
 from aiida.schedulers.scheduler import SchedulerError
 
-BJOBS_STDOUT_TO_TEST = '764213236|EXIT|TERM_RUNLIMIT: job killed after reaching LSF run time limit' \
-                       '|b681e480bd|inewton|1|-|b681e480bd|test|Feb  2 00:46|Feb  2 00:45|-|Feb  2 00:44' \
-                       '|aiida-1033269\n' '764220165|PEND|-|-|inewton|-|-|-|8nm|-|-|-|Feb  2 01:46|aiida-1033444\n' \
-                       '764220167|PEND|-|-|fchopin|-|-|-|test|-|-|-|Feb  2 01:53 L|aiida-1033449\n' \
-                       '764254593|RUN|-|lxbsu2710|inewton|1|-|lxbsu2710|test|Feb  2 07:40|Feb  2 07:39|-|Feb  2 07:39|'\
-                       'test\n764255172|RUN|-|b68ac74822|inewton|1|-|b68ac74822|test|Feb  2 07:48 L|Feb  2 07:47| ' \
-                       '15.00% L|Feb  2 07:47|test\n764245175|RUN|-|b68ac74822|dbowie|1|-|b68ac74822|test|' \
-                       'Jan  1 05:07|Dec  31 23:48 L|25.00%|Dec  31 23:40|test\n 764399747|DONE|-|p05496706j68144|' \
-                       'inewton|1|-|p05496706j68144|test|Feb  2 14:56 L|Feb  2 14:54|38.33% L|Feb  2 14:54|test'
+BJOBS_STDOUT_TO_TEST = (
+    '764213236|EXIT|TERM_RUNLIMIT: job killed after reaching LSF run time limit'
+    '|b681e480bd|inewton|1|-|b681e480bd|test|Feb  2 00:46|Feb  2 00:45|-|Feb  2 00:44'
+    '|aiida-1033269\n'
+    '764220165|PEND|-|-|inewton|-|-|-|8nm|-|-|-|Feb  2 01:46|aiida-1033444\n'
+    '764220167|PEND|-|-|fchopin|-|-|-|test|-|-|-|Feb  2 01:53 L|aiida-1033449\n'
+    '764254593|RUN|-|lxbsu2710|inewton|1|-|lxbsu2710|test|Feb  2 07:40|Feb  2 07:39|-|Feb  2 07:39|'
+    'test\n764255172|RUN|-|b68ac74822|inewton|1|-|b68ac74822|test|Feb  2 07:48 L|Feb  2 07:47| '
+    '15.00% L|Feb  2 07:47|test\n764245175|RUN|-|b68ac74822|dbowie|1|-|b68ac74822|test|'
+    'Jan  1 05:07|Dec  31 23:48 L|25.00%|Dec  31 23:40|test\n 764399747|DONE|-|p05496706j68144|'
+    'inewton|1|-|p05496706j68144|test|Feb  2 14:56 L|Feb  2 14:54|38.33% L|Feb  2 14:54|test'
+)
 BJOBS_STDERR_TO_TEST = 'Job <864220165> is not found'
 
 SUBMIT_STDOUT_TO_TEST = 'Job <764254593> is submitted to queue <test>.'
@@ -35,12 +35,11 @@ BKILL_STDOUT_TO_TEST = 'Job <764254593> is being terminated'
 
 
 def test_parse_common_joblist_output():
-    """
-    Tests to verify if the function _parse_joblist_output can parse the bjobs output.
+    """Tests to verify if the function _parse_joblist_output can parse the bjobs output.
     The tests is done parsing a string defined above, to be used offline
     """
-    # pylint: disable=too-many-locals,too-many-statements
     import datetime
+
     scheduler = LsfScheduler()
 
     # Disable logging to avoid excessive output during test
@@ -100,12 +99,13 @@ def test_parse_common_joblist_output():
     assert num_machines == parsed_num_machines
     assert allocated_machines == parsed_allocated_machines
 
-    assert [j.requested_wallclock_time_seconds for j in job_list if j.job_id == '764254593'][0] == 60  # pylint: disable=invalid-name
-    assert [j.wallclock_time_seconds for j in job_list if j.job_id == '764255172'][0] == 9
-    assert [j.wallclock_time_seconds for j in job_list if j.job_id == '764245175'][0] == 4785
+    assert next(j.requested_wallclock_time_seconds for j in job_list if j.job_id == '764254593') == 60
+    assert next(j.wallclock_time_seconds for j in job_list if j.job_id == '764255172') == 9
+    assert next(j.wallclock_time_seconds for j in job_list if j.job_id == '764245175') == 4785
     current_year = datetime.datetime.now().year
-    assert [j.submission_time for j in job_list if j.job_id == '764245175'
-            ][0] == datetime.datetime(current_year, 12, 31, 23, 40)
+    assert next(j.submission_time for j in job_list if j.job_id == '764245175') == datetime.datetime(
+        current_year, 12, 31, 23, 40
+    )
 
     # Important to enable again logs!
     logging.disable(logging.NOTSET)
@@ -166,25 +166,25 @@ def test_submit_script_rerunnable():
     assert '#BSUB -rn' in submit_script_text
 
 
-# yapf: disable
-@pytest.mark.parametrize('kwargs, exception, message', (
-    ({'tot_num_mpiprocs': 'Not-a-Number'}, TypeError, ''),
-    ({'parallel_env': 0}, TypeError, 'parallel_env` must be a string'),
-    ({'num_machines': 1}, ConfigurationError, '`num_machines` cannot be set unless `use_num_machines` is `True`.'),
-    ({'use_num_machines': True}, ConfigurationError, 'must set `num_machines` when `use_num_machines` is `True`.'),
-    ({'num_machines': 'string', 'use_num_machines': True}, TypeError, '`num_machines` must be an integer'),
-    ({}, TypeError, '`tot_num_mpiprocs` must be specified and must be an integer'),
-    ({'tot_num_mpiprocs': 'string'}, TypeError, '`tot_num_mpiprocs` must be specified and must be an integer'),
-    ({'tot_num_mpiprocs': 0}, ValueError, 'tot_num_mpiprocs must be >= 1'),
-    ({'default_mpiprocs_per_machine': 1}, ConfigurationError, '`default_mpiprocs_per_machine` cannot be set.'),
-))
-# yapf: enable
+@pytest.mark.parametrize(
+    'kwargs, exception, message',
+    (
+        ({'tot_num_mpiprocs': 'Not-a-Number'}, TypeError, ''),
+        ({'parallel_env': 0}, TypeError, 'parallel_env` must be a string'),
+        ({'num_machines': 1}, ConfigurationError, '`num_machines` cannot be set unless `use_num_machines` is `True`.'),
+        ({'use_num_machines': True}, ConfigurationError, 'must set `num_machines` when `use_num_machines` is `True`.'),
+        ({'num_machines': 'string', 'use_num_machines': True}, TypeError, '`num_machines` must be an integer'),
+        ({}, TypeError, '`tot_num_mpiprocs` must be specified and must be an integer'),
+        ({'tot_num_mpiprocs': 'string'}, TypeError, '`tot_num_mpiprocs` must be specified and must be an integer'),
+        ({'tot_num_mpiprocs': 0}, ValueError, 'tot_num_mpiprocs must be >= 1'),
+        ({'default_mpiprocs_per_machine': 1}, ConfigurationError, '`default_mpiprocs_per_machine` cannot be set.'),
+    ),
+)
 def test_create_job_resource(kwargs, exception, message):
-    """
-    Test to verify that script fails in the following cases:
-        * if we specify only num_machines
-        * if tot_num_mpiprocs is not an int (and can't be casted to one)
-        * if parallel_env is not a str
+    """Test to verify that script fails in the following cases:
+    * if we specify only num_machines
+    * if tot_num_mpiprocs is not an int (and can't be casted to one)
+    * if parallel_env is not a str
     """
     scheduler = LsfScheduler()
 
@@ -226,7 +226,7 @@ def test_job_tmpl_errors():
     job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs=2)
     job_tmpl.codes_info = []
 
-    # Raises for missing codes_run_mode
+    # Raises for missing codes_run_mode
     with pytest.raises(NotImplementedError):
         scheduler.get_submit_script(job_tmpl)
     job_tmpl.codes_run_mode = CodeRunMode.SERIAL
@@ -249,6 +249,7 @@ def test_job_tmpl_errors():
 def test_parsing_errors():
     """Test the raising of the appropriate errors"""
     from aiida.schedulers import SchedulerParsingError
+
     scheduler = LsfScheduler()
 
     with pytest.raises(SchedulerParsingError) as exc:

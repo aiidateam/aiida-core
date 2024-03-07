@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -19,16 +18,15 @@ withtout knowing the exact django version that created it (and run migrations).
 Therefore, we need to check that the migration code handles this correctly.
 """
 import sqlalchemy as sa
-
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_v0x_django_0003(perform_migrations: PsqlDosMigrator, reflect_schema, data_regression):  # pylint: disable=too-many-locals
+def test_v0x_django_0003(perform_migrations: PsqlDosMigrator, reflect_schema, data_regression):
     """Test against an archive database schema, created in aiida-core v0.x, at revision django_0003."""
     metadata = generate_schema()
     connection = perform_migrations.connection
     metadata.create_all(connection.engine)
-    with perform_migrations._migration_context() as context:  # pylint: disable=protected-access
+    with perform_migrations._migration_context() as context:
         assert context.script
         context.stamp(context.script, 'django@django_0003')
     connection.commit()
@@ -74,7 +72,7 @@ def generate_schema() -> sa.MetaData:
         sa.Index(
             'db_dbattribute_datatype_7e609aede7da800c_like',
             'datatype',
-            postgresql_ops={'datatype': 'varchar_pattern_ops'}
+            postgresql_ops={'datatype': 'varchar_pattern_ops'},
         ),
         sa.Index('db_dbattribute_key_6936ff5c4f96a1be_like', 'key', postgresql_ops={'key': 'varchar_pattern_ops'}),
     )
@@ -308,14 +306,12 @@ def generate_schema() -> sa.MetaData:
         sa.Index('db_dblog_850eed5f', 'objpk'),
         sa.Index('db_dblog_e3898037', 'objname'),
         sa.Index(
-            'db_dblog_levelname_14b334f2645c4b06_like',
-            'levelname',
-            postgresql_ops={'levelname': 'varchar_pattern_ops'}
+            'db_dblog_levelname_14b334f2645c4b06_like', 'levelname', postgresql_ops={'levelname': 'varchar_pattern_ops'}
         ),
         sa.Index(
             'db_dblog_loggername_4f4ecb812e82233_like',
             'loggername',
-            postgresql_ops={'loggername': 'varchar_pattern_ops'}
+            postgresql_ops={'loggername': 'varchar_pattern_ops'},
         ),
         sa.Index(
             'db_dblog_objname_704cbe43c1c08fe5_like', 'objname', postgresql_ops={'objname': 'varchar_pattern_ops'}
@@ -405,7 +401,7 @@ def generate_schema() -> sa.MetaData:
         sa.Index(
             'db_dbsetting_datatype_50c0180f460a7006_like',
             'datatype',
-            postgresql_ops={'datatype': 'varchar_pattern_ops'}
+            postgresql_ops={'datatype': 'varchar_pattern_ops'},
         ),
         sa.Index('db_dbsetting_key_4cac773d062e1744_like', 'key', postgresql_ops={'key': 'varchar_pattern_ops'}),
     )
@@ -603,9 +599,7 @@ def generate_schema() -> sa.MetaData:
         sa.Column('id', sa.Integer(), nullable=False),
         sa.PrimaryKeyConstraint('id', name='db_dbworkflowstep_sub_workflows_pkey'),
         sa.UniqueConstraint(
-            'dbworkflow_id',
-            'dbworkflowstep_id',
-            name='db_dbworkflowstep_sub_workflo_dbworkflowstep_id_dbworkflow__key'
+            'dbworkflow_id', 'dbworkflowstep_id', name='db_dbworkflowstep_sub_workflo_dbworkflowstep_id_dbworkflow__key'
         ),
         sa.ForeignKeyConstraint(
             ['dbworkflowstep_id'],

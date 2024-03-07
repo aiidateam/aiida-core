@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -21,4 +20,4 @@ except MissingConfigurationError:
     STORAGE_BACKEND_ENTRY_POINT = 'core.psql_dos'
 
 if STORAGE_BACKEND_ENTRY_POINT != 'core.psql_dos':
-    collect_ignore_glob = ['*']  # pylint: disable=invalid-name
+    collect_ignore_glob = ['*']

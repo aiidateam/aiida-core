@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -12,7 +11,6 @@ import logging
 
 import paramiko
 import pytest
-
 from aiida.transports.plugins.ssh import SshTransport
 from aiida.transports.transport import TransportInternalError
 
@@ -21,7 +19,7 @@ def test_closed_connection_ssh():
     """Test calling command on a closed connection."""
     with pytest.raises(TransportInternalError):
         transport = SshTransport(machine='localhost')
-        transport._exec_command_internal('ls')  # pylint: disable=protected-access
+        transport._exec_command_internal('ls')
 
 
 def test_closed_connection_sftp():
@@ -50,14 +48,13 @@ def test_proxy_jump():
         proxy_jump='localhost,localhost,localhost',
         timeout=30,
         load_system_host_keys=True,
-        key_policy='AutoAddPolicy'
+        key_policy='AutoAddPolicy',
     ):
         pass
 
 
 def test_proxy_jump_invalid():
     """Test proper error reporting when invalid host as a proxy"""
-
     # import is also that when Python is running with debug warnings `-Wd`
     # no unclosed files are reported.
     with pytest.raises(paramiko.SSHException):
@@ -66,7 +63,7 @@ def test_proxy_jump_invalid():
             proxy_jump='localhost,nohost',
             timeout=30,
             load_system_host_keys=True,
-            key_policy='AutoAddPolicy'
+            key_policy='AutoAddPolicy',
         ):
             pass
 
@@ -78,7 +75,7 @@ def test_proxy_command():
         proxy_command='ssh -W localhost:22 localhost',
         timeout=30,
         load_system_host_keys=True,
-        key_policy='AutoAddPolicy'
+        key_policy='AutoAddPolicy',
     ):
         pass
 

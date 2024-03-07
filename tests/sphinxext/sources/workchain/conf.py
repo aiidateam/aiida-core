@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-builtin,invalid-name,missing-module-docstring
 #
 # sphinx-aiida-demo documentation build configuration file, created by
 # sphinx-quickstart on Mon Oct  2 13:04:07 2017.
@@ -110,15 +108,12 @@ latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
-
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -144,7 +139,12 @@ man_pages = [(master_doc, 'sphinx-aiida-demo', 'sphinx-aiida-demo Documentation'
 #  dir menu entry, description, category)
 texinfo_documents = [
     (
-        master_doc, 'sphinx-aiida-demo', 'sphinx-aiida-demo Documentation', author, 'sphinx-aiida-demo',
-        'One line description of project.', 'Miscellaneous'
+        master_doc,
+        'sphinx-aiida-demo',
+        'sphinx-aiida-demo Documentation',
+        author,
+        'sphinx-aiida-demo',
+        'One line description of project.',
+        'Miscellaneous',
     ),
 ]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -62,8 +61,6 @@ def test_print_process_info():
     """Test the ``print_process_info`` method."""
 
     class TestProcessWithoutDocstring(Process):
-        # pylint: disable=missing-docstring
-
         @classmethod
         def define(cls, spec):
             super().define(spec)

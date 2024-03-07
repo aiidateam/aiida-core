@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -11,7 +10,6 @@
 import re
 
 import pytest
-
 from aiida.cmdline.commands import cmd_devel
 from aiida.orm import Node, ProcessNode, QueryBuilder
 

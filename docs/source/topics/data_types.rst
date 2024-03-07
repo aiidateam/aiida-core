@@ -872,7 +872,7 @@ Note that contrary with the :py:class:`~aiida.orm.nodes.data.structure.Structure
 Exporting
 ^^^^^^^^^
 
-You can export the py:class:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData` node with ``verdi data core.trajectory export``, which accepts a number of formats including ``xsf`` and  ``cif``, and additional parameters like ``--step NUM`` (to choose to export only a given trajectory step).
+You can export the :py:class:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData` node with ``verdi data core.trajectory export``, which accepts a number of formats including ``xsf`` and  ``cif``, and additional parameters like ``--step NUM`` (to choose to export only a given trajectory step).
 
 The following export formats are available:
 

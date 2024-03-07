@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,16 +6,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :mod:`~aiida.plugins.entry_point` module."""
-from importlib_metadata import EntryPoint as EP
-from importlib_metadata import EntryPoints
 import pytest
-
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.plugins import entry_point
 from aiida.plugins.entry_point import get_entry_point, validate_registered_entry_points
+from importlib_metadata import EntryPoint as EP  # noqa: N817
+from importlib_metadata import EntryPoints
 
 
 def test_validate_registered_entry_points():
@@ -25,7 +22,8 @@ def test_validate_registered_entry_points():
 
 
 @pytest.mark.parametrize(
-    'group, name', (
+    'group, name',
+    (
         ('aiida.calculations', 'arithmetic.add'),
         ('aiida.data', 'array'),
         ('aiida.tools.dbimporters', 'cod'),
@@ -34,7 +32,7 @@ def test_validate_registered_entry_points():
         ('aiida.schedulers', 'direct'),
         ('aiida.transports', 'local'),
         ('aiida.workflows', 'arithmetic.multiply_add'),
-    )
+    ),
 )
 def test_get_entry_point_deprecated(group, name):
     """Test the ``get_entry_point`` method for a deprecated entry point.
@@ -59,22 +57,22 @@ def eps(request):
     """
 
     class MockEntryPoints:
-
         @staticmethod
-        def select(group, name):  # pylint: disable=unused-argument
+        def select(group, name):
             return EntryPoints(request.param)
 
     return MockEntryPoints
 
 
 @pytest.mark.parametrize(
-    'eps, name, exception', (
+    'eps, name, exception',
+    (
         ((EP(name='ep', group='gr', value='x'),), 'ep', None),
         ((EP(name='ep', group='gr', value='x'),), 'non-existing', MissingEntryPointError),
         ((EP(name='ep', group='gr', value='x'), EP(name='ep', group='gr', value='y')), 'ep', MultipleEntryPointError),
         ((EP(name='ep', group='gr', value='x'), EP(name='ep', group='gr', value='x')), 'ep', None),
     ),
-    indirect=['eps']
+    indirect=['eps'],
 )
 def test_get_entry_point(eps, name, exception, monkeypatch):
     """Test the ``get_entry_point`` method.

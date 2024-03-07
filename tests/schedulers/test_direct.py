@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,10 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the ``DirectScheduler`` plugin."""
 import pytest
-
 from aiida.common.datastructures import CodeRunMode
 from aiida.schedulers import SchedulerError
 from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
@@ -41,11 +38,11 @@ def template():
     (
         """21259 S+   broeder   0:00.04\n87619 S+   broeder   0:00.44\n87634 S+   broeder   0:00.01""",  # MacOS
         """11354 Ss   aiida    00:00:00\n\n87619 R+   aiida    00:00:00\n11384 S+   aiida    00:00:00""",  # Linux
-    )
+    ),
 )
 def test_parse_joblist_output(scheduler, stdout):
     """Test the ``_parse_joblist_output`` for output taken from MacOS and Linux."""
-    result = scheduler._parse_joblist_output(retval=0, stdout=stdout, stderr='')  # pylint: disable=protected-access
+    result = scheduler._parse_joblist_output(retval=0, stdout=stdout, stderr='')
     assert len(result) == 3
     assert '87619' in [job.job_id for job in result]
 
@@ -53,7 +50,7 @@ def test_parse_joblist_output(scheduler, stdout):
 def test_parse_joblist_output_incorrect(scheduler):
     """Test the ``_parse_joblist_output`` for invalid output."""
     with pytest.raises(SchedulerError):
-        scheduler._parse_joblist_output(retval=0, stdout='aaa', stderr='')  # pylint: disable=protected-access
+        scheduler._parse_joblist_output(retval=0, stdout='aaa', stderr='')
 
 
 def test_submit_script_rerunnable(scheduler, template, aiida_caplog):

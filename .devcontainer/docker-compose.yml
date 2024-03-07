@@ -1,38 +1,37 @@
----
 version: '3.4'
 
 services:
 
-    database:
-        image: postgres:15
-        environment:
-            POSTGRES_USER: postgres
-            POSTGRES_PASSWORD: password
-            POSTGRES_HOST_AUTH_METHOD: trust
-        healthcheck:
-            test: [ "CMD-SHELL", "pg_isready"]
-            interval: 5s
-            timeout: 5s
-            retries: 10
+  database:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: [CMD-SHELL, pg_isready]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-    messaging:
-        image: rabbitmq:3.8.14-management
-        environment:
-            RABBITMQ_DEFAULT_USER: guest
-            RABBITMQ_DEFAULT_PASS: guest
-        healthcheck:
-            test: rabbitmq-diagnostics check_port_connectivity
-            interval: 30s
-            timeout: 30s
-            retries: 10
+  messaging:
+    image: rabbitmq:3.8.14-management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 30s
+      timeout: 30s
+      retries: 10
 
-    daemon:
-        image: ghcr.io/aiidateam/aiida-core-base:edge
-        user: aiida
-        entrypoint: tail -f /dev/null
-        environment:
-          SETUP_DEFAULT_AIIDA_PROFILE: 'true'
-          TZ: 'Europe/Zurich'
-        depends_on:
-            database:
-                condition: service_healthy
+  daemon:
+    image: ghcr.io/aiidateam/aiida-core-base:edge
+    user: aiida
+    entrypoint: tail -f /dev/null
+    environment:
+      SETUP_DEFAULT_AIIDA_PROFILE: 'true'
+      TZ: Europe/Zurich
+    depends_on:
+      database:
+        condition: service_healthy

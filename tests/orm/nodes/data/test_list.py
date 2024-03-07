@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,10 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for :class:`aiida.orm.nodes.data.list.List` class."""
 import pytest
-
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import List, load_node
 
@@ -30,7 +27,7 @@ def test_creation():
     node = List()
     assert len(node) == 0
     with pytest.raises(IndexError):
-        node[0]  # pylint: disable=pointless-statement
+        node[0]
 
 
 def test_mutability():

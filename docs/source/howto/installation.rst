@@ -256,6 +256,39 @@ Similarly to unset a value:
 .. seealso:: :ref:`How-to configure caching <how-to:run-codes:caching>`
 
 
+.. _how-to:installation:configure:warnings:
+
+Controlling warnings
+--------------------
+
+AiiDA may emit warnings for a variety of reasons, for example, warnings when a deprecated part of the code is used.
+These warnings are on by default as they provide the user with important information.
+The warnings can be turned off using the ``warnings.showdeprecations`` config option, for example:
+
+.. code-block:: console
+
+    verdi config set warnings.showdeprecations false
+
+.. tip::
+
+    The command above changes the option for the current profile.
+    However, certain warnings are emitted before a profile can be loaded, for example, when certain modules are imported.
+    To also silence these warnings, apply the option globally:
+
+        .. code-block:: console
+
+            verdi config set warnings.showdeprecations false --global
+
+In addition to the config option, AiiDA also provides the dedicated environment variable ``AIIDA_WARN_v{version}`` for deprecation warnings.
+Here ``{version}`` is the version number in which the deprecated code will be removed, e.g., ``AIIDA_WARN_v3``.
+This environment variable can be used to enable deprecation warnings even if ``warnings.showdeprecations`` is turned off.
+This can be useful to temporarily enable deprecation warnings for a single command, e.g.:
+
+.. code-block:: console
+
+    AIIDA_WARN_v3=1 verdi run script.py
+
+
 .. _how-to:installation:configure:instance-isolation:
 
 Isolating multiple instances

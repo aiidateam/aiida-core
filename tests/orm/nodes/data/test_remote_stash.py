@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Tests for the :mod:`aiida.orm.nodes.data.remote.stash` module."""
 import pytest
-
 from aiida.common.datastructures import StashMode
 from aiida.common.exceptions import StoringNotAllowed
 from aiida.orm import RemoteStashData, RemoteStashFolderData
@@ -45,12 +43,13 @@ def test_constructor(store):
 
 
 @pytest.mark.parametrize(
-    'argument, value', (
+    'argument, value',
+    (
         ('stash_mode', 'copy'),
         ('target_basepath', ['list']),
         ('source_list', 'relative/path'),
         ('source_list', ('/absolute/path')),
-    )
+    ),
 )
 def test_constructor_invalid(argument, value):
     """Test the constructor for invalid argument types."""

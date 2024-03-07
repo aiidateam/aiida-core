@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from aiida.engine import WorkChain, calcfunction
 from aiida.orm import Int
 
@@ -7,12 +6,13 @@ from aiida.orm import Int
 def add(x, y):
     return Int(x + y)
 
+
 @calcfunction
 def multiply(x, y):
     return Int(x * y)
 
-class AddAndMultiplyWorkChain(WorkChain):
 
+class AddAndMultiplyWorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)

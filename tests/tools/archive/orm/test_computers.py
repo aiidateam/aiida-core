@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,18 +7,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm.Computer tests for the export and import routines"""
-# pylint: disable=too-many-statements,no-member
 import pytest
-
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 from aiida.tools.archive.imports import DUPLICATE_LABEL_TEMPLATE
+
 from tests.utils.archives import import_test_archive
 
 
 def test_same_computer_import(aiida_profile, tmp_path, aiida_localhost):
-    """
-    Test that you can import nodes in steps without any problems. In this
+    """Test that you can import nodes in steps without any problems. In this
     test we will import a first calculation and then a second one. The
     import should work as expected and have in the end two job
     calculations.
@@ -85,11 +82,11 @@ def test_same_computer_import(aiida_profile, tmp_path, aiida_localhost):
     builder = orm.QueryBuilder()
     builder.append(orm.Computer, project=['label', 'uuid', 'id'])
     assert builder.count() == 1, 'Only one computer should be found.'
-    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'  # pylint: disable=unsubscriptable-object
-    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'  # pylint: disable=unsubscriptable-object
+    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'
+    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'
 
     # Store the id of the computer
-    comp_id = builder.first()[2]  # pylint: disable=unsubscriptable-object
+    comp_id = builder.first()[2]
 
     # Import the second calculation
     import_archive(filename2)
@@ -99,9 +96,9 @@ def test_same_computer_import(aiida_profile, tmp_path, aiida_localhost):
     builder = orm.QueryBuilder()
     builder.append(orm.Computer, project=['label', 'uuid', 'id'])
     assert builder.count() == 1, f'Found {builder.count()} computersbut only one computer should be found.'
-    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'  # pylint: disable=unsubscriptable-object
-    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'  # pylint: disable=unsubscriptable-object
-    assert builder.first()[2] == comp_id, 'The computer id is not correct.'  # pylint: disable=unsubscriptable-object
+    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'
+    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'
+    assert builder.first()[2] == comp_id, 'The computer id is not correct.'
 
     # Check that now you have two calculations attached to the same
     # computer.
@@ -114,8 +111,7 @@ def test_same_computer_import(aiida_profile, tmp_path, aiida_localhost):
 
 
 def test_same_computer_different_name_import(aiida_profile, tmp_path, aiida_localhost):
-    """
-    This test checks that if the computer is re-imported with a different
+    """This test checks that if the computer is re-imported with a different
     name to the same database, then the original computer will not be
     renamed. It also checks that the names were correctly imported (without
     any change since there is no computer name collision)
@@ -181,7 +177,7 @@ def test_same_computer_different_name_import(aiida_profile, tmp_path, aiida_loca
     builder = orm.QueryBuilder()
     builder.append(orm.Computer, project=['label', 'uuid', 'id'])
     assert builder.count() == 1, 'Only one computer should be found.'
-    assert str(builder.first()[0]) == comp1_name, 'The computer name is not correct.'  # pylint: disable=unsubscriptable-object
+    assert str(builder.first()[0]) == comp1_name, 'The computer name is not correct.'
 
     # Import the second calculation
     import_archive(filename2)
@@ -195,8 +191,7 @@ def test_same_computer_different_name_import(aiida_profile, tmp_path, aiida_loca
 
 
 def test_different_computer_same_name_import(aiida_profile, tmp_path, aiida_localhost_factory):
-    """
-    This test checks that if there is a name collision, the imported
+    """This test checks that if there is a name collision, the imported
     computers are renamed accordingly.
     """
     # Set the computer name
@@ -258,9 +253,7 @@ def test_different_computer_same_name_import(aiida_profile, tmp_path, aiida_loca
     # Check that there are no calculations
     builder = orm.QueryBuilder()
     builder.append(orm.CalcJobNode, project=['*'])
-    assert builder.count() == 0, 'There should not be any ' \
-        'calculations in the database at ' \
-        'this point.'
+    assert builder.count() == 0, 'There should not be any ' 'calculations in the database at ' 'this point.'
 
     # Import all the calculations
     import_archive(filename1)
@@ -279,9 +272,7 @@ def test_different_computer_same_name_import(aiida_profile, tmp_path, aiida_loca
 
 
 def test_import_of_computer_json_params(aiida_profile_clean, tmp_path, aiida_localhost):
-    """
-    This test checks that the metadata and transport params are exported and imported correctly in both backends.
-    """
+    """This test checks that the metadata and transport params are exported and imported correctly in both backends."""
     # Set the computer name
     comp1_name = 'localhost_1'
     comp1_metadata = {'workdir': '/tmp/aiida'}
@@ -317,7 +308,7 @@ def test_import_of_computer_json_params(aiida_profile_clean, tmp_path, aiida_loc
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('backend', ['django', 'sqlalchemy'])
-def test_import_of_django_sqla_export_file(aiida_localhost, backend):  # pylint: disable=unused-argument
+def test_import_of_django_sqla_export_file(aiida_localhost, backend):
     """Check that import manages to import the archive file correctly for legacy storage backends."""
     archive = f'{backend}.aiida'
 

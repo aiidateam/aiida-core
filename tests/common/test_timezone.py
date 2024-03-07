@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -12,7 +11,6 @@ from datetime import datetime, timedelta, timezone, tzinfo
 from time import time
 
 import pytest
-
 from aiida.common.timezone import delta, localtime, make_aware, now, timezone_from_name
 
 

@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name,protected-access,no-member
 """Tests for the :mod:`aiida.orm.nodes.repository` module."""
 import pathlib
 
 import pytest
-
 from aiida.common import exceptions
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.engine import ProcessState
@@ -88,7 +85,6 @@ def test_load_updated():
 
 def test_caching(cacheable_node):
     """Test the repository after a node is stored from the cache."""
-
     with enable_caching():
         cached = CalcJobNode(process_type='aiida.calculations:core.core.arithmetic.add')
         cached.base.repository.put_object_from_bytes(b'content', 'relative/path')

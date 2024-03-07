@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Tests for generic queries."""
 import pytest
-
 from aiida.orm import Computer, Data, Group, Node, ProcessNode, QueryBuilder, User
 
 
@@ -17,8 +15,9 @@ def test_qb_clsf_sqla():
     """Test SQLA classifiers"""
     from aiida.orm.querybuilder import _get_ormclass
 
-    for aiida_cls, orm_name in zip((Group, User, Computer, Node, Data, ProcessNode),
-                                   ('group', 'user', 'computer', 'node', 'node', 'node')):
+    for aiida_cls, orm_name in zip(
+        (Group, User, Computer, Node, Data, ProcessNode), ('group', 'user', 'computer', 'node', 'node', 'node')
+    ):
         cls, _ = _get_ormclass(aiida_cls, None)
 
         assert cls.value == orm_name

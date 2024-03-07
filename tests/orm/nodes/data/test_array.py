@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -10,7 +9,6 @@
 """Tests for the :mod:`aiida.orm.nodes.data.array.array` module."""
 import numpy
 import pytest
-
 from aiida.orm import ArrayData, load_node
 
 

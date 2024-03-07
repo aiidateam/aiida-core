@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument,protected-access
 """Performance benchmark tests for single nodes.
 
 The purpose of these tests is to benchmark and compare basic node interactions,
@@ -16,7 +14,6 @@ such as storage and deletion from the database and repository.
 from io import StringIO
 
 import pytest
-
 from aiida.common import NotExistent
 from aiida.orm import Data, load_node
 
@@ -84,7 +81,7 @@ def test_delete_backend(benchmark):
 
     def _run(node):
         pk = node.pk
-        Data.collection._backend.nodes.delete(pk)  # pylint: disable=no-member
+        Data.collection._backend.nodes.delete(pk)
         return pk
 
     pk = benchmark.pedantic(_run, setup=get_data_node, iterations=1, rounds=100, warmup_rounds=1)
@@ -100,7 +97,7 @@ def test_delete(benchmark):
 
     def _run(node):
         pk = node.pk
-        Data.collection.delete(pk)  # pylint: disable=no-member
+        Data.collection.delete(pk)
         return pk
 
     pk = benchmark.pedantic(_run, setup=get_data_node, iterations=1, rounds=100, warmup_rounds=1)
@@ -116,7 +113,7 @@ def test_delete_with_object(benchmark):
 
     def _run(node):
         pk = node.pk
-        Data.collection.delete(pk)  # pylint: disable=no-member
+        Data.collection.delete(pk)
         return pk
 
     pk = benchmark.pedantic(_run, setup=get_data_node_and_object, iterations=1, rounds=100, warmup_rounds=1)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,13 +6,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Test migrating all export archives included in `tests/static/export/migrate`."""
 import pytest
-
 from aiida import get_version
 from aiida.storage.sqlite_zip.migrations.legacy import LEGACY_MIGRATE_FUNCTIONS
 from aiida.storage.sqlite_zip.migrations.utils import verify_metadata_version
+
 from tests.utils.archives import get_archive_file, read_json_files
 
 
@@ -34,7 +32,7 @@ def test_migrations(migration_data):
 
     filepath_archive_old = get_archive_file(f'export_{version_old}_simple.aiida', filepath='export/migrate')
 
-    metadata_old, data_old = read_json_files(filepath_archive_old, names=['metadata.json', 'data.json'])  # pylint: disable=unbalanced-tuple-unpacking
+    metadata_old, data_old = read_json_files(filepath_archive_old, names=['metadata.json', 'data.json'])
 
     migration_method(metadata_old, data_old)
 

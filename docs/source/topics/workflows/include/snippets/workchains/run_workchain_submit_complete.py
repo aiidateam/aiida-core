@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 from aiida.engine import ToContext, WorkChain
 
 
 class SomeWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)

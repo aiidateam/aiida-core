@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -10,14 +9,13 @@
 """Test the :meth:`aiida.orm.data.base.to_aiida_type` serializer."""
 import numpy
 import pytest
-
 from aiida import orm
 from aiida.common.links import LinkType
 
-#yapf: disable
 
 @pytest.mark.parametrize(
-    'expected_type, value', (
+    'expected_type, value',
+    (
         (orm.Bool, True),
         (orm.Dict, {'foo': 'bar'}),
         (orm.Float, 5.0),
@@ -26,9 +24,8 @@ from aiida.common.links import LinkType
         (orm.Str, 'test-string'),
         (orm.EnumData, LinkType.RETURN),
         (orm.ArrayData, numpy.array([[0, 0, 0], [1, 1, 1]])),
-    )
+    ),
 )
-# yapf: enable
 def test_to_aiida_type(expected_type, value):
     """Test the ``to_aiida_type`` dispatch."""
     converted = orm.to_aiida_type(value)

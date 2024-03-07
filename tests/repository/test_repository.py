@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name,invalid-name
 """Tests for the :mod:`aiida.repository.repository` module."""
 import contextlib
 import io
@@ -7,7 +5,6 @@ import pathlib
 import typing as t
 
 import pytest
-
 from aiida.repository import File, FileType, Repository
 from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
 
@@ -22,6 +19,7 @@ def get_sandbox_backend(*_) -> SandboxRepositoryBackend:
 def get_disk_object_store_backend(tmp_path) -> DiskObjectStoreRepositoryBackend:
     """Return an instance of the disk object store repository backend."""
     from disk_objectstore import Container
+
     yield DiskObjectStoreRepositoryBackend(container=Container(tmp_path))
 
 
@@ -82,11 +80,11 @@ def serialize_file_hierarchy(dirpath: pathlib.Path):
         values are the text contents.
     """
     import os
+
     serialized = {}
 
     for root, _, files in os.walk(dirpath):
         for filepath in files:
-
             relpath = pathlib.Path(root).relative_to(dirpath)
             subdir = serialized
             if relpath.parts:
@@ -123,8 +121,6 @@ def test_initialise(repository_uninitialised):
 
 def test_pre_process_path():
     """Test the ``Repository.pre_process_path`` classmethod."""
-    # pylint: disable=protected-access
-
     with pytest.raises(TypeError, match=r'path is not of type `str` nor `pathlib.PurePosixPath`.'):
         Repository._pre_process_path(path=1)
 
@@ -413,15 +409,9 @@ def test_put_object_from_tree_raises(repository):
 
 def test_put_object_from_tree(repository, generate_directory):
     """Test the ``Repository.put_object_from_tree`` method."""
-    directory = generate_directory({
-        'file_a': b'content_a',
-        'relative': {
-            'file_b': b'content_b',
-            'sub': {
-                'file_c': b'content_c'
-            }
-        }
-    })
+    directory = generate_directory(
+        {'file_a': b'content_a', 'relative': {'file_b': b'content_b', 'sub': {'file_c': b'content_c'}}}
+    )
 
     repository.put_object_from_tree(str(directory))
 
@@ -535,12 +525,14 @@ def test_delete_object_hard(repository, generate_directory):
 
 def test_erase(repository, generate_directory):
     """Test the ``Repository.erase`` method."""
-    directory = generate_directory({
-        'file_a': b'content_a',
-        'relative': {
-            'file_b': b'content_b',
+    directory = generate_directory(
+        {
+            'file_a': b'content_a',
+            'relative': {
+                'file_b': b'content_b',
+            },
         }
-    })
+    )
 
     repository.put_object_from_tree(str(directory))
 
@@ -586,14 +578,15 @@ def test_walk(repository, generate_directory):
     ]
 
 
-# yapf: disable
-@pytest.mark.parametrize(('path', 'expected_hierarchy'), (
-    (None, {'file_a': b'a', 'relative': {'file_b': b'b', 'sub': {'file_c': b'c'}}}),
-    ('.', {'file_a': b'a', 'relative': {'file_b': b'b', 'sub': {'file_c': b'c'}}}),
-    ('relative', {'file_b': b'b', 'sub': {'file_c': b'c'}}),
-    ('relative/sub', {'file_c': b'c'}),
-))
-# yapf: enable
+@pytest.mark.parametrize(
+    ('path', 'expected_hierarchy'),
+    (
+        (None, {'file_a': b'a', 'relative': {'file_b': b'b', 'sub': {'file_c': b'c'}}}),
+        ('.', {'file_a': b'a', 'relative': {'file_b': b'b', 'sub': {'file_c': b'c'}}}),
+        ('relative', {'file_b': b'b', 'sub': {'file_c': b'c'}}),
+        ('relative/sub', {'file_c': b'c'}),
+    ),
+)
 def test_copy_tree(repository, generate_directory, tmp_path_parametrized, path, expected_hierarchy):
     """Test the ``Repository.copy_tree`` method."""
     directory = generate_directory({'file_a': b'a', 'relative': {'file_b': b'b', 'sub': {'file_c': b'c'}}})
@@ -602,12 +595,15 @@ def test_copy_tree(repository, generate_directory, tmp_path_parametrized, path, 
     assert serialize_file_hierarchy(tmp_path_parametrized) == expected_hierarchy
 
 
-@pytest.mark.parametrize(('argument', 'value', 'exception', 'match'), (
-    ('target', None, TypeError, r'path .* is not of type `str` nor `pathlib.Path`.'),
-    ('target', 'relative/path', TypeError, r'provided target `.*` is not an absolute path.'),
-    ('target', pathlib.Path('.'), TypeError, r'provided target `.*` is not an absolute path.'),
-    ('path', pathlib.Path('file_a'), NotADirectoryError, r'object with path `.*` is not a directory.'),
-))
+@pytest.mark.parametrize(
+    ('argument', 'value', 'exception', 'match'),
+    (
+        ('target', None, TypeError, r'path .* is not of type `str` nor `pathlib.Path`.'),
+        ('target', 'relative/path', TypeError, r'provided target `.*` is not an absolute path.'),
+        ('target', pathlib.Path('.'), TypeError, r'provided target `.*` is not an absolute path.'),
+        ('path', pathlib.Path('file_a'), NotADirectoryError, r'object with path `.*` is not a directory.'),
+    ),
+)
 def test_copy_tree_invalid(tmp_path, repository, generate_directory, argument, value, exception, match):
     """Test the ``Repository.copy_tree`` method for invalid input."""
     directory = generate_directory({'file_a': None})
@@ -680,17 +676,17 @@ def test_hash(repository, generate_directory):
 
 def test_flatten(repository, generate_directory):
     """Test the ``Repository.flatten`` classmethod."""
-    directory = generate_directory({
-        'empty': {},
-        'file_a': b'content',
-        'relative': {
-            'file_b': None,
-            'sub': {
-                'file_c': None
+    directory = generate_directory(
+        {
+            'empty': {},
+            'file_a': b'content',
+            'relative': {
+                'file_b': None,
+                'sub': {'file_c': None},
+                'sub_empty': {},
             },
-            'sub_empty': {},
         }
-    })
+    )
     repository.put_object_from_tree(str(directory))
     flattened = repository.flatten(repository.serialize())
     assert isinstance(flattened, dict)

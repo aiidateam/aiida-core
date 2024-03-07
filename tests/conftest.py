@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Collection of ``pytest`` fixtures that are intended for internal use to ``aiida-core`` only.
 
 Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.manage.tests.pytest_fixtures`. They are
@@ -25,11 +23,13 @@ import warnings
 
 import click
 import pytest
-
 from aiida import get_profile
-from aiida.manage.configuration import Config, Profile, get_config, load_profile
+from aiida.manage.configuration import Profile, get_config, load_profile
 
-pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']  # pylint: disable=invalid-name
+if t.TYPE_CHECKING:
+    from aiida.manage.configuration.config import Config
+
+pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']
 
 
 @pytest.fixture()
@@ -79,6 +79,7 @@ def non_interactive_editor(request):
 def fixture_sandbox():
     """Return a `SandboxFolder`."""
     from aiida.common.folders import SandboxFolder
+
     with SandboxFolder() as folder:
         yield folder
 
@@ -176,8 +177,9 @@ def isolated_config(monkeypatch):
     Python process and so doesn't have access to the loaded config in memory in the process that is running the test.
     """
     from aiida.manage import configuration
+    from aiida.manage.configuration.config import Config
 
-    monkeypatch.setattr(configuration.Config, '_backup', lambda *args, **kwargs: None)
+    monkeypatch.setattr(Config, '_backup', lambda *args, **kwargs: None)
 
     current_config = configuration.CONFIG
     configuration.CONFIG = copy.deepcopy(current_config)
@@ -247,7 +249,6 @@ def profile_factory() -> Profile:
     """
 
     def _create_profile(name='test-profile', **kwargs):
-
         repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
 
         profile_dictionary = {
@@ -262,7 +263,7 @@ def profile_factory() -> Profile:
                     'database_username': kwargs.pop('database_username', 'user'),
                     'database_password': kwargs.pop('database_password', 'pass'),
                     'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
-                }
+                },
             },
             'process_control': {
                 'backend': kwargs.pop('process_control_backend', 'rabbitmq'),
@@ -274,9 +275,9 @@ def profile_factory() -> Profile:
                     'broker_port': kwargs.pop('broker_port', 5672),
                     'broker_virtual_host': kwargs.pop('broker_virtual_host', ''),
                     'broker_parameters': kwargs.pop('broker_parameters', {}),
-                }
+                },
             },
-            'test_profile': kwargs.pop('test_profile', True)
+            'test_profile': kwargs.pop('test_profile', True),
         }
 
         return Profile(name, profile_dictionary)
@@ -342,7 +343,14 @@ def config_with_profile(config_with_profile_factory):
 def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
     from aiida.manage import get_manager
+
     return get_manager()
+
+
+@pytest.fixture
+def runner(manager):
+    """Get the ``Runner`` instance of the currently loaded profile."""
+    return manager.get_runner()
 
 
 @pytest.fixture
@@ -370,6 +378,7 @@ def communicator(manager):
 def default_user():
     """Return the default user."""
     from aiida.orm import User
+
     return User.collection.get_default()
 
 
@@ -448,8 +457,11 @@ class CliResult:
 
     stderr_bytes: bytes
     stdout_bytes: bytes
-    exc_info: tuple[t.Type[BaseException], BaseException, types.TracebackType] | tuple[None, None,
-                                                                                       None] = (None, None, None)
+    exc_info: tuple[t.Type[BaseException], BaseException, types.TracebackType] | tuple[None, None, None] = (
+        None,
+        None,
+        None,
+    )
     exception: BaseException | None = None
     exit_code: int | None = 0
 
@@ -475,7 +487,7 @@ class CliResult:
 
 
 @pytest.fixture
-def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: disable=unused-argument
+def run_cli_command(reset_log_level, aiida_instance, aiida_profile):
     """Run a ``click`` command with the given options.
 
     The call will raise if the command triggered an exception or the exit code returned is non-zero.
@@ -489,7 +501,7 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
         use_subprocess: bool = False,
         suppress_warnings: bool = False,
         initialize_ctx_obj: bool = True,
-        **kwargs
+        **kwargs,
     ) -> CliResult:
         """Run the command and check the result.
 
@@ -527,18 +539,34 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
         # Cast all elements in ``parameters`` to strings as that is required by ``subprocess.run``.
         parameters = [str(param) for param in parameters or []]
 
-        if use_subprocess:
-            result = run_cli_command_subprocess(command, parameters, user_input, aiida_profile.name, suppress_warnings)
-        else:
-            result = run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs)
+        try:
+            config_show_deprecations = aiida_instance.get_option('warnings.showdeprecations')
 
-        if raises:
-            assert result.exception is not None, result.output
-            assert result.exit_code != 0, result.exit_code
-        else:
-            import traceback
-            assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
-            assert result.exit_code == 0, (result.exit_code, result.stderr)
+            if config_show_deprecations and suppress_warnings:
+                aiida_instance.set_option('warnings.showdeprecations', False)
+                if use_subprocess:
+                    aiida_instance.store()
+
+            if use_subprocess:
+                result = run_cli_command_subprocess(
+                    command, parameters, user_input, aiida_profile.name, suppress_warnings
+                )
+            else:
+                result = run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs)
+
+            if raises:
+                assert result.exception is not None, result.output
+                assert result.exit_code != 0, result.exit_code
+            else:
+                import traceback
+
+                assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
+                assert result.exit_code == 0, (result.exit_code, result.stderr)
+        finally:
+            if config_show_deprecations and suppress_warnings:
+                aiida_instance.set_option('warnings.showdeprecations', config_show_deprecations)
+                if use_subprocess:
+                    aiida_instance.store()
 
         return result
 
@@ -584,15 +612,16 @@ def run_cli_command_subprocess(command, parameters, user_input, profile_name, su
 
 def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs):
     """Run CLI command through ``click.testing.CliRunner``."""
-    from click.testing import CliRunner
-
     from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
-    from aiida.common import AttributeDict
+    from aiida.cmdline.groups.verdi import LazyVerdiObjAttributeDict
+    from click.testing import CliRunner
 
     if initialize_ctx_obj:
         config = get_config()
         profile = get_profile()
-        obj = AttributeDict({'config': config, 'profile': profile})
+        obj = LazyVerdiObjAttributeDict(None, {'config': config})
+        if profile is not None:
+            obj.profile = profile
     else:
         obj = None
 
@@ -620,6 +649,7 @@ def reset_log_level():
     :class:`~aiida.cmdline.params.options.main.VERBOSITY` option in a CLI command invocation.
     """
     from aiida.common import log
+
     try:
         yield
     finally:

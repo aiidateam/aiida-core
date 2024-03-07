@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
+from aiida.engine import ToContext, WorkChain
 from child import ChildWorkChain
-
-from aiida.engine import ToContext, WorkChain, run
 
 
 class SimpleParentWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)
@@ -18,6 +15,4 @@ class SimpleParentWorkChain(WorkChain):
         return ToContext(child=child)
 
     def finalize(self):
-        self.out_many(
-            self.exposed_outputs(self.ctx.child, ChildWorkChain)
-        )
+        self.out_many(self.exposed_outputs(self.ctx.child, ChildWorkChain))

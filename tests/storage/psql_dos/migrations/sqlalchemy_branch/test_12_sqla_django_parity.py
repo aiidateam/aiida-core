@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Tests for migrations to bring parity between SQLAlchemy and Django."""
-# pylint: disable=invalid-name,too-many-locals,too-many-statements
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 

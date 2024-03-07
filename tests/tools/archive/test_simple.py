@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -10,13 +9,12 @@
 """Simple tests for the export and import routines"""
 import json
 
-from archive_path import ZipPath
 import pytest
-
 from aiida import orm
 from aiida.common.exceptions import IncompatibleStorageSchema, LicensingException
 from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
+from archive_path import ZipPath
 
 
 @pytest.mark.parametrize('entities', ['all', 'specific'])

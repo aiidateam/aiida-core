@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.manage.tests.pytest_fixtures` module."""
 import uuid
 

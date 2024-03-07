@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,15 +6,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument,invalid-name
 """Tests for the 'verdi computer' command."""
-from collections import OrderedDict
 import os
 import tempfile
 import textwrap
+from collections import OrderedDict
 
 import pytest
-
 from aiida import orm
 from aiida.cmdline.commands.cmd_computer import (
     computer_configure,
@@ -30,8 +27,7 @@ from aiida.cmdline.commands.cmd_computer import (
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):
-    """
-    Return a OrderedDict with the key-value pairs for the command line.
+    """Return a OrderedDict with the key-value pairs for the command line.
 
     I use an ordered dict because for changing entries it's easier
     to have keys (so, a dict) but the commands might require a specific order,
@@ -69,8 +65,7 @@ def generate_setup_options_dict(replace_args=None, non_interactive=True):
 
 
 def generate_setup_options(ordereddict):
-    """
-    Given an (ordered) dict, returns a list of options
+    """Given an (ordered) dict, returns a list of options
 
     Note that at this moment the implementation only supports long options
     (i.e. --option=value) and not short ones (-o value).
@@ -89,8 +84,7 @@ def generate_setup_options(ordereddict):
 
 
 def generate_setup_options_interactive(ordereddict):
-    """
-    Given an (ordered) dict, returns a list of options
+    """Given an (ordered) dict, returns a list of options
 
     Note that at this moment the implementation only supports long options
     (i.e. --option=value) and not short ones (-o value).
@@ -116,13 +110,13 @@ def test_help(run_cli_command):
 def test_reachable():
     """Test if the verdi computer setup is reachable."""
     import subprocess as sp
+
     output = sp.check_output(['verdi', 'computer', 'setup', '--help'])
     assert b'Usage:' in output
 
 
 def test_mixed(run_cli_command):
-    """
-    Test verdi computer setup in mixed mode.
+    """Test verdi computer setup in mixed mode.
 
     Some parts are given interactively and some non-interactively.
     """
@@ -171,9 +165,7 @@ def test_mixed(run_cli_command):
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
 def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor):
-    """
-    Main test to check if the non-interactive command works
-    """
+    """Main test to check if the non-interactive command works"""
     options_dict = generate_setup_options_dict()
     options = generate_setup_options(options_dict)
 
@@ -200,9 +192,7 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
 
 
 def test_noninteractive_optional_default_mpiprocs(run_cli_command):
-    """
-    Check that if is ok not to specify mpiprocs-per-machine
-    """
+    """Check that if is ok not to specify mpiprocs-per-machine"""
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs'})
     options_dict.pop('mpiprocs-per-machine')
     options = generate_setup_options(options_dict)
@@ -214,9 +204,7 @@ def test_noninteractive_optional_default_mpiprocs(run_cli_command):
 
 
 def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
-    """
-    Check that if is the specified value is zero, it means unspecified
-    """
+    """Check that if is the specified value is zero, it means unspecified"""
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_2'})
     options_dict['mpiprocs-per-machine'] = 0
     options = generate_setup_options(options_dict)
@@ -228,9 +216,7 @@ def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
 
 
 def test_noninteractive_optional_default_mpiprocs_3(run_cli_command):
-    """
-    Check that it fails for a negative number of mpiprocs
-    """
+    """Check that it fails for a negative number of mpiprocs"""
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_3'})
     options_dict['mpiprocs-per-machine'] = -1
     options = generate_setup_options(options_dict)
@@ -239,9 +225,7 @@ def test_noninteractive_optional_default_mpiprocs_3(run_cli_command):
 
 
 def test_noninteractive_optional_default_memory(run_cli_command):
-    """
-    Check that if is ok not to specify default-memory-per-machine
-    """
+    """Check that if is ok not to specify default-memory-per-machine"""
     options_dict = generate_setup_options_dict({'label': 'computer_default_mem'})
     options_dict.pop('default-memory-per-machine')
     options = generate_setup_options(options_dict)
@@ -253,9 +237,7 @@ def test_noninteractive_optional_default_memory(run_cli_command):
 
 
 def test_noninteractive_optional_default_memory_invalid(run_cli_command):
-    """
-    Check that it fails for a negative number of default_memory.
-    """
+    """Check that it fails for a negative number of default_memory."""
     options_dict = generate_setup_options_dict({'label': 'computer_default_memory_3'})
     options_dict['default-memory-per-machine'] = -1
     options = generate_setup_options(options_dict)
@@ -264,9 +246,7 @@ def test_noninteractive_optional_default_memory_invalid(run_cli_command):
 
 
 def test_noninteractive_wrong_transport_fail(run_cli_command):
-    """
-    Check that if fails as expected for an unknown transport
-    """
+    """Check that if fails as expected for an unknown transport"""
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['transport'] = 'unknown_transport'
     options = generate_setup_options(options_dict)
@@ -275,9 +255,7 @@ def test_noninteractive_wrong_transport_fail(run_cli_command):
 
 
 def test_noninteractive_wrong_scheduler_fail(run_cli_command):
-    """
-    Check that if fails as expected for an unknown transport
-    """
+    """Check that if fails as expected for an unknown transport"""
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['scheduler'] = 'unknown_scheduler'
     options = generate_setup_options(options_dict)
@@ -286,9 +264,7 @@ def test_noninteractive_wrong_scheduler_fail(run_cli_command):
 
 
 def test_noninteractive_invalid_shebang_fail(run_cli_command):
-    """
-    Check that if fails as expected for an unknown transport
-    """
+    """Check that if fails as expected for an unknown transport"""
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['shebang'] = '/bin/bash'  # Missing #! in front
     options = generate_setup_options(options_dict)
@@ -297,9 +273,7 @@ def test_noninteractive_invalid_shebang_fail(run_cli_command):
 
 
 def test_noninteractive_invalid_mpirun_fail(run_cli_command):
-    """
-    Check that if fails as expected for an unknown transport
-    """
+    """Check that if fails as expected for an unknown transport"""
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['mpirun-command'] = 'mpirun -np {unknown_key}'
     options = generate_setup_options(options_dict)
@@ -312,12 +286,14 @@ def test_noninteractive_from_config(run_cli_command):
     label = 'noninteractive_config'
 
     with tempfile.NamedTemporaryFile('w') as handle:
-        handle.write(f"""---
+        handle.write(
+            f"""---
 label: {label}
 hostname: myhost
 transport: core.local
 scheduler: core.direct
-""")
+"""
+        )
         handle.flush()
 
         options = ['--non-interactive', '--config', os.path.realpath(handle.name)]
@@ -330,10 +306,10 @@ class TestVerdiComputerConfigure:
     """Test the ``verdi computer configure`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, run_cli_command):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         from aiida.orm.utils.builders.computer import ComputerBuilder
+
         self.cli_runner = run_cli_command
         self.user = orm.User.collection.get_default()
         self.comp_builder = ComputerBuilder(label='test_comp_setup')
@@ -358,14 +334,14 @@ class TestVerdiComputerConfigure:
     def test_reachable(self):
         """Test reachability of top level and sub commands."""
         import subprocess as sp
+
         sp.check_output(['verdi', 'computer', 'configure', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'core.local', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'core.ssh', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'show', '--help'])
 
     def test_local_ni_empty(self):
-        """
-        Test verdi computer configure core.local <comp>
+        """Test verdi computer configure core.local <comp>
 
         Test twice, with comp setup for local or ssh.
 
@@ -408,8 +384,7 @@ class TestVerdiComputerConfigure:
         assert new_auth_params['use_login_shell'] is False
 
     def test_ssh_interactive(self):
-        """
-        Check that the interactive prompt is accepting the correct values.
+        """Check that the interactive prompt is accepting the correct values.
 
         Actually, even passing a shorter set of options should work:
         ``verdi computer configure ssh`` is able to provide sensible default
@@ -467,8 +442,7 @@ class TestVerdiComputerConfigure:
         assert computer.get_configuration()['use_login_shell'] == use_login_shell
 
     def test_ssh_ni_empty(self):
-        """
-        Test verdi computer configure core.ssh <comp>
+        """Test verdi computer configure core.ssh <comp>
 
         Test twice, with comp setup for ssh or local.
 
@@ -544,9 +518,8 @@ class TestVerdiComputerCommands:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_computer, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_computer, run_cli_command):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer_name = 'comp_cli_test_computer'
         self.comp = aiida_computer(label=self.computer_name)
         self.comp.set_default_mpiprocs_per_machine(1)
@@ -560,8 +533,7 @@ class TestVerdiComputerCommands:
         self.cli_runner = run_cli_command
 
     def test_computer_test(self):
-        """
-        Test if the 'verdi computer test' command works
+        """Test if the 'verdi computer test' command works
 
         It should work as it is a local connection
         """
@@ -572,9 +544,7 @@ class TestVerdiComputerCommands:
         self.cli_runner(computer_test, ['comp_cli_test_computer'])
 
     def test_computer_list(self):
-        """
-        Test if 'verdi computer list' command works
-        """
+        """Test if 'verdi computer list' command works"""
         # Check the vanilla command works
         result = self.cli_runner(computer_list, [])
         # Something should be printed to stdout
@@ -587,9 +557,7 @@ class TestVerdiComputerCommands:
             assert result.output is not None
 
     def test_computer_show(self):
-        """
-        Test if 'verdi computer show' command works
-        """
+        """Test if 'verdi computer show' command works"""
         # See if we can display info about the test computer.
         result = self.cli_runner(computer_show, ['comp_cli_test_computer'])
         # Something should be printed to stdout
@@ -599,9 +567,7 @@ class TestVerdiComputerCommands:
         result = self.cli_runner(computer_show, 'non_existent_computer_name', raises=True)
 
     def test_computer_relabel(self):
-        """
-        Test if 'verdi computer relabel' command works
-        """
+        """Test if 'verdi computer relabel' command works"""
         from aiida.common.exceptions import NotExistent
 
         # See if the command complains about not getting an invalid computer
@@ -639,9 +605,7 @@ class TestVerdiComputerCommands:
         orm.Computer.collection.get(label='comp_cli_test_computer')
 
     def test_computer_delete(self):
-        """
-        Test if 'verdi computer delete' command works
-        """
+        """Test if 'verdi computer delete' command works"""
         from aiida.common.exceptions import NotExistent
 
         # Setup a computer to delete during the test
@@ -651,7 +615,7 @@ class TestVerdiComputerCommands:
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir='/tmp/aiida'
+            workdir='/tmp/aiida',
         ).store()
         # and configure it
         options = ['core.local', label, '--non-interactive', '--safe-interval', '0']
@@ -784,7 +748,7 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
 
     aiida_localhost.configure()
 
-    def time_use_login_shell(authinfo, auth_params, use_login_shell, iterations) -> float:  # pylint: disable=unused-argument
+    def time_use_login_shell(authinfo, auth_params, use_login_shell, iterations) -> float:
         if use_login_shell:
             return 0.21
         return 0.10

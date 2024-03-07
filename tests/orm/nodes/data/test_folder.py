@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -9,7 +8,6 @@
 ###########################################################################
 """Tests for the `FolderData` class."""
 import pytest
-
 from aiida.orm import FolderData
 
 
@@ -26,7 +24,8 @@ def test_constructor_tree(tmp_path):
 
 
 @pytest.mark.parametrize(
-    'method', (
+    'method',
+    (
         'list_objects',
         'list_object_names',
         'open',
@@ -42,7 +41,7 @@ def test_constructor_tree(tmp_path):
         'copy_tree',
         'delete_object',
         'erase',
-    )
+    ),
 )
 def test_api(method, recwarn):
     """Test the direct interface can be called without deprecation warnings.
@@ -58,6 +57,6 @@ def test_api(method, recwarn):
 
     try:
         getattr(node, method)()
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         pass
     assert len(recwarn) == 0

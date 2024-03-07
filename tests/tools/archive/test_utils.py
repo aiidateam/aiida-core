@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,9 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test utility functions."""
-from archive_path import TarPath, ZipPath
-
 from aiida.storage.sqlite_zip.migrations.utils import copy_tar_to_zip, copy_zip_to_zip
+from archive_path import TarPath, ZipPath
 
 
 def test_copy_zip_to_zip(tmp_path):

@@ -200,6 +200,7 @@ The rule of thumb therefore is, as soon as the worfklow becomes only slightly co
 This was a very quick overview of the intended use of work chains and how they work, but of course they have a lot more features.
 To learn how to write work chains for real life problems, continue reading at the :ref:`work chain development<topics:workflows:usage:workchains>` section, but before you do, read the following part on when to use a work function and when it is better to use a work chain.
 
+.. _topics:workflows:concepts:workfunctions_vs_workchains:
 
 When to use which
 =================

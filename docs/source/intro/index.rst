@@ -6,6 +6,7 @@ Introduction
    :maxdepth: 1
 
    about
+   quickstart
    get_started
    installation
    tutorial

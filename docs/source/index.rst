@@ -23,7 +23,13 @@ Welcome to AiiDA's documentation!
 
       .. rubric:: AiiDA
 
-      An open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data (see :ref:`features<intro:about>`).
+      An open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data (see :ref:`what is AiiDA<intro:about>`).
+
+      XXX: why aiida? XXX: the overview of the design, and the main features.
+
+      XXX: learn more about AiiDA link to a post describing the problem we are trying to solve, and how AiiDA solves it.
+
+      To get started and have a quick feel of what AiiDA works like, you can try the `Quick start <intro/get_started>`_ guide.
 
       **aiida-core version:** |release|
 
@@ -31,6 +37,23 @@ Welcome to AiiDA's documentation!
 
 .. grid:: 1 2 2 2
    :gutter: 3
+
+   .. grid-item-card:: :fa:`stopwatch;mr-1` Quick Start
+      :text-align: center
+      :shadow: md
+
+      Install AiiDA and run an example workflow in 5 minutes.
+
+      +++++++++++++++++++++++++++++++++++++++++++++
+
+      .. button-ref:: intro/quickstart
+         :ref-type: doc
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
+
+         To the quick start guide
 
    .. grid-item-card:: :fa:`rocket;mr-1` Getting Started
       :text-align: center

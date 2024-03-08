@@ -593,8 +593,6 @@ This command will delete both the file repository and the database.
 Transferring data
 =================
 
-.. versionadded:: 1.6.0
-
 .. danger::
 
     This feature is still in beta version and its API might change in the near future.

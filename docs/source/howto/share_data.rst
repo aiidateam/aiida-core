@@ -278,28 +278,28 @@ Here are some examples to try::
 
 For an extensive user documentation of the endpoints, the query string as well as the format of the responses, see the :ref:`AiiDA REST API reference <reference:rest-api>`.
 
-.. versionadded:: 2.1.0
+.. versionadded-block:: 2.1.0
 
-It is possible to allow a request to declare a specific profile for which to run the profile.
-This makes it possible to use a single REST API to serve the content of all configured profiles.
-The profile switching functionality is disabled by default but can be enabled through the config:
+    It is possible to allow a request to declare a specific profile for which to run the profile.
+    This makes it possible to use a single REST API to serve the content of all configured profiles.
+    The profile switching functionality is disabled by default but can be enabled through the config:
 
-.. code-block:: console
+    .. code-block:: console
 
-    verdi config set rest_api.profile_switching True
+        verdi config set rest_api.profile_switching True
 
-After the REST API is restarted, it will now accept the `profile` query parameter, for example:
+    After the REST API is restarted, it will now accept the `profile` query parameter, for example:
 
-.. code-block:: console
+    .. code-block:: console
 
-    http://127.0.0.1:5000/api/v4/computers?profile=some-profile-name
+        http://127.0.0.1:5000/api/v4/computers?profile=some-profile-name
 
-If the specified is already loaded, the REST API functions exactly as without profile switching enabled.
-If another profile is specified, the REST API will first switch profiles before executing the request.
+    If the specified is already loaded, the REST API functions exactly as without profile switching enabled.
+    If another profile is specified, the REST API will first switch profiles before executing the request.
 
-.. note::
+    .. note::
 
-    If the profile parameter is specified in a request and the REST API does not have profile switching enabled, a 400 response is returned.
+        If the profile parameter is specified in a request and the REST API does not have profile switching enabled, a 400 response is returned.
 
 .. _how-to:share:serve:deploy:
 

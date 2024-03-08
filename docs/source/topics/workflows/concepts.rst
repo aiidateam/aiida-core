@@ -40,7 +40,7 @@ Consider the following example, where we implement a function called ``add_and_m
 .. include:: include/snippets/workfunctions/add_multiply_workfunction_orchestrate.py
     :code: python
 
-.. versionadded:: 2.1
+.. versionadded-block:: 2.1
 
     If a function argument is a Python base type (i.e. a value of type ``bool``, ``dict``, ``Enum``, ``float``, ``int``, ``list`` or ``str``), it can be passed straight away to the function, without first having to wrap it in the corresponding AiiDA data type.
     That is to say, you can run the example above also as:

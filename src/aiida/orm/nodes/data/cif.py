@@ -699,9 +699,6 @@ class CifData(SinglefileData):
     def get_structure(self, converter='pymatgen', store=False, **kwargs):
         """Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
 
-        .. versionadded:: 1.0
-           Renamed from _get_aiida_structure
-
         :param converter: specify the converter. Default 'pymatgen'.
         :param store: if True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.

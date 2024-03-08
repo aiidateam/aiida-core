@@ -120,3 +120,38 @@ div.highlight-console div.highlight {
 .bd-sidebar-primary {
     overflow-y: hidden;
 }
+
+/* These classes provide a consistent style across the deprecated, versionadded, and new versionadded-block directives. */
+.versionadded,
+.versionadded-block {
+    border-color: purple !important;
+}
+
+.versionmodified.added,
+.versionmodified.deprecated,
+.admonition-title-block p {
+    font-weight: 600 !important;
+    font-style: normal !important;
+}
+
+.versionadded p:before,
+.admonition-title-block:before {
+    background-color: purple !important;
+    opacity: 0.1 !important;
+}
+
+.versionmodified.added:before,
+.versionmodified.deprecated:before {
+    margin-right: 0.5rem !important;
+}
+
+.versionmodified.added:before,
+.admonition-title-block:after {
+    content: "\f005" !important;
+    color: purple !important;
+}
+
+.versionmodified.deprecated:before {
+    content: "\f1f8" !important;
+    padding: 0 2px !important;
+}

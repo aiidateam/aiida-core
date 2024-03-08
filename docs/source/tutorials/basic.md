@@ -21,8 +21,7 @@ execution:
 (tutorial:basic)=
 # Basic tutorial
 
-Welcome to the AiiDA tutorial!
-The goal of this tutorial is to give you a basic idea of how AiiDA helps you in executing data-driven workflows.
+The goal of this tutorial is to give you an idea of how AiiDA helps you in executing data-driven workflows.
 At the end of this tutorial, you will know how to:
 
 - Store data in the database and subsequently retrieve it.
@@ -36,7 +35,7 @@ If this is not the case, consult the {ref}`getting started page<intro:get_starte
 :::
 
 :::{tip}
-This tutorial can be downloaded and run as a Jupyter Notebook: {nb-download}`tutorial.ipynb` {octicon}`download`
+This tutorial can be downloaded and run as a Jupyter Notebook: {nb-download}`basic.ipynb` {octicon}`download`
 :::
 
 ```{code-cell} ipython3

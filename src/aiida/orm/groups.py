@@ -17,7 +17,7 @@ from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from . import convert, entities, extras, users
-from .fields import QbField
+from .fields import add_field
 
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
@@ -107,15 +107,50 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
     __type_string: ClassVar[Optional[str]]
 
-    __qb_fields__ = (
-        QbField('uuid', dtype=str, doc='The UUID of the group'),
-        QbField('type_string', dtype=str, doc='The type of the group'),
-        QbField('label', dtype=str, doc='The group label'),
-        QbField('description', dtype=str, doc='The group description'),
-        QbField('time', dtype=str, doc='The time of the group creation'),
-        QbField('extras', dtype=Dict[str, Any], doc='The group extras'),
-        QbField('user_pk', 'user_id', dtype=int, doc='The PK for the creating user'),
-    )
+    __qb_fields__ = [
+        add_field(
+            'uuid',
+            dtype=str,
+            is_attribute=False,
+            doc='The UUID of the group',
+        ),
+        add_field(
+            'type_string',
+            dtype=str,
+            is_attribute=False,
+            doc='The type of the group',
+        ),
+        add_field(
+            'label',
+            dtype=str,
+            is_attribute=False,
+            doc='The group label',
+        ),
+        add_field(
+            'description',
+            dtype=str,
+            is_attribute=False,
+            doc='The group description',
+        ),
+        add_field(
+            'time',
+            dtype=str,
+            is_attribute=False,
+            doc='The time of the group creation',
+        ),
+        add_field(
+            'extras',
+            dtype=Dict[str, Any],
+            is_attribute=False,
+            doc='The group extras',
+        ),
+        add_field(
+            'user_pk',
+            dtype=int,
+            is_attribute=False,
+            doc='The PK for the creating user',
+        ),
+    ]
 
     _CLS_COLLECTION = GroupCollection
 

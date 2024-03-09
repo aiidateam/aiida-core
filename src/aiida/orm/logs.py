@@ -15,7 +15,7 @@ from aiida.common import timezone
 from aiida.manage import get_manager
 
 from . import entities
-from .fields import QbField
+from .fields import add_field
 
 if TYPE_CHECKING:
     from aiida.orm import Node
@@ -128,15 +128,50 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
     _CLS_COLLECTION = LogCollection
 
-    __qb_fields__ = (
-        QbField('uuid', dtype=str, doc='The UUID of the node'),
-        QbField('loggername', dtype=str, doc='The name of the logger'),
-        QbField('levelname', dtype=str, doc='The name of the log level'),
-        QbField('message', dtype=str, doc='The message of the log'),
-        QbField('time', dtype=datetime, doc='The time at which the log was created'),
-        QbField('metadata', dtype=Dict[str, Any], doc='The metadata of the log'),
-        QbField('node_pk', 'dbnode_id', dtype=int, doc='The PK for the node'),
-    )
+    __qb_fields__ = [
+        add_field(
+            'uuid',
+            dtype=str,
+            is_attribute=False,
+            doc='The UUID of the node',
+        ),
+        add_field(
+            'loggername',
+            dtype=str,
+            is_attribute=False,
+            doc='The name of the logger',
+        ),
+        add_field(
+            'levelname',
+            dtype=str,
+            is_attribute=False,
+            doc='The name of the log level',
+        ),
+        add_field(
+            'message',
+            dtype=str,
+            is_attribute=False,
+            doc='The message of the log',
+        ),
+        add_field(
+            'time',
+            dtype=datetime,
+            is_attribute=False,
+            doc='The time at which the log was created',
+        ),
+        add_field(
+            'metadata',
+            dtype=Dict[str, Any],
+            is_attribute=False,
+            doc='The metadata of the log',
+        ),
+        add_field(
+            'node_pk',
+            dtype=int,
+            is_attribute=False,
+            doc='The PK for the node',
+        ),
+    ]
 
     def __init__(
         self,

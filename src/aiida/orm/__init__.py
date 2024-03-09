@@ -83,7 +83,6 @@ __all__ = (
     'PortableCode',
     'ProcessNode',
     'ProjectionData',
-    'QbAttrField',
     'QbField',
     'QbFieldFilters',
     'QbFields',

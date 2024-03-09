@@ -11,7 +11,7 @@
 import collections.abc
 from typing import List
 
-from aiida.orm.fields import QbAttrField
+from aiida.orm.fields import add_field
 
 from .array import ArrayData
 
@@ -23,11 +23,23 @@ class TrajectoryData(ArrayData):
     possibly with velocities).
     """
 
-    __qb_fields__ = (
-        QbAttrField('units_positions', 'units|positions', dtype=str),
-        QbAttrField('units_times', 'units|times', dtype=str),
-        QbAttrField('symbols', dtype=List[str], doc='list of symbols'),
-    )
+    __qb_fields__ = [
+        add_field(
+            'units_positions',
+            'units|positions',
+            dtype=str,
+        ),
+        add_field(
+            'units_times',
+            'units|times',
+            dtype=str,
+        ),
+        add_field(
+            'symbols',
+            dtype=List[str],
+            doc='list of symbols',
+        ),
+    ]
 
     def __init__(self, structurelist=None, **kwargs):
         super().__init__(**kwargs)

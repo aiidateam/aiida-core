@@ -646,7 +646,7 @@ class QueryBuilder:
                     if isinstance(item_to_order_by, str):
                         item_to_order_by = {item_to_order_by: {}}  # noqa: PLW2901
                     elif isinstance(item_to_order_by, fields.QbField):
-                        item_to_order_by = {item_to_order_by.qb_field: {}}  # noqa: PLW2901
+                        item_to_order_by = {item_to_order_by.backend_key: {}}  # noqa: PLW2901
                     elif isinstance(item_to_order_by, dict):
                         pass
                     else:
@@ -715,23 +715,18 @@ class QueryBuilder:
     @staticmethod
     def _process_filters(filters: FilterType) -> Dict[str, Any]:
         """Process filters."""
-        filters_dict: Dict[Union[str, fields.QbField], Any] = {}
-        if isinstance(filters, fields.QbFieldFilters):
-            filters_dict = filters.as_dict()  # type: ignore[assignment]
-        elif isinstance(filters, dict):
-            filters_dict = filters  # type: ignore[assignment]
-        else:
-            raise TypeError('Filters have to be passed as dictionaries or QbFieldFilters')
+        if not isinstance(filters, (dict, fields.QbFieldFilters)):
+            raise TypeError('Filters must be either a dictionary or QbFieldFilters')
 
         processed_filters = {}
 
-        for key, value in filters_dict.items():
+        for key, value in filters.items():
             if isinstance(value, entities.Entity):
                 # Convert to be the id of the joined entity because we can't query
                 # for the object instance directly
                 processed_filters[f'{key}_id'] = value.pk
             elif isinstance(key, fields.QbField):
-                processed_filters[key.qb_field] = value
+                processed_filters[key.backend_key] = value
             else:
                 processed_filters[key] = value
 
@@ -846,10 +841,10 @@ class QueryBuilder:
 
         def _update_project_map(projection: fields.QbField):
             """Return the DB field to use, or a tuple of the DB field to use and the key to return."""
-            if projection.qb_field != projection.key:
+            if projection.backend_key != projection.key:
                 self._project_map.setdefault(tag, {})
-                self._project_map[tag][projection.qb_field] = projection.key
-            return projection.qb_field
+                self._project_map[tag][projection.backend_key] = projection.key
+            return projection.backend_key
 
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]  # type: ignore[list-item]

@@ -10,7 +10,7 @@
 import os
 
 from aiida.orm import AuthInfo
-from aiida.orm.fields import QbAttrField
+from aiida.orm.fields import add_field
 
 from ..data import Data
 
@@ -24,7 +24,12 @@ class RemoteData(Data):
     """
 
     KEY_EXTRA_CLEANED = 'cleaned'
-    __qb_fields__ = (QbAttrField('remote_path', dtype=str),)
+    __qb_fields__ = [
+        add_field(
+            'remote_path',
+            dtype=str,
+        ),
+    ]
 
     def __init__(self, remote_path=None, **kwargs):
         super().__init__(**kwargs)

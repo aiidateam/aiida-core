@@ -21,7 +21,7 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
-from .fields import EntityFieldMeta, QbField, QbFields
+from .fields import EntityFieldMeta, QbField, QbFields, add_field
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -176,7 +176,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
     fields: QbFields = QbFields()
 
-    __qb_fields__: Sequence[QbField] = (QbField('pk', 'id', dtype=int, doc='The primary key of the entity'),)
+    __qb_fields__: Sequence[QbField] = [
+        add_field(
+            'pk',
+            dtype=int,
+            is_attribute=False,
+            doc='The primary key of the entity',
+        ),
+    ]
 
     @classproperty
     def objects(cls: EntityType) -> CollectionType:  # noqa: N805

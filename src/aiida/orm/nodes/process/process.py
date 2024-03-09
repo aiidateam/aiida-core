@@ -8,14 +8,14 @@
 ###########################################################################
 """Module with `Node` sub class for processes."""
 import enum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from plumpy.process_states import ProcessState
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
-from aiida.orm.fields import QbAttrField, QbField
+from aiida.orm.fields import add_field
 from aiida.orm.utils.mixins import Sealable
 
 from ..caching import NodeCaching
@@ -182,17 +182,53 @@ class ProcessNode(Sealable, Node):
             cls.PROCESS_STATUS_KEY,
         )
 
-    __qb_fields__: Sequence[QbField] = (
-        QbField('process_type', dtype=Optional[str], doc='The process type string'),
-        QbField('computer_pk', 'dbcomputer_id', dtype=Optional[int], doc='The computer PK'),
-        QbAttrField(PROCESS_LABEL_KEY, dtype=Optional[str], doc='The process label'),
-        QbAttrField(PROCESS_STATE_KEY, dtype=Optional[str], doc='The process state enum'),
-        QbAttrField(PROCESS_STATUS_KEY, dtype=Optional[str], doc='The process status is a generic status message'),
-        QbAttrField(EXIT_STATUS_KEY, dtype=Optional[int], doc='The process exit status'),
-        QbAttrField(EXIT_MESSAGE_KEY, dtype=Optional[str], doc='The process exit message'),
-        QbAttrField(EXCEPTION_KEY, dtype=Optional[str], doc='The process exception message'),
-        QbAttrField(PROCESS_PAUSED_KEY, dtype=bool, doc='Whether the process is paused'),
-    )
+    __qb_fields__ = [
+        add_field(
+            'process_type',
+            dtype=Optional[str],
+            doc='The process type string',
+        ),
+        add_field(
+            'computer_pk',
+            dtype=Optional[int],
+            doc='The computer PK',
+        ),
+        add_field(
+            PROCESS_LABEL_KEY,
+            dtype=Optional[str],
+            doc='The process label',
+        ),
+        add_field(
+            PROCESS_STATE_KEY,
+            dtype=Optional[str],
+            doc='The process state enum',
+        ),
+        add_field(
+            PROCESS_STATUS_KEY,
+            dtype=Optional[str],
+            doc='The process status is a generic status message',
+        ),
+        add_field(
+            EXIT_STATUS_KEY,
+            dtype=Optional[int],
+            doc='The process exit status',
+        ),
+        add_field(
+            EXIT_MESSAGE_KEY,
+            dtype=Optional[str],
+            doc='The process exit message',
+        ),
+        add_field(
+            EXCEPTION_KEY,
+            dtype=Optional[str],
+            doc='The process exception message',
+        ),
+        add_field(
+            PROCESS_PAUSED_KEY,
+            dtype=bool,
+            doc='Whether the process is paused',
+        ),
+    ]
 
     def set_metadata_inputs(self, value: Dict[str, Any]) -> None:
         """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""

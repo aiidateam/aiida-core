@@ -6,25 +6,37 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=missing-class-docstring,protected-access,unused-argument
 """Test for entity fields"""
+
 import pytest
 from aiida import orm
-from aiida.orm import Data, Dict, QueryBuilder, fields
+from aiida.orm.fields import add_field
 from importlib_metadata import entry_points
 
 EPS = entry_points()
 
 
-@pytest.mark.parametrize('entity_cls', (orm.AuthInfo, orm.Comment, orm.Computer, orm.Group, orm.Log, orm.User))
+@pytest.mark.parametrize(
+    'entity_cls',
+    (orm.AuthInfo, orm.Comment, orm.Computer, orm.Group, orm.Log, orm.User),
+)
 def test_all_entity_fields(entity_cls, data_regression):
     data_regression.check(
-        {key: repr(value) for key, value in entity_cls.fields._dict.items()}, basename=f'fields_{entity_cls.__name__}'
+        {key: repr(value) for key, value in entity_cls.fields._dict.items()},
+        basename=f'fields_{entity_cls.__name__}',
     )
 
 
 @pytest.mark.parametrize(
-    'group,name', ((group, name) for group in ('aiida.node', 'aiida.data') for name in EPS.select(group=group).names)
+    'group,name',
+    (
+        (group, name)
+        for group in (
+            'aiida.node',
+            'aiida.data',
+        )
+        for name in EPS.select(group=group).names
+    ),
 )
 def test_all_node_fields(group, name, data_regression):
     """Test that all the node fields are correctly registered."""
@@ -33,6 +45,44 @@ def test_all_node_fields(group, name, data_regression):
         {key: repr(value) for key, value in node_cls.fields._dict.items()},
         basename=f'fields_{group}.{name}.{node_cls.__name__}',
     )
+
+
+def test_add_field():
+    """Test the `add_field` API."""
+
+    class NewNode(orm.Data):
+        __qb_fields__ = (
+            add_field(
+                'key1',
+                dtype=str,
+                is_subscriptable=False,
+            ),
+        )
+
+    node = NewNode()
+
+    assert 'key1' in node.fields
+    assert node.fields.key1.dtype is str
+    assert isinstance(node.fields.key1, orm.fields.QbStrField)
+    assert node.fields.key1.backend_key == 'attributes.key1'
+    assert not node.fields.key1.is_subscriptable
+
+
+@pytest.mark.parametrize('key', ('|', 'some.field', '1key'))
+def test_invalid_field_keys(key):
+    """Test for invalid field keys."""
+    with pytest.raises(ValueError):
+        _ = add_field(key)
+
+
+def test_disallowed_alias_for_db_field():
+    """Test for disallowed alias argument for database fields."""
+    with pytest.raises(ValueError):
+        _ = add_field(
+            'some_key',
+            'alias_not_allowed_for_db_fields',
+            is_attribute=False,
+        )
 
 
 def test_query_new_class(clear_database_before_test, monkeypatch):
@@ -44,77 +94,128 @@ def test_query_new_class(clear_database_before_test, monkeypatch):
     def _dummy(*args, **kwargs):
         return True
 
-    monkeypatch.setattr(plugins.entry_point, 'is_registered_entry_point', _dummy)
+    monkeypatch.setattr(
+        plugins.entry_point,
+        'is_registered_entry_point',
+        _dummy,
+    )
 
-    class NewNode(Data):
-        __qb_fields__ = (
-            fields.QbField('key1', 'attributes.key1'),
-            fields.QbAttrField('key2'),
-            fields.QbAttrField('key3'),
-        )
+    class NewNode(orm.Data):
+        __qb_fields__ = [
+            add_field('some_label', dtype=str),
+            add_field('some_value', dtype=int),
+        ]
 
     node = NewNode()
-    node.set_attribute_many({'key1': 2, 'key2': 2, 'key3': 3})
+    node.base.attributes.set_many({'some_label': 'A', 'some_value': 1})
     node.store()
 
     node = NewNode()
-    node.set_attribute_many({'key1': 1, 'key2': 2, 'key3': 1})
+    node.base.attributes.set_many({'some_label': 'B', 'some_value': 2})
     node.store()
 
     node = NewNode()
-    node.set_attribute_many({'key1': 4, 'key2': 5, 'key3': 6})
+    node.base.attributes.set_many({'some_label': 'C', 'some_value': 3})
     node.store()
 
     result = (
-        QueryBuilder()
+        orm.QueryBuilder()
         .append(
             NewNode,
             tag='node',
-            project=[NewNode.fields.key1, NewNode.fields.key2, NewNode.fields.key3],
-            filters={NewNode.fields.key2: 2},
+            project=[
+                NewNode.fields.some_label,
+                NewNode.fields.some_value,
+            ],
+            filters=NewNode.fields.some_value > 1,
         )
         .order_by({'node': NewNode.fields.ctime})
         .all()
     )
-    assert result == [[2, 2, 3], [1, 2, 1]]
+    assert result == [['B', 2], ['C', 3]]
 
 
 def test_filter_operators():
     """Test that the operators are correctly registered."""
-    field = Data.fields.pk
-    filters = (field == 1) & (field != 2) & (field > 3) & (field >= 4) & (field < 5) & (field <= 6)
+    pk = orm.Data.fields.pk
+    filters = (pk == 1) & (pk != 2) & (pk > 3) & (pk >= 4) & (pk < 5) & (pk <= 6) & ~(pk == 7) & ~(pk < 8)
     # print(filters.as_dict())
     assert filters.as_dict() == {
-        fields.QbField('pk', qb_field='id', dtype=int): {
-            'and': [{'==': 1}, {'!=': 2}, {'>': 3}, {'>=': 4}, {'<': 5}, {'<=': 6}]
-        }
+        'and': [
+            {'pk': {'==': 1}},
+            {'pk': {'!==': 2}},
+            {'pk': {'>': 3}},
+            {'pk': {'>=': 4}},
+            {'pk': {'<': 5}},
+            {'pk': {'<=': 6}},
+            {'pk': {'!==': 7}},
+            {'pk': {'!<': 8}},
+        ]
     }
 
 
 def test_filter_comparators():
     """Test that the comparators are correctly registered."""
-    field = Data.fields.uuid
-    filters = (field.in_(['a'])) & (field.not_in(['b'])) & (field.like('a%')) & (field.ilike('a%'))
-    print(filters.as_dict())
+    field = orm.Data.fields.attributes['something']
+    filters = (
+        (field.in_(['a'])) & ~(field.in_(['b']))
+        | (field.like('a%')) & (field.ilike('a%'))
+        | ~((field.contains(['a'])) & (field.shorter(3)))
+    )
     assert filters.as_dict() == {
-        fields.QbField('uuid', qb_field='uuid', dtype=str): {
-            'and': [{'in': {'a'}}, {'!in': {'b'}}, {'like': 'a%'}, {'ilike': 'a%'}]
-        }
+        'or': [
+            {
+                'and': [
+                    {'attributes.something': {'in': ['a']}},
+                    {'attributes.something': {'!in': ['b']}},
+                ]
+            },
+            {
+                'and': [
+                    {'attributes.something': {'like': 'a%'}},
+                    {'attributes.something': {'ilike': 'a%'}},
+                ]
+            },
+            {
+                '!and': [
+                    {'attributes.something': {'contains': ['a']}},
+                    {'attributes.something': {'shorter': 3}},
+                ]
+            },
+        ]
     }
 
 
 def test_query_filters(clear_database_before_test):
     """Test using fields to generate a query filter."""
-    node1 = Data().store()
-    Data().store()
-    filters = (Data.fields.pk == node1.pk) & (Data.fields.pk >= node1.pk)
-    result = QueryBuilder().append(Data, project=Data.fields.pk, filters=filters).all()
-    assert result == [[node1.pk]]
+    node = orm.Data().store()
+    orm.Data().store()
+    filters = (orm.Data.fields.pk == node.pk) & (orm.Data.fields.pk >= node.pk)
+    result = (
+        orm.QueryBuilder()
+        .append(
+            orm.Data,
+            project=orm.Data.fields.pk,
+            filters=filters,
+        )
+        .all()
+    )
+    assert result == [[node.pk]]
 
 
 def test_query_subscriptable(clear_database_before_test):
     """Test using subscriptable fields in a query."""
-    node = Dict(dict={'a': 1}).store()
-    node.set_extra('b', 2)
-    result = QueryBuilder().append(Dict, project=[Dict.fields.dict['a'], Dict.fields.extras['b']]).all()
+    node = orm.Dict(dict={'a': 1}).store()
+    node.base.extras.set('b', 2)
+    result = (
+        orm.QueryBuilder()
+        .append(
+            orm.Dict,
+            project=[
+                orm.Dict.fields.dict['a'],
+                orm.Dict.fields.extras['b'],
+            ],
+        )
+        .all()
+    )
     assert result == [[1, 2]]

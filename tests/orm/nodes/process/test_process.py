@@ -1,9 +1,13 @@
 """Tests for :mod:`aiida.orm.nodes.process.process`."""
 import pytest
-from aiida.engine import ExitCode, ProcessState
+from aiida.engine import ExitCode, ProcessState, launch
+from aiida.orm import Int
 from aiida.orm.nodes.caching import NodeCaching
 from aiida.orm.nodes.process.process import ProcessNode
 from aiida.orm.nodes.process.workflow import WorkflowNode
+from aiida.plugins import CalculationFactory
+
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 def test_exit_code():
@@ -68,4 +72,16 @@ def process_nodes():
 def test_is_valid_cache(process_nodes):
     """Test the :meth:`aiida.orm.nodes.process.process.ProcessNode.is_valid_cache` property."""
     for node, is_valid_cache in process_nodes:
-        assert node.is_valid_cache == is_valid_cache, node
+        assert node.base.caching.is_valid_cache == is_valid_cache, node
+
+
+def test_get_builder_restart(aiida_local_code_factory):
+    """Test :meth:`aiida.orm.nodes.process.process.ProcessNode.get_builder_restart`."""
+    inputs = {
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'x': Int(1),
+        'y': Int(1),
+        'metadata': {'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}},
+    }
+    _, node = launch.run_get_node(ArithmeticAddCalculation, inputs)
+    assert node.get_builder_restart()._inputs(prune=True) == inputs

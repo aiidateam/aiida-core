@@ -348,6 +348,12 @@ def manager():
 
 
 @pytest.fixture
+def runner(manager):
+    """Get the ``Runner`` instance of the currently loaded profile."""
+    return manager.get_runner()
+
+
+@pytest.fixture
 def event_loop(manager):
     """Get the event loop instance of the currently loaded profile.
 

@@ -109,7 +109,7 @@ class TestCalcFunction:
             result_cached, cached = add_calcfunction.run_get_node(self.default_int)
             assert result_original != result_cached
             assert not cached.base.caching.is_created_from_cache
-            assert cached.is_valid_cache
+            assert cached.base.caching.is_valid_cache
 
             # Test that the locally-created calcfunction can be cached in principle
             result2_cached, cached2 = add_calcfunction.run_get_node(self.default_int)

@@ -1378,7 +1378,7 @@ This command runs the `verdi` CLI using the currently loaded profile of the IPyt
 %verdi status
 ```
 
-See the [Basic Tutorial](docs/source/intro/tutorial.md) for example usage.
+See the [Basic Tutorial](docs/source/tutorials/basic.md) for example usage.
 
 ### New `SqliteTempBackend` ✨
 
@@ -1403,7 +1403,7 @@ profile = load_profile(
 )
 ```
 
-See the [Basic Tutorial](docs/source/intro/tutorial.md) for example usage.
+See the [Basic Tutorial](docs/source/tutorials/basic.md) for example usage.
 
 ### Key Pull Requests
 

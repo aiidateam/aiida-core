@@ -12,7 +12,7 @@ from __future__ import annotations
 import abc
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, Union, cast
 
 from plumpy.base.utils import call_with_super_check, super_check
 
@@ -99,15 +99,19 @@ class Collection(abc.ABC, Generic[EntityType]):
         self,
         filters: Optional['FilterType'] = None,
         order_by: Optional['OrderByType'] = None,
+        project: Optional[Union[list[str], str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
+        subclassing: bool = True,
     ) -> 'QueryBuilder':
         """Get a query builder for the objects of this collection.
 
         :param filters: the keyword value pair filters to match
         :param order_by: a list of (key, direction) pairs specifying the sort order
+        :param project: Optional projections.
         :param limit: the maximum number of results to return
         :param offset: number of initial results to be skipped
+        :param subclassing: whether to match subclasses of the type as well.
         """
         from . import querybuilder
 
@@ -115,7 +119,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         order_by = {self.entity_type: order_by} if order_by else {}
 
         query = querybuilder.QueryBuilder(backend=self._backend, limit=limit, offset=offset)
-        query.append(self.entity_type, project='*', filters=filters)
+        query.append(self.entity_type, project=project, filters=filters, subclassing=subclassing)
         query.order_by([order_by])
         return query
 

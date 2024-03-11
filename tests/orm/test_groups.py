@@ -90,7 +90,9 @@ class TestGroups:
         class Custom(orm.Group):
             pass
 
-        group = Custom('label')
+        with pytest.warns(UserWarning, match=r'no registered entry point for .* its instances will not be storable.'):
+            group = Custom('label')
+
         assert group.entry_point is None
         assert Custom.entry_point is None
 
@@ -324,20 +326,20 @@ class TestGroupsSubclasses:
     def test_creation_unregistered():
         """Test rules around creating `Group` subclasses without a registered entry point."""
         # Defining an unregistered subclas should issue a warning and its type string should be set to `None`
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match=r'no registered entry point for .* its instances will not be storable.'):
 
             class SubGroup(orm.Group):
                 pass
 
             assert SubGroup._type_string is None
 
-        # Creating an instance is allowed
-        instance = SubGroup(label=uuid.uuid4().hex)
-        assert instance._type_string is None
+            # Creating an instance is allowed
+            instance = SubGroup(label=uuid.uuid4().hex)
+            assert instance._type_string is None
 
-        # Storing the instance, however, is forbidden and should raise
-        with pytest.raises(exceptions.StoringNotAllowed):
-            instance.store()
+            # Storing the instance, however, is forbidden and should raise
+            with pytest.raises(exceptions.StoringNotAllowed):
+                instance.store()
 
     @staticmethod
     def test_loading_unregistered():

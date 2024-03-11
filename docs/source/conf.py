@@ -146,7 +146,7 @@ html_theme_options = {
         {
             'name': 'Twitter',
             'url': 'https://www.twitter.com/aiidateam',
-            'icon': 'fa-brands fa-twitter-square',
+            'icon': 'fa-brands fa-square-x-twitter',
             'type': 'fontawesome',
         },
     ],

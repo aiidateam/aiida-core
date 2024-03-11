@@ -143,13 +143,14 @@ def copy_tar_to_zip(
         temp_extracted = Path(tmpdirname) / 'extracted'
         with get_progress_reporter()(total=1) as progress:
             callback = create_callback(progress)
-            TarPath(inpath, mode='r:*').extract_tree(
-                temp_extracted,
-                allow_dev=False,
-                allow_symlink=False,
-                callback=callback,
-                cb_descript=f'{title} (extracting tar)',
-            )
+            with TarPath(inpath, mode='r:*') as path:
+                path.extract_tree(
+                    temp_extracted,
+                    allow_dev=False,
+                    allow_symlink=False,
+                    callback=callback,
+                    cb_descript=f'{title} (extracting tar)',
+                )
         temp_archive = Path(tmpdirname) / 'archive.zip'
         with ZipPath(temp_archive, mode='w', compresslevel=compression, info_order=info_order) as new_path:
             length = sum(1 for _ in temp_extracted.glob('**/*'))

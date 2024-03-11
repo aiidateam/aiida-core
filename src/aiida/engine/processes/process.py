@@ -114,6 +114,12 @@ class Process(plumpy.processes.Process):
             default='CALL',
             help='The label to use for the `CALL` link if the process is called by another process.',
         )
+        spec.input(
+            'metadata.disable_cache',
+            required=False,
+            valid_type=bool,
+            help='Do not consider the cache for this process, ignoring all other caching configuration rules.',
+        )
         spec.inputs.valid_type = orm.Data
         spec.inputs.dynamic = False  # Settings a ``valid_type`` automatically makes it dynamic, so we reset it again
         spec.exit_code(
@@ -721,7 +727,7 @@ class Process(plumpy.processes.Process):
     def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""
         for name, value in metadata.items():
-            if name in ['store_provenance', 'dry_run', 'call_link_label']:
+            if name in ['store_provenance', 'dry_run', 'call_link_label', 'disable_cache']:
                 continue
 
             if name == 'label':

@@ -198,7 +198,7 @@ def test_source_code_attributes():
     _, node = test_process_function.run_get_node(data=orm.Int(5))
 
     # Read the source file of the calculation function that should be stored in the repository
-    function_source_code = node.get_function_source_code().split('\n')
+    function_source_code = node.get_source_code_file().split('\n')
 
     # Verify that the function name is correct and the first source code linenumber is stored
     assert node.function_name == function_name
@@ -214,8 +214,8 @@ def test_source_code_attributes():
     assert node.function_name in function_name_from_source
 
 
-def test_get_function_source_code():
-    """Test that ``get_function_source_code`` returns ``None`` if no source code was stored.
+def test_get_source_code_file():
+    """Test that ``get_source_code_file`` returns ``None`` if no source code was stored.
 
     This is the case for example for functions defined in an interactive shell, where the retrieval of the source code
     upon storing the node fails and nothing is stored. The function should not except in this case.
@@ -227,7 +227,7 @@ def test_get_function_source_code():
     # Delete the source file by going down to the ``RepositoryBackend`` to circumvent the immutability check.
     node.base.repository._repository.delete_object(FunctionCalculationMixin.FUNCTION_SOURCE_FILE_PATH)
 
-    assert node.get_function_source_code() is None
+    assert node.get_source_code_file() is None
 
 
 def test_function_varargs():
@@ -236,7 +236,7 @@ def test_function_varargs():
     assert isinstance(result, orm.Str)
     assert result.value == 'a b c d'
 
-    inputs = node.get_incoming().nested()
+    inputs = node.base.links.get_incoming().nested()
     assert inputs['str_a'].value == 'a'
     assert inputs['str_b'].value == 'b'
     assert inputs['args_0'].value == 'c'
@@ -648,7 +648,7 @@ def test_nested_namespace():
     }
     results, node = function.run_get_node(**inputs)
     assert results == inputs
-    assert node.get_incoming().nested() == inputs
+    assert node.base.links.get_incoming().nested() == inputs
 
     inputs = {
         'nested': {

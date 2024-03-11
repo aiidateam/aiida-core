@@ -135,7 +135,7 @@ class TestTrajectory:
 
         structure.store()
         expected.store()
-        assert structure.get_hash() == expected.get_hash()
+        assert structure.base.caching.get_hash() == expected.base.caching.get_hash()
 
         with pytest.raises(IndexError):
             trajectory.get_step_structure(500)

@@ -147,7 +147,7 @@ RUN set -x && \
 
 # Add ~/.local/bin to PATH where the dependencies get installed via pip
 # This require the package installed with `--user` flag in pip
-ENV PATH=${PATH}:/home/${NB_USER}/.local/bin
+ENV PATH=${PATH}:/home/${SYSTEM_USER}/.local/bin
 
 # Switch to root to install AiiDA and set AiiDA as service
 # Install AiiDA from source code

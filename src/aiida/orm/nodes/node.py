@@ -447,8 +447,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         :note: After successful storage, those links that are in the cache, and for which also the parent node is
             already stored, will be automatically stored. The others will remain unstored.
         """
-        from aiida.manage.caching import get_use_cache
-
         if not self.is_stored:
             # Call `_validate_storability` directly and not in `_validate` in case sub class forgets to call the super.
             self._validate_storability()
@@ -457,15 +455,12 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             # Verify that parents are already stored. Raises if this is not the case.
             self._verify_are_parents_stored()
 
-            # Determine whether the cache should be used for the process type of this node.
-            use_cache = get_use_cache(identifier=self.process_type)
-
             # Clean the values on the backend node *before* computing the hash in `_get_same_node`. This will allow
             # us to set `clean=False` if we are storing normally, since the values will already have been cleaned
             self._backend_entity.clean_values()
 
-            # Retrieve the cached node.
-            same_node = self.base.caching._get_same_node() if use_cache else None
+            # Retrieve the cached node if ``should_use_cache`` returns True
+            same_node = self.base.caching._get_same_node() if self.base.caching.should_use_cache() else None
 
             if same_node is not None:
                 self._store_from_cache(same_node)

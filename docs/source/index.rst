@@ -49,15 +49,15 @@ Welcome to AiiDA's documentation!
 
          To the installation guides
 
-   .. grid-item-card:: :fa:`info-circle;mr-1` Tutorial
+   .. grid-item-card:: :fa:`info-circle;mr-1` Tutorials
       :text-align: center
       :shadow: md
 
-      First time users: Get your feet wet with AiiDA basics!
+      Concrete step-by-step examples.
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
-      .. button-ref:: intro/tutorial
+      .. button-ref:: tutorials/index
          :ref-type: doc
          :click-parent:
          :expand:
@@ -154,6 +154,7 @@ Welcome to AiiDA's documentation!
    :hidden:
 
    intro/index
+   tutorials/index
    howto/index
    topics/index
    reference/index

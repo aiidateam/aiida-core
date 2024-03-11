@@ -548,7 +548,7 @@ class CalcJob(Process):
             # this case, the parser will not be called. The outputs will already have been added to the process node
             # though, so all that needs to be done here is just also assign them to the process instance. This such that
             # when the process returns its results, it returns the actual outputs and not an empty dictionary.
-            self._outputs = self.node.get_outgoing(link_type=LinkType.CREATE).nested()
+            self._outputs = self.node.base.links.get_outgoing(link_type=LinkType.CREATE).nested()
             return self.node.exit_status
 
         # Launch the upload operation

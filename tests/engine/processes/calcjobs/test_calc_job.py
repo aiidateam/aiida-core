@@ -507,7 +507,7 @@ class TestCalcJob:
         """Test that :meth:`aiida.orm.CalcJobNode.get_hash` returns the same hash as what is stored in the extras."""
         builder = get_calcjob_builder()
         _, node = launch.run_get_node(builder)
-        assert node.base.extras.get(node.base.caching._HASH_EXTRA_KEY) == node.get_hash()
+        assert node.base.extras.get(node.base.caching._HASH_EXTRA_KEY) == node.base.caching.get_hash()
 
     def test_process_status(self):
         """Test that the process status is properly reset if calculation ends successfully."""

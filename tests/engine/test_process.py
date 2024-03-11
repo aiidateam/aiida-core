@@ -15,7 +15,7 @@ from aiida import orm
 from aiida.common.lang import override
 from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
 from aiida.engine.processes.ports import PortNamespace
-from aiida.manage.caching import enable_caching
+from aiida.manage.caching import disable_caching, enable_caching
 from aiida.orm.nodes.caching import NodeCaching
 from aiida.plugins import CalculationFactory
 from plumpy.utils import AttributesFrozendict
@@ -477,7 +477,7 @@ class TestNotRequiredNoneProcess(Process):
         spec.input('any_type', required=False)
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_not_required_accepts_none():
     """Test that a port that is not required, accepts ``None``."""
     from aiida.engine.utils import instantiate_process
@@ -509,15 +509,11 @@ class TestMetadataInputsProcess(Process):
         spec.input('metadata_portnamespace.without_default', is_metadata=True)
 
 
-def test_metadata_inputs():
+def test_metadata_inputs(runner):
     """Test that explicitly passed ``is_metadata`` inputs are stored in the attributes.
 
     This is essential to make it possible to recreate a builder for the process with the original inputs.
     """
-    from aiida.manage import get_manager
-
-    runner = get_manager().get_runner()
-
     inputs = {
         'metadata_port': 'value',
         'metadata_port_non_serializable': orm.Data().store(),
@@ -531,3 +527,43 @@ def test_metadata_inputs():
         'metadata_port': 'value',
         'metadata_portnamespace': {'without_default': 100},
     }
+
+
+class CachableProcess(Process):
+    """Dummy process that defines a storable and cachable node class."""
+
+    _node_class = orm.CalculationNode
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_metadata_disable_cache(runner, entry_points):
+    """Test the ``metadata.disable_cache`` input."""
+    from aiida.engine.processes import ProcessState
+
+    entry_points.add(CachableProcess, 'aiida.workflows:core.dummy')
+
+    # Create a ``ProcessNode`` instance that is a valid cache source
+    process_original = CachableProcess(runner=runner)
+    process_original.node.set_process_state(ProcessState.FINISHED)
+    process_original.node.seal()
+    assert process_original.node.base.caching.is_valid_cache
+
+    # Cache is disabled, so node should not be cached
+    with disable_caching():
+        process = CachableProcess(runner=runner)
+        assert not process.node.base.caching.is_created_from_cache
+
+    # Cache is disabled, fact that ``disable_cache`` is explicitly set to ``False`` should not change anything
+    with disable_caching():
+        process = CachableProcess(runner=runner, inputs={'metadata': {'disable_cache': False}})
+        assert not process.node.base.caching.is_created_from_cache
+
+    # Cache is enabled, so node should be cached
+    with enable_caching():
+        process = CachableProcess(runner=runner)
+        assert process.node.base.caching.is_created_from_cache
+
+    # Cache is enabled, but ``disable_cache`` is explicitly set to ``False``, so node should not be cached
+    with enable_caching():
+        process = CachableProcess(runner=runner, inputs={'metadata': {'disable_cache': True}})
+        assert not process.node.base.caching.is_created_from_cache

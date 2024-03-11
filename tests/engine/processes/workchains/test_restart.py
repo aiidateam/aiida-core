@@ -7,6 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `aiida.engine.processes.workchains.restart` module."""
+import warnings
+
 import pytest
 from aiida import engine, orm
 from aiida.engine.processes.workchains.awaitable import Awaitable
@@ -66,7 +68,9 @@ def test_get_process_handlers():
 )
 def test_get_process_handlers_by_priority(generate_work_chain, inputs, priorities):
     """Test the `BaseRestartWorkChain.get_process_handlers_by_priority` method."""
-    process = generate_work_chain(SomeWorkChain, inputs)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        process = generate_work_chain(SomeWorkChain, inputs)
     process.setup()
     assert sorted([priority for priority, handler in process.get_process_handlers_by_priority()]) == priorities
 

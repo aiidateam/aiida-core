@@ -33,6 +33,19 @@ class ProcessNodeCaching(NodeCaching):
     # The link_type might not be correct while the object is being created.
     _hash_ignored_inputs = ['CALL_CALC', 'CALL_WORK']
 
+    def should_use_cache(self) -> bool:
+        """Return whether the cache should be considered when storing this node.
+
+        :returns: True if the cache should be considered, False otherwise.
+        """
+        metadata_inputs = self._node.get_metadata_inputs() or {}
+        disable_cache = metadata_inputs.get('metadata', {}).get('disable_cache', None)
+
+        if disable_cache:
+            return False
+
+        return super().should_use_cache()
+
     @property
     def is_valid_cache(self) -> bool:
         """Return whether the node is valid for caching
@@ -152,6 +165,10 @@ class ProcessNode(Sealable, Node):
         return f'{base}'
 
     @classproperty
+    def _hash_ignored_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
+        return super()._hash_ignored_attributes + ('metadata_inputs',)
+
+    @classproperty
     def _updatable_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
         return super()._updatable_attributes + (
             cls.PROCESS_PAUSED_KEY,
@@ -182,6 +199,19 @@ class ProcessNode(Sealable, Node):
 
         return create_logger_adapter(self._logger, self)
 
+    @classmethod
+    def recursive_merge(cls, left: dict[Any, Any], right: dict[Any, Any]) -> None:
+        """Recursively merge the ``right`` dictionary into the ``left`` dictionary.
+
+        :param left: Base dictionary.
+        :param right: Dictionary to recurisvely merge on top of ``left`` dictionary.
+        """
+        for key, value in right.items():
+            if key in left and isinstance(left[key], dict) and isinstance(value, dict):
+                cls.recursive_merge(left[key], value)
+            else:
+                left[key] = value
+
     def get_builder_restart(self) -> 'ProcessBuilder':
         """Return a `ProcessBuilder` that is ready to relaunch the process that created this node.
 
@@ -192,9 +222,9 @@ class ProcessNode(Sealable, Node):
         :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
         """
         builder = self.process_class.get_builder()
-        builder._update(self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested())
-        builder._merge(self.get_metadata_inputs() or {})
-
+        inputs = self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested()
+        self.recursive_merge(inputs, self.get_metadata_inputs() or {})
+        builder._update(inputs)
         return builder
 
     @property

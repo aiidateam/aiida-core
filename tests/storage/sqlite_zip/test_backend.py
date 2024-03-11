@@ -51,13 +51,13 @@ def test_initialise_reset_false(tmp_path, aiida_caplog):
 
 
 @pytest.mark.usefixtures('chdir_tmp_path')
-def test_configuration():
-    """Test :class:`aiida.storage.sqlite_zip.backend.SqliteZipBackend.Configuration`."""
+def test_model():
+    """Test :class:`aiida.storage.sqlite_zip.backend.SqliteZipBackend.Model`."""
     with pytest.raises(ValidationError, match=r'.*The archive `non-existent` does not exist.*'):
-        SqliteZipBackend.Configuration(filepath='non-existent')
+        SqliteZipBackend.Model(filepath='non-existent')
 
     filepath = pathlib.Path.cwd() / 'archive.aiida'
     filepath.touch()
 
-    configuration = SqliteZipBackend.Configuration(filepath=filepath.name)
-    assert pathlib.Path(configuration.filepath).is_absolute()
+    model = SqliteZipBackend.Model(filepath=filepath.name)
+    assert pathlib.Path(model.filepath).is_absolute()

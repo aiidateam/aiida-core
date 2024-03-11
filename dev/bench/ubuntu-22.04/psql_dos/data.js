@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709888194634,
+  "lastUpdate": 1710161287327,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -33491,6 +33491,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0012218",
             "group": "node",
             "extra": "mean: 22.706 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "3.17",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.13",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "06189d528c2362516f42e0d48840882812b97fe4",
+          "message": "ORM: Switch to `pydantic` for code schema definition (#6190)\n\nThe `verdi code create` command dynamically generates a subcommand for\r\neach registered entry point that is a subclass of the `AbstractCode`\r\ndata plugin base class. The options for each subcommand are generated\r\nautomatically for each plugin using the `DynamicEntryPointCommandGroup`.\r\n\r\nWhen first developed, this `click.Group` subclass would rely on the\r\nplugin defining the `get_cli_options` method to return a dictionary with\r\na spec for each of the options. This specification used an ad-hoc custom\r\nschema making it not very useful for any other applications.\r\n\r\nRecently, the class added support for using `pydantic` models to define\r\nthe specification instead. This was already used for plugins of storage\r\nbackends. Here, the `AbstractCode` and its subclasses are also migrated\r\nto use `pydantic` instead to define their model.\r\n\r\nMost of the data that is required to create `click` options from the\r\npydantic model can be communicated using the default properties of\r\npydantic's `Field` class. However, there was the need for a few\r\nadditional metadata properties:\r\n\r\n* `priority`: To control the order in which options are prompted for.\r\nThis used to be controlled by the `_get_cli_options` of each plugin. It\r\ncould define the options in the order required and could also determine\r\nwhether they came before or after the options that could potentially be\r\ninherited from a base class. The way the pydantic models work, the\r\nfields of a subclass will always come _after_ those of the base class\r\nand there is no way to control this.\r\n\r\n* `short_name`: The short form of the option name.\r\nThe option name is derived from the `title` attribute of the `Field`. In\r\naddition to a full name, options often want to provide a short form\r\noption. Since there is no algorithmic method of deducing this from the\r\ntitle, a dedicated metadata keyword is added.\r\n\r\n* `option_cls`: To customize the class to be used to create the option.\r\nThis can be used by options that should use a different subclass of the\r\n`click.Option` base class.\r\n\r\nThe `aiida.common.pydantic.MetadataField` utility function is added\r\nwhich provides a transparent way to define these metadata arguments when\r\ndeclaring a field in the model. The alternative is to use `Annotated`\r\nbut this quickly makes the model difficult to read if multiple metadata\r\nare provided.\r\n\r\nThe changes introduce _almost_ no difference in behavior of the `verdi\r\ncode create` command. There is one exception and that is that the\r\ncallbacks of the options are now replaced by the validators of the\r\nmodels. The downside is that the validators are only called once all\r\noptions are specified, whereas the callbacks would be called immediately\r\nonce the respective option was defined. This is not really a problem\r\nexcept for the `label` of the `InstalledCode`. The callback would be\r\ncalled immediately and so if an invalid label was provided during an\r\ninteractive session, the user would be immediately prompted to provide a\r\nnew label. It is not clear how this behavior can be reproduced using the\r\npydantic validators.",
+          "timestamp": "2024-03-11T13:39:25+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/06189d528c2362516f42e0d48840882812b97fe4",
+          "distinct": true,
+          "tree_id": "1c03faf13e11c78de0584797213f1834432ba40a"
+        },
+        "date": 1710161282767,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.147711154031557,
+            "unit": "iter/sec",
+            "range": "stddev: 0.069189",
+            "group": "import-export",
+            "extra": "mean: 317.69 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.1561050359201777,
+            "unit": "iter/sec",
+            "range": "stddev: 0.056643",
+            "group": "import-export",
+            "extra": "mean: 316.85 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.664286775752461,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0067526",
+            "group": "import-export",
+            "extra": "mean: 214.40 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.611618382920361,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0038432",
+            "group": "import-export",
+            "extra": "mean: 216.84 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.707430261559143,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0035128",
+            "group": "engine",
+            "extra": "mean: 269.73 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.7797136491191139,
+            "unit": "iter/sec",
+            "range": "stddev: 0.085127",
+            "group": "engine",
+            "extra": "mean: 1.2825 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.8820922180403791,
+            "unit": "iter/sec",
+            "range": "stddev: 0.082589",
+            "group": "engine",
+            "extra": "mean: 1.1337 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.20919933758284104,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12333",
+            "group": "engine",
+            "extra": "mean: 4.7801 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.23413131335424087,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14071",
+            "group": "engine",
+            "extra": "mean: 4.2711 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.532719075744942,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010646",
+            "group": "engine",
+            "extra": "mean: 394.83 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5437729245611211,
+            "unit": "iter/sec",
+            "range": "stddev: 0.062150",
+            "group": "engine",
+            "extra": "mean: 1.8390 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.608529800514674,
+            "unit": "iter/sec",
+            "range": "stddev: 0.048447",
+            "group": "engine",
+            "extra": "mean: 1.6433 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.16229712650411998,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10536",
+            "group": "engine",
+            "extra": "mean: 6.1615 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.1810617062596235,
+            "unit": "iter/sec",
+            "range": "stddev: 0.033409",
+            "group": "engine",
+            "extra": "mean: 5.5230 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 470.7953239214513,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00013315",
+            "group": "node",
+            "extra": "mean: 2.1241 msec\nrounds: 271"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 79.27861559012693,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00043676",
+            "group": "node",
+            "extra": "mean: 12.614 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 53.40745633139403,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0016742",
+            "group": "node",
+            "extra": "mean: 18.724 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 291.4168208197202,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020202",
+            "group": "node",
+            "extra": "mean: 3.4315 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 44.05647808577589,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011338",
+            "group": "node",
+            "extra": "mean: 22.698 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 38.000002705589985,
+            "unit": "iter/sec",
+            "range": "stddev: 0.032180",
+            "group": "node",
+            "extra": "mean: 26.316 msec\nrounds: 100"
           }
         ]
       }

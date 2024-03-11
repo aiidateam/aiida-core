@@ -42,7 +42,7 @@ class SqliteTempBackend(StorageBackend):
     and destroys it when it is garbage collected.
     """
 
-    class Configuration(BaseModel):
+    class Model(BaseModel):
         filepath: str = Field(
             title='Temporary directory',
             description='Temporary directory in which to store data for this backend.',

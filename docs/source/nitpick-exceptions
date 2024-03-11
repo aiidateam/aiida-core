@@ -138,6 +138,7 @@ py:meth click.Option.get_default
 py:meth fail
 
 py:class ComputedFieldInfo
+py:class pydantic.fields.Field
 py:class pydantic.main.BaseModel
 
 py:class requests.models.Response

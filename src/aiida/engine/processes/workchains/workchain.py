@@ -288,9 +288,9 @@ class WorkChain(Process, metaclass=Protect):
         else:
             status = None
         if self.paused:
-            # update the pre-paused status so that when the process is played
-            #  it will be set to the correct status
-            self._pre_paused_status = status  # pylint: disable=attribute-defined-outside-init
+            # Update the pre-paused status so that when the process is played
+            # it will be set to the new status
+            self._pre_paused_status = status
         else:
             self.set_status(status)
 

@@ -292,9 +292,6 @@ class WorkChain(Process, metaclass=Protect):
             #  it will be set to the correct status
             self._pre_paused_status = status  # pylint: disable=attribute-defined-outside-init
         else:
-            self.node.set_process_status(status)
-            # we also need to update the process status
-            # because it is used to initialize the _pre_paused_status
             self.set_status(status)
 
     @override

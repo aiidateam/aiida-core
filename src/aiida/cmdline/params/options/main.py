@@ -82,6 +82,7 @@ __all__ = (
     'OLDER_THAN',
     'ORDER_BY',
     'ORDER_DIRECTION',
+    'OVERWRITE',
     'PAST_DAYS',
     'PAUSED',
     'PORT',
@@ -787,4 +788,13 @@ USE_PREPARE_FOR_SUBMISSION = OverridableOption(
     show_default=True,
     help="""Use the `prepare_for_submission` method of the respective `CalcJob`(s). Note: this requires the
     corresponding aiida-plugin to be installed.""",
+)
+
+OVERWRITE = OverridableOption(
+    '--overwrite',
+    '-o',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="""Overwrite directory if it already exists.""",
 )

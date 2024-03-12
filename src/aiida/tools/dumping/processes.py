@@ -18,10 +18,10 @@ from aiida.transports.plugins.local import LocalTransport
 class ProcessNodeYamlDumper:
     """Utility class to dump selected `ProcessNode` properties and, optionally, attributes and extras to yaml."""
 
-    METADATA_PROPERTIES = [
+    NODE_PROPERTIES = [
         'label',
         'description',
-        'pk',
+        # 'pk',
         'uuid',
         'ctime',
         'mtime',
@@ -29,6 +29,10 @@ class ProcessNodeYamlDumper:
         'process_type',
         'is_finished_ok',
     ]
+
+    USER_PROPERTIES = ("first_name", "last_name", "email", "institution")
+
+    COMPUTER_PROPERTIES = ("label", "hostname", "scheduler_type", "transport_type")
 
     def __init__(self, include_attributes: bool = True, include_extras: bool = True):
         self.include_attributes = include_attributes
@@ -50,10 +54,30 @@ class ProcessNodeYamlDumper:
         metadata_dict = {}
 
         # Add actual node `@property`s to dictionary
-        for metadata_property in self.METADATA_PROPERTIES:
+        for metadata_property in self.NODE_PROPERTIES:
             metadata_dict[metadata_property] = getattr(process_node, metadata_property)
 
-        node_dict['Node metadata'] = metadata_dict
+        node_dict['Node data'] = metadata_dict
+
+        # Add user data
+        try:
+            node_dbuser = process_node.user._backend_entity.bare_model
+            user_dict = {}
+            for user_property in self.USER_PROPERTIES:
+                user_dict[user_property] = getattr(node_dbuser, user_property)
+            node_dict['User data'] = user_dict
+        except AttributeError:
+            pass
+
+        # Add computer data
+        try:
+            node_dbcomputer = process_node.computer._backend_entity.bare_model
+            computer_dict = {}
+            for computer_property in self.COMPUTER_PROPERTIES:
+                computer_dict[computer_property] = getattr(node_dbcomputer, computer_property)
+            node_dict['Computer data'] = computer_dict
+        except AttributeError:
+            pass
 
         # Add node attributes
         if self.include_attributes is True:

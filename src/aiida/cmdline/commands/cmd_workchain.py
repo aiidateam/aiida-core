@@ -11,6 +11,7 @@
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import WorkflowParamType
+from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.defaults import make_default_dump_path
 from aiida.tools.dumping.processes import ProcessNodeYamlDumper, workchain_dump
 
@@ -46,6 +47,7 @@ def verdi_workchain():
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
 @options.USE_PREPARE_FOR_SUBMISSION()
+@options.OVERWRITE()
 def dump(
     workchain,
     path,
@@ -53,6 +55,7 @@ def dump(
     include_attributes,
     include_extras,
     use_prepare_for_submission,
+    overwrite
 ) -> None:
     """Dump files involved in the execution of a `WorkChain`.
 
@@ -64,7 +67,7 @@ def dump(
     processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
 
     # Make output directory
-    output_path = make_default_dump_path(path=path, process_node=workchain)
+    output_path = make_default_dump_path(path=path, process_node=workchain, overwrite=overwrite)
 
     # Actual recursive function call
     workchain_dump(
@@ -73,4 +76,17 @@ def dump(
         no_node_inputs=no_node_inputs,
         use_prepare_for_submission=use_prepare_for_submission,
         node_dumper=processnode_dumper,
+    )
+
+    echo.echo_report(
+        f'''Workchain <{workchain.uuid[:8]}> dumped successfully in directory <{output_path}>.
+
+        The root directory is `dump-<uuid>` or the name specified via `-p/--path`. The tree mirrors the hierachy
+        obtained when running `verdi process status {workchain.uuid[:8]}`.
+
+        Called `WorkChain`s and `Calcjob`s are contained in the tree as sub-folders and sorted by their creation time.
+        For each `CalcJob`, input and output files can be found in the corresponding `raw_inputs` and `raw_outputs`
+        directories. Additional input files (depending on the type of calculation) are placed in the `node_inputs`
+        folder. Every folder also contains an `aiida_node_metadata.yaml` file with the relevant AiiDA node data.
+        '''
     )

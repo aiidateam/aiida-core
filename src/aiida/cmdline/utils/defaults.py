@@ -40,7 +40,9 @@ def get_default_profile():
     return default_profile
 
 
-def make_default_dump_path(process_node: Union[WorkChainNode, CalcJobNode], path: Path = Path()):
+def make_default_dump_path(
+    process_node: Union[WorkChainNode, CalcJobNode], path: Path = Path(), overwrite: bool = False
+):
     """
     Create default dumping directory for a given process node.
 
@@ -50,15 +52,18 @@ def make_default_dump_path(process_node: Union[WorkChainNode, CalcJobNode], path
     :type path: Path
     :return: The created dump path.
     :rtype: Path
-    :raises FileExistsError: If the directory already exists.
     """
+    import shutil
 
     if str(path) == '.':
-        path = Path(f'dump-{process_node.pk}')
+        path = Path(f'dump-{process_node.uuid[:8]}')
 
-    try:
-        path.mkdir(parents=True, exist_ok=False)
-    except FileExistsError:
-        echo.echo_critical(f'Invalid dumping destination selected. Path: "{path}" already exists.')
+    if path.is_dir():
+        if overwrite:
+            echo.echo_report(f"Overwrite set to true, will overwrite directory <{path}>.")
+            shutil.rmtree(path)
+        else:
+            echo.echo_critical(f'Invalid dumping destination selected. Path: <{path}> already exists.')
+    path.mkdir(parents=True, exist_ok=False)
 
     return path

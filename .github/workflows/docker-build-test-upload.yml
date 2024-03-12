@@ -43,7 +43,7 @@ jobs:
         rm -rf /tmp/aiida-core/
       shell: bash
 
-    - name: Build images aiida-core-base and aiida-core-with-services
+    - name: Build aiida-core images
       # The order of the buildx bake files is important, as the second one will overwrite the first one
       run: docker buildx bake -f docker-bake.hcl -f build.json --set *.platform=linux/${{ inputs.architecture }} --load
       env:
@@ -53,11 +53,12 @@ jobs:
     - name: Run tests ✅
       run: TAG=newly-baked python -m pytest -s tests
 
-    - name: Save image as a tar for later use 💾
+    - name: Save images as tar for later use 💾
       run: |
         mkdir -p /tmp/aiida-core
         docker save ${{ env.OWNER }}/aiida-core-base -o /tmp/aiida-core/aiida-core-base-${{ inputs.architecture }}.tar
         docker save ${{ env.OWNER }}/aiida-core-with-services -o /tmp/aiida-core/aiida-core-with-services-${{ inputs.architecture }}.tar
+        docker save ${{ env.OWNER }}/aiida-core-dev -o /tmp/aiida-core/aiida-core-dev-${{ inputs.architecture }}.tar
 
     - name: Upload aiida-core-base image as artifact 💾
       uses: actions/upload-artifact@v4
@@ -71,4 +72,11 @@ jobs:
       with:
         name: aiida-core-with-services-${{ inputs.architecture }}
         path: /tmp/aiida-core/aiida-core-with-services-${{ inputs.architecture }}.tar
+        retention-days: 3
+
+    - name: Upload aiida-core-dev image as artifact 💾
+      uses: actions/upload-artifact@v4
+      with:
+        name: aiida-core-dev-${{ inputs.architecture }}
+        path: /tmp/aiida-core/aiida-core-dev-${{ inputs.architecture }}.tar
         retention-days: 3

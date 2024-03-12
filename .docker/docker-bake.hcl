@@ -21,7 +21,7 @@ variable "PLATFORMS" {
 }
 
 variable "TARGETS" {
-  default = ["aiida-core-base", "aiida-core-with-services"]
+  default = ["aiida-core-base", "aiida-core-with-services", "aiida-core-dev"]
 }
 
 function "tags" {
@@ -40,6 +40,9 @@ target "aiida-core-base-meta" {
 }
 target "aiida-core-with-services-meta" {
   tags = tags("aiida-core-with-services")
+}
+target "aiida-core-dev-meta" {
+  tags = tags("aiida-core-dev")
 }
 
 target "aiida-core-base" {
@@ -65,4 +68,12 @@ target "aiida-core-with-services" {
     "PGSQL_VERSION" = "${PGSQL_VERSION}"
     "RMQ_VERSION" = "${RMQ_VERSION}"
   }
+}
+target "aiida-core-dev" {
+  inherits = ["aiida-core-dev-meta"]
+  context = "aiida-core-dev"
+  contexts = {
+    aiida-core-with-services = "target:aiida-core-with-services"
+  }
+  platforms = "${PLATFORMS}"
 }

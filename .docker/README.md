@@ -1,21 +1,30 @@
-# AiiDA docker stacks
+# AiiDA Docker stacks
 
 ### Build images locally
 
-To build the images, run `docker buildx bake -f build.json -f docker-bake.hcl --load` (tested with *docker buildx* version v0.8.2).
+To build the images, run the following command: (tested with _docker buildx_ version v0.8.2)
+
+```bash
+docker buildx bake -f docker-bake.hcl -f build.json --load
+```
 
 The build system will attempt to detect the local architecture and automatically build images for it (tested with amd64 and arm64).
-You can also specify a custom platform with the `--platform`, example: `docker buildx bake -f build.json -f docker-bake.hcl --set *.platform=linux/amd64 --load`.
 
-### Test the build images locally
+You can also specify a custom platform with `--platform`, for example:
 
-Run
+```bash
+docker buildx bake -f docker-bake.hcl -f build.json --set *.platform=linux/amd64 --load
+```
+
+### Test built images locally
+
+To test the images, run
 
 ```bash
 TAG=newly-baked python -m pytest -s tests
 ```
 
-### Trigger a build on ghcr.io and dockerhub
+### Trigger a build on ghcr.io and Dockerhub
 
-Only the PR open to the organization repository will trigger a build on ghcr.io.
-Push to dockerhub is triggered when making a release on github.
+- Only an open PR to the organization's repository will trigger a build on ghcr.io.
+- A push to dockerhub is triggered when making a release on github.

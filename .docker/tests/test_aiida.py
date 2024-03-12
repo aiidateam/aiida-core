@@ -41,3 +41,46 @@ def test_computer_setup_success(aiida_exec, container_user):
 
     assert 'Success' in output
     assert 'Failed' not in output
+
+
+def test_clone_dir_exists(aiida_exec, variant):
+    """Test that the aiida-core repository is cloned in the aiida-core-dev image."""
+    if variant != 'aiida-core-dev':
+        pytest.skip(f'aiida-core clone not available in {variant} image')
+
+    output = aiida_exec('ls /home/aiida/').decode().strip()
+
+    assert 'aiida-core' in output
+
+
+def test_editable_install(aiida_exec, variant):
+    """Test that the aiida-core repository is installed in editable mode in the aiida-core-dev image."""
+    if variant != 'aiida-core-dev':
+        pytest.skip(f'aiida-core clone not available in {variant} image')
+
+    package = 'aiida-core'
+
+    output = aiida_exec(f'pip show {package}').decode().strip()
+
+    assert f'Editable project location: /home/aiida/{package}' in output
+
+
+@pytest.mark.parametrize(
+    'package',
+    [
+        'ase',
+        'Sphinx',
+        'pre-commit',
+        'Flask',
+        'pytest',
+        'trogon',
+    ],
+)
+def test_optional_dependency_install(aiida_exec, package, variant):
+    """Test that optional dependencies are installed in the aiida-core-dev image."""
+    if variant != 'aiida-core-dev':
+        pytest.skip(f'optional dependencies are not installed in {variant} image')
+
+    output = aiida_exec(f'pip show {package}').decode().strip()
+
+    assert f'Name: {package}' in output

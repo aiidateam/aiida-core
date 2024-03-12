@@ -16,6 +16,7 @@ from __future__ import annotations
 import pathlib
 
 from aiida.common.lang import type_check
+from aiida.common.pydantic import MetadataField
 
 from .installed import InstalledCode
 
@@ -27,6 +28,32 @@ class ContainerizedCode(InstalledCode):
 
     _KEY_ATTRIBUTE_ENGINE_COMMAND: str = 'engine_command'
     _KEY_ATTRIBUTE_IMAGE_NAME: str = 'image_name'
+
+    class Model(InstalledCode.Model):
+        """Model describing required information to create an instance."""
+
+        engine_command: str = MetadataField(
+            ...,
+            title='Engine command',
+            description='The command to run the container. It must contain the placeholder {image_name} that will be '
+            'replaced with the `image_name`.',
+            short_name='-E',
+            priority=3,
+        )
+        image_name: str = MetadataField(
+            ...,
+            title='Image name',
+            description='Name of the image container in which to the run the executable.',
+            short_name='-I',
+            priority=2,
+        )
+        wrap_cmdline_params: bool = MetadataField(
+            False,
+            title='Wrap command line parameters',
+            description='Whether all command line parameters to be passed to the engine command should be wrapped in '
+            'a double quotes to form a single argument. This should be set to `True` for Docker.',
+            priority=1,
+        )
 
     def __init__(self, engine_command: str, image_name: str, **kwargs):
         super().__init__(**kwargs)
@@ -103,36 +130,3 @@ class ContainerizedCode(InstalledCode):
         engine_cmdline_params = engine_cmdline.split()
 
         return (mpi_args or []) + (extra_mpirun_params or []) + engine_cmdline_params
-
-    @classmethod
-    def _get_cli_options(cls) -> dict:
-        """Return the CLI options that would allow to create an instance of this class."""
-        import click
-
-        options = {
-            'engine_command': {
-                'short_name': '-E',
-                'required': True,
-                'prompt': 'Engine command',
-                'help': 'The command to run the container. It must contain the placeholder {image_name} that will be '
-                'replaced with the `image_name`.',
-                'type': click.STRING,
-            },
-            'image_name': {
-                'short_name': '-I',
-                'required': True,
-                'type': click.STRING,
-                'prompt': 'Image name',
-                'help': 'Name of the image container in which to the run the executable.',
-            },
-            'wrap_cmdline_params': {
-                'is_flag': True,
-                'default': False,
-                'help': 'Whether all command line parameters to be passed to the engine command should be wrapped in '
-                'a double quotes to form a single argument. This should be set to `True` for Docker.',
-                'prompt': 'Wrap command line parameters',
-            },
-        }
-        options.update(**super()._get_cli_options())
-
-        return options

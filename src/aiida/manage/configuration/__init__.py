@@ -219,7 +219,7 @@ def create_profile(
     from aiida.manage import get_manager
     from aiida.orm import User
 
-    storage_config = storage_cls.Configuration(**{k: v for k, v in kwargs.items() if v is not None}).model_dump()
+    storage_config = storage_cls.Model(**{k: v for k, v in kwargs.items() if v is not None}).model_dump()
     profile: Profile = config.create_profile(name=name, storage_cls=storage_cls, storage_config=storage_config)
 
     with profile_context(profile.name, allow_switch=True):

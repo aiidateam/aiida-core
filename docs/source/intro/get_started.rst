@@ -17,6 +17,7 @@ An AiiDA installation consists of three core components (plus any external codes
    install_system
    install_conda
    run_docker
+   installation
 
 .. _intro:install:setup:
 .. _intro:get_started:setup:

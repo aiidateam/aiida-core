@@ -166,8 +166,6 @@ For all of the base data types, their value is stored in the database in the att
 EnumData
 --------
 
-.. versionadded:: 2.0
-
 An `Enum` member is represented by three attributes in the :py:class:`~aiida.orm.EnumData` class:
 
 - ``name``: the member's name
@@ -197,8 +195,6 @@ An `Enum` member is represented by three attributes in the :py:class:`~aiida.orm
 
 JsonableData
 ------------
-
-.. versionadded:: 2.0
 
 :py:class:`~aiida.orm.JsonableData` is a data plugin that allows one to easily wrap existing objects that are JSON-able.
 

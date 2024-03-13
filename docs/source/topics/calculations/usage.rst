@@ -568,8 +568,6 @@ The concept of the ``retrieve_temporary_list`` is essentially that the files wil
 Stashing on the remote
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: 1.6.0
-
 The ``stash`` option namespace allows a user to specify certain files and/or folders that are created by the calculation job to be stashed somewhere on the remote where the job is run.
 This can be useful if these need to be stored for a longer time on a machine where the scratch space is cleaned regularly, but they need to be kept on the remote machine and not retrieved.
 Examples are files that are necessary to restart a calculation but are too big to be retrieved and stored permanently in the local file repository.

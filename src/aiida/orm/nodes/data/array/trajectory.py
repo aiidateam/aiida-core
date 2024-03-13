@@ -224,9 +224,6 @@ class TrajectoryData(ArrayData):
     def get_stepids(self):
         """Return the array of steps, if it has already been set.
 
-        .. versionadded:: 0.7
-           Renamed from get_steps
-
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('steps')
@@ -285,9 +282,6 @@ class TrajectoryData(ArrayData):
         methods such as :py:meth:`.get_step_data` or
         :py:meth:`.get_step_structure`.
 
-        .. versionadded:: 0.7
-           Renamed from get_step_index
-
         .. note:: Note that this function returns the first index found
             (i.e. if multiple steps are present with the same value,
             only the index of the first one is returned).
@@ -345,9 +339,6 @@ class TrajectoryData(ArrayData):
         :py:meth:`.get_index_from_stepid` method to get the corresponding index.
 
         .. note:: The periodic boundary conditions are always set to True.
-
-        .. versionadded:: 0.7
-           Renamed from step_to_structure
 
         :param index: The index of the step that you want to retrieve, from
            0 to ``self.numsteps- 1``.
@@ -454,9 +445,6 @@ class TrajectoryData(ArrayData):
     def get_structure(self, store=False, **kwargs):
         """Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
 
-        .. versionadded:: 1.0
-            Renamed from _get_aiida_structure
-
         :param store: If True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
         :param index: The index of the step that you want to retrieve, from
@@ -485,11 +473,7 @@ class TrajectoryData(ArrayData):
         return ret_dict['structure']
 
     def get_cif(self, index=None, **kwargs):
-        """Creates :py:class:`aiida.orm.nodes.data.cif.CifData`
-
-        .. versionadded:: 1.0
-           Renamed from _get_cif
-        """
+        """Creates :py:class:`aiida.orm.nodes.data.cif.CifData`"""
         struct = self.get_structure(index=index, **kwargs)
         cif = struct.get_cif(**kwargs)
         return cif

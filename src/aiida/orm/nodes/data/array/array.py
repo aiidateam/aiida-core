@@ -92,11 +92,7 @@ class ArrayData(Data):
 
     def get_arraynames(self) -> list[str]:
         """Return a list of all arrays stored in the node, listing the files (and
-        not relying on the properties).
-
-        .. versionadded:: 0.7
-           Renamed from arraynames
-        """
+        not relying on the properties)."""
         return self._arraynames_from_properties()
 
     def _arraynames_from_files(self) -> list[str]:
@@ -120,11 +116,7 @@ class ArrayData(Data):
         return tuple(self.base.attributes.get(f'{self.array_prefix}{name}'))
 
     def get_iterarrays(self) -> Iterator[tuple[str, ndarray]]:
-        """Iterator that returns tuples (name, array) for each array stored in the node.
-
-        .. versionadded:: 1.0
-            Renamed from iterarrays
-        """
+        """Iterator that returns tuples (name, array) for each array stored in the node."""
         for name in self.get_arraynames():
             yield (name, self.get_array(name))
 

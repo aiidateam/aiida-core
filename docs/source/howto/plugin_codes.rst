@@ -495,8 +495,6 @@ If you still have time left, consider going through the optional exercise below.
 Writing importers for existing computations
 ===========================================
 
-.. versionadded:: 2.0
-
 New users to your plugin may often have completed many previous computations without the use of AiiDA, which they wish to import into AiiDA.
 In these cases, it is possible to write an importer for their inputs/outputs, which generates the provenance nodes for the corresponding |CalcJob|.
 

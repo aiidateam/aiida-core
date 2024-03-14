@@ -73,6 +73,7 @@ target "aiida-core-dev" {
   inherits = ["aiida-core-dev-meta"]
   context = "aiida-core-dev"
   contexts = {
+    src = ".."
     aiida-core-with-services = "target:aiida-core-with-services"
   }
   platforms = "${PLATFORMS}"

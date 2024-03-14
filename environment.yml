@@ -12,7 +12,7 @@ dependencies:
 - circus~=0.18.0
 - click-spinner~=0.1.8
 - click~=8.1
-- disk-objectstore@ git+https://github.com/aiidateam/disk-objectstore
+- disk-objectstore~=1.1
 - docstring_parser
 - get-annotations~=0.1
 - python-graphviz~=0.19

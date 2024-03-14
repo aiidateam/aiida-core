@@ -501,8 +501,6 @@ class PsqlDosBackend(StorageBackend):
         import subprocess
         import tempfile
 
-        from aiida.manage.configuration import get_config
-        from aiida.manage.configuration.config import Config
         from aiida.manage.profile_access import ProfileAccessManager
 
         STORAGE_LOGGER.report('Starting backup...')
@@ -522,25 +520,11 @@ class PsqlDosBackend(StorageBackend):
         except exceptions.LockedProfileError as exc:
             raise exceptions.StorageBackupError('The profile is locked!') from exc
 
-        # step 1: back up aiida config.json file (strip other profiles!)
-        STORAGE_LOGGER.report('Backing up config.json...')
-        try:
-            config = get_config()
-            profile = config.get_profile(self.profile.name)  # Get the profile being backed up
-            with tempfile.TemporaryDirectory() as tmpdir:
-                filepath_config = pathlib.Path(tmpdir) / 'config.json'
-                backup_config = Config(str(filepath_config), {})  # Create empty config at temporary file location
-                backup_config.add_profile(profile)  # Add the profile being backed up
-                backup_config.store()  # Write the contents to disk
-                manager.call_rsync(filepath_config, path, dest_trailing_slash=True)
-        except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exc:
-            raise exceptions.StorageBackupError('aiida config.json not found!') from exc
-
-        # step 2: first run the storage maintenance version that can safely be performed while aiida is running
+        # step 1: first run the storage maintenance version that can safely be performed while aiida is running
         STORAGE_LOGGER.report('Running basic maintenance...')
         self.maintain(full=False, compress=False)
 
-        # step 3: dump the PostgreSQL database into a temporary directory
+        # step 2: dump the PostgreSQL database into a temporary directory
         STORAGE_LOGGER.report('Backing up PostgreSQL...')
         pg_dump_exe = 'pg_dump'
         with tempfile.TemporaryDirectory() as temp_dir_name:
@@ -568,10 +552,10 @@ class PsqlDosBackend(StorageBackend):
             else:
                 raise backup_utils.BackupError(f"'{psql_temp_loc!s}' was not created.")
 
-            # step 4: transfer the PostgreSQL database file
+            # step 3: transfer the PostgreSQL database file
             manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)
 
-        # step 5: back up the disk-objectstore
+        # step 4: back up the disk-objectstore
         STORAGE_LOGGER.report('Backing up DOS container...')
         backup_utils.backup_container(
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None

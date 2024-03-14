@@ -225,7 +225,7 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     # can still configure those manually beforehand through the config options.
     if CLI_LOG_LEVEL is not None:
         for name, logger in config['loggers'].items():
-            if name in ['aiida', 'verdi']:
+            if name in ['aiida', 'verdi', 'disk_objectstore']:
                 logger['level'] = CLI_LOG_LEVEL
 
     # Add the `DbLogHandler` if `with_orm` is `True`

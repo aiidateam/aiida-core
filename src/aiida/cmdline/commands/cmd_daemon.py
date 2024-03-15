@@ -225,11 +225,21 @@ def restart(ctx, reset, no_wait, timeout):
     """
     if reset:
         warn_deprecation(
-            '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.', version=3
-        )
+            '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.', version=3)
+    if no_wait:
+        warn_deprecation(
+            'The `--no-wait` flag is deprecated and no longer has any effect.', version=3)
+    if timeout is not None:
+        warn_deprecation(
+            'The `--timeout` option is deprecated and no longer has any effect.', version=3)
 
-    ctx.invoke(stop, no_wait=no_wait)
-    ctx.invoke(start)
+    # These two lines can be simplified to `ctx.invoke(start)` once issue #950 in `click` is resolved.
+    # Due to that bug, the `callback` of the `number` argument the `start` command is not being called, which is
+    # responsible for settting the default value, which causes `None` to be passed and that triggers an exception.
+    # As a temporary workaround, we fetch the default here manually and pass that in explicitly.
+    number = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
+    ctx.invoke(stop)
+    ctx.invoke(start, number=number)
 
 
 @verdi_daemon.command(hidden=True)

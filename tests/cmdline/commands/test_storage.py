@@ -182,7 +182,17 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
 def tests_storage_backup(run_cli_command, tmp_path):
     """Test the ``verdi storage backup`` command."""
     result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)])
-    assert ' backed up to ' in result.output
+    assert 'backed up to' in result.output
     assert result.exit_code == 0
     last_backup = tmp_path / 'last-backup'
     assert last_backup.is_symlink()
+
+
+def tests_storage_backup_nonempty_dest(run_cli_command, tmp_path):
+    """Test that the ``verdi storage backup`` fails for non-empty destination."""
+    # add a file to the destination
+    with open(tmp_path / 'test.txt', 'w') as _:
+        pass
+    result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)], raises=True)
+    assert result.exit_code == 1
+    assert 'destination is not empty' in result.output

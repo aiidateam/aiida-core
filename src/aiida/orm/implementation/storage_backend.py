@@ -343,7 +343,7 @@ class StorageBackend(abc.ABC):
                         'The chosen destination contains backups of a different profile! Aborting!'
                     )
             else:
-                STORAGE_LOGGER.warn('Initializing a new backup folder.')
+                STORAGE_LOGGER.warning('Initializing a new backup folder.')
                 # make sure the folder is empty
                 success, stdout = backup_manager.run_cmd(['ls', '-A', str(backup_manager.path)])
                 if not success:

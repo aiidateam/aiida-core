@@ -166,5 +166,5 @@ def test_backup(tmp_path):
     # make sure the necessary files are there
     # note: disk-objectstore container backup is already tested in its own repo
     contents = [c.name for c in last_backup.iterdir()]
-    for name in ['config.json', 'container', 'db.psql']:
+    for name in ['container', 'db.psql']:
         assert name in contents

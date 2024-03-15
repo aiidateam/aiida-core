@@ -191,8 +191,7 @@ def tests_storage_backup(run_cli_command, tmp_path):
 def tests_storage_backup_nonempty_dest(run_cli_command, tmp_path):
     """Test that the ``verdi storage backup`` fails for non-empty destination."""
     # add a file to the destination
-    with open(tmp_path / 'test.txt', 'w') as _:
-        pass
+    (tmp_path / 'test.txt').touch()
     result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)], raises=True)
     assert result.exit_code == 1
     assert 'destination is not empty' in result.output

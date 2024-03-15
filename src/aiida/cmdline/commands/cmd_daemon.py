@@ -218,14 +218,14 @@ def stop(ctx, no_wait, all_profiles, timeout):
 def restart(ctx, reset, no_wait, timeout):
     """Restart the daemon.
 
-    By default the full daemon will be stopped and restarted with the default
+    The daemon is stopped before being restarted with the default
     number of workers that is started when calling `verdi daemon start` manually.
 
     Returns exit code 0 if the result is OK, non-zero if there was an error.
     """
     if reset:
         warn_deprecation(
-            '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.', nl=False
+            '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.', version=3
         )
 
     ctx.invoke(stop, no_wait=no_wait)

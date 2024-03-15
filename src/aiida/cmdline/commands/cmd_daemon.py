@@ -224,9 +224,11 @@ def restart(ctx, reset, no_wait, timeout):
     Returns exit code 0 if the result is OK, non-zero if there was an error.
     """
     if reset:
-        warn_deprecation('`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.', nl=False)
+        warn_deprecation(
+            '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.', nl=False
+        )
 
-    ctx.invoke(stop, no_wait = no_wait)
+    ctx.invoke(stop, no_wait=no_wait)
     ctx.invoke(start)
 
 

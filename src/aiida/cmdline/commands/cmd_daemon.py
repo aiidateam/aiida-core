@@ -225,13 +225,12 @@ def restart(ctx, reset, no_wait, timeout):
     """
     if reset:
         warn_deprecation(
-            '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.', version=3)
+            '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.', version=3
+        )
     if no_wait:
-        warn_deprecation(
-            'The `--no-wait` flag is deprecated and no longer has any effect.', version=3)
+        warn_deprecation('The `--no-wait` flag is deprecated and no longer has any effect.', version=3)
     if timeout is not None:
-        warn_deprecation(
-            'The `--timeout` option is deprecated and no longer has any effect.', version=3)
+        warn_deprecation('The `--timeout` option is deprecated and no longer has any effect.', version=3)
 
     # These two lines can be simplified to `ctx.invoke(start)` once issue #950 in `click` is resolved.
     # Due to that bug, the `callback` of the `number` argument the `start` command is not being called, which is

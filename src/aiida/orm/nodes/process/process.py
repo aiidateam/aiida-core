@@ -83,11 +83,15 @@ class ProcessNodeCaching(NodeCaching):
     def _get_objects_to_hash(self) -> List[Any]:
         """Return a list of objects which should be included in the hash."""
         res = super()._get_objects_to_hash()
-        res.append(
+        res.update(
             {
-                entry.link_label: entry.node.base.caching.get_hash()
-                for entry in self._node.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
-                if entry.link_label not in self._hash_ignored_inputs
+                'inputs': {
+                    entry.link_label: entry.node.base.caching.get_hash()
+                    for entry in self._node.base.links.get_incoming(
+                        link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)
+                    )
+                    if entry.link_label not in self._hash_ignored_inputs
+                }
             }
         )
         return res

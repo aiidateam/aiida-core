@@ -40,16 +40,16 @@ In order to figure out why a calculation is *not* being reused, the :meth:`~aiid
 
     In [7]: node.base.caching._get_objects_to_hash()
     Out[7]:
-    [
-        '1.0.0',
-        {
+    {
+        'class': "<class 'aiida.orm.nodes.process.calculation.calcjob.CalcJobNode'>",
+        'version': '2.6.0',
+        'attributes': {
             'resources': {'num_machines': 2, 'default_mpiprocs_per_machine': 28},
             'parser_name': 'cp2k',
             'linkname_retrieved': 'retrieved'
         },
-        <aiida.common.folders.Folder at 0x1171b9a20>,
-        '6850dc88-0949-482e-bba6-8b11205aec11',
-        {
+        'computer_uuid': '85faf55e-8597-4649-90e0-55881271c33c',
+        'links': {
             'code': 'f6bd65b9ca3a5f0cf7d299d9cfc3f403d32e361aa9bb8aaa5822472790eae432',
             'parameters': '2c20fdc49672c3505cebabacfb9b1258e71e7baae5940a80d25837bee0032b59',
             'structure': 'c0f1c1d1bbcfc7746dcf7d0d675904c62a5b1759d37db77b564948fa5a788769',

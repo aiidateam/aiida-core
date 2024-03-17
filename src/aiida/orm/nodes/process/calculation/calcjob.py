@@ -13,8 +13,6 @@ from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, T
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
-from aiida.common.links import LinkType
-from aiida.orm.fields import add_field
 
 from ..process import ProcessNodeCaching
 from .calculation import CalculationNode
@@ -43,22 +41,8 @@ class CalcJobNodeCaching(ProcessNodeCaching):
         anyway in the computation of the hash would mean that the hash of the node would change as soon as the process
         has started and the input files have been written to the repository.
         """
-        from importlib import import_module
-
-        objects = [
-            import_module(self._node.__module__.split('.', 1)[0]).__version__,
-            {
-                key: val
-                for key, val in self._node.base.attributes.items()
-                if key not in self._node._hash_ignored_attributes and key not in self._node._updatable_attributes
-            },
-            self._node.computer.uuid if self._node.computer is not None else None,
-            {
-                entry.link_label: entry.node.base.caching.get_hash()
-                for entry in self._node.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
-                if entry.link_label not in self._hash_ignored_inputs
-            },
-        ]
+        objects = super()._get_objects_to_hash()
+        objects.pop('repository_hash', None)
         return objects
 
 

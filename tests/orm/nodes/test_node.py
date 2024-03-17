@@ -1009,6 +1009,14 @@ class TestNodeCaching:
         assert hash(node_a) != hash(node_0)
         assert hash(node_b) != hash(node_0)
 
+    def test_subclasses_are_distinguished(self):
+        """Test that subclasses get different hashes even if they contain the same attributes."""
+        node_int = Int(5).store()
+        node_data = Data()
+        node_data.base.attributes.set_many(node_int.base.attributes.all)
+        node_data.store()
+        assert node_int.base.caching.get_hash() != node_data.base.caching.get_hash()
+
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_iter_repo_keys():

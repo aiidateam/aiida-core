@@ -60,10 +60,10 @@ def make_default_dump_path(
 
     if path.is_dir():
         if overwrite:
-            echo.echo_report(f"Overwrite set to true, will overwrite directory <{path}>.")
+            echo.echo_report(f'Overwrite set to true, will overwrite directory "{path}".')
             shutil.rmtree(path)
         else:
-            echo.echo_critical(f'Invalid dumping destination selected. Path: <{path}> already exists.')
+            echo.echo_critical(f'Invalid dumping destination selected. Path: "{path}" already exists.')
     path.mkdir(parents=True, exist_ok=False)
 
     return path

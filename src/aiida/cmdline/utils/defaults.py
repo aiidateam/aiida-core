@@ -56,7 +56,7 @@ def make_default_dump_path(
     import shutil
 
     if str(path) == '.':
-        path = Path(f'dump-{process_node.uuid[:8]}')
+        path = Path(f'dump-{process_node.pk}')
 
     if path.is_dir():
         if overwrite:

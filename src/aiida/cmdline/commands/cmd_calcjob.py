@@ -18,7 +18,7 @@ from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.defaults import make_default_dump_path
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
-from aiida.tools.dumping.processes import ProcessNodeYamlDumper, calcjob_dump, workchain_dump
+from aiida.tools.dumping.processes import ProcessNodeYamlDumper, calcjob_dump, process_dump, workchain_dump
 
 
 @verdi.group('calcjob')
@@ -352,9 +352,7 @@ def get_remote_and_path(calcjob, path=None):
         'Please specify a path explicitly.'
     )
 
-
 @verdi_calcjob.command('dump')
-# @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 @arguments.PROCESS()
 @options.DUMP_PATH()
 @options.NO_NODE_INPUTS()
@@ -362,51 +360,9 @@ def get_remote_and_path(calcjob, path=None):
 @options.INCLUDE_EXTRAS()
 @options.USE_PREPARE_FOR_SUBMISSION()
 @options.OVERWRITE()
-def dump(
-    process,
-    path,
-    no_node_inputs,
-    include_attributes,
-    include_extras,
-    use_prepare_for_submission,
-    overwrite
-) -> None:
+def calcjob_dump_wrapper(**kwargs) -> None:
     """Dump files involved in the execution of a `CalcJob`.
 
     Note: This is for inspection only and does not guarantee that a direct resubmission of the simulation is possible.
     """
-
-    # Instantiate YamlDumper
-    processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
-
-    # Make output directory
-    output_path = make_default_dump_path(path=path, process_node=process, overwrite=overwrite)
-
-    # Actually dump CalcJob files
-    if isinstance(process, CalcJobNode):
-        calcjob_dump(
-            calcjob_node=process,
-            output_path=output_path,
-            no_node_inputs=no_node_inputs,
-            use_prepare_for_submission=use_prepare_for_submission,
-            node_dumper=processnode_dumper,
-        )
-    elif isinstance(process, WorkChainNode):
-        echo.echo_warning(
-            f'''Command called on WorkChainNode. Will dump anyway, but `verdi workchain dump <{process.uuid[:8]}>`
-            should be used instead.'''
-        )
-        workchain_dump(
-            process_node=process,
-            output_path=output_path,
-            no_node_inputs=no_node_inputs,
-            use_prepare_for_submission=use_prepare_for_submission,
-            node_dumper=processnode_dumper,
-        )
-    else:
-        echo.echo_critical("<{calcjob.uuid[:8]}> not a ProcessNode.")
-
-    echo.echo_report(
-        f'''Raw files for the calculation <{process.uuid[:8]}> dumped successfully in directory "{output_path}".
-        '''
-    )
+    process_dump(process_type=CalcJobNode, **kwargs)

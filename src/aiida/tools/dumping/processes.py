@@ -4,6 +4,7 @@ from typing import Union
 import yaml
 
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.defaults import make_default_dump_path
 from aiida.common import LinkType
 from aiida.common.folders import Folder
 from aiida.engine.daemon.execmanager import upload_calculation
@@ -30,9 +31,9 @@ class ProcessNodeYamlDumper:
         'is_finished_ok',
     ]
 
-    USER_PROPERTIES = ("first_name", "last_name", "email", "institution")
+    USER_PROPERTIES = ('first_name', 'last_name', 'email', 'institution')
 
-    COMPUTER_PROPERTIES = ("label", "hostname", "scheduler_type", "transport_type")
+    COMPUTER_PROPERTIES = ('label', 'hostname', 'scheduler_type', 'transport_type')
 
     def __init__(self, include_attributes: bool = True, include_extras: bool = True):
         self.include_attributes = include_attributes
@@ -101,7 +102,7 @@ class ProcessNodeYamlDumper:
 
 
 def workchain_dump(
-    process_node: Union[WorkChainNode, CalcJobNode],
+    process: Union[WorkChainNode, CalcJobNode],
     output_path: Path = Path(),
     no_node_inputs: bool = False,
     use_prepare_for_submission: bool = False,
@@ -126,11 +127,11 @@ def workchain_dump(
     # Dump node metadata as yaml
     if node_dumper is None:
         node_dumper = ProcessNodeYamlDumper()
-    if isinstance(process_node, WorkChainNode):
-        node_dumper.dump_yaml(process_node=process_node, output_path=output_path)
+    if isinstance(process, WorkChainNode):
+        node_dumper.dump_yaml(process_node=process, output_path=output_path)
 
     # node_dumper.dump_yaml(process_node=process_node, output_path=output_path)
-    called_links = process_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
+    called_links = process.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
 
     # Don't increment index for `ProcessNodes`` that don't have file IO (`CalcFunctionNodes`/`WorkFunctionNodes`), such
     # as `create_kpoints_from_distance`
@@ -156,7 +157,7 @@ def workchain_dump(
         # Recursive function call for `WorkChainNode``
         if isinstance(child_node, WorkChainNode):
             workchain_dump(
-                process_node=child_node,
+                process=child_node,
                 output_path=output_path_child,
                 no_node_inputs=no_node_inputs,
                 use_prepare_for_submission=use_prepare_for_submission,
@@ -166,7 +167,7 @@ def workchain_dump(
         # Dump for `CalcJobNode`
         elif isinstance(child_node, CalcJobNode):
             calcjob_dump(
-                calcjob_node=child_node,
+                process=child_node,
                 output_path=output_path_child,
                 no_node_inputs=no_node_inputs,
                 use_prepare_for_submission=use_prepare_for_submission,
@@ -175,7 +176,7 @@ def workchain_dump(
 
 
 def calcjob_dump(
-    calcjob_node: CalcJobNode,
+    process: CalcJobNode,
     output_path: Path,
     no_node_inputs: bool = False,
     use_prepare_for_submission: bool = False,
@@ -196,17 +197,17 @@ def calcjob_dump(
 
     if node_dumper is None:
         node_dumper = ProcessNodeYamlDumper()
-    node_dumper.dump_yaml(process_node=calcjob_node, output_path=output_path)
+    node_dumper.dump_yaml(process_node=process, output_path=output_path)
 
     if use_prepare_for_submission is False:
         # Outputs obtained via retrieved and should not be present when using `prepare_for_submission` as it puts the
         # calculation in a state to be submitted ?!
-        calcjob_node.base.repository.copy_tree(output_path_abs / Path('raw_inputs'))
-        calcjob_node.outputs.retrieved.copy_tree(output_path_abs / Path('raw_outputs'))
+        process.base.repository.copy_tree(output_path_abs / Path('raw_inputs'))
+        process.outputs.retrieved.copy_tree(output_path_abs / Path('raw_outputs'))
 
         # Dump `SinglefileData` and `FolderData` inputs of the `CalcJobNode`
         if no_node_inputs is False:
-            input_node_triples = calcjob_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
+            input_node_triples = process.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
             dump_types = (SinglefileData, FolderData)
 
             for input_node_triple in input_node_triples:
@@ -224,12 +225,12 @@ def calcjob_dump(
     else:
         echo.echo_warning('`use_prepare_for_submission` not fully implemented yet. Files likely missing.')
         try:
-            builder_restart = calcjob_node.get_builder_restart()
+            builder_restart = process.get_builder_restart()
             runner = get_manager().get_runner()
             calcjob_process = instantiate_process(runner, builder_restart)
             calc_info = calcjob_process.presubmit(folder=Folder(abspath=output_path_abs))
             remote_data = upload_calculation(
-                node=calcjob_node,
+                node=process,
                 transport=LocalTransport(),
                 calc_info=calc_info,
                 folder=Folder(abspath=output_path_abs),
@@ -241,3 +242,64 @@ def calcjob_dump(
             echo.echo_error(
                 'ValueError when trying to get a restart-builder. Do you have the relevant aiida-plugin installed?'
             )
+
+
+def process_dump(
+    process_type,
+    process: ProcessNode,
+    path: Path,
+    no_node_inputs: bool = False,
+    include_attributes: bool = True,
+    include_extras: bool = False,
+    use_prepare_for_submission: bool = False,
+    overwrite: bool = False,
+) -> None:
+    """
+    Dump the raw files for a given process node. Note that this is just a wrapper around the respective `calcjob_dump`
+    and `workchain_dump` functions that provides some type checking and instantiates the YamlDumper and the output path.
+
+    :param process_type: The type of process node to dump (e.g., CalcJobNode, WorkChainNode).
+    :param process: The process node to dump.
+    :param path: The path where the raw files will be dumped.
+    :param no_node_inputs: If True, exclude the inputs of the process node from the dump.
+    :param include_attributes: If True, include the attributes of the process node in the dump.
+    :param include_extras: If True, include the extras of the process node in the dump.
+    :param use_prepare_for_submission: If True, use the `prepare_for_submission` method of the process node
+                                       to generate the input files for the dump.
+    :param overwrite: If True, overwrite any existing files in the dump path.
+    """
+
+    # Instantiate YamlDumper
+    processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
+
+    # Make output directory
+    output_path = make_default_dump_path(path=path, process_node=process, overwrite=overwrite)
+
+    # Type checking for process with warning if called on the wrong one
+    if isinstance(process, process_type):
+        dump_function = calcjob_dump if process_type == CalcJobNode else workchain_dump
+        dump_function(
+            process=process,
+            output_path=output_path,
+            no_node_inputs=no_node_inputs,
+            use_prepare_for_submission=use_prepare_for_submission,
+            node_dumper=processnode_dumper,
+        )
+    else:
+        alternative_type = 'CalcJob' if process_type == WorkChainNode else 'WorkChain'
+        echo.echo_warning(f'Command called on {alternative_type}Node.')
+        echo.echo_warning(
+            f'Will dump anyway, but `verdi {alternative_type.lower()} dump <{process.pk}>` should be used instead.'
+        )
+        dump_function = workchain_dump if process_type == CalcJobNode else calcjob_dump
+        dump_function(
+            process=process,
+            output_path=output_path,
+            no_node_inputs=no_node_inputs,
+            use_prepare_for_submission=use_prepare_for_submission,
+            node_dumper=processnode_dumper,
+        )
+
+    echo.echo_report(
+        f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in directory "{output_path}".'
+    )

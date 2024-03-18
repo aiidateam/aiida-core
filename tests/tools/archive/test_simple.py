@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Simple tests for the export and import routines"""
+import functools
 import json
 
 import pytest
@@ -24,15 +25,24 @@ def test_base_data_nodes(aiida_profile, tmp_path, entities):
     values = ('Hello', 6, -1.2399834e12, False)
     filename = str(tmp_path / 'export.aiida')
 
+    # Regression test for https://github.com/aiidateam/aiida-core/issues/6325
+    # Test run should not fail for empty DB
+    create_archive(None, filename=filename, test_run=True)
+
     # producing nodes:
     nodes = [cls(val).store() for val, cls in zip(values, (orm.Str, orm.Int, orm.Float, orm.Bool))]
     # my uuid - list to reload the node:
     uuids = [n.uuid for n in nodes]
-    # exporting the nodes:
+
     if entities == 'all':
-        create_archive(None, filename=filename)
+        create = functools.partial(create_archive, None)
     else:
-        create_archive(nodes, filename=filename)
+        create = functools.partial(create_archive, nodes)
+
+    # check that test run succeeds
+    create(filename=filename, test_run=True)
+    # actually export now
+    create(filename=filename)
     # cleaning:
     aiida_profile.clear_profile()
     # Importing back the data:

@@ -60,6 +60,7 @@ class NodeCaching:
         except (ImportError, AttributeError) as exc:
             raise exceptions.HashingError("The node's package version could not be determined") from exc
         objects = [
+            str(self._node.__class__),
             version,
             {
                 key: val

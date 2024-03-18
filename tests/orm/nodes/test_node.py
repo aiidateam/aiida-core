@@ -985,6 +985,7 @@ class TestNodeCaching:
         """Tests that ``get_hash`` fails in an expected manner."""
         node = Data().store()
         node.__module__ = 'unknown'  # this will inhibit package version determination
+        print(node.base.caching.get_objects_to_hash())
         result = node.base.caching.get_hash(ignore_errors=True)
         assert result is None
         assert aiida_caplog.record_tuples == [(node.logger.name, logging.ERROR, 'Node hashing failed')]

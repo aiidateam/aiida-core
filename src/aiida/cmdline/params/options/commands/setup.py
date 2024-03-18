@@ -145,9 +145,11 @@ def get_quicksetup_password(ctx, param, value):
     config = get_config()
 
     for available_profile in config.profiles:
-        if available_profile.storage_config['database_username'] == username:
-            value = available_profile.storage_config['database_password']
-            break
+        if available_profile.storage_backend == 'core.psql_dos':
+            storage_config = available_profile.storage_config
+            if storage_config['database_username'] == username:
+                value = storage_config['database_password']
+                break
     else:
         value = get_random_string(16)
 

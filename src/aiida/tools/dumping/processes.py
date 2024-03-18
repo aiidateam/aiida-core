@@ -269,6 +269,10 @@ def process_dump(
     :param overwrite: If True, overwrite any existing files in the dump path.
     """
 
+    # Should not usually be used for file I/O
+    if isinstance(process, (CalcFunctionNode, WorkFunctionNode)):
+        echo.echo_critical(f"File dumping not implemented for {process.__class__.__name__} <{process.pk}>.")
+
     # Instantiate YamlDumper
     processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
 

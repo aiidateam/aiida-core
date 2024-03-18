@@ -73,7 +73,7 @@ def revive_processes(processes: list[ProcessNode], *, wait: bool = False) -> Non
     Warning: Use only as a last resort after you've gone through the checklist below.
 
         1. Does ``verdi status`` indicate that both daemon and RabbitMQ are running properly?
-           If not, restart the daemon with ``verdi daemon restart --reset`` and restart RabbitMQ.
+           If not, restart the daemon with ``verdi daemon restart`` and restart RabbitMQ.
         2. Try to play the process through ``play_processes``.
            If a ``ProcessTimeoutException`` is raised use this method to attempt to revive it.
 

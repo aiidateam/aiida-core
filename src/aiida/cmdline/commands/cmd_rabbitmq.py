@@ -255,7 +255,7 @@ def cmd_tasks_revive(processes, force):
 
     \b
         1. Does ``verdi status`` indicate that both daemon and RabbitMQ are running properly?
-           If not, restart the daemon with ``verdi daemon restart --reset`` and restart RabbitMQ.
+           If not, restart the daemon with ``verdi daemon restart`` and restart RabbitMQ.
         2. Try ``verdi process play <PID>``.
            If you receive a message that the process is no longer reachable,
            use ``verdi devel rabbitmq tasks revive <PID>``.

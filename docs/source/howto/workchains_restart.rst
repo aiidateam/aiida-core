@@ -185,7 +185,7 @@ As you can see the work chain launched a single instance of the ``ArithmeticAddC
 
     .. code-block:: bash
 
-        $ verdi daemon restart --reset
+        $ verdi daemon restart
 
     Indeed, when updating an existing work chain file or adding a new one, it is **necessary** to restart the daemon **every time** after all changes have taken place.
 
@@ -249,7 +249,7 @@ When submitting or running the work chain using namespaced inputs (``add`` in th
 
     .. code-block:: bash
 
-        $ verdi daemon restart --reset
+        $ verdi daemon restart
 
 
 Customizing outputs

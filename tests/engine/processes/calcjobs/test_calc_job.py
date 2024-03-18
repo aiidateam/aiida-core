@@ -512,6 +512,30 @@ class TestCalcJob:
         _, node = launch.run_get_node(builder)
         assert node.base.extras.get(node.base.caching._HASH_EXTRA_KEY) == node.base.caching.get_hash()
 
+    def test_get_objects_attributes(self, get_calcjob_builder):
+        """Test that :meth:`aiida.orm.CalcJobNode._get_objects_to_hash` returns the expected objects."""
+        builder = get_calcjob_builder()
+        _, node = launch.run_get_node(builder)
+        objects = node.base.caching.get_objects_to_hash()
+
+        assert 'version' not in objects
+        assert 'version' not in objects['attributes']
+
+    def test_compute_hash_version_independent(self, get_calcjob_builder, monkeypatch, manager):
+        """Test that :meth:`aiida.orm.CalcJobNode.compute_hash` is independent of the version of ``aiida-core``."""
+        import aiida
+        _, node_a = launch.run_get_node(get_calcjob_builder())
+
+        monkeypatch.setattr(aiida, '__version__', '0.0.0')
+
+        # The global runner uses an instance of the ``PluginVersionProvider`` that caches versions so need to reset it
+        manager.reset_runner()
+
+        _, node_b = launch.run_get_node(get_calcjob_builder())
+        assert node_b.base.attributes.get('version')['core'] == '0.0.0'
+        assert node_b.base.caching.compute_hash() == node_a.base.caching.compute_hash()
+        assert node_b.base.caching.get_hash() == node_a.base.caching.get_hash()
+
     def test_process_status(self):
         """Test that the process status is properly reset if calculation ends successfully."""
         _, node = launch.run_get_node(ArithmeticAddCalculation, code=self.remote_code, **self.inputs)

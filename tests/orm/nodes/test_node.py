@@ -982,15 +982,22 @@ class TestNodeCaching:
         assert clone.base.caching.get_cache_source() == data.uuid
         assert data.base.caching.get_hash() == clone.base.caching.get_hash()
 
-    def test_hashing_errors(self, aiida_caplog):
+    def test_hashing_errors(self, caplog, monkeypatch):
         """Tests that ``compute_hash`` fails in an expected manner."""
+        from aiida.orm.nodes.caching import NodeCaching
         node = Data().store()
-        node.__module__ = 'unknown'  # this will inhibit package version determination
+
+        # monkeypatch `get_objects_to_hash` to raise a fake error
+        monkeypatch.setattr(
+            NodeCaching,
+            'get_objects_to_hash',
+            lambda _: (_ for _ in ()).throw(exceptions.HashingError('fake hashing error')),
+        )
         result = node.base.caching.compute_hash(ignore_errors=True)
         assert result is None
-        assert aiida_caplog.record_tuples == [(node.logger.name, logging.ERROR, 'Node hashing failed')]
+        assert caplog.record_tuples == [(node.logger.name, logging.ERROR, 'Node hashing failed')]
 
-        with pytest.raises(exceptions.HashingError, match='package version could not be determined'):
+        with pytest.raises(exceptions.HashingError, match='fake hashing error'):
             result = node.base.caching.compute_hash(ignore_errors=False)
         assert result is None
 

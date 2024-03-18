@@ -31,7 +31,7 @@ class StoreMessageCalculation(ArithmeticAddCalculation):
         spec.output_namespace('messages', valid_type=Str)
 
 
-def monitor_store_message(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_store_message(node, transport, **kwargs):
     """Test monitor that returns an output node."""
     import datetime
     import secrets

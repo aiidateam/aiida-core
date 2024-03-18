@@ -15,10 +15,8 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.defaults import make_default_dump_path
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
-from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
-from aiida.tools.dumping.processes import ProcessNodeYamlDumper, calcjob_dump, process_dump, workchain_dump
+from aiida.tools.dumping.processes import process_dump
 
 
 @verdi.group('calcjob')
@@ -351,6 +349,7 @@ def get_remote_and_path(calcjob, path=None):
         f'nor does its associated process class `{calcjob.process_class.__class__.__name__}`\n'
         'Please specify a path explicitly.'
     )
+
 
 @verdi_calcjob.command('dump')
 @arguments.PROCESS()

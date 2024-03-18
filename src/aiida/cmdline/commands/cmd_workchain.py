@@ -18,6 +18,7 @@ from aiida.tools.dumping.processes import process_dump
 def verdi_workchain():
     """Inspect and manage workchains."""
 
+
 @verdi_workchain.command('dump')
 @arguments.PROCESS()
 @options.DUMP_PATH()

@@ -16,7 +16,6 @@ from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS, capture_logging
 from aiida.manage import get_manager
 from aiida.orm.nodes.process.process import ProcessNode
-from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
 from aiida.restapi.resources import ProcessNode
 from aiida.tools.dumping.processes import process_dump
 

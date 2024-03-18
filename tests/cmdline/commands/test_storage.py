@@ -8,6 +8,8 @@
 ###########################################################################
 """Tests for `verdi storage`."""
 
+import json
+
 import pytest
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_storage
@@ -181,11 +183,14 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
 
 def tests_storage_backup(run_cli_command, tmp_path):
     """Test the ``verdi storage backup`` command."""
-    result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)])
-    assert 'backed up to' in result.output
-    assert result.exit_code == 0
-    last_backup = tmp_path / 'last-backup'
-    assert last_backup.is_symlink()
+    result1 = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)])
+    assert 'backed up to' in result1.output
+    assert result1.exit_code == 0
+    assert (tmp_path / 'last-backup').is_symlink()
+    # make another backup in the same folder
+    result2 = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)])
+    assert 'backed up to' in result2.output
+    assert result2.exit_code == 0
 
 
 def tests_storage_backup_nonempty_dest(run_cli_command, tmp_path):
@@ -195,3 +200,17 @@ def tests_storage_backup_nonempty_dest(run_cli_command, tmp_path):
     result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)], raises=True)
     assert result.exit_code == 1
     assert 'destination is not empty' in result.output
+
+
+def tests_storage_backup_other_profile(run_cli_command, tmp_path):
+    """Test that the ``verdi storage backup`` fails for a destination that has been used for another profile."""
+    existing_backup_info = {
+        'PROFILE_NAME': 'test-profile',
+        'PROFILE_UUID': 'test-uuid',
+        'STORAGE_BACKEND': 'core.psql_dos',
+    }
+    with open(tmp_path / 'aiida-backup.json', 'w', encoding='utf-8') as fhandle:
+        json.dump(existing_backup_info, fhandle, indent=4)
+    result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)], raises=True)
+    assert result.exit_code == 1
+    assert 'contains backups of a different profile' in result.output

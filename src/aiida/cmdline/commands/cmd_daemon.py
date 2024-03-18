@@ -217,24 +217,27 @@ def stop(ctx, no_wait, all_profiles, timeout):
 def restart(ctx, reset, no_wait, timeout):
     """Restart the daemon.
 
-    By default will only reset the workers of the running daemon. After the restart the same amount of workers will be
-    running. If the `--reset` flag is passed, however, the full daemon will be stopped and restarted with the default
+    The daemon is stopped before being restarted with the default
     number of workers that is started when calling `verdi daemon start` manually.
 
     Returns exit code 0 if the result is OK, non-zero if there was an error.
     """
     if reset:
-        # These two lines can be simplified to `ctx.invoke(start)` once issue #950 in `click` is resolved.
-        # Due to that bug, the `callback` of the `number` argument the `start` command is not being called, which is
-        # responsible for settting the default value, which causes `None` to be passed and that triggers an exception.
-        # As a temporary workaround, we fetch the default here manually and pass that in explicitly.
-        number = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
-        ctx.invoke(stop)
-        ctx.invoke(start, number=number)
-        return
+        echo.echo_deprecated(
+            '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.'
+        )
+    if no_wait:
+        echo.echo_deprecated('The `--no-wait` flag is deprecated and no longer has any effect.')
+    if timeout is not None:
+        echo.echo_deprecated('The `--timeout` option is deprecated and no longer has any effect.')
 
-    echo.echo('Restarting the daemon... ', nl=False)
-    execute_client_command('restart_daemon', wait=not no_wait, timeout=timeout)
+    # These two lines can be simplified to `ctx.invoke(start)` once issue #950 in `click` is resolved.
+    # Due to that bug, the `callback` of the `number` argument the `start` command is not being called, which is
+    # responsible for settting the default value, which causes `None` to be passed and that triggers an exception.
+    # As a temporary workaround, we fetch the default here manually and pass that in explicitly.
+    number = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
+    ctx.invoke(stop)
+    ctx.invoke(start, number=number)
 
 
 @verdi_daemon.command(hidden=True)

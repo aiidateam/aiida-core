@@ -453,7 +453,7 @@ Finally instead of running your calculation in the current shell, you can submit
 
 .. code-block:: console
 
-    $ verdi daemon restart --reset
+    $ verdi daemon restart
 
 * Update your launch script to use:
 

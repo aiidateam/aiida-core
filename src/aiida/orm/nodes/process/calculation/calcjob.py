@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, T
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
+from aiida.orm.fields import add_field
 
 from ..process import ProcessNodeCaching
 from .calculation import CalculationNode
@@ -32,7 +33,7 @@ __all__ = ('CalcJobNode',)
 class CalcJobNodeCaching(ProcessNodeCaching):
     """Interface to control caching of a node instance."""
 
-    def _get_objects_to_hash(self) -> List[Any]:
+    def get_objects_to_hash(self) -> List[Any]:
         """Return a list of objects which should be included in the hash.
 
         This method is purposefully overridden from the base `Node` class, because we do not want to include the
@@ -41,7 +42,7 @@ class CalcJobNodeCaching(ProcessNodeCaching):
         anyway in the computation of the hash would mean that the hash of the node would change as soon as the process
         has started and the input files have been written to the repository.
         """
-        objects = super()._get_objects_to_hash()
+        objects = super().get_objects_to_hash()
         objects.pop('repository_hash', None)
         return objects
 

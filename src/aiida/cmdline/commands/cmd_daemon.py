@@ -18,7 +18,6 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
-from aiida.common.warnings import warn_deprecation
 
 
 def validate_daemon_workers(ctx, param, value):
@@ -225,7 +224,8 @@ def restart(ctx, reset, no_wait, timeout):
     """
     if reset:
         echo.echo_deprecated(
-            '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.')
+            '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.'
+        )
     if no_wait:
         echo.echo_deprecated('The `--no-wait` flag is deprecated and no longer has any effect.')
     if timeout is not None:

@@ -989,7 +989,11 @@ class TestNodeCaching:
         node = Data().store()
 
         # monkeypatch `get_objects_to_hash` to raise an fake error
-        monkeypatch.setattr(NodeCaching, 'get_objects_to_hash', lambda _: (_ for _ in ()).throw(exceptions.HashingError('fake hashing error')))
+        monkeypatch.setattr(
+            NodeCaching,
+            'get_objects_to_hash',
+            lambda _: (_ for _ in ()).throw(exceptions.HashingError('fake hashing error')),
+        )
 
         result = node.base.caching.get_hash(ignore_errors=True)
         assert result is None

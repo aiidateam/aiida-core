@@ -80,9 +80,9 @@ class ProcessNodeCaching(NodeCaching):
         """
         super(ProcessNodeCaching, self.__class__).is_valid_cache.fset(self, valid)
 
-    def _get_objects_to_hash(self) -> List[Any]:
+    def get_objects_to_hash(self) -> List[Any]:
         """Return a list of objects which should be included in the hash."""
-        res = super()._get_objects_to_hash()
+        res = super().get_objects_to_hash()
         res.update(
             {
                 'inputs': {

@@ -30,7 +30,7 @@ On the level of the :class:`Process <aiida.engine.processes.process.Process>` an
 * The :meth:`ProcessNodeCaching.is_valid_cache <aiida.orm.nodes.process.process.ProcessNodeCaching.is_valid_cache>` calls :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>`, passing the node itself.
   This can be used in :class:`~aiida.engine.processes.process.Process` subclasses (e.g. in calculation plugins) to implement custom ways of invalidating the cache.
 * The :meth:`ProcessNodeCaching._hash_ignored_inputs <aiida.orm.nodes.process.process.ProcessNodeCaching._hash_ignored_inputs>` attribute lists the inputs that should be ignored when creating the hash.
-  This is checked by the :meth:`ProcessNodeCaching._get_objects_to_hash <aiida.orm.nodes.process.process.ProcessNodeCaching._get_objects_to_hash>` method.
+  This is checked by the :meth:`ProcessNodeCaching.get_objects_to_hash <aiida.orm.nodes.process.process.ProcessNodeCaching.get_objects_to_hash>` method.
 * The :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>` is where the :meth:`exit_codes <aiida.engine.processes.process_spec.ProcessSpec.exit_code>` that have been marked by ``invalidates_cache`` are checked.
 
 

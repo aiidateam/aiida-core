@@ -34,7 +34,7 @@ def workchain_dump_wrapper(**kwargs) -> None:
     sorted by their creation time. The directory tree mirrors the hierarchy obtained when running `verdi process
     status`. For each calculation, input and output files can be found in the corresponding `raw_inputs` and
     `raw_outputs` directories. Additional input files (depending on the type of calculation) are placed in the
-    `node_inputs` folder. Every folder also contains an `aiida_node_metadata.yaml` file with the relevant AiiDA node
+    `node_inputs` folder. Every folder also contains an `.aiida_node_metadata.yaml` file with the relevant AiiDA node
     data.
 
     Note: This is for inspection only and not intended for direct resubmission of the simulations run by the

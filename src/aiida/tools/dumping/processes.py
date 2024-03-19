@@ -40,14 +40,14 @@ class ProcessNodeYamlDumper:
         self.include_extras = include_extras
 
     def dump_yaml(
-        self, process_node: ProcessNode, output_path: Path, output_filename: str = 'aiida_node_metadata.yaml'
+        self, process_node: ProcessNode, output_path: Path, output_filename: str = '.aiida_node_metadata.yaml'
     ) -> None:
         """
         Dump the selected `ProcessNode` properties, attributes, and extras to a yaml file.
 
         :param process_node: The ProcessNode to dump.
         :param output_path: The path to the directory where the yaml file will be saved.
-        :param output_filename: The name of the output yaml file. Defaults to 'aiida_node_metadata.yaml'.
+        :param output_filename: The name of the output yaml file. Defaults to `.aiida_node_metadata.yaml`.
         :return: None
         """
 
@@ -215,9 +215,11 @@ def calcjob_dump(
                 if len(input_node_triple.node.base.repository.list_objects()) > 0 and isinstance(
                     input_node_triple.node, dump_types
                 ):
-                    input_node_path = output_path / Path('node_inputs') / Path(input_node_triple.link_label)
+                    # input_node_path = output_path / Path('node_inputs') / Path(input_node_triple.link_label)
                     # Could also create nested path from name mangling?
-                    # output_path / Path('node_inputs') / Path(*input_node_triple.link_label.split('__'))
+                    input_node_path = (
+                        output_path / Path('node_inputs') / Path(*input_node_triple.link_label.split('__'))
+                    )
 
                     input_node_path.mkdir(parents=True, exist_ok=True)
                     input_node_triple.node.base.repository.copy_tree(input_node_path.resolve())

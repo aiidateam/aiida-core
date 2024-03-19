@@ -768,7 +768,7 @@ INCLUDE_ATTRIBUTES = OverridableOption(
     is_flag=True,
     default=False,
     show_default=True,
-    help='Include attributes in the `aiida_node_metadata.yaml` which is written for every `ProcessNode`.',
+    help='Include attributes in the `.aiida_node_metadata.yaml` which is written for every `ProcessNode`.',
 )
 
 INCLUDE_EXTRAS = OverridableOption(
@@ -777,7 +777,7 @@ INCLUDE_EXTRAS = OverridableOption(
     is_flag=True,
     default=False,
     show_default=True,
-    help='Include extras in the `aiida_node_metadata.yaml` which is written for every `ProcessNode`.',
+    help='Include extras in the `.aiida_node_metadata.yaml` which is written for every `ProcessNode`.',
 )
 
 USE_PREPARE_FOR_SUBMISSION = OverridableOption(

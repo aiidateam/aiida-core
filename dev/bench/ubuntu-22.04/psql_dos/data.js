@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710922233369,
+  "lastUpdate": 1710925457750,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -35504,6 +35504,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.030123",
             "group": "node",
             "extra": "mean: 27.011 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "3.17",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.13",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "69389e0387369d8437e1219487b88430b7b2e679",
+          "message": "Refactor: Abstract message broker functionality (#6303)\n\nRabbitMQ is used as a message broker to allow processes to be\r\ndistributed across multiple daemon workers. Setting up RabbitMQ as a\r\nservice can be a hurdle for users and for simple use cases the\r\nadditional scaling it provides is not always necessary.\r\n\r\nThe idea is to provide a light version of AiiDA that doesn't require a\r\nmessage broker, making it easy to setup and install to allow users to\r\nquickly familiarize themselves with AiiDA before committing to a more\r\nproduction ready setup.\r\n\r\nCurrently, the RabbitMQ functionality is a bit dispersed throughout the\r\ncodebase, making it difficult to make its use optional. Therefore, the\r\nfirst step is to refactor the code and centralize all RabbitMQ specific\r\nfunctionality.\r\n\r\nThe `aiida.brokers` module is introduced, which provides the abstract\r\nclass `Broker`. This is the interface that a message broker, such as\r\nRabbitMQ should implement. The existing RabbitMQ implementation is added\r\nto the `RabbitmqBroker` class. Note that this interface is extremely\r\npreliminary and has not been fleshed out. The main purpose of\r\nabstracting the broker at this point is to allow to run AiiDA without\r\nbroker, not necessarily to provide a complete interface ready to be\r\nimplemented by plugins for different broker services.\r\n\r\nThe `Manager` class now provides the `get_broker` method which will load\r\nthe broker instance based on the plugin that is defined by the profile.\r\nThis is an entry point that should be registered in the `aiida.brokers`\r\ngroup. The broker is optional, in which case the profile can specify\r\n`None` for the broker backend. In this case, `Manager.get_broker`\r\nreturns `None` so the caller should check explicitly for this case\r\nbefore attempting to use the broker for a given profile.\r\n\r\nThese changes are just a first refactoring that don't change any\r\nfunctionality and everything is backwards compatible. In the future,\r\nfunctionality can be added to allow creating profiles that do not define\r\na broker. These can then be used to run processes locally in the same\r\nPython interpreter in which they are launched.",
+          "timestamp": "2024-03-20T09:55:52+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/69389e0387369d8437e1219487b88430b7b2e679",
+          "distinct": true,
+          "tree_id": "1ac703d526aec11e53d61532d785d225d08a0371"
+        },
+        "date": 1710925453361,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.3219968621690485,
+            "unit": "iter/sec",
+            "range": "stddev: 0.051091",
+            "group": "import-export",
+            "extra": "mean: 301.02 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.2313587520301286,
+            "unit": "iter/sec",
+            "range": "stddev: 0.051881",
+            "group": "import-export",
+            "extra": "mean: 309.47 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.428055102217247,
+            "unit": "iter/sec",
+            "range": "stddev: 0.059231",
+            "group": "import-export",
+            "extra": "mean: 225.83 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.689048985204007,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0021842",
+            "group": "import-export",
+            "extra": "mean: 213.26 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.4902352378168957,
+            "unit": "iter/sec",
+            "range": "stddev: 0.083088",
+            "group": "engine",
+            "extra": "mean: 286.51 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.8155850846751708,
+            "unit": "iter/sec",
+            "range": "stddev: 0.018255",
+            "group": "engine",
+            "extra": "mean: 1.2261 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.9393017239794551,
+            "unit": "iter/sec",
+            "range": "stddev: 0.020814",
+            "group": "engine",
+            "extra": "mean: 1.0646 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.21586256865400144,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10866",
+            "group": "engine",
+            "extra": "mean: 4.6326 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.24023564215024995,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11589",
+            "group": "engine",
+            "extra": "mean: 4.1626 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.724991091983712,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0086685",
+            "group": "engine",
+            "extra": "mean: 366.97 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5597092469956583,
+            "unit": "iter/sec",
+            "range": "stddev: 0.041099",
+            "group": "engine",
+            "extra": "mean: 1.7866 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.631013229408597,
+            "unit": "iter/sec",
+            "range": "stddev: 0.041505",
+            "group": "engine",
+            "extra": "mean: 1.5848 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.1675487217827079,
+            "unit": "iter/sec",
+            "range": "stddev: 0.039961",
+            "group": "engine",
+            "extra": "mean: 5.9684 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.18631142680233326,
+            "unit": "iter/sec",
+            "range": "stddev: 0.065326",
+            "group": "engine",
+            "extra": "mean: 5.3674 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 424.97292343045604,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00019743",
+            "group": "node",
+            "extra": "mean: 2.3531 msec\nrounds: 253"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 77.1631698291696,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00039949",
+            "group": "node",
+            "extra": "mean: 12.960 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 54.41759977147282,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00040477",
+            "group": "node",
+            "extra": "mean: 18.376 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 273.9339352760094,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017045",
+            "group": "node",
+            "extra": "mean: 3.6505 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 45.23109244729316,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010035",
+            "group": "node",
+            "extra": "mean: 22.109 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 46.56900805104517,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012333",
+            "group": "node",
+            "extra": "mean: 21.474 msec\nrounds: 100"
           }
         ]
       }

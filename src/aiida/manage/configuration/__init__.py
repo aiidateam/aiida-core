@@ -8,11 +8,10 @@
 ###########################################################################
 # ruff: noqa: E402
 """Modules related to the configuration of an AiiDA instance."""
+from __future__ import annotations
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .migrations import *
 from .options import *
 from .profile import *
@@ -196,31 +195,41 @@ def profile_context(profile: Optional[str] = None, allow_switch=False) -> 'Profi
 
 def create_profile(
     config: 'Config',
-    storage_cls,
     *,
+    storage_backend: str,
+    storage_config: dict[str, Any],
+    broker_backend: str | None = None,
+    broker_config: dict[str, Any] | None = None,
     name: str,
     email: str,
     first_name: Optional[str] = None,
     last_name: Optional[str] = None,
     institution: Optional[str] = None,
-    **kwargs,
 ) -> Profile:
     """Create a new profile, initialise its storage and create a default user.
 
     :param config: The config instance.
-    :param storage_cls: The storage class obtained through loading the entry point from ``aiida.storage`` group.
     :param name: Name of the profile.
     :param email: Email for the default user.
     :param first_name: First name for the default user.
     :param last_name: Last name for the default user.
     :param institution: Institution for the default user.
-    :param kwargs: Arguments to initialise instance of the selected storage implementation.
+    :param storage_backend: The entry point to the :class:`aiida.orm.implementation.storage_backend.StorageBackend`
+        implementation to use for the storage.
+    :param storage_config: The configuration necessary to initialise and connect to the storage backend.
+    :param broker_backend: The entry point to the :class:`aiida.brokers.Broker` implementation to use for the broker.
+    :param broker_config: The configuration necessary to initialise and connect to the broker.
     """
     from aiida.manage import get_manager
     from aiida.orm import User
 
-    storage_config = storage_cls.Model(**{k: v for k, v in kwargs.items() if v is not None}).model_dump()
-    profile: Profile = config.create_profile(name=name, storage_cls=storage_cls, storage_config=storage_config)
+    profile: Profile = config.create_profile(
+        name=name,
+        storage_backend=storage_backend,
+        storage_config=storage_config,
+        broker_backend=broker_backend,
+        broker_config=broker_config,
+    )
 
     with profile_context(profile.name, allow_switch=True):
         manager = get_manager()

@@ -152,8 +152,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     _CLS_COLLECTION = NodeCollection
     _CLS_NODE_LINKS = NodeLinks
     _CLS_NODE_CACHING = NodeCaching
-    CACHE_VERSION: str | None = None
-    _CLS_KEY_CACHE_VERSION = '_aiida_cache_version'
 
     __plugin_type_string: ClassVar[str]
     __query_type_string: ClassVar[str]
@@ -530,9 +528,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             # us to set `clean=False` if we are storing normally, since the values will already have been cleaned
             self._backend_entity.clean_values()
 
-            # Store the cache version in the node attributes, which needs to be included in the calculation of the hash.
-            self._set_cache_version()
-
             # Retrieve the cached node if ``should_use_cache`` returns True
             same_node = self.base.caching._get_same_node() if self.base.caching.should_use_cache() else None
 
@@ -561,10 +556,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         self.base.caching.rehash()
 
         return self
-
-    def _set_cache_version(self):
-        """Store the ``CACHE_VERSION`` attribute in the node's attributes."""
-        return self.base.attributes.set(self._CLS_KEY_CACHE_VERSION, self.CACHE_VERSION)
 
     def _verify_are_parents_stored(self) -> None:
         """Verify that all `parent` nodes are already stored.

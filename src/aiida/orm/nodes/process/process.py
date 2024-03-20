@@ -8,7 +8,6 @@
 ###########################################################################
 """Module with `Node` sub class for processes."""
 import enum
-import warnings
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from plumpy.process_states import ProcessState
@@ -186,15 +185,6 @@ class ProcessNode(Sealable, Node):
             cls.PROCESS_STATE_KEY,
             cls.PROCESS_STATUS_KEY,
         )
-
-    def _set_cache_version(self):
-        """Store the ``CACHE_VERSION`` attribute in the node's attributes."""
-        try:
-            process_class = self.process_class
-        except ValueError:
-            warnings.warn('Could not retrieve the process class to determine the ``CACHE_VERSION``.', UserWarning)
-        else:
-            self.base.attributes.set(self._CLS_KEY_CACHE_VERSION, getattr(process_class, 'CACHE_VERSION', None))
 
     __qb_fields__ = [
         add_field(

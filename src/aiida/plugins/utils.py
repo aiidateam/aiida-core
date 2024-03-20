@@ -24,6 +24,7 @@ __all__ = ('PluginVersionProvider',)
 KEY_VERSION_ROOT: str = 'version'
 KEY_VERSION_CORE: str = 'core'  # The version of `aiida-core`
 KEY_VERSION_PLUGIN: str = 'plugin'  # The version of the plugin top level module, e.g. `aiida-quantumespresso`
+KEY_VERSION_CACHE: str = 'cache'  # Optional key that can be controlled by plugins to effectively reset the cache
 
 
 class PluginVersionProvider:
@@ -75,6 +76,7 @@ class PluginVersionProvider:
         self._cache[plugin] = {
             KEY_VERSION_ROOT: {
                 KEY_VERSION_CORE: version_core,
+                KEY_VERSION_CACHE: getattr(plugin, 'CACHE_VERSION', None),
             }
         }
 

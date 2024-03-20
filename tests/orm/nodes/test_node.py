@@ -1017,26 +1017,6 @@ class TestNodeCaching:
         node_data.store()
         assert node_int.base.caching.get_hash() != node_data.base.caching.get_hash()
 
-    def test_cache_version_attribute(self, entry_points):
-        """Test that the ``Node.CACHE_VERSION`` attribute can be used to control hashes.
-
-        If the implementation of a ``Data`` or ``CalcJob`` plugin changes significantly, a plugin developer can change
-        the ``CACHE_VERSION`` attribute to cause the hash to be changed, ensuring old completed instances of the
-        class no longer to be valid cache sources.
-        """
-
-        class CustomData(Data):
-            pass
-
-        entry_points.add(CustomData, 'aiida.data:core.custom')
-
-        node_a = CustomData().store()
-
-        CustomData.CACHE_VERSION = 'v1.0'
-
-        node_b = CustomData().store()
-        assert node_a.base.caching.get_hash() != node_b.base.caching.get_hash()
-
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_iter_repo_keys():

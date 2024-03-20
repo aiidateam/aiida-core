@@ -293,68 +293,57 @@ This can be useful to temporarily enable deprecation warnings for a single comma
 
 Isolating multiple instances
 ----------------------------
-An AiiDA instance is defined as the installed source code plus the configuration folder that stores the configuration files with all the configured profiles.
-It is possible to run multiple AiiDA instances on a single machine, simply by isolating the code and configuration in a virtual environment.
 
-To isolate the code, make sure to install AiiDA into a virtual environment, e.g., with conda or venv, as described :ref:`here <intro:get_started:setup>`.
-Whenever you activate this particular environment, you will be running the particular version of AiiDA (and all the plugins) that you installed specifically for it.
-
-This is separate from the configuration of AiiDA, which is stored in the configuration directory which is always named ``.aiida`` and by default is stored in the home directory.
-Therefore, the default path of the configuration directory is ``~/.aiida``.
-By default, each AiiDA instance (each installation) will store associated profiles in this folder.
-A best practice is to always separate the profiles together with the code to which they belong.
-The typical approach is to place the configuration folder in the virtual environment itself and have it automatically selected whenever the environment is activated.
-
-The location of the AiiDA configuration folder can be controlled with the ``AIIDA_PATH`` environment variable.
-This allows us to change the configuration folder automatically, by adding the following lines to the activation script of a virtual environment.
-For example, if the path of your virtual environment is ``/home/user/.virtualenvs/aiida``, add the following line:
-
-.. code:: bash
-
-    $ export AIIDA_PATH='/home/user/.virtualenvs/aiida'
-
-Make sure to reactivate the virtual environment, if it was already active, for the changes to take effect.
+An AiiDA instance is defined by its configuration directory, which is always named ``.aiida``.
+It contains the configuration file, which holds all the profile information, daemon log files, and `PID files <https://en.wikipedia.org/wiki/Process_identifier>`_.
 
 .. note::
 
-   For ``conda``, create a directory structure ``etc/conda/activate.d`` in the root folder of your conda environment (e.g. ``/home/user/miniconda/envs/aiida``), and place a file ``aiida-init.sh`` in that folder which exports the ``AIIDA_PATH``.
+    Depending on the storage backend, a profile's data is typically also stored in this directory.
+    However, this is not necessarily always the case, as often the data location can be configured, and some storage backends use a database service that stores the data elsewhere on disk.
 
-You can test that everything works by first echoing the environment variable with ``echo $AIIDA_PATH`` to confirm it prints the correct path.
-Finally, you can check that AiiDA know also properly realizes the new location for the configuration folder by calling ``verdi profile list``.
-This should display the current location of the configuration directory:
+The location of the configuration directory is determined as follows:
 
-.. code:: bash
+1. First, the ``AIIDA_PATH`` environment variables is checked, which can be a colon-separated list of directories.
+The first directory that points to an existing configuration directory is selected.
+If no existing directories are found, the last directory defined in the variable is used and the configuration directory is created there if it did not already exist.
+2. If the ``AIIDA_PATH`` is not defined, the current working directory is checked, going up the hierarchy until the first existing configuration directory is encountered.
+3. If no existing configuration directory is found yet, the ``.aiida`` directory in the user's home folder is used, and is created automatically if it does not already exist.
 
-    Info: configuration folder: /home/user/.virtualenvs/aiida/.aiida
-    Critical: configuration file /home/user/.virtualenvs/aiida/.aiida/config.json does not exist
+Examples
+........
 
-The second line you will only see if you haven't yet setup a profile for this AiiDA instance.
-For information on setting up a profile, refer to :ref:`creating profiles<how-to:installation:profile>`.
+Consider the following directory structure::
 
-Besides a single path, the value of ``AIIDA_PATH`` can also be a colon-separated list of paths.
-AiiDA will go through each of the paths and check whether they contain a configuration directory, i.e., a folder with the name ``.aiida``.
-The first configuration directory that is encountered will be used as the configuration directory.
-If no configuration directory is found, one will be created in the last path that was considered.
-For example, the directory structure in your home folder ``~/`` might look like this::
-
-    .
+    ~
     ├── .aiida
-    └── project_a
-        ├── .aiida
+    ├── project_a
+    │   ├── .aiida
+    │   └── subfolder
+    │       └── .aiida
+    ├── project_b
+    │   ├── .aiida
+    │   └── subfolder
+    └── project_c
         └── subfolder
 
-If you leave the ``AIIDA_PATH`` variable unset, the default location ``~/.aiida`` will be used.
-However, if you set:
+The following table shows the configuration directory that is selected given a certain ``AIIDA_PATH`` variable and the current working directory:
 
-.. code:: bash
++--------------------------------------------------------------+----------------------------------+
+| Variables                                                    | Configuration directory          |
++==============================================================+==================================+
+| ``AIIDA_PATH = '~/project_b/'``                              | ``~/project_b/.aiida``           |
+| ``AIIDA_PATH = '~/project_b/.aiida'``                        | ``~/project_b/.aiida``           |
+| ``AIIDA_PATH = '~/project_a/.aiida:~/project_b/.aiida'``     | ``~/project_a/.aiida``           |
+| ``AIIDA_PATH = '~/project_a/subfolder:~/project_a/.aiida:'`` | ``~/project_a/subfolder/.aiida`` |
+| ``CWD = '~/project_a/subfolder``                             | ``~/project_a/subfolder/.aiida`` |
+| ``CWD = '~/project_b/subfolder``                             | ``~/project_b/.aiida``           |
+| ``CWD = '~/project_c/subfolder``                             | ``~/.aiida``                     |
++--------------------------------------------------------------+----------------------------------+
 
-    $ export AIIDA_PATH='~/project_a:'
+.. tip::
 
-the configuration directory ``~/project_a/.aiida`` will be used.
-
-.. warning::
-
-    If there was no ``.aiida`` directory in ``~/project_a``, AiiDA would have created it for you, so make sure to set the ``AIIDA_PATH`` correctly.
+    The output of ``verdi status`` contains the location of the matched configuration directory.
 
 
 .. _how-to:installation:configure:daemon-as-service:

@@ -57,6 +57,18 @@ In order to figure out why a calculation is *not* being reused, the :meth:`~aiid
         }
     ]
 
+.. versionchanged:: 2.6
+    Version information removed from hash computation
+
+    Up until v2.6, the objects used to compute the hash of a ``ProcessNode`` included the ``version`` attribute.
+    This attribute stores a dictionary of the installed versions of the ``aiida-core`` and plugin packages (if relevant) at the time of creation.
+    When the caching mechanism was first introduced, this information was added intentionally to the hash to err on the safe side and prevent false positives as much as possible.
+    This turned out to be too limiting, however, as this means that each time ``aiida-core`` or a plugin package's version is updated, all existing valid cache sources are essentially invalidated.
+    Even if an identical process were to be run, its hash would be different, solely because the version information differs.
+    Therefore, as of v2.6, the version information is no longer part of the hash computation.
+    The most likely source for false positives due to changes in code are going to be ``CalcJob`` and ``Parser`` plugins.
+    See :ref:`this section <topics:provenance:caching:control-hashing:calcjobs-parsers>` on a mechanism to control the caching of ``CalcJob`` plugins.
+
 
 .. _topics:provenance:caching:control-hashing:
 
@@ -81,6 +93,37 @@ Process nodes
 
 The hashing of *Process nodes* is fixed and can only be influenced indirectly via the hashes of their inputs.
 For implementation details of the hashing mechanism for process nodes, see :ref:`here <internal_architecture:engine:caching>`.
+
+
+.. _topics:provenance:caching:control-hashing:calcjobs-parsers:
+
+Calculation jobs and parsers
+............................
+
+.. versionadded:: 2.6
+    Resetting the calculation job cache
+
+    When the implementation of a ``CalcJob`` or ``Parser`` plugin changes significantly, it can be the case that for identical inputs, significantly different outputs are expected
+    The following non-exhaustive list provides some examples:
+
+    * The ``CalcJob.prepare_for_submission`` changes input files that are written independent of input nodes
+    * The ``Parser`` adds an output node for identical output files produced by the calculation
+    * The ``Parser`` changes an existing output node even for identical output files produced by the calculation
+
+    In this case, existing completed nodes of the ``CalcJob`` plugin in question should be invalidated as a cache source, because they could constitute false positives.
+    For that reason, the ``CalcJob`` and ``Parser`` base classes each have the ``CACHE_VERSION`` class attribute.
+    By default it is set to ``None``, but when set to an integer, it is included into the computed hash for its nodes.
+    This allows a plugin developer to invalidate the cache of existing nodes by simply incrementing this attribute, for example:
+
+    .. code-block:: python
+
+        class SomeCalcJob(CalcJob):
+
+            CACHE_VERSION = 1
+
+    Note that the exact value of the ``CACHE_VERSION`` does not really matter, all that matters is that changing it, invalidates the existing cache.
+    To keep things simple, it is recommended to treat it as a counter and simply increment it by 1 each time.
+
 
 .. _topics:provenance:caching:control-caching:
 

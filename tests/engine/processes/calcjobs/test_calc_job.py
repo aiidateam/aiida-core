@@ -27,9 +27,10 @@ from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.utils import instantiate_process
-from aiida.plugins import CalculationFactory
+from aiida.plugins import CalculationFactory, ParserFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
+ArithmeticAddParser = ParserFactory('core.arithmetic.add')
 
 
 def raise_exception(exception, *args, **kwargs):
@@ -1468,3 +1469,30 @@ def test_file_copy_operation_order_invalid(fixture_sandbox, runner, aiida_local_
     process = instantiate_process(runner, FileCopyOperationOrderInvalid, **inputs)
     with pytest.raises(exceptions.PluginInternalError, match=r'calc_info.file_copy_operation_order is not a list .*'):
         process.presubmit(fixture_sandbox)
+
+
+def test_cache_version_attribute(arithmetic_add_inputs, monkeypatch):
+    """Test that the ``CalcJob.CACHE_VERSION`` and ``Parser.CACHE_VERSION`` attributes can be used to control hashes.
+
+    If the implementation of a ``CalcJob`` or ``Parser`` plugin changes significantly, a plugin developer can change
+    the ``CACHE_VERSION`` attribute to cause the hash to be changed, ensuring old completed instances of the class no
+    longer to be valid cache sources.
+    """
+    _, node_a = launch.run_get_node(ArithmeticAddCalculation, arithmetic_add_inputs)
+
+    monkeypatch.setattr(ArithmeticAddCalculation, 'CACHE_VERSION', 1)
+
+    _, node_b = launch.run_get_node(ArithmeticAddCalculation, arithmetic_add_inputs)
+    assert node_b.base.attributes.get(ArithmeticAddCalculation.KEY_CACHE_VERSION) == {'calc_job': 1}
+    assert node_a.base.caching.get_hash() != node_b.base.caching.get_hash()
+    assert not node_b.base.caching.is_created_from_cache
+
+    monkeypatch.setattr(ArithmeticAddParser, 'CACHE_VERSION', 2)
+
+    _, node_c = launch.run_get_node(ArithmeticAddCalculation, arithmetic_add_inputs)
+    assert node_c.base.attributes.get(ArithmeticAddCalculation.KEY_CACHE_VERSION) == {
+        'calc_job': 1,
+        'parser': 2,
+    }
+    assert node_b.base.caching.get_hash() != node_c.base.caching.get_hash()
+    assert not node_c.base.caching.is_created_from_cache

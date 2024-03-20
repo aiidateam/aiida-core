@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi process` command."""
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -14,6 +15,9 @@ from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS, capture_logging
 from aiida.manage import get_manager
+from aiida.orm.nodes.process.process import ProcessNode
+from aiida.restapi.resources import ProcessNode
+from aiida.tools.dumping.processes import process_dump
 
 REPAIR_INSTRUCTIONS = """\
 If one ore more processes are unreachable, you can run the following commands to try and repair them:
@@ -128,7 +132,7 @@ def process_list(
     echo.echo(f'\nTotal results: {len(projected)}\n')
 
     if 'cached' in project:
-        echo.echo_report('\u267B Processes marked with check-mark were not run but taken from the cache.')
+        echo.echo_report('\u267b Processes marked with check-mark were not run but taken from the cache.')
         echo.echo_report('Add the option `-P pk cached_from` to the command to display cache source.')
 
     print_last_process_state_change()
@@ -466,3 +470,21 @@ def process_repair(ctx, manager, dry_run):
         if pid not in set_process_tasks:
             process_controller.continue_process(pid)
             echo.echo_report(f'Revived process `{pid}`')
+
+
+@verdi_process.command('dump')
+@arguments.PROCESS()
+@options.DUMP_PATH()
+@options.NO_NODE_INPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.USE_PREPARE_FOR_SUBMISSION()
+@options.OVERWRITE()
+def process_dump_wrapper(**kwargs) -> None:
+    """Dump files involved in the execution of a process.
+
+    Note: This is just a convenience method, and dumping should be achieved via the designated `verdi workchain dump`
+    and `verdi calcjob dump` commands.
+    """
+
+    process_dump(process_type=ProcessNode, **kwargs)

@@ -7,6 +7,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
+
+import pathlib
+
 import click
 
 from aiida.common.log import LOG_LEVELS, configure_logging
@@ -54,6 +57,7 @@ __all__ = (
     'DICT_FORMAT',
     'DICT_KEYS',
     'DRY_RUN',
+    'DUMP_PATH',
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
@@ -65,6 +69,8 @@ __all__ = (
     'GROUP_CLEAR',
     'HOSTNAME',
     'IDENTIFIER',
+    'INCLUDE_ATTRIBUTES',
+    'INCLUDE_EXTRAS',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
@@ -72,10 +78,12 @@ __all__ = (
     'MOST_RECENT_NODE',
     'NODE',
     'NODES',
+    'NO_NODE_INPUTS',
     'NON_INTERACTIVE',
     'OLDER_THAN',
     'ORDER_BY',
     'ORDER_DIRECTION',
+    'OVERWRITE',
     'PAST_DAYS',
     'PAUSED',
     'PORT',
@@ -101,6 +109,7 @@ __all__ = (
     'USER_FIRST_NAME',
     'USER_INSTITUTION',
     'USER_LAST_NAME',
+    'USE_PREPARE_FOR_SUBMISSION',
     'VERBOSITY',
     'VISUALIZATION_FORMAT',
     'WAIT',
@@ -741,4 +750,59 @@ PRINT_TRACEBACK = OverridableOption(
     '--print-traceback',
     is_flag=True,
     help='Print the full traceback in case an exception is raised.',
+)
+
+DUMP_PATH = OverridableOption(
+    '-p',
+    '--path',
+    type=click.Path(path_type=pathlib.Path),
+    default=pathlib.Path(),
+    show_default=False,
+    help='The main directory to save the files involved in the `WorkChain` or `CalcJob`.',
+)
+
+NO_NODE_INPUTS = OverridableOption(
+    '--no-node-inputs',
+    '-n',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Turn off dumping of the input nodes of the `CalcJob`(s).',
+)
+
+INCLUDE_ATTRIBUTES = OverridableOption(
+    '--include-attributes',
+    '-a',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Include attributes in the `aiida_node_metadata.yaml` which is written for every `ProcessNode`.',
+)
+
+INCLUDE_EXTRAS = OverridableOption(
+    '--include-extras',
+    '-e',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Include extras in the `aiida_node_metadata.yaml` which is written for every `ProcessNode`.',
+)
+
+USE_PREPARE_FOR_SUBMISSION = OverridableOption(
+    '--use-prepare-for-submission',
+    '-u',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="""Use the `prepare_for_submission` method of the respective `CalcJob`(s). Note: this requires the
+    corresponding aiida-plugin to be installed.""",
+)
+
+OVERWRITE = OverridableOption(
+    '--overwrite',
+    '-o',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="""Overwrite directory if it already exists.""",
 )

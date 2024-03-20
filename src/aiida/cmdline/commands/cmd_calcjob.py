@@ -15,6 +15,8 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.cmdline.utils import decorators, echo
+from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
+from aiida.tools.dumping.processes import process_dump
 
 
 @verdi.group('calcjob')
@@ -347,3 +349,19 @@ def get_remote_and_path(calcjob, path=None):
         f'nor does its associated process class `{calcjob.process_class.__class__.__name__}`\n'
         'Please specify a path explicitly.'
     )
+
+
+@verdi_calcjob.command('dump')
+@arguments.PROCESS()
+@options.DUMP_PATH()
+@options.NO_NODE_INPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.USE_PREPARE_FOR_SUBMISSION()
+@options.OVERWRITE()
+def calcjob_dump_wrapper(**kwargs) -> None:
+    """Dump files involved in the execution of a `CalcJob`.
+
+    Note: This is for inspection only and does not guarantee that a direct resubmission of the simulation is possible.
+    """
+    process_dump(process_type=CalcJobNode, **kwargs)

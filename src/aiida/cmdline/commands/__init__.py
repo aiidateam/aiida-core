@@ -35,4 +35,5 @@ from aiida.cmdline.commands import (
     cmd_status,
     cmd_storage,
     cmd_user,
+    cmd_workchain,
 )

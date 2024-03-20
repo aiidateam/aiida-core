@@ -28,17 +28,17 @@ class NodeCaching:
         """Initialize the caching interface."""
         self._node = node
 
-    def get_hash(self, ignore_errors: bool = True, **kwargs: t.Any) -> str | None:
-        """Return the hash for this node based on its attributes.
+    def compute_hash(self, ignore_errors: bool = True, **kwargs: t.Any) -> str | None:
+        """Return the computed hash for this node based on its attributes.
 
         :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError`` (logging the exception)
         """
         if not self._node.is_stored:
             raise exceptions.InvalidOperation('You can get the hash only after having stored the node')
 
-        return self._get_hash(ignore_errors=ignore_errors, **kwargs)
+        return self._compute_hash(ignore_errors=ignore_errors, **kwargs)
 
-    def _get_hash(self, ignore_errors: bool = True, **kwargs: t.Any) -> str | None:
+    def _compute_hash(self, ignore_errors: bool = True, **kwargs: t.Any) -> str | None:
         """Return the hash for this node based on its attributes.
 
         This will always work, even before storing.
@@ -81,9 +81,18 @@ class NodeCaching:
             'computer_uuid': self._node.computer.uuid if self._node.computer is not None else None,
         }
 
+    def get_hash(self) -> str | None:
+        """Return the hash that was computed and stored for this node or ``None``.
+
+        This does not recompute the hash but simply returns the hash that was computed when the node was stored. If the
+        hash was reset, using :meth:`aiida.orm.nodes.caching.NodeCaching.clear_hash` for example, it will return
+        ``None``.
+        """
+        return self._node.base.extras.get(self._HASH_EXTRA_KEY, None)
+
     def rehash(self) -> None:
         """Regenerate the stored hash of the Node."""
-        self._node.base.extras.set(self._HASH_EXTRA_KEY, self.get_hash())
+        self._node.base.extras.set(self._HASH_EXTRA_KEY, self.compute_hash())
 
     def clear_hash(self) -> None:
         """Sets the stored hash of the Node to None."""
@@ -116,7 +125,7 @@ class NodeCaching:
     def _get_same_node(self) -> 'Node' | None:
         """Returns a stored node from which the current Node can be cached or None if it does not exist
 
-        If a node is returned it is a valid cache, meaning its `_aiida_hash` extra matches `self.get_hash()`.
+        If a node is returned it is a valid cache, meaning its `_aiida_hash` extra matches `self.compute_hash()`.
         If there are multiple valid matches, the first one is returned.
         If no matches are found, `None` is returned.
 
@@ -133,7 +142,7 @@ class NodeCaching:
     def get_all_same_nodes(self) -> list['Node']:
         """Return a list of stored nodes which match the type and hash of the current node.
 
-        All returned nodes are valid caches, meaning their `_aiida_hash` extra matches `self.get_hash()`.
+        All returned nodes are valid caches, meaning their `_aiida_hash` extra matches `self.compute_hash()`.
 
         Note: this can be called only after storing a Node (since at store time attributes will be cleaned with
         `clean_value` and the hash should become idempotent to the action of serialization/deserialization)
@@ -149,7 +158,7 @@ class NodeCaching:
         if not allow_before_store and not self._node.is_stored:
             raise exceptions.InvalidOperation('You can get the hash only after having stored the node')
 
-        node_hash = self._get_hash()
+        node_hash = self._compute_hash()
 
         if not node_hash or not self._node._cachable:
             return iter(())

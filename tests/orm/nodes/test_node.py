@@ -983,15 +983,15 @@ class TestNodeCaching:
         assert data.base.caching.get_hash() == clone.base.caching.get_hash()
 
     def test_hashing_errors(self, aiida_caplog):
-        """Tests that ``get_hash`` fails in an expected manner."""
+        """Tests that ``compute_hash`` fails in an expected manner."""
         node = Data().store()
         node.__module__ = 'unknown'  # this will inhibit package version determination
-        result = node.base.caching.get_hash(ignore_errors=True)
+        result = node.base.caching.compute_hash(ignore_errors=True)
         assert result is None
         assert aiida_caplog.record_tuples == [(node.logger.name, logging.ERROR, 'Node hashing failed')]
 
         with pytest.raises(exceptions.HashingError, match='package version could not be determined'):
-            result = node.base.caching.get_hash(ignore_errors=False)
+            result = node.base.caching.compute_hash(ignore_errors=False)
         assert result is None
 
     def test_uuid_equality_fallback(self):

@@ -39,7 +39,7 @@ def _docker_service_wait(docker_services):
             output = docker_compose.execute('exec -T aiida verdi status').decode().strip()
         except Exception:
             return False
-        return 'Connected to RabbitMQ' in output and 'Daemon is running' in output
+        return '✔ broker:' in output and 'Daemon is running' in output
 
     docker_services.wait_until_responsive(
         timeout=600.0,

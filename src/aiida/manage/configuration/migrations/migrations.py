@@ -139,7 +139,7 @@ class AddMessageBroker(SingleMigration):
     up_compatible = 3
 
     def upgrade(self, config: ConfigType) -> None:
-        from aiida.manage.external.rmq import BROKER_DEFAULTS
+        from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
 
         defaults = [
             ('broker_protocol', BROKER_DEFAULTS.protocol),

@@ -25,7 +25,7 @@ def test_status(run_cli_command):
     assert 'The daemon is not running' in result.output
     assert result.exit_code is ExitCode.SUCCESS.value
 
-    for string in ['config', 'profile', 'postgres', 'rabbitmq', 'daemon']:
+    for string in ['config', 'profile', 'postgres', 'broker', 'daemon']:
         assert string in result.output
 
     assert __version__ in result.output

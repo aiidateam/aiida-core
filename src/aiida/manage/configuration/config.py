@@ -21,7 +21,7 @@ import io
 import json
 import os
 import uuid
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import (
     BaseModel,
@@ -38,10 +38,7 @@ from aiida.common.log import AIIDA_LOGGER, LogLevels
 from .options import Option, get_option, get_option_names, parse_option
 from .profile import Profile
 
-if TYPE_CHECKING:
-    from aiida.orm.implementation.storage_backend import StorageBackend
-
-LOGGER = AIIDA_LOGGER.getChild(__file__)
+LOGGER = AIIDA_LOGGER.getChild('manage.configuration.config')
 
 
 class ConfigVersionSchema(BaseModel, defer_build=True):
@@ -453,53 +450,74 @@ class Config:
 
         return self._profiles[name]
 
-    def create_profile(self, name: str, storage_cls: Type['StorageBackend'], storage_config: dict[str, str]) -> Profile:
+    def create_profile(
+        self,
+        name: str,
+        storage_backend: str,
+        storage_config: dict[str, Any],
+        broker_backend: str | None = None,
+        broker_config: dict[str, Any] | None = None,
+        is_test_profile: bool = False,
+    ) -> Profile:
         """Create a new profile and initialise its storage.
 
         :param name: The profile name.
-        :param storage_cls: The :class:`aiida.orm.implementation.storage_backend.StorageBackend` implementation to use.
+        :param storage_backend: The entry point to the :class:`aiida.orm.implementation.storage_backend.StorageBackend`
+            implementation to use for the storage.
         :param storage_config: The configuration necessary to initialise and connect to the storage backend.
+        :param broker_backend: The entry point to the :class:`aiida.brokers.Broker` implementation to use for the
+            message broker.
+        :param broker_config: The configuration necessary to initialise and connect to the broker.
         :returns: The created profile.
         :raises ValueError: If the profile already exists.
-        :raises TypeError: If the ``storage_cls`` is not a subclass of
+        :raises TypeError: If the ``storage_backend`` is not a subclass of
             :class:`aiida.orm.implementation.storage_backend.StorageBackend`.
-        :raises EntryPointError: If the ``storage_cls`` does not have an associated entry point.
+        :raises EntryPointError: If the ``storage_backend`` does not have an associated entry point.
         :raises StorageMigrationError: If the storage cannot be initialised.
         """
+        from aiida.brokers import Broker
         from aiida.orm.implementation.storage_backend import StorageBackend
-        from aiida.plugins.entry_point import get_entry_point_from_class
+        from aiida.plugins.entry_point import load_entry_point
 
         if name in self.profile_names:
             raise ValueError(f'The profile `{name}` already exists.')
 
-        if not issubclass(storage_cls, StorageBackend):
-            raise TypeError(
-                f'The `storage_cls={storage_cls}` is not subclass of `aiida.orm.implementationStorageBackend`.'
-            )
+        try:
+            storage_cls = load_entry_point('aiida.storage', storage_backend)
+        except EntryPointError as exception:
+            raise ValueError(f'The entry point `{storage_backend}` could not be loaded.') from exception
+        else:
+            if not issubclass(storage_cls, StorageBackend):
+                raise TypeError(
+                    f'The `storage_backend={storage_backend}` is not a subclass of '
+                    '`aiida.orm.implementation.storage_backend.StorageBackend`.'
+                )
 
-        _, storage_entry_point = get_entry_point_from_class(storage_cls.__module__, storage_cls.__name__)
+        storage_config = storage_cls.Model(**(storage_config or {})).model_dump()
 
-        if storage_entry_point is None:
-            raise EntryPointError(f'`{storage_cls}` does not have a registered entry point.')
+        if broker_backend is not None:
+            try:
+                broker_cls = load_entry_point('aiida.brokers', broker_backend)
+            except EntryPointError as exception:
+                raise ValueError(f'The entry point `{broker_backend}` could not be loaded.') from exception
+            else:
+                if not issubclass(broker_cls, Broker):
+                    raise TypeError(
+                        f'The `broker_backend={broker_backend}` is not a subclass of `aiida.brokers.broker.Broker`.'
+                    )
 
         profile = Profile(
             name,
             {
                 'storage': {
-                    'backend': storage_entry_point.name,
+                    'backend': storage_backend,
                     'config': storage_config,
                 },
                 'process_control': {
-                    'backend': 'rabbitmq',
-                    'config': {
-                        'broker_protocol': 'amqp',
-                        'broker_username': 'guest',
-                        'broker_password': 'guest',
-                        'broker_host': '127.0.0.1',
-                        'broker_port': 5672,
-                        'broker_virtual_host': '',
-                    },
+                    'backend': broker_backend,
+                    'config': broker_config,
                 },
+                'test_profile': is_test_profile,
             },
         )
 

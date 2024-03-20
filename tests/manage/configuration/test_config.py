@@ -19,8 +19,11 @@ from aiida.manage.configuration import Profile, settings
 from aiida.manage.configuration.config import Config
 from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 from aiida.manage.configuration.options import get_option
-from aiida.orm.implementation.storage_backend import StorageBackend
 from aiida.storage.sqlite_temp import SqliteTempBackend
+
+
+class InvalidBaseStorage:
+    pass
 
 
 @pytest.fixture
@@ -476,7 +479,7 @@ def test_delete_profile(config_with_profile, profile_factory):
     assert profile_name not in config_on_disk.profile_names
 
 
-def test_create_profile_raises(config_with_profile, monkeypatch):
+def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):
     """Test the ``create_profile`` method when it raises."""
     config = config_with_profile
     profile_name = uuid.uuid4().hex
@@ -485,21 +488,19 @@ def test_create_profile_raises(config_with_profile, monkeypatch):
         raise exceptions.StorageMigrationError()
 
     monkeypatch.setattr(SqliteTempBackend, 'initialise', raise_storage_migration_error)
-
-    class UnregisteredStorageBackend(StorageBackend):
-        pass
+    entry_points.add(InvalidBaseStorage, 'aiida.storage:core.invalid_base')
 
     with pytest.raises(ValueError, match=r'The profile `.*` already exists.'):
-        config.create_profile(config_with_profile.default_profile_name, SqliteTempBackend, {})
+        config.create_profile(config_with_profile.default_profile_name, 'core.sqlite_temp', {})
 
-    with pytest.raises(TypeError, match=r'The `storage_cls=.*` is not subclass of `.*`.'):
-        config.create_profile(profile_name, object, {})
+    with pytest.raises(TypeError, match=r'The `storage_backend=.*` is not a subclass of `.*`.'):
+        config.create_profile(profile_name, 'core.invalid_base', {})
 
-    with pytest.raises(exceptions.EntryPointError, match=r'.*does not have a registered entry point.'):
-        config.create_profile(profile_name, UnregisteredStorageBackend, {})
+    with pytest.raises(ValueError, match=r'The entry point `.*` could not be loaded'):
+        config.create_profile(profile_name, 'core.non_existant', {})
 
     with pytest.raises(exceptions.StorageMigrationError, match='Storage backend initialisation failed.*'):
-        config.create_profile(profile_name, SqliteTempBackend, {})
+        config.create_profile(profile_name, 'core.sqlite_temp', {})
 
 
 def test_create_profile(config_with_profile):
@@ -507,5 +508,5 @@ def test_create_profile(config_with_profile):
     config = config_with_profile
     profile_name = uuid.uuid4().hex
 
-    config.create_profile(profile_name, SqliteTempBackend, {})
+    config.create_profile(profile_name, 'core.sqlite_temp', {})
     assert profile_name in config.profile_names

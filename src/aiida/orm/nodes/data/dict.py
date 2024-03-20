@@ -137,7 +137,9 @@ class Dict(Data):
 
         :return: dictionary
         """
-        return dict(self.base.attributes.all)
+        attributes = dict(self.base.attributes.all)
+        attributes.pop(self._CLS_KEY_CACHE_VERSION, None)
+        return attributes
 
     def keys(self):
         """Iterator of valid keys stored in the Dict object.
@@ -145,11 +147,15 @@ class Dict(Data):
         :return: iterator over the keys of the current dictionary
         """
         for key in self.base.attributes.keys():
+            if key is self._CLS_KEY_CACHE_VERSION:
+                continue
             yield key
 
     def items(self):
         """Iterator of all items stored in the Dict node."""
         for key, value in self.base.attributes.items():
+            if key is self._CLS_KEY_CACHE_VERSION:
+                continue
             yield key, value
 
     @property

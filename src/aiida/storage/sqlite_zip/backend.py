@@ -297,7 +297,7 @@ class SqliteZipBackend(StorageBackend):
         raise ReadOnlyError()
 
     def get_global_variable(self, key: str):
-        raise NotImplementedError
+        return None
 
     def set_global_variable(self, key: str, value, description: Optional[str] = None, overwrite=True) -> None:
         raise ReadOnlyError()

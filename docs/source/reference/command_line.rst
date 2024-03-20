@@ -267,6 +267,35 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
 
+.. _reference:command-line:verdi-init:
+
+``verdi init``
+--------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] [DIRECTORY]
+
+      Initialize a new AiiDA instance.
+
+      The instance is initialized in DIRECTORY, which defaults to the current working
+      directory. A profile is automatically created using the `core.sqlite_dos` storage
+      backend and the localhost is configured as a computer.
+
+      By default, a user is created in the database that is automatically attached to all the
+      nodes that will be created in the future. The user details are specified by default but
+      can be customized using a number of options that this command exposes.
+
+    Options:
+      --from-archive FILE  Mount the archive as a read-only profile instead of creating an
+                           empty profile.
+      --email TEXT         The email of the user.  [default: aiida@localhost]
+      --first-name TEXT    The first name of the user.  [default: John]
+      --last-name TEXT     The last name of the user.  [default: Doe]
+      --institution TEXT   The institution of the user.  [default: Unknown]
+      --help               Show this message and exit.
+
+
 .. _reference:command-line:verdi-node:
 
 ``verdi node``

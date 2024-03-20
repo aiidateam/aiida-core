@@ -234,7 +234,7 @@ def create_default_user(
         if user:
             manager.set_default_user_email(profile, user.email)
 
-    return
+    return user
 
 
 def create_profile(

@@ -24,6 +24,7 @@ from aiida.cmdline.commands import (
     cmd_devel,
     cmd_group,
     cmd_help,
+    cmd_init,
     cmd_node,
     cmd_plugin,
     cmd_process,

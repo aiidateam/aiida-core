@@ -509,6 +509,15 @@ class TestCalcJob:
         _, node = launch.run_get_node(builder)
         assert node.base.extras.get(node.base.caching._HASH_EXTRA_KEY) == node.base.caching.get_hash()
 
+    def test_get_objects_attributes(self, get_calcjob_builder):
+        """Test that :meth:`aiida.orm.CalcJobNode._get_objects_to_hash` returns the expected objects."""
+        builder = get_calcjob_builder()
+        _, node = launch.run_get_node(builder)
+        objects = node.base.caching.get_objects_to_hash()  # pylint: disable=protected-access
+
+        assert 'version' not in objects
+        assert 'version' not in objects['attributes']
+
     def test_process_status(self):
         """Test that the process status is properly reset if calculation ends successfully."""
         _, node = launch.run_get_node(ArithmeticAddCalculation, code=self.remote_code, **self.inputs)

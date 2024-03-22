@@ -274,13 +274,13 @@ Below is a list with all available subcommands.
 
 .. code:: console
 
-    Usage:  [OPTIONS] [DIRECTORY]
+    Usage:  [OPTIONS]
 
       Initialize a new AiiDA instance.
 
-      The instance is initialized in DIRECTORY, which defaults to the current working
-      directory. A profile is automatically created using the `core.sqlite_dos` storage
-      backend and the localhost is configured as a computer.
+      Create a new AiiDA instance in the current working directory. A profile is automatically
+      created using the `core.sqlite_dos` storage backend and the localhost is configured as a
+      computer.
 
       By default, a user is created in the database that is automatically attached to all the
       nodes that will be created in the future. The user details are specified by default but

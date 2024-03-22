@@ -64,7 +64,7 @@ class TestPluginVersionProvider:
         version_plugin = '0.1.01'
         dynamic_plugin = create_dynamic_plugin_module(DummyCalcJob, version_plugin, add_module_to_sys=False)
 
-        expected_version = {'version': {'core': version_core}}
+        expected_version = {'version': {'core': version_core, 'cache': None}}
         assert provider.get_version_info(dynamic_plugin) == expected_version
 
     def test_external_module_no_version_attribute(self, create_dynamic_plugin_module, provider):
@@ -76,7 +76,7 @@ class TestPluginVersionProvider:
         version_plugin = '0.1.02'
         dynamic_plugin = create_dynamic_plugin_module(DummyCalcJob, version_plugin, add_version=False)
 
-        expected_version = {'version': {'core': version_core}}
+        expected_version = {'version': {'core': version_core, 'cache': None}}
         assert provider.get_version_info(dynamic_plugin) == expected_version
 
     def test_external_module_class(self, create_dynamic_plugin_module, provider):
@@ -88,7 +88,7 @@ class TestPluginVersionProvider:
         version_plugin = '0.1.17'
         dynamic_plugin = create_dynamic_plugin_module(DummyCalcJob, version_plugin)
 
-        expected_version = {'version': {'core': version_core, 'plugin': version_plugin}}
+        expected_version = {'version': {'core': version_core, 'plugin': version_plugin, 'cache': None}}
         assert provider.get_version_info(dynamic_plugin) == expected_version
 
     def test_external_module_function(self, create_dynamic_plugin_module, provider):
@@ -101,7 +101,7 @@ class TestPluginVersionProvider:
         version_plugin = '0.2.19'
         dynamic_plugin = create_dynamic_plugin_module(test_calcfunction, version_plugin)
 
-        expected_version = {'version': {'core': version_core, 'plugin': version_plugin}}
+        expected_version = {'version': {'core': version_core, 'plugin': version_plugin, 'cache': None}}
         assert provider.get_version_info(dynamic_plugin) == expected_version
 
     def test_calcfunction(self, provider):
@@ -111,14 +111,14 @@ class TestPluginVersionProvider:
         def test_calcfunction():
             return
 
-        expected_version = {'version': {'core': version_core, 'plugin': version_core}}
+        expected_version = {'version': {'core': version_core, 'plugin': version_core, 'cache': None}}
         assert provider.get_version_info(test_calcfunction) == expected_version
 
     def test_calc_job(self, provider):
         """Test the mapper for a `CalcJob`."""
         AddArithmeticCalculation = CalculationFactory('core.arithmetic.add')  # noqa: N806
 
-        expected_version = {'version': {'core': version_core, 'plugin': version_core}}
+        expected_version = {'version': {'core': version_core, 'plugin': version_core, 'cache': None}}
         assert provider.get_version_info(AddArithmeticCalculation) == expected_version
 
     def test_work_chain(self, provider):
@@ -127,12 +127,12 @@ class TestPluginVersionProvider:
         class SomeWorkChain(WorkChain):
             """Need to create a dummy class since there is no built-in work chain with entry point in `aiida-core`."""
 
-        expected_version = {'version': {'core': version_core, 'plugin': version_core}}
+        expected_version = {'version': {'core': version_core, 'plugin': version_core, 'cache': None}}
         assert provider.get_version_info(SomeWorkChain) == expected_version
 
     def test_entry_point_string(self, provider):
         """Test passing an entry point string."""
-        expected_version = {'version': {'core': version_core, 'plugin': version_core}}
+        expected_version = {'version': {'core': version_core, 'plugin': version_core, 'cache': None}}
         assert provider.get_version_info('aiida.calculations:core.arithmetic.add') == expected_version
 
     def test_entry_point_string_non_existant(self, provider):

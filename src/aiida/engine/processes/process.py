@@ -74,6 +74,7 @@ class Process(plumpy.processes.Process):
     _spec_class = ProcessSpec
 
     SINGLE_OUTPUT_LINKNAME: str = 'result'
+    CACHE_VERSION: str | None = None
 
     class SaveKeys(enum.Enum):
         """Keys used to identify things in the saved instance state bundle."""

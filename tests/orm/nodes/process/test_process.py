@@ -75,13 +75,39 @@ def test_is_valid_cache(process_nodes):
         assert node.base.caching.is_valid_cache == is_valid_cache, node
 
 
-def test_get_builder_restart(aiida_local_code_factory):
-    """Test :meth:`aiida.orm.nodes.process.process.ProcessNode.get_builder_restart`."""
-    inputs = {
+@pytest.fixture
+def default_inputs(aiida_local_code_factory):
+    return {
         'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
         'x': Int(1),
         'y': Int(1),
         'metadata': {'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}},
     }
-    _, node = launch.run_get_node(ArithmeticAddCalculation, inputs)
-    assert node.get_builder_restart()._inputs(prune=True) == inputs
+
+
+def test_get_builder_restart(default_inputs):
+    """Test :meth:`aiida.orm.nodes.process.process.ProcessNode.get_builder_restart`."""
+    _, node = launch.run_get_node(ArithmeticAddCalculation, default_inputs)
+    assert node.get_builder_restart()._inputs(prune=True) == default_inputs
+
+
+def test_cache_version_attribute(default_inputs, monkeypatch, manager):
+    """Test that the ``Node.CACHE_VERSION`` attribute can be used to control hashes.
+
+    If the implementation of a ``Data`` or ``CalcJob`` plugin changes significantly, a plugin developer can change
+    the ``CACHE_VERSION`` attribute to cause the hash to be changed, ensuring old completed instances of the
+    class no longer to be valid cache sources.
+    """
+    from aiida.plugins.utils import KEY_VERSION_CACHE
+
+    _, node_a = launch.run_get_node(ArithmeticAddCalculation, default_inputs)
+
+    monkeypatch.setattr(ArithmeticAddCalculation, 'CACHE_VERSION', 'v1.0')
+
+    # The runner keeps an instance of :class:`aiida.plugins.utils.PluginVersionProvider` which keeps an internal cache
+    # of the version information for plugins, so we need to reset it for the monkeypatched change above to be picked up.
+    manager.reset_runner()
+
+    _, node_b = launch.run_get_node(ArithmeticAddCalculation, default_inputs)
+    assert node_b.base.attributes.get('version')[KEY_VERSION_CACHE] == 'v1.0'
+    assert node_a.base.caching.get_hash() != node_b.base.caching.get_hash()

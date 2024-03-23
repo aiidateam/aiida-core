@@ -4,13 +4,15 @@
 The AiiDA cheat sheet
 =====================
 
-The AiiDA cheat sheet gives a broad overview over the most commonly used `verdi` commands, as well as the inheritance
-hierarchy of the main AiiDA classes and their methods.
+The AiiDA cheat sheet gives a broad overview of the most commonly used `verdi` commands, the inheritance
+hierarchy of the main AiiDA classes, their properties and methods, as well as a showcase of the QueryBuilder.
 
-When clicking on the following image, the original svg file containing hyperlinks to the relevant sections of the
-documentation will be opened in the browser.
+When clicking on the embedded image, the original SVG file will be opened in the browser. Where applicable, text objects
+contain hyperlinks to the relevant sections of the documentation.
 
-The file can further be downloaded as a :download:`pdf <_cheatsheet/cheatsheet.pdf>`.
+The file can also be downloaded as a :download:`pdf <_cheatsheet/cheatsheet.pdf>`.
+
+Happy exploring!
 
 .. image:: ./_cheatsheet/cheatsheet_h.svg
    :target: ../_images/cheatsheet_h.svg

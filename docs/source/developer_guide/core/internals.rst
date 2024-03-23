@@ -350,9 +350,6 @@ In case a method is renamed or removed, this is the procedure to follow:
 1. (If you want to rename) move the code to the new function name.
    Then, in the docstring, add something like::
 
-     .. versionadded:: 0.7
-        Renamed from OLDMETHODNAME
-
 2. Don't remove directly the old function, but just change the code to use
    the new function, and add in the docstring::
 

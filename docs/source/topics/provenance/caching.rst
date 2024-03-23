@@ -29,7 +29,7 @@ The hash of a :class:`~aiida.orm.ProcessNode` includes, on top of this, the hash
 Once a node is stored in the database, its hash is stored in the ``_aiida_hash`` extra, and this extra is used to find matching nodes.
 If a node of the same class with the same hash already exists in the database, this is considered a cache match.
 You can use the :meth:`~aiida.orm.nodes.caching.NodeCaching.get_hash` method to check the hash of any node.
-In order to figure out why a calculation is *not* being reused, the :meth:`~aiida.orm.nodes.caching.NodeCaching._get_objects_to_hash` method may be useful:
+In order to figure out why a calculation is *not* being reused, the :meth:`~aiida.orm.nodes.caching.NodeCaching.get_objects_to_hash` method may be useful:
 
 .. code-block:: ipython
 
@@ -38,18 +38,18 @@ In order to figure out why a calculation is *not* being reused, the :meth:`~aiid
     In [6]: node.base.caching.get_hash()
     Out[6]: '62eca804967c9428bdbc11c692b7b27a59bde258d9971668e19ccf13a5685eb8'
 
-    In [7]: node.base.caching._get_objects_to_hash()
+    In [7]: node.base.caching.get_objects_to_hash()
     Out[7]:
-    [
-        '1.0.0',
-        {
+    {
+        'class': "<class 'aiida.orm.nodes.process.calculation.calcjob.CalcJobNode'>",
+        'version': '2.6.0',
+        'attributes': {
             'resources': {'num_machines': 2, 'default_mpiprocs_per_machine': 28},
             'parser_name': 'cp2k',
             'linkname_retrieved': 'retrieved'
         },
-        <aiida.common.folders.Folder at 0x1171b9a20>,
-        '6850dc88-0949-482e-bba6-8b11205aec11',
-        {
+        'computer_uuid': '85faf55e-8597-4649-90e0-55881271c33c',
+        'links': {
             'code': 'f6bd65b9ca3a5f0cf7d299d9cfc3f403d32e361aa9bb8aaa5822472790eae432',
             'parameters': '2c20fdc49672c3505cebabacfb9b1258e71e7baae5940a80d25837bee0032b59',
             'structure': 'c0f1c1d1bbcfc7746dcf7d0d675904c62a5b1759d37db77b564948fa5a788769',
@@ -71,7 +71,7 @@ The hashing of *Data nodes* can be customized both when implementing a new data 
 In the :py:class:`~aiida.orm.Node` subclass:
 
 * Use the ``_hash_ignored_attributes`` to exclude a list of node attributes ``['attr1', 'attr2']`` from computing the hash.
-* Include extra information in computing the hash by overriding the :meth:`~aiida.orm.nodes.caching.NodeCaching._get_objects_to_hash` method.
+* Include extra information in computing the hash by overriding the :meth:`~aiida.orm.nodes.caching.NodeCaching.get_objects_to_hash` method.
   Use the ``super()`` method, and then append to the list of objects to hash.
 
 You can also modify hashing behavior during runtime by passing a keyword argument to :meth:`~aiida.orm.nodes.caching.NodeCaching.get_hash`, which are forwarded to :meth:`~aiida.common.hashing.make_hash`.

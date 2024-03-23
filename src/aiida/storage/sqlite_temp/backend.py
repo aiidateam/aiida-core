@@ -72,7 +72,7 @@ class SqliteTempBackend(StorageBackend):
                         'debug': debug,
                     },
                 },
-                'process_control': {'backend': 'null', 'config': {}},
+                'process_control': {'backend': None, 'config': {}},
                 'options': options or {},
             },
         )

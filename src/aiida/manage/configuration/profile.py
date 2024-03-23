@@ -7,6 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA profile related code"""
+from __future__ import annotations
+
 import collections
 import os
 import pathlib
@@ -118,7 +120,7 @@ class Profile:
         return StorageFactory(self.storage_backend)
 
     @property
-    def process_control_backend(self) -> str:
+    def process_control_backend(self) -> str | None:
         """Return the type of the process control backend."""
         return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_BACKEND]
 
@@ -225,26 +227,6 @@ class Profile:
             raise exceptions.ConfigurationError('invalid repository URI: the path has to be absolute')
 
         return pathlib.Path(os.path.expanduser(parts.path))
-
-    @property
-    def rmq_prefix(self) -> str:
-        """Return the prefix that should be used for RMQ resources
-
-        :return: the rmq prefix string
-        """
-        return f'aiida-{self.uuid}'
-
-    def get_rmq_url(self) -> str:
-        """Return the RMQ url for this profile."""
-        from aiida.manage.external.rmq import get_rmq_url
-
-        if self.process_control_backend != 'rabbitmq':
-            raise exceptions.ConfigurationError(
-                f"invalid process control backend, only 'rabbitmq' is supported: {self.process_control_backend}"
-            )
-        kwargs = {key[7:]: val for key, val in self.process_control_config.items() if key.startswith('broker_')}
-        additional_kwargs = kwargs.pop('parameters', {})
-        return get_rmq_url(**kwargs, **additional_kwargs)
 
     @property
     def filepaths(self):

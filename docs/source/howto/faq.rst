@@ -85,7 +85,7 @@ For example, go to the directory that contains the file where you defined the pr
 
     $ echo "export PYTHONPATH=\$PYTHONPATH:$PWD" >> $HOME/.bashrc
     $ source $HOME/.bashrc
-    $ verdi daemon restart --reset
+    $ verdi daemon restart
 
 .. _how-to:faq:caching-not-enabled:
 

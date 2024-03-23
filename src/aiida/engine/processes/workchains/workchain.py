@@ -285,9 +285,14 @@ class WorkChain(Process, metaclass=Protect):
         """Set the process status with a message accounting the current sub processes that we are waiting for."""
         if self._awaitables:
             status = f"Waiting for child processes: {', '.join([str(_.pk) for _ in self._awaitables])}"
-            self.node.set_process_status(status)
         else:
-            self.node.set_process_status(None)
+            status = None
+        if self.paused:
+            # Update the pre-paused status so that when the process is played
+            # it will be set to the new status
+            self._pre_paused_status = status
+        else:
+            self.set_status(status)
 
     @override
     @Protect.final

@@ -13,7 +13,6 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS, capture_logging
-from aiida.manage import get_manager
 
 REPAIR_INSTRUCTIONS = """\
 If one ore more processes are unreachable, you can run the following commands to try and repair them:
@@ -101,6 +100,7 @@ def process_list(
 
     from aiida.cmdline.commands.cmd_daemon import execute_client_command
     from aiida.cmdline.utils.common import print_last_process_state_change
+    from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import get_daemon_client
     from aiida.orm import ProcessNode, QueryBuilder
     from aiida.tools.query.calculation import CalculationQueryBuilder
@@ -133,7 +133,13 @@ def process_list(
 
     print_last_process_state_change()
 
-    if not get_daemon_client().is_daemon_running:
+    try:
+        client = get_daemon_client()
+    except ConfigurationError:
+        echo.echo_warning('This profile does not have a broker and so it has no daemon.')
+        return
+
+    if not client.is_daemon_running:
         echo.echo_warning('The daemon is not running', bold=True)
         return
 
@@ -352,8 +358,9 @@ def process_play(processes, all_entries, timeout, wait):
 @verdi_process.command('watch')
 @arguments.PROCESSES()
 @decorators.with_dbenv()
+@decorators.with_broker
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
-def process_watch(processes):
+def process_watch(broker, processes):
     """Watch the state transitions for a process."""
     from time import sleep
 
@@ -369,7 +376,7 @@ def process_watch(processes):
 
         echo.echo(f'Process<{sender}> [{subject}|{correlation_id}]: {body}')
 
-    communicator = get_manager().get_communicator()
+    communicator = broker.get_communicator()
     echo.echo_report('watching for broadcasted messages, press CTRL+C to stop...')
 
     for process in processes:
@@ -399,8 +406,8 @@ def process_watch(processes):
 @options.DRY_RUN()
 @decorators.only_if_daemon_not_running()
 @decorators.with_manager
-@click.pass_context
-def process_repair(ctx, manager, dry_run):
+@decorators.with_broker
+def process_repair(manager, broker, dry_run):
     """Automatically repair all stuck processes.
 
     N.B.: This command requires the daemon to be stopped.
@@ -414,7 +421,7 @@ def process_repair(ctx, manager, dry_run):
     from aiida.engine.processes.control import get_active_processes, get_process_tasks, iterate_process_tasks
 
     active_processes = get_active_processes(project='id')
-    process_tasks = get_process_tasks(ctx.obj.profile, manager.get_communicator())
+    process_tasks = get_process_tasks(broker)
 
     set_active_processes = set(active_processes)
     set_process_tasks = set(process_tasks)
@@ -453,7 +460,7 @@ def process_repair(ctx, manager, dry_run):
     echo.echo_report('Attempting to fix inconsistencies')
 
     # Eliminate duplicate tasks and tasks that correspond to terminated process
-    for task in iterate_process_tasks(ctx.obj.profile, manager.get_communicator()):
+    for task in iterate_process_tasks(broker):
         pid = task.body.get('args', {}).get('pid', None)
         if pid not in set_active_processes:
             with task.processing() as outcome:

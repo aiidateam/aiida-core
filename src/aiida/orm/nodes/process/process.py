@@ -15,6 +15,7 @@ from plumpy.process_states import ProcessState
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
+from aiida.orm.fields import add_field
 from aiida.orm.utils.mixins import Sealable
 
 from ..caching import NodeCaching
@@ -79,14 +80,18 @@ class ProcessNodeCaching(NodeCaching):
         """
         super(ProcessNodeCaching, self.__class__).is_valid_cache.fset(self, valid)
 
-    def _get_objects_to_hash(self) -> List[Any]:
+    def get_objects_to_hash(self) -> List[Any]:
         """Return a list of objects which should be included in the hash."""
-        res = super()._get_objects_to_hash()
-        res.append(
+        res = super().get_objects_to_hash()
+        res.update(
             {
-                entry.link_label: entry.node.base.caching.get_hash()
-                for entry in self._node.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
-                if entry.link_label not in self._hash_ignored_inputs
+                'inputs': {
+                    entry.link_label: entry.node.base.caching.get_hash()
+                    for entry in self._node.base.links.get_incoming(
+                        link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)
+                    )
+                    if entry.link_label not in self._hash_ignored_inputs
+                }
             }
         )
         return res
@@ -180,6 +185,54 @@ class ProcessNode(Sealable, Node):
             cls.PROCESS_STATE_KEY,
             cls.PROCESS_STATUS_KEY,
         )
+
+    __qb_fields__ = [
+        add_field(
+            'process_type',
+            dtype=Optional[str],
+            doc='The process type string',
+        ),
+        add_field(
+            'computer_pk',
+            dtype=Optional[int],
+            doc='The computer PK',
+        ),
+        add_field(
+            PROCESS_LABEL_KEY,
+            dtype=Optional[str],
+            doc='The process label',
+        ),
+        add_field(
+            PROCESS_STATE_KEY,
+            dtype=Optional[str],
+            doc='The process state enum',
+        ),
+        add_field(
+            PROCESS_STATUS_KEY,
+            dtype=Optional[str],
+            doc='The process status is a generic status message',
+        ),
+        add_field(
+            EXIT_STATUS_KEY,
+            dtype=Optional[int],
+            doc='The process exit status',
+        ),
+        add_field(
+            EXIT_MESSAGE_KEY,
+            dtype=Optional[str],
+            doc='The process exit message',
+        ),
+        add_field(
+            EXCEPTION_KEY,
+            dtype=Optional[str],
+            doc='The process exception message',
+        ),
+        add_field(
+            PROCESS_PAUSED_KEY,
+            dtype=bool,
+            doc='Whether the process is paused',
+        ),
+    ]
 
     def set_metadata_inputs(self, value: Dict[str, Any]) -> None:
         """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""

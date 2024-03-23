@@ -64,7 +64,7 @@ class Runner:
         poll_interval: Union[int, float] = 0,
         loop: Optional[asyncio.AbstractEventLoop] = None,
         communicator: Optional[kiwipy.Communicator] = None,
-        rmq_submit: bool = False,
+        broker_submit: bool = False,
         persister: Optional[Persister] = None,
     ):
         """Construct a new runner.
@@ -72,18 +72,18 @@ class Runner:
         :param poll_interval: interval in seconds between polling for status of active sub processes
         :param loop: an asyncio event loop, if none is suppled a new one will be created
         :param communicator: the communicator to use
-        :param rmq_submit: if True, processes will be submitted to RabbitMQ, otherwise they will be scheduled here
+        :param broker_submit: if True, processes will be submitted to the broker, otherwise they will be scheduled here
         :param persister: the persister to use to persist processes
 
         """
         assert not (
-            rmq_submit and persister is None
+            broker_submit and persister is None
         ), 'Must supply a persister if you want to submit using communicator'
 
         set_event_loop_policy()
         self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._poll_interval = poll_interval
-        self._rmq_submit = rmq_submit
+        self._broker_submit = broker_submit
         self._transport = transports.TransportQueue(self._loop)
         self._job_manager = manager.JobManager(self._transport)
         self._persister = persister
@@ -92,9 +92,9 @@ class Runner:
         if communicator is not None:
             self._communicator = wrap_communicator(communicator, self._loop)
             self._controller = RemoteProcessThreadController(communicator)
-        elif self._rmq_submit:
-            LOGGER.warning('Disabling RabbitMQ submission, no communicator provided')
-            self._rmq_submit = False
+        elif self._broker_submit:
+            LOGGER.warning('Disabling broker submission, no communicator provided')
+            self._broker_submit = False
 
     def __enter__(self) -> 'Runner':
         return self
@@ -136,11 +136,11 @@ class Runner:
 
     @property
     def is_daemon_runner(self) -> bool:
-        """Return whether the runner is a daemon runner, which means it submits processes over RabbitMQ.
+        """Return whether the runner is a daemon runner, which means it submits processes over a broker.
 
         :return: True if the runner is a daemon runner
         """
-        return self._rmq_submit
+        return self._broker_submit
 
     def is_closed(self) -> bool:
         return self._closed
@@ -193,7 +193,7 @@ class Runner:
         if process_inited.metadata.get('dry_run', False):
             raise exceptions.InvalidOperation('cannot submit a process from within another with `dry_run=True`')
 
-        if self._rmq_submit:
+        if self._broker_submit:
             assert self.persister is not None, 'runner does not have a persister'
             assert self.controller is not None, 'runner does not have a controller'
             self.persister.save_checkpoint(process_inited)

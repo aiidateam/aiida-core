@@ -31,9 +31,6 @@ def test_base_properties(profile_factory):
     # Check that the default user email field is not None
     assert profile.default_user_email is not None
 
-    # The RabbitMQ prefix should contain the profile UUID
-    assert profile.uuid in profile.rmq_prefix
-
 
 @pytest.mark.parametrize('test_profile', (True, False))
 def test_is_test_profile(profile_factory, test_profile):

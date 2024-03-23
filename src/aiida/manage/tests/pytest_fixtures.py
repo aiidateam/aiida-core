@@ -243,7 +243,7 @@ def clear_profile():
 
     manager = get_manager()
     manager.get_profile_storage()._clear()
-    manager.reset_communicator()
+    manager.reset_broker()
     manager.reset_runner()
 
     User(get_manager().get_profile().default_user_email).store()

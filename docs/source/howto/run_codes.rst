@@ -584,32 +584,32 @@ If a monitor, attached to a calculation job, returns anything other than ``None`
 Finally, the monitor needs to be declared using an entry point in the ``aiida.calculations.monitors`` group.
 The next section will show how this entry point is used to assign it to a calculation job.
 
-
 .. versionadded:: 2.5.0
+    Monitors can now attach outputs to calculation
 
-Monitors can also attach outputs to the calculation that it is monitoring.
-This can be useful to report outputs while the calculation is running that should still be stored permanently in the provenance graph.
-In the following example, a simple monitor is implemented that returns a ``CalcJobMonitorResult`` that defines a dictionary of output nodes:
+    Monitors can also attach outputs to the calculation that it is monitoring.
+    This can be useful to report outputs while the calculation is running that should still be stored permanently in the provenance graph.
+    In the following example, a simple monitor is implemented that returns a ``CalcJobMonitorResult`` that defines a dictionary of output nodes:
 
-.. code-block:: python
+    .. code-block:: python
 
-    from aiida.orm import CalcJobNode
-    from aiida.transports import Transport
+        from aiida.orm import CalcJobNode
+        from aiida.transports import Transport
 
-    def monitor(node: CalcJobNode, transport: Transport) -> CalcJobMonitorResult:
-        """Return a dictionary of output nodes to be attached to the calculation to which the monitor is attached."""
-        import secrets
-        return CalcJobMonitorResult(
-            outputs={
-                'some_output': Int(2),
-                'messages': {
-                    f'key_{secrets.token_hex(4)}': Str('some random message')
+        def monitor(node: CalcJobNode, transport: Transport) -> CalcJobMonitorResult:
+            """Return a dictionary of output nodes to be attached to the calculation to which the monitor is attached."""
+            import secrets
+            return CalcJobMonitorResult(
+                outputs={
+                    'some_output': Int(2),
+                    'messages': {
+                        f'key_{secrets.token_hex(4)}': Str('some random message')
+                    }
                 }
-            }
-        )
+            )
 
-Once the monitor returns, the engine will loop over the nodes in the ``outputs`` dictionary and attach them to the calculation node.
-Note that the ``CalcJob`` class of course needs to specify this output port in the output namespace, otherwise an exception is raised.
+    Once the monitor returns, the engine will loop over the nodes in the ``outputs`` dictionary and attach them to the calculation node.
+    Note that the ``CalcJob`` class of course needs to specify this output port in the output namespace, otherwise an exception is raised.
 
 
 How to assign a monitor

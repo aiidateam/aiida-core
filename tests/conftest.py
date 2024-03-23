@@ -419,7 +419,7 @@ def suppress_internal_deprecations():
 def chdir_tmp_path(request, tmp_path):
     """Change to a temporary directory before running the test and reverting to original working directory."""
     os.chdir(tmp_path)
-    yield
+    yield tmp_path
     os.chdir(request.config.invocation_dir)
 
 

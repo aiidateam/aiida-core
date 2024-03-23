@@ -31,10 +31,31 @@ __all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
 
 @decorator
 def with_manager(wrapped, _, args, kwargs):
-    """Decorate a function injecting a :class:`kiwipy.rmq.communicator.RmqCommunicator`."""
+    """Decorate a function injecting a :class:`aiida.manage.manager.Manager` instance."""
     from aiida.manage import get_manager
 
     kwargs['manager'] = get_manager()
+    return wrapped(*args, **kwargs)
+
+
+@decorator
+def with_broker(wrapped, _, args, kwargs):
+    """Decorate a function injecting a :class:`aiida.brokers.broker.Broker` instance.
+
+    If the currently loaded profile does not define a broker, the command is aborted.
+    """
+    from aiida.manage import get_manager
+
+    broker = get_manager().get_broker()
+    profile = get_manager().get_profile()
+    assert profile is not None
+
+    if broker is None:
+        echo.echo_critical(
+            f'Profile `{profile.name}` does not support this functionality as it does not provide a broker.'
+        )
+
+    kwargs['broker'] = broker
     return wrapped(*args, **kwargs)
 
 
@@ -268,3 +289,30 @@ def requires_loaded_profile():
         return wrapped(*args, **kwargs)
 
     return wrapper
+
+
+@decorator
+def requires_broker(wrapped, _, args, kwargs):
+    """Function decorator for CLI command that requires a profile that defines a broker.
+
+    Example::
+
+        @requires_broker
+        def start_daemon():
+            pass
+
+    If the loaded profile does not define a broker, the command will exit with a critical error.
+    """
+    from aiida.manage import get_manager
+
+    manager = get_manager()
+
+    if (profile := manager.get_profile()) is None:
+        echo.echo_critical('No profile loaded: make sure at least one profile is configured and a default is set.')
+
+    assert profile is not None
+
+    if manager.get_broker() is None:
+        echo.echo_critical(f'profile `{profile.name}` does not define a broker and so cannot use this functionality.')
+
+    return wrapped(*args, **kwargs)

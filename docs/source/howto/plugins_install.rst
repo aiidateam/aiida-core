@@ -27,11 +27,11 @@ For example, if the code is available through a Git repository:
 
 .. warning::
 
-    If your daemon was running when installing or updating a plugin package, make sure to restart it with the ``--reset`` flag for changes to take effect:
+    If you installed or updated a plugin package while your daemon was running, be sure to restart it so that the changes take effect:
 
     .. code-block:: console
 
-        $ verdi daemon restart --reset
+        $ verdi daemon restart
 
 To verify which plugins are currently installed, use the command:
 

@@ -8,7 +8,7 @@ The AiiDA cheat sheet gives a broad overview of the most commonly used `verdi` c
 
 When clicking on the embedded image, it will be opened in a new tab the browser. Where applicable, text elements contain hyperlinks to the relevant sections of the documentation.
 
-The file can also be downloaded as a :download:`pdf <_cheatsheet/cheatsheet.pdf>`.
+The file can also be downloaded as a :download:`pdf <_cheatsheet/cheatsheet_v.pdf>`.
 
 Happy exploring!
 

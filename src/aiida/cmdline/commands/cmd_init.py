@@ -18,9 +18,6 @@ from aiida.manage.configuration import get_config_option
 
 
 @verdi.command('init')
-@click.argument(
-    'directory', type=click.Path(exists=False, path_type=pathlib.Path, resolve_path=True), default=pathlib.Path.cwd()
-)
 @click.option(
     '--from-archive',
     type=click.Path(dir_okay=False, exists=True, resolve_path=True, path_type=pathlib.Path),
@@ -50,11 +47,11 @@ from aiida.manage.configuration import get_config_option
     show_default=True,
     help='The institution of the user.',
 )
-def verdi_init(directory, from_archive, email, first_name, last_name, institution):
+def verdi_init(from_archive, email, first_name, last_name, institution):
     """Initialize a new AiiDA instance.
 
-    The instance is initialized in DIRECTORY, which defaults to the current working directory. A profile is
-    automatically created using the `core.sqlite_dos` storage backend and the localhost is configured as a computer.
+    Create a new AiiDA instance in the current working directory. A profile is automatically created using the
+    `core.sqlite_dos` storage backend and the localhost is configured as a computer.
 
     By default, a user is created in the database that is automatically attached to all the nodes that will be created
     in the future. The user details are specified by default but can be customized using a number of options that this
@@ -72,10 +69,15 @@ def verdi_init(directory, from_archive, email, first_name, last_name, institutio
     get_manager().unload_profile()
     reset_config()
 
-    dirpath_config = directory / settings.DEFAULT_CONFIG_DIR_NAME
+    dirpath_config = settings.get_configuration_directory_from_envvar()
+
+    if dirpath_config is not None:
+        echo.echo_warning(f'The `AIIDA_PATH` environment variable is set; config directory set to `{dirpath_config}`.')
+    else:
+        dirpath_config = pathlib.Path.cwd() / settings.DEFAULT_CONFIG_DIR_NAME
 
     if dirpath_config.is_dir():
-        echo.echo_critical(f'A configuration directory already exists in `{directory}`.')
+        echo.echo_critical(f'The configuration directory `{dirpath_config}` already exists.')
 
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')

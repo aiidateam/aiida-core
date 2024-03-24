@@ -81,12 +81,7 @@ def get_configuration_directory():
 
     :returns: The path of the configuration directory.
     """
-    dirpath_config: pathlib.Path | None = None
-
-    if environment_variable := os.environ.get(DEFAULT_AIIDA_PATH_VARIABLE):
-        dirpath_config = get_configuration_directory_from_envvar(environment_variable)
-    else:
-        dirpath_config = get_configuration_directory_from_cwd()
+    dirpath_config = get_configuration_directory_from_envvar() or get_configuration_directory_from_cwd()
 
     # If no existing configuration directory is found, fall back to the default
     if dirpath_config is None:
@@ -95,15 +90,20 @@ def get_configuration_directory():
     return dirpath_config
 
 
-def get_configuration_directory_from_envvar(environment_variable: str) -> pathlib.Path:
+def get_configuration_directory_from_envvar() -> pathlib.Path | None:
     """Return the path of a config directory from the ``AIIDA_PATH`` environment variable.
 
     The environment variable should be a colon separated string of filepaths that either point directly to a config
     directory or a path that contains a config directory. The first match is returned. If no existing config directory
     is found, the last path in the environment variable is used.
 
-    :returns: The path of the configuration directory.
+    :returns: The path of the configuration directory or ``None`` if ``AIIDA_PATH`` is not defined.
     """
+    environment_variable = os.environ.get(DEFAULT_AIIDA_PATH_VARIABLE)
+
+    if environment_variable is None:
+        return None
+
     # Loop over all the paths in the ``AIIDA_PATH`` variable to see if any of them contain a configuration folder
     for base_dir_path in [path for path in environment_variable.split(':') if path]:
         dirpath_config = pathlib.Path(base_dir_path).expanduser()

@@ -626,10 +626,13 @@ def computer_delete(computer, force):
     if existing_node:
         if force:
             pass
-        elif click.confirm((
-            f'This computer has {tot_pks} associated nodes, '
-            'are you sure you want to delete this computer and its associated nodes?'
-        ), abort=True):
+        elif click.confirm(
+            (
+                f'This computer has {tot_pks} associated nodes, '
+                'are you sure you want to delete this computer and its associated nodes?'
+            ),
+            abort=True,
+        ):
             pass
 
         _, was_deleted = delete_nodes(node_pks, dry_run=False)

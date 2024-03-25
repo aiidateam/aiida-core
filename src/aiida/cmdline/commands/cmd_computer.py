@@ -619,7 +619,6 @@ def computer_delete(computer, force):
 
     # Extract the PKs from the results
     node_pks = [result[0].pk for result in results]
-    print(node_pks)
     tot_pks = len(node_pks)
     existing_node = True if tot_pks > 0 else False
 
@@ -627,13 +626,11 @@ def computer_delete(computer, force):
     if existing_node:
         if force:
             pass
-        elif click.confirm(
-            f'This computer has {tot_pks} associated nodes, are you sure you want to delete this computer and its associated nodes?'
-        ):
+        elif click.confirm((
+            f'This computer has {tot_pks} associated nodes, '
+            'are you sure you want to delete this computer and its associated nodes?'
+        ), abort=True):
             pass
-        else:
-            echo.echo_success(f"Deleting computer '{label}' canceled.")
-            return
 
         _, was_deleted = delete_nodes(node_pks, dry_run=False)
 

@@ -595,24 +595,57 @@ def computer_test(user, print_traceback, computer):
 
 
 @verdi_computer.command('delete')
+@click.option('--force', is_flag=True, help='Force deletion of computers with running nodes without confirmation')
 @arguments.COMPUTER()
 @with_dbenv()
-def computer_delete(computer):
+def computer_delete(computer, force):
     """Delete a computer.
 
     Note that it is not possible to delete the computer if there are calculations that are using it.
     """
     from aiida import orm
     from aiida.common.exceptions import InvalidOperation
+    from aiida.tools import delete_nodes
+    from aiida.orm.querybuilder import QueryBuilder
+    from aiida.orm import Computer, Node
 
     label = computer.label
 
+    # Check in the command whether the computer has any associated nodes. 
+    builder = QueryBuilder()
+    builder.append(Computer, filters={'label': label}, tag='computer')
+    builder.append(Node, with_computer='computer')
+    results = builder.all()
+    
+    # Extract the PKs from the results
+    node_pks = [result[0].pk for result in results]
+    print(node_pks)
+    tot_pks = len(node_pks)
+    existing_node = True if tot_pks >0 else False
+
+    # Confirm deletion of existing node (if any exist)
+    if existing_node:
+        if force: 
+            pass 
+        elif click.confirm(f'This computer has {tot_pks} associated nodes, are you sure you want to delete this computer and its associated nodes?'):
+            pass
+        else:
+            echo.echo_success(f"Deleting computer '{label}' canceled.")
+            return
+        
+        _, was_deleted  = delete_nodes(node_pks, dry_run=False)
+    
+    # Delete the computer
     try:
         orm.Computer.collection.delete(computer.pk)
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 
-    echo.echo_success(f"Computer '{label}' deleted.")
+    # echo appropriate message
+    if existing_node:
+        echo.echo_success(f"Computer '{label}' and all it's {tot_pks} associated nodes deleted.")
+    else:
+        echo.echo_success(f"Computer '{label}' deleted.")
 
 
 class LazyConfigureGroup(VerdiCommandGroup):

@@ -35,6 +35,20 @@ def execution_counter_calcfunction(data):
     return Int(data.value + 1)
 
 
+def test_disconnect():
+    """Test the communicator disconnect."""
+    from aiida.manage import get_manager
+
+    manager = get_manager()
+    manager.get_communicator()
+    manager.reset_profile()  # This will return just fine
+
+    result, node = add_calcfunction.run_get_node(1)
+    assert node.is_finished_ok
+    assert result == 2
+    manager.reset_profile()  # This will now hang and timeout
+
+
 @pytest.mark.requires_rmq
 class TestCalcFunction:
     """Tests for calcfunctions.

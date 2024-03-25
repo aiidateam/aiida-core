@@ -116,4 +116,4 @@ class RabbitmqBroker(Broker):
 
         :return: :class:`packaging.version.Version`
         """
-        return parse(self.get_communicator().server_properties['version'].decode('utf-8'))
+        return parse(self.get_communicator().server_properties['version'])

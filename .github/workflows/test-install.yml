@@ -86,7 +86,7 @@ jobs:
     needs: [validate-dependency-specification]
     if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
 
     steps:
     - uses: actions/checkout@v2

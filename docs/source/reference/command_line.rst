@@ -48,6 +48,7 @@ Below is a list with all available subcommands.
 
     Commands:
       cleanworkdir  Clean all content of all output remote folders of calcjobs.
+      dump          Dump files involved in the execution of a calculation.
       gotocomputer  Open a shell in the remote folder on the calcjob.
       inputcat      Show the contents of one of the calcjob input files.
       inputls       Show the list of the generated calcjob input files.
@@ -591,24 +592,6 @@ Below is a list with all available subcommands.
       configure    Configure a new or existing user.
       list         Show a list of all users.
       set-default  Set a user as the default user for the profile.
-
-
-.. _reference:command-line:verdi-workchain:
-
-``verdi workchain``
--------------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Inspect and manage workchains.
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      inputsave  Save input files of a workchain.
 
 
 

@@ -44,7 +44,7 @@ def make_default_dump_path(
     process_node: Union[WorkChainNode, CalcJobNode], path: Path = Path(), overwrite: bool = False
 ):
     """
-    Create default dumping directory for a given process node.
+    Create default dumping directory for a given process node and return it as absolute path.
 
     :param process_node: The `ProcessNode` for which the directory is created.
     :type process_node: Union[WorkChainNode, CalcJobNode]
@@ -66,4 +66,4 @@ def make_default_dump_path(
             echo.echo_critical(f'Invalid dumping destination selected. Path: "{path}" already exists.')
     path.mkdir(parents=True, exist_ok=False)
 
-    return path
+    return path.resolve()

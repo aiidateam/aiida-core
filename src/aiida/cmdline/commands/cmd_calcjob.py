@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi calcjob` commands."""
+
 import os
 
 import click
@@ -15,8 +16,8 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.cmdline.utils import decorators, echo
-from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
-from aiida.tools.dumping.processes import process_dump
+from aiida.cmdline.utils.defaults import make_default_dump_path
+from aiida.tools.dumping.processes import ProcessNodeYamlDumper, calcjob_dump
 
 
 @verdi.group('calcjob')
@@ -352,16 +353,34 @@ def get_remote_and_path(calcjob, path=None):
 
 
 @verdi_calcjob.command('dump')
-@arguments.PROCESS()
+@arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 @options.DUMP_PATH()
 @options.NO_NODE_INPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
 @options.USE_PREPARE_FOR_SUBMISSION()
 @options.OVERWRITE()
-def calcjob_dump_wrapper(**kwargs) -> None:
-    """Dump files involved in the execution of a `CalcJob`.
+def dump(
+    calcjob, path, no_node_inputs, include_attributes, include_extras, use_prepare_for_submission, overwrite
+) -> None:
+    """Dump files involved in the execution of a calculation.
 
-    Note: This is for inspection only and does not guarantee that a direct resubmission of the simulation is possible.
+    Note: This is for inspection only and does not guarantee that direct resubmission is possible.
     """
-    process_dump(process_type=CalcJobNode, **kwargs)
+
+    # Instantiate YamlDumper
+    processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
+
+    # Make output directory
+    output_path = make_default_dump_path(path=path, process_node=calcjob, overwrite=overwrite)
+
+    # Actually dump CalcJob files
+    calcjob_dump(
+        calcjob_node=calcjob,
+        output_path=output_path,
+        no_node_inputs=no_node_inputs,
+        use_prepare_for_submission=use_prepare_for_submission,
+        node_dumper=processnode_dumper,
+    )
+
+    echo.echo_report(f'Raw files for calculation <{calcjob.pk}> dumped successfully in directory "{output_path}"')

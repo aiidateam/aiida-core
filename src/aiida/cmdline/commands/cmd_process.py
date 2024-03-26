@@ -13,11 +13,11 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.defaults import make_default_dump_path
 from aiida.common.log import LOG_LEVELS, capture_logging
 from aiida.manage import get_manager
-from aiida.orm.nodes.process.process import ProcessNode
-from aiida.restapi.resources import ProcessNode
-from aiida.tools.dumping.processes import process_dump
+from aiida.orm import CalcJobNode, WorkChainNode
+from aiida.tools.dumping.processes import ProcessNodeYamlDumper, calcjob_dump, workchain_dump
 
 REPAIR_INSTRUCTIONS = """\
 If one ore more processes are unreachable, you can run the following commands to try and repair them:
@@ -430,7 +430,6 @@ def process_repair(ctx, manager, dry_run):
             echo.echo_report(f'Revived process `{pid}`')
 
 
-@verdi_process.command('dump')
 @arguments.PROCESS()
 @options.DUMP_PATH()
 @options.NO_NODE_INPUTS()
@@ -438,11 +437,52 @@ def process_repair(ctx, manager, dry_run):
 @options.INCLUDE_EXTRAS()
 @options.USE_PREPARE_FOR_SUBMISSION()
 @options.OVERWRITE()
-def process_dump_wrapper(**kwargs) -> None:
-    """Dump files involved in the execution of a process.
+def dump(
+    process, path, no_node_inputs, include_attributes, include_extras, use_prepare_for_submission, overwrite
+) -> None:
+    """Dump files involved in the execution of a workflow.
 
-    Note: This is just a convenience method, and dumping should be achieved via the designated `verdi workchain dump`
-    and `verdi calcjob dump` commands.
+    Child workflows and calculations called by the parent AiiDA `WorkChain` are contained in the tree as sub-folders and
+    sorted by their creation time. The directory tree mirrors the hierarchy obtained when running `verdi process
+    status`. For each calculation, input and output files can be found in the corresponding `raw_inputs` and
+    `raw_outputs` directories. Additional input files (depending on the type of calculation) are placed in the
+    `node_inputs` folder. Every folder also contains an `aiida_node_metadata.yaml` file with the relevant AiiDA node
+    data.
+
+    Note: This is for inspection only and not intended for direct resubmission of the simulations run by the
+    workflow, as intermediate files can be missing.
     """
 
-    process_dump(process_type=ProcessNode, **kwargs)
+    # Instantiate YamlDumper
+    processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
+
+    # Make output directory
+    output_path = make_default_dump_path(path=path, process_node=process, overwrite=overwrite)
+
+    # Actual recursive function call
+    if isinstance(process, WorkChainNode):
+        workchain_dump(
+            process_node=process,
+            output_path=output_path,
+            no_node_inputs=no_node_inputs,
+            use_prepare_for_submission=use_prepare_for_submission,
+            node_dumper=processnode_dumper,
+        )
+    elif isinstance(process, CalcJobNode):
+        echo.echo_warning(
+            f"""Command called on CalcJobNode. Will dump anyway, but `verdi calcjob dump <{process.uuid[:8]}>` should be
+            used instead."""
+        )
+        calcjob_dump(
+            calcjob_node=process,
+            output_path=output_path,
+            no_node_inputs=no_node_inputs,
+            use_prepare_for_submission=use_prepare_for_submission,
+            node_dumper=processnode_dumper,
+        )
+    else:
+        echo.echo_critical('<{workchain.uuid[:8]}> not a ProcessNode.')
+
+    echo.echo_report(
+        f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in directory "{output_path}".'
+    )

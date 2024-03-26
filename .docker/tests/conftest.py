@@ -43,7 +43,7 @@ def _docker_service_wait(docker_services):
 
     docker_services.wait_until_responsive(
         timeout=600.0,
-        pause=0.1,
+        pause=2,
         check=lambda: is_container_ready(),
     )
 

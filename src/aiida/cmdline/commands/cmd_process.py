@@ -430,6 +430,7 @@ def process_repair(ctx, manager, dry_run):
             echo.echo_report(f'Revived process `{pid}`')
 
 
+@verdi_process.command('dump')
 @arguments.PROCESS()
 @options.DUMP_PATH()
 @options.NO_NODE_INPUTS()
@@ -440,7 +441,7 @@ def process_repair(ctx, manager, dry_run):
 def dump(
     process, path, no_node_inputs, include_attributes, include_extras, use_prepare_for_submission, overwrite
 ) -> None:
-    """Dump files involved in the execution of a workflow.
+    """Dump files involved in the execution of a process.
 
     Child workflows and calculations called by the parent AiiDA `WorkChain` are contained in the tree as sub-folders and
     sorted by their creation time. The directory tree mirrors the hierarchy obtained when running `verdi process
@@ -469,10 +470,8 @@ def dump(
             node_dumper=processnode_dumper,
         )
     elif isinstance(process, CalcJobNode):
-        echo.echo_warning(
-            f"""Command called on CalcJobNode. Will dump anyway, but `verdi calcjob dump <{process.uuid[:8]}>` should be
-            used instead."""
-        )
+        echo.echo_warning('Command called on CalcJobNode.')
+        echo.echo_warning(f'Will dump anyway, but `verdi calcjob dump <{process.uuid[:8]}>` should be used instead.')
         calcjob_dump(
             calcjob_node=process,
             output_path=output_path,

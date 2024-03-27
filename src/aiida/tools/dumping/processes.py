@@ -22,7 +22,7 @@ class ProcessNodeYamlDumper:
     NODE_PROPERTIES = [
         'label',
         'description',
-        # 'pk',
+        'pk',
         'uuid',
         'ctime',
         'mtime',
@@ -97,12 +97,12 @@ class ProcessNodeYamlDumper:
             yaml.dump(node_dict, handle, sort_keys=False)
 
 
-def calcjob_node_inputs_dump(process: ProcessNode, output_path: Path, parent_name: str = 'node_inputs'):
+def calcjob_node_inputs_dump(calcjob_node: CalcJobNode, output_path: Path, parent_name: str = 'node_inputs'):
     """
-    Dump inputs of a `ProcessNode` of type `SinglefileData` and `FolderData`.
+    Dump inputs of a `CalcJobNode` of type `SinglefileData` and `FolderData`.
 
-    :param process: The `ProcessNode` whose inputs need to be dumped.
-    :type process: Union[CalcJobNode, WorkChainNode]
+    :param calcjob_node: The `CalcJobNode` whose inputs will be dumped.
+    :type calcjob_node: CalcJobNode
     :param output_path: The path where the inputs will be dumped.
     :type output_path: Path
     """
@@ -111,7 +111,7 @@ def calcjob_node_inputs_dump(process: ProcessNode, output_path: Path, parent_nam
     # Not using the node_class argument of `get_incoming` here, as it does not actually retrieve the `UpfData` node with
     # (due to planned deprecation?)
     # Instead, check for isinstance of `SinglefileData`
-    input_node_triples = process.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
+    input_node_triples = calcjob_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 
     for input_node_triple in input_node_triples:
         # Select only repositories that hold objects and are of the selected dump_types
@@ -161,7 +161,7 @@ def calcjob_dump(
     output_path: Path,
     no_node_inputs: bool = False,
     use_prepare_for_submission: bool = False,
-    node_dumper: ProcessNodeYamlDumper = None,
+    node_dumper: ProcessNodeYamlDumper | None = None,
 ):
     """
     Dump the contents of a CalcJobNode to a specified output path.
@@ -186,7 +186,7 @@ def calcjob_dump(
             pass
 
         if not no_node_inputs:
-            calcjob_node_inputs_dump(process=calcjob_node, output_path=output_path)
+            calcjob_node_inputs_dump(calcjob_node=calcjob_node, output_path=output_path)
 
     else:
         echo.echo_warning('`use_prepare_for_submission` not fully implemented yet. Files likely missing.')
@@ -199,11 +199,11 @@ def calcjob_dump(
 
 
 def workchain_dump(
-    process: Union[WorkChainNode, CalcJobNode],
+    process_node: Union[WorkChainNode, CalcJobNode],
     output_path: Path = Path(),
     no_node_inputs: bool = False,
     use_prepare_for_submission: bool = False,
-    node_dumper: ProcessNodeYamlDumper = None,
+    node_dumper: ProcessNodeYamlDumper | None = None,
 ) -> None:
     """
     Dumps all data involved in a `WorkChainNode`, including its outgoing links.
@@ -228,10 +228,10 @@ def workchain_dump(
     # This will eventually be replaced once pydantic backend PR merged
     if node_dumper is None:
         node_dumper = ProcessNodeYamlDumper()
-    node_dumper.dump_yaml(process_node=process, output_path=output_path)
+    node_dumper.dump_yaml(process_node=process_node, output_path=output_path)
 
     # node_dumper.dump_yaml(process_node=process_node, output_path=output_path)
-    called_links = process.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
+    called_links = process_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
 
     # Don't increment index for `ProcessNodes`` that don't have file IO (`CalcFunctionNodes`/`WorkFunctionNodes`), such
     # as `create_kpoints_from_distance`
@@ -256,7 +256,7 @@ def workchain_dump(
         # Recursive function call for `WorkChainNode``
         if isinstance(child_node, WorkChainNode):
             workchain_dump(
-                process=child_node,
+                process_node=child_node,
                 output_path=output_path_child,
                 no_node_inputs=no_node_inputs,
                 use_prepare_for_submission=use_prepare_for_submission,

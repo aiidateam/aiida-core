@@ -34,6 +34,30 @@ class CalcJobState(Enum):
     PARSING = 'parsing'
 
 
+class FileCopyOperation(IntEnum):
+    """Enum to represent the copy operations that are used when creating the working directory of a ``CalcJob``.
+
+    There are three different sources of files that are copied to the working directory on the remote computer where a
+    calculation job is executed:
+
+        * Local: files written to the temporary sandbox folder by the engine based on the ``local_copy_list`` defined
+          by the plugin in the ``prepare_for_submission`` method.
+        * Remote: files written directly to the remote working directory by the engine base on the ``remote_copy_list``
+          defined by the plugin in the ``prepare_for_submission`` method.
+        * Sandbox: files written to a temporary sandbox folder on the local file system written by the ``CalcJob``
+          plugin, first in the ``prepare_for_submission`` method, followed by the ``presubmit`` of the base class.
+
+    Historically, these operations were performed in the order of sandbox, local and remote. For certain use cases,
+    however, this was deemed non-ideal, for example because files from the remote would override files written by the
+    plugin itself in the sandbox. The ``CalcInfo.file_copy_operation_order`` attribute can be used to specify a list
+    of this enum to indicate the desired order for file copy operations.
+    """
+
+    LOCAL = 0
+    REMOTE = 1
+    SANDBOX = 2
+
+
 class CalcInfo(DefaultFieldsAttributeDict):
     """This object will store the data returned by the calculation plugin and to be
     passed to the ExecManager.
@@ -85,6 +109,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         but can also be `CodeRunMode.PARALLEL`)
     * skip_submit: a flag that, when set to True, orders the engine to skip the submit/update steps (so no code will
         run, it will only upload the files and then retrieve/parse).
+    * file_copy_operation_order: Order in which input files are copied to the working directory. Should be a list of
+      :class:`aiida.common.datastructures.FileCopyOperation` instances.
     """
 
     _default_fields = (
@@ -110,6 +136,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'codes_info',
         'codes_run_mode',
         'skip_submit',
+        'file_copy_operation_order',
     )
 
     if TYPE_CHECKING:
@@ -135,6 +162,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         codes_info: None | list[CodeInfo]
         codes_run_mode: None | CodeRunMode
         skip_submit: None | bool
+        file_copy_operation_order: None | list[FileCopyOperation]
 
 
 class CodeInfo(DefaultFieldsAttributeDict):

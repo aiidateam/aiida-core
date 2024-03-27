@@ -20,10 +20,12 @@ from unittest.mock import patch
 import pytest
 from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
+from aiida.common.datastructures import FileCopyOperation
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult
 from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.utils import instantiate_process
 from aiida.plugins import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
@@ -1390,3 +1392,53 @@ class TestImport:
         assert 'sum' in results
         assert isinstance(results['sum'], orm.Int)
         assert results['sum'].value == expected_sum
+
+
+@pytest.fixture
+def arithmetic_add_inputs(aiida_localhost):
+    return {
+        'x': orm.Int(1),
+        'y': orm.Int(2),
+        'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
+    }
+
+
+class FileCopyOperationOrderInvalid(CalcJob):
+    """`Test the ``CalcInfo.file_copy_order`` attribute."""
+
+    def prepare_for_submission(self, _):
+        from aiida.common.datastructures import CalcInfo, CodeInfo
+
+        code_info = CodeInfo()
+        code_info.code_uuid = self.inputs.code.uuid
+        calc_info = CalcInfo()
+        calc_info.codes_info = [code_info]
+        calc_info.file_copy_operation_order = [
+            FileCopyOperation.REMOTE,
+            'sandbox',
+        ]
+        return calc_info
+
+
+def test_file_copy_operation_order_default(fixture_sandbox, arithmetic_add_inputs, runner):
+    """Test the ``CalcInfo.file_copy_operation_order`` is set by default."""
+    process = instantiate_process(runner, ArithmeticAddCalculation, **arithmetic_add_inputs)
+    calc_info = process.presubmit(fixture_sandbox)
+    assert calc_info.file_copy_operation_order == [
+        FileCopyOperation.SANDBOX,
+        FileCopyOperation.LOCAL,
+        FileCopyOperation.REMOTE,
+    ]
+
+
+def test_file_copy_operation_order_invalid(fixture_sandbox, runner, aiida_local_code_factory):
+    """Test the ``CalcInfo.file_copy_operation_order`` is causes exception if set to invalid type."""
+    from aiida.engine.utils import instantiate_process
+
+    inputs = {
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/true'),
+        'metadata': {'options': {'resources': {'num_machines': 1}}},
+    }
+    process = instantiate_process(runner, FileCopyOperationOrderInvalid, **inputs)
+    with pytest.raises(exceptions.PluginInternalError, match=r'calc_info.file_copy_operation_order is not a list .*'):
+        process.presubmit(fixture_sandbox)

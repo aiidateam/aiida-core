@@ -21,7 +21,7 @@ import plumpy.process_states
 
 from aiida import orm
 from aiida.common import AttributeDict, exceptions
-from aiida.common.datastructures import CalcInfo
+from aiida.common.datastructures import CalcInfo, FileCopyOperation
 from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
@@ -974,6 +974,22 @@ class CalcJob(Process):
             codes_run_mode = calc_info.codes_run_mode
 
         job_tmpl.codes_run_mode = codes_run_mode
+
+        if calc_info.file_copy_operation_order is not None:
+            if not isinstance(calc_info.file_copy_operation_order, list) or any(  # type: ignore[redundant-expr]
+                not isinstance(e, FileCopyOperation) for e in calc_info.file_copy_operation_order
+            ):
+                raise PluginInternalError(
+                    'calc_info.file_copy_operation_order is not a list of `FileCopyOperation` enums.'
+                )
+        else:
+            # Set the default
+            calc_info.file_copy_operation_order = [
+                FileCopyOperation.SANDBOX,
+                FileCopyOperation.LOCAL,
+                FileCopyOperation.REMOTE,
+            ]
+
         ########################################################################
 
         custom_sched_commands = self.node.get_option('custom_scheduler_commands')

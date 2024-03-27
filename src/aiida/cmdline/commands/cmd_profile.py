@@ -25,9 +25,7 @@ def verdi_profile():
     """Inspect and manage the configured profiles."""
 
 
-def command_create_profile(
-    ctx: click.Context, storage_cls, non_interactive: bool, profile: Profile, set_as_default: bool = True, **kwargs
-):
+def command_create_profile(ctx: click.Context, storage_cls, profile: Profile, set_as_default: bool = True, **kwargs):
     """Create a new profile, initialise its storage and create a default user.
 
     :param ctx: The context of the CLI command.

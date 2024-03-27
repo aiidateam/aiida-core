@@ -48,6 +48,7 @@ __all__ = (
     'OutputParsingError',
     'HashingError',
     'StorageMigrationError',
+    'StorageBackupError',
     'LockedProfileError',
     'LockingProfileError',
     'ClosedStorage',
@@ -216,6 +217,10 @@ class DatabaseMigrationError(AiidaException):
 
 class StorageMigrationError(DatabaseMigrationError):
     """Raised if a critical error is encountered during a storage migration."""
+
+
+class StorageBackupError(AiidaException):
+    """Raised if a critical error is encountered during a storage backup."""
 
 
 class DbContentError(AiidaException):

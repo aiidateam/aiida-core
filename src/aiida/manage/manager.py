@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA manager for global settings"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Optional, Union

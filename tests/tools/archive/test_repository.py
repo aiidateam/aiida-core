@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test the export for nodes with files in the repository."""
+
 import os
 
 from aiida import orm

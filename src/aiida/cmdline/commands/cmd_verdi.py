@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The main `verdi` click group."""
+
 import click
 
 from aiida import __version__

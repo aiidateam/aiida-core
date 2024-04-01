@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Functions to delete entities from the database, preserving provenance integrity."""
+
 import logging
 from typing import Callable, Iterable, Set, Tuple, Union
 

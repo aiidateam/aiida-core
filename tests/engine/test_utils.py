@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test engine utilities such as the exponential backoff mechanism."""
+
 import asyncio
 
 import pytest
@@ -156,7 +157,7 @@ class TestInterruptable:
         async def task():
             interruptable.set_result('NOT ME!!!')
 
-        loop.create_task(task())
+        future = loop.create_task(task())
         try:
             loop.run_until_complete(interruptable.with_interrupt(asyncio.sleep(20.0)))
         except RuntimeError as err:
@@ -165,6 +166,7 @@ class TestInterruptable:
             pytest.fail('ExpectedException not raised')
 
         assert interruptable.done()
+        assert future.done()
 
 
 @pytest.mark.requires_rmq

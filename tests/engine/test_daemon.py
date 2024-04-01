@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test daemon module."""
+
 import asyncio
 
 import pytest

@@ -12,6 +12,7 @@ Revision ID: django_0013
 Revises: django_0012
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 

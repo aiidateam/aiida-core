@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the links utilities."""
+
 import pytest
 from aiida.common.links import validate_link_label
 

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to test RabbitMQ."""
+
 import asyncio
 
 import plumpy

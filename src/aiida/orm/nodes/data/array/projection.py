@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data plugin to represet arrays of projected wavefunction components."""
+
 import copy
 
 import numpy as np

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Abstraction for an archive file format."""
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Literal, Optional, Type, TypeVar, Union, overload
@@ -205,22 +206,19 @@ class ArchiveFormatAbstract(ABC):
     @abstractmethod
     def open(
         self, path: Union[str, Path], mode: Literal['r'], *, compression: int = 6, **kwargs: Any
-    ) -> ArchiveReaderAbstract:
-        ...
+    ) -> ArchiveReaderAbstract: ...
 
     @overload
     @abstractmethod
     def open(
         self, path: Union[str, Path], mode: Literal['x', 'w'], *, compression: int = 6, **kwargs: Any
-    ) -> ArchiveWriterAbstract:
-        ...
+    ) -> ArchiveWriterAbstract: ...
 
     @overload
     @abstractmethod
     def open(
         self, path: Union[str, Path], mode: Literal['a'], *, compression: int = 6, **kwargs: Any
-    ) -> ArchiveWriterAbstract:
-        ...
+    ) -> ArchiveWriterAbstract: ...
 
     @abstractmethod
     def open(

@@ -15,6 +15,7 @@ Revises: ea2f50e7f615
 Create Date: 2019-01-30 20:26:16.550071
 
 """
+
 from alembic import op
 
 # revision identifiers, used by Alembic.

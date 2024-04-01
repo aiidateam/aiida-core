@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Plugin for transport over SSH (and SFTP for file transfer)."""
+
 import glob
 import io
 import os

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `aiida.engine.processes.builder.ProcessBuilder`."""
+
 import textwrap
 from collections.abc import Mapping, MutableMapping
 

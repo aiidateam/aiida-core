@@ -22,6 +22,7 @@ The individual SQLAlchemy database migrations may be found at:
 
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
+
 from typing import Union
 
 from ..utils import update_metadata, verify_metadata_version

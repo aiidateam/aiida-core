@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for REST API statistics."""
+
 from threading import Thread
 
 import pytest

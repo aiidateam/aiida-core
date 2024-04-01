@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions for command line commands operating on the repository."""
+
 from aiida.cmdline.utils import echo
 
 

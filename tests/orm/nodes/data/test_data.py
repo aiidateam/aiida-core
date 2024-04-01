@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :class:`aiida.orm.nodes.data.data:Data` class."""
+
 import os
 
 import numpy

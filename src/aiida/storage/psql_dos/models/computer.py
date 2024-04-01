@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to manage computers for the SQLA backend."""
+
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.schema import Column
 from sqlalchemy.sql.schema import Index

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi run` command."""
+
 import contextlib
 import pathlib
 import sys

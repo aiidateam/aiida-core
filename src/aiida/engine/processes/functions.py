@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Class and decorators to generate processes out of simple python functions."""
+
 from __future__ import annotations
 
 import collections
@@ -101,17 +102,13 @@ N = t.TypeVar('N', bound=ProcessNode)
 class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
     """Protocol for a decorated process function."""
 
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R_co:
-        ...
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R_co: ...
 
-    def run(self, *args: P.args, **kwargs: P.kwargs) -> R_co:
-        ...
+    def run(self, *args: P.args, **kwargs: P.kwargs) -> R_co: ...
 
-    def run_get_pk(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, int]:
-        ...
+    def run_get_pk(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, int]: ...
 
-    def run_get_node(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, N]:
-        ...
+    def run_get_node(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, N]: ...
 
     is_process_function: bool
 

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for ``verdi daemon``."""
+
 import textwrap
 from unittest.mock import patch
 

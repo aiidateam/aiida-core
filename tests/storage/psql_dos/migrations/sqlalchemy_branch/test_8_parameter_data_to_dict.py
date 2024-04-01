@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N806
 """Tests 61fc0913fae9 -> d254fdfed416"""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 

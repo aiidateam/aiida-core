@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Abstract data plugin representing an executable code."""
+
 from __future__ import annotations
 
 import abc

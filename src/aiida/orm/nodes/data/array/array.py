@@ -6,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""AiiDA ORM data class storing (numpy) arrays
-"""
+"""AiiDA ORM data class storing (numpy) arrays"""
+
 from __future__ import annotations
 
 from typing import Any, Iterator

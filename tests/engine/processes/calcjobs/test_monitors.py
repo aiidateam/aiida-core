@@ -1,4 +1,5 @@
 """Tests for the :mod:`aiida.engine.processes.calcjobs.monitors` module."""
+
 from __future__ import annotations
 
 import time

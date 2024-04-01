@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.orm.nodes.data.array.array` module."""
+
 import numpy
 import pytest
 from aiida.orm import ArrayData, load_node

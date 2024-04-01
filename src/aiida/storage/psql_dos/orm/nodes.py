@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SqlAlchemy implementation of the `BackendNode` and `BackendNodeCollection` classes."""
+
 from datetime import datetime
 from typing import Any, Dict, Iterable, Tuple, Type
 

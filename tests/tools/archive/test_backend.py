@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test using the archive backend directly."""
+
 import pytest
 from aiida import orm
 from aiida.common.exceptions import NotExistent

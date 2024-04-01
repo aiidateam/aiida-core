@@ -16,6 +16,7 @@ an interface classes which enforces the implementation of its defined methods.
 An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
 when instantiated by the user.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -1032,12 +1033,10 @@ class QueryBuilder:
             return value
 
     @overload
-    def first(self, flat: Literal[False] = False) -> Optional[list[Any]]:
-        ...
+    def first(self, flat: Literal[False] = False) -> Optional[list[Any]]: ...
 
     @overload
-    def first(self, flat: Literal[True]) -> Optional[Any]:
-        ...
+    def first(self, flat: Literal[True]) -> Optional[Any]: ...
 
     def first(self, flat: bool = False) -> Optional[list[Any] | Any]:
         """Return the first result of the query.

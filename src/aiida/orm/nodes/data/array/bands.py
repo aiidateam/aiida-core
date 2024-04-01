@@ -9,6 +9,7 @@
 """This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
+
 import json
 from string import Template
 from typing import List, Optional

@@ -14,6 +14,7 @@ Revises: 1de112340b17
 Create Date: 2021-08-25 04:28:52.102767
 
 """
+
 from alembic import op
 
 from aiida.storage.psql_dos.migrations.utils.parity import synchronize_schemas

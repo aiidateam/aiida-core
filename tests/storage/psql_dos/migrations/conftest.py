@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the migration engine (Alembic) as well as for the AiiDA migrations for SQLAlchemy."""
+
 from pathlib import Path
 from uuid import uuid4
 

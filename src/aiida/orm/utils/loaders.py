@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `OrmEntityLoader` and its sub classes that simplify loading entities through their identifiers."""
+
 from abc import abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING

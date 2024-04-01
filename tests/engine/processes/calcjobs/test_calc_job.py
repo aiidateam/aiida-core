@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test for the `CalcJob` process sub class."""
+
 import io
 import json
 import os

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test the schema of the sqlite file within the archive."""
+
 from contextlib import suppress
 
 import yaml
@@ -107,9 +108,9 @@ def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):
             psql_nullable = psql_columns[column_name]['nullable']
             sqlite_nullable = sqlite_columns[column_name]['nullable']
             if psql_nullable != sqlite_nullable:
-                diffs.setdefault(table_name, {}).setdefault(column_name, {})[
-                    'nullable'
-                ] = f'{sqlite_nullable} != {psql_nullable}'
+                diffs.setdefault(table_name, {}).setdefault(column_name, {})['nullable'] = (
+                    f'{sqlite_nullable} != {psql_nullable}'
+                )
 
         # compare unique constraints
         psql_uq_constraints = [c['name'] for c in psql_insp.get_unique_constraints(table_name)]

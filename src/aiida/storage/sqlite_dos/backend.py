@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Storage implementation using Sqlite database and disk-objectstore container."""
+
 from __future__ import annotations
 
 from functools import cached_property

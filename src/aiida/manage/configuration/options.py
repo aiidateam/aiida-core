@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of known configuration options and methods to parse and get option values."""
+
 from typing import Any, Dict, List, Tuple
 
 from aiida.common.exceptions import ConfigurationError

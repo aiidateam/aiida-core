@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the ``Config`` class."""
+
 import json
 import os
 import pathlib

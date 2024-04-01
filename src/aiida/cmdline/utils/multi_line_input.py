@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for getting multi line input from the commandline."""
+
 import re
 
 import click

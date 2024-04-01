@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for GroupPath command line interface"""
+
 from textwrap import dedent
 
 import pytest

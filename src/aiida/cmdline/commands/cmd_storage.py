@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi storage` commands."""
+
 import click
 from click_spinner import spinner
 

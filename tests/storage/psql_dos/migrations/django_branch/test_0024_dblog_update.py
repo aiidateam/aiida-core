@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test the update to the ``DbLog`` table."""
+
 import json
 
 from aiida.common import timezone

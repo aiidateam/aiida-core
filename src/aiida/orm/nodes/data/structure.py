@@ -9,6 +9,7 @@
 """This module defines the classes for structures and all related
 functions to operate on them.
 """
+
 import copy
 import functools
 import itertools

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility module with a factory of standard ``QueryBuilder`` instances for ``CalculationNodes``."""
+
 from aiida.common.lang import classproperty
 
 from .mapping import CalculationProjectionMapper

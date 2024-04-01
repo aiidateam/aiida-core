@@ -15,6 +15,7 @@ and indeed a valid implementation is::
     set_progress_reporter(tqdm, bar_format='{l_bar}{bar}{r_bar}')
 
 """
+
 from functools import partial
 from types import TracebackType
 from typing import Any, Callable, Optional, Type

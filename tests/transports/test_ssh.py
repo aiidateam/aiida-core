@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test :mod:`aiida.transports.plugins.ssh`."""
+
 import logging
 
 import paramiko

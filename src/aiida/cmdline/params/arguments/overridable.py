@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Convenience class which can be used to defined a set of commonly used arguments that can be easily reused."""
+
 import click
 
 __all__ = ('OverridableArgument',)

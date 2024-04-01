@@ -10,6 +10,7 @@
 to access members of other classes via TAB-completable attributes
 (e.g. the class underlying `calculation.inputs` to allow to do `calculation.inputs.<label>`).
 """
+
 from aiida.common import AttributeDict
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
 from aiida.common.links import LinkType

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Base class implementation for an external database importer."""
+
 import io
 from typing import Optional
 

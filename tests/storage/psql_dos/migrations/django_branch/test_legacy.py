@@ -17,6 +17,7 @@ So is not possible to know declaratively exactly what constraints/indexes are pr
 withtout knowing the exact django version that created it (and run migrations).
 Therefore, we need to check that the migration code handles this correctly.
 """
+
 import sqlalchemy as sa
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 

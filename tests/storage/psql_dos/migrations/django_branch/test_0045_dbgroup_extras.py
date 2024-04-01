@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test migration to add the `extras` JSONB column to the `DbGroup` model."""
+
 from uuid import uuid4
 
 from aiida.common import timezone

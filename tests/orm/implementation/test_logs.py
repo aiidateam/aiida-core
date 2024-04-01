@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the BackendLog and BackendLogCollection classes."""
+
 import logging
 from datetime import datetime
 from uuid import UUID, uuid4

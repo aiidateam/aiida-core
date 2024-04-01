@@ -1,4 +1,5 @@
 """Tests for the :mod:`aiida.repository.repository` module."""
+
 import contextlib
 import io
 import pathlib

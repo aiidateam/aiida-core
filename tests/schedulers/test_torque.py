@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `TorqueScheduler` plugin."""
+
 import unittest
 import uuid
 

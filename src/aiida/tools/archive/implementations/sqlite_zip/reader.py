@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA archive reader implementation."""
+
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 

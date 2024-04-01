@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module which provides decorators for AiiDA ORM entity -> DB field mappings."""
+
 import datetime
 import typing as t
 from abc import ABCMeta
@@ -160,8 +161,7 @@ class QbField:
 
     if t.TYPE_CHECKING:
 
-        def __getitem__(self, key: str) -> 'QbField':
-            ...
+        def __getitem__(self, key: str) -> 'QbField': ...
 
 
 class QbNumericField(QbField):

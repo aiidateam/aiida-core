@@ -8,6 +8,7 @@
 ###########################################################################
 # start-marker for docs
 """Code snippets for the "How to extend workflows" section."""
+
 from aiida.engine import ToContext, WorkChain, calcfunction
 from aiida.orm import AbstractCode, Bool, Int
 from aiida.plugins.factories import CalculationFactory

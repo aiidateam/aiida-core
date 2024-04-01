@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA profile related code"""
+
 from __future__ import annotations
 
 import collections

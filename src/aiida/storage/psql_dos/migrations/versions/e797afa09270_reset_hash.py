@@ -15,6 +15,7 @@ Revises: 26d561acd560
 Create Date: 2019-07-01 19:39:33.605457
 
 """
+
 from alembic import op
 
 from aiida.storage.psql_dos.migrations.utils.integrity import drop_hashes

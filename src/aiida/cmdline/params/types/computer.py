@@ -6,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module for the custom click param type computer
-"""
+"""Module for the custom click param type computer"""
+
 from click.shell_completion import CompletionItem
 from click.types import StringParamType
 

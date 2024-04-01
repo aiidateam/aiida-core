@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Methods to validate the database integrity and fix violations."""
+
 from __future__ import annotations
 
 from aiida.common.log import AIIDA_LOGGER

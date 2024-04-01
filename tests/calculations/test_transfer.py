@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `TransferCalculation` plugin."""
+
 import os
 
 import pytest

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to define the custom click type for code."""
+
 import click
 
 __all__ = ('ConfigOptionParamType',)

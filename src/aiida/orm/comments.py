@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Comment objects and functions"""
+
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Type
 

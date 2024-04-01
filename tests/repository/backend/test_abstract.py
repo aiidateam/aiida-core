@@ -1,4 +1,5 @@
 """Tests for the :mod:`aiida.repository.backend.abstract` module."""
+
 import io
 import tempfile
 from typing import BinaryIO, Iterable, List, Optional

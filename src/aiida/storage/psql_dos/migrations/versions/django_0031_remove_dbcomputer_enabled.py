@@ -14,6 +14,7 @@ Revision ID: django_0031
 Revises: django_0030
 
 """
+
 from alembic import op
 
 revision = 'django_0031'

@@ -6,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""A custom click type that defines a lazy choice
-"""
+"""A custom click type that defines a lazy choice"""
+
 import click
 
 __all__ = ('LazyChoice',)

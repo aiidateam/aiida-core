@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Convenience functions for logging output from ``verdi`` commands."""
+
 import collections
 import enum
 import json

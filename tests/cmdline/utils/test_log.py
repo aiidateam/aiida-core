@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.cmdline.utils.log` module."""
+
 import logging
 
 from aiida.cmdline.utils import log

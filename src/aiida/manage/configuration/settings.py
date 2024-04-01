@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Base settings required for the configuration of an AiiDA instance."""
+
 from __future__ import annotations
 
 import os

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi process` command."""
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -128,7 +129,7 @@ def process_list(
     echo.echo(f'\nTotal results: {len(projected)}\n')
 
     if 'cached' in project:
-        echo.echo_report('\u267B Processes marked with check-mark were not run but taken from the cache.')
+        echo.echo_report('\u267b Processes marked with check-mark were not run but taken from the cache.')
         echo.echo_report('Add the option `-P pk cached_from` to the command to display cache source.')
 
     print_last_process_state_change()

@@ -6,8 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Translator for computer
-"""
+"""Translator for computer"""
 
 from aiida import orm
 from aiida.restapi.translator.base import BaseTranslator

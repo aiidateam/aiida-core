@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi archive` command."""
+
 import logging
 import traceback
 from enum import Enum

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The `verdi setup` and `verdi quicksetup` commands."""
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi

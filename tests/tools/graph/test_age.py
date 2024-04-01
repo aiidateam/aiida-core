@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AGE tests"""
+
 import numpy as np
 import pytest
 from aiida import orm

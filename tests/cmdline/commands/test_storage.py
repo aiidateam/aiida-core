@@ -193,6 +193,17 @@ def tests_storage_backup(run_cli_command, tmp_path):
     assert result2.exit_code == 0
 
 
+def tests_storage_backup_keep(run_cli_command, tmp_path):
+    """Test the ``verdi storage backup`` command with the keep argument"""
+    params = [str(tmp_path), '--keep', '1']
+    for i in range(3):
+        result = run_cli_command(cmd_storage.storage_backup, parameters=params)
+        assert 'backed up to' in result.output
+        assert result.exit_code == 0
+    # make sure only two copies of the backup are kept
+    assert len(list((tmp_path.glob('backup_*')))) == 2
+
+
 def tests_storage_backup_nonempty_dest(run_cli_command, tmp_path):
     """Test that the ``verdi storage backup`` fails for non-empty destination."""
     # add a file to the destination

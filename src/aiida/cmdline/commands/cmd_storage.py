@@ -171,6 +171,7 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
 @click.argument('dest', type=click.Path(file_okay=False), nargs=1)
 @click.option(
     '--keep',
+    type=int,
     required=False,
     help=(
         'Number of previous backups to keep in the destination, '

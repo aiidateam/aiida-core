@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for `WorkChain` implementations."""
+
 from functools import partial
 from inspect import getfullargspec
 from types import FunctionType

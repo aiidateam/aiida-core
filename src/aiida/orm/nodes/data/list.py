@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a list."""
+
 from collections.abc import MutableSequence
 
 from .base import to_aiida_type

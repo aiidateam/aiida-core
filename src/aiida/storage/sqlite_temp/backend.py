@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of the ``SqliteTempBackend`` backend."""
+
 from __future__ import annotations
 
 import functools

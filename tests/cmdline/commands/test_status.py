@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi status`."""
+
 import pytest
 from aiida import __version__, get_profile
 from aiida.cmdline.commands import cmd_status

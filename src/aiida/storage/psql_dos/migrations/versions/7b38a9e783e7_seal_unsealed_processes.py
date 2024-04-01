@@ -24,6 +24,7 @@ Revises: e734dd5e50d7
 Create Date: 2019-10-28 13:22:56.224234
 
 """
+
 from alembic import op
 from sqlalchemy.sql import text
 

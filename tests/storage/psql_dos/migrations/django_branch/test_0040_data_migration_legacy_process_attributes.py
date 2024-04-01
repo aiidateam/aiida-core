@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests the database migration of legacy process attributes."""
+
 from uuid import uuid4
 
 from aiida.common import timezone

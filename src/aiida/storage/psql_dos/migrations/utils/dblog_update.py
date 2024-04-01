@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Shared function for django_0024 and sqlalchemy ea2f50e7f615"""
+
 import sys
 from tempfile import NamedTemporaryFile
 from typing import Set

@@ -12,6 +12,7 @@ Despite the import of the annotations backport below which enables postponed typ
 with PEP 563 (https://peps.python.org/pep-0563/), this is not compatible with ``pydantic`` for Python 3.9 and older (
 See https://github.com/pydantic/pydantic/issues/2678 for details).
 """
+
 from __future__ import annotations
 
 import codecs

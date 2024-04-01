@@ -1,4 +1,5 @@
 """Tests for :mod:`aiida.orm.nodes.process.process`."""
+
 import pytest
 from aiida.engine import ExitCode, ProcessState, launch
 from aiida.orm import Int

@@ -6,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module to get the backend instance from the Models instance
-"""
+"""Module to get the backend instance from the Models instance"""
+
 from functools import singledispatch
 
 from aiida.storage.psql_dos.models.authinfo import DbAuthInfo

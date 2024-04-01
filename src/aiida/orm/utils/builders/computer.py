@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Manage computer objects with lazy loading of the db env"""
+
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import ErrorAccumulator
 

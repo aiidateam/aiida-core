@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the ``DirectScheduler`` plugin."""
+
 import pytest
 from aiida.common.datastructures import CodeRunMode
 from aiida.schedulers import SchedulerError

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `verdi group` command."""
+
 import pytest
 from aiida import orm
 from aiida.cmdline.commands import cmd_group

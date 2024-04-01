@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities that extend the basic python language."""
+
 import functools
 import keyword
 from typing import Any, Callable, Generic, TypeVar

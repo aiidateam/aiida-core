@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi profile` command."""
+
 from __future__ import annotations
 
 import click

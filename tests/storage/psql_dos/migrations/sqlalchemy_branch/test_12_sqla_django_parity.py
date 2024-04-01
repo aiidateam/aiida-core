@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N806
 """Tests for migrations to bring parity between SQLAlchemy and Django."""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 

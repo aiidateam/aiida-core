@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test migration of `type_string` after the `Group` class became pluginnable."""
+
 from uuid import uuid4
 
 from aiida.common import timezone

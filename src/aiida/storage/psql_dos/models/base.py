@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Base SQLAlchemy models."""
+
 from sqlalchemy import MetaData, event, inspect
 from sqlalchemy.orm import declarative_base
 

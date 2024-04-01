@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the calcfunction decorator and CalcFunctionNode."""
+
 import pytest
 from aiida.common import exceptions
 from aiida.common.links import LinkType

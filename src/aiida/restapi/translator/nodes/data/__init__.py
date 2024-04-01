@@ -6,8 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Translator for data node
-"""
+"""Translator for data node"""
 
 from aiida.common.exceptions import LicensingException
 from aiida.restapi.common.exceptions import RestInputValidationError

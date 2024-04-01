@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the various node managers (.inputs, .outputs, .dict, ...)."""
+
 import warnings
 
 import pytest

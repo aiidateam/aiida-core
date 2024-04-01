@@ -10,6 +10,7 @@
 
 The tests highlight the features of the archive abstraction.
 """
+
 from io import BytesIO
 
 import pytest

@@ -21,6 +21,7 @@ Revision ID: django_0050
 Revises: django_0049
 
 """
+
 from alembic import op
 
 from aiida.storage.psql_dos.migrations.utils.parity import synchronize_schemas

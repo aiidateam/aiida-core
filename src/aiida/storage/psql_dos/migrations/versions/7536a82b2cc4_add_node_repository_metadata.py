@@ -13,6 +13,7 @@ Revises: 0edcdd5a30f0
 Create Date: 2020-07-09 11:32:39.924151
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql

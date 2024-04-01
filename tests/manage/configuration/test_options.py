@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the configuration options."""
+
 import pytest
 from aiida import get_profile
 from aiida.common.exceptions import ConfigurationError

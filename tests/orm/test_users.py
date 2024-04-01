@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for :mod:`aiida.orm.users`."""
+
 from aiida.orm.users import User
 
 

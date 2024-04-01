@@ -1,4 +1,5 @@
 """Interface for comments of a node instance."""
+
 from __future__ import annotations
 
 import typing as t

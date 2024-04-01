@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`~aiida.common.timezone` module."""
+
 from datetime import datetime, timedelta, timezone, tzinfo
 from time import time
 

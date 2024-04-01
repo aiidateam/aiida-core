@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the BackendNode and BackendNodeCollection classes."""
+
 from collections import OrderedDict
 from datetime import datetime
 from uuid import UUID, uuid4

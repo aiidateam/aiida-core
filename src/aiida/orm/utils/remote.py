@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for operations on files on remote computers."""
+
 import os
 
 from aiida.orm.nodes.data.remote.base import RemoteData

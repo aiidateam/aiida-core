@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `SgeScheduler` plugin."""
+
 import logging
 import unittest
 

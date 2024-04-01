@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Profile param type for click."""
+
 from click.shell_completion import CompletionItem
 
 from .strings import LabelStringType

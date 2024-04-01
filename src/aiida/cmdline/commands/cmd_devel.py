@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi devel` commands."""
+
 import sys
 
 import click

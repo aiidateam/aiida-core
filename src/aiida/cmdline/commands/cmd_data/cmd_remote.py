@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi data core.remote` command."""
+
 import stat
 
 import click

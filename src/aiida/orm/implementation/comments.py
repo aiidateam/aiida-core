@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for comment backend classes."""
+
 import abc
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional

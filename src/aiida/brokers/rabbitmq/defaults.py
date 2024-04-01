@@ -1,4 +1,5 @@
 """Defaults related to RabbitMQ."""
+
 from aiida.common.extendeddicts import AttributeDict
 
 __all__ = ('BROKER_DEFAULTS',)

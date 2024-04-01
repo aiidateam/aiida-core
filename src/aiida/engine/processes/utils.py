@@ -1,4 +1,5 @@
 """Module with utilities."""
+
 from collections.abc import Mapping
 
 from aiida.orm import Node

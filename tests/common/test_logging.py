@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.common.log` module."""
+
 import logging
 
 from aiida.common.log import capture_logging

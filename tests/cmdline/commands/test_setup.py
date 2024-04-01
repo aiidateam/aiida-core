@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for ``verdi setup``."""
+
 import os
 import tempfile
 import uuid

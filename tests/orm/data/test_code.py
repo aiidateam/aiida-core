@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for :class:`aiida.orm.nodes.data.code.legacy.Code` class."""
+
 import uuid
 
 import pytest

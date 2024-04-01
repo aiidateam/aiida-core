@@ -8,6 +8,7 @@
 ###########################################################################
 # start-marker for docs
 """Implementation of the MultiplyAddWorkChain for testing and demonstration purposes."""
+
 from aiida.engine import ToContext, WorkChain, calcfunction
 from aiida.orm import AbstractCode, Int
 from aiida.plugins.factories import CalculationFactory

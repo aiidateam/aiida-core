@@ -11,6 +11,7 @@ using the old ``data.json`` format for storing the database.
 
 These migrations simply manipulate the metadata and data in-place.
 """
+
 from typing import Callable, Dict, Tuple
 
 from .v04_to_v05 import migrate_v4_to_v5

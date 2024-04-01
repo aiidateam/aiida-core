@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions specific to the SqlAlchemy backend."""
+
 import json
 from typing import TypedDict
 

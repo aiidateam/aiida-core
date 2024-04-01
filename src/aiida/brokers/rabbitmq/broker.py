@@ -1,4 +1,5 @@
 """Implementation of the message broker interface using RabbitMQ through ``kiwipy``."""
+
 from __future__ import annotations
 
 import functools

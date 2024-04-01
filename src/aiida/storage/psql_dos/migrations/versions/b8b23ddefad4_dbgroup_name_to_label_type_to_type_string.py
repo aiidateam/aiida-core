@@ -13,6 +13,7 @@ Revises: 239cea6d2452
 Create Date: 2018-12-06 15:25:32.865136
 
 """
+
 from alembic import op
 
 # revision identifiers, used by Alembic.

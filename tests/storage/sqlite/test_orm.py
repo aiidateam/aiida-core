@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test for the ORM implementation."""
+
 import json
 
 import pytest

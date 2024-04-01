@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi storage`."""
+
 import pytest
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_storage

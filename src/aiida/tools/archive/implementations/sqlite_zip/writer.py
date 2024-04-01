@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA archive writer implementation."""
+
 import hashlib
 import json
 import os

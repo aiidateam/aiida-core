@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility module with simple functions to format variables into strings for outputting as text."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -33,19 +34,19 @@ def format_state(process_state: str, paused: bool | None = None, exit_status: in
     :return: String representation of the process' state.
     """
     if process_state in ['excepted']:
-        symbol = '\u2A2F'
+        symbol = '\u2a2f'
     elif process_state in ['killed']:
         symbol = '\u2620'
     elif process_state in ['created', 'finished']:
-        symbol = '\u23F9'
+        symbol = '\u23f9'
     elif process_state in ['running', 'waiting']:
         if paused is True:
-            symbol = '\u23F8'
+            symbol = '\u23f8'
         else:
-            symbol = '\u23F5'
+            symbol = '\u23f5'
     else:
         # Unknown process state, use invisible separator
-        symbol = '\u00B7'  # middle dot
+        symbol = '\u00b7'  # middle dot
 
     if process_state == 'finished' and exit_status is not None:
         return f'{symbol} {format_process_state(process_state)} [{exit_status}]'

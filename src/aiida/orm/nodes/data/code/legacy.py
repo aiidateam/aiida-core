@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data plugin represeting an executable code to be wrapped and called through a `CalcJob` plugin."""
+
 import os
 import pathlib
 from typing import Optional

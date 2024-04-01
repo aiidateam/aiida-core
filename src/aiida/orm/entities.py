@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all common top level AiiDA entity classes and methods"""
+
 from __future__ import annotations
 
 import abc

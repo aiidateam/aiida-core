@@ -10,6 +10,7 @@
 
 This migration is necessary after the `core.` prefix was added to entry points shipped with `aiida-core`.
 """
+
 from ..utils import update_metadata, verify_metadata_version
 
 MAPPING_DATA = {

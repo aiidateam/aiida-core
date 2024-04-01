@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N806
 """Tests for the provenance redesign: 140c971ae0a3 -> 239cea6d2452"""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 

@@ -11,6 +11,7 @@
 Threaded mode is the default (and only) way to run the AiiDA REST API (see `aiida.restapi.run_api:run_api()`).
 This test file's layout is inspired by https://gist.github.com/prschmid/4643738
 """
+
 import time
 from threading import Thread
 

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities to operate on `Node` classes."""
+
 import logging
 import warnings
 

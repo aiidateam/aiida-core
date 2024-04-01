@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests to run with a running daemon."""
+
 import os
 import re
 import shutil

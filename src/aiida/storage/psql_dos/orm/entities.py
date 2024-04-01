@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Classes and methods for Django specific backend entities"""
+
 from typing import Generic, Set, TypeVar
 
 from aiida.common.lang import type_check

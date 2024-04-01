@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `Node` utils."""
+
 import pytest
 from aiida.orm import Data
 from aiida.orm.utils.node import load_node_class

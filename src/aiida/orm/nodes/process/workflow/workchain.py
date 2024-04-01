@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for workchain processes."""
+
 from typing import Optional, Tuple
 
 from aiida.common.lang import classproperty

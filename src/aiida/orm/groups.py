@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA Group entites"""
+
 import warnings
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast

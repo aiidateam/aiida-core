@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N806
 """Tests DbLog migration: 7ca08c391c49 -> 375c2db70663"""
+
 import json
 
 import pytest

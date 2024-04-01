@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for Computer entities"""
+
 import logging
 import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union

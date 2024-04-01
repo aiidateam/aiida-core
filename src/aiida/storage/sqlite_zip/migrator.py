@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Versioning and migration implementation for the sqlite_zip format."""
+
 import contextlib
 import json
 import os

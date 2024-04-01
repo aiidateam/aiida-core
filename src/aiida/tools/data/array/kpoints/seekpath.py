@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tool to automatically determine k-points for a given structure using SeeK-path."""
+
 import seekpath
 
 from aiida.orm import Dict, KpointsData

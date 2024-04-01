@@ -1,4 +1,5 @@
 """Launch a calculation using the 'diff-tutorial' plugin"""
+
 from pathlib import Path
 
 from aiida import engine, orm

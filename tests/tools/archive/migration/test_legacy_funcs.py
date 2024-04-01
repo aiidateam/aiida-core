@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test migrating all export archives included in `tests/static/export/migrate`."""
+
 import pytest
 from aiida import get_version
 from aiida.storage.sqlite_zip.migrations.legacy import LEGACY_MIGRATE_FUNCTIONS

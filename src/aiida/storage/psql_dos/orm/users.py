@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQLA user"""
+
 from aiida.orm.implementation.users import BackendUser, BackendUserCollection
 from aiida.storage.psql_dos.models.user import DbUser
 

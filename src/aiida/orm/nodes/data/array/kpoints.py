@@ -10,6 +10,7 @@
 lists and meshes of k-points (i.e., points in the reciprocal space of a
 periodic crystal structure).
 """
+
 from typing import List
 
 import numpy

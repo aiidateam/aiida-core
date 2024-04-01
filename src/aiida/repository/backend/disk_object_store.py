@@ -1,4 +1,5 @@
 """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-objectstore`` as the backend."""
+
 import contextlib
 import dataclasses
 import shutil

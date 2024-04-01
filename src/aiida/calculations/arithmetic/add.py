@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`CalcJob` implementation to add two numbers using bash for testing and demonstration purposes."""
+
 from aiida import orm
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.folders import Folder

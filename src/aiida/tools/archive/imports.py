@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Import an archive."""
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, Literal, Optional, Set, Tuple, Union

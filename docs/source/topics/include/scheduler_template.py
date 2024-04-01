@@ -1,4 +1,5 @@
 """Template for a scheduler plugin."""
+
 import logging
 
 from aiida.common import exceptions

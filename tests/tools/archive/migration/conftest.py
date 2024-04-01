@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with tests for export archive migrations."""
+
 import pytest
 from aiida.storage.sqlite_zip.migrations.utils import verify_metadata_version
 

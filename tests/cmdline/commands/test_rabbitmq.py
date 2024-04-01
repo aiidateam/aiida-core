@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for ``verdi devel rabbitmq``."""
+
 import pytest
 from aiida.cmdline.commands import cmd_rabbitmq
 from aiida.engine import ProcessState, submit

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test migration that updates node types after `core.` prefix was added to entry point names."""
+
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator

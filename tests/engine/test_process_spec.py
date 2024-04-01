@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `ProcessSpec` class."""
+
 import pytest
 from aiida.engine import Process
 from aiida.orm import Data, Node

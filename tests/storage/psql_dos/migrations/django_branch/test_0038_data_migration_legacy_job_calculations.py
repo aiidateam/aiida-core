@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests the database migration from legacy calculations."""
+
 from __future__ import annotations
 
 from uuid import uuid4

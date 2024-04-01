@@ -7,12 +7,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to draw ASCII diagrams to the command line."""
+
 from typing import Optional
 
 __all__ = ('format_call_graph',)
 
 TREE_LAST_ENTRY = '\u2514\u2500\u2500 '
-TREE_MIDDLE_ENTRY = '\u251C\u2500\u2500 '
+TREE_MIDDLE_ENTRY = '\u251c\u2500\u2500 '
 TREE_FIRST_ENTRY = TREE_MIDDLE_ENTRY
 
 

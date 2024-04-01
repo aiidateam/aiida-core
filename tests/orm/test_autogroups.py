@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the Autogroup functionality."""
+
 import pytest
 from aiida.orm import AutoGroup, QueryBuilder
 from aiida.orm.autogroup import AutogroupManager

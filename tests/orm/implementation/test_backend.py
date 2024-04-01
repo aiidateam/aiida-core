@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the ORM Backend class."""
+
 import uuid
 
 import pytest

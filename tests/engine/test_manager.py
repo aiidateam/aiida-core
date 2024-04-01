@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the classes in `aiida.engine.processes.calcjobs.manager`."""
+
 import asyncio
 import time
 

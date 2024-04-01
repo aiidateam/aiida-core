@@ -16,6 +16,7 @@ However, when migrating an archive from the old format, we require a fixed revis
 The only difference between the PostGreSQL schema and SQLite one,
 is the replacement of ``JSONB`` with ``JSON``, and ``UUID`` with ``CHAR(32)``.
 """
+
 from sqlalchemy import ForeignKey, MetaData, orm
 from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.schema import Column, UniqueConstraint

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Define the current configuration version and migrations."""
+
 from typing import Any, Dict, Iterable, Optional, Protocol, Type
 
 from aiida.common import exceptions

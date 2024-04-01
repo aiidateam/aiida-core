@@ -6,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Base classes for PBSPro and PBS/Torque plugins.
-"""
+"""Base classes for PBSPro and PBS/Torque plugins."""
+
 import logging
 
 from aiida.common.escaping import escape_for_bash

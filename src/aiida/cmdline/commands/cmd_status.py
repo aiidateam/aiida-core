@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi status` command."""
+
 import enum
 import sys
 
@@ -42,7 +43,7 @@ STATUS_SYMBOLS = {
     },
     ServiceStatus.WARNING: {
         'color': 'yellow',
-        'string': '\u23FA',
+        'string': '\u23fa',
     },
     ServiceStatus.DOWN: {
         'color': 'red',

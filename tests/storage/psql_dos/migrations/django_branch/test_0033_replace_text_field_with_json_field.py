@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test migration adding the `repository_metadata` column to the `Node` model."""
+
 import json
 
 from aiida.common import timezone

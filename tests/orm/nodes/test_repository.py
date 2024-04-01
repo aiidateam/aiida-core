@@ -1,4 +1,5 @@
 """Tests for the :mod:`aiida.orm.nodes.repository` module."""
+
 import pathlib
 
 import pytest

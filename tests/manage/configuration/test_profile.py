@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :class:`aiida.manage.configuration.profile.Profile` class."""
+
 import uuid
 
 import pytest

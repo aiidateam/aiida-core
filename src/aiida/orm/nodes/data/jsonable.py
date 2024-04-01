@@ -1,4 +1,5 @@
 """Data plugin that allows to easily wrap objects that are JSON-able."""
+
 import importlib
 import json
 import typing
@@ -9,8 +10,7 @@ __all__ = ('JsonableData',)
 
 
 class JsonSerializableProtocol(typing.Protocol):
-    def as_dict(self) -> typing.MutableMapping[typing.Any, typing.Any]:
-        ...
+    def as_dict(self) -> typing.MutableMapping[typing.Any, typing.Any]: ...
 
 
 class JsonableData(Data):

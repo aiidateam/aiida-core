@@ -10,6 +10,7 @@
 
 This migration applies the name change of the ``Computer`` attribute ``name`` to ``label``.
 """
+
 from ..utils import update_metadata, verify_metadata_version
 
 

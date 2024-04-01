@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Skip this test module unless the storage backend of the test profile matches ``core.psql_dos``."""
+
 import os
 
 from aiida.common.exceptions import MissingConfigurationError

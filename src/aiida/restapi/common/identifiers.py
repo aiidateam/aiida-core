@@ -30,6 +30,7 @@ Examples of invalid full types:
     'process.calculation%.calcfunction.%|aiida.calculations:arithmetic.add'  # More than one operator in segment
 
 """
+
 from collections.abc import MutableMapping
 
 from aiida.common.escaping import escape_for_sql_like

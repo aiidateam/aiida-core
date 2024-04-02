@@ -90,7 +90,7 @@ def test_export(benchmark, tmp_path, depth, breadth, num_objects):
 @pytest.mark.benchmark(group='import-export')
 def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects):
     """Benchmark importing a provenance graph."""
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     root_node = Dict()
     recursive_provenance(root_node, depth=depth, breadth=breadth, num_objects=num_objects)
     root_uuid = root_node.uuid
@@ -99,7 +99,7 @@ def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects)
     create_archive([root_node], **kwargs)
 
     def _setup():
-        aiida_profile.clear_profile()
+        aiida_profile.reset_storage()
 
     def _run():
         import_archive(str(out_path))

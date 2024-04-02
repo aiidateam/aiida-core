@@ -188,11 +188,11 @@ def monitor_emit_warning(node, transport, **kwargs):
     AIIDA_LOGGER.warning('monitor_emit_warning monitor was called')
 
 
-def test_calc_job_monitors_process_poll_interval_integrated(entry_points, aiida_local_code_factory, aiida_caplog):
+def test_calc_job_monitors_process_poll_interval_integrated(entry_points, aiida_code_installed, caplog):
     """Test the ``minimum_poll_interval`` input by actually running through the engine."""
     entry_points.add(monitor_emit_warning, 'aiida.calculations.monitors:core.emit_warning')
 
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     builder = code.get_builder()
     builder.x = Int(1)
     builder.y = Int(1)
@@ -203,16 +203,16 @@ def test_calc_job_monitors_process_poll_interval_integrated(entry_points, aiida_
     assert node.is_finished_ok
 
     # Check that the number of log messages emitted by the monitor is just 1 as it should have been called just once.
-    logs = [rec.message for rec in aiida_caplog.records if rec.message == 'monitor_emit_warning monitor was called']
+    logs = [rec.message for rec in caplog.records if rec.message == 'monitor_emit_warning monitor was called']
     assert len(logs) == 1
 
 
-def test_calc_job_monitors_outputs(entry_points, aiida_local_code_factory):
+def test_calc_job_monitors_outputs(entry_points, aiida_code_installed):
     """Test a monitor that returns outputs to be attached to the node."""
     entry_points.add(StoreMessageCalculation, 'aiida.calculations:core.store_message')
     entry_points.add(monitor_store_message, 'aiida.calculations.monitors:core.store_message')
 
-    code = aiida_local_code_factory('core.store_message', '/bin/bash')
+    code = aiida_code_installed(default_calc_job_plugin='core.store_message', filepath_executable='/bin/bash')
     builder = code.get_builder()
     builder.x = Int(1)
     builder.y = Int(1)

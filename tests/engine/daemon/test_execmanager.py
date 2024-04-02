@@ -81,12 +81,12 @@ def file_hierarchy_simple():
 
 
 @pytest.fixture
-def node_and_calc_info(aiida_localhost, aiida_local_code_factory):
+def node_and_calc_info(aiida_localhost, aiida_code_installed):
     """Return a ``CalcJobNode`` and associated ``CalcInfo`` instance."""
     node = CalcJobNode(computer=aiida_localhost)
     node.store()
 
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash').store()
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash').store()
     code_info = CodeInfo()
     code_info.code_uuid = code.uuid
 

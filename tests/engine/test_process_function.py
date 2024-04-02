@@ -694,7 +694,7 @@ def test_type_hinting_spec_inference():
         assert input_namespace[key].valid_type == valid_types, key
 
 
-def test_type_hinting_spec_inference_pep_604(aiida_caplog):
+def test_type_hinting_spec_inference_pep_604(caplog):
     """Test the parsing of type hinting that uses union typing of PEP 604 which is only available to Python 3.10 and up.
 
     Even though adding ``from __future__ import annotations`` should backport this functionality to Python 3.9 and older
@@ -724,7 +724,7 @@ def test_type_hinting_spec_inference_pep_604(aiida_caplog):
             ('c', (orm.Dict, type(None))),
         )
     else:
-        assert 'function `function` has invalid type hints: unsupported operand type' in aiida_caplog.records[0].message
+        assert 'function `function` has invalid type hints: unsupported operand type' in caplog.records[0].message
         expected = (
             ('a', (orm.Data,)),
             ('b', (orm.Data,)),
@@ -770,7 +770,7 @@ def test_help_text_spec_inference():
     assert input_namespace['param_c'].help is None
 
 
-def test_help_text_spec_inference_invalid_docstring(aiida_caplog, monkeypatch):
+def test_help_text_spec_inference_invalid_docstring(caplog, monkeypatch):
     """Test the parsing of docstrings does not except for invalid docstrings, but simply logs a warning."""
     import docstring_parser
 
@@ -785,4 +785,4 @@ def test_help_text_spec_inference_invalid_docstring(aiida_caplog, monkeypatch):
 
     # Now call the spec to have it parse the docstring.
     function.spec()
-    assert 'function `function` has a docstring that could not be parsed' in aiida_caplog.records[0].message
+    assert 'function `function` has a docstring that could not be parsed' in caplog.records[0].message

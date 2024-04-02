@@ -22,7 +22,7 @@ def new_archive(aiida_profile, tmp_path):
     data.base.extras.set_many({'b': 2, 'c': 3})
     archive_file = tmp_path / 'export.aiida'
     create_archive([data], filename=archive_file)
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     yield archive_file
 
 

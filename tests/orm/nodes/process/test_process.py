@@ -76,10 +76,10 @@ def test_is_valid_cache(process_nodes):
         assert node.base.caching.is_valid_cache == is_valid_cache, node
 
 
-def test_get_builder_restart(aiida_local_code_factory):
+def test_get_builder_restart(aiida_code_installed):
     """Test :meth:`aiida.orm.nodes.process.process.ProcessNode.get_builder_restart`."""
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'),
         'x': Int(1),
         'y': Int(1),
         'metadata': {'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}},

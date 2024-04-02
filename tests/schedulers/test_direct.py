@@ -54,12 +54,12 @@ def test_parse_joblist_output_incorrect(scheduler):
         scheduler._parse_joblist_output(retval=0, stdout='aaa', stderr='')
 
 
-def test_submit_script_rerunnable(scheduler, template, aiida_caplog):
+def test_submit_script_rerunnable(scheduler, template, caplog):
     """Test that setting the ``rerunnable`` option gives a warning."""
     template.rerunnable = True
     scheduler.get_submit_script(template)
-    assert 'rerunnable' in aiida_caplog.text
-    assert 'has no effect' in aiida_caplog.text
+    assert 'rerunnable' in caplog.text
+    assert 'has no effect' in caplog.text
 
 
 def test_submit_script_with_num_cores_per_mpiproc(scheduler, template):

@@ -14,9 +14,9 @@ from aiida.engine import Process, calcfunction
 from aiida.orm import CalcFunctionNode, CalculationNode, WorkflowNode
 
 
-def test_get_node_summary(aiida_local_code_factory):
+def test_get_node_summary(aiida_code_installed):
     """Test the ``get_node_summary`` utility."""
-    code = aiida_local_code_factory(entry_point='core.arithmetic.add', executable='/bin/bash')
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     node = CalculationNode()
     node.computer = code.computer
     node.base.links.add_incoming(code, link_type=LinkType.INPUT_CALC, link_label='code')

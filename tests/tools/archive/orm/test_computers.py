@@ -58,7 +58,7 @@ def test_same_computer_import(aiida_profile, tmp_path, aiida_localhost):
     create_archive([calc2], filename=filename2)
 
     # Clean the local database
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # Check that there are no computers
     builder = orm.QueryBuilder()
@@ -153,7 +153,7 @@ def test_same_computer_different_name_import(aiida_profile, tmp_path, aiida_loca
     create_archive([calc2], filename=filename2)
 
     # Clean the local database
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # Check that there are no computers
     builder = orm.QueryBuilder()
@@ -212,7 +212,7 @@ def test_different_computer_same_name_import(aiida_profile, tmp_path, aiida_loca
     create_archive([calc1], filename=filename1)
 
     # Reset the database
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # Store a second calculation
     calc2_label = 'calc2'
@@ -228,7 +228,7 @@ def test_different_computer_same_name_import(aiida_profile, tmp_path, aiida_loca
     create_archive([calc2], filename=filename2)
 
     # Reset the database
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # Store a third calculation
     calc3_label = 'calc3'
@@ -244,7 +244,7 @@ def test_different_computer_same_name_import(aiida_profile, tmp_path, aiida_loca
     create_archive([calc3], filename=filename3)
 
     # Clean the local database
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # Check that there are no computers
     builder = orm.QueryBuilder()
@@ -294,7 +294,7 @@ def test_import_of_computer_json_params(aiida_profile_clean, tmp_path, aiida_loc
     create_archive([calc1], filename=filename1)
 
     # Clean the local database
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     # Import the data
     import_archive(filename1)

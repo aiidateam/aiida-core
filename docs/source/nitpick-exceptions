@@ -190,6 +190,9 @@ py:class _asyncio.Future
 
 py:class tqdm.std.tqdm
 
+py:class pytest.TempPathFactory
+py:class PGTest
+
 py:class IPython.core.magic.Magics
 
 py:class HTMLParser.HTMLParser

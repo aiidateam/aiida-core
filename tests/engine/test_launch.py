@@ -69,10 +69,10 @@ class AddWorkChain(WorkChain):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
-def test_submit_wait(aiida_local_code_factory):
+def test_submit_wait(aiida_code_installed):
     """Test the ``wait`` argument of :meth:`aiida.engine.launch.submit`."""
     builder = ArithmeticAddCalculation.get_builder()
-    builder.code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
+    builder.code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     builder.x = orm.Int(1)
     builder.y = orm.Int(1)
     builder.metadata = {'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}}
@@ -94,10 +94,10 @@ def test_await_processes_invalid():
 
 
 @pytest.mark.usefixtures('started_daemon_client')
-def test_await_processes(aiida_local_code_factory, caplog):
+def test_await_processes(aiida_code_installed, caplog):
     """Test :func:`aiida.engine.launch.await_processes`."""
     builder = ArithmeticAddCalculation.get_builder()
-    builder.code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
+    builder.code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     builder.x = orm.Int(1)
     builder.y = orm.Int(2)
     builder.metadata = {'options': {'resources': {'num_machines': 1}}}

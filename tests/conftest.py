@@ -30,7 +30,21 @@ from aiida.manage.configuration import Profile, get_config, load_profile
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
 
-pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']
+pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
+
+
+@pytest.fixture(scope='session')
+def aiida_profile(aiida_config, aiida_profile_factory, config_psql_dos):
+    """Create and load a profile with ``core.psql_dos`` as a storage backend and RabbitMQ as the broker.
+
+    This overrides the ``aiida_profile`` fixture provided by ``aiida-core`` which runs with ``core.sqlite_dos`` and
+    without broker. However, tests in this package make use of the daemon which requires a broker and the tests should
+    be run against the main storage backend, which is ``core.sqlite_dos``.
+    """
+    with aiida_profile_factory(
+        aiida_config, storage_backend='core.psql_dos', storage_config=config_psql_dos(), broker_backend='core.rabbitmq'
+    ) as profile:
+        yield profile
 
 
 @pytest.fixture()
@@ -488,7 +502,7 @@ class CliResult:
 
 
 @pytest.fixture
-def run_cli_command(reset_log_level, aiida_instance, aiida_profile):
+def run_cli_command(reset_log_level, aiida_config, aiida_profile):
     """Run a ``click`` command with the given options.
 
     The call will raise if the command triggered an exception or the exit code returned is non-zero.
@@ -541,12 +555,12 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):
         parameters = [str(param) for param in parameters or []]
 
         try:
-            config_show_deprecations = aiida_instance.get_option('warnings.showdeprecations')
+            config_show_deprecations = aiida_config.get_option('warnings.showdeprecations')
 
             if config_show_deprecations and suppress_warnings:
-                aiida_instance.set_option('warnings.showdeprecations', False)
+                aiida_config.set_option('warnings.showdeprecations', False)
                 if use_subprocess:
-                    aiida_instance.store()
+                    aiida_config.store()
 
             if use_subprocess:
                 result = run_cli_command_subprocess(
@@ -565,9 +579,9 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):
                 assert result.exit_code == 0, (result.exit_code, result.stderr)
         finally:
             if config_show_deprecations and suppress_warnings:
-                aiida_instance.set_option('warnings.showdeprecations', config_show_deprecations)
+                aiida_config.set_option('warnings.showdeprecations', config_show_deprecations)
                 if use_subprocess:
-                    aiida_instance.store()
+                    aiida_config.store()
 
         return result
 

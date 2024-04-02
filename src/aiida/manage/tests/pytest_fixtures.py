@@ -51,6 +51,12 @@ if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
 
 
+warn_deprecation(
+    'The module `aiida.manage.tests.pytest_fixtures` is deprecated, please use `aiida.tools.pytest_fixtures` instead.',
+    version=3,
+)
+
+
 def recursive_merge(left: dict[t.Any, t.Any], right: dict[t.Any, t.Any]) -> None:
     """Recursively merge the ``right`` dictionary into the ``left`` dictionary.
 

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the :class:`aiida.cmdline.params.options.config.ConfigOption`."""
+
 import functools
 import textwrap
 

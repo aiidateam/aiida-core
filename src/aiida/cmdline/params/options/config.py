@@ -14,6 +14,7 @@ https://github.com/phha/click_config_file/blob/7b93a20b4c79458987fac116418859f30
 minor modification to ``configuration_callback`` to add a check for unknown parameters in the configuration file and
 the default provider is changed to :func:`yaml_config_file_provider`.
 """
+
 from __future__ import annotations
 
 import functools

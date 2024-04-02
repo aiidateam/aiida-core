@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility for performing schema migrations, via reflection of the current database."""
+
 from __future__ import annotations
 
 import alembic

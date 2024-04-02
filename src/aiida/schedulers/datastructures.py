@@ -13,6 +13,7 @@ the data structure to be filled for job submission (JobTemplate), and
 the data structure that is returned when querying for jobs in the scheduler
 (JobInfo).
 """
+
 from __future__ import annotations
 
 import abc

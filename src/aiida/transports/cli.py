@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common cli utilities for transport plugins."""
+
 from functools import partial
 
 import click

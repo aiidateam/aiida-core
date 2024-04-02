@@ -16,6 +16,7 @@ storage. The ``filepath_executable`` should indicate the filename of the executa
 :class:`aiida.engine.CalcJob` is run using a ``PortableCode``, the uploaded files will be automatically copied to the
 working directory on the selected computer and the executable will be run there.
 """
+
 from __future__ import annotations
 
 import pathlib

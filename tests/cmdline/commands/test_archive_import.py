@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi archive import`."""
+
 import pytest
 from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Group

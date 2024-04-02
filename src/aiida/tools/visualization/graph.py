@@ -9,6 +9,7 @@
 """provides functionality to create graphs of the AiiDa data providence,
 *via* graphviz.
 """
+
 from __future__ import annotations
 
 import os
@@ -33,8 +34,7 @@ LinkAnnotateType = Literal[None, 'label', 'type', 'both']
 class LinkStyleFunc(Protocol):
     """Protocol for a link style function"""
 
-    def __call__(self, link_pair: LinkPair, add_label: bool, add_type: bool) -> dict:
-        ...
+    def __call__(self, link_pair: LinkPair, add_label: bool, add_type: bool) -> dict: ...
 
 
 def default_link_styles(link_pair: LinkPair, add_label: bool, add_type: bool) -> dict:

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for logging methods/classes that need the ORM."""
+
 import logging
 
 

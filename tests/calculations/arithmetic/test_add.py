@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `ArithmeticAddCalculation` plugin."""
+
 import pytest
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation

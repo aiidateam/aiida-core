@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test data-related verdi commands."""
+
 import asyncio
 import io
 import os

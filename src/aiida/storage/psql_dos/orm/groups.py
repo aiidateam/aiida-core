@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQLA groups"""
+
 import logging
 
 from aiida.common.exceptions import UniquenessError

@@ -12,6 +12,7 @@ WARNING: Changing the representation of things here may break people's current s
 checkpoints and messages in the RabbitMQ queue so do so with caution.  It is fine to add representers
 for new types though.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -139,8 +140,7 @@ def represent_mapping(tag: str, dumper: yaml.Dumper, mapping: Any) -> yaml.Mappi
 
 
 class _MappingType(Protocol):
-    def __init__(self, mapping: dict) -> None:
-        ...
+    def __init__(self, mapping: dict) -> None: ...
 
 
 def mapping_constructor(
@@ -214,13 +214,11 @@ yaml.add_constructor(_DATACLASS_TAG, dataclass_constructor, Loader=AiiDALoader)
 
 
 @overload
-def serialize(data: Any, encoding: None = None) -> str:
-    ...
+def serialize(data: Any, encoding: None = None) -> str: ...
 
 
 @overload
-def serialize(data: Any, encoding: str) -> bytes:
-    ...
+def serialize(data: Any, encoding: str) -> bytes: ...
 
 
 def serialize(data: Any, encoding: str | None = None) -> str | bytes:

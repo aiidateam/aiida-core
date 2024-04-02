@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
+
 import asyncio
 from typing import Optional, Union
 

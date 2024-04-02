@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with resources common to the repository."""
+
 import enum
 import typing
 

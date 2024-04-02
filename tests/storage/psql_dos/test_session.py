@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Testing Session possible problems."""
+
 import uuid
 
 import pytest

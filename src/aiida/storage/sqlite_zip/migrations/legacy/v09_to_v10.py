@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Migration from v0.9 to v0.10, used by `verdi export migrate` command."""
+
 from ..utils import update_metadata, verify_metadata_version
 
 

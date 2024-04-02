@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Classes and methods for backend non-specific entities"""
+
 from __future__ import annotations
 
 import abc

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
+
 import click
 
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS

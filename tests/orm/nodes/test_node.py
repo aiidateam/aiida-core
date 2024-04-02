@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the Node ORM class."""
+
 import logging
 import os
 from decimal import Decimal

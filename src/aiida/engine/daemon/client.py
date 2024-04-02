@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Client to interact with the daemon."""
+
 from __future__ import annotations
 
 import contextlib

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Pytest fixtures for AiiDA sphinx extension tests."""
+
 import pathlib
 import shutil
 import sys

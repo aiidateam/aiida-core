@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Testing the general methods of the psql_dos backend."""
+
 import pytest
 from aiida.manage import get_manager
 from aiida.orm import User

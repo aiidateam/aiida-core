@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Translator for node"""
+
 import importlib.machinery
 import importlib.util
 import inspect

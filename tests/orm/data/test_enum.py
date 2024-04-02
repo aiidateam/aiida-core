@@ -1,4 +1,5 @@
 """Tests for the :class:`aiida.orm.nodes.data.enum.Enum` data plugin."""
+
 import enum
 
 import pytest

@@ -12,6 +12,7 @@
 It re-uses the classes already defined in ``psql_dos`` backend (for PostGresQL),
 but redefines the SQLAlchemy models to the SQLite compatible ones.
 """
+
 import json
 from functools import singledispatch
 from typing import Any, List, Optional, Tuple, Union

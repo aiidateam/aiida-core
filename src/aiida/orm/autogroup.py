@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to manage the autogrouping functionality by ``verdi run``."""
+
 from __future__ import annotations
 
 import re

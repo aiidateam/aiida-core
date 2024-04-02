@@ -15,6 +15,7 @@ until "dbgroup_type_string_change_content" (django: 0022), both included.
 The effects of the large db migration "provenance_redesign" (django: 0020)
 is tested in `TestLinks`, since the greatest change concerns links.
 """
+
 import pytest
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive

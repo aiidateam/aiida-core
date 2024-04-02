@@ -14,6 +14,7 @@ functionality from within python without knowing details about how postgres is
 installed by default on various systems. If the postgres setup is not the
 default installation, additional information needs to be provided.
 """
+
 from typing import TYPE_CHECKING
 
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO

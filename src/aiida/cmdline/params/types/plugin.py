@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Click parameter type for AiiDA Plugins."""
+
 from __future__ import annotations
 
 import functools

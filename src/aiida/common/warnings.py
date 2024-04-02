@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Define warnings that can be thrown by AiiDA."""
+
 import os
 import warnings
 

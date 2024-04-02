@@ -6,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module for the custom click param type for data
-"""
+"""Module for the custom click param type for data"""
+
 from .identifier import IdentifierParamType
 
 __all__ = ('DataParamType',)

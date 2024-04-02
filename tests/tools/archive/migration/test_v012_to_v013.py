@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test archive file migration from export version 0.12 to 0.13"""
+
 from aiida.storage.sqlite_zip.migrations.legacy.v12_to_v13 import migrate_v12_to_v13
 
 

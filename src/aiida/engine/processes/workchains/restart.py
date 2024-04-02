@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Base implementation of `WorkChain` class that implements a simple automated restart mechanism for sub processes."""
+
 import functools
 from inspect import getmembers
 from types import FunctionType

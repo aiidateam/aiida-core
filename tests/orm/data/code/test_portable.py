@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :class:`aiida.orm.nodes.data.code.portable.PortableCode` class."""
+
 import io
 import pathlib
 

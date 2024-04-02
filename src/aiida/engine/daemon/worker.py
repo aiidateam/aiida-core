@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Function that starts a daemon worker."""
+
 import asyncio
 import logging
 import signal

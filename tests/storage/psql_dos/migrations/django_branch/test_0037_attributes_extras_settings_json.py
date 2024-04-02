@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the migrations of the attributes, extras and settings from EAV to JSONB."""
+
 from datetime import datetime
 
 from aiida.common import timezone

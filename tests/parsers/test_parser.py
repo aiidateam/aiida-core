@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test for the `Parser` base class."""
+
 import io
 
 import pytest

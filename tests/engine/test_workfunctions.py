@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the workfunction decorator and WorkFunctionNode."""
+
 import pytest
 from aiida.common.links import LinkType
 from aiida.engine import Process, calcfunction, workfunction

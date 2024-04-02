@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to manage loading entrypoints."""
+
 from __future__ import annotations
 
 import enum

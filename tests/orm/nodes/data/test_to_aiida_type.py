@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test the :meth:`aiida.orm.data.base.to_aiida_type` serializer."""
+
 import numpy
 import pytest
 from aiida import orm

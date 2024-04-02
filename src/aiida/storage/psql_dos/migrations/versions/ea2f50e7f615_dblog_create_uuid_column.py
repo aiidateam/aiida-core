@@ -14,6 +14,7 @@ Revision ID: ea2f50e7f615
 Revises: 041a79fc615f
 Create Date: 2019-01-30 19:22:50.984380
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :class:`~aiida.cmdline.params.options.main.VERBOSITY` option."""
+
 import functools
 import logging
 

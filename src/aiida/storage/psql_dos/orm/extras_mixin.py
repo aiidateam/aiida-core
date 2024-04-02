@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Mixin class for SQL implementations of ``extras``."""
+
 from typing import Any, Dict, Iterable, Tuple
 
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key

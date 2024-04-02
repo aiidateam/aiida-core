@@ -20,6 +20,7 @@ Revises:
 Create Date: 2021-02-02
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.sqlite import JSON

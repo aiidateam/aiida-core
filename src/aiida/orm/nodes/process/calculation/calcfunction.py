@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for calculation function processes."""
+
 from typing import TYPE_CHECKING
 
 from aiida.common.links import LinkType

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the ProfileAccessManager that tracks process access to the profile."""
+
 import contextlib
 import os
 import typing

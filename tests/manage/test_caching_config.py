@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the functionality that reads and modifies the caching configuration file."""
+
 import contextlib
 import json
 import pathlib

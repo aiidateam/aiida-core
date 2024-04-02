@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for verdi node"""
+
 import datetime
 import errno
 import gzip

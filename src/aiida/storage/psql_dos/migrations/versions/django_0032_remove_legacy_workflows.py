@@ -14,6 +14,7 @@ Revision ID: django_0032
 Revises: django_0031
 
 """
+
 from alembic import op
 
 from aiida.storage.psql_dos.migrations.utils.legacy_workflows import export_workflow_data

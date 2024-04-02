@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-""""Invalidating node hashes
+""" "Invalidating node hashes
 
 Users should rehash nodes for caching
 
@@ -14,6 +14,7 @@ Revision ID: django_0039
 Revises: django_0038
 
 """
+
 from alembic import op
 
 from aiida.storage.psql_dos.migrations.utils.integrity import drop_hashes

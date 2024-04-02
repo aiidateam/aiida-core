@@ -15,6 +15,7 @@ Revises: 7b38a9e783e7
 Create Date: 2019-07-25 14:58:39.866822
 
 """
+
 from alembic import op
 from sqlalchemy.sql import text
 

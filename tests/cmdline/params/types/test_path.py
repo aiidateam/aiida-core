@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for Path types"""
+
 import pytest
 from aiida.cmdline.params.types.path import PathOrUrl, check_timeout_seconds
 

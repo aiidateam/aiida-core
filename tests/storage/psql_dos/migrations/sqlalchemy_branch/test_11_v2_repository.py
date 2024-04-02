@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N806
 """Tests for migrations forming the move from aiida-core v1 to v2."""
+
 import hashlib
 import os
 

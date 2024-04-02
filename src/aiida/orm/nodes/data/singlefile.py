@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data class that can be used to store a single file in its repository."""
+
 from __future__ import annotations
 
 import contextlib
@@ -62,25 +63,21 @@ class SinglefileData(Data):
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['r'] = ...) -> t.Iterator[t.TextIO]:
-        ...
+    def open(self, path: FilePath, mode: t.Literal['r'] = ...) -> t.Iterator[t.TextIO]: ...
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]:
-        ...
+    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]: ...
 
     @t.overload
     @contextlib.contextmanager
     def open(  # type: ignore[overload-overlap]
         self, path: None = None, mode: t.Literal['r'] = ...
-    ) -> t.Iterator[t.TextIO]:
-        ...
+    ) -> t.Iterator[t.TextIO]: ...
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: None = None, mode: t.Literal['rb'] = ...) -> t.Iterator[t.BinaryIO]:
-        ...
+    def open(self, path: None = None, mode: t.Literal['rb'] = ...) -> t.Iterator[t.BinaryIO]: ...
 
     @contextlib.contextmanager
     def open(

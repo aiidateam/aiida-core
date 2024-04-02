@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N802
 """Definition of factories to load classes from the various plugin groups."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, Tuple, Type, Union, overload
@@ -77,13 +78,11 @@ def BaseFactory(group: str, name: str, load: bool = True) -> Union[EntryPoint, A
 
 
 @overload
-def BrokerFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Broker']:
-    ...
+def BrokerFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Broker']: ...
 
 
 @overload
-def BrokerFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def BrokerFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def BrokerFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Broker'], Callable]:
@@ -112,13 +111,11 @@ def BrokerFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint,
 
 
 @overload
-def CalculationFactory(entry_point_name: str, load: Literal[True] = True) -> Union[Type['CalcJob'], Callable]:
-    ...
+def CalculationFactory(entry_point_name: str, load: Literal[True] = True) -> Union[Type['CalcJob'], Callable]: ...
 
 
 @overload
-def CalculationFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def CalculationFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def CalculationFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['CalcJob'], Callable]:
@@ -150,13 +147,11 @@ def CalculationFactory(entry_point_name: str, load: bool = True) -> Union[EntryP
 
 
 @overload
-def CalcJobImporterFactory(entry_point_name: str, load: Literal[True] = True) -> Type['CalcJobImporter']:
-    ...
+def CalcJobImporterFactory(entry_point_name: str, load: Literal[True] = True) -> Type['CalcJobImporter']: ...
 
 
 @overload
-def CalcJobImporterFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def CalcJobImporterFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['CalcJobImporter']]:
@@ -184,13 +179,11 @@ def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> Union[En
 
 
 @overload
-def DataFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Data']:
-    ...
+def DataFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Data']: ...
 
 
 @overload
-def DataFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def DataFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def DataFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Data']]:
@@ -219,13 +212,11 @@ def DataFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, T
 
 
 @overload
-def DbImporterFactory(entry_point_name: str, load: Literal[True] = True) -> Type['DbImporter']:
-    ...
+def DbImporterFactory(entry_point_name: str, load: Literal[True] = True) -> Type['DbImporter']: ...
 
 
 @overload
-def DbImporterFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def DbImporterFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def DbImporterFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['DbImporter']]:
@@ -254,13 +245,11 @@ def DbImporterFactory(entry_point_name: str, load: bool = True) -> Union[EntryPo
 
 
 @overload
-def GroupFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Group']:
-    ...
+def GroupFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Group']: ...
 
 
 @overload
-def GroupFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def GroupFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def GroupFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Group']]:
@@ -289,13 +278,11 @@ def GroupFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, 
 
 
 @overload
-def OrbitalFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Orbital']:
-    ...
+def OrbitalFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Orbital']: ...
 
 
 @overload
-def OrbitalFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def OrbitalFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def OrbitalFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Orbital']]:
@@ -324,13 +311,11 @@ def OrbitalFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint
 
 
 @overload
-def ParserFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Parser']:
-    ...
+def ParserFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Parser']: ...
 
 
 @overload
-def ParserFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def ParserFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def ParserFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Parser']]:
@@ -359,13 +344,11 @@ def ParserFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint,
 
 
 @overload
-def SchedulerFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Scheduler']:
-    ...
+def SchedulerFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Scheduler']: ...
 
 
 @overload
-def SchedulerFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def SchedulerFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def SchedulerFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Scheduler']]:
@@ -394,13 +377,11 @@ def SchedulerFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoi
 
 
 @overload
-def StorageFactory(entry_point_name: str, load: Literal[True] = True) -> Type['StorageBackend']:
-    ...
+def StorageFactory(entry_point_name: str, load: Literal[True] = True) -> Type['StorageBackend']: ...
 
 
 @overload
-def StorageFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def StorageFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def StorageFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['StorageBackend']]:
@@ -429,13 +410,11 @@ def StorageFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint
 
 
 @overload
-def TransportFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Transport']:
-    ...
+def TransportFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Transport']: ...
 
 
 @overload
-def TransportFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def TransportFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def TransportFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Transport']]:
@@ -463,13 +442,11 @@ def TransportFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoi
 
 
 @overload
-def WorkflowFactory(entry_point_name: str, load: Literal[True] = True) -> Union[Type['WorkChain'], Callable]:
-    ...
+def WorkflowFactory(entry_point_name: str, load: Literal[True] = True) -> Union[Type['WorkChain'], Callable]: ...
 
 
 @overload
-def WorkflowFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
-    ...
+def WorkflowFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
 def WorkflowFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['WorkChain'], Callable]:

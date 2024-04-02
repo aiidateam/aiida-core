@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The table models are dynamically generated from the sqlalchemy backend models."""
+
 from __future__ import annotations
 
 import json

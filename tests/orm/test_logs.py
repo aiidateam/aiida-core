@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ORM Log tests"""
+
 import json
 import logging
 

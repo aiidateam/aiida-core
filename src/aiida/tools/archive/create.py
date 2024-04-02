@@ -11,6 +11,7 @@
 The archive is a subset of the provenance graph,
 stored in a single file.
 """
+
 import shutil
 import tempfile
 from datetime import datetime

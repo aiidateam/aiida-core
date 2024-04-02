@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Reusable command line interface options for Computer commands."""
+
 import click
 
 from aiida.cmdline.params import options, types

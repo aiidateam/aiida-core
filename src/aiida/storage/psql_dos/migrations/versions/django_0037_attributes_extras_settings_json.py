@@ -12,6 +12,7 @@ Revision ID: django_0037
 Revises: django_0036
 
 """
+
 import math
 
 import sqlalchemy as sa

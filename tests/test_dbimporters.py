@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for subclasses of DbImporter, DbSearchResults and DbEntry"""
+
 import pytest
 
 from tests.static import STATIC_DIR

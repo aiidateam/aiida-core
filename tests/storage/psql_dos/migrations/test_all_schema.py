@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Basic tests for all migrations"""
+
 import pytest
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 

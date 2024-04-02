@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for the implementation of the SqlAlchemy backend."""
+
 import contextlib
 from typing import TYPE_CHECKING
 

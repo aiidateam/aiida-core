@@ -11,6 +11,7 @@
 The containerized code allows specifying a container image and the executable filepath within that container that is to
 be executed when a calculation job is run with this code.
 """
+
 from __future__ import annotations
 
 import pathlib

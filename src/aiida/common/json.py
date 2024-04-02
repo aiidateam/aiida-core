@@ -14,6 +14,7 @@ Use this module prefentially over standard json to ensure compatibility.
     dropped and for Python 3, one should simply use the ``json`` module of the standard library directly.
 
 """
+
 import codecs
 import json
 

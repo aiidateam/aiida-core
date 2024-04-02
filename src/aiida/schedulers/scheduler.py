@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of `Scheduler` base class."""
+
 from __future__ import annotations
 
 import abc

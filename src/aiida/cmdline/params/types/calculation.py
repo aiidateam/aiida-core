@@ -6,8 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module for the calculation parameter type
-"""
+"""Module for the calculation parameter type"""
 
 from .identifier import IdentifierParamType
 

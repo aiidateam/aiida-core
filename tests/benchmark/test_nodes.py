@@ -11,6 +11,7 @@
 The purpose of these tests is to benchmark and compare basic node interactions,
 such as storage and deletion from the database and repository.
 """
+
 from io import StringIO
 
 import pytest

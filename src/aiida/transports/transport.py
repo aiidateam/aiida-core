@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Transport interface."""
+
 import abc
 import fnmatch
 import os

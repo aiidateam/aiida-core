@@ -15,6 +15,7 @@ To use these fixtures, simply create a ``conftest.py`` in the tests folder and a
 This will make all the fixtures in this file available and ready for use. Simply use them as you would any other
 ``pytest`` fixture.
 """
+
 from __future__ import annotations
 
 import asyncio

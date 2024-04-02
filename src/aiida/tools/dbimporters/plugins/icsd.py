@@ -13,6 +13,7 @@ of ICSD, which are built with Apache Lucene and Tomcat. Older ICSD versions are
 supported, which included a MySQL database and a php-based web interface. The
 last confirmed compatible version was released in 2020.
 """
+
 import io
 
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults

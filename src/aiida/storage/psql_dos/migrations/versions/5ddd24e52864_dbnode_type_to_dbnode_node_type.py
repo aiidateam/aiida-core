@@ -15,6 +15,7 @@ Revises: d254fdfed416
 Create Date: 2019-02-22 17:09:57.715114
 
 """
+
 from alembic import op
 
 # revision identifiers, used by Alembic.

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test object relationships in the database."""
+
 import warnings
 
 from aiida.common.links import LinkType

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm links tests for the export and import routines"""
+
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes

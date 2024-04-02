@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility module with mapper objects that map database entities projections on attributes and labels."""
+
 from . import formatting
 
 
@@ -101,7 +102,7 @@ class CalculationProjectionMapper(ProjectionMapper):
             'ctime': 'Created',
             'mtime': 'Modified',
             'state': 'Process State',
-            'cached': '\u267B',
+            'cached': '\u267b',
         }
 
         default_attributes = {

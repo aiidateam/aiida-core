@@ -13,6 +13,7 @@ Revises: 118349c10896
 Create Date: 2020-03-31 10:00:52.609146
 
 """
+
 from alembic import op
 from sqlalchemy.sql import text
 

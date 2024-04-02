@@ -2,6 +2,7 @@
 
 Register parsers via the "aiida.parsers" entry point in the pyproject.toml file.
 """
+
 # mypy: disable_error_code=call-overload
 # START PARSER HEAD
 from aiida.engine import ExitCode

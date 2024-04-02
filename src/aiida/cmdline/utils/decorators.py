@@ -17,6 +17,7 @@ Provides:
     code branch gets visited and possibly avoiding the overhead if not
 
 """
+
 from contextlib import contextmanager
 
 from click_spinner import spinner

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data plugin to model an atomic orbital."""
+
 import copy
 
 from aiida.common.exceptions import ValidationError

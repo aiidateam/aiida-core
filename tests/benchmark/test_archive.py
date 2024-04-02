@@ -11,6 +11,7 @@
 The purpose of these tests is to benchmark and compare importing and exporting
 parts of the database.
 """
+
 from io import StringIO
 
 import pytest

@@ -378,6 +378,12 @@ testpaths = [
 xfail_strict = true
 
 [tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = 'single'
+
+[tool.ruff.lint]
 ignore = [
   'F403',  # Star imports unable to detect undefined names
   'F405',  # Import may be undefined or defined from star imports
@@ -389,7 +395,6 @@ ignore = [
   'RUF005',  # Consider iterable unpacking instead of concatenation
   'RUF012'  # Mutable class attributes should be annotated with `typing.ClassVar`
 ]
-line-length = 120
 select = [
   'E',  # pydocstyle
   'W',  # pydocstyle
@@ -402,9 +407,6 @@ select = [
   'PLW',  # pylint-warning
   'RUF'  # ruff
 ]
-
-[tool.ruff.format]
-quote-style = 'single'
 
 [tool.tox]
 legacy_tox_ini = """

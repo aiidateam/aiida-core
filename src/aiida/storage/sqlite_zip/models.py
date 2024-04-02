@@ -17,6 +17,7 @@ except for changes to the database specific types:
 
 Also, `varchar_pattern_ops` indexes are not possible in sqlite.
 """
+
 import functools
 from datetime import datetime, timezone
 from typing import Any, Optional, Set, Tuple

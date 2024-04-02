@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Mixin classes for ORM classes."""
+
 from __future__ import annotations
 
 import inspect

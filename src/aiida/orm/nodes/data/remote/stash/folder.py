@@ -1,4 +1,5 @@
 """Data plugin that models a stashed folder on a remote computer."""
+
 from typing import List, Tuple, Union
 
 from aiida.common.datastructures import StashMode

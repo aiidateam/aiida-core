@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.engine.daemon.execmanager` module."""
+
 import io
 import os
 import pathlib

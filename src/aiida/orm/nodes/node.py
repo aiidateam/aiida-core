@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Package for node ORM classes."""
+
 from datetime import datetime
 from functools import cached_property
 from logging import Logger

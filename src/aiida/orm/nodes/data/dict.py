@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a dictionary."""
+
 from __future__ import annotations
 
 import copy

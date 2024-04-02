@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility CLI to manage dependencies for aiida-core."""
+
 import os
 import re
 import subprocess

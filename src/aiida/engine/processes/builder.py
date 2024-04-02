@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Convenience classes to help building the input dictionaries for Processes."""
+
 import json
 from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Type

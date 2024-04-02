@@ -238,9 +238,9 @@ def run_apidoc(_):
 
     # See https://stackoverflow.com/a/30144019
     env = os.environ.copy()
-    env[
-        'SPHINX_APIDOC_OPTIONS'
-    ] = 'members,special-members,private-members,undoc-members,show-inheritance,ignore-module-all'
+    env['SPHINX_APIDOC_OPTIONS'] = (
+        'members,special-members,private-members,undoc-members,show-inheritance,ignore-module-all'
+    )
     subprocess.check_call([cmd_path] + cli_options, env=env)
 
 

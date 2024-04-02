@@ -425,7 +425,7 @@ def verdi_graph():
 
 
 @verdi_graph.command('generate')
-@arguments.NODE('root_node')
+@arguments.NODES('root_nodes')
 @click.option(
     '-l',
     '--link-types',
@@ -476,7 +476,7 @@ def verdi_graph():
 @arguments.OUTPUT_FILE(required=False)
 @decorators.with_dbenv()
 def graph_generate(
-    root_node,
+    root_nodes,
     link_types,
     identifier,
     ancestor_depth,
@@ -489,32 +489,33 @@ def graph_generate(
     show,
     output_file,
 ):
-    """Generate a graph from a ROOT_NODE (specified by pk or uuid)."""
+    """Generate a graph from ROOT_NODES (specified by pk or uuid)."""
     from aiida.tools.visualization import Graph
 
     link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
 
     echo.echo_info(f'Initiating graphviz engine: {engine}')
     graph = Graph(engine=engine, node_id_type=identifier)
-    echo.echo_info(f'Recursing ancestors, max depth={ancestor_depth}')
 
-    graph.recurse_ancestors(
-        root_node,
-        depth=ancestor_depth,
-        link_types=link_types,
-        annotate_links='both',
-        include_process_outputs=process_out,
-        highlight_classes=highlight_classes,
-    )
-    echo.echo_info(f'Recursing descendants, max depth={descendant_depth}')
-    graph.recurse_descendants(
-        root_node,
-        depth=descendant_depth,
-        link_types=link_types,
-        annotate_links='both',
-        include_process_inputs=process_in,
-        highlight_classes=highlight_classes,
-    )
+    for root_node in root_nodes:
+        echo.echo_info(f'Recursing ancestors, max depth={ancestor_depth}')
+        graph.recurse_ancestors(
+            root_node,
+            depth=ancestor_depth,
+            link_types=link_types,
+            annotate_links='both',
+            include_process_outputs=process_out,
+            highlight_classes=highlight_classes,
+        )
+        echo.echo_info(f'Recursing descendants, max depth={descendant_depth}')
+        graph.recurse_descendants(
+            root_node,
+            depth=descendant_depth,
+            link_types=link_types,
+            annotate_links='both',
+            include_process_inputs=process_in,
+            highlight_classes=highlight_classes,
+        )
 
     if not output_file:
         output_file = pathlib.Path(f'{root_node.pk}.{engine}.{output_format}')

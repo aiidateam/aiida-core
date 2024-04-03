@@ -425,7 +425,8 @@ def verdi_graph():
 
 
 @verdi_graph.command('generate')
-@arguments.NODES('root_nodes')
+@arguments.NODE('root_node', required=False)
+@options.NODES()
 @click.option(
     '-l',
     '--link-types',
@@ -476,7 +477,8 @@ def verdi_graph():
 @arguments.OUTPUT_FILE(required=False)
 @decorators.with_dbenv()
 def graph_generate(
-    root_nodes,
+    root_node,
+    nodes,
     link_types,
     identifier,
     ancestor_depth,
@@ -489,16 +491,31 @@ def graph_generate(
     show,
     output_file,
 ):
-    """Generate a graph from ROOT_NODES (specified by pk or uuid)."""
+    """Generate a graph from ROOT_NODE or --nodes option (specified by pk or uuid)."""
+    from aiida.cmdline.utils import echo
     from aiida.tools.visualization import Graph
+
+    if root_node and nodes:
+        echo.echo_warning(
+            'Specifying the root node positionally and the `-N/--nodes` option at the '
+            'same time is not supported, ignoring the root node! Please use the '
+            '`-N/--nodes` option only'
+        )
+        root_node = None
+
+    if root_node:
+        echo.echo_deprecated(
+            'Specifying the root node positionally is deprecated, please use the ' '`-N/--nodes` option instead'
+        )
 
     link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
 
     echo.echo_info(f'Initiating graphviz engine: {engine}')
     graph = Graph(engine=engine, node_id_type=identifier)
 
+    root_nodes = nodes or [root_node]
     for root_node in root_nodes:
-        echo.echo_info(f'Recursing ancestors, max depth={ancestor_depth}')
+        echo.echo_info(f'Recursing ancestors of <{root_node}>, max depth={ancestor_depth}')
         graph.recurse_ancestors(
             root_node,
             depth=ancestor_depth,
@@ -507,7 +524,7 @@ def graph_generate(
             include_process_outputs=process_out,
             highlight_classes=highlight_classes,
         )
-        echo.echo_info(f'Recursing descendants, max depth={descendant_depth}')
+        echo.echo_info(f'Recursing descendants of <{root_node}>, max depth={descendant_depth}')
         graph.recurse_descendants(
             root_node,
             depth=descendant_depth,
@@ -518,7 +535,8 @@ def graph_generate(
         )
 
     if not output_file:
-        output_file = pathlib.Path(f'{root_node.pk}.{engine}.{output_format}')
+        pks = '.'.join(str(n.pk) for n in root_nodes)
+        output_file = pathlib.Path(f'{pks}.{engine}.{output_format}')
 
     output_file_name = graph.graphviz.render(outfile=output_file, format=output_format, view=show, cleanup=True)
 

@@ -259,20 +259,9 @@ class TestVerdiGraph:
     """Tests for the ``verdi node graph`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, run_cli_command, tmp_path):
+    def init_profile(self, run_cli_command, chdir_tmp_path):
         """Initialize the profile."""
-        from aiida.orm import Data
-
-        self.node = Data().store()
-
-        # some of the export tests write in the current directory,
-        # make sure it is writeable and we don't pollute the current one
-        self.old_cwd = os.getcwd()
-        self.cwd = str(tmp_path.absolute())
-        os.chdir(self.cwd)
-        yield
-        os.chdir(self.old_cwd)
-        os.rmdir(self.cwd)
+        self.node = orm.Data().store()
 
     def test_generate_graph(self, run_cli_command):
         """Test that the default graph can be generated
@@ -287,6 +276,22 @@ class TestVerdiGraph:
             assert os.path.isfile(filename)
         finally:
             delete_temporary_file(filename)
+
+    def test_multiple_nodes(self, run_cli_command):
+        """Test the `-N/--nodes` option to specify multiple root nodes."""
+        node = orm.Data().store()
+        options = ['-N', str(self.node.pk), str(node.pk)]
+        result = run_cli_command(cmd_node.graph_generate, options)
+        assert 'Success: Output written to' in result.output
+        assert os.path.isfile(f'{self.node.pk}.{node.pk}.dot.pdf')
+
+    def test_deprecation_warnings(self, run_cli_command):
+        """Test that the positional arguments are deprecated and emit a warning."""
+        options = [str(self.node.pk), 'output.pdf']
+        result = run_cli_command(cmd_node.graph_generate, options)
+        assert 'Specifying the root node positionally is deprecated' in result.output
+        assert 'Specifying the output file positionally is deprecated' in result.output
+        assert os.path.isfile('output.pdf')
 
     def test_catch_bad_pk(self, run_cli_command):
         """Test that an invalid root_node pk (non-numeric, negative, or decimal),

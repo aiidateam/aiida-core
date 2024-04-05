@@ -612,12 +612,11 @@ def computer_delete(computer, dry_run):
 
     label = computer.label
 
-    # Sofar, we can only do get this info with QueryBuilder
+    # Sofar, we can only get this info with QueryBuilder
     builder = QueryBuilder()
     builder.append(Computer, filters={'label': label}, tag='computer')
-    builder.append(Node, with_computer='computer')
-    results = builder.all()
-    node_pks = [result[0].pk for result in results]
+    builder.append(Node, with_computer='computer', project=Node.fields.pk)
+    node_pks = builder.all(flat=True)
 
     echo.echo_report(f'This computer has {len(node_pks)} associated nodes')
 

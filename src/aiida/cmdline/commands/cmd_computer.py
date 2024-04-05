@@ -602,7 +602,8 @@ def computer_test(user, print_traceback, computer):
 def computer_delete(computer, dry_run):
     """Delete a computer.
 
-    Note prompt can delete the computer even if running calculations are using it.
+    Note: a computer can be deleted even if calculations are currently running on it. The calculation nodes will be
+    deleted with the computer if confirmed but the calculations will not be automatically cancelled with the scheduler
     """
     from aiida import orm
     from aiida.common.exceptions import InvalidOperation
@@ -639,7 +640,7 @@ def computer_delete(computer, dry_run):
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 
-    echo.echo_success(f"Computer '{label}' " + ("and all it's associated nodes" if node_pks else '') + ' deleted.')
+    echo.echo_success(f'Computer `{label}` {"and all its associated nodes" if node_pks else ""} deleted.')
 
 
 class LazyConfigureGroup(VerdiCommandGroup):

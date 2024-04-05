@@ -618,17 +618,15 @@ class TestVerdiComputerCommands:
             workdir='/tmp/aiida',
         )
         compute_temp.store()
-        options = ['core.local', label, '--non-interactive', '--safe-interval', '0']
-        self.cli_runner(computer_configure, options)
+        compute_temp.configure(safe_interval=0)
 
         c_label = 'code_69'
         code = orm.InstalledCode(
+            label=c_label,
             default_calc_job_plugin='core.arithmetic.add',
             computer=compute_temp,
             filepath_executable='/remote/abs/path',
-        )
-        code.label = c_label
-        code.store()
+        ).store()
 
         false_user_input = 'y'  # most common mistake
         user_input = 'SuRe'

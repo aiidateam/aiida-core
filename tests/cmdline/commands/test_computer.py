@@ -605,6 +605,50 @@ class TestVerdiComputerCommands:
         # The new label should be available
         orm.Computer.collection.get(label='comp_cli_test_computer')
 
+    def test_computer_delete_with_nodes(self):
+        """check if 'verdi computer delete' works when there are associated nodes"""
+        from aiida.common.exceptions import NotExistent
+
+        label = 'computer_69'
+        compute_temp = orm.Computer(
+            label=label,
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida',
+        )
+        compute_temp.store()
+        compute_temp.configure(safe_interval=0)
+
+        c_label = 'code_69'
+        orm.InstalledCode(
+            label=c_label,
+            default_calc_job_plugin='core.arithmetic.add',
+            computer=compute_temp,
+            filepath_executable='/remote/abs/path',
+        ).store()
+
+        false_user_input = 'y'  # most common mistake
+        user_input = 'yes'
+
+        # Abort in case of wrong input
+        self.cli_runner(computer_delete, [label], user_input=false_user_input, raises=True)
+        orm.load_code(c_label)
+
+        # Safety check in case of --dry-run
+        options = [label, '--dry-run']
+        self.cli_runner(computer_delete, options)
+        orm.load_code(c_label)
+
+        # A successul delete, including all associated nodes
+        self.cli_runner(computer_delete, [label], user_input=user_input)
+
+        with pytest.raises(NotExistent):
+            orm.Computer.collection.get(label=label)
+
+        with pytest.raises(NotExistent):
+            orm.load_code(c_label)
+
     def test_computer_delete(self):
         """Test if 'verdi computer delete' command works"""
         from aiida.common.exceptions import NotExistent
@@ -623,10 +667,11 @@ class TestVerdiComputerCommands:
         self.cli_runner(computer_configure, options)
 
         # See if the command complains about not getting an invalid computer
-        self.cli_runner(computer_delete, ['computer_that_does_not_exist'], raises=True)
+        user_input = 'yes'
+        self.cli_runner(computer_delete, ['computer_that_does_not_exist'], raises=True, user_input=user_input)
 
         # Delete a computer name successully.
-        self.cli_runner(computer_delete, [label])
+        self.cli_runner(computer_delete, [label], user_input=user_input)
         # Check that the computer really was deleted
         with pytest.raises(NotExistent):
             orm.Computer.collection.get(label=label)

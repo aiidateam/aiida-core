@@ -595,13 +595,13 @@ def computer_test(user, print_traceback, computer):
 
 
 @verdi_computer.command('delete')
-@click.option('--force', is_flag=True, help='Force deletion of computers with running nodes without confirmation')
+@options.DRY_RUN()
 @arguments.COMPUTER()
 @with_dbenv()
-def computer_delete(computer, force):
+def computer_delete(computer, dry_run):
     """Delete a computer.
 
-    Note that it is not possible to delete the computer if there are calculations that are using it.
+    Note prompt can delete the computer even if running calculations are using it.
     """
     from aiida import orm
     from aiida.common.exceptions import InvalidOperation
@@ -611,38 +611,35 @@ def computer_delete(computer, force):
 
     label = computer.label
 
-    # Check in the command whether the computer has any associated nodes.
+    # Sofar, we can only do get this info with QueryBuilder
     builder = QueryBuilder()
     builder.append(Computer, filters={'label': label}, tag='computer')
     builder.append(Node, with_computer='computer')
     results = builder.all()
-
-    # Extract the PKs from the results
     node_pks = [result[0].pk for result in results]
-    tot_pks = len(node_pks)
-    existing_node = True if tot_pks > 0 else False
 
-    if node_pks:
-        if not force:
-            click.confirm(
-                f'This computer has {len(node_pks)} associated nodes, '
-                'are you sure you want to delete this computer and its associated nodes?'
-                abort=True,
-            )
+    echo.echo_report(f'This computer has {len(node_pks)} associated nodes')
 
-        _ = delete_nodes(node_pks, dry_run=False)
+    def _dry_run_callback(pks):
+        if pks:
+            echo.echo_report('The nodes with the following pks would be deleted: ' + ' '.join(map(str, pks)))
+            echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
+        confirm = click.prompt('Shall I continue? [SuRe/N]', type=str) == 'SuRe'
+        if not confirm:
+            raise click.Abort
+        return not confirm
 
-    # Delete the computer
+    delete_nodes(node_pks, dry_run=dry_run or _dry_run_callback)
+
+    if dry_run:
+        return
+
     try:
         orm.Computer.collection.delete(computer.pk)
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 
-    # echo appropriate message
-    if existing_node:
-        echo.echo_success(f"Computer '{label}' and all it's {tot_pks} associated nodes deleted.")
-    else:
-        echo.echo_success(f"Computer '{label}' deleted.")
+    echo.echo_success(f"Computer '{label}' " + ("and all it's associated nodes" if node_pks else '') + ' deleted.')
 
 
 class LazyConfigureGroup(VerdiCommandGroup):

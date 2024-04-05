@@ -625,10 +625,7 @@ def computer_delete(computer, dry_run):
         if pks:
             echo.echo_report('The nodes with the following pks would be deleted: ' + ' '.join(map(str, pks)))
             echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
-        confirm = click.prompt('Shall I continue? [SuRe/N]', type=str) == 'SuRe'
-        if not confirm:
-            raise click.Abort
-        return not confirm
+        return not click.confirm('Are you sure that you want to continue?', abort=True)
 
     delete_nodes(node_pks, dry_run=dry_run or _dry_run_callback)
 

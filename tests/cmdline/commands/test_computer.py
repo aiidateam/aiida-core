@@ -621,7 +621,7 @@ class TestVerdiComputerCommands:
         compute_temp.configure(safe_interval=0)
 
         c_label = 'code_69'
-        code = orm.InstalledCode(
+        orm.InstalledCode(
             label=c_label,
             default_calc_job_plugin='core.arithmetic.add',
             computer=compute_temp,

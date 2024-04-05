@@ -13,6 +13,7 @@ taking a `Profile` as input for the connection configuration.
 
 .. important:: This code should only be accessed via the storage backend class, not directly!
 """
+
 from __future__ import annotations
 
 import contextlib

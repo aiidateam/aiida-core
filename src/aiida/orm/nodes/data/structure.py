@@ -9,13 +9,16 @@
 """This module defines the classes for structures and all related
 functions to operate on them.
 """
+
 import copy
 import functools
 import itertools
 import json
+from typing import List, Optional
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
+from aiida.orm.fields import add_field
 
 from .data import Data
 
@@ -692,6 +695,39 @@ class StructureData(Data):
 
     _dimensionality_label = {0: '', 1: 'length', 2: 'surface', 3: 'volume'}
     _internal_kind_tags = None
+
+    __qb_fields__ = [
+        add_field(
+            'pbc1',
+            dtype=bool,
+            doc='Whether periodic in the a direction',
+        ),
+        add_field(
+            'pbc2',
+            dtype=bool,
+            doc='Whether periodic in the b direction',
+        ),
+        add_field(
+            'pbc3',
+            dtype=bool,
+            doc='Whether periodic in the c direction',
+        ),
+        add_field(
+            'cell',
+            dtype=List[List[float]],
+            doc='The cell parameters',
+        ),
+        add_field(
+            'kinds',
+            dtype=Optional[List[dict]],
+            doc='The kinds of atoms',
+        ),
+        add_field(
+            'sites',
+            dtype=Optional[List[dict]],
+            doc='The atomic sites',
+        ),
+    ]
 
     def __init__(
         self, cell=None, pbc=None, ase=None, pymatgen=None, pymatgen_structure=None, pymatgen_molecule=None, **kwargs
@@ -1496,7 +1532,7 @@ class StructureData(Data):
         return [k.name for k in self.kinds]
 
     @property
-    def cell(self):
+    def cell(self) -> List[List[float]]:
         """Returns the cell shape.
 
         :return: a 3x3 list of lists.
@@ -1678,9 +1714,6 @@ class StructureData(Data):
 
     def get_cif(self, converter='ase', store=False, **kwargs):
         """Creates :py:class:`aiida.orm.nodes.data.cif.CifData`.
-
-        .. versionadded:: 1.0
-           Renamed from _get_cif
 
         :param converter: specify the converter. Default 'ase'.
         :param store: If True, intermediate calculation gets stored in the

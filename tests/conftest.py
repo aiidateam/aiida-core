@@ -11,6 +11,7 @@
 Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.manage.tests.pytest_fixtures`. They are
 loaded in this file as well, such that they can also be used for the tests of ``aiida-core`` itself.
 """
+
 from __future__ import annotations
 
 import copy
@@ -419,7 +420,7 @@ def suppress_internal_deprecations():
 def chdir_tmp_path(request, tmp_path):
     """Change to a temporary directory before running the test and reverting to original working directory."""
     os.chdir(tmp_path)
-    yield
+    yield tmp_path
     os.chdir(request.config.invocation_dir)
 
 

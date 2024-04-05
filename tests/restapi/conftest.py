@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """pytest fixtures for use with the aiida.restapi tests"""
+
 import pytest
 
 

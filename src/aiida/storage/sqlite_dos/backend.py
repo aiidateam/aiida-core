@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Storage implementation using Sqlite database and disk-objectstore container."""
+
 from __future__ import annotations
 
 from functools import cached_property
@@ -95,7 +96,7 @@ class SqliteDosStorage(PsqlDosBackend):
 
     migrator = SqliteDosMigrator
 
-    class Configuration(BaseModel):
+    class Model(BaseModel):
         """Model describing required information to configure an instance of the storage."""
 
         filepath: str = Field(

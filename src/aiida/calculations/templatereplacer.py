@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Generic `CalcJob` implementation where input file is a parametrized template file."""
+
 import io
 
 from aiida import orm

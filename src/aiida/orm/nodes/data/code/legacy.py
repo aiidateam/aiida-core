@@ -7,13 +7,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data plugin represeting an executable code to be wrapped and called through a `CalcJob` plugin."""
+
 import os
 import pathlib
+from typing import Optional
 
 from aiida.common import exceptions
 from aiida.common.log import override_log_level
 from aiida.common.warnings import warn_deprecation
 from aiida.orm import Computer
+from aiida.orm.fields import add_field
 
 from .abstract import AbstractCode
 
@@ -35,6 +38,39 @@ class Code(AbstractCode):
     methods (e.g., the set_preexec_code() can be used to load specific modules required
     for the code to be run).
     """
+
+    __qb_fields__ = [
+        add_field(
+            'prepend_text',
+            dtype=Optional[str],
+            doc='The code that will be put in the scheduler script before the execution of the code',
+        ),
+        add_field(
+            'append_text',
+            dtype=Optional[str],
+            doc='The code that will be put in the scheduler script after the execution of the code',
+        ),
+        add_field(
+            'input_plugin',
+            dtype=Optional[str],
+            doc='The name of the input plugin to be used for this code',
+        ),
+        add_field(
+            'local_executable',
+            dtype=Optional[str],
+            doc='Path to a local executable',
+        ),
+        add_field(
+            'remote_exec_path',
+            dtype=Optional[str],
+            doc='Remote path to executable',
+        ),
+        add_field(
+            'is_local',
+            dtype=Optional[bool],
+            doc='Whether the code is local or remote',
+        ),
+    ]
 
     def __init__(self, remote_computer_exec=None, local_executable=None, input_plugin_name=None, files=None, **kwargs):
         super().__init__(**kwargs)
@@ -367,7 +403,7 @@ class Code(AbstractCode):
         )
         self.prepend_text = code
 
-    def get_prepend_text(self):
+    def get_prepend_text(self) -> str:
         """Return the code that will be put in the scheduler script before the
         execution, or an empty string if no pre-exec code was defined.
         """

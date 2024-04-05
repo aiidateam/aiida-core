@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for editing pre and post bash scripts, comments, etc."""
+
 import click
 import pytest
 from aiida.cmdline.utils.multi_line_input import edit_comment, edit_multiline_template

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for Computer entities"""
+
 import logging
 import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
@@ -16,6 +17,7 @@ from aiida.manage import get_manager
 from aiida.plugins import SchedulerFactory, TransportFactory
 
 from . import entities, users
+from .fields import add_field
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
@@ -70,6 +72,51 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     PROPERTY_SHEBANG = 'shebang'
 
     _CLS_COLLECTION = ComputerCollection
+
+    __qb_fields__ = [
+        add_field(
+            'uuid',
+            dtype=str,
+            is_attribute=False,
+            doc='The UUID of the computer',
+        ),
+        add_field(
+            'label',
+            dtype=str,
+            is_attribute=False,
+            doc='Label for the computer',
+        ),
+        add_field(
+            'description',
+            dtype=str,
+            is_attribute=False,
+            doc='Description of the computer',
+        ),
+        add_field(
+            'hostname',
+            dtype=str,
+            is_attribute=False,
+            doc='Hostname of the computer',
+        ),
+        add_field(
+            'transport_type',
+            dtype=str,
+            is_attribute=False,
+            doc='Transport type of the computer',
+        ),
+        add_field(
+            'scheduler_type',
+            dtype=str,
+            is_attribute=False,
+            doc='Scheduler type of the computer',
+        ),
+        add_field(
+            'metadata',
+            dtype=Dict[str, Any],
+            is_attribute=False,
+            doc='Metadata of the computer',
+        ),
+    ]
 
     def __init__(
         self,

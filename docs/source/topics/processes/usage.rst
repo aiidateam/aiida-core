@@ -145,6 +145,7 @@ To signal that the value is invalid and to have a validation error raised, simpl
 The ``valid_type`` can define a single type, or a tuple of valid types.
 
 .. versionadded:: 2.1
+    Optional ports can now accept ``None``
 
     If a port is marked as optional through ``required=False`` and defines ``valid_type``, the port will also accept ``None`` as values, whereas before this would raise validation error.
     This is accomplished by automatically adding the ``NoneType`` to the ``valid_type`` tuple.
@@ -360,6 +361,7 @@ The function will submit the calculation to the daemon and immediately return co
     For a process to be submittable, the class or function needs to be importable in the daemon environment by a) giving it an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or b) :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` that the daemon workers will have.
 
 .. versionadded:: 2.5
+    Waiting on a process
 
     Use ``wait=True`` when calling ``submit`` to wait for the process to complete before returning the node.
     This can be useful for tutorials and demos in interactive notebooks where the user should not continue before the process is done.

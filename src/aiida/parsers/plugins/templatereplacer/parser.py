@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Parser for the `TemplatereplacerCalculation` calculation job."""
+
 import os
 
 from aiida.orm import Dict

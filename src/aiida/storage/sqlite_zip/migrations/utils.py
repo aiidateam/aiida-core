@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common variables"""
+
 import os
 import shutil
 import tempfile

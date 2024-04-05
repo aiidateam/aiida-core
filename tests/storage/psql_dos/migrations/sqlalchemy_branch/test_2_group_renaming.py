@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N806
 """Test renaming of type strings: b8b23ddefad4 -> e72ad251bcdb"""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 

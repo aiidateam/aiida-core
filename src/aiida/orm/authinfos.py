@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the `AuthInfo` ORM class."""
+
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.common import exceptions
@@ -14,6 +15,7 @@ from aiida.manage import get_manager
 from aiida.plugins import TransportFactory
 
 from . import entities, users
+from .fields import add_field
 
 if TYPE_CHECKING:
     from aiida.orm import Computer, User
@@ -43,6 +45,39 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
     _CLS_COLLECTION = AuthInfoCollection
+
+    __qb_fields__ = [
+        add_field(
+            'enabled',
+            dtype=bool,
+            is_attribute=False,
+            doc='Whether the instance is enabled',
+        ),
+        add_field(
+            'auth_params',
+            dtype=Dict[str, Any],
+            is_attribute=False,
+            doc='Dictionary of authentication parameters',
+        ),
+        add_field(
+            'metadata',
+            dtype=Dict[str, Any],
+            is_attribute=False,
+            doc='Dictionary of metadata',
+        ),
+        add_field(
+            'computer_pk',
+            dtype=int,
+            is_attribute=False,
+            doc='The PK of the computer',
+        ),
+        add_field(
+            'user_pk',
+            dtype=int,
+            is_attribute=False,
+            doc='The PK of the user',
+        ),
+    ]
 
     PROPERTY_WORKDIR = 'workdir'
 

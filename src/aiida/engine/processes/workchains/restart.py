@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Base implementation of `WorkChain` class that implements a simple automated restart mechanism for sub processes."""
+
 import functools
 from inspect import getmembers
 from types import FunctionType
@@ -398,8 +399,8 @@ class BaseRestartWorkChain(WorkChain):
             if isinstance(overrides, bool):
                 enabled = overrides
             else:
-                enabled = overrides.pop('enabled', None)
-                priority = overrides.pop('priority', None)
+                enabled = overrides.get('enabled')
+                priority = overrides.get('priority')
 
             if enabled is False or (enabled is None and not handler.enabled):  # type: ignore[attr-defined]
                 continue

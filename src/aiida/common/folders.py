@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to operate on filesystem folders."""
+
 from __future__ import annotations
 
 import contextlib

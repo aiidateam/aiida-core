@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test archive file migration from export version 0.7 to 0.8"""
+
 from aiida.storage.sqlite_zip.migrations.legacy.v07_to_v08 import migrate_v7_to_v8, migration_default_link_label
 
 

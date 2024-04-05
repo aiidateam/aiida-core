@@ -6,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Defines an rst directive to auto-document AiiDA calculation job.
-"""
+"""Defines an rst directive to auto-document AiiDA calculation job."""
+
 import inspect
 
 from aiida.engine import CalcJob

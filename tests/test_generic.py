@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Generic tests that need the use of the DB."""
+
 import pytest
 from aiida import orm
 

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the ``Config`` class."""
+
 import json
 import os
 import pathlib
@@ -43,14 +44,18 @@ def cache_aiida_path_variable():
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_environment_variable_not_set(tmp_path, monkeypatch):
+def test_environment_variable_not_set(chdir_tmp_path, monkeypatch):
     """Check that if the environment variable is not set, config folder will be created in `DEFAULT_AIIDA_PATH`.
 
     To make sure we do not mess with the actual default `.aiida` folder, which often lives in the home folder
     we create a temporary directory and set the `DEFAULT_AIIDA_PATH` to it.
+
+    Since if the environment variable is not set, the code will check for a config folder in the current working dir
+    or any of its parents, we switch the working directory to the temporary path, which is unlikely to have a config
+    directory in its hierarchy.
     """
     # Change the default configuration folder path to temp folder instead of probably `~`.
-    monkeypatch.setattr(settings, 'DEFAULT_AIIDA_PATH', tmp_path)
+    monkeypatch.setattr(settings, 'DEFAULT_AIIDA_PATH', chdir_tmp_path)
 
     # Make sure that the environment variable is not set
     try:
@@ -59,7 +64,7 @@ def test_environment_variable_not_set(tmp_path, monkeypatch):
         pass
     settings.set_configuration_directory()
 
-    config_folder = os.path.join(tmp_path, settings.DEFAULT_CONFIG_DIR_NAME)
+    config_folder = chdir_tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert os.path.isdir(config_folder)
     assert settings.AIIDA_CONFIG_FOLDER == pathlib.Path(config_folder)
 
@@ -135,6 +140,45 @@ def test_environment_variable_set_multiple_path(tmp_path):
     config_folder = directory_c / settings.DEFAULT_CONFIG_DIR_NAME
     assert os.path.isdir(config_folder)
     assert settings.AIIDA_CONFIG_FOLDER == config_folder
+
+
+@pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
+@pytest.mark.usefixtures('cache_aiida_path_variable')
+@pytest.mark.parametrize('environment_variable', (True, False))
+def test_cwd(environment_variable, chdir_tmp_path):
+    """Test that the current working directory is checked as long as ``AIIDA_PATH`` environment variable is not set."""
+    if environment_variable:
+        dirpath_env = chdir_tmp_path / 'env' / settings.DEFAULT_CONFIG_DIR_NAME
+        dirpath_env.mkdir(parents=True)
+        os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_env.absolute())
+    else:
+        os.environ.pop(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
+
+    dirpath_cwd = chdir_tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
+    dirpath_cwd.mkdir()
+
+    settings.set_configuration_directory()
+    if environment_variable:
+        assert settings.AIIDA_CONFIG_FOLDER == dirpath_env
+    else:
+        assert settings.AIIDA_CONFIG_FOLDER == dirpath_cwd
+
+
+@pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
+@pytest.mark.usefixtures('cache_aiida_path_variable')
+def test_cwd_parent(chdir_tmp_path):
+    """Test that if ``AIIDA_PATH`` is not set, the current working directory is checked, moving up all parents."""
+    os.environ.pop(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
+
+    dirpath = chdir_tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
+    dirpath.mkdir()
+    subdirpath = dirpath / 'subdirectory'
+    subdirpath.mkdir()
+    os.chdir(subdirpath)
+    assert pathlib.Path.cwd() == subdirpath
+
+    settings.set_configuration_directory()
+    assert settings.AIIDA_CONFIG_FOLDER == dirpath
 
 
 def compare_config_in_memory_and_on_disk(config, filepath):

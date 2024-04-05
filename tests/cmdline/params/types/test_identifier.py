@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `IdentifierParamType`."""
+
 import click
 import pytest
 from aiida.cmdline.params.types import IdentifierParamType, NodeParamType

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for orm logging abstract classes"""
+
 import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
@@ -15,6 +16,7 @@ from aiida.common import timezone
 from aiida.manage import get_manager
 
 from . import entities
+from .fields import add_field
 
 if TYPE_CHECKING:
     from aiida.orm import Node
@@ -126,6 +128,51 @@ class Log(entities.Entity['BackendLog', LogCollection]):
     """An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node."""
 
     _CLS_COLLECTION = LogCollection
+
+    __qb_fields__ = [
+        add_field(
+            'uuid',
+            dtype=str,
+            is_attribute=False,
+            doc='The UUID of the node',
+        ),
+        add_field(
+            'loggername',
+            dtype=str,
+            is_attribute=False,
+            doc='The name of the logger',
+        ),
+        add_field(
+            'levelname',
+            dtype=str,
+            is_attribute=False,
+            doc='The name of the log level',
+        ),
+        add_field(
+            'message',
+            dtype=str,
+            is_attribute=False,
+            doc='The message of the log',
+        ),
+        add_field(
+            'time',
+            dtype=datetime,
+            is_attribute=False,
+            doc='The time at which the log was created',
+        ),
+        add_field(
+            'metadata',
+            dtype=Dict[str, Any],
+            is_attribute=False,
+            doc='The metadata of the log',
+        ),
+        add_field(
+            'node_pk',
+            dtype=int,
+            is_attribute=False,
+            doc='The PK for the node',
+        ),
+    ]
 
     def __init__(
         self,

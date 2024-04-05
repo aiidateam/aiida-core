@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA specific implementation of plumpy Ports and PortNamespaces for the ProcessSpec."""
+
 import re
 import warnings
 from collections.abc import Mapping

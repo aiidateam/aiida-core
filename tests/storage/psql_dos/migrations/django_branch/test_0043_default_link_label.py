@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test update of link labels."""
+
 from uuid import uuid4
 
 from aiida.common import timezone

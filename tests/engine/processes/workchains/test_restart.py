@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `aiida.engine.processes.workchains.restart` module."""
+
 import warnings
 
 import pytest
@@ -72,7 +73,8 @@ def test_get_process_handlers_by_priority(generate_work_chain, inputs, prioritie
         warnings.simplefilter('ignore')
         process = generate_work_chain(SomeWorkChain, inputs)
     process.setup()
-    assert sorted([priority for priority, handler in process.get_process_handlers_by_priority()]) == priorities
+    handlers = process.get_process_handlers_by_priority()
+    assert sorted([priority for priority, _ in handlers]) == priorities
 
     # Verify the actual handlers on the class haven't been modified
     assert getattr(SomeWorkChain, 'handler_a').priority == 200
@@ -81,6 +83,14 @@ def test_get_process_handlers_by_priority(generate_work_chain, inputs, prioritie
     assert getattr(SomeWorkChain, 'handler_a').enabled
     assert getattr(SomeWorkChain, 'handler_b').enabled
     assert not getattr(SomeWorkChain, 'handler_c').enabled
+
+    # Validate that a second invocation return the exact same results. This is a regression test for
+    # https://github.com/aiidateam/aiida-core/issues/6307. Note that the handlers are compared by name, because the
+    # bound methods will be separate clones and the ``__eq__`` operation will return ``False`` even though it represents
+    # the same handler function.
+    assert [(p, h.__name__) for p, h in process.get_process_handlers_by_priority()] == [
+        (p, h.__name__) for p, h in handlers
+    ]
 
 
 @pytest.mark.requires_rmq

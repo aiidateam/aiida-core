@@ -15,6 +15,7 @@ relating to the transformation of the wrapped function into a ``FunctionProcess`
 fly, but then anytime inputs or outputs would be attached to it in the tests, the ``validate_link`` function would
 complain as the dummy node class is not recognized as a valid process node.
 """
+
 from __future__ import annotations
 
 import enum

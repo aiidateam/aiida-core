@@ -13,6 +13,7 @@ Revises: bf591f31dd12
 Create Date: 2019-04-03 14:38:50.585639
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql

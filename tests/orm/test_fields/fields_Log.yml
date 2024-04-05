@@ -1,0 +1,8 @@
+levelname: QbStrField('levelname', dtype=str, is_attribute=False)
+loggername: QbStrField('loggername', dtype=str, is_attribute=False)
+message: QbStrField('message', dtype=str, is_attribute=False)
+metadata: QbDictField('metadata', dtype=Dict[str, Any], is_attribute=False)
+node_pk: QbNumericField('node_pk', dtype=int, is_attribute=False)
+pk: QbNumericField('pk', dtype=int, is_attribute=False)
+time: QbNumericField('time', dtype=datetime, is_attribute=False)
+uuid: QbStrField('uuid', dtype=str, is_attribute=False)

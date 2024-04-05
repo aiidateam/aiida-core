@@ -7,12 +7,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all common top level AiiDA entity classes and methods"""
+
 from __future__ import annotations
 
 import abc
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Generic, List, Optional, Sequence, Type, TypeVar, Union, cast
 
 from plumpy.base.utils import call_with_super_check, super_check
 
@@ -20,6 +21,8 @@ from aiida.common.exceptions import InvalidOperation
 from aiida.common.lang import classproperty, type_check
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
+
+from .fields import EntityFieldMeta, QbField, QbFields, add_field
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -167,10 +170,21 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self.query(filters=filters).count()
 
 
-class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
+class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=EntityFieldMeta):
     """An AiiDA entity"""
 
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
+
+    fields: QbFields = QbFields()
+
+    __qb_fields__: Sequence[QbField] = [
+        add_field(
+            'pk',
+            dtype=int,
+            is_attribute=False,
+            doc='The primary key of the entity',
+        ),
+    ]
 
     @classproperty
     def objects(cls: EntityType) -> CollectionType:  # noqa: N805

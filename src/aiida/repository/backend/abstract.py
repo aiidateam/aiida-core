@@ -4,6 +4,7 @@ The scope of this class is intentionally very narrow. Any backend implementation
 store binary blobs, or "objects", and return a string-based key that unique identifies the object that was just created.
 This key should then be able to be used to retrieve the bytes of the corresponding object or to delete it.
 """
+
 import abc
 import contextlib
 import hashlib

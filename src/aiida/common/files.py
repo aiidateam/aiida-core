@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to operate on filesystem files."""
+
 import hashlib
 
 

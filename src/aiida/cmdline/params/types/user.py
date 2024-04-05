@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """User param type for click."""
+
 import click
 
 from aiida.cmdline.utils.decorators import with_dbenv

@@ -9,13 +9,16 @@
 """This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
+
 import json
 from string import Template
+from typing import List, Optional
 
 import numpy
 
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import join_labels, prettify_labels
+from aiida.orm.fields import add_field
 
 from .kpoints import KpointsData
 
@@ -210,6 +213,19 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
 class BandsData(KpointsData):
     """Class to handle bands data"""
 
+    __qb_fields__ = [
+        add_field(
+            'array_labels',
+            dtype=Optional[List[str]],
+            doc='Labels associated with the band arrays',
+        ),
+        add_field(
+            'units',
+            dtype=str,
+            doc='Units in which the data in bands were stored',
+        ),
+    ]
+
     def set_kpointsdata(self, kpointsdata):
         """Load the kpoints from a kpoint object.
         :param kpointsdata: an instance of KpointsData class
@@ -339,8 +355,8 @@ class BandsData(KpointsData):
         return self.base.attributes.get('array_labels', None)
 
     @property
-    def units(self):
-        """Units in which the data in bands were stored. A string"""
+    def units(self) -> str:
+        """Units in which the data in bands were stored."""
         # return copy.deepcopy(self._pbc)
         return self.base.attributes.get('units')
 

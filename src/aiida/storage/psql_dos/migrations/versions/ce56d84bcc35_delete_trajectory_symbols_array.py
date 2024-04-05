@@ -15,6 +15,7 @@ Revises: 12536798d4d3
 Create Date: 2019-01-21 15:35:07.280805
 
 """
+
 from alembic import op
 from sqlalchemy import Integer, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID

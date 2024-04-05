@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi code` command."""
+
 from collections import defaultdict
 from functools import partial
 
@@ -221,7 +222,7 @@ def show(code):
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
     table.append(['Type', code.entry_point.name])
-    for key in code.get_cli_options().keys():
+    for key in code.Model.model_fields.keys():
         try:
             table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
         except AttributeError:
@@ -242,7 +243,7 @@ def export(code, output_file):
 
     code_data = {}
 
-    for key in code.get_cli_options().keys():
+    for key in code.Model.model_fields.keys():
         if key == 'computer':
             value = getattr(code, key).label
         else:

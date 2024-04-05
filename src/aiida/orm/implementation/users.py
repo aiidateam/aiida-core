@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Backend user"""
+
 import abc
 
 from .entities import BackendCollection, BackendEntity

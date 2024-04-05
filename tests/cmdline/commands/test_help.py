@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi help`."""
+
 from aiida.cmdline.commands import cmd_verdi
 
 

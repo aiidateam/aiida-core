@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Plugin aware click command Group."""
+
 from aiida.cmdline.groups import VerdiCommandGroup
 from aiida.common import exceptions
 from aiida.plugins.entry_point import get_entry_point_names, load_entry_point

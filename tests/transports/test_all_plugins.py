@@ -11,6 +11,7 @@ the plugin.
 Every transport plugin should be able to pass all of these common tests.
 Plugin specific tests will be written in the plugin itself.
 """
+
 import io
 import os
 import pathlib
@@ -1112,7 +1113,7 @@ class TestExecuteCommandWait:
         I test directly the exec_command_wait_bytes function; I also pass some non-unicode
         bytes to check that there is no internal implicit encoding/decoding in the code.
         """
-        test_string = b'some_test bytes with non-unicode -> \xFA'
+        test_string = b'some_test bytes with non-unicode -> \xfa'
         with custom_transport as transport:
             retcode, stdout, stderr = transport.exec_command_wait_bytes('cat', stdin=test_string)
             assert retcode == 0
@@ -1139,7 +1140,7 @@ class TestExecuteCommandWait:
         cannot be decoded to UTF8). (Note: we cannot test for all encodings, we test for
         unicode hoping that this would already catch possible issues.)
         """
-        test_string = b'some_test bytes with non-unicode -> \xFA'
+        test_string = b'some_test bytes with non-unicode -> \xfa'
         stdin = io.BytesIO(test_string)
         with custom_transport as transport:
             retcode, stdout, stderr = transport.exec_command_wait_bytes('cat', stdin=stdin)
@@ -1157,7 +1158,7 @@ class TestExecuteCommandWait:
         cannot be decoded to UTF8). (Note: we cannot test for all encodings, we test for
         unicode hoping that this would already catch possible issues.)
         """
-        test_string = b'some_test bytes with non-unicode -> \xFA'
+        test_string = b'some_test bytes with non-unicode -> \xfa'
         stdin = io.BytesIO(test_string)
         with custom_transport as transport:
             with pytest.raises(UnicodeDecodeError):

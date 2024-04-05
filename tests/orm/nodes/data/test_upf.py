@@ -6,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""This module contains tests for UpfData and UpfData related functions.
-"""
+"""This module contains tests for UpfData and UpfData related functions."""
+
 import json
 import os
 import uuid

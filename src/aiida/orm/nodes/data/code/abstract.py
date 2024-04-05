@@ -7,22 +7,27 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Abstract data plugin representing an executable code."""
+
 from __future__ import annotations
 
 import abc
-import collections
+import functools
 import pathlib
-from typing import TYPE_CHECKING
+import typing as t
 
+from pydantic import BaseModel, field_validator
+
+from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
+from aiida.common.pydantic import MetadataField
 from aiida.orm import Computer
 from aiida.plugins import CalculationFactory
 
 from ..data import Data
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from aiida.engine import ProcessBuilder
 
 __all__ = ('AbstractCode',)
@@ -39,6 +44,80 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_WITH_MPI: str = 'with_mpi'
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
     _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
+
+    class Model(BaseModel):
+        """Model describing required information to create an instance."""
+
+        label: str = MetadataField(
+            ...,
+            title='Label',
+            description='A unique label to identify the code by.',
+            short_name='-L',
+        )
+        description: str = MetadataField(
+            '',
+            title='Description',
+            description='Human-readable description, ideally including version and compilation environment.',
+            short_name='-D',
+        )
+        default_calc_job_plugin: t.Optional[str] = MetadataField(
+            None,
+            title='Default `CalcJob` plugin',
+            description='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).',
+            short_name='-P',
+        )
+        use_double_quotes: bool = MetadataField(
+            False,
+            title='Escape using double quotes',
+            description='Whether the executable and arguments of the code in the submission script should be escaped '
+            'with single or double quotes.',
+        )
+        with_mpi: t.Optional[bool] = MetadataField(
+            None,
+            title='Run with MPI',
+            description='Whether the executable should be run as an MPI program. This option can be left unspecified '
+            'in which case `None` will be set and it is left up to the calculation job plugin or inputs '
+            'whether to run with MPI.',
+        )
+        prepend_text: str = MetadataField(
+            '',
+            title='Prepend script',
+            description='Bash commands that should be prepended to the run line in all submit scripts for this code.',
+            option_cls=functools.partial(
+                TemplateInteractiveOption,
+                extension='.bash',
+                header='PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call '
+                'in all submit scripts for this code, type that between the equal signs below and save the file.',
+                footer='All lines that start with `#=`: will be ignored.',
+            ),
+        )
+        append_text: str = MetadataField(
+            '',
+            title='Append script',
+            description='Bash commands that should be appended to the run line in all submit scripts for this code.',
+            option_cls=functools.partial(
+                TemplateInteractiveOption,
+                extension='.bash',
+                header='APPEND_TEXT: if there is any bash commands that should be appended to the executable call '
+                'in all submit scripts for this code, type that between the equal signs below and save the file.',
+                footer='All lines that start with `#=`: will be ignored.',
+            ),
+        )
+
+        @field_validator('label')
+        @classmethod
+        def validate_label_uniqueness(cls, value: str) -> str:
+            """Validate that the label does not already exist."""
+            from aiida.orm import load_code
+
+            try:
+                load_code(value)
+            except exceptions.NotExistent:
+                return value
+            except exceptions.MultipleObjectsError as exception:
+                raise ValueError(f'Multiple codes with the label `{value}` already exist.') from exception
+            else:
+                raise ValueError(f'A code with the label `{value}` already exists.')
 
     def __init__(
         self,
@@ -302,95 +381,3 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         builder.code = self
 
         return builder
-
-    @staticmethod
-    def cli_validate_label_uniqueness(_, __, value):
-        """Validate the uniqueness of the label of the code."""
-        import click
-
-        from aiida.orm import load_code
-
-        try:
-            load_code(value)
-        except exceptions.NotExistent:
-            pass
-        except exceptions.MultipleObjectsError:
-            raise click.BadParameter(f'Multiple codes with the label `{value}` already exist.')
-        else:
-            raise click.BadParameter(f'A code with the label `{value}` already exists.')
-
-        return value
-
-    @classmethod
-    def get_cli_options(cls) -> collections.OrderedDict:
-        """Return the CLI options that would allow to create an instance of this class."""
-        return collections.OrderedDict(cls._get_cli_options())
-
-    @classmethod
-    def _get_cli_options(cls) -> dict:
-        """Return the CLI options that would allow to create an instance of this class."""
-        import click
-
-        from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
-
-        return {
-            'label': {
-                'short_name': '-L',
-                'required': True,
-                'type': click.STRING,
-                'prompt': 'Label',
-                'help': 'A unique label to identify the code by.',
-                'callback': cls.cli_validate_label_uniqueness,
-            },
-            'description': {
-                'short_name': '-D',
-                'type': click.STRING,
-                'prompt': 'Description',
-                'help': 'Human-readable description, ideally including version and compilation environment.',
-            },
-            'default_calc_job_plugin': {
-                'short_name': '-P',
-                'type': click.STRING,
-                'prompt': 'Default `CalcJob` plugin',
-                'help': 'Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).',
-            },
-            'use_double_quotes': {
-                'is_flag': True,
-                'default': False,
-                'help': 'Whether the executable and arguments of the code in the submission script should be escaped '
-                'with single or double quotes.',
-                'prompt': 'Escape using double quotes',
-            },
-            'with_mpi': {
-                'is_flag': True,
-                'default': None,
-                'help': (
-                    'Whether the executable should be run as an MPI program. This option can be left unspecified '
-                    'in which case `None` will be set and it is left up to the calculation job plugin or inputs '
-                    'whether to run with MPI.'
-                ),
-                'prompt': 'Run with MPI',
-            },
-            'prepend_text': {
-                'cls': TemplateInteractiveOption,
-                'type': click.STRING,
-                'default': '',
-                'prompt': 'Prepend script',
-                'help': 'Bash commands that should be prepended to the run line in all submit scripts for this code.',
-                'extension': '.bash',
-                'header': 'PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call '
-                'in all submit scripts for this code, type that between the equal signs below and save the file.',
-                'footer': 'All lines that start with `#=`: will be ignored.',
-            },
-            'append_text': {
-                'cls': TemplateInteractiveOption,
-                'type': click.STRING,
-                'default': '',
-                'prompt': 'Append script',
-                'help': 'Bash commands that should be appended to the run line in all submit scripts for this code.',
-                'extension': '.bash',
-                'header': 'APPEND_TEXT: if there is any bash commands that should be appended to the executable call '
-                'in all submit scripts for this code, type that between the equal signs below and save the file.',
-                'footer': 'All lines that start with `#=`: will be ignored.',
-            },
-        }

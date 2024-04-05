@@ -16,15 +16,20 @@ storage. The ``filepath_executable`` should indicate the filename of the executa
 :class:`aiida.engine.CalcJob` is run using a ``PortableCode``, the uploaded files will be automatically copied to the
 working directory on the selected computer and the executable will be run there.
 """
+
 from __future__ import annotations
 
 import pathlib
 
+from pydantic import field_validator
+
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
+from aiida.common.pydantic import MetadataField
 from aiida.orm import Computer
 
+from .abstract import AbstractCode
 from .legacy import Code
 
 __all__ = ('PortableCode',)
@@ -34,6 +39,35 @@ class PortableCode(Code):
     """Data plugin representing an executable code stored in AiiDA's storage."""
 
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
+
+    class Model(AbstractCode.Model):
+        """Model describing required information to create an instance."""
+
+        filepath_files: str = MetadataField(
+            ...,
+            title='Code directory',
+            description='Filepath to directory containing code files.',
+            short_name='-F',
+            priority=2,
+        )
+        filepath_executable: str = MetadataField(
+            ...,
+            title='Filepath executable',
+            description='Relative filepath of executable with directory of code files.',
+            short_name='-X',
+            priority=1,
+        )
+
+        @field_validator('filepath_files')
+        @classmethod
+        def validate_filepath_files(cls, value: str) -> pathlib.Path:
+            """Validate that ``filepath_files`` is an existing directory."""
+            filepath = pathlib.Path(value)
+            if not filepath.exists():
+                raise ValueError(f'The filepath `{value}` does not exist.')
+            if not filepath.is_dir():
+                raise ValueError(f'The filepath `{value}` is not a directory.')
+            return filepath
 
     def __init__(self, filepath_executable: str, filepath_files: pathlib.Path, **kwargs):
         """Construct a new instance.
@@ -141,28 +175,3 @@ class PortableCode(Code):
             raise ValueError('The `filepath_executable` should not be absolute.')
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
-
-    @classmethod
-    def _get_cli_options(cls) -> dict:
-        """Return the CLI options that would allow to create an instance of this class."""
-        import click
-
-        options = {
-            'filepath_executable': {
-                'short_name': '-X',
-                'required': True,
-                'type': click.STRING,
-                'prompt': 'Relative filepath executable',
-                'help': 'Relative filepath of executable with directory of code files.',
-            },
-            'filepath_files': {
-                'short_name': '-F',
-                'required': True,
-                'type': click.Path(exists=True, file_okay=False, dir_okay=True, path_type=pathlib.Path),
-                'prompt': 'Code directory',
-                'help': 'Filepath to directory containing code files.',
-            },
-        }
-        options.update(**super()._get_cli_options())
-
-        return options

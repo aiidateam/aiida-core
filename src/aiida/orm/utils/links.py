@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for dealing with links between nodes."""
+
 from collections import OrderedDict
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Generator, Iterator, List, NamedTuple, Optional

@@ -31,6 +31,7 @@ Usage
 
    In [2]: %aiida
 """
+
 import json
 import shlex
 

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
+
 import functools
 import gc
 import pathlib
@@ -71,7 +72,7 @@ class PsqlDosBackend(StorageBackend):
     The `django` backend was removed, to consolidate access to this storage.
     """
 
-    class Configuration(BaseModel):
+    class Model(BaseModel):
         """Model describing required information to configure an instance of the storage."""
 
         database_engine: str = Field(

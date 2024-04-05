@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Client to interact with the daemon."""
+
 from __future__ import annotations
 
 import contextlib
@@ -95,6 +96,11 @@ class DaemonClient:
         self._profile = profile
         self._socket_directory: str | None = None
         self._daemon_timeout: int = config.get_option('daemon.timeout', scope=profile.name)
+
+        if self._profile.process_control_backend is None:
+            raise ConfigurationError(
+                f'profile `{self._profile.name}` does not define a broker so the daemon cannot be used.'
+            )
 
     @property
     def profile(self) -> Profile:

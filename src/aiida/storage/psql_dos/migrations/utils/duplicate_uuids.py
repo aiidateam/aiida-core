@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Generic functions to verify the integrity of the database and optionally apply patches to fix problems."""
+
 from sqlalchemy import text
 
 from aiida.common import exceptions

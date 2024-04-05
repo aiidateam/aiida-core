@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Resources for REST API"""
+
 from urllib.parse import unquote
 
 from flask import make_response, request

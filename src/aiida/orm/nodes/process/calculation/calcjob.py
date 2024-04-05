@@ -7,13 +7,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for calculation job processes."""
+
 import datetime
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
-from aiida.common.links import LinkType
+from aiida.orm.fields import add_field
 
 from ..process import ProcessNodeCaching
 from .calculation import CalculationNode
@@ -33,7 +34,7 @@ __all__ = ('CalcJobNode',)
 class CalcJobNodeCaching(ProcessNodeCaching):
     """Interface to control caching of a node instance."""
 
-    def _get_objects_to_hash(self) -> List[Any]:
+    def get_objects_to_hash(self) -> List[Any]:
         """Return a list of objects which should be included in the hash.
 
         This method is purposefully overridden from the base `Node` class, because we do not want to include the
@@ -42,22 +43,8 @@ class CalcJobNodeCaching(ProcessNodeCaching):
         anyway in the computation of the hash would mean that the hash of the node would change as soon as the process
         has started and the input files have been written to the repository.
         """
-        from importlib import import_module
-
-        objects = [
-            import_module(self._node.__module__.split('.', 1)[0]).__version__,
-            {
-                key: val
-                for key, val in self._node.base.attributes.items()
-                if key not in self._node._hash_ignored_attributes and key not in self._node._updatable_attributes
-            },
-            self._node.computer.uuid if self._node.computer is not None else None,
-            {
-                entry.link_label: entry.node.base.caching.get_hash()
-                for entry in self._node.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
-                if entry.link_label not in self._hash_ignored_inputs
-            },
-        ]
+        objects = super().get_objects_to_hash()
+        objects.pop('repository_hash', None)
         return objects
 
 
@@ -66,8 +53,8 @@ class CalcJobNode(CalculationNode):
 
     _CLS_NODE_CACHING = CalcJobNodeCaching
 
-    CALC_JOB_STATE_KEY = 'state'
     IMMIGRATED_KEY = 'imported'
+    CALC_JOB_STATE_KEY = 'state'
     REMOTE_WORKDIR_KEY = 'remote_workdir'
     RETRIEVE_LIST_KEY = 'retrieve_list'
     RETRIEVE_TEMPORARY_LIST_KEY = 'retrieve_temporary_list'
@@ -76,6 +63,59 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_LAST_CHECK_TIME_KEY = 'scheduler_lastchecktime'
     SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
+
+    __qb_fields__ = [
+        add_field(
+            SCHEDULER_STATE_KEY,
+            dtype=Optional[str],
+            doc='The state of the scheduler',
+        ),
+        add_field(
+            CALC_JOB_STATE_KEY,
+            dtype=Optional[str],
+            doc='The active state of the calculation job',
+        ),
+        add_field(
+            REMOTE_WORKDIR_KEY,
+            dtype=Optional[str],
+            doc='The path to the remote (on cluster) scratch folder',
+        ),
+        add_field(
+            SCHEDULER_JOB_ID_KEY,
+            dtype=Optional[str],
+            doc='The scheduler job id',
+        ),
+        add_field(
+            SCHEDULER_LAST_CHECK_TIME_KEY,
+            dtype=Optional[str],
+            doc='The last time the scheduler was checked, in isoformat',
+        ),
+        add_field(
+            SCHEDULER_LAST_JOB_INFO_KEY,
+            dtype=Optional[str],
+            doc='The last job info returned by the scheduler',
+        ),
+        add_field(
+            SCHEDULER_DETAILED_JOB_INFO_KEY,
+            dtype=Optional[dict],
+            doc='The detailed job info returned by the scheduler',
+        ),
+        add_field(
+            RETRIEVE_LIST_KEY,
+            dtype=Optional[List[str]],
+            doc='The list of files to retrieve from the remote cluster',
+        ),
+        add_field(
+            RETRIEVE_TEMPORARY_LIST_KEY,
+            dtype=Optional[List[str]],
+            doc='The list of temporary files to retrieve from the remote cluster',
+        ),
+        add_field(
+            IMMIGRATED_KEY,
+            dtype=Optional[bool],
+            doc='Whether the node has been migrated',
+        ),
+    ]
 
     # An optional entry point for a CalculationTools instance
     _tools = None
@@ -143,7 +183,7 @@ class CalcJobNode(CalculationNode):
         return self.base.attributes.get(self.IMMIGRATED_KEY, None) is True
 
     def get_option(self, name: str) -> Optional[Any]:
-        """Retun the value of an option that was set for this CalcJobNode
+        """Return the value of an option that was set for this CalcJobNode.
 
         :param name: the option name
         :return: the option value or None

@@ -11,6 +11,7 @@
 The archive is a subset of the provenance graph,
 stored in a single file.
 """
+
 import shutil
 import tempfile
 from datetime import datetime
@@ -267,12 +268,13 @@ def create_archive(
 
     if test_run:
         EXPORT_LOGGER.report('Test Run: Stopping before archive creation')
-        keys = set(
-            orm.Node.get_collection(backend).iter_repo_keys(
-                filters={'id': {'in': list(entity_ids[EntityTypes.NODE])}}, batch_size=batch_size
+        if node_ids := list(entity_ids[EntityTypes.NODE]):
+            keys = set(
+                orm.Node.get_collection(backend).iter_repo_keys(filters={'id': {'in': node_ids}}, batch_size=batch_size)
             )
-        )
-        count_summary.append(['Repository Files', len(keys)])
+            count_summary.append(['Repository Files', len(keys)])
+        else:
+            count_summary.append(['Repository Files', 0])
         EXPORT_LOGGER.report(f'Archive would be created with:\n{tabulate(count_summary)}')
         return filename
 

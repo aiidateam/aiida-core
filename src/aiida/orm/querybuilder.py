@@ -16,6 +16,7 @@ an interface classes which enforces the implementation of its defined methods.
 An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
 when instantiated by the user.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -51,7 +52,7 @@ from aiida.orm.implementation.querybuilder import (
     QueryDictType,
 )
 
-from . import authinfos, comments, computers, convert, entities, groups, logs, nodes, users
+from . import authinfos, comments, computers, convert, entities, fields, groups, logs, nodes, users
 
 if TYPE_CHECKING:
     from aiida.engine import Process
@@ -62,7 +63,7 @@ __all__ = ('QueryBuilder',)
 # re-usable type annotations
 EntityClsType = Type[Union[entities.Entity, 'Process']]
 ProjectType = Union[str, dict, Sequence[Union[str, dict]]]
-FilterType = Dict[str, Any]
+FilterType = Union[Dict[str, Any], fields.QbFieldFilters]
 OrderByType = Union[dict, List[dict], Tuple[dict, ...]]
 
 LOGGER = AIIDA_LOGGER.getChild('querybuilder')
@@ -106,6 +107,7 @@ class QueryBuilder:
         offset: Optional[int] = None,
         order_by: Optional[OrderByType] = None,
         distinct: bool = False,
+        project_map: Optional[Dict[str, Dict[str, str]]] = None,
     ) -> None:
         """Instantiates a QueryBuilder instance.
 
@@ -135,6 +137,7 @@ class QueryBuilder:
             How to order the results. As the 2 above, can be set also at later stage,
             check :func:`QueryBuilder.order_by` for more information.
         :param distinct: Whether to return de-duplicated rows
+        :param project_map: A mapping of the projection input-keys to the output-keys of `dict`/`iterdict`
 
         """
         self._backend = backend or get_manager().get_profile_storage()
@@ -144,9 +147,11 @@ class QueryBuilder:
         # A list storing the path being traversed by the query
         self._path: List[PathItemType] = []
         # map tags to filters
-        self._filters: Dict[str, FilterType] = {}
+        self._filters: Dict[str, Dict[str, Any]] = {}
         # map tags to projections: tag -> list(fields) -> func | cast -> value
         self._projections: Dict[str, List[Dict[str, Dict[str, Any]]]] = {}
+        # mapping: tag -> field -> return key for iterdict/dict methods
+        self._project_map: Dict[str, Dict[str, str]] = {}
         # list of mappings: tag -> list(fields) -> 'order' | 'cast' -> value (str('asc' | 'desc'), str(cast_key))
         self._order_by: List[Dict[str, List[Dict[str, Dict[str, str]]]]] = []
         self._limit: Optional[int] = None
@@ -180,17 +185,18 @@ class QueryBuilder:
             else:
                 self.append(cls=path_spec)
         # Validate & add projections
+        self._init_project_map(project_map or {})
         projection_dict = project or {}
         if not isinstance(projection_dict, dict):
             raise TypeError('You need to provide the projections as dictionary')
-        for key, val in projection_dict.items():
-            self.add_projection(key, val)
+        for key, projection in projection_dict.items():
+            self.add_projection(key, projection)
         # Validate & add filters
         filter_dict = filters or {}
         if not isinstance(filter_dict, dict):
             raise TypeError('You need to provide the filters as dictionary')
-        for key, val in filter_dict.items():
-            self.add_filter(key, val)
+        for key, filter in filter_dict.items():
+            self.add_filter(key, filter)
         # Validate & add limit
         self.limit(limit)
         # Validate & add offset
@@ -210,6 +216,7 @@ class QueryBuilder:
             'path': self._path,
             'filters': self._filters,
             'project': self._projections,
+            'project_map': self._project_map,
             'order_by': self._order_by,
             'limit': self._limit,
             'offset': self._offset,
@@ -567,6 +574,23 @@ class QueryBuilder:
 
         return self
 
+    def _init_project_map(self, project_map: Dict[str, Dict[str, str]]) -> None:
+        """Set the project map.
+
+        Note, this is a private method,
+        since the user should not override what is set by projected QbFields.
+
+        :param dict project_map: The project map.
+        """
+        if not isinstance(project_map, dict):
+            raise TypeError('project_map must be a dict')
+        for key, val in project_map.items():
+            if not isinstance(key, str):
+                raise TypeError('project_map keys must be strings')
+            if not isinstance(val, dict):
+                raise TypeError('project_map values must be dicts')
+        self._project_map = project_map
+
     def order_by(self, order_by: OrderByType) -> 'QueryBuilder':
         """Set the entity to order by
 
@@ -622,6 +646,8 @@ class QueryBuilder:
                 for item_to_order_by in items_to_order_by:
                     if isinstance(item_to_order_by, str):
                         item_to_order_by = {item_to_order_by: {}}  # noqa: PLW2901
+                    elif isinstance(item_to_order_by, fields.QbField):
+                        item_to_order_by = {item_to_order_by.backend_key: {}}  # noqa: PLW2901
                     elif isinstance(item_to_order_by, dict):
                         pass
                     else:
@@ -690,8 +716,8 @@ class QueryBuilder:
     @staticmethod
     def _process_filters(filters: FilterType) -> Dict[str, Any]:
         """Process filters."""
-        if not isinstance(filters, dict):
-            raise TypeError('Filters have to be passed as dictionaries')
+        if not isinstance(filters, (dict, fields.QbFieldFilters)):
+            raise TypeError('Filters must be either a dictionary or QbFieldFilters')
 
         processed_filters = {}
 
@@ -700,6 +726,8 @@ class QueryBuilder:
                 # Convert to be the id of the joined entity because we can't query
                 # for the object instance directly
                 processed_filters[f'{key}_id'] = value.pk
+            elif isinstance(key, fields.QbField):
+                processed_filters[key.backend_key] = value
             else:
                 processed_filters[key] = value
 
@@ -811,13 +839,28 @@ class QueryBuilder:
         tag = self._tags.get(tag_spec)
         _projections = []
         LOGGER.debug('Adding projection of %s: %s', tag_spec, projection_spec)
+
+        def _update_project_map(projection: fields.QbField):
+            """Return the DB field to use, or a tuple of the DB field to use and the key to return."""
+            if projection.backend_key != projection.key:
+                self._project_map.setdefault(tag, {})
+                self._project_map[tag][projection.backend_key] = projection.key
+            return projection.backend_key
+
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]  # type: ignore[list-item]
         for projection in projection_spec:
             if isinstance(projection, dict):
-                _thisprojection = projection
+                _thisprojection = {
+                    _update_project_map(key) if isinstance(key, fields.QbField) else key: value
+                    for key, value in projection.items()
+                }
             elif isinstance(projection, str):
                 _thisprojection = {projection: {}}
+            elif isinstance(projection, fields.QbField):
+                _thisprojection = {_update_project_map(projection): {}}
+            elif isinstance(projection, fields.QbFields):
+                _thisprojection = {_update_project_map(projection[name]): {} for name in projection}
             else:
                 raise ValueError(f'Cannot deal with projection specification {projection}\n')
             for spec in _thisprojection.values():
@@ -990,12 +1033,10 @@ class QueryBuilder:
             return value
 
     @overload
-    def first(self, flat: Literal[False] = False) -> Optional[list[Any]]:
-        ...
+    def first(self, flat: Literal[False] = False) -> Optional[list[Any]]: ...
 
     @overload
-    def first(self, flat: Literal[True]) -> Optional[Any]:
-        ...
+    def first(self, flat: Literal[True]) -> Optional[Any]: ...
 
     def first(self, flat: bool = False) -> Optional[list[Any] | Any]:
         """Return the first result of the query.

@@ -1,4 +1,5 @@
 """Tests for the :mod:`aiida.repository.backend.disk_object_store` module."""
+
 import io
 import pathlib
 

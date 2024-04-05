@@ -6,7 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-""""Migrate the file repository to the new disk object store based implementation."""
+""" "Migrate the file repository to the new disk object store based implementation."""
+
 import json
 from tempfile import NamedTemporaryFile
 

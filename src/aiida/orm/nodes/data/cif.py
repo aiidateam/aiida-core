@@ -9,8 +9,10 @@
 """Tools for handling Crystallographic Information Files (CIF)"""
 
 import re
+from typing import List
 
 from aiida.common.utils import Capturing
+from aiida.orm.fields import add_field
 
 from .singlefile import SinglefileData
 
@@ -247,6 +249,21 @@ class CifData(SinglefileData):
 
     _values = None
     _ase = None
+
+    __qb_fields__ = [
+        add_field(
+            'formulae',
+            dtype=List[str],
+        ),
+        add_field(
+            'spacegroup_numbers',
+            dtype=List[str],
+        ),
+        add_field(
+            'md5',
+            dtype=str,
+        ),
+    ]
 
     def __init__(self, ase=None, file=None, filename=None, values=None, scan_type=None, parse_policy=None, **kwargs):
         """Construct a new instance and set the contents to that of the file.
@@ -698,9 +715,6 @@ class CifData(SinglefileData):
 
     def get_structure(self, converter='pymatgen', store=False, **kwargs):
         """Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
-
-        .. versionadded:: 1.0
-           Renamed from _get_aiida_structure
 
         :param converter: specify the converter. Default 'pymatgen'.
         :param store: if True, intermediate calculation gets stored in the

@@ -7,10 +7,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Package for node ORM classes."""
-import datetime
+
+from datetime import datetime
 from functools import cached_property
 from logging import Logger
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterator, List, Optional, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterator, List, Optional, Tuple, Type, TypeVar
 from uuid import UUID
 
 from aiida.common import exceptions
@@ -28,6 +29,7 @@ from ..computers import Computer
 from ..entities import Collection as EntityCollection
 from ..entities import Entity, from_backend_entity
 from ..extras import EntityExtras
+from ..fields import add_field
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .attributes import NodeAttributes
@@ -183,6 +185,72 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     # Flag that determines whether the class can be stored.
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
+
+    __qb_fields__ = [
+        add_field(
+            'uuid',
+            dtype=str,
+            is_attribute=False,
+            doc='The UUID of the node',
+        ),
+        add_field(
+            'label',
+            dtype=str,
+            is_attribute=False,
+            doc='The node label',
+        ),
+        add_field(
+            'description',
+            dtype=str,
+            is_attribute=False,
+            doc='The node description',
+        ),
+        add_field(
+            'node_type',
+            dtype=str,
+            is_attribute=False,
+            doc='The type of the node',
+        ),
+        add_field(
+            'ctime',
+            dtype=datetime,
+            is_attribute=False,
+            doc='The creation time of the node',
+        ),
+        add_field(
+            'mtime',
+            dtype=datetime,
+            is_attribute=False,
+            doc='The modification time of the node',
+        ),
+        add_field(
+            'repository_metadata',
+            dtype=Dict[str, Any],
+            is_attribute=False,
+            doc='The repository virtual file system',
+        ),
+        add_field(
+            'extras',
+            dtype=Dict[str, Any],
+            is_attribute=False,
+            is_subscriptable=True,
+            doc='The node extras',
+        ),
+        add_field(
+            'user_pk',
+            dtype=int,
+            is_attribute=False,
+            doc='The PK of the user who owns the node',
+        ),
+        # Subclasses denote specific keys in the attributes dict
+        add_field(
+            'attributes',
+            dtype=Dict[str, Any],
+            is_attribute=False,
+            is_subscriptable=True,
+            doc='The node attributes',
+        ),
+    ]
 
     def __init__(
         self,
@@ -405,7 +473,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         self.backend_entity.user = user.backend_entity
 
     @property
-    def ctime(self) -> datetime.datetime:
+    def ctime(self) -> datetime:
         """Return the node ctime.
 
         :return: the ctime
@@ -413,7 +481,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         return self.backend_entity.ctime
 
     @property
-    def mtime(self) -> datetime.datetime:
+    def mtime(self) -> datetime:
         """Return the node mtime.
 
         :return: the mtime

@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N802
 """Sqla query builder implementation"""
+
 import uuid
 import warnings
 from contextlib import contextmanager, nullcontext
@@ -38,6 +39,36 @@ from .joiner import JoinReturn, SqlaJoiner
 jsonb_typeof = sa_func.jsonb_typeof
 jsonb_array_length = sa_func.jsonb_array_length
 array_length = sa_func.array_length
+
+PROJECT_MAP = {
+    'db_dbauthinfo': {
+        'pk': 'id',
+        'computer_pk': 'dbcomputer_id',
+        'user_pk': 'aiidauser_id',
+    },
+    'db_dbnode': {
+        'pk': 'id',
+        'dict': 'attributes',
+        'computer_pk': 'dbcomputer_id',
+        'user_pk': 'user_id',
+    },
+    'db_dbcomputer': {
+        'pk': 'id',
+    },
+    'db_dbgroup': {
+        'pk': 'id',
+        'user_pk': 'user_id',
+    },
+    'db_dbcomment': {
+        'pk': 'id',
+        'user_pk': 'user_id',
+        'node_pk': 'dbnode_id',
+    },
+    'db_dblog': {
+        'pk': 'id',
+        'node_pk': 'dbnode_id',
+    },
+}
 
 
 @dataclass
@@ -70,6 +101,18 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             'db_dbauthinfo': {'metadata': '_metadata'},
             'db_dbcomputer': {'metadata': '_metadata'},
             'db_dblog': {'metadata': '_metadata'},
+        }
+
+        # data generated from front-end
+        self._data: QueryDictType = {
+            'path': [],
+            'filters': {},
+            'project': {},
+            'project_map': {},
+            'order_by': [],
+            'offset': None,
+            'limit': None,
+            'distinct': False,
         }
 
         # Hashing the internal query representation avoids rebuilding a query
@@ -195,7 +238,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                                 attrkey,
                                 self.inner_to_outer_schema,
                             )
-                            yield_result[tag][field_name] = self.to_backend(row[project_index])
+                            key = self._data['project_map'].get(tag, {}).get(field_name, field_name)
+                            yield_result[tag][key] = self.to_backend(row[project_index])
                     yield yield_result
 
     def get_query(self, data: QueryDictType) -> BuiltQuery:
@@ -385,7 +429,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 column_name = path_spec.split('.')[0]
 
                 attr_key = path_spec.split('.')[1:]
-                is_jsonb = bool(attr_key) or column_name in ('attributes', 'extras')
+                is_jsonb = bool(attr_key) or column_name in ('dict', 'attributes', 'extras')
                 column: Optional[InstrumentedAttribute]
                 try:
                     column = get_column(column_name, alias)
@@ -825,6 +869,9 @@ def modify_expansions(
 
 def get_column(colname: str, alias: AliasedClass) -> InstrumentedAttribute:
     """Return the column for a given projection."""
+    table_name = get_table_name(alias)
+    if projections := PROJECT_MAP.get(table_name):
+        colname = projections.get(colname, colname)
     try:
         return getattr(alias, colname)
     except AttributeError as exc:

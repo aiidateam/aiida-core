@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test for general backend entities"""
+
 import pickle
 
 import pytest

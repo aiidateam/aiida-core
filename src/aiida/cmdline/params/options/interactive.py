@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tools and an option class for interactive parameter entry with additional features such as help lookup."""
+
 import typing as t
 
 import click

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to test orm utilities to load nodes, codes etc."""
+
 import pytest
 from aiida.common.exceptions import NotExistent
 from aiida.orm import Data, Group, Node

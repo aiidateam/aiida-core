@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The table models are dynamically generated from the sqlalchemy backend models."""
+
 from __future__ import annotations
 
 import json
@@ -67,7 +68,7 @@ class SqliteZipBackend(StorageBackend):
     read_only = True
     """This plugin is read only and data cannot be created or mutated."""
 
-    class Configuration(BaseModel):
+    class Model(BaseModel):
         """Model describing required information to configure an instance of the storage."""
 
         filepath: str = Field(title='Filepath of the archive', description='Filepath of the archive.')
@@ -92,7 +93,7 @@ class SqliteZipBackend(StorageBackend):
             profile_name,
             {
                 'storage': {'backend': 'core.sqlite_zip', 'config': {'filepath': str(filepath)}},
-                'process_control': {'backend': 'null', 'config': {}},
+                'process_control': {'backend': None, 'config': {}},
                 'options': options or {},
             },
         )

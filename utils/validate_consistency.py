@@ -15,6 +15,7 @@ Validates consistency of
  * environment.yml
 
 """
+
 import os
 
 import click

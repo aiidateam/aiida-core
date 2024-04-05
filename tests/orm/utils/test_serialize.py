@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.orm.utils.serialize` module."""
+
 import types
 import uuid
 from dataclasses import dataclass

@@ -7,9 +7,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data plugin that models a folder on a remote computer."""
+
 import os
 
 from aiida.orm import AuthInfo
+from aiida.orm.fields import add_field
 
 from ..data import Data
 
@@ -23,13 +25,19 @@ class RemoteData(Data):
     """
 
     KEY_EXTRA_CLEANED = 'cleaned'
+    __qb_fields__ = [
+        add_field(
+            'remote_path',
+            dtype=str,
+        ),
+    ]
 
     def __init__(self, remote_path=None, **kwargs):
         super().__init__(**kwargs)
         if remote_path is not None:
             self.set_remote_path(remote_path)
 
-    def get_remote_path(self):
+    def get_remote_path(self) -> str:
         return self.base.attributes.get('remote_path')
 
     def set_remote_path(self, val):

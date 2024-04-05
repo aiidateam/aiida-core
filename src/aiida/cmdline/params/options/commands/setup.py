@@ -7,15 +7,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Reusable command line interface options for the setup commands."""
+
 import functools
 import getpass
 
 import click
 
+from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
 from aiida.cmdline.params import options, types
 from aiida.manage.configuration import Profile, get_config, get_config_option
 from aiida.manage.external.postgres import DEFAULT_DBINFO
-from aiida.manage.external.rmq import BROKER_DEFAULTS
 
 PASSWORD_UNCHANGED = '***'
 
@@ -145,9 +146,11 @@ def get_quicksetup_password(ctx, param, value):
     config = get_config()
 
     for available_profile in config.profiles:
-        if available_profile.storage_config['database_username'] == username:
-            value = available_profile.storage_config['database_password']
-            break
+        if available_profile.storage_backend == 'core.psql_dos':
+            storage_config = available_profile.storage_config
+            if storage_config['database_username'] == username:
+                value = storage_config['database_password']
+                break
     else:
         value = get_random_string(16)
 

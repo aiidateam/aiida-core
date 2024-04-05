@@ -6,9 +6,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""AiiDA class to deal with crystal structure trajectories.
-"""
+"""AiiDA class to deal with crystal structure trajectories."""
+
 import collections.abc
+from typing import List
+
+from aiida.orm.fields import add_field
 
 from .array import ArrayData
 
@@ -19,6 +22,24 @@ class TrajectoryData(ArrayData):
     """Stores a trajectory (a sequence of crystal structures with timestamps, and
     possibly with velocities).
     """
+
+    __qb_fields__ = [
+        add_field(
+            'units_positions',
+            'units|positions',
+            dtype=str,
+        ),
+        add_field(
+            'units_times',
+            'units|times',
+            dtype=str,
+        ),
+        add_field(
+            'symbols',
+            dtype=List[str],
+            doc='list of symbols',
+        ),
+    ]
 
     def __init__(self, structurelist=None, **kwargs):
         super().__init__(**kwargs)
@@ -224,9 +245,6 @@ class TrajectoryData(ArrayData):
     def get_stepids(self):
         """Return the array of steps, if it has already been set.
 
-        .. versionadded:: 0.7
-           Renamed from get_steps
-
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('steps')
@@ -252,7 +270,7 @@ class TrajectoryData(ArrayData):
             return None
 
     @property
-    def symbols(self):
+    def symbols(self) -> List[str]:
         """Return the array of symbols, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
@@ -284,9 +302,6 @@ class TrajectoryData(ArrayData):
         array), return the array index of that stepid, that can be used in other
         methods such as :py:meth:`.get_step_data` or
         :py:meth:`.get_step_structure`.
-
-        .. versionadded:: 0.7
-           Renamed from get_step_index
 
         .. note:: Note that this function returns the first index found
             (i.e. if multiple steps are present with the same value,
@@ -345,9 +360,6 @@ class TrajectoryData(ArrayData):
         :py:meth:`.get_index_from_stepid` method to get the corresponding index.
 
         .. note:: The periodic boundary conditions are always set to True.
-
-        .. versionadded:: 0.7
-           Renamed from step_to_structure
 
         :param index: The index of the step that you want to retrieve, from
            0 to ``self.numsteps- 1``.
@@ -454,9 +466,6 @@ class TrajectoryData(ArrayData):
     def get_structure(self, store=False, **kwargs):
         """Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
 
-        .. versionadded:: 1.0
-            Renamed from _get_aiida_structure
-
         :param store: If True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
         :param index: The index of the step that you want to retrieve, from
@@ -485,11 +494,7 @@ class TrajectoryData(ArrayData):
         return ret_dict['structure']
 
     def get_cif(self, index=None, **kwargs):
-        """Creates :py:class:`aiida.orm.nodes.data.cif.CifData`
-
-        .. versionadded:: 1.0
-           Renamed from _get_cif
-        """
+        """Creates :py:class:`aiida.orm.nodes.data.cif.CifData`"""
         struct = self.get_structure(index=index, **kwargs)
         cif = struct.get_cif(**kwargs)
         return cif

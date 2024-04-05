@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.cmdline.utils.decorators` module."""
+
 from unittest import mock
 
 import pytest

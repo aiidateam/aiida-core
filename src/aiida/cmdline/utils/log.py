@@ -1,4 +1,5 @@
 """Utilities for logging in the command line interface context."""
+
 import logging
 
 import click

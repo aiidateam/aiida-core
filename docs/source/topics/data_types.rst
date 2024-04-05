@@ -166,8 +166,6 @@ For all of the base data types, their value is stored in the database in the att
 EnumData
 --------
 
-.. versionadded:: 2.0
-
 An `Enum` member is represented by three attributes in the :py:class:`~aiida.orm.EnumData` class:
 
 - ``name``: the member's name
@@ -197,8 +195,6 @@ An `Enum` member is represented by three attributes in the :py:class:`~aiida.orm
 
 JsonableData
 ------------
-
-.. versionadded:: 2.0
 
 :py:class:`~aiida.orm.JsonableData` is a data plugin that allows one to easily wrap existing objects that are JSON-able.
 
@@ -1379,3 +1375,34 @@ Therefore, big data (think large files), whose content does not necessarily need
 A data type may safely use both the database and file repository in parallel for individual properties.
 Properties stored in the database are stored as *attributes* of the node.
 The node class has various methods to set these attributes, such as :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.set` and :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.set_many`.
+
+Fields
+------
+
+.. versionadded:: 2.6
+
+The attributes of new data types may be exposed to end users by explicitly defining each attribute field under the ``__qb_fields__`` class attribute of the new data class.
+
+.. code-block:: python
+
+    from aiida.orm.fields import add_field
+
+    class NewData(Data):
+        """A new data type."""
+
+        __qb_fields__ = [
+            add_field(
+              key='frontend_key',
+              alias='backend_key',  # optional mapping to a backend key, if different (only allowed for attribute fields)
+              dtype=str,
+              is_attribute=True,  # signalling if field is an attribute field (default is `True`)
+              is_subscriptable=False,  # signalling subscriptability for dictionary fields
+              doc='An example field',
+            )
+        ]
+
+The internal mechanics of ``aiida.orm.fields`` will dynamically add ``frontend_key`` to the ``fields`` attribute of the new data type. The construction of ``fields`` follows the rules of inheritance, such that other than its own fields, ``NewData.fields`` will also inherit the fields of its parents, following the inheritance tree up to the root ``Entity`` ancestor. This enhances the usability of the new data type, for example, allowing the end user to programmatically define  :ref:`filters<how-to:query:filters:programmatic>` and :ref:`projections<how-to:query:projections:programmatic>` when using AiiDA's :py:class:`~aiida.orm.querybuilder.QueryBuilder`.
+
+.. note::
+
+  :py:meth:`~aiida.orm.fields.add_field` will return the flavor of :py:class:`~aiida.orm.fields.QbField` associated with the type of the field defined by the ``dtype`` argument, which can be given as a primitive type or a ``typing``-module type hint, e.g. ``Dict[str, Any]``. When using the data class in queries, the logical operators available to the user will depend on the flavor of :py:class:`~aiida.orm.fields.QbField` assigned to the field.

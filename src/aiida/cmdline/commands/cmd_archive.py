@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi archive` command."""
+
 import logging
 import traceback
 from enum import Enum
@@ -131,7 +132,12 @@ def inspect(ctx, archive, version, meta_data, database):
 @click.option(
     '-b', '--batch-size', default=1000, type=int, help='Stream database rows in batches, to reduce memory usage.'
 )
-@click.option('--test-run', is_flag=True, help='Determine entities to export, but do not create the archive.')
+@click.option(
+    '--test-run',
+    is_flag=True,
+    help='Determine entities to export, but do not create the archive. Deprecated, please use `--dry-run` instead.',
+)
+@options.DRY_RUN(help='Determine entities to export, but do not create the archive.')
 @decorators.with_dbenv()
 def create(
     output_file,
@@ -153,6 +159,7 @@ def create(
     compress,
     batch_size,
     test_run,
+    dry_run,
 ):
     """Create an archive from all or part of a profiles's data.
 
@@ -168,6 +175,10 @@ def create(
     from aiida.tools.archive.exceptions import ArchiveExportError
 
     archive_format = get_format()
+
+    if test_run:
+        echo.echo_deprecated('the `--test-run` option is deprecated. Use `-n/--dry-run` option instead')
+        dry_run = test_run
 
     if all_entries:
         entities = None
@@ -199,7 +210,7 @@ def create(
         'overwrite': force,
         'compression': compress,
         'batch_size': batch_size,
-        'test_run': test_run,
+        'test_run': dry_run,
     }
 
     if AIIDA_LOGGER.level <= logging.REPORT:
@@ -210,9 +221,10 @@ def create(
     try:
         create_archive(entities, filename=output_file, archive_format=archive_format, **kwargs)
     except ArchiveExportError as exception:
-        echo.echo_critical(f'failed to write the archive file. Exception: {exception}')
+        echo.echo_critical(f'failed to write the archive file: {exception}')
     else:
-        echo.echo_success(f'wrote the export archive file to {output_file}')
+        if not dry_run:
+            echo.echo_success(f'wrote the export archive file to {output_file}')
 
 
 @verdi_archive.command('migrate')
@@ -341,7 +353,12 @@ class ExtrasImportCode(Enum):
 @click.option(
     '-b', '--batch-size', default=1000, type=int, help='Stream database rows in batches, to reduce memory usage.'
 )
-@click.option('--test-run', is_flag=True, help='Determine entities to import, but do not actually import them.')
+@click.option(
+    '--test-run',
+    is_flag=True,
+    help='Determine entities to import, but do not actually import them. Deprecated, please use `--dry-run` instead.',
+)
+@options.DRY_RUN(help='Determine entities to import, but do not actually import them.')
 @decorators.with_dbenv()
 @click.pass_context
 def import_archive(
@@ -357,12 +374,17 @@ def import_archive(
     import_group,
     group,
     test_run,
+    dry_run,
 ):
     """Import archived data to a profile.
 
     The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
+
+    if test_run:
+        echo.echo_deprecated('the `--test-run` option is deprecated. Use `-n/--dry-run` option instead')
+        dry_run = test_run
 
     if AIIDA_LOGGER.level <= logging.REPORT:
         set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
@@ -384,7 +406,7 @@ def import_archive(
         'batch_size': batch_size,
         'create_group': import_group,
         'group': group,
-        'test_run': test_run,
+        'test_run': dry_run,
     }
 
     for archive, web_based in all_archives:

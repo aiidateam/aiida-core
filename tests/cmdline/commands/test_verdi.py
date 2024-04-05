@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi`."""
+
 import click
 import pytest
 from aiida import get_version

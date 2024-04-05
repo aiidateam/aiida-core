@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.cmdline.utils.common` module."""
+
 from aiida.cmdline.utils import common
 from aiida.common import LinkType
 from aiida.engine import Process, calcfunction

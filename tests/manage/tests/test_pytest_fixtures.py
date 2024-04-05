@@ -1,4 +1,5 @@
 """Tests for the :mod:`aiida.manage.tests.pytest_fixtures` module."""
+
 import uuid
 
 from aiida.manage.configuration import get_config

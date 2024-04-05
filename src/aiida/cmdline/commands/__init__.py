@@ -11,6 +11,7 @@
 
 The commands need to be imported here for them to be registered with the top-level command group.
 """
+
 from aiida.cmdline.commands import (
     cmd_archive,
     cmd_calcjob,

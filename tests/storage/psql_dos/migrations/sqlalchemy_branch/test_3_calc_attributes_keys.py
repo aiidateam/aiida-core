@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N806
 """Tests migration of the keys of certain attribute for ProcessNodes and CalcJobNodes: e72ad251bcdb -> 7ca08c391c49"""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 KEY_RESOURCES_OLD = 'jobresource_params'

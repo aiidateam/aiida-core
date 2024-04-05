@@ -219,18 +219,24 @@ def create_profile(
     from aiida.manage import get_manager
     from aiida.orm import User
 
-    storage_config = storage_cls.Configuration(**{k: v for k, v in kwargs.items() if v is not None}).model_dump()
+    storage_config = storage_cls.Model(**{k: v for k, v in kwargs.items() if v is not None}).model_dump()
     profile: Profile = config.create_profile(name=name, storage_cls=storage_cls, storage_config=storage_config)
 
     with profile_context(profile.name, allow_switch=True):
         manager = get_manager()
         storage = manager.get_profile_storage()
 
-        if not storage.read_only:
+        if storage.read_only:
+            # Check if the storage contains any users, and just set a random one as default user.
+            user = User.collection.query().first(flat=True)
+        else:
+            # Otherwise create a user and store it
             user = User(email=email, first_name=first_name, last_name=last_name, institution=institution).store()
-            # We can safely use ``Config.set_default_user_email`` here instead of ``Manager.set_default_user_email``
-            # since the storage backend of this new profile is not loaded yet.
-            config.set_default_user_email(profile, user.email)
+
+        # The user can be ``None`` if the storage is read-only and doesn't contain any users. This shouldn't happen in
+        # real situations, but this safe guard is added to be safe.
+        if user:
+            manager.set_default_user_email(profile, user.email)
 
     return profile
 

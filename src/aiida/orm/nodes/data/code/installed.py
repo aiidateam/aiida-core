@@ -13,16 +13,21 @@ storing the absolute filepath of the relevant executable and the computer on whi
 represented by an instance of :class:`aiida.orm.computers.Computer`. Each time a :class:`aiida.engine.CalcJob` is run
 using an ``InstalledCode``, it will run its executable on the associated computer.
 """
+
 from __future__ import annotations
 
 import pathlib
 
+from pydantic import field_validator, model_validator
+
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
+from aiida.common.pydantic import MetadataField
 from aiida.orm import Computer
 from aiida.orm.entities import from_backend_entity
 
+from .abstract import AbstractCode
 from .legacy import Code
 
 __all__ = ('InstalledCode',)
@@ -32,6 +37,57 @@ class InstalledCode(Code):
     """Data plugin representing an executable code on a remote computer."""
 
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
+
+    class Model(AbstractCode.Model):
+        """Model describing required information to create an instance."""
+
+        computer: str = MetadataField(
+            ...,
+            title='Computer',
+            description='The remote computer on which the executable resides.',
+            short_name='-Y',
+            priority=2,
+        )
+        filepath_executable: str = MetadataField(
+            ...,
+            title='Filepath executable',
+            description='Filepath of the executable on the remote computer.',
+            short_name='-X',
+            priority=1,
+        )
+
+        @field_validator('label')
+        @classmethod
+        def validate_label_uniqueness(cls, value: str) -> str:
+            """Override the validator for the ``label`` of the base class since uniqueness is defined on full label."""
+            return value
+
+        @field_validator('computer')
+        @classmethod
+        def validate_computer(cls, value: str) -> Computer:
+            """Override the validator for the ``label`` of the base class since uniqueness is defined on full label."""
+            from aiida.orm import load_computer
+
+            try:
+                return load_computer(value)
+            except exceptions.NotExistent as exception:
+                raise ValueError(exception) from exception
+
+        @model_validator(mode='after')  # type: ignore[misc]
+        def validate_full_label_uniqueness(self) -> AbstractCode.Model:
+            """Validate that the full label does not already exist."""
+            from aiida.orm import load_code
+
+            full_label = f'{self.label}@{self.computer.label}'  # type: ignore[attr-defined]
+
+            try:
+                load_code(full_label)
+            except exceptions.NotExistent:
+                return self
+            except exceptions.MultipleObjectsError as exception:
+                raise ValueError(f'Multiple codes with the label `{full_label}` already exist.') from exception
+            else:
+                raise ValueError(f'A code with the label `{full_label}` already exists.')
 
     def __init__(self, computer: Computer, filepath_executable: str, **kwargs):
         """Construct a new instance.
@@ -148,55 +204,3 @@ class InstalledCode(Code):
         """
         type_check(value, str)
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
-
-    @staticmethod
-    def cli_validate_label_uniqueness(ctx, _, value):
-        """Validate the uniqueness of the label of the code."""
-        import click
-
-        from aiida.orm import load_code
-
-        computer = ctx.params.get('computer', None)
-
-        if computer is None:
-            return value
-
-        full_label = f'{value}@{computer.label}'
-
-        try:
-            load_code(full_label)
-        except exceptions.NotExistent:
-            pass
-        except exceptions.MultipleObjectsError:
-            raise click.BadParameter(f'Multiple codes with the label `{full_label}` already exist.')
-        else:
-            raise click.BadParameter(f'A code with the label `{full_label}` already exists.')
-
-        return value
-
-    @classmethod
-    def _get_cli_options(cls) -> dict:
-        """Return the CLI options that would allow to create an instance of this class."""
-        import click
-
-        from aiida.cmdline.params.types import ComputerParamType
-
-        options = {
-            'computer': {
-                'short_name': '-Y',
-                'required': True,
-                'prompt': 'Computer',
-                'help': 'The remote computer on which the executable resides.',
-                'type': ComputerParamType(),
-            },
-            'filepath_executable': {
-                'short_name': '-X',
-                'required': True,
-                'type': click.Path(exists=False),
-                'prompt': 'Absolute filepath executable',
-                'help': 'Absolute filepath of the executable on the remote computer.',
-            },
-        }
-        options.update(**super()._get_cli_options())
-
-        return options

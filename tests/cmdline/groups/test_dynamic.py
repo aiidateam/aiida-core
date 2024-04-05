@@ -1,4 +1,5 @@
 """Tests for :mod:`aiida.cmdline.groups.dynamic`."""
+
 import typing as t
 
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
@@ -9,7 +10,7 @@ from pydantic_core import PydanticUndefined
 class CustomClass:
     """Test plugin class."""
 
-    class Configuration(BaseModel):
+    class Model(BaseModel):
         """Model configuration."""
 
         optional_type: t.Union[int, float] = Field(title='Optional type')
@@ -27,6 +28,6 @@ def test_list_options(entry_points):
 
     for option_decorators in group.list_options('custom'):
         option = option_decorators(lambda x: True).__click_params__[0]
-        field = CustomClass.Configuration.model_fields[option.name]
+        field = CustomClass.Model.model_fields[option.name]
         assert option.default == field.default_factory if field.default is PydanticUndefined else field.default
         assert option.type == t.get_args(field.annotation) or field.annotation

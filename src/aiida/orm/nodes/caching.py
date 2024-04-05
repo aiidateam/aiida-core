@@ -1,4 +1,5 @@
 """Interface to control caching of a node instance."""
+
 from __future__ import annotations
 
 import importlib
@@ -7,6 +8,7 @@ import typing as t
 from aiida.common import exceptions
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check
+from aiida.common.warnings import warn_deprecation
 
 from ..querybuilder import QueryBuilder
 
@@ -44,7 +46,7 @@ class NodeCaching:
         :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError`` (logging the exception)
         """
         try:
-            return make_hash(self._get_objects_to_hash(), **kwargs)
+            return make_hash(self.get_objects_to_hash(), **kwargs)
         except exceptions.HashingError:
             if not ignore_errors:
                 raise
@@ -53,23 +55,31 @@ class NodeCaching:
             return None
 
     def _get_objects_to_hash(self) -> list[t.Any]:
+        warn_deprecation(
+            '`NodeCaching._get_objects_to_hash` is deprecated, use `NodeCaching.get_objects_to_hash` instead', version=3
+        )
+        return self.get_objects_to_hash()
+
+    def get_objects_to_hash(self) -> list[t.Any]:
         """Return a list of objects which should be included in the hash."""
         top_level_module = self._node.__module__.split('.', 1)[0]
+
         try:
             version = importlib.import_module(top_level_module).__version__
         except (ImportError, AttributeError) as exc:
             raise exceptions.HashingError("The node's package version could not be determined") from exc
-        objects = [
-            version,
-            {
+
+        return {
+            'class': str(self._node.__class__),
+            'version': version,
+            'attributes': {
                 key: val
                 for key, val in self._node.base.attributes.items()
                 if key not in self._node._hash_ignored_attributes and key not in self._node._updatable_attributes
             },
-            self._node.base.repository.hash(),
-            self._node.computer.uuid if self._node.computer is not None else None,
-        ]
-        return objects
+            'repository_hash': self._node.base.repository.hash(),
+            'computer_uuid': self._node.computer.uuid if self._node.computer is not None else None,
+        }
 
     def rehash(self) -> None:
         """Regenerate the stored hash of the Node."""

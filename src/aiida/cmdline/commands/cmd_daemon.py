@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi daemon` commands."""
+
 from __future__ import annotations
 
 import subprocess
@@ -47,9 +48,14 @@ def execute_client_command(command: str, daemon_not_running_ok: bool = False, **
         not treated as a failure.
     :param kwargs: Keyword arguments that are passed to the client method.
     """
+    from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException, get_daemon_client
 
-    client = get_daemon_client()
+    try:
+        client = get_daemon_client()
+    except ConfigurationError:
+        echo.echo('WARNING', fg=echo.COLORS['warning'], bold=True)
+        return None
 
     try:
         response = getattr(client, command)(**kwargs)
@@ -74,6 +80,7 @@ def execute_client_command(command: str, daemon_not_running_ok: bool = False, **
 @click.argument('number', required=False, type=int, callback=validate_daemon_workers)
 @options.TIMEOUT(default=None, required=False, type=int)
 @decorators.with_dbenv()
+@decorators.requires_broker
 @decorators.check_circus_zmq_version
 def start(foreground, number, timeout):
     """Start the daemon with NUMBER workers.
@@ -92,6 +99,7 @@ def start(foreground, number, timeout):
 @options.TIMEOUT(default=None, required=False, type=int)
 @click.pass_context
 @decorators.requires_loaded_profile()
+@decorators.requires_broker
 def status(ctx, all_profiles, timeout):
     """Print the status of the current daemon or all daemons.
 
@@ -151,6 +159,7 @@ def status(ctx, all_profiles, timeout):
 @verdi_daemon.command()
 @click.argument('number', default=1, type=int)
 @options.TIMEOUT(default=None, required=False, type=int)
+@decorators.requires_broker
 @decorators.only_if_daemon_running()
 def incr(number, timeout):
     """Add NUMBER [default=1] workers to the running daemon.
@@ -164,6 +173,7 @@ def incr(number, timeout):
 @verdi_daemon.command()
 @click.argument('number', default=1, type=int)
 @options.TIMEOUT(default=None, required=False, type=int)
+@decorators.requires_broker
 @decorators.only_if_daemon_running()
 def decr(number, timeout):
     """Remove NUMBER [default=1] workers from the running daemon.
@@ -189,6 +199,7 @@ def logshow():
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation.')
 @click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons.')
 @options.TIMEOUT(default=None, required=False, type=int)
+@decorators.requires_broker
 @click.pass_context
 def stop(ctx, no_wait, all_profiles, timeout):
     """Stop the daemon.
@@ -213,34 +224,39 @@ def stop(ctx, no_wait, all_profiles, timeout):
 @options.TIMEOUT(default=None, required=False, type=int)
 @click.pass_context
 @decorators.with_dbenv()
+@decorators.requires_broker
 @decorators.only_if_daemon_running()
 def restart(ctx, reset, no_wait, timeout):
     """Restart the daemon.
 
-    By default will only reset the workers of the running daemon. After the restart the same amount of workers will be
-    running. If the `--reset` flag is passed, however, the full daemon will be stopped and restarted with the default
+    The daemon is stopped before being restarted with the default
     number of workers that is started when calling `verdi daemon start` manually.
 
     Returns exit code 0 if the result is OK, non-zero if there was an error.
     """
     if reset:
-        # These two lines can be simplified to `ctx.invoke(start)` once issue #950 in `click` is resolved.
-        # Due to that bug, the `callback` of the `number` argument the `start` command is not being called, which is
-        # responsible for settting the default value, which causes `None` to be passed and that triggers an exception.
-        # As a temporary workaround, we fetch the default here manually and pass that in explicitly.
-        number = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
-        ctx.invoke(stop)
-        ctx.invoke(start, number=number)
-        return
+        echo.echo_deprecated(
+            '`--reset` flag is deprecated. Now, `verdi daemon restart` by default restarts the full daemon.'
+        )
+    if no_wait:
+        echo.echo_deprecated('The `--no-wait` flag is deprecated and no longer has any effect.')
+    if timeout is not None:
+        echo.echo_deprecated('The `--timeout` option is deprecated and no longer has any effect.')
 
-    echo.echo('Restarting the daemon... ', nl=False)
-    execute_client_command('restart_daemon', wait=not no_wait, timeout=timeout)
+    # These two lines can be simplified to `ctx.invoke(start)` once issue #950 in `click` is resolved.
+    # Due to that bug, the `callback` of the `number` argument the `start` command is not being called, which is
+    # responsible for settting the default value, which causes `None` to be passed and that triggers an exception.
+    # As a temporary workaround, we fetch the default here manually and pass that in explicitly.
+    number = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
+    ctx.invoke(stop)
+    ctx.invoke(start, number=number)
 
 
 @verdi_daemon.command(hidden=True)
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
 @click.argument('number', required=False, type=int, callback=validate_daemon_workers)
 @decorators.with_dbenv()
+@decorators.requires_broker
 @decorators.check_circus_zmq_version
 def start_circus(foreground, number):
     """This will actually launch the circus daemon, either daemonized in the background or in the foreground.
@@ -256,8 +272,9 @@ def start_circus(foreground, number):
 
 @verdi_daemon.command('worker')
 @decorators.with_dbenv()
+@decorators.requires_broker
 def worker():
     """Run a single daemon worker in the current interpreter."""
     from aiida.engine.daemon.worker import start_daemon_worker
 
-    start_daemon_worker()
+    start_daemon_worker(foreground=True)

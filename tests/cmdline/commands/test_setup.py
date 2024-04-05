@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for ``verdi setup``."""
+
 import os
 import tempfile
 import uuid
@@ -207,7 +208,7 @@ repository: {tmp_path}"""
         postgres.determine_setup()
         db_name = 'aiida_test_setup'
         db_user = 'aiida_test_setup'
-        db_pass = 'aiida_test_setup'
+        db_pass = '@aiida_test_setup'
         postgres.create_dbuser(db_user, db_pass)
         postgres.create_db(db_user, db_name)
 

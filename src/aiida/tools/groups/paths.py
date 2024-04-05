@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Provides functionality for managing large numbers of AiiDA Groups, via label delimitation."""
+
 import re
 import warnings
 from collections import namedtuple

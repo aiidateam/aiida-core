@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi status` command."""
+
 import enum
 import sys
 
@@ -17,6 +18,7 @@ from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.log import override_log_level
+from aiida.common.warnings import warn_deprecation
 
 from ..utils.echo import ExitCode
 
@@ -41,7 +43,7 @@ STATUS_SYMBOLS = {
     },
     ServiceStatus.WARNING: {
         'color': 'yellow',
-        'string': '\u23FA',
+        'string': '\u23fa',
     },
     ServiceStatus.DOWN: {
         'color': 'red',
@@ -56,7 +58,7 @@ STATUS_SYMBOLS = {
 def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
     from aiida import __version__
-    from aiida.common.utils import Capturing
+    from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
     from aiida.manage.manager import get_manager
@@ -113,29 +115,41 @@ def verdi_status(print_traceback, no_rmq):
         message = str(storage_backend)
         print_status(ServiceStatus.UP, 'storage', message)
 
-    # Getting the rmq status
-    if not no_rmq:
-        rmq_url = '<NOT SET>'
+    if no_rmq:
+        warn_deprecation(
+            'The `--no-rmq` option is deprecated. If RabbitMQ is not available, a profile should be configured that '
+            'sets the `process_control.backend` attribute to `None`.',
+            version=3,
+        )
+
+    # Getting the broker status
+    broker = manager.get_broker()
+
+    if broker:
         try:
-            rmq_url = profile.get_rmq_url()
-            with Capturing(capture_stderr=True):
-                with override_log_level():  # temporarily suppress noisy logging
-                    comm = manager.get_communicator()
+            broker.get_communicator()
         except Exception as exc:
-            message = f'Unable to connect to rabbitmq with URL: {rmq_url}'
-            print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)
+            message = f'Unable to connect to broker: {broker}'
+            print_status(ServiceStatus.ERROR, 'broker', message, exception=exc, print_traceback=print_traceback)
             exit_code = ExitCode.CRITICAL
         else:
-            version, supported = manager.check_rabbitmq_version(comm)
-            connection = f'Connected to RabbitMQ v{version} as {rmq_url}'
-            if supported:
-                print_status(ServiceStatus.UP, 'rabbitmq', connection)
-            else:
-                print_status(ServiceStatus.WARNING, 'rabbitmq', 'Incompatible RabbitMQ version detected! ' + connection)
+            print_status(ServiceStatus.UP, 'broker', broker)
+    else:
+        print_status(
+            ServiceStatus.WARNING,
+            'broker',
+            'No broker defined for this profile: certain functionality not available.',
+        )
 
     # Getting the daemon status
     try:
         status = manager.get_daemon_client().get_status()
+    except ConfigurationError:
+        print_status(
+            ServiceStatus.WARNING,
+            'daemon',
+            'No broker defined for this profile: daemon is not available.',
+        )
     except DaemonNotRunningException as exception:
         print_status(ServiceStatus.WARNING, 'daemon', str(exception))
     except DaemonException as exception:

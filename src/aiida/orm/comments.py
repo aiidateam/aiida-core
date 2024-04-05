@@ -7,12 +7,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Comment objects and functions"""
+
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Type
 
 from aiida.manage import get_manager
 
 from . import entities, users
+from .fields import add_field
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
@@ -62,6 +64,45 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
     """Base class to map a DbComment that represents a comment attached to a certain Node."""
 
     _CLS_COLLECTION = CommentCollection
+
+    __qb_fields__ = [
+        add_field(
+            'uuid',
+            dtype=str,
+            is_attribute=False,
+            doc='The UUID of the comment',
+        ),
+        add_field(
+            'ctime',
+            dtype=datetime,
+            is_attribute=False,
+            doc='Creation time of the comment',
+        ),
+        add_field(
+            'mtime',
+            dtype=datetime,
+            is_attribute=False,
+            doc='Modified time of the comment',
+        ),
+        add_field(
+            'content',
+            dtype=str,
+            is_attribute=False,
+            doc='Content of the comment',
+        ),
+        add_field(
+            'user_pk',
+            dtype=int,
+            is_attribute=False,
+            doc='User PK that created the comment',
+        ),
+        add_field(
+            'node_pk',
+            dtype=int,
+            is_attribute=False,
+            doc='Node PK that the comment is attached to',
+        ),
+    ]
 
     def __init__(
         self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['StorageBackend'] = None

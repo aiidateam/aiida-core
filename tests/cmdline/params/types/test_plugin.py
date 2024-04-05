@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `PluginParamType`."""
+
 import click
 import pytest
 from aiida.cmdline.params.types.plugin import PluginParamType

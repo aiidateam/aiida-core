@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for ``verdi profile``."""
+
 import pytest
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
 from aiida.manage import configuration

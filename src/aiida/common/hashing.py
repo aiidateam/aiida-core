@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common password and hash generation functions."""
+
 import hashlib
 import numbers
 import secrets

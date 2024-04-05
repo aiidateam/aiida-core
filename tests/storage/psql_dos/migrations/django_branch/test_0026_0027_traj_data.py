@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test `TrajectoryData` nodes migration, moving symbol lists from repository array to attributes."""
+
 import numpy
 import pytest
 from aiida.common import timezone

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `aiida.restapi.translator` module."""
+
 from aiida.orm import Data
 from aiida.restapi.translator.nodes.node import NodeTranslator
 

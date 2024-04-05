@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Expose the AiiDA CLI, for usage as `python -m aiida`"""
+
 import sys
 
 if __name__ == '__main__':

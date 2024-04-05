@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for plugins to import data from external databases into an AiiDA database."""
+
 from .baseclasses import DbImporter
 
 __all__ = ('DbImporter',)

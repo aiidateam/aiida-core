@@ -1,4 +1,5 @@
 """Check that the GitHub release tag matches the package version."""
+
 import argparse
 import ast
 from pathlib import Path

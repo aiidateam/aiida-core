@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Functions to dynamically generate reversed polish notation expressions."""
+
 import collections
 import operator as operators
 import random

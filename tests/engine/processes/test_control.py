@@ -1,4 +1,5 @@
 """Tests for the :mod:`aiida.engine.processes.control` module."""
+
 import pytest
 from aiida.engine import ProcessState
 from aiida.engine.launch import submit

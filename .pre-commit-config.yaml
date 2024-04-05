@@ -32,7 +32,7 @@ repos:
     args: [--line-length=120, --fail-on-change]
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.1.9
+  rev: v0.3.5
   hooks:
   - id: ruff-format
     exclude: &exclude_ruff >

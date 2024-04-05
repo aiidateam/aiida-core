@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for :class:`aiida.orm.nodes.data.list.List` class."""
+
 import pytest
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import List, load_node

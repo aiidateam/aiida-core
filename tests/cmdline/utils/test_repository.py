@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.cmdline.utils.repository` module."""
+
 import io
 
 import pytest

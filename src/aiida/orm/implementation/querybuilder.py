@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Abstract `QueryBuilder` definition."""
+
 import abc
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Literal, Optional, Set, TypedDict, Union
 
@@ -66,6 +67,8 @@ class QueryDictType(TypedDict):
     # mapping: tag -> [] -> field -> 'func' -> 'max' | 'min' | 'count'
     #                                'cast' -> 'b' | 'd' | 'f' | 'i' | 'j' | 't'
     project: Dict[str, List[Dict[str, Dict[str, Any]]]]
+    # mapping: tag -> field -> return key for iterdict method
+    project_map: Dict[str, Dict[str, str]]
     # list of mappings: tag  -> [] -> field -> 'order' -> 'asc' | 'desc'
     #                                          'cast'  -> 'b' | 'd' | 'f' | 'i' | 'j' | 't'
     order_by: List[Dict[str, List[Dict[str, Dict[str, str]]]]]

@@ -6,7 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-""""Implementation of `DbImporter` for the Materials Project database."""
+""" "Implementation of `DbImporter` for the Materials Project database."""
+
 import datetime
 import os
 

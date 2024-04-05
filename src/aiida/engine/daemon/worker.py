@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Function that starts a daemon worker."""
+
 import asyncio
 import logging
 import signal
@@ -36,10 +37,14 @@ async def shutdown_worker(runner: Runner) -> None:
     LOGGER.info('Daemon worker stopped')
 
 
-def start_daemon_worker() -> None:
-    """Start a daemon worker for the currently configured profile."""
+def start_daemon_worker(foreground: bool = False) -> None:
+    """Start a daemon worker for the currently configured profile.
+
+    :param foreground: If true, the logging will be configured to write to stdout, otherwise it will be configured to
+        write to the daemon log file.
+    """
     daemon_client = get_daemon_client()
-    configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
+    configure_logging(daemon=not foreground, daemon_log_file=daemon_client.daemon_log_file)
 
     try:
         manager = get_manager()

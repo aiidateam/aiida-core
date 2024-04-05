@@ -9,6 +9,7 @@
 """A module defining hydrogen-like orbitals that are real valued (rather than
 complex-valued).
 """
+
 from aiida.common.exceptions import ValidationError
 
 from .orbital import Orbital, validate_float_or_none, validate_len3_list_or_none

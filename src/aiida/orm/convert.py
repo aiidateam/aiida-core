@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for converting backend entities into frontend, ORM, entities"""
+
 from collections.abc import Iterator, Mapping, Sized
 from functools import singledispatch
 

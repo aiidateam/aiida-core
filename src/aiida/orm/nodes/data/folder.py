@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a folder on a file system."""
+
 from __future__ import annotations
 
 import contextlib
@@ -72,13 +73,11 @@ class FolderData(Data):
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['r']) -> t.Iterator[t.TextIO]:
-        ...
+    def open(self, path: FilePath, mode: t.Literal['r']) -> t.Iterator[t.TextIO]: ...
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]:
-        ...
+    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]: ...
 
     @contextlib.contextmanager
     def open(self, path: FilePath, mode: t.Literal['r', 'rb'] = 'r') -> t.Iterator[t.BinaryIO] | t.Iterator[t.TextIO]:
@@ -120,12 +119,10 @@ class FolderData(Data):
         return self.base.repository.get_object(path)
 
     @t.overload
-    def get_object_content(self, path: str, mode: t.Literal['r']) -> str:
-        ...
+    def get_object_content(self, path: str, mode: t.Literal['r']) -> str: ...
 
     @t.overload
-    def get_object_content(self, path: str, mode: t.Literal['rb']) -> bytes:
-        ...
+    def get_object_content(self, path: str, mode: t.Literal['rb']) -> bytes: ...
 
     def get_object_content(self, path: str, mode: t.Literal['r', 'rb'] = 'r') -> str | bytes:
         """Return the content of a object identified by key.

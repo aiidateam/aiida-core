@@ -7,9 +7,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA Group entites"""
+
 import warnings
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
@@ -17,6 +18,7 @@ from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from . import convert, entities, extras, users
+from .fields import add_field
 
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
@@ -105,6 +107,51 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     """An AiiDA ORM implementation of group of nodes."""
 
     __type_string: ClassVar[Optional[str]]
+
+    __qb_fields__ = [
+        add_field(
+            'uuid',
+            dtype=str,
+            is_attribute=False,
+            doc='The UUID of the group',
+        ),
+        add_field(
+            'type_string',
+            dtype=str,
+            is_attribute=False,
+            doc='The type of the group',
+        ),
+        add_field(
+            'label',
+            dtype=str,
+            is_attribute=False,
+            doc='The group label',
+        ),
+        add_field(
+            'description',
+            dtype=str,
+            is_attribute=False,
+            doc='The group description',
+        ),
+        add_field(
+            'time',
+            dtype=str,
+            is_attribute=False,
+            doc='The time of the group creation',
+        ),
+        add_field(
+            'extras',
+            dtype=Dict[str, Any],
+            is_attribute=False,
+            doc='The group extras',
+        ),
+        add_field(
+            'user_pk',
+            dtype=int,
+            is_attribute=False,
+            doc='The PK for the creating user',
+        ),
+    ]
 
     _CLS_COLLECTION = GroupCollection
 

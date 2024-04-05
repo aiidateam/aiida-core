@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the `DaemonClient` class."""
+
 from unittest.mock import patch
 
 import pytest

@@ -6,8 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Translator for calcjob node
-"""
+"""Translator for calcjob node"""
 
 from aiida.restapi.translator.nodes.process.process import ProcessTranslator
 

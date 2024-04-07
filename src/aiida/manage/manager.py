@@ -121,8 +121,8 @@ class Manager:
         elif not isinstance(profile, Profile):
             raise TypeError(f'profile must be None, a string, or a Profile instance, got: {type(profile)}')
 
-        # If a profile is loaded and the specified profile name is that of the currently loaded, do nothing
-        if self._profile and (self._profile.name == profile.name):
+        # If a profile is loaded and the specified profile UUID is that of the currently loaded, do nothing
+        if self._profile and (self._profile.uuid == profile.uuid):
             return self._profile
 
         if self._profile and self.profile_storage_loaded and not allow_switch:

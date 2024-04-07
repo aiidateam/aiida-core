@@ -95,6 +95,10 @@ class PsqlDosBackend(StorageBackend):
         database_name: str = Field(
             title='PostgreSQL database name', description='The name of the database in the PostgreSQL server.'
         )
+        repository_uri: str = Field(
+            title='File repository URI',
+            description='URI to the file repository.',
+        )
 
     migrator = PsqlDosMigrator
 

@@ -167,8 +167,8 @@ def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point)
     assert profile_name not in isolated_config.profile_names
 
 
-@pytest.mark.parametrize('entry_point', ('core.sqlite_temp', 'core.sqlite_dos', 'core.sqlite_zip'))
-def test_setup(run_cli_command, isolated_config, tmp_path, entry_point):
+@pytest.mark.parametrize('entry_point', ('core.psql_dos', 'core.sqlite_temp', 'core.sqlite_dos', 'core.sqlite_zip'))
+def test_setup(config_psql_dos, run_cli_command, isolated_config, tmp_path, entry_point):
     """Test the ``verdi profile setup`` command.
 
     Note that the options for user name and institution are not given on purpose as these should not be required.
@@ -177,8 +177,16 @@ def test_setup(run_cli_command, isolated_config, tmp_path, entry_point):
         tmp_path = tmp_path / 'archive.aiida'
         create_archive([], filename=tmp_path)
 
+    if entry_point == 'core.psql_dos':
+        options = []
+        for key, value in config_psql_dos()['storage']['config'].items():
+            options.append(f'--{key.replace("_", "-")}')
+            options.append(str(value))
+    else:
+        options = ['--filepath', str(tmp_path)]
+
     profile_name = 'temp-profile'
-    options = [entry_point, '-n', '--filepath', str(tmp_path), '--profile', profile_name, '--email', 'email@host']
+    options = [entry_point, '-n', '--profile', profile_name, '--email', 'email@host', *options]
     result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     assert f'Created new profile `{profile_name}`.' in result.output
     assert profile_name in isolated_config.profile_names

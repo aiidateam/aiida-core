@@ -94,11 +94,13 @@ class QbField:
 
     @property
     def dtype(self) -> t.Optional[t.Any]:
-        return self._dtype
-
-    def get_root_type(self) -> t.Optional[t.Any]:
         """Return the primitive root type."""
         return extract_root_type(self._dtype)
+
+    @property
+    def annotation(self) -> t.Optional[t.Any]:
+        """Return the full type annotation."""
+        return self._dtype
 
     @property
     def is_attribute(self) -> bool:

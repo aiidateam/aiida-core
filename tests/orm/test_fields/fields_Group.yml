@@ -1,5 +1,5 @@
 description: QbStrField('description', dtype=str, is_attribute=False)
-extras: QbDictField('extras', dtype=Dict[str, Any], is_attribute=False)
+extras: QbDictField('extras', dtype=Dict[str, Any], is_attribute=False, is_subscriptable=True)
 label: QbStrField('label', dtype=str, is_attribute=False)
 pk: QbNumericField('pk', dtype=int, is_attribute=False)
 time: QbStrField('time', dtype=str, is_attribute=False)

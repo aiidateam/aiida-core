@@ -143,6 +143,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             'extras',
             dtype=Dict[str, Any],
             is_attribute=False,
+            is_subscriptable=True,
             doc='The group extras',
         ),
         add_field(

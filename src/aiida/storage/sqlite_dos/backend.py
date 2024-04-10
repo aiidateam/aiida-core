@@ -146,6 +146,9 @@ class SqliteDosStorage(PsqlDosBackend):
         engine = create_sqla_engine(Path(self._profile.storage_config['filepath']) / 'database.sqlite')
         self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
 
+    def is_backup_implemented(self):
+        return False
+
     def _backup_backend(
         self,
         dest: str,

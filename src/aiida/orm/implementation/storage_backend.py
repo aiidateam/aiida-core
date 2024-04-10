@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Generic backend related objects"""
+
 from __future__ import annotations
 
 import abc
@@ -304,6 +305,13 @@ class StorageBackend(abc.ABC):
         :param dry_run: flag to only print the actions that would be taken without actually executing them.
         """
 
+    def is_backup_implemented(self):
+        """Check if the storage backend implements a backup procedure.
+
+        Note: subclasses that implement a backup procedure need to overload this method and return True.
+        """
+        return False
+
     def _backup_backend(
         self,
         dest: str,
@@ -372,9 +380,13 @@ class StorageBackend(abc.ABC):
         :param keep: The number of backups to keep in the target destination, if the backend supports it.
         :raises ValueError: If the input parameters are invalid.
         :raises StorageBackupError: If an error occurred during the backup procedure.
+        :raises NotImplementedError: If the storage backend doesn't implement a backup procedure.
         """
-        self._validate_or_init_backup_folder(dest, keep)
-        self._backup_backend(dest, keep)
+        if self.is_backup_implemented():
+            self._validate_or_init_backup_folder(dest, keep)
+            self._backup_backend(dest, keep)
+        else:
+            raise NotImplementedError
 
     def get_info(self, detailed: bool = False) -> dict:
         """Return general information on the storage.

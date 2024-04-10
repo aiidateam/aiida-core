@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
+
 import functools
 import gc
 import pathlib
@@ -477,6 +478,9 @@ class PsqlDosBackend(StorageBackend):
         results = super().get_info(detailed=detailed)
         results['repository'] = self.get_repository().get_info(detailed)
         return results
+
+    def is_backup_implemented(self):
+        return True
 
     def _backup(
         self,

@@ -304,10 +304,11 @@ It contains the configuration file, which holds all the profile information, dae
 
 The location of the configuration directory is determined as follows:
 
-1. First, the ``AIIDA_PATH`` environment variables is checked, which can be a colon-separated list of directories.
+1. First, the current working directory is checked for an existing configuration directory moving up the file hierarchy until the first is encountered or the root directory is hit.
+The home directory is ignored, because it is likely that this will always exist and would always overshadow the ``AIIDA_PATH`` variable.
+2. Second, the ``AIIDA_PATH`` environment variable is checked, which can be a colon-separated list of directories.
 The first directory that points to an existing configuration directory is selected.
-If no existing directories are found, the last directory defined in the variable is used and the configuration directory is created there if it did not already exist.
-2. If the ``AIIDA_PATH`` is not defined, the current working directory is checked, going up the hierarchy until the first existing configuration directory is encountered.
+If none of the specified directories contains a configuration directory, the last considered directory is taken.
 3. If no existing configuration directory is found yet, the ``.aiida`` directory in the user's home folder is used, and is created automatically if it does not already exist.
 
 Examples
@@ -329,17 +330,19 @@ Consider the following directory structure::
 
 The following table shows the configuration directory that is selected given a certain ``AIIDA_PATH`` variable and the current working directory:
 
-+--------------------------------------------------------------+----------------------------------+
-| Variables                                                    | Configuration directory          |
-+==============================================================+==================================+
-| ``AIIDA_PATH = '~/project_b/'``                              | ``~/project_b/.aiida``           |
-| ``AIIDA_PATH = '~/project_b/.aiida'``                        | ``~/project_b/.aiida``           |
-| ``AIIDA_PATH = '~/project_a/.aiida:~/project_b/.aiida'``     | ``~/project_a/.aiida``           |
-| ``AIIDA_PATH = '~/project_a/subfolder:~/project_a/.aiida:'`` | ``~/project_a/subfolder/.aiida`` |
-| ``CWD = '~/project_a/subfolder``                             | ``~/project_a/subfolder/.aiida`` |
-| ``CWD = '~/project_b/subfolder``                             | ``~/project_b/.aiida``           |
-| ``CWD = '~/project_c/subfolder``                             | ``~/.aiida``                     |
-+--------------------------------------------------------------+----------------------------------+
++---------------------------------------------------------------------+-----------------------------------+
+| Variables                                                           | Configuration directory           |
++=====================================================================+===================================+
+| ``AIIDA_PATH = '~/project_b/'``                                     | ``~/project_b/.aiida``            |
+| ``AIIDA_PATH = '~/project_b/.aiida'``                               | ``~/project_b/.aiida``            |
+| ``AIIDA_PATH = '~/project_a/.aiida:~/project_b/.aiida'``            | ``~/project_a/.aiida``            |
+| ``AIIDA_PATH = '~/project_a/subfolder:~/project_a/.aiida:'``        | ``~/project_a/subfolder/.aiida``  |
+| ``CWD = '~/project_a/subfolder``                                    | ``~/project_a/subfolder/.aiida``  |
+| ``CWD = '~/project_b/subfolder``                                    | ``~/project_b/.aiida``            |
+| ``CWD = '~/project_c/subfolder``                                    | ``~/.aiida``                      |
+| ``CWD = '~/project_b/subfolder`` & ``AIIDA_PATH = '~/project_a/'``  | ``~/project_b/.aiida``            |
+| ``CWD = '~/project_c/subfolder`` & ``AIIDA_PATH = '~/project_a/'``  | ``~/project_a/.aiida``            |
++---------------------------------------------------------------------+-----------------------------------+
 
 .. tip::
 

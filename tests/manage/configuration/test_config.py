@@ -147,24 +147,13 @@ def test_environment_variable_set_multiple_path(tmp_path):
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-@pytest.mark.parametrize('environment_variable', (True, False))
-def test_cwd(environment_variable, chdir_tmp_path):
-    """Test that the current working directory is checked as long as ``AIIDA_PATH`` environment variable is not set."""
-    if environment_variable:
-        dirpath_env = chdir_tmp_path / 'env' / settings.DEFAULT_CONFIG_DIR_NAME
-        dirpath_env.mkdir(parents=True)
-        os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_env.absolute())
-    else:
-        os.environ.pop(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
-
+def test_cwd(chdir_tmp_path):
+    """Test that the current working directory is checked."""
     dirpath_cwd = chdir_tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     dirpath_cwd.mkdir()
 
     settings.set_configuration_directory()
-    if environment_variable:
-        assert settings.AIIDA_CONFIG_FOLDER == dirpath_env
-    else:
-        assert settings.AIIDA_CONFIG_FOLDER == dirpath_cwd
+    assert settings.AIIDA_CONFIG_FOLDER == dirpath_cwd
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')

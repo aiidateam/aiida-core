@@ -72,22 +72,28 @@ def get_configuration_directory():
 
     The location of the configuration directory is defined following these heuristics in order:
 
-        * If the ``AIIDA_PATH`` variable is set, all the paths will be checked to see if they contain a
-          configuration folder. The first one to be encountered will be set as ``AIIDA_CONFIG_FOLDER``. If none of them
-          contain one, the last path defined in the environment variable considered is used.
-        * If ``AIIDA_PATH`` is not set, the current working directory is checked for an existing configuration directory
-          moving up the file hierarchy until the first is encountered or the root directory is hit.
-        * If an existing directory is still not found, the ``DEFAULT_AIIDA_PATH`` is used.
+        * First, the current working directory is checked for an existing configuration directory moving up the file
+          hierarchy until the first is encountered or the root directory is hit. The directory ``DEFAULT_AIIDA_PATH``
+          is ignored, because it is likely that this will always exist and would always overshadow the ``AIIDA_PATH``
+          variable.
+        * If no directory in the current workding directory hierarchy is found, the ``AIIDA_PATH`` variable is checked.
+          If defined, all the paths are checked to see if they contain a configuration folder. The first one to be
+          encountered is set as ``AIIDA_CONFIG_FOLDER``. If none of them contain one, the last path defined in the
+          environment variable considered is used.
+        * If an existing directory is still not found, the path returned by ``get_configuration_directory_default`` is
+          used.
 
     :returns: The path of the configuration directory.
     """
-    dirpath_config = get_configuration_directory_from_envvar() or get_configuration_directory_from_cwd()
+    dirpath_config = get_configuration_directory_from_cwd() or get_configuration_directory_from_envvar()
 
     # If no existing configuration directory is found, fall back to the default
-    if dirpath_config is None:
-        dirpath_config = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
+    return dirpath_config or get_configuration_directory_default()
 
-    return dirpath_config
+
+def get_configuration_directory_default() -> pathlib.Path:
+    """Return the default path of the configuration directory."""
+    return pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
 
 
 def get_configuration_directory_from_envvar() -> pathlib.Path | None:
@@ -129,6 +135,10 @@ def get_configuration_directory_from_cwd() -> pathlib.Path | None:
     dirpath = pathlib.Path.cwd()
 
     while dirpath.is_dir():
+        # Once the default base directory is hit, the loop is aborted.
+        if dirpath == get_configuration_directory_default().parent:
+            break
+
         if (dirpath / DEFAULT_CONFIG_DIR_NAME).is_dir():
             return dirpath / DEFAULT_CONFIG_DIR_NAME
 

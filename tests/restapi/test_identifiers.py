@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `aiida.restapi.common.identifiers` module."""
+
 from threading import Thread
 
 import pytest

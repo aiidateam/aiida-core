@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Shared resources for the archive."""
+
 import urllib.parse
 import urllib.request
 from html.parser import HTMLParser

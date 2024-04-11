@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unittests for REST API."""
+
 import io
 import json
 from datetime import date

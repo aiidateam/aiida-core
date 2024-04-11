@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all logging methods/classes that don't need the ORM."""
+
 from __future__ import annotations
 
 import collections

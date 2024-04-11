@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module of `Data` sub class to represent a pseudopotential single file in UPF format and related utilities."""
+
 import json
 import re
 

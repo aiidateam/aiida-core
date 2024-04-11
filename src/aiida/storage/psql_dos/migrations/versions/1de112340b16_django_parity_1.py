@@ -14,6 +14,7 @@ Revises: 34a831f4286d
 Create Date: 2021-08-24 18:52:45.882712
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi user` command."""
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi

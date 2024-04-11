@@ -19,6 +19,8 @@
 .tox
 Pipfile
 
+.aiida
+
 # files created by coverage
 .cache
 .pytest_cache

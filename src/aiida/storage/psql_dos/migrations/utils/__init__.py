@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities to perform the migrations."""
+
 from .reflect import ReflectMigrations
 
 __all__ = ('ReflectMigrations',)

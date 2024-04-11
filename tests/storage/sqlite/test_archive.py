@@ -1,4 +1,5 @@
 """Test export and import of AiiDA archives to/from a temporary profile."""
+
 from pathlib import Path
 
 from aiida import orm

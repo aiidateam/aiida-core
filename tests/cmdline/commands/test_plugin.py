@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `verdi plugin list` command."""
+
 import pytest
 from aiida.cmdline.commands import cmd_plugin
 from aiida.plugins import CalculationFactory, WorkflowFactory

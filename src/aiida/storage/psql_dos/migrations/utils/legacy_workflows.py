@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N806
 """Utilities for removing legacy workflows."""
+
 import codecs
 import json
 import sys

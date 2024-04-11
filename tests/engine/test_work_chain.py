@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N806
 """Tests for the `WorkChain` class."""
+
 import asyncio
 import inspect
 

@@ -10,6 +10,7 @@
 
 Adapted from: `aiida/backends/djsite/db/migrations/__init__.py`
 """
+
 from __future__ import annotations
 
 import datetime

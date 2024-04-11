@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `CalcJob` utils."""
+
 import pytest
 from aiida.common.links import LinkType
 from aiida.orm import Dict

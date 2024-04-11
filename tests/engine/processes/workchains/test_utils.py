@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `aiida.engine.processes.workchains.utils` module."""
+
 import pytest
 from aiida.engine import ExitCode, ProcessState
 from aiida.engine.processes.workchains.restart import BaseRestartWorkChain

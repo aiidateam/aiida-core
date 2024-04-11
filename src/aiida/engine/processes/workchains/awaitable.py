@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Enums and function for the awaitables of Processes."""
+
 from enum import Enum
 from typing import Union
 

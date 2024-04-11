@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
+
 from typing import Dict, Optional
 
 from aiida.common import exceptions

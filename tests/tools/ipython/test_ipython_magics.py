@@ -1,4 +1,5 @@
 """Tests for :mod:`aiida.tools.ipython.ipython_magics`."""
+
 import textwrap
 
 from aiida.tools.ipython.ipython_magics import register_ipython_extension

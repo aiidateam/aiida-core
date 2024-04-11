@@ -6,16 +6,39 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the `aiida.manage.external.rmq` module."""
+"""Tests for the `aiida.brokers.rabbitmq` module."""
+
 import pathlib
 import uuid
 
 import pytest
 import requests
+from aiida.brokers.rabbitmq import client, utils
 from aiida.engine.processes import ProcessState, control
-from aiida.manage.external import rmq
 from aiida.orm import Int
 from kiwipy.rmq import RmqThreadCommunicator
+from packaging.version import parse
+
+
+@pytest.mark.parametrize(
+    ('version', 'supported'),
+    (
+        ('3.5', False),
+        ('3.6', True),
+        ('3.6.0', True),
+        ('3.6.1', True),
+        ('3.8', True),
+        ('3.8.14', True),
+        ('3.8.15', False),
+        ('3.9.0', False),
+        ('3.9', False),
+    ),
+)
+def test_is_rabbitmq_version_supported(monkeypatch, version, supported, manager):
+    """Test the :meth:`aiida.brokers.rabbitmq.RabbitmqBroker.is_rabbitmq_version_supported`."""
+    broker = manager.get_broker()
+    monkeypatch.setattr(broker, 'get_rabbitmq_version', lambda: parse(version))
+    assert broker.is_rabbitmq_version_supported() is supported
 
 
 @pytest.mark.parametrize(
@@ -35,13 +58,13 @@ def test_get_rmq_url(args, kwargs, expected):
     parameters are present in the expected form separately.
     """
     if isinstance(expected, str):
-        url = rmq.get_rmq_url(*args, **kwargs)
+        url = utils.get_rmq_url(*args, **kwargs)
         assert url.startswith(expected)
         for key, value in kwargs.items():
             assert f'{key}={value}' in url
     else:
         with pytest.raises(expected):
-            rmq.get_rmq_url(*args, **kwargs)
+            utils.get_rmq_url(*args, **kwargs)
 
 
 @pytest.mark.requires_rmq
@@ -117,7 +140,7 @@ def test_duplicate_subscriber_identifier(aiida_local_code_factory, started_daemo
 
 @pytest.fixture
 def rabbitmq_client(aiida_profile):
-    yield rmq.client.RabbitmqManagementClient(
+    yield client.RabbitmqManagementClient(
         username=aiida_profile.process_control_config['broker_username'],
         password=aiida_profile.process_control_config['broker_password'],
         hostname=aiida_profile.process_control_config['broker_host'],
@@ -127,29 +150,29 @@ def rabbitmq_client(aiida_profile):
 
 @pytest.mark.requires_rmq
 class TestRabbitmqManagementClient:
-    """Tests for the :class:`aiida.manage.external.rmq.client.RabbitmqManagementClient`."""
+    """Tests for the :class:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient`."""
 
     def test_is_connected(self, rabbitmq_client):
-        """Test the :meth:`aiida.manage.external.rmq.client.RabbitmqManagementClient.is_connected`."""
+        """Test the :meth:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient.is_connected`."""
         assert rabbitmq_client.is_connected
 
     def test_not_is_connected(self, rabbitmq_client, monkeypatch):
-        """Test the :meth:`aiida.manage.external.rmq.client.RabbitmqManagementClient.is_connected` if not connected."""
+        """Test the :meth:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient.is_connected` if not connected."""
 
         def raise_connection_error(*_):
-            raise rmq.client.ManagementApiConnectionError
+            raise client.ManagementApiConnectionError
 
         monkeypatch.setattr(rabbitmq_client, 'request', raise_connection_error)
         assert not rabbitmq_client.is_connected
 
     def test_request(self, rabbitmq_client):
-        """Test the :meth:`aiida.manage.external.rmq.client.RabbitmqManagementClient.request`."""
+        """Test the :meth:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient.request`."""
         response = rabbitmq_client.request('cluster-name')
         assert isinstance(response, requests.Response)
         assert response.ok
 
     def test_request_url_params(self, rabbitmq_client):
-        """Test the :meth:`aiida.manage.external.rmq.client.RabbitmqManagementClient.request` with ``url_params``.
+        """Test the :meth:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient.request` with ``url_params``.
 
         Create a queue and delete it again.
         """

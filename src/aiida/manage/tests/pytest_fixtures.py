@@ -15,6 +15,7 @@ To use these fixtures, simply create a ``conftest.py`` in the tests folder and a
 This will make all the fixtures in this file available and ready for use. Simply use them as you would any other
 ``pytest`` fixture.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -243,7 +244,7 @@ def clear_profile():
 
     manager = get_manager()
     manager.get_profile_storage()._clear()
-    manager.reset_communicator()
+    manager.reset_broker()
     manager.reset_runner()
 
     User(get_manager().get_profile().default_user_email).store()

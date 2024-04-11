@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common utility functions for command line commands."""
+
 import logging
 import os
 import sys

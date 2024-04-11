@@ -1,4 +1,5 @@
 """Tests for the :mod:`aiida.repository.common` module."""
+
 import pytest
 from aiida.repository import File, FileType
 

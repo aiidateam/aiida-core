@@ -14,6 +14,7 @@ Revises: 535039300e4a
 Create Date: 2021-08-11 18:25:48.706298
 
 """
+
 from alembic import op
 from sqlalchemy.sql import text
 

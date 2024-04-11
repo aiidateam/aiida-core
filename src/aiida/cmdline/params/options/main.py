@@ -7,11 +7,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
+
 import click
 
+from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
 from aiida.common.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.postgres import DEFAULT_DBINFO
-from aiida.manage.external.rmq import BROKER_DEFAULTS
 
 from ...utils import defaults, echo
 from .. import types

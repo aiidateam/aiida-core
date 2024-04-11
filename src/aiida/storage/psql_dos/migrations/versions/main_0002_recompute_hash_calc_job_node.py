@@ -16,6 +16,7 @@ Revises: main_0001
 Create Date: 2023-05-05
 
 """
+
 from alembic import op
 
 from aiida.storage.psql_dos.migrations.utils.integrity import drop_hashes

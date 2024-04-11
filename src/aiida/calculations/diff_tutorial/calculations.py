@@ -2,6 +2,7 @@
 
 Register calculations via the "aiida.calculations" entry point in the pyproject.toml file.
 """
+
 from aiida.common import datastructures
 from aiida.engine import CalcJob
 from aiida.orm import SinglefileData

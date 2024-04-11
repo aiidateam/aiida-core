@@ -9,6 +9,7 @@
 """This module implements a generic output plugin, that is general enough
 to allow the reading of the outputs of a calculation.
 """
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 

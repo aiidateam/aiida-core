@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N802
 """Sqla query builder implementation"""
+
 import uuid
 import warnings
 from contextlib import contextmanager, nullcontext

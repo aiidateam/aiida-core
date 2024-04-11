@@ -14,6 +14,7 @@ Revision ID: django_0021
 Revises: django_0020
 
 """
+
 from alembic import op
 
 from aiida.storage.psql_dos.migrations.utils import ReflectMigrations

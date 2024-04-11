@@ -15,6 +15,7 @@ Revises: 3d6190594e19
 Create Date: 2019-04-03 17:11:44.073582
 
 """
+
 from alembic import op
 
 from aiida.storage.psql_dos.migrations.utils.legacy_workflows import export_workflow_data

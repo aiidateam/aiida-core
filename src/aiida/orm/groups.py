@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA Group entites"""
+
 import warnings
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
@@ -142,6 +143,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             'extras',
             dtype=Dict[str, Any],
             is_attribute=False,
+            is_subscriptable=True,
             doc='The group extras',
         ),
         add_field(

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Migration from the "legacy" JSON format, to an sqlite database, and node uuid based repository to hash based."""
+
 import shutil
 import tarfile
 from contextlib import contextmanager

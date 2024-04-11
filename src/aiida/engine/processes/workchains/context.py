@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Convenience functions to add awaitables to the Context of a WorkChain."""
+
 from typing import Union
 
 from aiida.orm import ProcessNode

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`~aiida.plugins.entry_point` module."""
+
 import pytest
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import AiidaDeprecationWarning

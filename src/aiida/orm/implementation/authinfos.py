@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the backend implementation of the `AuthInfo` ORM class."""
+
 import abc
 from typing import TYPE_CHECKING, Any, Dict
 

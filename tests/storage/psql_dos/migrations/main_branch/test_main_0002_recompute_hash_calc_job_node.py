@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test ``main_0002_recompute_hash_calc_job_node.py``."""
+
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator

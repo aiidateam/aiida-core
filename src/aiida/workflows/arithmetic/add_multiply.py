@@ -8,6 +8,7 @@
 ###########################################################################
 # start-marker for docs
 """Basic calcfunction-based workflows for demonstration purposes."""
+
 from aiida.engine import calcfunction, workfunction
 
 

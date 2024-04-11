@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for testing memory leakage."""
+
 import asyncio
 
 from pympler import muppy

@@ -1,4 +1,5 @@
 """Utilities to define monitor functions for ``CalcJobs``."""
+
 from __future__ import annotations
 
 import collections

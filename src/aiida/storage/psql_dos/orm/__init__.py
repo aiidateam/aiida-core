@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of ORM backend entities."""
+
 import warnings
 
 from sqlalchemy.exc import SAWarning

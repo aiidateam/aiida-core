@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N806
 """Tests for legacy process migrations: 07fac78e6209 -> 118349c10896"""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 

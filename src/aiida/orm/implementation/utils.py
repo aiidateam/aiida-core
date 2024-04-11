@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility methods for backend non-specific implementations."""
+
 import math
 import numbers
 from collections.abc import Iterable, Mapping

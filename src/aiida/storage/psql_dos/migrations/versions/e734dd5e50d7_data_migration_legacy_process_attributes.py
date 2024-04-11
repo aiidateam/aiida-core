@@ -30,6 +30,7 @@ Revises: e797afa09270
 Create Date: 2019-07-04 18:23:56.127994
 
 """
+
 from alembic import op
 from sqlalchemy.sql import text
 

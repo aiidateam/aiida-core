@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA specific implementation of plumpy's ProcessSpec."""
+
 from typing import Optional
 
 import plumpy.process_spec

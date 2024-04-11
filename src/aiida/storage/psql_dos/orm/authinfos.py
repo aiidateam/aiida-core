@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the SqlAlchemy backend implementation of the `AuthInfo` ORM class."""
+
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.orm.implementation.authinfos import BackendAuthInfo, BackendAuthInfoCollection

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Work chain implementations for testing purposes."""
+
 from aiida.common import AttributeDict
 from aiida.engine import (
     BaseRestartWorkChain,

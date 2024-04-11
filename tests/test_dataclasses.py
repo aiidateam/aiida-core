@@ -8,6 +8,7 @@
 ###########################################################################
 # ruff: noqa: N806
 """Tests for specific subclasses of Data."""
+
 import os
 import tempfile
 

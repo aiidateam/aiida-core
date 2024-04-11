@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Components for the WorkChain concept of the workflow engine."""
+
 from __future__ import annotations
 
 import collections.abc

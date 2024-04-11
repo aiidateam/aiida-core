@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for synchronizing the django and sqlalchemy schema."""
+
 import alembic
 
 from aiida.storage.psql_dos.migrations.utils import ReflectMigrations

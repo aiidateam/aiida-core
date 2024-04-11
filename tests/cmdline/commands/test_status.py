@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi status`."""
+
 import pytest
 from aiida import __version__, get_profile
 from aiida.cmdline.commands import cmd_status
@@ -25,7 +26,7 @@ def test_status(run_cli_command):
     assert 'The daemon is not running' in result.output
     assert result.exit_code is ExitCode.SUCCESS.value
 
-    for string in ['config', 'profile', 'postgres', 'rabbitmq', 'daemon']:
+    for string in ['config', 'profile', 'postgres', 'broker', 'daemon']:
         assert string in result.output
 
     assert __version__ in result.output

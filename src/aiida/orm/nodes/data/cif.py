@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tools for handling Crystallographic Information Files (CIF)"""
+
 import re
 from typing import List
 

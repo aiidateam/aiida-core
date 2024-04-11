@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test migration of the old file repository to the disk object store."""
+
 import hashlib
 import os
 from uuid import uuid4

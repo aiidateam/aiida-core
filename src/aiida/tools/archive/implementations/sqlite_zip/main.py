@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The file format implementation"""
+
 from pathlib import Path
 from typing import Any, Literal, Union, overload
 
@@ -49,20 +50,17 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
     @overload
     def open(
         self, path: Union[str, Path], mode: Literal['r'], *, compression: int = 6, **kwargs: Any
-    ) -> ArchiveReaderSqlZip:
-        ...
+    ) -> ArchiveReaderSqlZip: ...
 
     @overload
     def open(
         self, path: Union[str, Path], mode: Literal['x', 'w'], *, compression: int = 6, **kwargs: Any
-    ) -> ArchiveWriterSqlZip:
-        ...
+    ) -> ArchiveWriterSqlZip: ...
 
     @overload
     def open(
         self, path: Union[str, Path], mode: Literal['a'], *, compression: int = 6, **kwargs: Any
-    ) -> ArchiveAppenderSqlZip:
-        ...
+    ) -> ArchiveAppenderSqlZip: ...
 
     def open(
         self, path: Union[str, Path], mode: Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: Any

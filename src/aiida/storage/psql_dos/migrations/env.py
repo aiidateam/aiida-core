@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Upper level SQLAlchemy migration funcitons."""
+
 from alembic import context
 
 

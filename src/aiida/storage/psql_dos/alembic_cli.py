@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Simple wrapper around the alembic command line tool that first loads an AiiDA profile."""
+
 from __future__ import annotations
 
 import contextlib

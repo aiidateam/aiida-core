@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test for the Group ORM class."""
+
 import uuid
 
 import pytest

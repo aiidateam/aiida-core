@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for custom click param type group."""
+
 import click
 
 from aiida.cmdline.utils import decorators

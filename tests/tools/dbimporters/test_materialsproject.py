@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that contains the class definitions necessary to offer support for queries to Materials Project."""
+
 import pytest
 from aiida.plugins import DbImporterFactory
 

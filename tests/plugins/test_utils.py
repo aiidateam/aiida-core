@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for utilities dealing with plugins and entry points."""
+
 import pytest
 from aiida import __version__ as version_core
 from aiida.common.exceptions import EntryPointError

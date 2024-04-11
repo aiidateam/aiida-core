@@ -6,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""This allows to manage showfunctionality to all data types.
-"""
+"""This allows to manage showfunctionality to all data types."""
+
 import pathlib
 
 from aiida.cmdline.utils import echo

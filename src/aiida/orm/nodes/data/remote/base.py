@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data plugin that models a folder on a remote computer."""
+
 import os
 
 from aiida.orm import AuthInfo

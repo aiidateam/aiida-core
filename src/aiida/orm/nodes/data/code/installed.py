@@ -13,6 +13,7 @@ storing the absolute filepath of the relevant executable and the computer on whi
 represented by an instance of :class:`aiida.orm.computers.Computer`. Each time a :class:`aiida.engine.CalcJob` is run
 using an ``InstalledCode``, it will run its executable on the associated computer.
 """
+
 from __future__ import annotations
 
 import pathlib

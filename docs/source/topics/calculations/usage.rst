@@ -184,6 +184,7 @@ In this simple example, we define four simple attributes:
 * ``remote_copy_list``: a list of tuples that instruct what files to copy to the working directory from the machine on which the job will run
 * ``retrieve_list``: a list of tuples instructing which files should be retrieved from the working directory and stored in the local repository after the job has finished
 
+See :ref:`topics:calculations:usage:calcjobs:file-copy-order` for details on the order in which input files are copied to the working directory.
 In this example we only need to run a single code, so the ``codes_info`` list has a single ``CodeInfo`` datastructure.
 This datastructure needs to define which code it needs to run, which is one of the inputs passed to the ``CalcJob``, and does so by means of its UUID.
 Through the ``stdout_name`` attribute, we tell the engine where the output of the executable should be redirected to.
@@ -562,6 +563,42 @@ The parser implementation can then parse these files and store the relevant info
 
 After the parser terminates, the engine will automatically clean up the sandbox folder with the temporarily retrieved files.
 The concept of the ``retrieve_temporary_list`` is essentially that the files will be available during parsing and will be destroyed immediately afterwards.
+
+
+.. _topics:calculations:usage:calcjobs:file-copy-order:
+
+Controlling order of file copying
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2.6
+
+Input files can come from three sources in a calculations job:
+
+#. Sandbox: files that are written by the ``CalcJob`` plugin in the :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submission` to the sandbox folder
+#. Local: files of input nodes that are defined through the ``local_copy_list``
+#. Remote: files of ``RemoteData`` input nodes that are defined through the ``remote_copy_list``
+
+By default, these files are copied in the order of sandbox, local, and finally remote.
+The order can be controlled through the ``file_copy_operation_order`` attribute of the :class:`~aiida.common.datastructures.CalcInfo` which takes a list of :class:`~aiida.common.datastructures.FileCopyOperation` instances, for example:
+
+.. code-block:: python
+
+    class CustomFileCopyOrder(CalcJob)
+
+        def prepare_for_submission(self, _):
+            from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
+
+            code_info = CodeInfo()
+            code_info.code_uuid = self.inputs.code.uuid
+            calc_info = CalcInfo()
+            calc_info.codes_info = [code_info]
+            calc_info.file_copy_operation_order = [
+                FileCopyOperation.LOCAL,
+                FileCopyOperation.REMOTE,
+                FileCopyOperation.SANDBOX,
+            ]
+            return calc_info
+
 
 .. _topics:calculations:usage:calcjobs:stashing:
 

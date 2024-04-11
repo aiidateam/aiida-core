@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.common.folders` module."""
+
 import io
 import pathlib
 import sys

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Command line interface to dynamically create and run a WorkChain that can evaluate a reversed polish expression."""
+
 import importlib
 import sys
 import time

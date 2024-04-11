@@ -10,6 +10,7 @@
 # of this code is changed, the snippets in the file `docs/source/howto/codes.rst` have to be checked for consistency.
 # mypy: disable_error_code=call-overload
 """Parser for an `ArithmeticAddCalculation` job."""
+
 from aiida.parsers.parser import Parser
 
 

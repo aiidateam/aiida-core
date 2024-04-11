@@ -1,4 +1,5 @@
 """Tests for :mod:`aiida.storage.sqlite_zip.backend`."""
+
 import pathlib
 
 import pytest

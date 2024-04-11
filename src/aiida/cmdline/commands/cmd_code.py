@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi code` command."""
+
 from collections import defaultdict
 from functools import partial
 

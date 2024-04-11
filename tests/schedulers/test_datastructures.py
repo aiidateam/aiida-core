@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.schedulers.test_datastructures` module."""
+
 import pytest
 from aiida.schedulers.datastructures import NodeNumberJobResource, ParEnvJobResource
 

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the BackendGroup and BackendGroupCollection classes."""
+
 from aiida import orm
 
 

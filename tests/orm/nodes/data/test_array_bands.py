@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.orm.nodes.data.array.bands` module."""
+
 import uuid
 from argparse import Namespace
 

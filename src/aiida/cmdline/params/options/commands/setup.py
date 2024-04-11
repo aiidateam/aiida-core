@@ -7,15 +7,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Reusable command line interface options for the setup commands."""
+
 import functools
 import getpass
 
 import click
 
+from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
 from aiida.cmdline.params import options, types
 from aiida.manage.configuration import Profile, get_config, get_config_option
 from aiida.manage.external.postgres import DEFAULT_DBINFO
-from aiida.manage.external.rmq import BROKER_DEFAULTS
 
 PASSWORD_UNCHANGED = '***'
 

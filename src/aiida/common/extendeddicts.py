@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Various dictionary types with extended functionality."""
+
 from collections.abc import Mapping
 
 from . import exceptions

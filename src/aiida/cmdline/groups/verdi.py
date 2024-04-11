@@ -1,4 +1,5 @@
 """Subclass of :class:`click.Group` for the ``verdi`` CLI."""
+
 from __future__ import annotations
 
 import base64

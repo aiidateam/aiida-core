@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities dealing with plugins and entry points."""
+
 from __future__ import annotations
 
 import typing as t

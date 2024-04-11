@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the ORM user class."""
+
 from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from aiida.common import exceptions

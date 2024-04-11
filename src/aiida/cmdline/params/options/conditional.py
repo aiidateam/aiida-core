@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Option whose requiredness is determined by a callback function."""
+
 import click
 
 

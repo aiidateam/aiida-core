@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test persisting via the AiiDAPersister."""
+
 import plumpy
 import pytest
 from aiida.engine import Process, run

@@ -11,6 +11,7 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
+
 from __future__ import annotations
 
 import os
@@ -18,12 +19,12 @@ import pathlib
 import shutil
 from collections.abc import Mapping
 from logging import LoggerAdapter
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 from typing import Mapping as MappingType
 
 from aiida.common import AIIDA_LOGGER, exceptions
-from aiida.common.datastructures import CalcInfo
+from aiida.common.datastructures import CalcInfo, FileCopyOperation
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.engine.processes.exit_code import ExitCode
@@ -201,96 +202,30 @@ def upload_calculation(
     remote_symlink_list = calc_info.remote_symlink_list or []
     provenance_exclude_list = calc_info.provenance_exclude_list or []
 
-    for uuid, filename, target in local_copy_list:
-        logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
+    file_copy_operation_order = calc_info.file_copy_operation_order or [
+        FileCopyOperation.SANDBOX,
+        FileCopyOperation.LOCAL,
+        FileCopyOperation.REMOTE,
+    ]
 
-        try:
-            data_node = load_node(uuid=uuid)
-        except exceptions.NotExistent:
-            data_node = _find_data_node(inputs, uuid) if inputs else None
-
-        if data_node is None:
-            logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
+    for file_copy_operation in file_copy_operation_order:
+        if file_copy_operation is FileCopyOperation.LOCAL:
+            _copy_local_files(logger, node, transport, inputs, local_copy_list)
+        elif file_copy_operation is FileCopyOperation.REMOTE:
+            if not dry_run:
+                _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list)
+        elif file_copy_operation is FileCopyOperation.SANDBOX:
+            if not dry_run:
+                _copy_sandbox_files(logger, node, transport, folder)
         else:
-            # If no explicit source filename is defined, we assume the top-level directory
-            filename_source = filename or '.'
-            filename_target = target or ''
-
-            # Make the target filepath absolute and create any intermediate directories if they don't yet exist
-            filepath_target = pathlib.Path(folder.abspath) / filename_target
-            filepath_target.parent.mkdir(parents=True, exist_ok=True)
-
-            if data_node.base.repository.get_object(filename_source).file_type == FileType.DIRECTORY:
-                # If the source object is a directory, we copy its entire contents
-                data_node.base.repository.copy_tree(filepath_target, filename_source)
-                sources = data_node.base.repository.list_object_names(filename_source)
-                if filename_target:
-                    sources = [str(pathlib.Path(filename_target) / subpath) for subpath in sources]
-                provenance_exclude_list.extend(sources)
-            else:
-                # Otherwise, simply copy the file
-                with folder.open(target, 'wb') as handle:
-                    with data_node.base.repository.open(filename, 'rb') as source:
-                        shutil.copyfileobj(source, handle)
-
-                provenance_exclude_list.append(target)
+            raise RuntimeError(f'file copy operation {file_copy_operation} is not yet implemented.')
 
     # In a dry_run, the working directory is the raw input folder, which will already contain these resources
-    if not dry_run:
-        for filename in folder.get_content_list():
-            logger.debug(f'[submission of calculation {node.pk}] copying file/folder {filename}...')
-            transport.put(folder.get_abs_path(filename), filename)
-
-        for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
-            if remote_computer_uuid == computer.uuid:
-                logger.debug(
-                    f'[submission of calculation {node.pk}] copying {dest_rel_path} '
-                    f'remotely, directly on the machine {computer.label}'
-                )
-                try:
-                    transport.copy(remote_abs_path, dest_rel_path)
-                except FileNotFoundError:
-                    logger.warning(
-                        f'[submission of calculation {node.pk}] Unable to copy remote '
-                        f'resource from {remote_abs_path} to {dest_rel_path}! NOT Stopping but just ignoring!.'
-                    )
-                except (IOError, OSError):
-                    logger.warning(
-                        f'[submission of calculation {node.pk}] Unable to copy remote '
-                        f'resource from {remote_abs_path} to {dest_rel_path}! Stopping.'
-                    )
-                    raise
-            else:
-                raise NotImplementedError(
-                    f'[submission of calculation {node.pk}] Remote copy between two different machines is '
-                    'not implemented yet'
-                )
-
-        for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
-            if remote_computer_uuid == computer.uuid:
-                logger.debug(
-                    f'[submission of calculation {node.pk}] copying {dest_rel_path} remotely, '
-                    f'directly on the machine {computer.label}'
-                )
-                remote_dirname = pathlib.Path(dest_rel_path).parent
-                try:
-                    transport.makedirs(remote_dirname, ignore_existing=True)
-                    transport.symlink(remote_abs_path, dest_rel_path)
-                except (IOError, OSError):
-                    logger.warning(
-                        f'[submission of calculation {node.pk}] Unable to create remote symlink '
-                        f'from {remote_abs_path} to {dest_rel_path}! Stopping.'
-                    )
-                    raise
-            else:
-                raise IOError(
-                    f'It is not possible to create a symlink between two different machines for calculation {node.pk}'
-                )
-    else:
+    if dry_run:
         if remote_copy_list:
             filepath = os.path.join(workdir, '_aiida_remote_copy_list.txt')
             with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
-                for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
+                for _, remote_abs_path, dest_rel_path in remote_copy_list:
                     handle.write(
                         f'would have copied {remote_abs_path} to {dest_rel_path} in working '
                         f'directory on remote {computer.label}'
@@ -299,7 +234,7 @@ def upload_calculation(
         if remote_symlink_list:
             filepath = os.path.join(workdir, '_aiida_remote_symlink_list.txt')
             with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
-                for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
+                for _, remote_abs_path, dest_rel_path in remote_symlink_list:
                     handle.write(
                         f'would have created symlinks from {remote_abs_path} to {dest_rel_path} in working'
                         f'directory on remote {computer.label}'
@@ -344,6 +279,103 @@ def upload_calculation(
         return RemoteData(computer=computer, remote_path=workdir)
 
     return None
+
+
+def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list):
+    """Perform the copy instructions of the ``remote_copy_list`` and ``remote_symlink_list``."""
+    for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
+        if remote_computer_uuid == computer.uuid:
+            logger.debug(
+                f'[submission of calculation {node.pk}] copying {dest_rel_path} '
+                f'remotely, directly on the machine {computer.label}'
+            )
+            try:
+                transport.copy(remote_abs_path, dest_rel_path)
+            except FileNotFoundError:
+                logger.warning(
+                    f'[submission of calculation {node.pk}] Unable to copy remote '
+                    f'resource from {remote_abs_path} to {dest_rel_path}! NOT Stopping but just ignoring!.'
+                )
+            except (IOError, OSError):
+                logger.warning(
+                    f'[submission of calculation {node.pk}] Unable to copy remote '
+                    f'resource from {remote_abs_path} to {dest_rel_path}! Stopping.'
+                )
+                raise
+        else:
+            raise NotImplementedError(
+                f'[submission of calculation {node.pk}] Remote copy between two different machines is '
+                'not implemented yet'
+            )
+
+    for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
+        if remote_computer_uuid == computer.uuid:
+            logger.debug(
+                f'[submission of calculation {node.pk}] copying {dest_rel_path} remotely, '
+                f'directly on the machine {computer.label}'
+            )
+            remote_dirname = pathlib.Path(dest_rel_path).parent
+            try:
+                transport.makedirs(remote_dirname, ignore_existing=True)
+                transport.symlink(remote_abs_path, dest_rel_path)
+            except (IOError, OSError):
+                logger.warning(
+                    f'[submission of calculation {node.pk}] Unable to create remote symlink '
+                    f'from {remote_abs_path} to {dest_rel_path}! Stopping.'
+                )
+                raise
+        else:
+            raise IOError(
+                f'It is not possible to create a symlink between two different machines for calculation {node.pk}'
+            )
+
+
+def _copy_local_files(logger, node, transport, inputs, local_copy_list):
+    """Perform the copy instrctions of the ``local_copy_list``."""
+    with TemporaryDirectory() as tmpdir:
+        dirpath = pathlib.Path(tmpdir)
+
+        # The transport class can only copy files directly from the file system, so the files in the source node's repo
+        # have to first be copied to a temporary directory on disk.
+        for uuid, filename, target in local_copy_list:
+            logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
+
+            try:
+                data_node = load_node(uuid=uuid)
+            except exceptions.NotExistent:
+                data_node = _find_data_node(inputs, uuid) if inputs else None
+
+            if data_node is None:
+                logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
+                continue
+
+            # If no explicit source filename is defined, we assume the top-level directory
+            filename_source = filename or '.'
+            filename_target = target or ''
+
+            # Make the target filepath absolute and create any intermediate directories if they don't yet exist
+            filepath_target = (dirpath / filename_target).resolve().absolute()
+            filepath_target.parent.mkdir(parents=True, exist_ok=True)
+
+            if data_node.base.repository.get_object(filename_source).file_type == FileType.DIRECTORY:
+                # If the source object is a directory, we copy its entire contents
+                data_node.base.repository.copy_tree(filepath_target, filename_source)
+            else:
+                # Otherwise, simply copy the file
+                with filepath_target.open('wb') as handle:
+                    with data_node.base.repository.open(filename_source, 'rb') as source:
+                        shutil.copyfileobj(source, handle)
+
+        # Now copy the contents of the temporary folder to the remote working directory using the transport
+        for filepath in dirpath.iterdir():
+            transport.put(str(filepath), filepath.name)
+
+
+def _copy_sandbox_files(logger, node, transport, folder):
+    """Copy the contents of the sandbox folder to the working directory."""
+    for filename in folder.get_content_list():
+        logger.debug(f'[submission of calculation {node.pk}] copying file/folder {filename}...')
+        transport.put(folder.get_abs_path(filename), filename)
 
 
 def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:

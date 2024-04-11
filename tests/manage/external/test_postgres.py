@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for postgres database maintenance functionality"""
+
 from unittest import TestCase
 
 from aiida.manage.external.postgres import Postgres

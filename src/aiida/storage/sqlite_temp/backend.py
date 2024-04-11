@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of the ``SqliteTempBackend`` backend."""
+
 from __future__ import annotations
 
 import functools
@@ -72,7 +73,7 @@ class SqliteTempBackend(StorageBackend):
                         'debug': debug,
                     },
                 },
-                'process_control': {'backend': 'null', 'config': {}},
+                'process_control': {'backend': None, 'config': {}},
                 'options': options or {},
             },
         )

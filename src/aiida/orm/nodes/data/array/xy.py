@@ -10,6 +10,7 @@
 collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Sequence

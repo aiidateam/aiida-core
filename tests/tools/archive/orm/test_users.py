@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm.User tests for the export and import routines"""
+
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 

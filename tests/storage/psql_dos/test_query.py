@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for generic queries."""
+
 import pytest
 from aiida.orm import Computer, Data, Group, Node, ProcessNode, QueryBuilder, User
 

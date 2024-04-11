@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi devel` commands."""
+
 import sys
 
 import click
@@ -46,7 +47,7 @@ def devel_check_load_time():
     if manager.profile_storage_loaded:
         echo.echo_critical('potential `verdi` speed problem: database backend is loaded.')
 
-    allowed = ('aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
+    allowed = ('aiida.brokers', 'aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
     for loaded in loaded_aiida_modules:
         if not any(loaded.startswith(mod) for mod in allowed):
             echo.echo_critical(

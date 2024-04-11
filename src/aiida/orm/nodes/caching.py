@@ -1,4 +1,5 @@
 """Interface to control caching of a node instance."""
+
 from __future__ import annotations
 
 import importlib

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to be used as a base for data containers that represent base python data types."""
+
 from functools import singledispatch
 
 from aiida.orm.fields import add_field

@@ -12,6 +12,7 @@ This has been tested on GE 6.2u3.
 Plugin originally written by Marco Dorigo.
 Email: marco(DOT)dorigo(AT)rub(DOT)de
 """
+
 import xml.dom.minidom
 import xml.parsers.expat
 

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A module to test class loader factories."""
+
 import aiida
 import pytest
 from aiida.engine import Process

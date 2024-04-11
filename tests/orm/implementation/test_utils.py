@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the backend non-specific utility methods."""
+
 import math
 
 import pytest

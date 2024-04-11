@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module which provides decorators for AiiDA ORM entity -> DB field mappings."""
+
 import datetime
 import typing as t
 from abc import ABCMeta
@@ -93,11 +94,13 @@ class QbField:
 
     @property
     def dtype(self) -> t.Optional[t.Any]:
-        return self._dtype
-
-    def get_root_type(self) -> t.Optional[t.Any]:
         """Return the primitive root type."""
         return extract_root_type(self._dtype)
+
+    @property
+    def annotation(self) -> t.Optional[t.Any]:
+        """Return the full type annotation."""
+        return self._dtype
 
     @property
     def is_attribute(self) -> bool:
@@ -160,8 +163,7 @@ class QbField:
 
     if t.TYPE_CHECKING:
 
-        def __getitem__(self, key: str) -> 'QbField':
-            ...
+        def __getitem__(self, key: str) -> 'QbField': ...
 
 
 class QbNumericField(QbField):

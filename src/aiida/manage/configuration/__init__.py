@@ -9,10 +9,10 @@
 # ruff: noqa: E402
 """Modules related to the configuration of an AiiDA instance."""
 
+from __future__ import annotations
+
 # AUTO-GENERATED
-
 # fmt: off
-
 from .migrations import *
 from .options import *
 from .profile import *
@@ -56,6 +56,8 @@ from typing import TYPE_CHECKING, Any, Optional
 from aiida.common.warnings import AiidaDeprecationWarning
 
 if TYPE_CHECKING:
+    from aiida.orm import User
+
     from .config import Config
 
 # global variables for aiida
@@ -174,7 +176,7 @@ def get_profile() -> Optional['Profile']:
 
 
 @contextmanager
-def profile_context(profile: Optional[str] = None, allow_switch=False) -> 'Profile':
+def profile_context(profile: 'Profile' | str | None = None, allow_switch=False) -> 'Profile':
     """Return a context manager for temporarily loading a profile, and unloading on exit.
 
     :param profile: the name of the profile to load, by default will use the one marked as default in the config
@@ -194,43 +196,86 @@ def profile_context(profile: Optional[str] = None, allow_switch=False) -> 'Profi
         manager.load_profile(current_profile, allow_switch=True)
 
 
+def create_default_user(
+    profile: Profile,
+    email: str,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    institution: Optional[str] = None,
+) -> User:
+    """Create a default user for the given profile.
+
+    If the profile's storage is read only, a random existing user will be queried and set as default. Otherwise a new
+    user is created with the provided details and set as user.
+
+    :param profile: The profile to create the user in.
+    :param email: Email for the default user.
+    :param first_name: First name for the default user.
+    :param last_name: Last name for the default user.
+    :param institution: Institution for the default user.
+    :returns: The user that was set as the default user.
+    """
+    from aiida.manage import get_manager
+    from aiida.orm import User
+
+    with profile_context(profile, allow_switch=True):
+        manager = get_manager()
+        storage = manager.get_profile_storage()
+
+        if storage.read_only:
+            # Check if the storage contains any users, and just set a random one as default user.
+            user = User.collection.query().first(flat=True)
+        else:
+            # Otherwise create a user and store it
+            user = User(email=email, first_name=first_name, last_name=last_name, institution=institution).store()
+
+        # The user can be ``None`` if the storage is read-only and doesn't contain any users. This shouldn't happen in
+        # real situations, but this safe guard is added to be safe.
+        if user:
+            manager.set_default_user_email(profile, user.email)
+
+    return
+
+
 def create_profile(
     config: 'Config',
-    storage_cls,
     *,
+    storage_backend: str,
+    storage_config: dict[str, Any],
+    broker_backend: str | None = None,
+    broker_config: dict[str, Any] | None = None,
     name: str,
     email: str,
     first_name: Optional[str] = None,
     last_name: Optional[str] = None,
     institution: Optional[str] = None,
-    **kwargs,
+    is_test_profile: bool = False,
 ) -> Profile:
     """Create a new profile, initialise its storage and create a default user.
 
     :param config: The config instance.
-    :param storage_cls: The storage class obtained through loading the entry point from ``aiida.storage`` group.
     :param name: Name of the profile.
     :param email: Email for the default user.
     :param first_name: First name for the default user.
     :param last_name: Last name for the default user.
     :param institution: Institution for the default user.
-    :param kwargs: Arguments to initialise instance of the selected storage implementation.
+    :param create_user: If `True`, creates a user that is set as the default user.
+    :param storage_backend: The entry point to the :class:`aiida.orm.implementation.storage_backend.StorageBackend`
+        implementation to use for the storage.
+    :param storage_config: The configuration necessary to initialise and connect to the storage backend.
+    :param broker_backend: The entry point to the :class:`aiida.brokers.Broker` implementation to use for the broker.
+    :param broker_config: The configuration necessary to initialise and connect to the broker.
     """
-    from aiida.manage import get_manager
-    from aiida.orm import User
+    profile: Profile = config.create_profile(
+        name=name,
+        storage_backend=storage_backend,
+        storage_config=storage_config,
+        broker_backend=broker_backend,
+        broker_config=broker_config,
+        is_test_profile=is_test_profile,
+    )
 
-    storage_config = storage_cls.Model(**{k: v for k, v in kwargs.items() if v is not None}).model_dump()
-    profile: Profile = config.create_profile(name=name, storage_cls=storage_cls, storage_config=storage_config)
-
-    with profile_context(profile.name, allow_switch=True):
-        manager = get_manager()
-        storage = manager.get_profile_storage()
-
-        if not storage.read_only:
-            user = User(email=email, first_name=first_name, last_name=last_name, institution=institution).store()
-            # We can safely use ``Config.set_default_user_email`` here instead of ``Manager.set_default_user_email``
-            # since the storage backend of this new profile is not loaded yet.
-            config.set_default_user_email(profile, user.email)
+    create_default_user(profile, email, first_name, last_name, institution)
 
     return profile
 

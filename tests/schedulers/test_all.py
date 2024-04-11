@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests run for all plugins in :mod:`aiida.schedulers.plugins`."""
+
 from __future__ import annotations
 
 import pytest

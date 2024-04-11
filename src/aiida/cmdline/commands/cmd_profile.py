@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi profile` command."""
+
 from __future__ import annotations
 
 import click
@@ -38,11 +39,39 @@ def command_create_profile(
     :param set_as_default: Whether to set the created profile as the new default.
     :param kwargs: Arguments to initialise instance of the selected storage implementation.
     """
+    from aiida.plugins.entry_point import get_entry_point_from_class
+
     if not storage_cls.read_only and kwargs.get('email', None) is None:
         raise click.BadParameter('The option is required for storages that are not read-only.', param_hint='--email')
 
+    email = kwargs.pop('email')
+    first_name = kwargs.pop('first_name')
+    last_name = kwargs.pop('last_name')
+    institution = kwargs.pop('institution')
+
+    _, storage_entry_point = get_entry_point_from_class(storage_cls.__module__, storage_cls.__name__)
+    assert storage_entry_point is not None
+
     try:
-        profile = create_profile(ctx.obj.config, storage_cls, name=profile.name, **kwargs)
+        profile = create_profile(
+            ctx.obj.config,
+            name=profile.name,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            institution=institution,
+            storage_backend=storage_entry_point.name,
+            storage_config=kwargs,
+            broker_backend='core.rabbitmq',
+            broker_config={
+                'broker_protocol': 'amqp',
+                'broker_username': 'guest',
+                'broker_password': 'guest',
+                'broker_host': '127.0.0.1',
+                'broker_port': 5672,
+                'broker_virtual_host': '',
+            },
+        )
     except (ValueError, TypeError, exceptions.EntryPointError, exceptions.StorageMigrationError) as exception:
         echo.echo_critical(str(exception))
 

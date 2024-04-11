@@ -1,4 +1,5 @@
 """Implementation of the ``AbstractRepositoryBackend`` using a sandbox folder on disk as the backend."""
+
 from __future__ import annotations
 
 import contextlib

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Backend group module"""
+
 import abc
 from typing import TYPE_CHECKING, List, Optional, Protocol, Sequence, Union
 

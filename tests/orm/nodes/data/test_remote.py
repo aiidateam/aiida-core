@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.orm.nodes.data.remote.base.RemoteData` module."""
+
 import pytest
 from aiida.orm import RemoteData
 

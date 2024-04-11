@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi node` command."""
+
 import datetime
 import pathlib
 
@@ -424,7 +425,8 @@ def verdi_graph():
 
 
 @verdi_graph.command('generate')
-@arguments.NODE('root_node')
+@arguments.NODE('root_node', required=False)
+@options.NODES(help='The root node(s) whose provenance graph to include.')
 @click.option(
     '-l',
     '--link-types',
@@ -472,10 +474,18 @@ def verdi_graph():
     multiple=True,
 )
 @click.option('-s', '--show', is_flag=True, help='Open the rendered result with the default application.')
+@click.option(
+    '-O',
+    '--output-file',
+    'output_filename',
+    type=click.Path(dir_okay=False, path_type=pathlib.Path),
+    help='The file to write the output to.',
+)
 @arguments.OUTPUT_FILE(required=False)
 @decorators.with_dbenv()
 def graph_generate(
     root_node,
+    nodes,
     link_types,
     identifier,
     ancestor_depth,
@@ -486,41 +496,72 @@ def graph_generate(
     output_format,
     highlight_classes,
     show,
+    output_filename,
     output_file,
 ):
-    """Generate a graph from a ROOT_NODE (specified by pk or uuid)."""
+    """Generate a graph from one or multiple root nodes."""
+    from aiida.cmdline.utils import echo
     from aiida.tools.visualization import Graph
 
-    link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
+    if root_node and nodes:
+        echo.echo_warning(
+            'Specifying the root node positionally and the `-N/--nodes` option at the same time is not supported, '
+            'ignoring the `ROOT_NODE`. Please use the `-N/--nodes` option only.'
+        )
+        root_node = None
+
+    if root_node:
+        echo.echo_deprecated(
+            'Specifying the root node positionally is deprecated, please use the `-N/--nodes` option instead.'
+        )
+
+    root_nodes = nodes or [root_node]
+
+    if output_file and output_filename:
+        echo.echo_warning(
+            'Specifying the output file positionally and the `-O/--output-file` option at the same time is not '
+            'supported, ignoring the `OUTPUF_FILE`. Please use the `-O/--output-file` option only.'
+        )
+        output_file = None
+
+    if output_file:
+        echo.echo_deprecated(
+            'Specifying the output file positionally is deprecated, please use the `-O/--output-file` option instead.'
+        )
+
+    output_filename = output_file or output_filename
+
+    if not output_filename:
+        pks = '.'.join(str(n.pk) for n in root_nodes)
+        output_filename = pathlib.Path(f'{pks}.{engine}.{output_format}')
 
     echo.echo_info(f'Initiating graphviz engine: {engine}')
     graph = Graph(engine=engine, node_id_type=identifier)
-    echo.echo_info(f'Recursing ancestors, max depth={ancestor_depth}')
+    link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
 
-    graph.recurse_ancestors(
-        root_node,
-        depth=ancestor_depth,
-        link_types=link_types,
-        annotate_links='both',
-        include_process_outputs=process_out,
-        highlight_classes=highlight_classes,
-    )
-    echo.echo_info(f'Recursing descendants, max depth={descendant_depth}')
-    graph.recurse_descendants(
-        root_node,
-        depth=descendant_depth,
-        link_types=link_types,
-        annotate_links='both',
-        include_process_inputs=process_in,
-        highlight_classes=highlight_classes,
-    )
+    for root_node in root_nodes:
+        echo.echo_info(f'Recursing ancestors of <{root_node}>, max depth={ancestor_depth}')
+        graph.recurse_ancestors(
+            root_node,
+            depth=ancestor_depth,
+            link_types=link_types,
+            annotate_links='both',
+            include_process_outputs=process_out,
+            highlight_classes=highlight_classes,
+        )
+        echo.echo_info(f'Recursing descendants of <{root_node}>, max depth={descendant_depth}')
+        graph.recurse_descendants(
+            root_node,
+            depth=descendant_depth,
+            link_types=link_types,
+            annotate_links='both',
+            include_process_inputs=process_in,
+            highlight_classes=highlight_classes,
+        )
 
-    if not output_file:
-        output_file = pathlib.Path(f'{root_node.pk}.{engine}.{output_format}')
+    filename_written = graph.graphviz.render(outfile=output_filename, format=output_format, view=show, cleanup=True)
 
-    output_file_name = graph.graphviz.render(outfile=output_file, format=output_format, view=show, cleanup=True)
-
-    echo.echo_success(f'Output written to `{output_file_name}`')
+    echo.echo_success(f'Output written to `{filename_written}`')
 
 
 @verdi_node.group('comment')

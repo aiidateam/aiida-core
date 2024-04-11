@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [aiida-core-base, aiida-core-with-services]
+        image: [aiida-core-base, aiida-core-with-services, aiida-core-dev]
     permissions:
       packages: write
 

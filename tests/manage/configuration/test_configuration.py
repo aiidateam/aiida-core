@@ -1,17 +1,22 @@
 """Tests for the :mod:`aiida.manage.configuration` module."""
+
 import aiida
 import pytest
 from aiida.manage.configuration import Profile, create_profile, get_profile, profile_context
 from aiida.manage.manager import get_manager
-from aiida.storage.sqlite_dos.backend import SqliteDosStorage
-from aiida.storage.sqlite_temp.backend import SqliteTempBackend
 
 
-@pytest.mark.parametrize('cls', (SqliteTempBackend, SqliteDosStorage))
-def test_create_profile(isolated_config, tmp_path, cls):
+@pytest.mark.parametrize('entry_point', ('core.sqlite_temp', 'core.sqlite_dos'))
+def test_create_profile(isolated_config, tmp_path, entry_point):
     """Test :func:`aiida.manage.configuration.tools.create_profile`."""
     profile_name = 'testing'
-    profile = create_profile(isolated_config, cls, name=profile_name, email='test@localhost', filepath=str(tmp_path))
+    profile = create_profile(
+        isolated_config,
+        name=profile_name,
+        email='test@localhost',
+        storage_backend=entry_point,
+        storage_config={'filepath': str(tmp_path)},
+    )
     assert isinstance(profile, Profile)
     assert profile_name in isolated_config.profile_names
 

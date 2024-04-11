@@ -424,7 +424,7 @@ def calcjob_presubmit_dump(calcjob_node: CalcJobNode, output_path: Path):
 
     builder_restart = calcjob_node.get_builder_restart()
     runner = get_manager().get_runner()
-    calcjob_process: CalcJob = instantiate_process(runner, builder_restart)
+    calcjob_process: CalcJob = instantiate_process(runner, builder_restart)  # type: ignore[assignment]
 
     # `presubmit` calls `prepare_for_submission` internally
     calc_info = calcjob_process.presubmit(folder=Folder(abspath=output_path))
@@ -443,7 +443,6 @@ def calcjob_presubmit_dump(calcjob_node: CalcJobNode, output_path: Path):
         pass
 
     local_transport = LocalTransport().open()
-    new_calcjob_node = calcjob_process.node  # type: ignore
     new_calcjob_node: CalcJobNode = calcjob_process.node
     upload_calculation(
         node=new_calcjob_node,

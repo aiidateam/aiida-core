@@ -48,6 +48,7 @@ Below is a list with all available subcommands.
 
     Commands:
       cleanworkdir  Clean all content of all output remote folders of calcjobs.
+      dump          Dump files involved in the execution of a `CalcJob`.
       gotocomputer  Open a shell in the remote folder on the calcjob.
       inputcat      Show the contents of one of the calcjob input files.
       inputls       Show the list of the generated calcjob input files.
@@ -367,6 +368,7 @@ Below is a list with all available subcommands.
 
     Commands:
       call-root  Show root process of the call stack for the given processes.
+      dump       Dump files involved in the execution of a process.
       kill       Kill running processes.
       list       Show a list of running or terminated processes.
       pause      Pause running processes.

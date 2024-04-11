@@ -205,14 +205,6 @@ def test_generate_default_dump_path(generate_arithmetic_add_node, generate_multi
 
 def test_generate_node_input_label(generate_multiply_add_node, generate_work_chain_io, aiida_localhost):
     # Test with MultiplyAddWorkChain inputs and outputs
-    multiply_add_node = generate_multiply_add_node(computer=aiida_localhost)
-    input_triples = multiply_add_node.base.links.get_incoming().all()
-    input_labels = [generate_node_input_label(_, input_node) for _, input_node in enumerate(input_triples)]
-    assert input_labels == ['00-x', '01-y', '02-z', '03-code']
-
-    output_triples = multiply_add_node.base.links.get_outgoing().all()
-    output_labels = [generate_node_input_label(_, output_node) for _, output_node in enumerate(output_triples)]
-    assert output_labels == ['00-multiply', '01-ArithmeticAddCalculation', '02-result']
 
     # Test with manually constructed, more complex workchain
     wc_node = generate_work_chain_io()

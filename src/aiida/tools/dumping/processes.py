@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import textwrap
 from pathlib import Path
-from typing import Union
 
 import yaml
 
@@ -66,8 +65,7 @@ class ProcessNodeYamlDumper:
         output_path: Path,
         output_filename: str = '.aiida_node_metadata.yaml',
     ) -> None:
-        """
-        Dump the selected `ProcessNode` properties, attributes, and extras to a yaml file.
+        """Dump the selected `ProcessNode` properties, attributes, and extras to a yaml file.
 
         :param process_node: The ProcessNode to dump.
         :param output_path: The path to the directory where the yaml file will be saved.
@@ -160,14 +158,14 @@ def make_dump_readme(process_node: ProcessNode, output_path: Path):
         handle.write(_readme_string)
 
 
-def generate_default_dump_path(process_node: Union[WorkChainNode, CalcJobNode]) -> Path:
+def generate_default_dump_path(process_node: WorkChainNode | CalcJobNode) -> Path:
     """Simple helper function to generate the default parent-dumping directory if none given.
 
     This function is not called for the sub-calls of `calcjob_dump` or during the recursive `workchain_dump` as it just
     creates the default parent folder for the dumping, if no name is given.
 
     :param process_node: The `ProcessNode` for which the directory is created.
-    :type process_node: Union[WorkChainNode, CalcJobNode]
+    :type process_node: WorkChainNode | CalcJobNode
     :return: The created parent dump path.
     :rtype: Path
     """
@@ -192,8 +190,6 @@ def validate_make_dump_path(
     """
     Create default dumping directory for a given process node and return it as absolute path.
 
-    :param process_node: The `ProcessNode` for which the directory is created.
-    :type process_node: Union[WorkChainNode, CalcJobNode]
     :param path: The base path for the dump. Defaults to the current directory.
     :type path: Path
     :return: The created dump path.
@@ -307,15 +303,14 @@ def calcjob_dump(
 
 
 def workchain_dump(
-    process_node: Union[WorkChainNode, CalcJobNode],
+    process_node: WorkChainNode | CalcJobNode,
     output_path: Path = Path(),
     no_node_inputs: bool = False,
     use_presubmit: bool = False,
     node_dumper: ProcessNodeYamlDumper | None = None,
     overwrite: bool = True,
 ) -> bool:
-    """
-    Dumps all data involved in a `WorkChainNode`, including its outgoing links.
+    """Dumps all data involved in a `WorkChainNode`, including its outgoing links.
 
     Note that if an outgoing link is again a `WorkChainNode`, the function recursively calls itself, while files are
     only actually created when a `CalcJobNode` is reached.
@@ -387,8 +382,7 @@ def workchain_dump(
 
 # Separate functions for CalcJob dumping using pre_submit, as well as for the node_inputs
 def calcjob_node_inputs_dump(calcjob_node: CalcJobNode, output_path: Path, inputs_relpath: Path = Path('node_inputs')):
-    """
-    Dump inputs of a `CalcJobNode` of type `SinglefileData` and `FolderData`.
+    """Dump inputs of a `CalcJobNode` of type `SinglefileData` and `FolderData`.
 
     :param calcjob_node: The `CalcJobNode` whose inputs will be dumped.
     :type calcjob_node: CalcJobNode

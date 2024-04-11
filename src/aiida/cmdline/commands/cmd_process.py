@@ -582,14 +582,11 @@ def dump(
     from aiida.orm import CalcJobNode
     from aiida.tools.dumping.processes import (
         ProcessNodeYamlDumper,
+        calcjob_dump,
         generate_default_dump_path,
         make_dump_readme,
         workchain_dump,
     )
-
-    # Allow the command to be run with `CalcJob`s and `WorkChain`s
-    if isinstance(process, CalcJobNode):
-        echo.echo_warning('Command called on `CalcJob`. Will dump, but you can also use `verdi calcjob dump` instead.')
 
     # Generate default parent folder
     if str(path) == '.':
@@ -598,14 +595,28 @@ def dump(
     # Instantiate YamlDumper
     processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
 
-    process_dumped = workchain_dump(
-        process_node=process,
-        output_path=output_path,
-        no_node_inputs=no_node_inputs,
-        use_presubmit=use_presubmit,
-        node_dumper=processnode_dumper,
-        overwrite=overwrite,
-    )
+    # Allow the command to be run with `CalcJob`s and `WorkChain`s
+    if isinstance(process, CalcJobNode):
+        echo.echo_warning('Command called on `CalcJob`. Will dump, but you can also use `verdi calcjob dump` instead.')
+
+        process_dumped = calcjob_dump(
+            calcjob_node=process,
+            output_path=output_path,
+            no_node_inputs=no_node_inputs,
+            use_presubmit=use_presubmit,
+            node_dumper=processnode_dumper,
+            overwrite=overwrite,
+        )
+
+    else:
+        process_dumped = workchain_dump(
+            process_node=process,
+            output_path=output_path,
+            no_node_inputs=no_node_inputs,
+            use_presubmit=use_presubmit,
+            node_dumper=processnode_dumper,
+            overwrite=overwrite,
+        )
 
     # Create README in parent directory
     # Done after dumping, so that dumping directory is there. Dumping directory is created within the calcjob_dump and

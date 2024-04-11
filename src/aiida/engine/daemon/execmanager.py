@@ -25,7 +25,7 @@ from typing import Mapping as MappingType
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo, FileCopyOperation
-from aiida.common.folders import SandboxFolder
+from aiida.common.folders import Folder, SandboxFolder
 from aiida.common.links import LinkType
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
@@ -66,7 +66,7 @@ def upload_calculation(
     node: CalcJobNode,
     transport: Transport,
     calc_info: CalcInfo,
-    folder: SandboxFolder,
+    folder: Folder,
     inputs: Optional[MappingType[str, Any]] = None,
     dry_run: bool = False,
 ) -> RemoteData | None:

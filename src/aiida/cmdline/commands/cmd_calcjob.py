@@ -348,3 +348,80 @@ def get_remote_and_path(calcjob, path=None):
         f'nor does its associated process class `{calcjob.process_class.__class__.__name__}`\n'
         'Please specify a path explicitly.'
     )
+
+
+@verdi_calcjob.command('dump')
+@arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
+@options.PATH()
+@options.NO_NODE_INPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.USE_PRESUBMIT()
+@options.OVERWRITE()
+def dump(
+    calcjob,
+    path,
+    no_node_inputs,
+    include_attributes,
+    include_extras,
+    use_presubmit,
+    overwrite,
+) -> None:
+    """Dump files involved in the execution of a `CalcJob`.
+
+    Child simulations/workflows (also called `CalcJob`s and `WorkChain`s in AiiDA jargon) run by the parent workflow are
+    contained in the directory tree as sub-folders and are sorted by their creation time. The directory tree thus
+    mirrors the logical execution of the workflow, which can also be queried by running `verdi process status
+    <pk>` on the command line.
+
+    By default, input and output files of each simulation can be found in the corresponding "raw_inputs" and
+    "raw_outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
+    settings). Additional input files (depending on the type of calculation) are placed in the "node_inputs".
+
+    When using the `--use-presubmit` command line option, the folder created for each individual simulation should, in
+    principle, allow for direct resubmission, as it mirrors the (remote) folder that was created by AiiDA to execute the
+    job. However, this option requires the relevant AiiDA plugin to be installed, so it is disabled by default. Also
+    note that intermediate files might be missing, so for a multi-step workflow, each step would still have to be run
+    separately.
+
+    Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
+    node data for further inspection.
+    """
+
+    from aiida.tools.dumping.processes import (
+        ProcessNodeYamlDumper,
+        calcjob_dump,
+        generate_default_dump_path,
+        make_dump_readme,
+    )
+
+    # Generate default parent folder
+    if str(path) == '.':
+        output_path = generate_default_dump_path(process_node=calcjob)
+    else:
+        output_path = path.resolve()
+
+    # Instantiate YamlDumper
+    calcjobnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
+
+    calcjob_dumped = calcjob_dump(
+        calcjob_node=calcjob,
+        output_path=output_path,
+        no_node_inputs=no_node_inputs,
+        use_presubmit=use_presubmit,
+        node_dumper=calcjobnode_dumper,
+        overwrite=overwrite,
+    )
+
+    # Create README in parent directory
+    # Done after dumping, so that dumping directory is there. Dumping directory is created within the calcjob_dump and
+    # workchain_dump files such that they can also be used from within the Python API, not just via verdi
+    make_dump_readme(output_path=output_path, process_node=calcjob)
+
+    # Communicate success/failure of dumping
+    if calcjob_dumped:
+        echo.echo_success(
+            f'Raw files for {calcjob.__class__.__name__} <{calcjob.pk}> dumped successfully in `{output_path}`.'
+        )
+    else:
+        echo.echo_report(f'Problem dumping {calcjob.__class__.__name__} <{calcjob.pk}>.')

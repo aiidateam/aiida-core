@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import io
 import os
 import pathlib
 import types
@@ -25,7 +26,9 @@ import warnings
 import click
 import pytest
 from aiida import get_profile
+from aiida.common.links import LinkType
 from aiida.manage.configuration import Profile, get_config, load_profile
+from aiida.orm import FolderData, SinglefileData
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
@@ -671,3 +674,137 @@ def reset_log_level():
         log.CLI_ACTIVE = None
         log.CLI_LOG_LEVEL = None
         log.configure_logging(with_orm=True)
+
+
+@pytest.fixture
+def generate_calcjob_node_io():
+    def _generate_calcjob_node_io(
+        attach_repository: bool = True, attach_node_inputs: bool = True, attach_outputs: bool = True, entry_point=None
+    ):
+        # `entry_point='aiida.calculations:core.arithmetic.add'` leads to error due to the unknown names of the attached
+        # nodes, which are not defined in the `Calculation` itself
+        # calcjob_node = generate_calculation_node(entry_point=entry_point)
+
+        from aiida.orm import CalcJobNode
+
+        calcjob_node = CalcJobNode()
+
+        filename: str = 'file.txt'
+
+        # Attach raw inputs to node repository
+        if attach_repository:
+            calcjob_node.base.repository.put_object_from_filelike(io.StringIO('a'), path=filename)
+
+        # Attach node inputs
+        if attach_node_inputs:
+            # Set up labels
+            singlefiledata_linklabel: str = 'singlefile_input'
+            folderdata_linklabel: str = 'folderdata_input'
+
+            # Generate SinglefileData, Folderdata, and CalcJobNode nodes
+            singlefiledata_node = SinglefileData.from_string(content='a', filename=filename)
+            singlefiledata_node.store()
+
+            folderdata_node = FolderData()
+            folderdata_node.put_object_from_filelike(io.StringIO('a'), path=pathlib.Path('relative_path') / filename)
+            folderdata_node.store()
+
+            calcjob_node.base.links.add_incoming(
+                singlefiledata_node,
+                link_type=LinkType.INPUT_CALC,
+                link_label=singlefiledata_linklabel,
+            )
+
+            calcjob_node.base.links.add_incoming(
+                folderdata_node, link_type=LinkType.INPUT_CALC, link_label=folderdata_linklabel
+            )
+
+        # Attach `retrieved` outputs
+        if attach_outputs:
+            # Not storing gives:
+            # `aiida.common.exceptions.ModificationNotAllowed: Cannot store because source node of link triple
+            # LinkTriple(...) is not stored``
+            calcjob_node.store()
+
+            retrieved_node = FolderData()
+            retrieved_node.put_object_from_filelike(io.StringIO('a'), path=filename)
+            retrieved_node.base.links.add_incoming(calcjob_node, link_type=LinkType.CREATE, link_label='retrieved')
+            retrieved_node.store()
+
+        return calcjob_node
+
+    return _generate_calcjob_node_io
+
+
+@pytest.fixture
+def generate_arithmetic_add_node():
+    def _generate_arithmetic_add_node(computer):
+        from aiida.engine import run_get_node
+        from aiida.orm import InstalledCode, Int
+        from aiida.plugins import CalculationFactory
+
+        arithmetic_add = CalculationFactory('core.arithmetic.add')
+
+        add_inputs = {
+            'x': Int(1),
+            'y': Int(2),
+            'code': InstalledCode(computer=computer, filepath_executable='/bin/bash'),
+        }
+
+        _, add_node = run_get_node(arithmetic_add, **add_inputs)
+
+        return add_node
+
+    return _generate_arithmetic_add_node
+
+
+@pytest.fixture
+def generate_multiply_add_node():
+    def _generate_multiply_add_node(computer):
+        from aiida.engine import run_get_node
+        from aiida.orm import InstalledCode, Int
+        from aiida.plugins import WorkflowFactory
+
+        multiplyaddworkchain = WorkflowFactory('core.arithmetic.multiply_add')
+
+        multiply_add_inputs = {
+            'x': Int(1),
+            'y': Int(2),
+            'z': Int(3),
+            'code': InstalledCode(computer=computer, filepath_executable='/bin/bash'),
+        }
+
+        _, multiply_add_node = run_get_node(multiplyaddworkchain, **multiply_add_inputs)
+
+        return multiply_add_node
+
+    return _generate_multiply_add_node
+
+
+@pytest.fixture
+def generate_work_chain_io(generate_calcjob_node_io):
+    def _generate_work_chain_io():
+        """Generate an instance of a `WorkChain` that contains a sub-`WorkChain` and a `CalcJob` with file io."""
+        from aiida.orm import WorkChainNode
+
+        wc_node = WorkChainNode()
+        wc_node_sub = WorkChainNode()
+        cj_node = generate_calcjob_node_io(attach_outputs=False)
+
+        # wc_node.process_label = 'main'
+        # wc_node_sub.process_label = 'sub'
+        # cj_node.process_label = 'calc'
+
+        # Add sub-workchain that calls a calcjob
+        wc_node_sub.base.links.add_incoming(wc_node, link_type=LinkType.CALL_WORK, link_label='sub_workchain')
+        cj_node.base.links.add_incoming(wc_node_sub, link_type=LinkType.CALL_CALC, link_label='calcjob')
+
+        # Need to store nodes so that the relationships are being picked up in the `get_outgoing` call (for
+        # `get_incoming` they work without being stored)
+        wc_node.store()
+        wc_node_sub.store()
+        cj_node.store()
+
+        return wc_node
+
+    return _generate_work_chain_io

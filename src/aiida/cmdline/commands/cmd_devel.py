@@ -39,6 +39,7 @@ def devel_check_load_time():
     from aiida.manage import get_manager
 
     loaded_aiida_modules = [key for key in sys.modules if key.startswith('aiida.')]
+    # print(loaded_aiida_modules)
     aiida_modules_str = '\n- '.join(sorted(loaded_aiida_modules))
     echo.echo_info(f'aiida modules loaded:\n- {aiida_modules_str}')
 

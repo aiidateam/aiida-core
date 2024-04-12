@@ -45,6 +45,11 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
 
             (aiida) $ pg_ctl -D mylocal_db -l logfile start
 
+        .. tip::
+
+            You may encounter issue that ``5432`` port is already in use. In this case, you can pass the ``-o "-F -p <port-num>"`` option to the ``pg_ctl`` command, ``<port-num>`` being the desired port number.
+            Then for the ``psql`` command, you can pass the ``-p <port-num>`` option.
+
         .. admonition:: Further Reading
             :class: seealso title-icon-read-more
 

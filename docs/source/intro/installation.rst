@@ -40,6 +40,11 @@ To assume the role of ``postgres`` run as root:
 
    $ psql
 
+.. tip::
+
+   If you see an error message like ``psql: FATAL:  role "<role_name>" does not exist``, probably you don't have any role created yet.
+   You can use ``-d template1`` to connect to the default database and create a new role.
+
 Create a new database user account for AiiDA by running:
 
 .. code-block:: sql

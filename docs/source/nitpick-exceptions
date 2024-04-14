@@ -20,6 +20,7 @@ py:class Path
 py:class str | list[str]
 py:class str | Path
 py:class typing.AbstractContextManager
+py:class typing_extensions.Literal
 py:class TypeDecorator
 py:class json.encoder.JSONEncoder
 py:class EXPOSED_TYPE

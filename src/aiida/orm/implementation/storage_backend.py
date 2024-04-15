@@ -319,55 +319,80 @@ class StorageBackend(abc.ABC):
     ):
         raise NotImplementedError
 
+    def _write_backup_config(self, backup_manager):
+        import pathlib
+        import tempfile
+
+        from aiida.common import exceptions
+        from aiida.manage.configuration import get_config
+        from aiida.manage.configuration.config import Config
+
+        try:
+            config = get_config()
+            profile = config.get_profile(self.profile.name)  # Get the profile being backed up
+            with tempfile.TemporaryDirectory() as tmpdir:
+                filepath_config = pathlib.Path(tmpdir) / 'config.json'
+                backup_config = Config(str(filepath_config), {})  # Create empty config at temporary file location
+                backup_config.add_profile(profile)  # Add the profile being backed up
+                backup_config.store()  # Write the contents to disk
+                backup_manager.call_rsync(filepath_config, backup_manager.path / 'config.json')
+        except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exc:
+            raise exceptions.StorageBackupError('AiiDA config.json not found!') from exc
+
     def _validate_or_init_backup_folder(self, dest, keep):
         import json
-        import pathlib
         import tempfile
 
         from disk_objectstore import backup_utils
 
         from aiida.common import exceptions
+        from aiida.manage.configuration.config import Config
         from aiida.storage.log import STORAGE_LOGGER
 
-        backup_info_fname = 'aiida-backup.json'
-        backup_info = {
-            'PROFILE_NAME': self.profile.name,
-            'PROFILE_UUID': self.profile.uuid,
-            'STORAGE_BACKEND': self.profile.storage_backend,
-        }
+        backup_config_fname = 'config.json'
 
         try:
             # this creates the dest folder if it doesn't exist
             backup_manager = backup_utils.BackupManager(dest, keep=keep)
+            backup_config_path = backup_manager.path / backup_config_fname
 
-            backup_info_path = backup_manager.path / backup_info_fname
-            if backup_manager.check_path_exists(backup_info_path):
-                success, stdout = backup_manager.run_cmd(['cat', str(backup_info_path)])
+            if backup_manager.check_path_exists(backup_config_path):
+                success, stdout = backup_manager.run_cmd(['cat', str(backup_config_path)])
                 if not success:
-                    raise exceptions.StorageBackupError(f"Couldn't read {backup_info_path!s}.")
-                backup_info_existing = json.loads(stdout)
-                if backup_info_existing != backup_info:
-                    raise exceptions.StorageBackupError(
-                        'The chosen destination contains backups of a different profile! Aborting!'
-                    )
+                    raise exceptions.StorageBackupError(f"Couldn't read {backup_config_path!s}.")
+                try:
+                    backup_config_existing = json.loads(stdout)
+                except json.decoder.JSONDecodeError as exc:
+                    raise exceptions.StorageBackupError(f'JSON parsing failed for {backup_config_path!s}: {exc.msg}')
+
+                # create a temporary config file to access the profile info
+                with tempfile.NamedTemporaryFile() as temp_file:
+                    backup_config = Config(temp_file.name, backup_config_existing, validate=False)
+                    if len(backup_config.profiles) != 1:
+                        raise exceptions.StorageBackupError(f"{backup_config_path!s} doesn't contain exactly 1 profile")
+
+                    if (
+                        backup_config.profiles[0].uuid != self.profile.uuid
+                        or backup_config.profiles[0].storage_backend != self.profile.storage_backend
+                    ):
+                        raise exceptions.StorageBackupError(
+                            'The chosen destination contains backups of a different profile! Aborting!'
+                        )
             else:
                 STORAGE_LOGGER.warning('Initializing a new backup folder.')
                 # make sure the folder is empty
                 success, stdout = backup_manager.run_cmd(['ls', '-A', str(backup_manager.path)])
                 if not success:
-                    raise exceptions.StorageBackupError(f"Couldn't read {backup_info_path!s}.")
+                    raise exceptions.StorageBackupError(f"Couldn't read {backup_manager.path!s}.")
                 if stdout:
                     raise exceptions.StorageBackupError("Can't initialize the backup folder, destination is not empty.")
 
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    tmp_path = pathlib.Path(tmpdir) / backup_info_fname
-                    with open(tmp_path, 'w', encoding='utf-8') as fhandle:
-                        json.dump(backup_info, fhandle, indent=4)
-                        fhandle.write('\n')
-                    backup_manager.call_rsync(tmp_path, backup_info_path)
+                self._write_backup_config(backup_manager)
 
         except backup_utils.BackupError as exc:
             raise exceptions.StorageBackupError(*exc.args) from exc
+
+        return backup_manager
 
     def backup(
         self,
@@ -382,9 +407,13 @@ class StorageBackend(abc.ABC):
         :raises StorageBackupError: If an error occurred during the backup procedure.
         :raises NotImplementedError: If the storage backend doesn't implement a backup procedure.
         """
+        from aiida.storage.log import STORAGE_LOGGER
+
         if self.is_backup_implemented():
-            self._validate_or_init_backup_folder(dest, keep)
+            backup_manager = self._validate_or_init_backup_folder(dest, keep)
             self._backup_backend(dest, keep)
+            STORAGE_LOGGER.report('Overwriting the config.json file.')
+            self._write_backup_config(backup_manager)
         else:
             raise NotImplementedError
 

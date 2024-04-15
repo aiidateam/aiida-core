@@ -215,13 +215,18 @@ def tests_storage_backup_nonempty_dest(run_cli_command, tmp_path):
 
 def tests_storage_backup_other_profile(run_cli_command, tmp_path):
     """Test that the ``verdi storage backup`` fails for a destination that has been used for another profile."""
-    existing_backup_info = {
-        'PROFILE_NAME': 'test-profile',
-        'PROFILE_UUID': 'test-uuid',
-        'STORAGE_BACKEND': 'core.psql_dos',
+    existing_backup_config = {
+        'CONFIG_VERSION': {'CURRENT': 9, 'OLDEST_COMPATIBLE': 9},
+        'profiles': {
+            'test': {
+                'PROFILE_UUID': 'test-uuid',
+                'storage': {'backend': 'core.psql_dos'},
+                'process_control': {'backend': 'rabbitmq'},
+            }
+        },
     }
-    with open(tmp_path / 'aiida-backup.json', 'w', encoding='utf-8') as fhandle:
-        json.dump(existing_backup_info, fhandle, indent=4)
+    with open(tmp_path / 'config.json', 'w', encoding='utf-8') as fhandle:
+        json.dump(existing_backup_config, fhandle, indent=4)
     result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)], raises=True)
     assert result.exit_code == 1
     assert 'contains backups of a different profile' in result.output

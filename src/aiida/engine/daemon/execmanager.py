@@ -367,8 +367,7 @@ def _copy_local_files(logger, node, transport, inputs, local_copy_list):
                         shutil.copyfileobj(source, handle)
 
         # Now copy the contents of the temporary folder to the remote working directory using the transport
-        for filepath in dirpath.iterdir():
-            transport.put(str(filepath), filepath.name)
+        transport.put(f'{dirpath}/*', transport.getcwd())
 
 
 def _copy_sandbox_files(logger, node, transport, folder):

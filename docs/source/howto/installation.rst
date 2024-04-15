@@ -612,7 +612,9 @@ Restoring data from a backup
 
 Restoring a backed up AiiDA profile requires:
 
-* restoring the profile information in the ``.aiida/config.json`` based on the backed up ``config.json`` file (entry under the "profiles" key). Some information (e.g. the database parameters) might need to be updated.
+* restoring the profile information in the AiiDA ``config.json`` file. Simply copy the`profiles` entry from
+  the backed up `config.json`to the one of the running AiiDA instance (see `verdi status` for exact location).
+  Some information (e.g. the database parameters) might need to be updated.
 
 * restoring the data of of the backed up profile according to the ``config.json`` entry.
   Like the backup procedure, this is dependent on the storage backend used by the profile.
@@ -636,9 +638,11 @@ To test if the restoration worked, run ``verdi -p <profile-name> status`` to ver
 
             psql -h <db_hostname> -p <db_port> - U <db_user> -d <db_name> -W < db.psql
 
+        where the parameters need to match with the corresponding AiiDA `config.json` profile entry.
+
         **File repository**
 
-        To restore the file repository, simply copy the directory that was backed up to the location indicated by the ``storage.config.repository_uri`` key returned by the ``verdi profile show`` command.
+        To restore the file repository, simply copy the directory that was backed up to the location indicated in AiiDA `config.json` (or the ``storage.config.repository_uri`` key returned by the ``verdi profile show`` command).
         Like the backing up process, we recommend using ``rsync`` for this:
 
         .. code-block:: console

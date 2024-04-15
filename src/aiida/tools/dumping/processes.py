@@ -289,8 +289,12 @@ def calcjob_dump(
             calcjob_presubmit_dump(calcjob_node=calcjob_node, output_path=output_path)
         except ValueError:
             # raise
+            # missing_plugin = str(calcjob_node.process_class).split(' ')[1].split('.')[0][1:] -> .process_class leads
+            # to exception without plugin installed
+            missing_plugin = f'aiida-{calcjob_node.process_type.split(':')[1].split('.')[0]}'
             echo.echo_error(
-                'Error when trying to get a restart-builder. Do you have the relevant aiida-plugin installed?'
+                f'Error when trying to get a restart-builder. Do you have the relevant '
+                f'plugin `{missing_plugin}` installed?'
             )
             return False
 

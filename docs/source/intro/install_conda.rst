@@ -47,7 +47,8 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
 
         .. tip::
 
-            You may encounter issue that ``5432`` port is already in use. In this case, you can pass the ``-o "-F -p <port-num>"`` option to the ``pg_ctl`` command, ``<port-num>`` being the desired port number.
+            The default port ``5432`` may already be in use by another process.
+            In this case, you can pass the ``-o "-F -p <port-num>"`` option to the ``pg_ctl`` command, ``<port-num>`` being the desired port number.
             Then for the ``psql`` command, you can pass the ``-p <port-num>`` option.
 
         .. admonition:: Further Reading

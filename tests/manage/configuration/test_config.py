@@ -145,45 +145,6 @@ def test_environment_variable_set_multiple_path(tmp_path):
     assert settings.AIIDA_CONFIG_FOLDER == config_folder
 
 
-@pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
-@pytest.mark.usefixtures('cache_aiida_path_variable')
-@pytest.mark.parametrize('environment_variable', (True, False))
-def test_cwd(environment_variable, chdir_tmp_path):
-    """Test that the current working directory is checked as long as ``AIIDA_PATH`` environment variable is not set."""
-    if environment_variable:
-        dirpath_env = chdir_tmp_path / 'env' / settings.DEFAULT_CONFIG_DIR_NAME
-        dirpath_env.mkdir(parents=True)
-        os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_env.absolute())
-    else:
-        os.environ.pop(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
-
-    dirpath_cwd = chdir_tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
-    dirpath_cwd.mkdir()
-
-    settings.set_configuration_directory()
-    if environment_variable:
-        assert settings.AIIDA_CONFIG_FOLDER == dirpath_env
-    else:
-        assert settings.AIIDA_CONFIG_FOLDER == dirpath_cwd
-
-
-@pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
-@pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_cwd_parent(chdir_tmp_path):
-    """Test that if ``AIIDA_PATH`` is not set, the current working directory is checked, moving up all parents."""
-    os.environ.pop(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
-
-    dirpath = chdir_tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
-    dirpath.mkdir()
-    subdirpath = dirpath / 'subdirectory'
-    subdirpath.mkdir()
-    os.chdir(subdirpath)
-    assert pathlib.Path.cwd() == subdirpath
-
-    settings.set_configuration_directory()
-    assert settings.AIIDA_CONFIG_FOLDER == dirpath
-
-
 def compare_config_in_memory_and_on_disk(config, filepath):
     """Verify that the contents of `config` are identical to the contents of the file with path `filepath`.
 

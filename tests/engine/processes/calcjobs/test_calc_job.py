@@ -524,6 +524,7 @@ class TestCalcJob:
     def test_compute_hash_version_independent(self, get_calcjob_builder, monkeypatch, manager):
         """Test that :meth:`aiida.orm.CalcJobNode.compute_hash` is independent of the version of ``aiida-core``."""
         import aiida
+
         _, node_a = launch.run_get_node(get_calcjob_builder())
 
         monkeypatch.setattr(aiida, '__version__', '0.0.0')

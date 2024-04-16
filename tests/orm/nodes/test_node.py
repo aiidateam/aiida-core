@@ -985,6 +985,7 @@ class TestNodeCaching:
     def test_hashing_errors(self, caplog, monkeypatch):
         """Tests that ``compute_hash`` fails in an expected manner."""
         from aiida.orm.nodes.caching import NodeCaching
+
         node = Data().store()
 
         # monkeypatch `get_objects_to_hash` to raise a fake error

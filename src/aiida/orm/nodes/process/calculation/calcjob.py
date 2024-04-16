@@ -175,6 +175,7 @@ class CalcJobNode(CalculationNode):
             'priority',
             'max_wallclock_seconds',
             'max_memory_kb',
+            'version',
         )
 
     @property

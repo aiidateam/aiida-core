@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
 import typing as t
 
 from aiida.common import exceptions
@@ -62,16 +61,9 @@ class NodeCaching:
 
     def get_objects_to_hash(self) -> list[t.Any]:
         """Return a list of objects which should be included in the hash."""
-        top_level_module = self._node.__module__.split('.', 1)[0]
-
-        try:
-            version = importlib.import_module(top_level_module).__version__
-        except (ImportError, AttributeError) as exc:
-            raise exceptions.HashingError("The node's package version could not be determined") from exc
 
         return {
             'class': str(self._node.__class__),
-            'version': version,
             'attributes': {
                 key: val
                 for key, val in self._node.base.attributes.items()

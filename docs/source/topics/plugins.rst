@@ -344,9 +344,9 @@ To make use of these fixtures, create a ``conftest.py`` file in your ``tests`` f
 
 .. code-block:: python
 
-   pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
+   pytest_plugins = 'aiida.tools.pytest_fixtures
 
-Just by adding this line, the fixtures that are provided by the :mod:`~aiida.manage.tests.pytest_fixtures` module are automatically imported.
+Just by adding this line, the fixtures that are provided by the :mod:`~aiida.tools.pytest_fixtures` module are automatically imported.
 The module provides the following fixtures:
 
 * :ref:`aiida_manager <topics:plugins:testfixtures:aiida-manager>`: Return the global instance of the :class:`~aiida.manage.manager.Manager`
@@ -354,19 +354,26 @@ The module provides the following fixtures:
 * :ref:`aiida_profile_clean <topics:plugins:testfixtures:aiida-profile-clean>`: Same as ``aiida_profile`` but the storage backend is cleaned
 * :ref:`aiida_profile_clean_class <topics:plugins:testfixtures:aiida-profile-clean-class>`: Same as ``aiida_profile_clean`` but should be used at the class scope
 * :ref:`aiida_profile_factory <topics:plugins:testfixtures:aiida-profile-factory>`: Create a temporary profile ready to be used for testing
-* :ref:`aiida_instance <topics:plugins:testfixtures:aiida-instance>`: Return the :class:`~aiida.manage.configuration.config.Config` instance that is used for the test session
+* :ref:`aiida_config <topics:plugins:testfixtures:aiida-config>`: Return the :class:`~aiida.manage.configuration.config.Config` instance that is used for the test session
 * :ref:`config_psql_dos <topics:plugins:testfixtures:config-psql-dos>`: Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`
-* :ref:`postgres_cluster <topics:plugins:testfixtures:postgres-cluster>`: Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yield
-* :ref:`aiida_local_code_factory <topics:plugins:testfixtures:aiida-local-code-factory>`: Setup a :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance on the ``localhost`` computer
+* :ref:`postgres_cluster <topics:plugins:testfixtures:postgres-cluster>`: Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yielder
 * :ref:`aiida_computer <topics:plugins:testfixtures:aiida-computer>`: Setup a :class:`~aiida.orm.computers.Computer` instance
 * :ref:`aiida_computer_local <topics:plugins:testfixtures:aiida-computer-local>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using local transport
 * :ref:`aiida_computer_ssh <topics:plugins:testfixtures:aiida-computer-ssh>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using SSH transport
 * :ref:`aiida_localhost <topics:plugins:testfixtures:aiida-localhost>`: Shortcut for <topics:plugins:testfixtures:aiida-computer-local> that immediately returns a :class:`~aiida.orm.computers.Computer` instance for the ``localhost`` computer instead of a factory
+* :ref:`aiida_code <topics:plugins:testfixtures:aiida-code>`: Setup a :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` instance
+* :ref:`aiida_code_installed <topics:plugins:testfixtures:aiida-code-installed>`: Setup a :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance on a given computer
 * :ref:`submit_and_await <topics:plugins:testfixtures:submit-and-await>`: Submit a process or process builder to the daemon and wait for it to reach a certain process state
 * :ref:`started_daemon_client <topics:plugins:testfixtures:started-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to be running
 * :ref:`stopped_daemon_client <topics:plugins:testfixtures:stopped-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to *not* be running
 * :ref:`daemon_client <topics:plugins:testfixtures:daemon-client>`: Return a :class:`~aiida.engine.daemon.client.DaemonClient` instance to control the daemon
 * :ref:`entry_points <topics:plugins:testfixtures:entry-points>`: Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance to add and remove entry points
+
+.. note::
+
+    Before v2.6, test fixtures were located in :mod:`aiida.manage.tests.pytest_fixtures`.
+    This module is now deprecated and will be removed in the future.
+    Some fixtures have analogs in :mod:`aiida.tools.pytest_fixtures` that are drop-in replacements, but in general, there are differences in the interface and functionality.
 
 
 .. _topics:plugins:testfixtures:aiida-manager:
@@ -395,17 +402,21 @@ By default, the fixture will generate a completely temporary independent AiiDA i
 This includes:
 
 * A temporary ``.aiida`` configuration folder with configuration files
-* A temporary PostgreSQL cluster
-* A temporary test profile complete with storage backend (creates a database in the temporary PostgreSQL cluster)
+* A temporary test profile configured with ``core.sqlite_dos`` storage backend
+
+.. note::
+
+    The profile uses ``core.sqlite_dos`` instead of the standard ``core.psql_dos`` storage plugin as it doesn't require PostgreSQL to be installed.
+    Since the functionality of PostgreSQL is not needed for most common test cases, this choice makes it easier to start writing and running tests.
 
 The temporary test instance and profile are automatically destroyed at the end of the test session.
 The fixture guarantees that no changes are made to the actual instance of AiiDA with its configuration and profiles.
 
-The creation of the temporary instance and profile takes a few seconds at the beginning of the test suite to setup.
-It is possible to avoid this by creating a dedicated test profile once and telling the fixture to use that instead of generating one each time:
+.. note::
 
-* Create a profile, by using `verdi setup` or `verdi quicksetup` and specify the ``--test-profile`` flag
-* Set the ``AIIDA_TEST_PROFILE`` environment variable to the name of the test profile: ``export AIIDA_TEST_PROFILE=<test-profile-name>``
+    The profile does not configure RabbitMQ as a broker since it is not required for most test cases useful for plugins.
+    This means, however, that any functionality that requires a broker is not available, such as running the daemon and submitting processes to the daemon.
+    If that functionality is required, a profile should be created and loaded that configures a broker.
 
 Although the fixture is automatically used, and so there is no need to explicitly pass it into a test function, it may
 still be useful, as it can be used to clean the storage backend from all data:
@@ -419,7 +430,7 @@ still be useful, as it can be used to clean the storage backend from all data:
       assert QueryBuilder().append(Data).count() != 0
 
       # The following call clears the storage backend, deleting all data, except for the default user.
-      aiida_profile.clear_profile()
+      aiida_profile.reset_storage()
 
       assert QueryBuilder().append(Data).count() == 0
 
@@ -434,8 +445,8 @@ Note that a default user will be inserted into the database after cleaning it.
 
 .. code-block:: python
 
-   def test(aiida_profile_clean):
-      """The profile storage is guaranteed to be emptied at the start of this test."""
+    def test(aiida_profile_clean):
+        """The profile storage is guaranteed to be emptied at the start of this test."""
 
 This functionality can be useful if it is easier to setup and write the test if there is no pre-existing data.
 However, cleaning the storage may take a non-negligible amount of time, so only use it when really needed in order to keep tests running as fast as possible.
@@ -488,17 +499,17 @@ Can be useful to create a test profile for a custom storage backend:
 Note that the configuration above is not actually functional and the actual configuration depends on the storage implementation that is used.
 
 
-.. _topics:plugins:testfixtures:aiida-instance:
+.. _topics:plugins:testfixtures:aiida-config:
 
-``aiida_instance``
+``aiida_config``
 ------------------
 
 Return the :class:`~aiida.manage.configuration.config.Config` instance that is used for the test session.
 
 .. code-block:: python
 
-    def test(aiida_instance):
-        aiida_instance.get_option('logging.aiida_loglevel')
+    def test(aiida_config):
+        aiida_config.get_option('logging.aiida_loglevel')
 
 
 .. _topics:plugins:testfixtures:config-psql-dos:
@@ -511,16 +522,17 @@ This can be used in combination with the ``aiida_profile_factory`` fixture to cr
 
 .. code-block:: python
 
-   @pytest.fixture(scope='session')
-   def psql_dos_profile(aiida_profile_factory, config_psql_dos) -> Profile:
-       """Return a test profile configured for the :class:`~aiida.storage.psql_dos.PsqlDosStorage`."""
-       configuration = config_psql_dos()
-       configuration['storage']['config']['repository_uri'] = '/some/custom/path'
-       yield aiida_profile_factory(configuration)
+    @pytest.fixture(scope='session')
+    def psql_dos_profile(aiida_profile_factory, config_psql_dos) -> Profile:
+        """Return a test profile configured for the :class:`~aiida.storage.psql_dos.PsqlDosStorage`."""
+        configuration = config_psql_dos()
+        configuration['repository_uri'] = '/some/custom/path'
+        with aiida_profile_factory(storage_backend='core.psql_dos', storage_config=configuration) as profile:
+            yield profile
 
 
 Note that this is only useful if the storage configuration needs to be customized.
-If any configuration works, simply use the ``aiida_profile`` fixture straight away, which uses the ``PsqlDosStorage`` storage backend by default.
+If any configuration works, simply use the ``aiida_profile`` fixture straight away.
 
 
 .. _topics:plugins:testfixtures:postgres-cluster:
@@ -553,25 +565,6 @@ This fixture returns a :class:`~aiida.orm.computers.Computer` that represents th
 
     def test(aiida_localhost):
         aiida_localhost.get_minimum_job_poll_interval()
-
-
-.. _topics:plugins:testfixtures:aiida-local-code-factory:
-
-``aiida_local_code_factory``
-----------------------------
-
-This test is useful if a test requires an :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance.
-For example:
-
-.. code-block:: python
-
-    def test(aiida_local_code_factory):
-        code = aiida_local_code_factory(
-            entry_point='core.arithmetic.add',
-            executable='/usr/bin/bash'
-        )
-
-By default, it will use the ``localhost`` computer returned by the ``aiida_localhost`` fixture.
 
 
 .. _topics:plugins:testfixtures:aiida-computer:
@@ -679,6 +672,45 @@ If you need a guarantee that the computer is not configured, make sure to clean 
         assert not localhost.is_configured
 
 
+.. _topics:plugins:testfixtures:aiida-code:
+
+``aiida_code``
+----------------------------
+
+This fixture is useful if a test requires an :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` instance.
+For example:
+
+.. code-block:: python
+
+    def test(aiida_localhost, aiida_code):
+        from aiida.orm import InstalledCode
+        code = aiida_code(
+            'core.code.installed',
+            label='test-code',
+            computer=aiida_localhost,
+            filepath_executable='/bin/bash'
+        )
+        assert isinstance(code, InstalledCode)
+
+
+.. _topics:plugins:testfixtures:aiida-code-installed:
+
+``aiida_code_installed``
+----------------------------
+
+This test is useful if a test requires an :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance.
+For example:
+
+.. code-block:: python
+
+    def test(aiida_code_installed):
+        from aiida.orm import InstalledCode
+        code = aiida_code_installed()
+        assert isinstance(code, InstalledCode)
+
+By default, it will use the ``localhost`` computer returned by the ``aiida_localhost`` fixture.
+
+
 .. _topics:plugins:testfixtures:submit-and-await:
 
 ``submit_and_await``
@@ -690,8 +722,8 @@ By default it will wait for the process to reach ``ProcessState.FINISHED``:
 
 .. code-block:: python
 
-    def test(aiida_local_code_factory, submit_and_await):
-        code = aiida_local_code_factory('core.arithmetic.add', '/usr/bin/bash')
+    def test(aiida_code_installed, submit_and_await):
+        code = aiida_code_installed(filepath_executable='core.arithmetic.add', filepath_executable='/usr/bin/bash')
         builder = code.get_builder()
         builder.x = orm.Int(1)
         builder.y = orm.Int(1)
@@ -762,7 +794,7 @@ Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance
         class CustomParser(Parser):
             """Parser implementation."""
 
-        entry_points.add(CustomParser, 'custom.parser')
+        entry_points.add(CustomParser, 'aiida.parsers:custom.parser')
 
         assert ParserFactory('custom.parser', CustomParser)
 

@@ -210,11 +210,13 @@ def test_mixed(run_cli_command, aiida_localhost, non_interactive_editor):
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
-def test_code_duplicate_interactive(run_cli_command, aiida_local_code_factory, non_interactive_editor):
+def test_code_duplicate_interactive(run_cli_command, aiida_code_installed, non_interactive_editor):
     """Test code duplication interactive."""
     label = 'code_duplicate_interactive'
     user_input = f'\n\n{label}\n\n\n\n'
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code')
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/cat', description='code'
+    )
     run_cli_command(cmd_code.code_duplicate, [str(code.pk)], user_input=user_input)
 
     duplicate = load_code(label)
@@ -225,14 +227,16 @@ def test_code_duplicate_interactive(run_cli_command, aiida_local_code_factory, n
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
-def test_code_duplicate_ignore(run_cli_command, aiida_local_code_factory, non_interactive_editor):
+def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_interactive_editor):
     """Providing "!" to description should lead to empty description.
 
     Regression test for: https://github.com/aiidateam/aiida-core/issues/3770
     """
     label = 'code_duplicate_interactive'
     user_input = f'\n\n{label}\n!\n\n\n'
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code')
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/cat', label='code'
+    )
     run_cli_command(cmd_code.code_duplicate, [str(code.pk)], user_input=user_input)
 
     duplicate = load_code(label)
@@ -240,10 +244,15 @@ def test_code_duplicate_ignore(run_cli_command, aiida_local_code_factory, non_in
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_code_export(run_cli_command, aiida_local_code_factory, tmp_path, file_regression):
+def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code', prepend_text=prepend_text)
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        label='code',
+        prepend_text=prepend_text,
+    )
     filepath = tmp_path / 'code.yml'
     options = [str(code.pk), str(filepath)]
     run_cli_command(cmd_code.export, options)
@@ -312,11 +321,16 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
 
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
 def test_code_setup_remote_duplicate_full_label_interactive(
-    run_cli_command, aiida_local_code_factory, aiida_localhost, non_interactive_editor
+    run_cli_command, aiida_code_installed, aiida_localhost, non_interactive_editor
 ):
     """Test ``verdi code setup`` for a remote code in interactive mode specifying an existing full label."""
     label = 'some-label'
-    aiida_local_code_factory('core.arithmetic.add', '/bin/cat', computer=aiida_localhost, label=label)
+    aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        computer=aiida_localhost,
+        label=label,
+    )
     assert isinstance(load_code(label), InstalledCode)
 
     label_unique = 'label-unique'
@@ -329,11 +343,16 @@ def test_code_setup_remote_duplicate_full_label_interactive(
 
 @pytest.mark.parametrize('label_first', (True, False))
 def test_code_setup_remote_duplicate_full_label_non_interactive(
-    run_cli_command, aiida_local_code_factory, aiida_localhost, label_first
+    run_cli_command, aiida_code_installed, aiida_localhost, label_first
 ):
     """Test ``verdi code setup`` for a remote code in non-interactive mode specifying an existing full label."""
     label = f'some-label-{label_first}'
-    aiida_local_code_factory('core.arithmetic.add', '/bin/cat', computer=aiida_localhost, label=label)
+    aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        computer=aiida_localhost,
+        label=label,
+    )
     assert isinstance(load_code(label), InstalledCode)
 
     options = ['-n', '-D', 'd', '-P', 'core.arithmetic.add', '--on-computer', '--remote-abs-path=/remote/abs/path']
@@ -349,9 +368,7 @@ def test_code_setup_remote_duplicate_full_label_non_interactive(
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_code_setup_local_duplicate_full_label_interactive(
-    run_cli_command, aiida_local_code_factory, aiida_localhost, non_interactive_editor, tmp_path
-):
+def test_code_setup_local_duplicate_full_label_interactive(run_cli_command, non_interactive_editor, tmp_path):
     """Test ``verdi code setup`` for a local code in interactive mode specifying an existing full label."""
     filepath = tmp_path / 'bash'
     filepath.write_text('fake bash')
@@ -369,9 +386,7 @@ def test_code_setup_local_duplicate_full_label_interactive(
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_code_setup_local_duplicate_full_label_non_interactive(
-    run_cli_command, aiida_local_code_factory, aiida_localhost
-):
+def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command):
     """Test ``verdi code setup`` for a local code in non-interactive mode specifying an existing full label."""
     label = 'some-label'
     code = PortableCode(filepath_executable='bash', filepath_files=pathlib.Path('/bin/bash'))

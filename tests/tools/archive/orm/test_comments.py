@@ -46,7 +46,7 @@ def test_multiple_imports_for_single_node(tmp_path, aiida_profile):
     create_archive([node], filename=export_file_full)
 
     # Clean database and reimport "EXISTING" DB
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(export_file_existing)
 
     # Check correct import
@@ -113,7 +113,7 @@ def test_exclude_comments_flag(tmp_path, aiida_profile):
     create_archive([node], filename=export_file, include_comments=False)
 
     # Clean database and reimport exported file
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(export_file)
 
     # Get node, users, and comments
@@ -157,7 +157,7 @@ def test_calc_and_data_nodes_with_comments(tmp_path, aiida_profile):
     create_archive([calc_node, data_node], filename=export_file)
 
     # Clean database and reimport exported file
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(export_file)
 
     # Get nodes and comments
@@ -208,7 +208,7 @@ def test_multiple_user_comments_single_node(tmp_path, aiida_profile):
     create_archive([node], filename=export_file)
 
     # Clean database and reimport exported file
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(export_file)
 
     # Get node, users, and comments
@@ -293,7 +293,7 @@ def test_mtime_of_imported_comments(tmp_path, aiida_profile_clean):
     # Export, reset database and reimport
     export_file = tmp_path / 'export.aiida'
     create_archive([calc], filename=export_file)
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(export_file)
 
     # Retrieve node and comment
@@ -470,7 +470,7 @@ def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile_clean):
     create_archive([calc], filename=export_file_full)
 
     # Clean database
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     ## Part II
     # Reimport "EXISTING" DB
@@ -509,7 +509,7 @@ def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile_clean):
     create_archive([calc], filename=export_file_new)
 
     # Clean database
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     ## Part III
     # Reimport "EXISTING" DB
@@ -578,7 +578,7 @@ def test_import_newest(tmp_path, aiida_profile):
     export_file_new = tmp_path / 'export_new.aiida'
     create_archive([node], filename=export_file_new, include_comments=True)
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     import_archive(export_file_old)
     assert orm.Comment.collection.get(uuid=comment_1_uuid).content == 'Comment old'

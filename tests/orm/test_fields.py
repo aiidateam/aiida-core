@@ -85,7 +85,8 @@ def test_disallowed_alias_for_db_field():
         )
 
 
-def test_query_new_class(clear_database_before_test, monkeypatch):
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_query_new_class(monkeypatch):
     """Test that fields are correctly registered on a new data class,
     and can be used in a query.
     """
@@ -186,7 +187,8 @@ def test_filter_comparators():
     }
 
 
-def test_query_filters(clear_database_before_test):
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_query_filters():
     """Test using fields to generate a query filter."""
     node = orm.Data().store()
     orm.Data().store()
@@ -203,7 +205,8 @@ def test_query_filters(clear_database_before_test):
     assert result == [[node.pk]]
 
 
-def test_query_subscriptable(clear_database_before_test):
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_query_subscriptable():
     """Test using subscriptable fields in a query."""
     node = orm.Dict(dict={'a': 1}).store()
     node.base.extras.set('b', 2)

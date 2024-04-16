@@ -280,9 +280,9 @@ def test_port_names_overlapping_mutable_mapping_methods():
     assert builder.boolean == orm.Bool(False)
 
 
-def test_calc_job_node_get_builder_restart(aiida_local_code_factory):
+def test_calc_job_node_get_builder_restart(aiida_code_installed):
     """Test the `CalcJobNode.get_builder_restart` method."""
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     inputs = {
         'metadata': {
             'label': 'some-label',

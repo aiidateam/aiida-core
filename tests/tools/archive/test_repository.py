@@ -27,7 +27,7 @@ def test_export_repository(aiida_profile_clean, tmp_path):
     filepath = os.path.join(tmp_path / 'export.aiida')
     create_archive([node], filename=filepath)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(filepath)
 
     loaded = orm.load_node(uuid=node_uuid)
@@ -53,7 +53,7 @@ def test_export_repository_after_maintain(aiida_profile_clean, tmp_path):
     filepath = os.path.join(tmp_path / 'export.aiida')
     create_archive([node], filename=filepath)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(filepath)
 
     loaded = orm.load_node(uuid=node_uuid)

@@ -78,7 +78,7 @@ def test_complex_graph_import_export(aiida_profile_clean, tmp_path, aiida_localh
     filename = tmp_path / 'export.aiida'
     create_archive([fd1], filename=filename)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     import_archive(filename)
 
@@ -150,7 +150,7 @@ def test_reexport(aiida_profile_clean, tmp_path):
         # this also checks if group memberships are preserved!
         create_archive([group] + list(group.nodes), filename=filename)
         # cleaning the DB!
-        aiida_profile_clean.clear_profile()
+        aiida_profile_clean.reset_storage()
         # reimporting the data from the file
         import_archive(filename)
         # creating the hash from db content

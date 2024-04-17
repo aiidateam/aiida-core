@@ -305,14 +305,7 @@ class StorageBackend(abc.ABC):
         :param dry_run: flag to only print the actions that would be taken without actually executing them.
         """
 
-    def is_backup_implemented(self):
-        """Check if the storage backend implements a backup procedure.
-
-        Note: subclasses that implement a backup procedure need to overload this method and return True.
-        """
-        return False
-
-    def _backup_backend(
+    def _backup(
         self,
         dest: str,
         keep: Optional[int] = None,
@@ -324,6 +317,7 @@ class StorageBackend(abc.ABC):
         import tempfile
 
         from aiida.common import exceptions
+        from aiida.common.log import override_log_level
         from aiida.manage.configuration import get_config
         from aiida.manage.configuration.config import Config
 
@@ -335,7 +329,11 @@ class StorageBackend(abc.ABC):
                 backup_config = Config(str(filepath_config), {})  # Create empty config at temporary file location
                 backup_config.add_profile(profile)  # Add the profile being backed up
                 backup_config.store()  # Write the contents to disk
-                backup_manager.call_rsync(filepath_config, backup_manager.path / 'config.json')
+
+                # Temporarily disable all logging because the verbose rsync output just for copying the config file
+                # is a bit much.
+                with override_log_level():
+                    backup_manager.call_rsync(filepath_config, backup_manager.path / 'config.json')
         except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exc:
             raise exceptions.StorageBackupError('AiiDA config.json not found!') from exc
 
@@ -409,13 +407,28 @@ class StorageBackend(abc.ABC):
         """
         from aiida.storage.log import STORAGE_LOGGER
 
-        if self.is_backup_implemented():
-            backup_manager = self._validate_or_init_backup_folder(dest, keep)
-            self._backup_backend(dest, keep)
-            STORAGE_LOGGER.report('Overwriting the config.json file.')
-            self._write_backup_config(backup_manager)
-        else:
-            raise NotImplementedError
+        backup_manager = self._validate_or_init_backup_folder(dest, keep)
+
+        try:
+            self._backup(dest, keep)
+        except NotImplementedError:
+            success, stdout = backup_manager.run_cmd(['ls', '-A', str(backup_manager.path)])
+
+            if not success:
+                STORAGE_LOGGER.warning(f'Failed to determine contents of destination folder `{dest}`: not deleting it.')
+                raise
+
+            # If the backup directory was just initialized for the first time, it should only contain the config.json
+            # file and nothing else. If anything else is found, do not delete the directory for safety reasons.
+            if stdout.strip() != 'config.json':
+                STORAGE_LOGGER.warning(f'The destination folder `{dest}` is not empty: not deleting it.')
+                raise
+
+            backup_manager.run_cmd(['rm', '-rf', str(backup_manager.path)])
+            raise
+
+        STORAGE_LOGGER.report('Overwriting the config.json file.')
+        self._write_backup_config(backup_manager)
 
     def get_info(self, detailed: bool = False) -> dict:
         """Return general information on the storage.

@@ -103,7 +103,7 @@ class SqliteDosStorage(PsqlDosBackend):
         filepath: str = Field(
             title='Directory of the backend',
             description='Filepath of the directory in which to store data for this backend.',
-            default_factory=lambda: AIIDA_CONFIG_FOLDER / 'repository' / f'sqlite_dos_{uuid4().hex}',
+            default_factory=lambda: str(AIIDA_CONFIG_FOLDER / 'repository' / f'sqlite_dos_{uuid4().hex}'),
         )
 
         @field_validator('filepath')

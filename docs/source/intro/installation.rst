@@ -44,7 +44,7 @@ To assume the role of ``postgres`` run as root:
 
    If you see an error message like ``psql: FATAL:  role "<role_name>" does not exist``, probably you don't have any role created yet.
    You can run ``psql -l`` to check the exist roles and specify the correct one with the ``-U`` option.
-   If the error message is ``psql: FATAL:  database "<database_name>" does not exist``, you can use default database ``template1`` with ``psql -d template1``.
+   If the error message is ``psql: FATAL:  database "<database_name>" does not exist``, you can use the default database ``template1`` with ``psql -d template1`` to connect.
 
 Create a new database user account for AiiDA by running:
 

@@ -29,7 +29,7 @@ def test_that_solo_code_is_exported_correctly(aiida_profile, tmp_path, aiida_loc
     export_file = tmp_path / 'export.aiida'
     create_archive([code], filename=export_file)
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     import_archive(export_file)
 
@@ -60,7 +60,7 @@ def test_input_code(aiida_profile, tmp_path, aiida_localhost):
     export_file = tmp_path / 'export.aiida'
     create_archive([calc], filename=export_file)
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     import_archive(export_file)
 
@@ -90,7 +90,7 @@ def test_solo_code(aiida_profile, tmp_path, aiida_localhost):
     export_file = tmp_path / 'export.aiida'
     create_archive([code], filename=export_file)
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     import_archive(export_file)
 

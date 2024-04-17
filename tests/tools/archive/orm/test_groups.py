@@ -51,7 +51,7 @@ def test_nodes_in_group(aiida_profile, tmp_path, aiida_localhost):
     filename1 = tmp_path / 'export1.aiida'
     create_archive([sd1, jc1, gr1], filename=filename1)
     n_uuids = [sd1.uuid, jc1.uuid]
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(filename1)
 
     # Check that the imported nodes are correctly imported and that
@@ -89,7 +89,7 @@ def test_group_export(tmp_path, aiida_profile):
     filename = tmp_path / 'export.aiida'
     create_archive([group], filename=filename)
     n_uuids = [sd1.uuid]
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(filename)
 
     # Check that the imported nodes are correctly imported and that
@@ -130,7 +130,7 @@ def test_group_import_existing(tmp_path, aiida_profile):
     # At this point we export the generated data
     filename = tmp_path / 'export1.aiida'
     create_archive([group], filename=filename)
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # Creating a group of the same name
     group = orm.Group(label='node_group_existing')
@@ -167,7 +167,7 @@ def test_import_to_group(tmp_path, aiida_profile):
     # Export Nodes
     filename = tmp_path / 'export.aiida'
     create_archive([data1, data2], filename=filename)
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # Create Group, do not store
     group_label = 'import_madness'

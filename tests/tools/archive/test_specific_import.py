@@ -38,7 +38,7 @@ def test_simple_import(aiida_profile_clean, tmp_path):
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
 
     # Clean the database and verify there are no nodes left
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     assert orm.QueryBuilder().append(orm.Node).count() == 0
 
     # After importing we should have the original number of nodes again
@@ -94,7 +94,7 @@ def test_cycle_structure_data(aiida_profile_clean, aiida_localhost, tmp_path):
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
 
     # Clean the database and verify there are no nodes left
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     assert orm.QueryBuilder().append(orm.Node).count() == 0
 
     # After importing we should have the original number of nodes again
@@ -155,7 +155,7 @@ def test_import_checkpoints(aiida_profile_clean, tmp_path):
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
 
     # Clean the database and verify there are no nodes left
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     assert orm.QueryBuilder().append(orm.Node).count() == 0
 
     import_archive(archive_path)

@@ -87,7 +87,7 @@ class ProcessNodeCaching(NodeCaching):
         res.update(
             {
                 'inputs': {
-                    entry.link_label: entry.node.base.caching.get_hash()
+                    entry.link_label: entry.node.base.caching.compute_hash()
                     for entry in self._node.base.links.get_incoming(
                         link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)
                     )

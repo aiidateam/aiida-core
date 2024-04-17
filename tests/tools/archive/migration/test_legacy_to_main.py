@@ -22,11 +22,11 @@ def test_dangling_links(tmp_path):
         migrate(filepath_archive, tmp_path / 'archive.aiida', 'main_0001')
 
 
-def test_missing_nodes_in_groups(tmp_path, aiida_caplog):
+def test_missing_nodes_in_groups(tmp_path, caplog):
     """Test that groups with listed node UUIDs that are not in the archive are correctly handled."""
     filepath_archive = get_archive_file('0.10_unknown_nodes_in_group.aiida', 'export/migrate')
     migrate(filepath_archive, tmp_path / 'archive.aiida', 'main_0001')
-    assert 'Dropped unknown nodes in groups' in aiida_caplog.text, aiida_caplog.text
+    assert 'Dropped unknown nodes in groups' in caplog.text, caplog.text
 
 
 def test_fields_with_null_values(tmp_path):

@@ -54,9 +54,13 @@ def test_leak_run_process():
 
 @pytest.mark.skipif(sys.version_info >= (3, 12), reason='Garbage collecting hangs on Python 3.12')
 @pytest.mark.usefixtures('aiida_profile', 'check_memory_leaks')
-def test_leak_local_calcjob(aiida_local_code_factory):
+def test_leak_local_calcjob(aiida_code_installed):
     """Test whether running a local CalcJob leaks memory."""
-    inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash')}
+    inputs = {
+        'x': orm.Int(1),
+        'y': orm.Int(2),
+        'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'),
+    }
     run_finished_ok(ArithmeticAddCalculation, **inputs)
 
 

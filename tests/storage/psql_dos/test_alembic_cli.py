@@ -16,5 +16,5 @@ def test_history():
     """Test the 'history' command."""
     runner = CliRunner()
     result = runner.invoke(alembic_cli, ['history'])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert 'head' in result.output

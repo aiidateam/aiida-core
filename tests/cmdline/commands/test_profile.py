@@ -179,7 +179,7 @@ def test_setup(config_psql_dos, run_cli_command, isolated_config, tmp_path, entr
 
     if entry_point == 'core.psql_dos':
         options = []
-        for key, value in config_psql_dos()['storage']['config'].items():
+        for key, value in config_psql_dos().items():
             options.append(f'--{key.replace("_", "-")}')
             options.append(str(value))
     else:

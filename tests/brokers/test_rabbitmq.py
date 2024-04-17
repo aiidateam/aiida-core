@@ -91,7 +91,7 @@ def test_add_broadcast_subscriber(communicator):
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_duplicate_subscriber_identifier(aiida_local_code_factory, started_daemon_client, submit_and_await):
+def test_duplicate_subscriber_identifier(aiida_code_installed, started_daemon_client, submit_and_await):
     """Test that a ``DuplicateSubscriberError`` in ``ProcessLauncher._continue`` does not except the process.
 
     It is possible that when a daemon worker tries to continue a process, that a ``kiwipy.DuplicateSubscriberError`` is
@@ -114,7 +114,7 @@ def test_duplicate_subscriber_identifier(aiida_local_code_factory, started_daemo
     process, that should not incur this inception and that is not what we are testing here. This test should therefore
     be ran with a single daemon worker.
     """
-    code = aiida_local_code_factory(entry_point='core.arithmetic.add', executable='/bin/bash')
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
 
     builder = code.get_builder()
     builder.x = Int(1)

@@ -45,7 +45,7 @@ def test_base_data_nodes(aiida_profile, tmp_path, entities):
     # actually export now
     create(filename=filename)
     # cleaning:
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     # Importing back the data:
     import_archive(filename)
     # Checking whether values are preserved:
@@ -79,7 +79,7 @@ def test_calc_of_structuredata(aiida_profile, tmp_path, aiida_localhost):
 
     create_archive([calc], filename=filename)
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     import_archive(filename)
     for uuid, value in attrs.items():
@@ -111,7 +111,7 @@ def test_check_for_export_format_version(aiida_profile, tmp_path):
                     (outpath / subpath.at).write_bytes(subpath.read_bytes())
 
     # then try to import it
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     with pytest.raises(IncompatibleStorageSchema):
         import_archive(filename2)
 

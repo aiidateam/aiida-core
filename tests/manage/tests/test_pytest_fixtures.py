@@ -2,6 +2,7 @@
 
 import uuid
 
+import pytest
 from aiida.manage.configuration import get_config
 from aiida.manage.configuration.config import Config
 from aiida.orm import Computer
@@ -18,12 +19,7 @@ def test_aiida_localhost(aiida_localhost):
     assert aiida_localhost.label == 'localhost'
 
 
-def test_aiida_local_code(aiida_local_code_factory):
-    """Test the ``aiida_local_code_factory`` fixture."""
-    code = aiida_local_code_factory(entry_point='core.templatereplacer', executable='diff')
-    assert code.computer.label == 'localhost'
-
-
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_aiida_computer_local(aiida_computer_local):
     """Test the ``aiida_computer_local`` fixture."""
     computer = aiida_computer_local()
@@ -46,6 +42,7 @@ def test_aiida_computer_local(aiida_computer_local):
     assert not computer_unconfigured.is_configured
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_aiida_computer_ssh(aiida_computer_ssh):
     """Test the ``aiida_computer_ssh`` fixture."""
     computer = aiida_computer_ssh()

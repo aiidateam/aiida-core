@@ -66,7 +66,7 @@ def test_nodes_belonging_to_different_users(aiida_profile, tmp_path, aiida_local
     filename = tmp_path.joinpath('export.aiida')
 
     create_archive([sd3], filename=filename)
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(filename)
 
     # Check that the imported nodes are correctly imported and that
@@ -121,7 +121,7 @@ def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_f
     filename1 = tmp_path.joinpath('export1.aiidaz')
     create_archive([sd2], filename=filename1)
     uuids1 = [sd1.uuid, jc1.uuid, sd2.uuid]
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(filename1)
 
     # Check that the imported nodes are correctly imported and that
@@ -152,7 +152,7 @@ def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_f
 
     filename2 = tmp_path.joinpath('export2.aiida')
     create_archive([sd3], filename=filename2)
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(filename2)
 
     # Check that the imported nodes are correctly imported and that

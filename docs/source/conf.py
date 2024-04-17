@@ -97,7 +97,7 @@ todo_include_todos = False
 ipython_mplbackend = ''
 
 myst_enable_extensions = ['colon_fence', 'deflist']
-myst_heading_anchors = 3
+myst_heading_anchors = 4
 nb_execution_show_tb = 'READTHEDOCS' in os.environ
 nb_merge_streams = True
 nb_mime_priority_overrides = [

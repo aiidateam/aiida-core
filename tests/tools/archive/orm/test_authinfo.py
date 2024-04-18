@@ -44,7 +44,7 @@ def test_import_authinfo(aiida_profile, tmp_path, aiida_localhost):
     """Test archive import, including authinfo"""
     filename1 = tmp_path / 'export1.aiida'
     create_archive([aiida_localhost], filename=filename1, include_authinfos=True)
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     # create a computer + authinfo, so that the PKs are different than the original ones
     # (to check that they are correctly translated)
     computer = orm.Computer(

@@ -47,7 +47,7 @@ def test_links_to_unknown_nodes(tmp_path, aiida_profile):
     with ArchiveFormatSqlZip().open(filename, 'r') as archive:
         assert archive.querybuilder().append(entity_type='link').count() == 1
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # since the query builder only looks for links between known nodes,
     # this should not import the erroneous link
@@ -75,7 +75,7 @@ def test_input_and_create_links(tmp_path, aiida_profile):
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([node_output], filename=export_file)
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     import_archive(export_file)
     import_links = get_all_node_links()
@@ -252,7 +252,7 @@ def test_complex_workflow_graph_links(aiida_profile_clean, tmp_path, aiida_local
     export_file = tmp_path.joinpath('export.aiida')
     create_archive(graph_nodes, filename=export_file)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     import_archive(export_file)
     import_links = get_all_node_links()
@@ -273,7 +273,7 @@ def test_complex_workflow_graph_export_sets(aiida_profile, tmp_path, aiida_local
         create_archive([export_node], filename=export_file, overwrite=True)
         export_node_str = str(export_node)
 
-        aiida_profile.clear_profile()
+        aiida_profile.reset_storage()
 
         import_archive(export_file)
 
@@ -319,7 +319,7 @@ def test_high_level_workflow_links(aiida_profile, tmp_path, aiida_localhost_fact
 
     for calcs in high_level_calc_nodes:
         for works in high_level_work_nodes:
-            aiida_profile.clear_profile()
+            aiida_profile.reset_storage()
 
             graph_nodes, _ = construct_complex_graph(aiida_localhost_factory, calc_nodes=calcs, work_nodes=works)
 
@@ -351,7 +351,7 @@ def test_high_level_workflow_links(aiida_profile, tmp_path, aiida_localhost_fact
             export_file = tmp_path.joinpath('export.aiida')
             create_archive(graph_nodes, filename=export_file, overwrite=True)
 
-            aiida_profile.clear_profile()
+            aiida_profile.reset_storage()
 
             import_archive(export_file)
             import_links = get_all_node_links()
@@ -585,10 +585,10 @@ def test_link_flags(aiida_profile, tmp_path, aiida_localhost_factory):
         ),
     )
 
-    link_flags_import_helper(input_links_forward, aiida_profile.clear_profile)
-    link_flags_import_helper(create_return_links_backward, aiida_profile.clear_profile)
-    link_flags_import_helper(call_links_backward_calc1, aiida_profile.clear_profile)
-    link_flags_import_helper(call_links_backward_work2, aiida_profile.clear_profile)
+    link_flags_import_helper(input_links_forward, aiida_profile.reset_storage)
+    link_flags_import_helper(create_return_links_backward, aiida_profile.reset_storage)
+    link_flags_import_helper(call_links_backward_calc1, aiida_profile.reset_storage)
+    link_flags_import_helper(call_links_backward_work2, aiida_profile.reset_storage)
 
 
 def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):
@@ -616,7 +616,7 @@ def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([data_out, work1, work2, data_in], filename=export_file)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     import_archive(export_file)
 
@@ -655,7 +655,7 @@ def test_multiple_post_return_links(tmp_path, aiida_profile_clean):
     create_archive([data], filename=data_provenance, return_backward=False)
     create_archive([data], filename=all_provenance, return_backward=True)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     # import data provenance
     import_archive(data_provenance)

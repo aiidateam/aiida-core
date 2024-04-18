@@ -711,19 +711,11 @@ class Process(plumpy.processes.Process):
         self._setup_version_info()
         self._setup_inputs()
 
-    def _setup_version_info(self) -> None:
+    def _setup_version_info(self) -> dict[str, Any]:
         """Store relevant plugin version information."""
-        from aiida.plugins.entry_point import format_entry_point_string
-
         version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
-
-        for key, monitor in self.inputs.get('monitors', {}).items():
-            entry_point = monitor.base.attributes.get('entry_point')
-            entry_point_string = format_entry_point_string('aiida.calculations.monitors', entry_point)
-            monitor_version_info = self.runner.plugin_version_provider.get_version_info(entry_point_string)
-            version_info['version'].setdefault('monitors', {})[key] = monitor_version_info['version']['plugin']
-
         self.node.base.attributes.set_many(version_info)
+        return version_info
 
     def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""

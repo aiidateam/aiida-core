@@ -1,7 +1,7 @@
 append_text: ''
 computer: localhost
 default_calc_job_plugin: core.arithmetic.add
-description: code
+description: ''
 filepath_executable: /bin/cat
 label: code
 prepend_text: "module load something\n    some command"

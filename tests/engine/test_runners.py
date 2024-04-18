@@ -83,13 +83,13 @@ def test_submit(runner):
     runner.submit(Proc, **inputs)
 
 
-def test_run_return_value_cached(aiida_local_code_factory):
+def test_run_return_value_cached(aiida_code_installed):
     """Test that :meth:`aiida.engine.runners.Runner._run` return process results even when cached.
 
     Regression test for https://github.com/aiidateam/aiida-core/issues/5994.
     """
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'),
         'x': Int(1),
         'y': Int(-2),
     }

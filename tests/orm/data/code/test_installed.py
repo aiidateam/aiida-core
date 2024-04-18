@@ -99,6 +99,7 @@ def computer(request, aiida_computer_local, aiida_computer_ssh):
     raise ValueError(f'unsupported request parameter: {request.param}')
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('computer', ('core.local', 'core.ssh'), indirect=True)
 def test_validate_filepath_executable(ssh_key, computer):
     """Test the :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.validate_filepath_executable` method."""

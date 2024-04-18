@@ -40,6 +40,12 @@ To assume the role of ``postgres`` run as root:
 
    $ psql
 
+.. tip::
+
+   If you have installed PostgreSQL through Conda and you see an error like ``psql: FATAL:  role "<role_name>" does not exist`` or ``psql: FATAL:  database "<database_name>" does not exist``, the default role and database apparently do no exist.
+   The command ``psql -l`` prints the list of existing databases and the associated roles.
+   You can try connecting to one of those by using the ``-d`` and ``-U`` option to specify the database and role, respectively, for example, ``psql -d template0 -U some-role``.
+
 Create a new database user account for AiiDA by running:
 
 .. code-block:: sql

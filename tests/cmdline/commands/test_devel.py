@@ -47,9 +47,9 @@ def test_launch_add_daemon(run_cli_command, submit_and_await):
     assert node.is_finished_ok
 
 
-def test_launch_add_code(run_cli_command, aiida_local_code_factory):
+def test_launch_add_code(run_cli_command, aiida_code_installed):
     """Test ``verdi devel launch-add`` passing an explicit ``Code``."""
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     result = run_cli_command(cmd_devel.devel_launch_arithmetic_add, ['-X', str(code.pk)])
     assert not re.search(r'Warning: No `localhost` computer exists yet: creating and configuring', result.stdout)
 

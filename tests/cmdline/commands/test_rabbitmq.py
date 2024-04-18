@@ -68,9 +68,9 @@ def test_tasks_revive_without_daemon(run_cli_command):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
-def test_revive(run_cli_command, monkeypatch, aiida_local_code_factory, submit_and_await):
+def test_revive(run_cli_command, monkeypatch, aiida_code_installed, submit_and_await):
     """Test ``tasks revive``."""
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     builder = code.get_builder()
     builder.x = Int(1)
     builder.y = Int(1)

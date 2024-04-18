@@ -178,6 +178,8 @@ class CalcJob(Process):
     _node_class = orm.CalcJobNode
     _spec_class = CalcJobProcessSpec
     link_label_retrieved: str = 'retrieved'
+    KEY_CACHE_VERSION: str = 'cache_version'
+    CACHE_VERSION: int | None = None
 
     def __init__(self, *args, **kwargs) -> None:
         """Construct a CalcJob instance.
@@ -567,6 +569,40 @@ class CalcJob(Process):
         :returns: the `CalcInfo` instance
         """
         raise NotImplementedError()
+
+    def _setup_version_info(self) -> dict[str, Any]:
+        """Store relevant plugin version information."""
+        from aiida.plugins.entry_point import format_entry_point_string
+        from aiida.plugins.factories import ParserFactory
+
+        version_info = super()._setup_version_info()
+
+        for key, monitor in self.inputs.get('monitors', {}).items():
+            entry_point = monitor.base.attributes.get('entry_point')
+            entry_point_string = format_entry_point_string('aiida.calculations.monitors', entry_point)
+            monitor_version_info = self.runner.plugin_version_provider.get_version_info(entry_point_string)
+            version_info['version'].setdefault('monitors', {})[key] = monitor_version_info['version']['plugin']
+
+        cache_version_info = {}
+
+        if self.CACHE_VERSION is not None:
+            cache_version_info['calc_job'] = self.CACHE_VERSION
+
+        parser_entry_point = self.inputs.metadata.options.get('parser_name')
+
+        if parser_entry_point is not None:
+            try:
+                parser = ParserFactory(self.inputs.metadata.options.parser_name)
+            except exceptions.EntryPointError:
+                self.logger.warning(f'Could not load the `parser_name` entry point `{parser_entry_point}')
+            else:
+                if parser.CACHE_VERSION is not None:
+                    cache_version_info['parser'] = parser.CACHE_VERSION
+
+        if cache_version_info:
+            self.node.base.attributes.set(self.KEY_CACHE_VERSION, cache_version_info)
+
+        return version_info
 
     def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""

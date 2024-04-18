@@ -10,6 +10,8 @@
 to allow the reading of the outputs of a calculation.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
@@ -28,6 +30,8 @@ LOGGER = log.AIIDA_LOGGER.getChild('parser')
 
 class Parser(ABC):
     """Base class for a Parser that can parse the outputs produced by a CalcJob process."""
+
+    CACHE_VERSION: int | None = None
 
     def __init__(self, node: 'CalcJobNode'):
         """Construct the Parser instance.

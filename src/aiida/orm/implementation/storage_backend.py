@@ -305,6 +305,132 @@ class StorageBackend(abc.ABC):
         :param dry_run: flag to only print the actions that would be taken without actually executing them.
         """
 
+    def _backup(
+        self,
+        dest: str,
+        keep: Optional[int] = None,
+    ):
+        raise NotImplementedError
+
+    def _write_backup_config(self, backup_manager):
+        import pathlib
+        import tempfile
+
+        from aiida.common import exceptions
+        from aiida.common.log import override_log_level
+        from aiida.manage.configuration import get_config
+        from aiida.manage.configuration.config import Config
+        from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
+
+        try:
+            config = get_config()
+            profile = config.get_profile(self.profile.name)  # Get the profile being backed up
+            with tempfile.TemporaryDirectory() as tmpdir:
+                filepath_config = pathlib.Path(tmpdir) / DEFAULT_CONFIG_FILE_NAME
+                backup_config = Config(str(filepath_config), {})  # Create empty config at temporary file location
+                backup_config.add_profile(profile)  # Add the profile being backed up
+                backup_config.store()  # Write the contents to disk
+
+                # Temporarily disable all logging because the verbose rsync output just for copying the config file
+                # is a bit much.
+                with override_log_level():
+                    backup_manager.call_rsync(filepath_config, backup_manager.path / DEFAULT_CONFIG_FILE_NAME)
+        except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exc:
+            raise exceptions.StorageBackupError('AiiDA config.json not found!') from exc
+
+    def _validate_or_init_backup_folder(self, dest, keep):
+        import json
+        import tempfile
+
+        from disk_objectstore import backup_utils
+
+        from aiida.common import exceptions
+        from aiida.manage.configuration.config import Config
+        from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
+        from aiida.storage.log import STORAGE_LOGGER
+
+        try:
+            # this creates the dest folder if it doesn't exist
+            backup_manager = backup_utils.BackupManager(dest, keep=keep)
+            backup_config_path = backup_manager.path / DEFAULT_CONFIG_FILE_NAME
+
+            if backup_manager.check_path_exists(backup_config_path):
+                success, stdout = backup_manager.run_cmd(['cat', str(backup_config_path)])
+                if not success:
+                    raise exceptions.StorageBackupError(f"Couldn't read {backup_config_path!s}.")
+                try:
+                    backup_config_existing = json.loads(stdout)
+                except json.decoder.JSONDecodeError as exc:
+                    raise exceptions.StorageBackupError(f'JSON parsing failed for {backup_config_path!s}: {exc.msg}')
+
+                # create a temporary config file to access the profile info
+                with tempfile.NamedTemporaryFile() as temp_file:
+                    backup_config = Config(temp_file.name, backup_config_existing, validate=False)
+                    if len(backup_config.profiles) != 1:
+                        raise exceptions.StorageBackupError(f"{backup_config_path!s} doesn't contain exactly 1 profile")
+
+                    if (
+                        backup_config.profiles[0].uuid != self.profile.uuid
+                        or backup_config.profiles[0].storage_backend != self.profile.storage_backend
+                    ):
+                        raise exceptions.StorageBackupError(
+                            'The chosen destination contains backups of a different profile! Aborting!'
+                        )
+            else:
+                STORAGE_LOGGER.warning('Initializing a new backup folder.')
+                # make sure the folder is empty
+                success, stdout = backup_manager.run_cmd(['ls', '-A', str(backup_manager.path)])
+                if not success:
+                    raise exceptions.StorageBackupError(f"Couldn't read {backup_manager.path!s}.")
+                if stdout:
+                    raise exceptions.StorageBackupError("Can't initialize the backup folder, destination is not empty.")
+
+                self._write_backup_config(backup_manager)
+
+        except backup_utils.BackupError as exc:
+            raise exceptions.StorageBackupError(*exc.args) from exc
+
+        return backup_manager
+
+    def backup(
+        self,
+        dest: str,
+        keep: Optional[int] = None,
+    ):
+        """Create a backup of the storage contents.
+
+        :param dest: The path to the destination folder.
+        :param keep: The number of backups to keep in the target destination, if the backend supports it.
+        :raises ValueError: If the input parameters are invalid.
+        :raises StorageBackupError: If an error occurred during the backup procedure.
+        :raises NotImplementedError: If the storage backend doesn't implement a backup procedure.
+        """
+        from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
+        from aiida.storage.log import STORAGE_LOGGER
+
+        backup_manager = self._validate_or_init_backup_folder(dest, keep)
+
+        try:
+            self._backup(dest, keep)
+        except NotImplementedError:
+            success, stdout = backup_manager.run_cmd(['ls', '-A', str(backup_manager.path)])
+
+            if not success:
+                STORAGE_LOGGER.warning(f'Failed to determine contents of destination folder `{dest}`: not deleting it.')
+                raise
+
+            # If the backup directory was just initialized for the first time, it should only contain the configuration
+            # file and nothing else. If anything else is found, do not delete the directory for safety reasons.
+            if stdout.strip() != DEFAULT_CONFIG_FILE_NAME:
+                STORAGE_LOGGER.warning(f'The destination folder `{dest}` is not empty: not deleting it.')
+                raise
+
+            backup_manager.run_cmd(['rm', '-rf', str(backup_manager.path)])
+            raise
+
+        STORAGE_LOGGER.report(f'Overwriting the `{DEFAULT_CONFIG_FILE_NAME} file.')
+        self._write_backup_config(backup_manager)
+
     def get_info(self, detailed: bool = False) -> dict:
         """Return general information on the storage.
 

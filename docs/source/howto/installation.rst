@@ -547,20 +547,33 @@ See the :doc:`../reference/_changelog` for a list of breaking changes.
 
 .. _how-to:installation:backup:
 
-Backing up your installation
+Backing up your data
 ============================
 
-A full backup of an AiiDA instance and AiiDA managed data requires a backup of:
+General information
+-----------------------------------------
 
-* the AiiDA configuration folder, which is named ``.aiida``.
-  The location of the folder is shown in the output of ``verdi status``.
-  This folder contains, among other things, the ``config.json`` configuration file and log files.
+The most convenient way to back up the data of a single AiiDA profile is to use
 
-* the data stored for each profile.
-  Where the data is stored, depends on the storage backend used by each profile.
+.. code:: bash
 
-The panels below provide instructions for storage backends provided by ``aiida-core``.
-To determine what storage backend a profile uses, call ``verdi profile show``.
+    $ verdi --profile <profile_name> storage backup /path/to/destination
+
+This command automatically manages a subfolder structure of previous backups, and new backups are done in an efficient way (using ``rsync`` hard-link functionality to the previous backup).
+The command backs up everything that's needed to restore the profile later:
+
+* the AiiDA configuration file ``.aiida/config.json``, from which other profiles are removed (see ``verdi status`` for exact location);
+* all the data of the backed up profile (which depends on the storage backend).
+
+The specific procedure of the command and whether it even is implemented depends on the storage backend.
+
+.. note::
+    The ``verdi storage backup`` command is implemented in a way to be as safe as possible to use when AiiDA is running, meaning that it will most likely produce an uncorrupted backup even when data is being modified. However, the exact conditions depend on the specific storage backend and to err on the safe side, only perform a backup when the profile is not in use.
+
+Storage backend specific information
+-----------------------------------------
+
+Alternatively to the CLI command, one can also manually create a backup. This requires a backup of the configuration file  ``.aiida/config.json`` and the storage backend. The panels below provide instructions for storage backends provided by ``aiida-core``. To determine what storage backend a profile uses, call ``verdi profile show``.
 
 .. tip:: Before creating a backup, it is recommended to run ``verdi storage maintain``.
     This will optimize the storage which can significantly reduce the time required to create the backup.
@@ -605,44 +618,47 @@ To determine what storage backend a profile uses, call ``verdi profile show``.
 
 .. _how-to:installation:backup:restore:
 
-Restoring your installation
-===========================
+Restoring data from a backup
+==================================
 
-Restoring a backed up AiiDA installation requires:
+Restoring a backed up AiiDA profile requires:
 
-* restoring the backed up ``.aiida`` folder, with at the very least the ``config.json`` file it contains.
-  It should be placed in the path defined by the ``AIIDA_PATH`` environment variable.
-  To test the restoration worked, run ``verdi profile list`` to verify that all profiles are displayed.
+* restoring the profile information in the AiiDA ``config.json`` file. Simply copy the`profiles` entry from
+  the backed up `config.json`to the one of the running AiiDA instance (see `verdi status` for exact location).
+  Some information (e.g. the database parameters) might need to be updated.
 
-* restoring the data of each backed up profile.
+* restoring the data of of the backed up profile according to the ``config.json`` entry.
   Like the backup procedure, this is dependent on the storage backend used by the profile.
 
 The panels below provide instructions for storage backends provided by ``aiida-core``.
 To determine what storage backend a profile uses, call ``verdi profile show``.
+To test if the restoration worked, run ``verdi -p <profile-name> status`` to verify that AiiDA can successfully connect to the data storage.
 
 .. tab-set::
 
     .. tab-item:: psql_dos
 
-        To fully backup the data stored for a profile using the ``core.psql_dos`` backend, you should restore the associated database and file repository.
+        To restore the backed up data for a profile using the ``core.psql_dos`` backend, you should restore the associated database and file repository.
 
         **PostgreSQL database**
 
-        To restore the PostgreSQL database from the ``.psql`` file that was backed up, first you should create an empty database following the instructions described in :ref:`database <intro:install:database>` skipping the ``verdi setup`` phase.
+        To restore the PostgreSQL database from the ``db.psql`` file that was backed up, first you should create an empty database following the instructions described in :ref:`database <intro:install:database>` skipping the ``verdi setup`` phase.
         The backed up data can then be imported by calling:
 
         .. code-block:: console
 
-            psql -h <database_hostname> -p <database_port> -d <database_name> -W < aiida_backup.psql
+            psql -h <db_hostname> -p <db_port> - U <db_user> -d <db_name> -W < db.psql
+
+        where the parameters need to match with the corresponding AiiDA `config.json` profile entry.
 
         **File repository**
 
-        To restore the file repository, simply copy the directory that was backed up to the location indicated by the ``storage.config.repository_uri`` key returned by the ``verdi profile show`` command.
+        To restore the file repository, simply copy the directory that was backed up to the location indicated in AiiDA `config.json` (or the ``storage.config.repository_uri`` key returned by the ``verdi profile show`` command).
         Like the backing up process, we recommend using ``rsync`` for this:
 
         .. code-block:: console
 
-            rsync -arvz /some/path/aiida_backup <storage.config.repository_uri>
+            rsync -arvz /path/to/backup/container <storage.config.repository_uri>
 
 
 .. _how-to:installation:multi-user:

@@ -8,6 +8,8 @@
 ###########################################################################
 """Tests for `verdi storage`."""
 
+import json
+
 import pytest
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_storage
@@ -177,3 +179,54 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     assert ' > full: True' in message_list
     assert ' > do_repack: False' in message_list
     assert ' > dry_run: False' in message_list
+
+
+def tests_storage_backup(run_cli_command, tmp_path):
+    """Test the ``verdi storage backup`` command."""
+    result1 = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)])
+    assert 'backed up to' in result1.output
+    assert result1.exit_code == 0
+    assert (tmp_path / 'last-backup').is_symlink()
+    # make another backup in the same folder
+    result2 = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)])
+    assert 'backed up to' in result2.output
+    assert result2.exit_code == 0
+
+
+def tests_storage_backup_keep(run_cli_command, tmp_path):
+    """Test the ``verdi storage backup`` command with the keep argument"""
+    params = [str(tmp_path), '--keep', '1']
+    for i in range(3):
+        result = run_cli_command(cmd_storage.storage_backup, parameters=params)
+        assert 'backed up to' in result.output
+        assert result.exit_code == 0
+    # make sure only two copies of the backup are kept
+    assert len(list((tmp_path.glob('backup_*')))) == 2
+
+
+def tests_storage_backup_nonempty_dest(run_cli_command, tmp_path):
+    """Test that the ``verdi storage backup`` fails for non-empty destination."""
+    # add a file to the destination
+    (tmp_path / 'test.txt').touch()
+    result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)], raises=True)
+    assert result.exit_code == 1
+    assert 'destination is not empty' in result.output
+
+
+def tests_storage_backup_other_profile(run_cli_command, tmp_path):
+    """Test that the ``verdi storage backup`` fails for a destination that has been used for another profile."""
+    existing_backup_config = {
+        'CONFIG_VERSION': {'CURRENT': 9, 'OLDEST_COMPATIBLE': 9},
+        'profiles': {
+            'test': {
+                'PROFILE_UUID': 'test-uuid',
+                'storage': {'backend': 'core.psql_dos'},
+                'process_control': {'backend': 'rabbitmq'},
+            }
+        },
+    }
+    with open(tmp_path / 'config.json', 'w', encoding='utf-8') as fhandle:
+        json.dump(existing_backup_config, fhandle, indent=4)
+    result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)], raises=True)
+    assert result.exit_code == 1
+    assert 'contains backups of a different profile' in result.output

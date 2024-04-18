@@ -14,10 +14,12 @@ import pathlib
 from contextlib import contextmanager, nullcontext
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
+from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field
 from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
+from aiida.common import exceptions
 from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration.profile import Profile
@@ -221,8 +223,6 @@ class PsqlDosBackend(StorageBackend):
                 )
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
-        from disk_objectstore import Container
-
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
         container = Container(get_filepath_container(self.profile))
@@ -482,3 +482,97 @@ class PsqlDosBackend(StorageBackend):
         results = super().get_info(detailed=detailed)
         results['repository'] = self.get_repository().get_info(detailed)
         return results
+
+    def _backup_storage(
+        self,
+        manager: backup_utils.BackupManager,
+        path: pathlib.Path,
+        prev_backup: Optional[pathlib.Path] = None,
+    ) -> None:
+        """Create a backup of the postgres database and disk-objectstore to the provided path.
+
+        :param manager:
+            BackupManager from backup_utils containing utilities such as for calling the rsync.
+
+        :param path:
+            Path to where the backup will be created.
+
+        :param prev_backup:
+            Path to the previous backup. Rsync calls will be hard-linked to this path, making the backup
+            incremental and efficient.
+        """
+        import os
+        import shutil
+        import subprocess
+        import tempfile
+
+        from aiida.manage.profile_access import ProfileAccessManager
+
+        STORAGE_LOGGER.report('Starting backup...')
+
+        # This command calls `rsync` and `pg_dump` executables. check that they are in PATH
+        for exe in ['rsync', 'pg_dump']:
+            if shutil.which(exe) is None:
+                raise exceptions.StorageBackupError(f"Required executable '{exe}' not found in PATH, please add it.")
+
+        cfg = self._profile.storage_config
+        container = Container(get_filepath_container(self.profile))
+
+        # check that the AiiDA profile is not locked and request access for the duration of this backup process
+        # (locked means that possibly a maintenance operation is running that could interfere with the backup)
+        try:
+            ProfileAccessManager(self._profile).request_access()
+        except exceptions.LockedProfileError as exc:
+            raise exceptions.StorageBackupError('The profile is locked!') from exc
+
+        # step 1: first run the storage maintenance version that can safely be performed while aiida is running
+        STORAGE_LOGGER.report('Running basic maintenance...')
+        self.maintain(full=False, compress=False)
+
+        # step 2: dump the PostgreSQL database into a temporary directory
+        STORAGE_LOGGER.report('Backing up PostgreSQL...')
+        pg_dump_exe = 'pg_dump'
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            psql_temp_loc = pathlib.Path(temp_dir_name) / 'db.psql'
+
+            env = os.environ.copy()
+            env['PGPASSWORD'] = cfg['database_password']
+            cmd = [
+                pg_dump_exe,
+                f'--host={cfg["database_hostname"]}',
+                f'--port={cfg["database_port"]}',
+                f'--dbname={cfg["database_name"]}',
+                f'--username={cfg["database_username"]}',
+                '--no-password',
+                '--format=p',
+                f'--file={psql_temp_loc!s}',
+            ]
+            try:
+                subprocess.run(cmd, check=True, env=env)
+            except subprocess.CalledProcessError as exc:
+                raise backup_utils.BackupError(f'pg_dump: {exc}')
+
+            if psql_temp_loc.is_file():
+                STORAGE_LOGGER.info(f'Dumped the PostgreSQL database to {psql_temp_loc!s}')
+            else:
+                raise backup_utils.BackupError(f"'{psql_temp_loc!s}' was not created.")
+
+            # step 3: transfer the PostgreSQL database file
+            manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)
+
+        # step 4: back up the disk-objectstore
+        STORAGE_LOGGER.report('Backing up DOS container...')
+        backup_utils.backup_container(
+            manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
+        )
+
+    def _backup(
+        self,
+        dest: str,
+        keep: Optional[int] = None,
+    ):
+        try:
+            backup_manager = backup_utils.BackupManager(dest, keep=keep)
+            backup_manager.backup_auto_folders(lambda path, prev: self._backup_storage(backup_manager, path, prev))
+        except backup_utils.BackupError as exc:
+            raise exceptions.StorageBackupError(*exc.args) from exc

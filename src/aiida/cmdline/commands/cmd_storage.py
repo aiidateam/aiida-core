@@ -165,3 +165,50 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
     except LockingProfileError as exception:
         echo.echo_critical(str(exception))
     echo.echo_success('Requested maintenance procedures finished.')
+
+
+@verdi_storage.command('backup')
+@click.argument('dest', type=click.Path(file_okay=False), nargs=1)
+@click.option(
+    '--keep',
+    type=int,
+    required=False,
+    help=(
+        'Number of previous backups to keep in the destination, '
+        'if the storage backend supports it. If not set, keeps all previous backups.'
+    ),
+)
+@decorators.with_manager
+@click.pass_context
+def storage_backup(ctx, manager, dest: str, keep: int):
+    """Backup the data storage of a profile.
+
+    The backup is created in the destination `DEST`, in a subfolder that follows the naming convention
+    backup_<timestamp>_<randstr> and a symlink called `last-backup` is pointed to it.
+
+    Destination (DEST) can either be a local path, or a remote destination (reachable via ssh).
+    In the latter case, remote destination needs to have the following syntax:
+
+        [<remote_user>@]<remote_host>:<path>
+
+    i.e., contain the remote host name and the remote path, separated by a colon (and optionally the
+    remote user separated by an @ symbol). You can tune SSH parameters using the standard options given
+    by OpenSSH, such as adding configuration options to ~/.ssh/config (e.g. to allow for passwordless
+    login - recommended, since this script might ask multiple times for the password).
+
+    NOTE: 'rsync' and other UNIX-specific commands are called, thus the command will not work on
+    non-UNIX environments. What other executables are called, depend on the storage backend.
+    """
+
+    storage = manager.get_profile_storage()
+    profile = ctx.obj.profile
+    try:
+        storage.backup(dest, keep)
+    except NotImplementedError:
+        echo.echo_critical(
+            f'Profile {profile.name} uses the storage plugin `{profile.storage_backend}` which does not implement a '
+            'backup mechanism.'
+        )
+    except (ValueError, exceptions.StorageBackupError) as exception:
+        echo.echo_critical(str(exception))
+    echo.echo_success(f'Data storage of profile `{profile.name}` backed up to `{dest}`.')

@@ -13,7 +13,7 @@ from __future__ import annotations
 from functools import cached_property
 from pathlib import Path
 from shutil import rmtree
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from uuid import uuid4
 
 from disk_objectstore import Container
@@ -145,6 +145,13 @@ class SqliteDosStorage(PsqlDosBackend):
         """
         engine = create_sqla_engine(Path(self._profile.storage_config['filepath']) / 'database.sqlite')
         self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
+
+    def _backup(
+        self,
+        dest: str,
+        keep: Optional[int] = None,
+    ):
+        raise NotImplementedError
 
     def delete(self) -> None:  # type: ignore[override]
         """Delete the storage and all the data."""

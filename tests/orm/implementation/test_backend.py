@@ -8,6 +8,10 @@
 ###########################################################################
 """Unit tests for the ORM Backend class."""
 
+from __future__ import annotations
+
+import json
+import pathlib
 import uuid
 
 import pytest
@@ -161,3 +165,46 @@ class TestBackend:
             orm.Node.collection.get(id=node_pk)
         assert len(calc_node.base.links.get_outgoing().all()) == 0
         assert len(group.nodes) == 0
+
+
+def test_backup_not_implemented(aiida_config, backend, monkeypatch, tmp_path):
+    """Test the backup functionality if the plugin does not implement it."""
+
+    def _backup(*args, **kwargs):
+        raise NotImplementedError
+
+    monkeypatch.setattr(backend, '_backup', _backup)
+
+    filepath_backup = tmp_path / 'backup_dir'
+
+    with pytest.raises(NotImplementedError):
+        backend.backup(str(filepath_backup))
+
+    # The backup directory should have been initialized but then cleaned up when the plugin raised the exception
+    assert not filepath_backup.is_dir()
+
+    # Now create the backup directory with the config file and some other content to it.
+    filepath_backup.mkdir()
+    (filepath_backup / 'config.json').write_text(json.dumps(aiida_config.dictionary))
+    (filepath_backup / 'backup-deadbeef').mkdir()
+
+    with pytest.raises(NotImplementedError):
+        backend.backup(str(filepath_backup))
+
+    # The backup directory should not have been delete
+    assert filepath_backup.is_dir()
+    assert (filepath_backup / 'config.json').is_file()
+
+
+def test_backup_implemented(backend, monkeypatch, tmp_path):
+    """Test the backup functionality if the plugin does implement it."""
+
+    def _backup(dest: str, keep: int | None = None):
+        (pathlib.Path(dest) / 'backup.file').touch()
+
+    monkeypatch.setattr(backend, '_backup', _backup)
+
+    filepath_backup = tmp_path / 'backup_dir'
+    backend.backup(str(filepath_backup))
+    assert (filepath_backup / 'config.json').is_file()
+    assert (filepath_backup / 'backup.file').is_file()

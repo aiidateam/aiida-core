@@ -80,6 +80,9 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
     logging__verdi_loglevel: LogLevels = Field(
         'REPORT', description='Minimum level to log to console when running a `verdi` command.'
     )
+    logging__disk_objectstore_loglevel: LogLevels = Field(
+        'INFO', description='Minimum level to log to daemon log and the `DbLog` table for `disk_objectstore` logger.'
+    )
     logging__db_loglevel: LogLevels = Field('REPORT', description='Minimum level to log to the DbLog table.')
     logging__plumpy_loglevel: LogLevels = Field(
         'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `plumpy` logger.'

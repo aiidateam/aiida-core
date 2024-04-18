@@ -483,10 +483,7 @@ class PsqlDosBackend(StorageBackend):
         results['repository'] = self.get_repository().get_info(detailed)
         return results
 
-    def is_backup_implemented(self):
-        return True
-
-    def _backup(
+    def _backup_storage(
         self,
         manager: backup_utils.BackupManager,
         path: pathlib.Path,
@@ -569,13 +566,13 @@ class PsqlDosBackend(StorageBackend):
             manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
 
-    def _backup_backend(
+    def _backup(
         self,
         dest: str,
         keep: Optional[int] = None,
     ):
         try:
             backup_manager = backup_utils.BackupManager(dest, keep=keep)
-            backup_manager.backup_auto_folders(lambda path, prev: self._backup(backup_manager, path, prev))
+            backup_manager.backup_auto_folders(lambda path, prev: self._backup_storage(backup_manager, path, prev))
         except backup_utils.BackupError as exc:
             raise exceptions.StorageBackupError(*exc.args) from exc

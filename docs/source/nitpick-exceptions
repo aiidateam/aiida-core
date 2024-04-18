@@ -262,5 +262,3 @@ py:exc seekpath.hpkot.EdgeCaseWarning
 
 py:class graphviz.graphs.Digraph
 py:class Digraph
-
-py:class typing_extensions.Literal

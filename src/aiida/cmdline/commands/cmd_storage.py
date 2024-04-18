@@ -206,9 +206,9 @@ def storage_backup(ctx, manager, dest: str, keep: int):
         storage.backup(dest, keep)
     except NotImplementedError:
         echo.echo_critical(
-            f'Profile {profile.name} uses the storage plugin '
-            f'{profile.storage_backend} which does not implement a backup mechanism.'
+            f'Profile {profile.name} uses the storage plugin `{profile.storage_backend}` which does not implement a '
+            'backup mechanism.'
         )
     except (ValueError, exceptions.StorageBackupError) as exception:
         echo.echo_critical(str(exception))
-    echo.echo_success(f'Data storage of profile `{profile.name}` backed up to `{dest}`')
+    echo.echo_success(f'Data storage of profile `{profile.name}` backed up to `{dest}`.')

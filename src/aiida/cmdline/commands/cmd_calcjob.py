@@ -353,7 +353,7 @@ def get_remote_and_path(calcjob, path=None):
 @verdi_calcjob.command('dump')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 @options.PATH()
-@options.NO_NODE_INPUTS()
+@options.INCLUDE_INPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
 @options.USE_PRESUBMIT()
@@ -361,7 +361,7 @@ def get_remote_and_path(calcjob, path=None):
 def dump(
     calcjob,
     path,
-    no_node_inputs,
+    include_inputs,
     include_attributes,
     include_extras,
     use_presubmit,
@@ -369,12 +369,7 @@ def dump(
 ) -> None:
     """Dump files involved in the execution of a `CalcJob`.
 
-    Child simulations/workflows (also called `CalcJob`s and `WorkChain`s in AiiDA jargon) run by the parent workflow are
-    contained in the directory tree as sub-folders and are sorted by their creation time. The directory tree thus
-    mirrors the logical execution of the workflow, which can also be queried by running `verdi process status
-    <pk>` on the command line.
-
-    By default, input and output files of each simulation can be found in the corresponding "raw_inputs" and
+    By default, input and output files can be found in the corresponding "raw_inputs" and
     "raw_outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
     settings). Additional input files (depending on the type of calculation) are placed in the "node_inputs".
 
@@ -395,19 +390,17 @@ def dump(
         make_dump_readme,
     )
 
-    # Generate default parent folder
-    if str(path) == '.':
+    if path is None:
         output_path = generate_default_dump_path(process_node=calcjob)
     else:
         output_path = path.resolve()
 
-    # Instantiate YamlDumper
     calcjobnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
 
     calcjob_dumped = calcjob_dump(
         calcjob_node=calcjob,
         output_path=output_path,
-        no_node_inputs=no_node_inputs,
+        include_inputs=include_inputs,
         use_presubmit=use_presubmit,
         node_dumper=calcjobnode_dumper,
         overwrite=overwrite,
@@ -418,10 +411,9 @@ def dump(
     # workchain_dump files such that they can also be used from within the Python API, not just via verdi
     make_dump_readme(output_path=output_path, process_node=calcjob)
 
-    # Communicate success/failure of dumping
     if calcjob_dumped:
         echo.echo_success(
-            f'Raw files for {calcjob.__class__.__name__} <{calcjob.pk}> dumped successfully in `{output_path}`.'
+            f'Raw files for {calcjob.__class__.__name__} <{calcjob.pk}> dumped in `{output_path}`.'
         )
     else:
         echo.echo_report(f'Problem dumping {calcjob.__class__.__name__} <{calcjob.pk}>.')

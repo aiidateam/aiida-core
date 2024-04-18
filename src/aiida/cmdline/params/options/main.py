@@ -69,6 +69,7 @@ __all__ = (
     'HOSTNAME',
     'IDENTIFIER',
     'INCLUDE_ATTRIBUTES',
+    'INCLUDE_INPUTS',
     'INCLUDE_EXTRAS',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
@@ -77,7 +78,6 @@ __all__ = (
     'MOST_RECENT_NODE',
     'NODE',
     'NODES',
-    'NO_NODE_INPUTS',
     'NON_INTERACTIVE',
     'OLDER_THAN',
     'ORDER_BY',
@@ -756,18 +756,15 @@ PATH = OverridableOption(
     '-p',
     '--path',
     type=click.Path(path_type=pathlib.Path),
-    default=pathlib.Path(),
     show_default=False,
     help='The directory in which the dumping folder will be created.',
 )
 
-NO_NODE_INPUTS = OverridableOption(
-    '--no-node-inputs',
-    '-n',
-    is_flag=True,
-    default=False,
+INCLUDE_INPUTS = OverridableOption(
+    '--include-inputs/--exclude-inputs',
+    default=True,
     show_default=True,
-    help='Turn off dumping of the input nodes of the `CalcJob`(s).',
+    help='Include the input nodes of the `CalcJob`(s).',
 )
 
 INCLUDE_ATTRIBUTES = OverridableOption(

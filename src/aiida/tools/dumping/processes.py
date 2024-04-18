@@ -113,7 +113,6 @@ class ProcessNodeYamlDumper:
             if node_extras:
                 node_dict['Node extras'] = node_extras
 
-        # Dump to file
         output_file = output_path.resolve() / output_filename
         with open(output_file, 'w') as handle:
             yaml.dump(node_dict, handle, sort_keys=False)
@@ -124,9 +123,7 @@ def make_dump_readme(process_node: ProcessNode, output_path: Path):
     """Generate README file in main dumping directory.
 
     :param process_node: CalcJob or WorkChain Node.
-    :type process_node: ProcessNode
     :param output_path: Output path for dumping.
-    :type output_path: Path
 
     """
     _readme_string = textwrap.dedent(
@@ -154,8 +151,7 @@ def make_dump_readme(process_node: ProcessNode, output_path: Path):
 
     # TODO: Add outputs of `verdi process (status|report|show?)`
 
-    with open(output_path / 'README', 'w') as handle:
-        handle.write(_readme_string)
+    (output_path / 'README').write_text(_readme_string)
 
 
 def generate_default_dump_path(process_node: WorkChainNode | CalcJobNode) -> Path:
@@ -165,9 +161,7 @@ def generate_default_dump_path(process_node: WorkChainNode | CalcJobNode) -> Pat
     creates the default parent folder for the dumping, if no name is given.
 
     :param process_node: The `ProcessNode` for which the directory is created.
-    :type process_node: WorkChainNode | CalcJobNode
     :return: The created parent dump path.
-    :rtype: Path
     """
 
     try:
@@ -175,11 +169,6 @@ def generate_default_dump_path(process_node: WorkChainNode | CalcJobNode) -> Pat
     except AttributeError:
         # ? This case came up during testing, not sure how relevant it actually is
         return Path(f'dump-{process_node.process_type}-{process_node.pk}')
-
-
-# ? Could move code from `generate_calcjob_node_io` here to normal function
-def attach_files_to_calcjob():
-    pass
 
 
 # ? Could move this to `cmdline/utils`
@@ -191,16 +180,14 @@ def validate_make_dump_path(
     Create default dumping directory for a given process node and return it as absolute path.
 
     :param path: The base path for the dump. Defaults to the current directory.
-    :type path: Path
     :return: The created dump path.
-    :rtype: Path
     """
     import shutil
 
     output_path = path.resolve()
 
     # ? Use of `echo.echo_` only when running via `verdi`? -> I only see it used in the `cmd_` files.
-    if str(path) == '.' and overwrite:
+    if path is None and overwrite:
         echo.echo_critical('Path not set, defaults to CWD. Will not delete here for safety.')
         return output_path
 
@@ -208,12 +195,11 @@ def validate_make_dump_path(
         if overwrite:
             # ? This might be a bit dangerous -> Check for it not being CWD enough?
             # ? Added check for README in folder to decrease chances of deleting some other path
-            if (output_path / 'README').is_file():  # Also check for presence of README for safety
+            if (output_path / 'README').is_file():
                 echo.echo_report(f'Overwrite set to true, will overwrite directory `{output_path}`.')
                 shutil.rmtree(output_path)
             else:
                 echo.echo_critical(f'Something went wrong. Manually remove existing `{output_path}` and dump again.')
-                # echo.echo_critical(f'No README present in "{output_path}" Manually remove and dump again.')
         else:
             echo.echo_critical(f'Path `{output_path}` already exists and overwrite set to False.')
 
@@ -243,16 +229,13 @@ def generate_node_input_label(index: int, link_triple: LinkTriple) -> str:
         if process_type is not None:
             node_label += f'-{process_type}'
 
-    # ? Add pk also to the sub-steps or only the parent dumping directory?
-    # node_label += f'-{node.pk}'
-
     return node_label
 
 
 def calcjob_dump(
     calcjob_node: CalcJobNode,
     output_path: Path = Path(),
-    no_node_inputs: bool = False,
+    include_inputs: bool = False,
     use_presubmit: bool = False,
     node_dumper: ProcessNodeYamlDumper | None = None,
     overwrite: bool = True,
@@ -262,7 +245,7 @@ def calcjob_dump(
 
     :param calcjob_node: The CalcJobNode to be dumped.
     :param output_path: The path where the dumped contents will be stored.
-    :param no_node_inputs: If True, do not dump the inputs of the CalcJobNode.
+    :param include_inputs: If True, do not dump the inputs of the CalcJobNode.
     :param use_presubmit: If True, use the `prepare_for_submission` method to prepare the calculation for
         submission. If False, use the retrieved outputs and raw inputs.
     :return: None
@@ -281,7 +264,7 @@ def calcjob_dump(
         except NotExistentAttributeError:
             pass
 
-        if not no_node_inputs:
+        if not include_inputs:
             calcjob_node_inputs_dump(calcjob_node=calcjob_node, output_path=output_path)
 
     else:
@@ -309,7 +292,7 @@ def calcjob_dump(
 def workchain_dump(
     process_node: WorkChainNode | CalcJobNode,
     output_path: Path = Path(),
-    no_node_inputs: bool = False,
+    include_inputs: bool = False,
     use_presubmit: bool = False,
     node_dumper: ProcessNodeYamlDumper | None = None,
     overwrite: bool = True,
@@ -321,7 +304,7 @@ def workchain_dump(
 
     :param process_node: The parent process node to be dumped. It can be either a `WorkChainNode` or a `CalcJobNode`.
     :param output_path: The main output path where the directory tree will be created.
-    :param no_node_inputs: If True, do not include file or folder inputs in the dump. Defaults to False.
+    :param include_inputs: If True, include file or folder inputs in the dump. Defaults to True.
     :param use_presubmit: If True, use the `prepare_for_submission` method to get the inputs of the
     CalcJobNode. Defaults to False.
     :param node_dumper: The ProcessNodeYamlDumper instance to use for dumping node metadata. If not provided, a new
@@ -361,7 +344,7 @@ def workchain_dump(
             process_dumped = workchain_dump(
                 process_node=child_node,
                 output_path=output_path_child,
-                no_node_inputs=no_node_inputs,
+                include_inputs=include_inputs,
                 use_presubmit=use_presubmit,
                 node_dumper=node_dumper,
             )
@@ -371,7 +354,7 @@ def workchain_dump(
             process_dumped = calcjob_dump(
                 calcjob_node=child_node,
                 output_path=output_path_child,
-                no_node_inputs=no_node_inputs,
+                include_inputs=include_inputs,
                 use_presubmit=use_presubmit,
                 node_dumper=node_dumper,
             )
@@ -389,9 +372,7 @@ def calcjob_node_inputs_dump(calcjob_node: CalcJobNode, output_path: Path, input
     """Dump inputs of a `CalcJobNode` of type `SinglefileData` and `FolderData`.
 
     :param calcjob_node: The `CalcJobNode` whose inputs will be dumped.
-    :type calcjob_node: CalcJobNode
     :param output_path: The path where the inputs will be dumped.
-    :type output_path: Path
     """
     dump_types = (SinglefileData, FolderData)
 
@@ -405,7 +386,6 @@ def calcjob_node_inputs_dump(calcjob_node: CalcJobNode, output_path: Path, input
         if len(input_node_triple.node.base.repository.list_objects()) > 0 and isinstance(
             input_node_triple.node, dump_types
         ):
-            # input_node_path = output_path / Path('node_inputs') / Path(input_node_triple.link_label)
             input_node_path = output_path / inputs_relpath / Path(*input_node_triple.link_label.split('__'))
             input_node_triple.node.base.repository.copy_tree(input_node_path)
 
@@ -415,9 +395,7 @@ def calcjob_presubmit_dump(calcjob_node: CalcJobNode, output_path: Path):
     Dump inputs of a `CalcJobNode` using the `presubmit` function.
 
     :param process: The `CalcJobNode` whose inputs need to be dumped.
-    :type process: CalcJobNode
     :param output_path: The path where the inputs will be dumped.
-    :type output_path: Path
     """
 
     builder_restart = calcjob_node.get_builder_restart()

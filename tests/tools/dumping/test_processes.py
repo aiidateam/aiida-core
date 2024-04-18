@@ -97,7 +97,7 @@ def test_calcjob_dump_io(generate_calcjob_node_io, tmp_path):
     clean_tmp_path(tmp_path=tmp_path)
 
     # Don't dump the connected node inputs
-    result = calcjob_dump(calcjob_node=calcjob_node, output_path=dump_path, no_node_inputs=True)
+    result = calcjob_dump(calcjob_node=calcjob_node, output_path=dump_path, include_inputs=True)
     assert not singlefiledata_outputfile.is_file()
     assert result
 

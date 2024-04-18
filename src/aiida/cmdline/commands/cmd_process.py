@@ -114,11 +114,7 @@ def process_list(
     builder = CalculationQueryBuilder()
     filters = builder.get_filters(all_entries, process_state, process_label, paused, exit_status, failed)
     query_set = builder.get_query_set(
-        relationships=relationships,
-        filters=filters,
-        order_by={order_by: order_dir},
-        past_days=past_days,
-        limit=limit,
+        relationships=relationships, filters=filters, order_by={order_by: order_dir}, past_days=past_days, limit=limit
     )
     projected = builder.get_projected(query_set, projections=project)
     headers = projected.pop(0)
@@ -165,10 +161,7 @@ def process_list(
         slots_per_worker = ctx.obj.config.get_option('daemon.worker_process_slots', scope=ctx.obj.profile.name)
         active_processes = (
             QueryBuilder()
-            .append(
-                ProcessNode,
-                filters={'attributes.process_state': {'in': ('created', 'waiting', 'running')}},
-            )
+            .append(ProcessNode, filters={'attributes.process_state': {'in': ('created', 'waiting', 'running')}})
             .count()
         )
         available_slots = active_workers * slots_per_worker
@@ -234,13 +227,7 @@ def process_call_root(processes):
 @verdi_process.command('report')
 @arguments.PROCESSES()
 @options.MOST_RECENT_NODE()
-@click.option(
-    '-i',
-    '--indent-size',
-    type=int,
-    default=2,
-    help='Set the number of spaces to indent each level by.',
-)
+@click.option('-i', '--indent-size', type=int, default=2, help='Set the number of spaces to indent each level by.')
 @click.option(
     '-l',
     '--levelname',
@@ -249,21 +236,12 @@ def process_call_root(processes):
     help='Filter the results by name of the log level.',
 )
 @click.option(
-    '-m',
-    '--max-depth',
-    'max_depth',
-    type=int,
-    default=None,
-    help='Limit the number of levels to be printed.',
+    '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
 )
 @decorators.with_dbenv()
 def process_report(processes, most_recent_node, levelname, indent_size, max_depth):
     """Show the log report for one or multiple processes."""
-    from aiida.cmdline.utils.common import (
-        get_calcjob_report,
-        get_process_function_report,
-        get_workchain_report,
-    )
+    from aiida.cmdline.utils.common import get_calcjob_report, get_process_function_report, get_workchain_report
     from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
 
     if processes and most_recent_node:
@@ -288,20 +266,9 @@ def process_report(processes, most_recent_node, levelname, indent_size, max_dept
 
 @verdi_process.command('status')
 @options.MOST_RECENT_NODE()
+@click.option('-c', '--call-link-label', 'call_link_label', is_flag=True, help='Include the call link label if set.')
 @click.option(
-    '-c',
-    '--call-link-label',
-    'call_link_label',
-    is_flag=True,
-    help='Include the call link label if set.',
-)
-@click.option(
-    '-m',
-    '--max-depth',
-    'max_depth',
-    type=int,
-    default=None,
-    help='Limit the number of levels to be printed.',
+    '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
 )
 @arguments.PROCESSES()
 def process_status(call_link_label, most_recent_node, max_depth, processes):
@@ -333,10 +300,7 @@ def process_kill(processes, all_entries, timeout, wait):
     from aiida.engine.processes import control
 
     if processes and all_entries:
-        raise click.BadOptionUsage(
-            'all',
-            'cannot specify individual processes and the `--all` flag at the same time.',
-        )
+        raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
     if all_entries:
         click.confirm('Are you sure you want to kill all processes?', abort=True)
@@ -344,13 +308,7 @@ def process_kill(processes, all_entries, timeout, wait):
     with capture_logging() as stream:
         try:
             message = 'Killed through `verdi process kill`'
-            control.kill_processes(
-                processes,
-                all_entries=all_entries,
-                timeout=timeout,
-                wait=wait,
-                message=message,
-            )
+            control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
 
@@ -369,21 +327,12 @@ def process_pause(processes, all_entries, timeout, wait):
     from aiida.engine.processes import control
 
     if processes and all_entries:
-        raise click.BadOptionUsage(
-            'all',
-            'cannot specify individual processes and the `--all` flag at the same time.',
-        )
+        raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
     with capture_logging() as stream:
         try:
             message = 'Paused through `verdi process pause`'
-            control.pause_processes(
-                processes,
-                all_entries=all_entries,
-                timeout=timeout,
-                wait=wait,
-                message=message,
-            )
+            control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
 
@@ -402,10 +351,7 @@ def process_play(processes, all_entries, timeout, wait):
     from aiida.engine.processes import control
 
     if processes and all_entries:
-        raise click.BadOptionUsage(
-            'all',
-            'cannot specify individual processes and the `--all` flag at the same time.',
-        )
+        raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
     with capture_logging() as stream:
         try:
@@ -480,11 +426,7 @@ def process_repair(manager, broker, dry_run):
     daemon worker to complete it and will effectively be "stuck". Any process task that does not correspond to an active
     process is useless and should be discarded. Finally, duplicate process tasks are also problematic and are discarded.
     """
-    from aiida.engine.processes.control import (
-        get_active_processes,
-        get_process_tasks,
-        iterate_process_tasks,
-    )
+    from aiida.engine.processes.control import get_active_processes, get_process_tasks, iterate_process_tasks
 
     active_processes = get_active_processes(project='id')
     process_tasks = get_process_tasks(broker)
@@ -544,7 +486,7 @@ def process_repair(manager, broker, dry_run):
 @verdi_process.command('dump')
 @arguments.PROCESS()
 @options.PATH()
-@options.NO_NODE_INPUTS()
+@options.INCLUDE_INPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
 @options.USE_PRESUBMIT()
@@ -552,7 +494,7 @@ def process_repair(manager, broker, dry_run):
 def dump(
     process,
     path,
-    no_node_inputs,
+    include_inputs,
     include_attributes,
     include_extras,
     use_presubmit,
@@ -589,10 +531,11 @@ def dump(
     )
 
     # Generate default parent folder
-    if str(path) == '.':
+    if path is None:
         output_path = generate_default_dump_path(process_node=process)
+    else:
+        output_path = path.resolve()
 
-    # Instantiate YamlDumper
     processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
 
     # Allow the command to be run with `CalcJob`s and `WorkChain`s
@@ -602,7 +545,7 @@ def dump(
         process_dumped = calcjob_dump(
             calcjob_node=process,
             output_path=output_path,
-            no_node_inputs=no_node_inputs,
+            no_node_inputs=include_inputs,
             use_presubmit=use_presubmit,
             node_dumper=processnode_dumper,
             overwrite=overwrite,
@@ -612,7 +555,7 @@ def dump(
         process_dumped = workchain_dump(
             process_node=process,
             output_path=output_path,
-            no_node_inputs=no_node_inputs,
+            no_node_inputs=include_inputs,
             use_presubmit=use_presubmit,
             node_dumper=processnode_dumper,
             overwrite=overwrite,
@@ -629,4 +572,4 @@ def dump(
             f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in `{output_path}`.'
         )
     else:
-        echo.echo_report(f'Problem dumping {process.__class__.__name__} <{process.pk}>.')
+        echo.echo_critical(f'Problem dumping {process.__class__.__name__} <{process.pk}>.')

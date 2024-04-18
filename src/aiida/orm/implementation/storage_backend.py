@@ -320,12 +320,13 @@ class StorageBackend(abc.ABC):
         from aiida.common.log import override_log_level
         from aiida.manage.configuration import get_config
         from aiida.manage.configuration.config import Config
+        from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
 
         try:
             config = get_config()
             profile = config.get_profile(self.profile.name)  # Get the profile being backed up
             with tempfile.TemporaryDirectory() as tmpdir:
-                filepath_config = pathlib.Path(tmpdir) / 'config.json'
+                filepath_config = pathlib.Path(tmpdir) / DEFAULT_CONFIG_FILE_NAME
                 backup_config = Config(str(filepath_config), {})  # Create empty config at temporary file location
                 backup_config.add_profile(profile)  # Add the profile being backed up
                 backup_config.store()  # Write the contents to disk
@@ -333,7 +334,7 @@ class StorageBackend(abc.ABC):
                 # Temporarily disable all logging because the verbose rsync output just for copying the config file
                 # is a bit much.
                 with override_log_level():
-                    backup_manager.call_rsync(filepath_config, backup_manager.path / 'config.json')
+                    backup_manager.call_rsync(filepath_config, backup_manager.path / DEFAULT_CONFIG_FILE_NAME)
         except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exc:
             raise exceptions.StorageBackupError('AiiDA config.json not found!') from exc
 
@@ -345,14 +346,13 @@ class StorageBackend(abc.ABC):
 
         from aiida.common import exceptions
         from aiida.manage.configuration.config import Config
+        from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
         from aiida.storage.log import STORAGE_LOGGER
-
-        backup_config_fname = 'config.json'
 
         try:
             # this creates the dest folder if it doesn't exist
             backup_manager = backup_utils.BackupManager(dest, keep=keep)
-            backup_config_path = backup_manager.path / backup_config_fname
+            backup_config_path = backup_manager.path / DEFAULT_CONFIG_FILE_NAME
 
             if backup_manager.check_path_exists(backup_config_path):
                 success, stdout = backup_manager.run_cmd(['cat', str(backup_config_path)])
@@ -405,6 +405,7 @@ class StorageBackend(abc.ABC):
         :raises StorageBackupError: If an error occurred during the backup procedure.
         :raises NotImplementedError: If the storage backend doesn't implement a backup procedure.
         """
+        from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
         from aiida.storage.log import STORAGE_LOGGER
 
         backup_manager = self._validate_or_init_backup_folder(dest, keep)
@@ -418,16 +419,16 @@ class StorageBackend(abc.ABC):
                 STORAGE_LOGGER.warning(f'Failed to determine contents of destination folder `{dest}`: not deleting it.')
                 raise
 
-            # If the backup directory was just initialized for the first time, it should only contain the config.json
+            # If the backup directory was just initialized for the first time, it should only contain the configuration
             # file and nothing else. If anything else is found, do not delete the directory for safety reasons.
-            if stdout.strip() != 'config.json':
+            if stdout.strip() != DEFAULT_CONFIG_FILE_NAME:
                 STORAGE_LOGGER.warning(f'The destination folder `{dest}` is not empty: not deleting it.')
                 raise
 
             backup_manager.run_cmd(['rm', '-rf', str(backup_manager.path)])
             raise
 
-        STORAGE_LOGGER.report('Overwriting the config.json file.')
+        STORAGE_LOGGER.report(f'Overwriting the `{DEFAULT_CONFIG_FILE_NAME} file.')
         self._write_backup_config(backup_manager)
 
     def get_info(self, detailed: bool = False) -> dict:

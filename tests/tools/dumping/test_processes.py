@@ -22,7 +22,7 @@ from aiida.tools.dumping.processes import (
     calcjob_node_inputs_dump,
     generate_default_dump_path,
     generate_node_input_label,
-    workchain_dump,
+    process_dump,
 )
 
 filename = 'file.txt'
@@ -141,7 +141,7 @@ def test_calcjob_dump_arithmetic_add(tmp_path, aiida_localhost, generate_arithme
     assert not Path(dump_path / 'aiida.out').is_file()
 
 
-def test_workchain_dump_io(generate_work_chain_io, tmp_path):
+def test_process_dump_io(generate_work_chain_io, tmp_path):
     wc_node = generate_work_chain_io()
 
     dump_parent_path = tmp_path / 'wc-dump-test'
@@ -161,20 +161,20 @@ def test_workchain_dump_io(generate_work_chain_io, tmp_path):
     # Here, when setting `output_path=tmp_path`, no parent directory for the parent workchain is created
     # Therefore, go into tmp-directory used for testing, without specifying output path -> Closer to how people might
     # actually use the function
-    result = workchain_dump(process_node=wc_node, output_path=dump_parent_path)
+    result = process_dump(process_node=wc_node, output_path=dump_parent_path)
 
     assert result
     assert all([expected_file.is_file() for expected_file in expected_files])
 
 
-def test_workchain_dump_multiply_add(tmp_path, generate_multiply_add_node, aiida_localhost):
+def test_process_dump_multiply_add(tmp_path, generate_multiply_add_node, aiida_localhost):
     # Still set directory fixed to make dump directory reproducible (it should be anyway, but contains e.g. the pk)
     dump_parent_path = tmp_path / 'multiply_add-dump-test'
 
     # Now test for output from running MultiplyAddWorkChain
     multiply_add_node = generate_multiply_add_node(computer=aiida_localhost)
 
-    result = workchain_dump(process_node=multiply_add_node, output_path=dump_parent_path)
+    result = process_dump(process_node=multiply_add_node, output_path=dump_parent_path)
     assert result
 
     raw_input_files = ['_aiidasubmit.sh', 'aiida.in', '.aiida/job_tmpl.json', '.aiida/calcinfo.json']

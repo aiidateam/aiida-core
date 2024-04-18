@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import logging
 import textwrap
 from pathlib import Path
 
@@ -26,14 +27,14 @@ from aiida.manage import get_manager
 from aiida.orm import (
     CalcFunctionNode,
     CalcJobNode,
-    FolderData,
     ProcessNode,
-    SinglefileData,
     WorkChainNode,
     WorkFunctionNode,
 )
 from aiida.orm.utils import LinkTriple
 from aiida.transports.plugins.local import LocalTransport
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class ProcessNodeYamlDumper:
@@ -157,7 +158,7 @@ def make_dump_readme(process_node: ProcessNode, output_path: Path):
 def generate_default_dump_path(process_node: WorkChainNode | CalcJobNode) -> Path:
     """Simple helper function to generate the default parent-dumping directory if none given.
 
-    This function is not called for the sub-calls of `calcjob_dump` or during the recursive `workchain_dump` as it just
+    This function is not called for the sub-calls of `calcjob_dump` or during the recursive `process_dump` as it just
     creates the default parent folder for the dumping, if no name is given.
 
     :param process_node: The `ProcessNode` for which the directory is created.
@@ -173,7 +174,7 @@ def generate_default_dump_path(process_node: WorkChainNode | CalcJobNode) -> Pat
 
 # ? Could move this to `cmdline/utils`
 def validate_make_dump_path(
-    path: Path = Path(),
+    path: Path,
     overwrite: bool = False,
 ) -> Path:
     """
@@ -184,28 +185,38 @@ def validate_make_dump_path(
     """
     import shutil
 
-    output_path = path.resolve()
-
     # ? Use of `echo.echo_` only when running via `verdi`? -> I only see it used in the `cmd_` files.
-    if path is None and overwrite:
-        echo.echo_critical('Path not set, defaults to CWD. Will not delete here for safety.')
-        return output_path
+    if path is None:
+        raise ValueError('Path not set.')
 
-    if output_path.is_dir() and any(output_path.iterdir()):
-        if overwrite:
-            # ? This might be a bit dangerous -> Check for it not being CWD enough?
-            # ? Added check for README in folder to decrease chances of deleting some other path
-            if (output_path / 'README').is_file():
-                echo.echo_report(f'Overwrite set to true, will overwrite directory `{output_path}`.')
-                shutil.rmtree(output_path)
-            else:
-                echo.echo_critical(f'Something went wrong. Manually remove existing `{output_path}` and dump again.')
+    if path.is_dir():
+
+        # Existing, but empty directory => OK
+        if not any(path.iterdir()):
+            pass
+
+        # Existing and non-empty directory and overwrite False => FileExistsError
+        elif not overwrite:
+            raise FileExistsError(f'Path `{path}` already exists and overwrite set to False.')
+
+        # Existing and non-empty directory and overwrite True => Check for '.aiida_node_metadata.yaml' for safety
+        # '.aiida_node_metadata.yaml' present => Remove directory
+        elif (path / '.aiida_node_metadata.yaml').is_file():
+            _LOGGER.info(f'Overwrite set to true, will overwrite directory `{path}`.')
+            shutil.rmtree(path)
+            path.mkdir(parents=True, exist_ok=False)
+
+        # Existing and non-empty directory and overwrite True => Check for README for safety
+        # '.aiida_node_metadata.yaml' absent => Remove directory
         else:
-            echo.echo_critical(f'Path `{output_path}` already exists and overwrite set to False.')
+            _LOGGER.critical(
+                f"`{path}` Path exists but no `.aiida_node_metadata.yaml` found. Won't delete for security.\n"
+                # f'Manually remove existing `{path}` and dump again.'
+            )
 
-    output_path.mkdir(parents=True, exist_ok=False)
+    path.mkdir(exist_ok=True, parents=True)
 
-    return output_path
+    return path.resolve()
 
 
 def generate_node_input_label(index: int, link_triple: LinkTriple) -> str:
@@ -214,19 +225,16 @@ def generate_node_input_label(index: int, link_triple: LinkTriple) -> str:
     link_label = link_triple.link_label
 
     # Generate directories with naming scheme akin to `verdi process status`
-    if link_label != 'CALL' and not link_label.startswith('iteration_'):
-        node_label = f'{index:02d}-{link_label}'
-    else:
-        node_label = f'{index:02d}'
+    node_label = f'{index:02d}-{link_label}'
 
     try:
         process_label = node.process_label
-        if process_label is not None:
+        if process_label is not None and process_label != link_label:
             node_label += f'-{process_label}'
 
     except AttributeError:
         process_type = node.process_type
-        if process_type is not None:
+        if process_type is not None and process_type != link_label:
             node_label += f'-{process_type}'
 
     return node_label
@@ -234,8 +242,8 @@ def generate_node_input_label(index: int, link_triple: LinkTriple) -> str:
 
 def calcjob_dump(
     calcjob_node: CalcJobNode,
-    output_path: Path = Path(),
-    include_inputs: bool = False,
+    output_path: Path,
+    include_inputs: bool = True,
     use_presubmit: bool = False,
     node_dumper: ProcessNodeYamlDumper | None = None,
     overwrite: bool = True,
@@ -251,23 +259,26 @@ def calcjob_dump(
     :return: None
     """
 
-    output_path = validate_make_dump_path(path=output_path, overwrite=overwrite)
+    if output_path is None:
+        output_path = generate_default_dump_path(process_node=calcjob_node)
+
+    validate_make_dump_path(path=output_path, overwrite=overwrite)
 
     if not use_presubmit:
-        # ? Outputs obtained via retrieved and should not be present when using `prepare_for_submission` as it puts the
-        # ? calculation in a state to be submitted ?!
-        calcjob_node.base.repository.copy_tree(output_path / Path('raw_inputs'))
+        calcjob_node.base.repository.copy_tree(output_path.resolve() / 'raw_inputs')
         try:
-            calcjob_node.outputs.retrieved.copy_tree(output_path / Path('raw_outputs'))
+            calcjob_node.outputs.retrieved.copy_tree(output_path.resolve() / 'raw_outputs')
 
         # Might not have an output with link label `retrieved`
         except NotExistentAttributeError:
             pass
 
-        if not include_inputs:
+        if include_inputs:
             calcjob_node_inputs_dump(calcjob_node=calcjob_node, output_path=output_path)
 
     else:
+        # ? Outputs obtained via retrieved and should not be present when using `prepare_for_submission` as it puts the
+        # ? calculation in a state to be submitted ?!
         try:
             calcjob_presubmit_dump(calcjob_node=calcjob_node, output_path=output_path)
         except ValueError:
@@ -286,13 +297,11 @@ def calcjob_dump(
         node_dumper = ProcessNodeYamlDumper()
     node_dumper.dump_yaml(process_node=calcjob_node, output_path=output_path)
 
-    return True
 
-
-def workchain_dump(
+def process_dump(
     process_node: WorkChainNode | CalcJobNode,
-    output_path: Path = Path(),
-    include_inputs: bool = False,
+    output_path: Path,
+    include_inputs: bool = True,
     use_presubmit: bool = False,
     node_dumper: ProcessNodeYamlDumper | None = None,
     overwrite: bool = True,
@@ -312,59 +321,69 @@ def workchain_dump(
     :return: bool
     """
 
-    # Keep track of dumping success to be able to communicate it outwards
-    all_processes_dumped = True
-
     # ? Realized during testing: If no path provided, only for the sub-workchain an additional directory is created, but
     # ? should also create one here, if the function is imported normally and used in Python scripts
-    output_path = validate_make_dump_path(path=output_path, overwrite=overwrite)
+    if output_path is None:
+        output_path = generate_default_dump_path(process_node=process_node)
+
+    validate_make_dump_path(path=output_path, overwrite=overwrite)
 
     # This will eventually be replaced once pydantic backend PR merged
     if node_dumper is None:
         node_dumper = ProcessNodeYamlDumper()
+
+    # Need to dump for `WorkChainNode`s, as well, otherwise only `CalcJobNode`s
     node_dumper.dump_yaml(process_node=process_node, output_path=output_path.resolve())
 
-    # Don't increment index for `ProcessNodes` that don't (always?) have file IO
-    # (`CalcFunctionNodes`/`WorkFunctionNodes`), such as `create_kpoints_from_distance`
-    called_links = process_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
-    called_links = [
-        called_link
-        for called_link in called_links
-        if not isinstance(called_link.node, (CalcFunctionNode, WorkFunctionNode))
-    ]
+    # This seems a bit duplicated, but if the logic for checking the types should be contained in the recursive
+    # `process_dump` function which is the only one called from `verdi`, then I need to dump for a `CalcJob` here, as
+    # well. Also, if I want to be able to use `process_dump` from within the Python API
+    if isinstance(process_node, CalcJobNode):
+        calcjob_dump(
+            calcjob_node=process_node,
+            output_path=output_path,
+            include_inputs=include_inputs,
+            use_presubmit=use_presubmit,
+            node_dumper=node_dumper,
+            overwrite=overwrite,
+        )
 
-    for index, link_triple in enumerate(sorted(called_links, key=lambda link_triple: link_triple.node.ctime), start=1):
-        child_node = link_triple.node
-        child_label = generate_node_input_label(index=index, link_triple=link_triple)
+    # Recursive call for WorkChainNode
+    elif isinstance(process_node, WorkChainNode):
 
-        output_path_child = output_path.resolve() / child_label
+        # Don't increment index for `ProcessNodes` that don't (always?) have file IO
+        # (`CalcFunctionNodes`/`WorkFunctionNodes`), such as `create_kpoints_from_distance`
+        called_links = process_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
 
-        # Recursive function call for `WorkChainNode``
-        if isinstance(child_node, WorkChainNode):
-            process_dumped = workchain_dump(
-                process_node=child_node,
-                output_path=output_path_child,
-                include_inputs=include_inputs,
-                use_presubmit=use_presubmit,
-                node_dumper=node_dumper,
-            )
+        for index, link_triple in enumerate(
+            sorted(called_links, key=lambda link_triple: link_triple.node.ctime), start=1
+        ):
+            child_node = link_triple.node
+            child_label = generate_node_input_label(index=index, link_triple=link_triple)
+            child_output_path = output_path.resolve() / child_label
 
-        # Dump for `CalcJobNode`
-        elif isinstance(child_node, CalcJobNode):
-            process_dumped = calcjob_dump(
-                calcjob_node=child_node,
-                output_path=output_path_child,
-                include_inputs=include_inputs,
-                use_presubmit=use_presubmit,
-                node_dumper=node_dumper,
-            )
+            # Recursive function call for `WorkChainNode``
+            # Not sure if the next two cases works for `WorkFunction` and `CalcFuncion``Node`s
+            if isinstance(child_node, (WorkChainNode, WorkFunctionNode)):
 
-        else:
-            process_dumped = False
+                process_dump(
+                    process_node=child_node,
+                    output_path=child_output_path,
+                    include_inputs=include_inputs,
+                    use_presubmit=use_presubmit,
+                    node_dumper=node_dumper,
+                    overwrite=overwrite
+                )
 
-        all_processes_dumped = all_processes_dumped and process_dumped
-
-    return all_processes_dumped
+            elif isinstance(child_node, (CalcJobNode, CalcFunctionNode)):
+                calcjob_dump(
+                    calcjob_node=child_node,
+                    output_path=child_output_path,
+                    include_inputs=include_inputs,
+                    use_presubmit=use_presubmit,
+                    node_dumper=node_dumper,
+                    overwrite=overwrite
+                )
 
 
 # Separate functions for CalcJob dumping using pre_submit, as well as for the node_inputs
@@ -374,7 +393,6 @@ def calcjob_node_inputs_dump(calcjob_node: CalcJobNode, output_path: Path, input
     :param calcjob_node: The `CalcJobNode` whose inputs will be dumped.
     :param output_path: The path where the inputs will be dumped.
     """
-    dump_types = (SinglefileData, FolderData)
 
     # ? Not using the `node_class` argument of `get_incoming`, as it does not actually retrieve, e.g. a `UpfData` node
     # ? (due to planned deprecation?)
@@ -382,12 +400,10 @@ def calcjob_node_inputs_dump(calcjob_node: CalcJobNode, output_path: Path, input
     input_node_triples = calcjob_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 
     for input_node_triple in input_node_triples:
-        # Select only repositories that hold objects and are of the selected dump_types
-        if len(input_node_triple.node.base.repository.list_objects()) > 0 and isinstance(
-            input_node_triple.node, dump_types
-        ):
+        # Select only repositories that actually hold objects
+        if len(input_node_triple.node.base.repository.list_objects()) > 0:
             input_node_path = output_path / inputs_relpath / Path(*input_node_triple.link_label.split('__'))
-            input_node_triple.node.base.repository.copy_tree(input_node_path)
+            input_node_triple.node.base.repository.copy_tree(input_node_path.resolve())
 
 
 def calcjob_presubmit_dump(calcjob_node: CalcJobNode, output_path: Path):
@@ -418,13 +434,13 @@ def calcjob_presubmit_dump(calcjob_node: CalcJobNode, output_path: Path):
         # This happens if `local_copy_list` is empty
         pass
 
-    local_transport = LocalTransport().open()
-    new_calcjob_node: CalcJobNode = calcjob_process.node
-    upload_calculation(
-        node=new_calcjob_node,
-        transport=local_transport,
-        calc_info=calc_info,
-        folder=Folder(abspath=output_path),
-        inputs=calcjob_process.inputs,
-        dry_run=False,
-    )
+    with LocalTransport() as transport:
+        new_calcjob_node: CalcJobNode = calcjob_process.node
+        upload_calculation(
+            node=new_calcjob_node,
+            transport=transport,
+            calc_info=calc_info,
+            folder=Folder(abspath=output_path),
+            inputs=calcjob_process.inputs,
+            dry_run=False,
+        )

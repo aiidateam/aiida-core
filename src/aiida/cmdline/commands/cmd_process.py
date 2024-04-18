@@ -502,10 +502,10 @@ def dump(
 ) -> None:
     """Dump files involved in the execution of a process.
 
-    Child simulations/workflows (also called `CalcJob`s and `WorkChain`s in AiiDA jargon) run by the parent workflow are
-    contained in the directory tree as sub-folders and are sorted by their creation time. The directory tree thus
-    mirrors the logical execution of the workflow, which can also be queried by running `verdi process status
-    <pk>` on the command line.
+    Child calculations/workflows (also called `CalcJob`s and `WorkChain`s in AiiDA jargon) run by the parent workflow
+    are contained in the directory tree as sub-folders and are sorted by their creation time. The directory tree thus
+    mirrors the logical execution of the workflow, which can also be queried by running `verdi process status <pk>` on
+    the command line.
 
     By default, input and output files of each simulation can be found in the corresponding "raw_inputs" and
     "raw_outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
@@ -521,55 +521,46 @@ def dump(
     node data for further inspection.
     """
 
-    from aiida.orm import CalcJobNode
     from aiida.tools.dumping.processes import (
         ProcessNodeYamlDumper,
-        calcjob_dump,
         generate_default_dump_path,
         make_dump_readme,
-        workchain_dump,
+        process_dump,
+        validate_make_dump_path,
     )
 
     # Generate default parent folder
     if path is None:
         output_path = generate_default_dump_path(process_node=process)
-    else:
-        output_path = path.resolve()
+
+    # Capture `FileExistsError` here already, not by trying to run the dumping
+    try:
+        validate_make_dump_path(path=output_path, overwrite=overwrite)
+    except FileExistsError:
+        echo.echo_critical(f'Path `{output_path}` already exists and overwrite set to False.')
 
     processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
 
-    # Allow the command to be run with `CalcJob`s and `WorkChain`s
-    if isinstance(process, CalcJobNode):
-        echo.echo_warning('Command called on `CalcJob`. Will dump, but you can also use `verdi calcjob dump` instead.')
-
-        process_dumped = calcjob_dump(
-            calcjob_node=process,
-            output_path=output_path,
-            no_node_inputs=include_inputs,
-            use_presubmit=use_presubmit,
-            node_dumper=processnode_dumper,
-            overwrite=overwrite,
-        )
-
-    else:
-        process_dumped = workchain_dump(
+    try:
+        process_dump(
             process_node=process,
             output_path=output_path,
-            no_node_inputs=include_inputs,
+            include_inputs=include_inputs,
             use_presubmit=use_presubmit,
             node_dumper=processnode_dumper,
             overwrite=overwrite,
         )
 
-    # Create README in parent directory
-    # Done after dumping, so that dumping directory is there. Dumping directory is created within the calcjob_dump and
-    # workchain_dump files such that they can also be used from within the Python API, not just via verdi
-    make_dump_readme(output_path=output_path, process_node=process)
-
-    # Communicate success/failure of dumping
-    if process_dumped:
         echo.echo_success(
             f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in `{output_path}`.'
         )
-    else:
+
+    # ? Which exceptions do I expect here? So far only FileExistsError
+    except Exception:
+        # raise
         echo.echo_critical(f'Problem dumping {process.__class__.__name__} <{process.pk}>.')
+
+    # Create README in parent directory
+    # Done after dumping, so that dumping directory is there. Dumping directory is created within the calcjob_dump and
+    # process_dump files such that they can also be used from within the Python API, not just via verdi
+    make_dump_readme(output_path=output_path, process_node=process)

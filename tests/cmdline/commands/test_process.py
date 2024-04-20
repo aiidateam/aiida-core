@@ -338,14 +338,15 @@ class TestVerdiProcess:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_list_worker_slot_warning(run_cli_command, monkeypatch):
+@pytest.mark.parametrize('numprocesses, percentage', ((0, 100), (1, 90)))
+def test_list_worker_slot_warning(run_cli_command, monkeypatch, numprocesses, percentage):
     """Test that the if the number of used worker process slots exceeds a threshold,
     that the warning message is displayed to the user when running `verdi process list`
     """
     from aiida.engine import DaemonClient
     from aiida.manage.configuration import get_config
 
-    monkeypatch.setattr(DaemonClient, 'get_numprocesses', lambda _: {'numprocesses': 1})
+    monkeypatch.setattr(DaemonClient, 'get_numprocesses', lambda _: {'numprocesses': numprocesses})
     monkeypatch.setattr(DaemonClient, 'is_daemon_running', lambda: True)
 
     # Get the number of allowed processes per worker:
@@ -359,20 +360,26 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
         calc.set_process_state(ProcessState.RUNNING)
         calc.store()
 
-    # Default cmd should not throw the warning as we are below the limit
     result = run_cli_command(cmd_process.process_list, use_subprocess=False)
-    warning_phrase = 'of the available daemon worker slots have been used!'
-    assert all(warning_phrase not in line for line in result.output_lines), result.output
+
+    if numprocesses == 0:
+        warning_phrase = 'The daemon has no active workers!'
+        assert any(warning_phrase in line for line in result.output_lines)
+    else:
+        # Default cmd should not throw the warning as we are below the limit
+        warning_phrase = 'of the available daemon worker slots have been used!'
+        assert all(warning_phrase not in line for line in result.output_lines), result.output
 
     # Add one more running node to put us over the limit
     calc = WorkFunctionNode()
     calc.set_process_state(ProcessState.RUNNING)
     calc.store()
 
-    # Now the warning should fire
-    result = run_cli_command(cmd_process.process_list, use_subprocess=False)
-    warning_phrase = '% of the available daemon worker slots have been used!'
-    assert any(warning_phrase in line for line in result.output_lines)
+    if numprocesses != 0:
+        # Now the warning should fire
+        result = run_cli_command(cmd_process.process_list, use_subprocess=False)
+        warning_phrase = f'{percentage}% of the available daemon worker slots have been used!'
+        assert any(warning_phrase in line for line in result.output_lines)
 
 
 class TestVerdiProcessCallRoot:

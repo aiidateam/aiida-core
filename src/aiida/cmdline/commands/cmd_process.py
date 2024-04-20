@@ -165,7 +165,14 @@ def process_list(
             .count()
         )
         available_slots = active_workers * slots_per_worker
+
+        if active_workers == 0:
+            echo.echo_warning('The daemon has no active workers!')
+            echo.echo_warning('Increase the number of workers with `verdi daemon incr`.')
+            return
+
         percent_load = active_processes / available_slots
+
         if percent_load > 0.9:  # 90%
             echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
             echo.echo_warning('Increase the number of workers with `verdi daemon incr`.')

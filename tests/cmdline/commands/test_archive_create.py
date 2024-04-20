@@ -37,6 +37,14 @@ def test_create_force(run_cli_command, tmp_path):
     run_cli_command(cmd_archive.create, options)
 
 
+def test_create_file_nested_directory(run_cli_command, tmp_path):
+    """Test that output files that contains nested directories are created automatically."""
+    filepath = tmp_path / 'some' / 'sub' / 'directory' / 'output.aiida'
+    options = [str(filepath)]
+    run_cli_command(cmd_archive.create, options)
+    assert filepath.exists()
+
+
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_create_all(run_cli_command, tmp_path, aiida_localhost):
     """Test that creating an archive for a set of various ORM entities works with the zip format."""

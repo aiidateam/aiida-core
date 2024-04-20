@@ -13,7 +13,7 @@ If you experience any problems, first check that all services are up and running
    ✓ version:     AiiDA v2.0.0
    ✓ config:      /path/to/.aiida
    ✓ profile:     default
-   ✓ storage:     Storage for 'default' @ postgresql://username:***@localhost:5432/db_name / file:///path/to/repository
+   ✓ storage:     Storage for 'default' @ postgresql+psycopg://username:***@localhost:5432/db_name / file:///path/to/repository
    ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
    ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
 

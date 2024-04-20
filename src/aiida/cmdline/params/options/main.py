@@ -383,8 +383,8 @@ DB_ENGINE = OverridableOption(
     '--db-engine',
     required=True,
     help='Engine to use to connect to the database.',
-    default='postgresql_psycopg2',
-    type=click.Choice(['postgresql_psycopg2']),
+    default='postgresql_psycopg',
+    type=click.Choice(['postgresql_psycopg']),
 )
 
 DB_BACKEND = OverridableOption(

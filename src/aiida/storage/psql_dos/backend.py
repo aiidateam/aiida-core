@@ -80,7 +80,7 @@ class PsqlDosBackend(StorageBackend):
         database_engine: str = Field(
             title='PostgreSQL engine',
             description='The engine to use to connect to the database.',
-            default='postgresql_psycopg2',
+            default='postgresql_psycopg',
         )
         database_hostname: str = Field(
             title='PostgreSQL hostname', description='The hostname of the PostgreSQL server.', default='localhost'

@@ -427,7 +427,7 @@ Below is a list with all available subcommands.
       --first-name NONEMPTYSTRING     First name of the user.  [required]
       --last-name NONEMPTYSTRING      Last name of the user.  [required]
       --institution NONEMPTYSTRING    Institution of the user.  [required]
-      --db-engine [postgresql_psycopg2]
+      --db-engine [postgresql_psycopg]
                                       Engine to use to connect to the database.  [required]
       --db-backend [core.psql_dos]    Database backend to use.  [required]
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
@@ -534,7 +534,7 @@ Below is a list with all available subcommands.
       --first-name NONEMPTYSTRING     First name of the user.  [required]
       --last-name NONEMPTYSTRING      Last name of the user.  [required]
       --institution NONEMPTYSTRING    Institution of the user.  [required]
-      --db-engine [postgresql_psycopg2]
+      --db-engine [postgresql_psycopg]
                                       Engine to use to connect to the database.  [required]
       --db-backend [core.psql_dos]    Database backend to use.  [required]
       --db-host HOSTNAME              Database server host. Leave empty for "peer"

@@ -29,7 +29,7 @@ def postgres_cluster():
         from aiida.manage.external.postgres import Postgres
 
         postgres_config = {
-            'database_engine': 'postgresql_psycopg2',
+            'database_engine': 'postgresql_psycopg',
             'database_name': database_name or str(uuid4()),
             'database_username': database_username or 'guest',
             'database_password': database_password or 'guest',
@@ -42,8 +42,8 @@ def postgres_cluster():
             )
         postgres.create_db(postgres_config['database_username'], postgres_config['database_name'])
 
-        postgres_config['database_hostname'] = postgres.host_for_psycopg2
-        postgres_config['database_port'] = postgres.port_for_psycopg2
+        postgres_config['database_hostname'] = postgres.host_for_psycopg
+        postgres_config['database_port'] = postgres.port_for_psycopg
 
         return postgres_config
 

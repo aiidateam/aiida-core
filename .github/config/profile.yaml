@@ -4,7 +4,7 @@ first_name: Giuseppe
 last_name: Verdi
 institution: Khedivial
 db_backend: core.psql_dos
-db_engine: postgresql_psycopg2
+db_engine: postgresql_psycopg
 db_host: localhost
 db_port: 5432
 db_name: test_aiida

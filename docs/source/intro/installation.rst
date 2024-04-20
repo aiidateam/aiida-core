@@ -87,7 +87,7 @@ If you use the same names as in the example commands above, then during the ``ve
 
 .. code-block:: console
 
-   $ Database engine: postgresql_psycopg2
+   $ Database engine: postgresql_psycopg
    $ Database host: localhost
    $ Database port: 5432
    $ AiiDA Database name: aiidadb
@@ -142,7 +142,7 @@ During the ``verdi setup`` phase, use ``!`` to leave host empty and specify your
 
 .. code-block:: console
 
-   $ Database engine: postgresql_psycopg2
+   $ Database engine: postgresql_psycopg
    $ Database host: !
    $ Database port: 5432
    $ AiiDA Database name: aiidadb
@@ -209,7 +209,7 @@ Then, the following prompts will help you configure the database. Typical settin
 .. code-block:: console
 
    $ Default user email: richard.wagner@leipzig.de
-   $ Database engine: postgresql_psycopg2
+   $ Database engine: postgresql_psycopg
    $ PostgreSQL host: localhost
    $ PostgreSQL port: 5432
    $ AiiDA Database name: aiida_dev

@@ -25,6 +25,11 @@ repos:
   - id: trailing-whitespace
     exclude: *exclude_pre_commit_hooks
 
+- repo: https://github.com/python-jsonschema/check-jsonschema
+  rev: 0.28.2
+  hooks:
+  - id: check-github-workflows
+
 - repo: https://github.com/ikamensh/flynt/
   rev: 1.0.1
   hooks:

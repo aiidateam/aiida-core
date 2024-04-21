@@ -21,10 +21,10 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python 3.12
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
 
@@ -82,28 +82,23 @@ jobs:
         - 5001:22
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz
 
-    - name: Upgrade pip and setuptools
-      # Install specific version of setuptools, because 65.6.0 breaks a number of packages, such as numpy
-      run: |
-        pip install --upgrade pip
-        pip install setuptools==65.5.0
-        pip --version
+    - name: Install uv installer
+      run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astral-sh/uv/releases/download/0.1.35/uv-installer.sh | sh
 
     - name: Install aiida-core
       run: |
-        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
-        pip install --no-deps -e .
-        pip freeze
+        uv pip install --system -r requirements/requirements-py-${{ matrix.python-version }}.txt
+        uv pip install --system --no-deps -e .
 
     - name: Setup environment
       run: .github/workflows/setup.sh
@@ -133,15 +128,18 @@ jobs:
         python-version: ['3.9', '3.12']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Install uv installer
+      run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astral-sh/uv/releases/download/0.1.35/uv-installer.sh | sh
+
     - name: Install python dependencies
-      run: pip install -e .
+      run: uv pip install --system -e .
 
     - name: Run verdi
       run: |

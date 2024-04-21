@@ -46,26 +46,13 @@ jobs:
         - 15672:15672
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql
-
-    - name: Upgrade pip
-      run: |
-        pip install --upgrade pip
-        pip --version
-
-    - name: Install aiida-core
-      run: |
-        pip install -r requirements/requirements-py-3.9.txt
-        pip install --no-deps -e .
-        pip freeze
 
     - name: Run tests
       run: pytest -sv -k 'requires_rmq'

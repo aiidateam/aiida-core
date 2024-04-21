@@ -84,21 +84,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz
 
-    - name: Install uv installer
-      run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astral-sh/uv/releases/download/0.1.35/uv-installer.sh | sh
-
     - name: Install aiida-core
-      run: |
-        uv pip install --system -r requirements/requirements-py-${{ matrix.python-version }}.txt
-        uv pip install --system --no-deps -e .
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: ${{ matrix.python-version }}
 
     - name: Setup environment
       run: .github/workflows/setup.sh
@@ -130,16 +122,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Install uv installer
-      run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astral-sh/uv/releases/download/0.1.35/uv-installer.sh | sh
-
-    - name: Install python dependencies
-      run: uv pip install --system -e .
+        from-requirements: false
 
     - name: Run verdi
       run: |

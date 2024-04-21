@@ -48,22 +48,12 @@ jobs:
         - 5672:5672
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - uses: actions/checkout@v4
+
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.10'
-
-    - name: Upgrade pip
-      run: |
-        pip install --upgrade pip
-        pip --version
-
-    - name: Install python dependencies
-      run: |
-        pip install -r requirements/requirements-py-3.10.txt
-        pip install --no-deps -e .
-        pip freeze
 
     - name: Run benchmarks
       run: pytest --benchmark-only --benchmark-json benchmark.json

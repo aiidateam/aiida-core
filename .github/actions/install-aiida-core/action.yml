@@ -1,0 +1,40 @@
+name: Install aiida-core
+description: Install aiida-core package and its Python dependencies
+
+inputs:
+  python-version:
+    description: Python version
+    default: '3.9'              # Lowest supported version
+    required: false
+    type: string
+  extras:
+    description: aiida-core extras (including brackets)
+    default: ''
+    required: false
+    type: string
+  from-requirements:
+    description: Install aiida-core dependencies from pre-compiled requirements.txt file
+    default: true
+    required: false
+    type: boolean
+
+runs:
+  using: composite
+  steps:
+  - name: Set Up Python 🐍
+    uses: actions/setup-python@v5
+    with:
+      python-version: ${{ inputs.python-version }}
+
+  - name: Install uv installer
+    run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astral-sh/uv/releases/download/0.1.35/uv-installer.sh | sh
+    shell: bash
+
+  - name: Install dependencies from requirements-py-*.txt
+    if: ${{ inputs.from-requirements }}
+    run: uv pip install --system -r requirements/requirements-py-${{ inputs.python-version }}.txt
+    shell: bash
+
+  - name: Install aiida-core 📦
+    run: uv pip install --system ${{ inputs.from-requirements && '--no-deps' || '' }} -e .${{ inputs.extras }}
+    shell: bash

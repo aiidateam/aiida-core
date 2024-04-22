@@ -126,7 +126,7 @@ jobs:
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: ${{ matrix.python-version }}
-        from-requirements: false
+        from-requirements: 'false'
 
     - name: Run verdi
       run: |

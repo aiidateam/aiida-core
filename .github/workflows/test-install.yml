@@ -220,7 +220,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         extras: '[atomic_tools, docs, notebook, rest, tests, tui]'
-        from-requirements: false
+        from-requirements: 'false'
 
     - name: Setup AiiDA environment
       run: .github/workflows/setup.sh

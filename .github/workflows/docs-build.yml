@@ -22,7 +22,7 @@ jobs:
       with:
         python-version: '3.9'
         extras: '[docs,tests,rest,atomic_tools]'
-        from-requirements: false
+        from-requirements: 'false'
 
     - name: Build HTML docs
       id: linkcheck

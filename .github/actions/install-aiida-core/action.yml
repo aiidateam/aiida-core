@@ -27,10 +27,10 @@ runs:
       python-version: ${{ inputs.python-version }}
 
   - name: Install uv installer
-    run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astral-sh/uv/releases/download/${{ env.UV_VERSION }}/uv-installer.sh | sh
+    run: curl --proto '=https' --tlsv1.2 -LsSf https://${{ env.UV_URL }} | sh
     env:
       UV_VERSION: 0.1.35
-      UV_URL: https://github.com/astral-sh/uv/releases/download/$UV_VERSION/uv-installer.sh
+      UV_URL: github.com/astral-sh/uv/releases/download/$UV_VERSION/uv-installer.sh
     shell: bash
 
   - name: Install dependencies from requirements-py-*.txt

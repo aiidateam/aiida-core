@@ -20,7 +20,7 @@ inputs:
 runs:
   using: composite
   steps:
-  - name: Set Up Python 🐍
+  - name: Set Up Python
     uses: actions/setup-python@v5
     with:
       python-version: ${{ inputs.python-version }}
@@ -37,7 +37,7 @@ runs:
     run: uv pip install --system -r requirements/requirements-py-${{ inputs.python-version }}.txt
     shell: bash
 
-  - name: Install aiida-core 📦
+  - name: Install aiida-core
     run: uv pip install --system ${{ env.NO_DEPS }} -e .${{ inputs.extras }}
     env:
         # Don't install dependencies if they were installed through requirements file AND

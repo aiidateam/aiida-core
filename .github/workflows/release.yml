@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
     - run: python .github/workflows/check_release_tag.py $GITHUB_REF
@@ -32,22 +32,19 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.10'
+    - uses: actions/checkout@v4
     - name: Install system dependencies
       # note libkrb5-dev is required as a dependency for the gssapi pip install
       run: |
         sudo apt update
         sudo apt install libkrb5-dev ruby ruby-dev
-    - name: Install python dependencies
-      run: |
-        pip install --upgrade pip
-        pip install -r requirements/requirements-py-3.10.txt
-        pip install -e .[pre-commit]
-        pip freeze
+
+    - name: Install aiida-core and pre-commit
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.10'
+        extras: '[pre-commit]'
+
     - name: Run pre-commit
       run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
@@ -78,25 +75,16 @@ jobs:
         - 15672:15672
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
+    - uses: actions/checkout@v4
+
     - name: Install system dependencies
       run: |
         sudo apt update
         sudo apt install postgresql graphviz
 
-    - name: Upgrade pip
-      run: |
-        pip install --upgrade pip
-        pip --version
-
     - name: Install aiida-core
-      run: |
-        pip install -r requirements/requirements-py-3.9.txt
-        pip install --no-deps -e .
+      uses: ./.github/actions/install-aiida-core
+
     - name: Run sub-set of test suite
       run: pytest -sv -k 'requires_rmq'
 
@@ -110,9 +98,9 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
     - name: install flit

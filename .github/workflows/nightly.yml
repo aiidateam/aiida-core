@@ -51,32 +51,18 @@ jobs:
         - 15672:15672
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - uses: eWaterCycle/setup-singularity@v7        # for containerized code test
       with:
         singularity-version: 3.8.7
-
-    - name: Cache Python dependencies
-      uses: actions/cache@v1
-      with:
-        path: ~/.cache/pip
-        key: pip-${{ matrix.python-version }}-tests-${{ hashFiles('**/setup.json') }}
-        restore-keys: pip-${{ matrix.python-version }}-tests
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql
 
     - name: Install aiida-core
-      id: install
-      run: |
-        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
-        pip install --no-deps -e .
-        pip freeze
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: ${{ matrix.python-version }}
 
     - name: Setup environment
       run: .github/workflows/setup.sh

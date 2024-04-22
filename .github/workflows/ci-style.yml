@@ -27,6 +27,7 @@ jobs:
       with:
         python-version: '3.10'
         extras: '[pre-commit]'
+        from-requirements: false
 
     - name: Run pre-commit
       run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )

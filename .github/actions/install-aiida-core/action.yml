@@ -31,10 +31,10 @@ runs:
     shell: bash
 
   - name: Install dependencies from requirements-py-*.txt
-    if: ${{ inputs.from-requirements }}
+    if: ${{ inputs.from-requirements == true }}
     run: uv pip install -v --system -r requirements/requirements-py-${{ inputs.python-version }}.txt
     shell: bash
 
   - name: Install aiida-core 📦
-    run: uv pip install -v --system ${{ inputs.from-requirements && '--no-deps' || '' }} -e .${{ inputs.extras }}
+    run: uv pip install -v --system ${{ inputs.from-requirements == true && '--no-deps' || '' }} -e .${{ inputs.extras }}
     shell: bash

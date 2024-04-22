@@ -32,9 +32,9 @@ runs:
 
   - name: Install dependencies from requirements-py-*.txt
     if: ${{ inputs.from-requirements }}
-    run: uv pip install --system -r requirements/requirements-py-${{ inputs.python-version }}.txt
+    run: uv pip install -v --system -r requirements/requirements-py-${{ inputs.python-version }}.txt
     shell: bash
 
   - name: Install aiida-core 📦
-    run: uv pip install --system ${{ inputs.from-requirements && '--no-deps' || '' }} -e .${{ inputs.extras }}
+    run: uv pip install -v --system ${{ inputs.from-requirements && '--no-deps' || '' }} -e .${{ inputs.extras }}
     shell: bash

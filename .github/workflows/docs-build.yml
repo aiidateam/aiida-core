@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install aiida-core and docs deps
-      uses: .github/actions/install-aiida-core
+      uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.9'
         extras: '[docs,tests,rest,atomic_tools]'

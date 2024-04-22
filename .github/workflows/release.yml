@@ -40,7 +40,7 @@ jobs:
         sudo apt install libkrb5-dev ruby ruby-dev
 
     - name: Install aiida-core and pre-commit
-      uses: .github/actions/install-aiida-core
+      uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.10'
         extras: '[pre-commit]'
@@ -83,7 +83,7 @@ jobs:
         sudo apt install postgresql graphviz
 
     - name: Install aiida-core
-      uses: .github/actions/install-aiida-core
+      uses: ./.github/actions/install-aiida-core
 
     - name: Run sub-set of test suite
       run: pytest -sv -k 'requires_rmq'

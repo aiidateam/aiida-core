@@ -491,6 +491,7 @@ def process_repair(manager, broker, dry_run):
 @options.INCLUDE_EXTRAS()
 @options.USE_PRESUBMIT()
 @options.OVERWRITE()
+@click.option('-f', '--flat', 'flat', is_flag=True, default=False, help='Dump all the files in one location.')
 def dump(
     process,
     path,
@@ -499,6 +500,7 @@ def dump(
     include_extras,
     use_presubmit,
     overwrite,
+    flat,
 ) -> None:
     """Dump files involved in the execution of a process.
 
@@ -549,16 +551,21 @@ def dump(
             use_presubmit=use_presubmit,
             node_dumper=processnode_dumper,
             overwrite=overwrite,
+            flat=flat,
         )
 
         echo.echo_success(
             f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in `{output_path}`.'
         )
 
-    # ? Which exceptions do I expect here? So far only FileExistsError
-    except Exception:
-        # raise
-        echo.echo_critical(f'Problem dumping {process.__class__.__name__} <{process.pk}>.')
+    # ? Which exceptions do I expect here?
+    # except FileExistsError:
+    #     # raise
+    #     echo.echo_critical('Some files present in the dumping directory. Delete manually and try again.')
+    except NotImplementedError:
+        echo.echo_critical('flat dumping not supported for `WorkChains` that call more than one `CalcJob`.')
+    except Exception as e:
+        echo.echo_critical(f'Unexpected error ({e!s}) while dumping {process.__class__.__name__} <{process.pk}>.')
 
     # Create README in parent directory
     # Done after dumping, so that dumping directory is there. Dumping directory is created within the calcjob_dump and

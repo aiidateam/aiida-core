@@ -190,7 +190,6 @@ def validate_make_dump_path(
         raise ValueError('Path not set.')
 
     if path.is_dir():
-
         # Existing, but empty directory => OK
         if not any(path.iterdir()):
             pass
@@ -247,6 +246,7 @@ def calcjob_dump(
     use_presubmit: bool = False,
     node_dumper: ProcessNodeYamlDumper | None = None,
     overwrite: bool = True,
+    flat: bool = False,
 ) -> bool:
     """
     Dump the contents of a CalcJobNode to a specified output path.
@@ -264,19 +264,27 @@ def calcjob_dump(
 
     validate_make_dump_path(path=output_path, overwrite=overwrite)
 
+    if not flat:
+        default_dump_paths = ('raw_inputs', 'raw_outputs', 'node_inputs')
+    else:
+        default_dump_paths = ('', '', '')
+
     if not use_presubmit:
-        calcjob_node.base.repository.copy_tree(output_path.resolve() / 'raw_inputs')
+        calcjob_node.base.repository.copy_tree(output_path.resolve() / default_dump_paths[0])
         try:
-            calcjob_node.outputs.retrieved.copy_tree(output_path.resolve() / 'raw_outputs')
+            calcjob_node.outputs.retrieved.copy_tree(output_path.resolve() / default_dump_paths[1])
 
         # Might not have an output with link label `retrieved`
         except NotExistentAttributeError:
             pass
 
         if include_inputs:
-            calcjob_node_inputs_dump(calcjob_node=calcjob_node, output_path=output_path)
+            calcjob_node_inputs_dump(
+                calcjob_node=calcjob_node, output_path=output_path / default_dump_paths[2], flat=flat
+            )
 
     else:
+        pass
         # ? Outputs obtained via retrieved and should not be present when using `prepare_for_submission` as it puts the
         # ? calculation in a state to be submitted ?!
         try:
@@ -305,6 +313,7 @@ def process_dump(
     use_presubmit: bool = False,
     node_dumper: ProcessNodeYamlDumper | None = None,
     overwrite: bool = True,
+    flat: bool = False,
 ) -> bool:
     """Dumps all data involved in a `WorkChainNode`, including its outgoing links.
 
@@ -339,41 +348,62 @@ def process_dump(
     # `process_dump` function which is the only one called from `verdi`, then I need to dump for a `CalcJob` here, as
     # well. Also, if I want to be able to use `process_dump` from within the Python API
     if isinstance(process_node, CalcJobNode):
-        calcjob_dump(
-            calcjob_node=process_node,
-            output_path=output_path,
-            include_inputs=include_inputs,
-            use_presubmit=use_presubmit,
-            node_dumper=node_dumper,
-            overwrite=overwrite,
-        )
+        if not flat:
+            calcjob_dump(
+                calcjob_node=process_node,
+                output_path=output_path,
+                include_inputs=include_inputs,
+                use_presubmit=use_presubmit,
+                node_dumper=node_dumper,
+                overwrite=overwrite,
+            )
+        else:
+            calcjob_dump(
+                calcjob_node=process_node,
+                output_path=output_path,
+                include_inputs=include_inputs,
+                use_presubmit=use_presubmit,
+                node_dumper=node_dumper,
+                overwrite=overwrite,
+                flat=flat,
+            )
 
     # Recursive call for WorkChainNode
     elif isinstance(process_node, WorkChainNode):
-
         # Don't increment index for `ProcessNodes` that don't (always?) have file IO
         # (`CalcFunctionNodes`/`WorkFunctionNodes`), such as `create_kpoints_from_distance`
         called_links = process_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
+
+        # todo: Add check if flat is True, and multiple sub-workchains, that it raises exception. Otherwise, if
+        # todo: only one top-level workchain, dump everything from the single calcjob that was called in the
+        # todo: workchain in the main workchain directory
+        called_descendants = process_node.called_descendants
+        if flat and [isinstance(node, CalcJobNode) for node in called_descendants].count(True) > 1:
+            raise NotImplementedError
 
         for index, link_triple in enumerate(
             sorted(called_links, key=lambda link_triple: link_triple.node.ctime), start=1
         ):
             child_node = link_triple.node
-            child_label = generate_node_input_label(index=index, link_triple=link_triple)
+            if not flat:
+                child_label = generate_node_input_label(index=index, link_triple=link_triple)
+            else:
+                child_label = ''
             child_output_path = output_path.resolve() / child_label
 
             # Recursive function call for `WorkChainNode``
-            # Not sure if the next two cases works for `WorkFunction` and `CalcFuncion``Node`s
+            # Not sure if the next two cases work for `WorkFunction` and `CalcFuncion``Node`s
             if isinstance(child_node, (WorkChainNode, WorkFunctionNode)):
-
-                process_dump(
-                    process_node=child_node,
-                    output_path=child_output_path,
-                    include_inputs=include_inputs,
-                    use_presubmit=use_presubmit,
-                    node_dumper=node_dumper,
-                    overwrite=overwrite
-                )
+                if flat:
+                    process_dump(
+                        process_node=child_node,
+                        output_path=child_output_path,
+                        include_inputs=include_inputs,
+                        use_presubmit=use_presubmit,
+                        node_dumper=node_dumper,
+                        overwrite=overwrite,
+                        flat=flat,
+                    )
 
             elif isinstance(child_node, (CalcJobNode, CalcFunctionNode)):
                 calcjob_dump(
@@ -382,12 +412,13 @@ def process_dump(
                     include_inputs=include_inputs,
                     use_presubmit=use_presubmit,
                     node_dumper=node_dumper,
-                    overwrite=overwrite
+                    overwrite=overwrite,
+                    flat=flat,
                 )
 
 
 # Separate functions for CalcJob dumping using pre_submit, as well as for the node_inputs
-def calcjob_node_inputs_dump(calcjob_node: CalcJobNode, output_path: Path, inputs_relpath: Path = Path('node_inputs')):
+def calcjob_node_inputs_dump(calcjob_node: CalcJobNode, output_path: Path, flat: bool = False):
     """Dump inputs of a `CalcJobNode` of type `SinglefileData` and `FolderData`.
 
     :param calcjob_node: The `CalcJobNode` whose inputs will be dumped.
@@ -402,7 +433,11 @@ def calcjob_node_inputs_dump(calcjob_node: CalcJobNode, output_path: Path, input
     for input_node_triple in input_node_triples:
         # Select only repositories that actually hold objects
         if len(input_node_triple.node.base.repository.list_objects()) > 0:
-            input_node_path = output_path / inputs_relpath / Path(*input_node_triple.link_label.split('__'))
+            if not flat:
+                input_node_path = output_path / Path(*input_node_triple.link_label.split('__'))
+            else:
+                input_node_path = output_path
+
             input_node_triple.node.base.repository.copy_tree(input_node_path.resolve())
 
 

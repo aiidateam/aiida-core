@@ -48,7 +48,6 @@ Below is a list with all available subcommands.
 
     Commands:
       cleanworkdir  Clean all content of all output remote folders of calcjobs.
-      dump          Dump files involved in the execution of a `CalcJob`.
       gotocomputer  Open a shell in the remote folder on the calcjob.
       inputcat      Show the contents of one of the calcjob input files.
       inputls       Show the list of the generated calcjob input files.

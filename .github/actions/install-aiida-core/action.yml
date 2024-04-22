@@ -18,6 +18,9 @@ inputs:
     required: false
     type: boolean
 
+env:
+  UV_VERSION: 0.1.35
+
 runs:
   using: composite
   steps:
@@ -27,14 +30,18 @@ runs:
       python-version: ${{ inputs.python-version }}
 
   - name: Install uv installer
-    run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astral-sh/uv/releases/download/0.1.35/uv-installer.sh | sh
+    run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astral-sh/uv/releases/download/${{ env.UV_VERSION }}/uv-installer.sh | sh
     shell: bash
 
   - name: Install dependencies from requirements-py-*.txt
-    if: ${{ inputs.from-requirements == true }}
+    if: inputs.from-requirements == true
     run: uv pip install -v --system -r requirements/requirements-py-${{ inputs.python-version }}.txt
     shell: bash
 
   - name: Install aiida-core 📦
-    run: uv pip install -v --system ${{ inputs.from-requirements == true && '--no-deps' || '' }} -e .${{ inputs.extras }}
+    run: uv pip install --system ${{ env.NO_DEPS }} -e .${{ inputs.extras }}
+    env:
+        # Don't install dependencies if they were installed through requirements file AND
+        # if no extras are required.
+      NO_DEPS: ${{ (inputs.from-requirements && inputs.extras == '')  && '--no-deps' || '' }}
     shell: bash

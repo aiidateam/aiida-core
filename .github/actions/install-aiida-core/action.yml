@@ -38,7 +38,7 @@ runs:
     shell: bash
 
   - name: Install aiida-core
-    run: uv pip install --system ${{ env.NO_DEPS }} -e .${{ inputs.extras }}
+    run: uv pip install --system ${{ env.NO_DEPS }} .${{ inputs.extras }}
     env:
         # Don't install dependencies if they were installed through requirements file AND
         # if no extras are required.

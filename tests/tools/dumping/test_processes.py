@@ -101,16 +101,6 @@ def test_calcjob_dump_io(generate_calcjob_node_io, tmp_path):
     assert not singlefiledata_outputfile.is_file()
     assert result
 
-    clean_tmp_path(tmp_path=tmp_path)
-
-    # use_presubmit -> Depends on implementation from aiida-plugin, so I cannot test specifically inside aiida-core
-    # Assert that `False` is returned if `use_presubmit` used, but no `process_type` has been set. This is the test case
-    # one gets from the fixture (f'no process type for Node<{self.pk}>: cannot recreate process class')
-    result = calcjob_dump(calcjob_node=calcjob_node, output_path=dump_path, use_presubmit=True)
-    assert result is False
-
-    clean_tmp_path(tmp_path=tmp_path)
-
 
 def test_calcjob_dump_arithmetic_add(tmp_path, aiida_localhost, generate_arithmetic_add_node):
     dump_path = tmp_path / 'calcjob_dump_arithmetic_add'
@@ -131,14 +121,6 @@ def test_calcjob_dump_arithmetic_add(tmp_path, aiida_localhost, generate_arithme
     assert all([raw_output_file.is_file() for raw_output_file in raw_output_files])
 
     clean_tmp_path(tmp_path=tmp_path)
-
-    # Dumping with `use_presubmit` -> Directory structure is different and output file not dumped
-    result = calcjob_dump(calcjob_node=add_node, output_path=dump_path, use_presubmit=True)
-
-    assert result
-    assert Path(dump_path / '_aiidasubmit.sh').is_file()
-    assert Path(dump_path / 'aiida.in').is_file()
-    assert not Path(dump_path / 'aiida.out').is_file()
 
 
 def test_process_dump_io(generate_work_chain_io, tmp_path):

@@ -109,7 +109,6 @@ __all__ = (
     'USER_FIRST_NAME',
     'USER_INSTITUTION',
     'USER_LAST_NAME',
-    'USE_PRESUBMIT',
     'VERBOSITY',
     'VISUALIZATION_FORMAT',
     'WAIT',
@@ -783,16 +782,6 @@ INCLUDE_EXTRAS = OverridableOption(
     default=False,
     show_default=True,
     help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-
-USE_PRESUBMIT = OverridableOption(
-    '--use-presubmit',
-    '-u',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help="""Use the `presubmit` method for dumping the files of the`CalcJob`. Note: this requires the corresponding
-    aiida-plugin to be installed.""",
 )
 
 OVERWRITE = OverridableOption(

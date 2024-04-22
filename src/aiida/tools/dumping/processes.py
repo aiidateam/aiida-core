@@ -140,12 +140,6 @@ def make_dump_readme(process_node: ProcessNode, output_path: Path):
     "raw_outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
     settings). Additional input files (depending on the type of calculation) are placed in the "node_inputs".
 
-    When using the `--use-presubmit` command line option, the folder created for each individual simulation should, in
-    principle, allow for direct resubmission, as it mirrors the (remote) folder that was created by AiiDA to execute the
-    job. However, this option requires the relevant AiiDA plugin to be installed, so it is disabled by default. Also
-    note that intermediate files might be missing, so for a multi-step workflow, each step would still have to be run
-    separately.
-
     Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
     node data for further inspection."""  # noqa: E501
     )
@@ -243,7 +237,6 @@ def calcjob_dump(
     calcjob_node: CalcJobNode,
     output_path: Path,
     include_inputs: bool = True,
-    use_presubmit: bool = False,
     node_dumper: ProcessNodeYamlDumper | None = None,
     overwrite: bool = True,
     flat: bool = False,
@@ -254,8 +247,6 @@ def calcjob_dump(
     :param calcjob_node: The CalcJobNode to be dumped.
     :param output_path: The path where the dumped contents will be stored.
     :param include_inputs: If True, do not dump the inputs of the CalcJobNode.
-    :param use_presubmit: If True, use the `prepare_for_submission` method to prepare the calculation for
-        submission. If False, use the retrieved outputs and raw inputs.
     :return: None
     """
 
@@ -269,36 +260,18 @@ def calcjob_dump(
     else:
         default_dump_paths = ('', '', '')
 
-    if not use_presubmit:
-        calcjob_node.base.repository.copy_tree(output_path.resolve() / default_dump_paths[0])
-        try:
-            calcjob_node.outputs.retrieved.copy_tree(output_path.resolve() / default_dump_paths[1])
+    calcjob_node.base.repository.copy_tree(output_path.resolve() / default_dump_paths[0])
 
-        # Might not have an output with link label `retrieved`
-        except NotExistentAttributeError:
-            pass
-
-        if include_inputs:
-            calcjob_node_inputs_dump(
-                calcjob_node=calcjob_node, output_path=output_path / default_dump_paths[2], flat=flat
-            )
-
-    else:
+    try:
+        calcjob_node.outputs.retrieved.copy_tree(output_path.resolve() / default_dump_paths[1])
+    except NotExistentAttributeError:
+    # Might not have an output with link label `retrieved`
         pass
-        # ? Outputs obtained via retrieved and should not be present when using `prepare_for_submission` as it puts the
-        # ? calculation in a state to be submitted ?!
-        try:
-            calcjob_presubmit_dump(calcjob_node=calcjob_node, output_path=output_path)
-        except ValueError:
-            # raise
-            # missing_plugin = str(calcjob_node.process_class).split(' ')[1].split('.')[0][1:] -> .process_class leads
-            # to exception without plugin installed
-            missing_plugin = f'aiida-{calcjob_node.process_type.split(':')[1].split('.')[0]}'
-            echo.echo_error(
-                f'Error when trying to get a restart-builder. Do you have the relevant '
-                f'plugin `{missing_plugin}` installed?'
-            )
-            return False
+
+    if include_inputs:
+        calcjob_node_inputs_dump(
+            calcjob_node=calcjob_node, output_path=output_path / default_dump_paths[2], flat=flat
+        )
 
     # This will eventually be replaced once pydantic backend PR merged
     if node_dumper is None:
@@ -310,7 +283,6 @@ def process_dump(
     process_node: WorkChainNode | CalcJobNode,
     output_path: Path,
     include_inputs: bool = True,
-    use_presubmit: bool = False,
     node_dumper: ProcessNodeYamlDumper | None = None,
     overwrite: bool = True,
     flat: bool = False,
@@ -323,8 +295,6 @@ def process_dump(
     :param process_node: The parent process node to be dumped. It can be either a `WorkChainNode` or a `CalcJobNode`.
     :param output_path: The main output path where the directory tree will be created.
     :param include_inputs: If True, include file or folder inputs in the dump. Defaults to True.
-    :param use_presubmit: If True, use the `prepare_for_submission` method to get the inputs of the
-    CalcJobNode. Defaults to False.
     :param node_dumper: The ProcessNodeYamlDumper instance to use for dumping node metadata. If not provided, a new
         instance will be created. Defaults to None.
     :return: bool
@@ -353,7 +323,6 @@ def process_dump(
                 calcjob_node=process_node,
                 output_path=output_path,
                 include_inputs=include_inputs,
-                use_presubmit=use_presubmit,
                 node_dumper=node_dumper,
                 overwrite=overwrite,
             )
@@ -362,7 +331,6 @@ def process_dump(
                 calcjob_node=process_node,
                 output_path=output_path,
                 include_inputs=include_inputs,
-                use_presubmit=use_presubmit,
                 node_dumper=node_dumper,
                 overwrite=overwrite,
                 flat=flat,
@@ -399,7 +367,6 @@ def process_dump(
                         process_node=child_node,
                         output_path=child_output_path,
                         include_inputs=include_inputs,
-                        use_presubmit=use_presubmit,
                         node_dumper=node_dumper,
                         overwrite=overwrite,
                         flat=flat,
@@ -410,7 +377,6 @@ def process_dump(
                     calcjob_node=child_node,
                     output_path=child_output_path,
                     include_inputs=include_inputs,
-                    use_presubmit=use_presubmit,
                     node_dumper=node_dumper,
                     overwrite=overwrite,
                     flat=flat,

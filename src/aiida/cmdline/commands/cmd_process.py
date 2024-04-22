@@ -489,7 +489,6 @@ def process_repair(manager, broker, dry_run):
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
-@options.USE_PRESUBMIT()
 @options.OVERWRITE()
 @click.option('-f', '--flat', 'flat', is_flag=True, default=False, help='Dump all the files in one location.')
 def dump(
@@ -498,7 +497,6 @@ def dump(
     include_inputs,
     include_attributes,
     include_extras,
-    use_presubmit,
     overwrite,
     flat,
 ) -> None:
@@ -512,12 +510,6 @@ def dump(
     By default, input and output files of each simulation can be found in the corresponding "raw_inputs" and
     "raw_outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
     settings). Additional input files (depending on the type of calculation) are placed in the "node_inputs".
-
-    When using the `--use-presubmit` command line option, the folder created for each individual simulation should, in
-    principle, allow for direct resubmission, as it mirrors the (remote) folder that was created by AiiDA to execute the
-    job. However, this option requires the relevant AiiDA plugin to be installed, so it is disabled by default. Also
-    note that intermediate files might be missing, so for a multi-step workflow, each step would still have to be run
-    separately.
 
     Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
     node data for further inspection.
@@ -548,7 +540,6 @@ def dump(
             process_node=process,
             output_path=output_path,
             include_inputs=include_inputs,
-            use_presubmit=use_presubmit,
             node_dumper=processnode_dumper,
             overwrite=overwrite,
             flat=flat,

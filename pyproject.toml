@@ -210,6 +210,7 @@ notebook = [
   'notebook~=6.1,>=6.1.5'
 ]
 pre-commit = [
+  'aiida-core[atomic_tools,rest,tests,tui]',
   'mypy~=1.7.1',
   'packaging~=23.0',
   'pre-commit~=2.2',

@@ -14,7 +14,7 @@ on:
         type: string
 
 jobs:
-  build-test-upload:
+  build:
     runs-on: ${{ inputs.runsOn }}
     defaults:
       run:
@@ -28,3 +28,60 @@ jobs:
     - name: Build aiida-core images for amd64
       # The order of the buildx bake files is important, as the second one will overwrite the first one
       run: docker buildx bake -f docker-bake.hcl -f build.json --set *.platform=linux/$amd64 --load
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to GitHub Container Registry 🔑
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    # TODO: Separate amd64 build just just for testing now
+    - name: Build amd64 images 🏗️
+      id: build-amd64
+      uses: docker/bake-action@v4
+      with:
+        push: true
+        set: |
+          *.platform=linux/amd64
+        files: |
+          docker-bake.hcl
+          build.json
+
+    - name: Set output variables
+      run: .github/workflows/extract-docker-image-names.sh >> "${GITHUB_OUTPUT}"
+      env:
+        BAKE_METADATA: ${{ steps.build-amd64.outputs.metadata }}
+
+    # Here we build arm64 images (with help of QEMU virtualization)
+    # and upload both amd64 and arm64 images to ghcr.io
+    - name: Build ARM64 and upload to ghcr.io 🍎📤
+      id: build-upload
+      if: false
+      uses: docker/bake-action@v4
+      with:
+          # TODO: Actually push, add tags first though!
+        load: true
+        push: false
+          # Using provenance to disable default attestation so it will build only desired images:
+          # https://github.com/orgs/community/discussions/45969
+        provenance: false
+          # NOTE: linux/amd64 images are taken from previous step
+        set: |
+          *.platform=linux/amd64,linux/arm64
+        files: |
+          docker-bake.hcl
+          build.json
+
+    - name: Set output variables
+      if: false
+      id: bake_metadata
+      run: .github/workflows/extract-docker-image-names.sh >> "${GITHUB_OUTPUT}"
+      env:
+        BAKE_METADATA: ${{ steps.build-upload.outputs.metadata }}

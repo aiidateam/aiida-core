@@ -1,0 +1,30 @@
+name: Build image and then upload the image, tags and manifests to GitHub artifacts
+
+env:
+  OWNER: ${{ github.repository_owner }}
+  # Full logs for CI build
+  BUILDKIT_PROGRESS: plain
+
+on:
+  workflow_call:
+    inputs:
+      runsOn:
+        description: GitHub Actions Runner image
+        required: true
+        type: string
+
+jobs:
+  build-test-upload:
+    runs-on: ${{ inputs.runsOn }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: .docker
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+
+    - name: Build aiida-core images for amd64
+      # The order of the buildx bake files is important, as the second one will overwrite the first one
+      run: docker buildx bake -f docker-bake.hcl -f build.json --set *.platform=linux/$amd64 --load

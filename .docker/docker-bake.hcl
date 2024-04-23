@@ -27,7 +27,7 @@ variable "TARGETS" {
 function "tags" {
   params = [image]
   result = [
-    "${REGISTRY}${ORGANIZATION}/${image}:newly-baked"
+    "${REGISTRY}${ORGANIZATION}/${image}"
   ]
 }
 

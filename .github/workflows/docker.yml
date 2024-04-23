@@ -42,7 +42,4 @@ jobs:
     if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [build, test]
     uses: ./.github/workflows/docker-publish.yml
-    with:
-      architecture: amd64
-      registry: docker.io
     secrets: inherit

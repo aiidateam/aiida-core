@@ -16,14 +16,8 @@ from pathlib import Path
 
 import yaml
 
-from aiida.cmdline.utils import echo
 from aiida.common import LinkType
 from aiida.common.exceptions import NotExistentAttributeError
-from aiida.common.folders import Folder
-from aiida.engine.daemon.execmanager import upload_calculation
-from aiida.engine.processes.calcjobs import CalcJob
-from aiida.engine.utils import instantiate_process
-from aiida.manage import get_manager
 from aiida.orm import (
     CalcFunctionNode,
     CalcJobNode,
@@ -32,7 +26,6 @@ from aiida.orm import (
     WorkFunctionNode,
 )
 from aiida.orm.utils import LinkTriple
-from aiida.transports.plugins.local import LocalTransport
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -149,7 +142,7 @@ def make_dump_readme(process_node: ProcessNode, output_path: Path):
     (output_path / 'README').write_text(_readme_string)
 
 
-def generate_default_dump_path(process_node: WorkChainNode | CalcJobNode) -> Path:
+def generate_default_dump_path(process_node: WorkChainNode | CalcJobNode | CalcFunctionNode | WorkFunctionNode) -> Path:
     """Simple helper function to generate the default parent-dumping directory if none given.
 
     This function is not called for the sub-calls of `calcjob_dump` or during the recursive `process_dump` as it just
@@ -234,13 +227,14 @@ def generate_node_input_label(index: int, link_triple: LinkTriple) -> str:
 
 
 def calcjob_dump(
-    calcjob_node: CalcJobNode,
-    output_path: Path,
+    calcjob_node: CalcJobNode | CalcFunctionNode,
+    output_path: Path | None,
     include_inputs: bool = True,
     node_dumper: ProcessNodeYamlDumper | None = None,
     overwrite: bool = True,
     flat: bool = False,
-) -> bool:
+    io_dump_paths: list | None = None,
+):
     """
     Dump the contents of a CalcJobNode to a specified output path.
 
@@ -253,25 +247,40 @@ def calcjob_dump(
     if output_path is None:
         output_path = generate_default_dump_path(process_node=calcjob_node)
 
-    validate_make_dump_path(path=output_path, overwrite=overwrite)
+    try:
+        validate_make_dump_path(path=output_path, overwrite=overwrite)
+    except:
+        raise
 
-    if not flat:
-        default_dump_paths = ('raw_inputs', 'raw_outputs', 'node_inputs')
-    else:
-        default_dump_paths = ('', '', '')
+    default_io_dump_paths = ['raw_inputs', 'raw_outputs', 'node_inputs']
 
-    calcjob_node.base.repository.copy_tree(output_path.resolve() / default_dump_paths[0])
+    if flat and io_dump_paths is None:
+        io_dump_paths = ['', '', '']
+        _LOGGER.info('Flat set to True and no `io_dump_paths`. Dump in a flat directory, files might be overwritten.')
+        # raise ValueError('Flat set to False but no io_dump_paths provided.')
+        # -> Can still provide paths but use flat=True to not flatten the node_inputs -> Probably this is bad design...
+    elif flat and io_dump_paths is not None:
+        _LOGGER.info('Flat set to True but `io_dump_paths` provided. These will be used, but `node_inputs` not nested.')
+    elif not flat and io_dump_paths is None:
+        _LOGGER.info(
+            f'Flat set to False but no `io_dump_paths` provided. Will use the defaults: {default_io_dump_paths}.'
+        )
+        io_dump_paths = default_io_dump_paths
+    elif not flat and io_dump_paths is not None:
+        _LOGGER.info(
+            'Flat set to False but no `io_dump_paths` provided. These will be used, but `node_inputs` flattened.'
+        )
+
+    calcjob_node.base.repository.copy_tree(output_path.resolve() / io_dump_paths[0])
 
     try:
-        calcjob_node.outputs.retrieved.copy_tree(output_path.resolve() / default_dump_paths[1])
+        calcjob_node.outputs.retrieved.copy_tree(output_path.resolve() / io_dump_paths[1])
     except NotExistentAttributeError:
-    # Might not have an output with link label `retrieved`
+        # Might not have an output with link label `retrieved`
         pass
 
     if include_inputs:
-        calcjob_node_inputs_dump(
-            calcjob_node=calcjob_node, output_path=output_path / default_dump_paths[2], flat=flat
-        )
+        calcjob_node_inputs_dump(calcjob_node=calcjob_node, output_path=output_path / io_dump_paths[2], flat=flat)
 
     # This will eventually be replaced once pydantic backend PR merged
     if node_dumper is None:
@@ -280,13 +289,13 @@ def calcjob_dump(
 
 
 def process_dump(
-    process_node: WorkChainNode | CalcJobNode,
-    output_path: Path,
+    process_node: WorkChainNode | CalcJobNode | WorkFunctionNode | CalcFunctionNode,
+    output_path: Path | None,
     include_inputs: bool = True,
     node_dumper: ProcessNodeYamlDumper | None = None,
     overwrite: bool = True,
     flat: bool = False,
-) -> bool:
+):
     """Dumps all data involved in a `WorkChainNode`, including its outgoing links.
 
     Note that if an outgoing link is again a `WorkChainNode`, the function recursively calls itself, while files are
@@ -318,23 +327,14 @@ def process_dump(
     # `process_dump` function which is the only one called from `verdi`, then I need to dump for a `CalcJob` here, as
     # well. Also, if I want to be able to use `process_dump` from within the Python API
     if isinstance(process_node, CalcJobNode):
-        if not flat:
-            calcjob_dump(
-                calcjob_node=process_node,
-                output_path=output_path,
-                include_inputs=include_inputs,
-                node_dumper=node_dumper,
-                overwrite=overwrite,
-            )
-        else:
-            calcjob_dump(
-                calcjob_node=process_node,
-                output_path=output_path,
-                include_inputs=include_inputs,
-                node_dumper=node_dumper,
-                overwrite=overwrite,
-                flat=flat,
-            )
+        calcjob_dump(
+            calcjob_node=process_node,
+            output_path=output_path,
+            include_inputs=include_inputs,
+            node_dumper=node_dumper,
+            overwrite=overwrite,
+            flat=flat,
+        )
 
     # Recursive call for WorkChainNode
     elif isinstance(process_node, WorkChainNode):
@@ -384,16 +384,13 @@ def process_dump(
 
 
 # Separate functions for CalcJob dumping using pre_submit, as well as for the node_inputs
-def calcjob_node_inputs_dump(calcjob_node: CalcJobNode, output_path: Path, flat: bool = False):
+def calcjob_node_inputs_dump(calcjob_node: CalcJobNode | CalcFunctionNode, output_path: Path, flat: bool = False):
     """Dump inputs of a `CalcJobNode` of type `SinglefileData` and `FolderData`.
 
     :param calcjob_node: The `CalcJobNode` whose inputs will be dumped.
     :param output_path: The path where the inputs will be dumped.
     """
 
-    # ? Not using the `node_class` argument of `get_incoming`, as it does not actually retrieve, e.g. a `UpfData` node
-    # ? (due to planned deprecation?)
-    # ? Instead, check for isinstance of `SinglefileData`
     input_node_triples = calcjob_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 
     for input_node_triple in input_node_triples:
@@ -402,46 +399,7 @@ def calcjob_node_inputs_dump(calcjob_node: CalcJobNode, output_path: Path, flat:
             if not flat:
                 input_node_path = output_path / Path(*input_node_triple.link_label.split('__'))
             else:
+                # Don't use link_label at all
                 input_node_path = output_path
 
             input_node_triple.node.base.repository.copy_tree(input_node_path.resolve())
-
-
-def calcjob_presubmit_dump(calcjob_node: CalcJobNode, output_path: Path):
-    """
-    Dump inputs of a `CalcJobNode` using the `presubmit` function.
-
-    :param process: The `CalcJobNode` whose inputs need to be dumped.
-    :param output_path: The path where the inputs will be dumped.
-    """
-
-    builder_restart = calcjob_node.get_builder_restart()
-    runner = get_manager().get_runner()
-    calcjob_process: CalcJob = instantiate_process(runner, builder_restart)  # type: ignore[assignment]
-
-    # `presubmit` calls `prepare_for_submission` internally
-    calc_info = calcjob_process.presubmit(folder=Folder(abspath=output_path))
-
-    try:
-        # Hackish way to modify local copy list so that the pseudos are actually dumped where I want them to. Otherwise
-        # they
-        # end up in home...
-        local_copy_list = calc_info['local_copy_list'].copy()
-        # print('LOCAL_COPY_LIST', local_copy_list)
-        new_local_copy_list = [tuple(list(local_copy_list[0][:2]) + [str(output_path / local_copy_list[0][-1])])]
-        calc_info['local_copy_list'] = new_local_copy_list
-        # print('NEW_LOCAL_COPY_LIST', new_local_copy_list)
-    except IndexError:
-        # This happens if `local_copy_list` is empty
-        pass
-
-    with LocalTransport() as transport:
-        new_calcjob_node: CalcJobNode = calcjob_process.node
-        upload_calculation(
-            node=new_calcjob_node,
-            transport=transport,
-            calc_info=calc_info,
-            folder=Folder(abspath=output_path),
-            inputs=calcjob_process.inputs,
-            dry_run=False,
-        )

@@ -518,7 +518,7 @@ def process_dump(
     from aiida.tools.dumping.processes import (
         ProcessNodeYamlDumper,
         generate_default_dump_path,
-        make_dump_readme,
+        generate_dump_readme,
         process_node_dump,
         validate_make_dump_path,
     )
@@ -561,4 +561,4 @@ def process_dump(
     # Create README in parent directory
     # Done after dumping, so that dumping directory is there. Dumping directory is created within the calcjob_dump and
     # process_dump files such that they can also be used from within the Python API, not just via verdi
-    make_dump_readme(output_path=output_path, process_node=process)
+    generate_dump_readme(output_path=output_path, process_node=process)

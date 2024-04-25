@@ -114,7 +114,7 @@ class ProcessNodeYamlDumper:
 
 
 # Utility functions
-def make_dump_readme(process_node: ProcessNode, output_path: Path):
+def generate_dump_readme(process_node: ProcessNode, output_path: Path):
     """Generate README file in main dumping directory.
 
     :param process_node: CalcJob or WorkChain Node.
@@ -268,6 +268,30 @@ def generate_node_input_label(index: int, link_triple: LinkTriple, flat: bool = 
     return node_label
 
 
+def generate_calcjob_io_dump_paths(calcjob_io_dump_paths: list | None = None, flat: bool = False):
+    default_calcjob_io_dump_paths = ['raw_inputs', 'raw_outputs', 'node_inputs']
+
+    if flat and calcjob_io_dump_paths is None:
+        calcjob_io_dump_paths = ['', '', '']
+        _LOGGER.info(
+            'Flat set to True and no `io_dump_paths`. Dumping in a flat directory, files might be overwritten.'
+        )
+    elif flat and calcjob_io_dump_paths is not None:
+        _LOGGER.info('Flat set to True but `io_dump_paths` provided. These will be used, but `node_inputs` not nested.')
+    elif not flat and calcjob_io_dump_paths is None:
+        _LOGGER.info(
+            f'Flat set to False but no `io_dump_paths` provided. Will use the defaults {default_calcjob_io_dump_paths}.'
+        )
+        calcjob_io_dump_paths = default_calcjob_io_dump_paths
+    # elif not flat and calcjob_io_dump_paths is not None:
+    else:
+        _LOGGER.info(
+            'Flat set to False but no `io_dump_paths` provided. These will be used, but `node_inputs` flattened.'
+        )
+
+    return calcjob_io_dump_paths
+
+
 def calcjob_node_dump(
     calcjob_node: CalcJobNode | CalcFunctionNode,
     output_path: Path | None,
@@ -295,24 +319,7 @@ def calcjob_node_dump(
         # raise same exception here to communicate it outwards
         raise
 
-    default_io_dump_paths = ['raw_inputs', 'raw_outputs', 'node_inputs']
-
-    if flat and io_dump_paths is None:
-        io_dump_paths = ['', '', '']
-        _LOGGER.info('Flat set to True and no `io_dump_paths`. Dumping in a flat directory, files might be overwritten.')
-        # raise ValueError('Flat set to False but no io_dump_paths provided.')
-        # -> Can still provide paths but use flat=True to not flatten the node_inputs -> Probably this is bad design...
-    elif flat and io_dump_paths is not None:
-        _LOGGER.info('Flat set to True but `io_dump_paths` provided. These will be used, but `node_inputs` not nested.')
-    elif not flat and io_dump_paths is None:
-        _LOGGER.info(
-            f'Flat set to False but no `io_dump_paths` provided. Will use the defaults: {default_io_dump_paths}.'
-        )
-        io_dump_paths = default_io_dump_paths
-    elif not flat and io_dump_paths is not None:
-        _LOGGER.info(
-            'Flat set to False but no `io_dump_paths` provided. These will be used, but `node_inputs` flattened.'
-        )
+    io_dump_paths = generate_calcjob_io_dump_paths(calcjob_io_dump_paths=io_dump_paths, flat=flat)
 
     calcjob_node.base.repository.copy_tree(output_path.resolve() / io_dump_paths[0])
 
@@ -356,7 +363,10 @@ def process_node_dump(
     if output_path is None:
         output_path = generate_default_dump_path(process_node=process_node)
 
-    validate_make_dump_path(path=output_path, overwrite=overwrite)
+    try:
+        validate_make_dump_path(path=output_path, overwrite=overwrite)
+    except:
+        raise
 
     # This will eventually be replaced once pydantic backend PR merged
     if node_dumper is None:
@@ -378,8 +388,6 @@ def process_node_dump(
             flat=flat,
         )
 
-    # Recursive call for WorkChainNode
-    # todo: Rather than checking for both, I could check for subclass of WorkFlowNode
     elif isinstance(process_node, (WorkChainNode, WorkFunctionNode)):
         called_links = process_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
 
@@ -398,9 +406,8 @@ def process_node_dump(
             if not flat:
                 child_label = generate_node_input_label(index=index, link_triple=link_triple, flat=flat)
             else:
-                # test
-                child_label = generate_node_input_label(index=index, link_triple=link_triple, flat=flat)
-                # child_label = ''
+                child_label = ''
+
             child_output_path = output_path.resolve() / child_label
 
             # Recursive function call for `WorkChainNode``
@@ -424,6 +431,9 @@ def process_node_dump(
                     overwrite=overwrite,
                     flat=flat,
                 )
+
+            # todo: Add checks for `CalcFunctionNode` and `WorkFunctionNode` here specifically and implement the
+            # respective duming functions
 
 
 # Separate functions for CalcJob dumping using pre_submit, as well as for the node_inputs

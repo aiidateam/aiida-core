@@ -336,6 +336,28 @@ class TestVerdiProcess:
             assert len(result.output_lines) == 1, result.output_lines
             assert result.output_lines[0] == 'No log messages recorded for this entry'
 
+    def test_process_dump(self, run_cli_command):
+        """Test verdi process dump"""
+        node = WorkflowNode().store()
+        # node.set_process_state(ProcessState.RUNNING)
+
+        # # Running without identifiers should not except and not print anything
+        # options = []
+        # result = run_cli_command(cmd_process.process_status, options)
+        # assert result.exception is None, result.output
+        # assert len(result.output_lines) == 0
+
+        # # Giving a single identifier should print a non empty string message
+        # options = [str(node.pk)]
+        # result = run_cli_command(cmd_process.process_status, options)
+        # assert result.exception is None, result.output
+        # assert len(result.output_lines) > 0
+
+        # # With max depth 0, the output should be empty
+        # options = ['--max-depth', 0, str(node.pk)]
+        # result = run_cli_command(cmd_process.process_status, options)
+        # assert result.exception is None, result.output
+        # assert len(result.output_lines) == 0
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('numprocesses, percentage', ((0, 100), (1, 90)))

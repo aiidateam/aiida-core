@@ -121,6 +121,15 @@ def make_dump_readme(process_node: ProcessNode, output_path: Path):
     :param output_path: Output path for dumping.
 
     """
+
+    from aiida.cmdline.utils.ascii_vis import format_call_graph
+    from aiida.cmdline.utils.common import (
+        get_calcjob_report,
+        get_node_info,
+        get_process_function_report,
+        get_workchain_report,
+    )
+
     _readme_string = textwrap.dedent(
         f"""\
     This directory contains the files involved in the simulation/workflow `{process_node.process_label} <{process_node.pk}>` run with AiiDA.
@@ -138,7 +147,26 @@ def make_dump_readme(process_node: ProcessNode, output_path: Path):
     node data for further inspection."""  # noqa: E501
     )
 
-    # TODO: Add outputs of `verdi process (status|report|show?)`
+    # `verdi process status`
+    process_status = format_call_graph(calc_node=process_node, max_depth=None, call_link_label=True)
+    _readme_string += f'\n\nOutput of `verdi process status`\n\n{process_status}'
+
+    # `verdi process report`
+    # Copied over from `cmd_process`
+    if isinstance(process_node, CalcJobNode):
+        process_report = get_calcjob_report(process_node)
+    elif isinstance(process_node, WorkChainNode):
+        process_report = get_workchain_report(process_node, levelname='REPORT', indent_size=2, max_depth=None)
+    elif isinstance(process_node, (CalcFunctionNode, WorkFunctionNode)):
+        process_report = get_process_function_report(process_node)
+    else:
+        process_report = f'Nothing to show for node type {process_node.__class__}'
+
+    _readme_string += f'\n\nOutput of `verdi process report`\n\n{process_report}'
+
+    # `verdi process show`?
+    process_show = get_node_info(node=process_node)
+    _readme_string += f'\n\nOutput of `verdi process show`\n\n{process_show}'
 
     (output_path / 'README').write_text(_readme_string)
 
@@ -162,9 +190,7 @@ def generate_default_dump_path(process_node: WorkChainNode | CalcJobNode | CalcF
 
 # ? Could move this to `cmdline/utils`
 def validate_make_dump_path(
-    path: Path,
-    overwrite: bool = False,
-    safeguard_file: str = '.aiida_node_metadata.yaml'
+    path: Path, overwrite: bool = False, safeguard_file: str = '.aiida_node_metadata.yaml'
 ) -> Path:
     """
     Create default dumping directory for a given process node and return it as absolute path.
@@ -355,7 +381,6 @@ def process_dump(
     # Recursive call for WorkChainNode
     # todo: Rather than checking for both, I could check for subclass of WorkFlowNode
     elif isinstance(process_node, (WorkChainNode, WorkFunctionNode)):
-
         called_links = process_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
 
         # If multiple CalcJobs contained in Workchain flat=True doesn't make sense as files would be overwritten
@@ -373,7 +398,7 @@ def process_dump(
             if not flat:
                 child_label = generate_node_input_label(index=index, link_triple=link_triple, flat=flat)
             else:
-                #test
+                # test
                 child_label = generate_node_input_label(index=index, link_triple=link_triple, flat=flat)
                 # child_label = ''
             child_output_path = output_path.resolve() / child_label

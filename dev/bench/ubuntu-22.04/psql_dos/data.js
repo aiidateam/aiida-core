@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713967842492,
+  "lastUpdate": 1714036169534,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -40079,6 +40079,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0013011",
             "group": "node",
             "extra": "mean: 24.444 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "3.11",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.14",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "ffc6e4f706277854dbd454d6f3164cec31e7819a",
+          "message": "CLI: Improve error message of `PathOrUrl` and `FileOrUrl` (#6360)\n\nThe `PathOrUrl` and `FileOrUrl` parameter types extend click's `Path`\r\nand `File` parameter types, respectively, by adding support for URLs.\r\nIf the conversion the base type fails, the provided value is tried as a\r\nURL.\r\n\r\nThe problem was that if the provided value was intended to be a local\r\nfile or path, but conversion failed, the conversion to URL would almost\r\ncertainly also fail and that would be the returned error message. This\r\nwould be confusing for users that tried to specify a local path, but it\r\ncontained a typo or was not readable for other reasons, such as file\r\npermissions.\r\n\r\nWhen the base type conversion fails, now the parameter types first check\r\nwhether the provided file or path exists on the local disk. If so, it is\r\nassumed that the value was intended to be a local path and an error is\r\nreturned that the path could not be read. Only then is the path tried as\r\na URL. Here the `URLError` and `socket.timeout` exceptions are caught\r\nseparately in which case we are almost certainly dealing with a URL\r\nwhich just couldn't be reached (in time). The `urlopen` method can also\r\nthrow a `ValueError` which is usually when no protocol is defined. In\r\nthis case an error is returned that explicitly states that the provided\r\nvalue does not correspond to a readable path nor to a reachable URL.",
+          "timestamp": "2024-04-25T11:02:17+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/ffc6e4f706277854dbd454d6f3164cec31e7819a",
+          "distinct": true,
+          "tree_id": "7dd54d84304a59fef9779f947ffcbd1e48be01a1"
+        },
+        "date": 1714036165483,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 2.702970787485139,
+            "unit": "iter/sec",
+            "range": "stddev: 0.15145",
+            "group": "import-export",
+            "extra": "mean: 369.96 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.3078385198588514,
+            "unit": "iter/sec",
+            "range": "stddev: 0.058120",
+            "group": "import-export",
+            "extra": "mean: 302.31 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.5653842305417465,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010951",
+            "group": "import-export",
+            "extra": "mean: 219.04 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.470160201589933,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0033863",
+            "group": "import-export",
+            "extra": "mean: 223.71 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 4.011228587258633,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0055135",
+            "group": "engine",
+            "extra": "mean: 249.30 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.8339151327107952,
+            "unit": "iter/sec",
+            "range": "stddev: 0.090620",
+            "group": "engine",
+            "extra": "mean: 1.1992 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.9216636182780722,
+            "unit": "iter/sec",
+            "range": "stddev: 0.074127",
+            "group": "engine",
+            "extra": "mean: 1.0850 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.2212942868043678,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11777",
+            "group": "engine",
+            "extra": "mean: 4.5189 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.24688319767287015,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12138",
+            "group": "engine",
+            "extra": "mean: 4.0505 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.729835294142756,
+            "unit": "iter/sec",
+            "range": "stddev: 0.016746",
+            "group": "engine",
+            "extra": "mean: 366.32 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5723188510763533,
+            "unit": "iter/sec",
+            "range": "stddev: 0.046898",
+            "group": "engine",
+            "extra": "mean: 1.7473 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.6536640458738412,
+            "unit": "iter/sec",
+            "range": "stddev: 0.039291",
+            "group": "engine",
+            "extra": "mean: 1.5298 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.17039548483529263,
+            "unit": "iter/sec",
+            "range": "stddev: 0.096166",
+            "group": "engine",
+            "extra": "mean: 5.8687 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.19083481373928315,
+            "unit": "iter/sec",
+            "range": "stddev: 0.072449",
+            "group": "engine",
+            "extra": "mean: 5.2401 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 439.5197973644881,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00023554",
+            "group": "node",
+            "extra": "mean: 2.2752 msec\nrounds: 258"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 79.36066873843215,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00096353",
+            "group": "node",
+            "extra": "mean: 12.601 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 49.6910540950318,
+            "unit": "iter/sec",
+            "range": "stddev: 0.026656",
+            "group": "node",
+            "extra": "mean: 20.124 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 334.17718307460484,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015492",
+            "group": "node",
+            "extra": "mean: 2.9924 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 49.05527225245261,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00087198",
+            "group": "node",
+            "extra": "mean: 20.385 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 48.35195564904232,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011281",
+            "group": "node",
+            "extra": "mean: 20.682 msec\nrounds: 100"
           }
         ]
       }

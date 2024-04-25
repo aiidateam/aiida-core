@@ -677,6 +677,51 @@ def reset_log_level():
 
 
 @pytest.fixture
+def generate_arithmetic_add_node():
+    def _generate_arithmetic_add_node(computer):
+        from aiida.engine import run_get_node
+        from aiida.orm import InstalledCode, Int
+        from aiida.plugins import CalculationFactory
+
+        arithmetic_add = CalculationFactory('core.arithmetic.add')
+
+        add_inputs = {
+            'x': Int(1),
+            'y': Int(2),
+            'code': InstalledCode(computer=computer, filepath_executable='/bin/bash'),
+        }
+
+        _, add_node = run_get_node(arithmetic_add, **add_inputs)
+
+        return add_node
+
+    return _generate_arithmetic_add_node
+
+
+@pytest.fixture
+def generate_multiply_add_node():
+    def _generate_multiply_add_node(computer):
+        from aiida.engine import run_get_node
+        from aiida.orm import InstalledCode, Int
+        from aiida.plugins import WorkflowFactory
+
+        multiplyaddworkchain = WorkflowFactory('core.arithmetic.multiply_add')
+
+        multiply_add_inputs = {
+            'x': Int(1),
+            'y': Int(2),
+            'z': Int(3),
+            'code': InstalledCode(computer=computer, filepath_executable='/bin/bash'),
+        }
+
+        _, multiply_add_node = run_get_node(multiplyaddworkchain, **multiply_add_inputs)
+
+        return multiply_add_node
+
+    return _generate_multiply_add_node
+
+
+@pytest.fixture
 def generate_calcjob_node_io():
     def _generate_calcjob_node_io(
         attach_repository: bool = True, attach_node_inputs: bool = True, attach_outputs: bool = True, entry_point=None
@@ -737,74 +782,25 @@ def generate_calcjob_node_io():
 
 
 @pytest.fixture
-def generate_arithmetic_add_node():
-    def _generate_arithmetic_add_node(computer):
-        from aiida.engine import run_get_node
-        from aiida.orm import InstalledCode, Int
-        from aiida.plugins import CalculationFactory
-
-        arithmetic_add = CalculationFactory('core.arithmetic.add')
-
-        add_inputs = {
-            'x': Int(1),
-            'y': Int(2),
-            'code': InstalledCode(computer=computer, filepath_executable='/bin/bash'),
-        }
-
-        _, add_node = run_get_node(arithmetic_add, **add_inputs)
-
-        return add_node
-
-    return _generate_arithmetic_add_node
-
-
-@pytest.fixture
-def generate_multiply_add_node():
-    def _generate_multiply_add_node(computer):
-        from aiida.engine import run_get_node
-        from aiida.orm import InstalledCode, Int
-        from aiida.plugins import WorkflowFactory
-
-        multiplyaddworkchain = WorkflowFactory('core.arithmetic.multiply_add')
-
-        multiply_add_inputs = {
-            'x': Int(1),
-            'y': Int(2),
-            'z': Int(3),
-            'code': InstalledCode(computer=computer, filepath_executable='/bin/bash'),
-        }
-
-        _, multiply_add_node = run_get_node(multiplyaddworkchain, **multiply_add_inputs)
-
-        return multiply_add_node
-
-    return _generate_multiply_add_node
-
-
-@pytest.fixture
-def generate_work_chain_io(generate_calcjob_node_io):
-    def _generate_work_chain_io():
+def generate_workchain_node_io():
+    def _generate_workchain_node_io(cj_nodes):
         """Generate an instance of a `WorkChain` that contains a sub-`WorkChain` and a `CalcJob` with file io."""
         from aiida.orm import WorkChainNode
 
         wc_node = WorkChainNode()
         wc_node_sub = WorkChainNode()
-        cj_node = generate_calcjob_node_io(attach_outputs=False)
-
-        # wc_node.process_label = 'main'
-        # wc_node_sub.process_label = 'sub'
-        # cj_node.process_label = 'calc'
 
         # Add sub-workchain that calls a calcjob
         wc_node_sub.base.links.add_incoming(wc_node, link_type=LinkType.CALL_WORK, link_label='sub_workchain')
-        cj_node.base.links.add_incoming(wc_node_sub, link_type=LinkType.CALL_CALC, link_label='calcjob')
+        for i, cj_node in enumerate(cj_nodes):
+            cj_node.base.links.add_incoming(wc_node_sub, link_type=LinkType.CALL_CALC, link_label=f'calcjob_{i}')
 
         # Need to store nodes so that the relationships are being picked up in the `get_outgoing` call (for
         # `get_incoming` they work without being stored)
         wc_node.store()
         wc_node_sub.store()
-        cj_node.store()
+        [cj_node.store() for cj_node in cj_nodes]
 
         return wc_node
 
-    return _generate_work_chain_io
+    return _generate_workchain_node_io

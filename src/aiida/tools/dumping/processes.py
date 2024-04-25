@@ -26,6 +26,7 @@ from aiida.orm import (
     WorkFunctionNode,
 )
 from aiida.orm.utils import LinkTriple
+from aiida.repository import File
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,12 +98,12 @@ class ProcessNodeYamlDumper:
             pass
 
         # Add node attributes
-        if self.include_attributes is True:
+        if self.include_attributes:
             node_attributes = process_node.base.attributes.all
             node_dict['Node attributes'] = node_attributes
 
         # Add node extras
-        if self.include_extras is True:
+        if self.include_extras:
             node_extras = process_node.base.extras.all
             if node_extras:
                 node_dict['Node extras'] = node_extras
@@ -163,6 +164,7 @@ def generate_default_dump_path(process_node: WorkChainNode | CalcJobNode | CalcF
 def validate_make_dump_path(
     path: Path,
     overwrite: bool = False,
+    safeguard_file: str = '.aiida_node_metadata.yaml'
 ) -> Path:
     """
     Create default dumping directory for a given process node and return it as absolute path.
@@ -171,10 +173,6 @@ def validate_make_dump_path(
     :return: The created dump path.
     """
     import shutil
-
-    # ? Use of `echo.echo_` only when running via `verdi`? -> I only see it used in the `cmd_` files.
-    if path is None:
-        raise ValueError('Path not set.')
 
     if path.is_dir():
         # Existing, but empty directory => OK
@@ -187,41 +185,59 @@ def validate_make_dump_path(
 
         # Existing and non-empty directory and overwrite True => Check for '.aiida_node_metadata.yaml' for safety
         # '.aiida_node_metadata.yaml' present => Remove directory
-        elif (path / '.aiida_node_metadata.yaml').is_file():
+        elif (path / safeguard_file).is_file():
             _LOGGER.info(f'Overwrite set to true, will overwrite directory `{path}`.')
             shutil.rmtree(path)
             path.mkdir(parents=True, exist_ok=False)
 
-        # Existing and non-empty directory and overwrite True => Check for README for safety
-        # '.aiida_node_metadata.yaml' absent => Remove directory
+        # Existing and non-empty directory and overwrite True => Check for safeguard_file (e.g.
+        # '.aiida_node_metadata.yaml') for safety  reasons (don't wont to recursively delete wrong directory...)
         else:
-            _LOGGER.critical(
-                f"`{path}` Path exists but no `.aiida_node_metadata.yaml` found. Won't delete for security.\n"
-                # f'Manually remove existing `{path}` and dump again.'
+            # _LOGGER.critical(
+            #     f"`{path}` Path exists but no `.aiida_node_metadata.yaml` found. Won't delete for security.\n"
+            #     # f'Manually remove existing `{path}` and dump again.'
+            # )
+            raise FileExistsError(
+                f"Path `{path}` already exists and doesn't contain `.aiida_node_metadata.yaml`. Not removing for safety reasons."
             )
 
+    # Not included in else as to avoid having to repeat the `mkdir` call. `exist_ok=True` as checks implemented above
     path.mkdir(exist_ok=True, parents=True)
 
     return path.resolve()
 
 
-def generate_node_input_label(index: int, link_triple: LinkTriple) -> str:
+def generate_node_input_label(index: int, link_triple: LinkTriple, flat: bool = False) -> str:
     """Small helper function to generate the directory label for node inputs."""
     node = link_triple.node
     link_label = link_triple.link_label
 
     # Generate directories with naming scheme akin to `verdi process status`
-    node_label = f'{index:02d}-{link_label}'
+    if not flat:
+        # node_label = f'{index:02d}-{link_label}'
+        label_list = [f'{index:02d}', link_label]
 
-    try:
-        process_label = node.process_label
-        if process_label is not None and process_label != link_label:
-            node_label += f'-{process_label}'
+        try:
+            process_label = node.process_label
+            if process_label is not None and process_label != link_label:
+                label_list += [process_label]
+                # node_label += f'-{process_label}'
 
-    except AttributeError:
-        process_type = node.process_type
-        if process_type is not None and process_type != link_label:
-            node_label += f'-{process_type}'
+        except AttributeError:
+            process_type = node.process_type
+            if process_type is not None and process_type != link_label:
+                label_list += [process_type]
+                # node_label += f'-{process_type}'
+
+    else:
+        label_list = []
+
+    if isinstance(node, File):
+        label_list += [node.name]
+
+    node_label = '-'.join(label_list)
+    # `CALL-` as part of the link labels also for MultiplyAddWorkChain, so remove for generality
+    node_label = node_label.replace('CALL-', '')
 
     return node_label
 
@@ -250,6 +266,7 @@ def calcjob_dump(
     try:
         validate_make_dump_path(path=output_path, overwrite=overwrite)
     except:
+        # raise same exception here to communicate it outwards
         raise
 
     default_io_dump_paths = ['raw_inputs', 'raw_outputs', 'node_inputs']
@@ -306,11 +323,10 @@ def process_dump(
     :param include_inputs: If True, include file or folder inputs in the dump. Defaults to True.
     :param node_dumper: The ProcessNodeYamlDumper instance to use for dumping node metadata. If not provided, a new
         instance will be created. Defaults to None.
-    :return: bool
     """
 
-    # ? Realized during testing: If no path provided, only for the sub-workchain an additional directory is created, but
-    # ? should also create one here, if the function is imported normally and used in Python scripts
+    # Realized during testing: If no path provided, only for the sub-workchain an additional directory is created, but
+    # should also create one here, if the function is imported normally and used in Python scripts
     if output_path is None:
         output_path = generate_default_dump_path(process_node=process_node)
 
@@ -320,13 +336,13 @@ def process_dump(
     if node_dumper is None:
         node_dumper = ProcessNodeYamlDumper()
 
-    # Need to dump for `WorkChainNode`s, as well, otherwise only `CalcJobNode`s
+    # Need to dump for parent ProcessNode, as well, otherwise no metadata file in parent ProcessNode directory
     node_dumper.dump_yaml(process_node=process_node, output_path=output_path.resolve())
 
     # This seems a bit duplicated, but if the logic for checking the types should be contained in the recursive
-    # `process_dump` function which is the only one called from `verdi`, then I need to dump for a `CalcJob` here, as
-    # well. Also, if I want to be able to use `process_dump` from within the Python API
-    if isinstance(process_node, CalcJobNode):
+    # `process_dump` function called by `verdi`, then I need to dump for a `CalcJob` here, as
+    # well. Also, if I want to be able to use `process_dump` via the Python API
+    if isinstance(process_node, (CalcFunctionNode, CalcJobNode)):
         calcjob_dump(
             calcjob_node=process_node,
             output_path=output_path,
@@ -337,40 +353,42 @@ def process_dump(
         )
 
     # Recursive call for WorkChainNode
-    elif isinstance(process_node, WorkChainNode):
-        # Don't increment index for `ProcessNodes` that don't (always?) have file IO
-        # (`CalcFunctionNodes`/`WorkFunctionNodes`), such as `create_kpoints_from_distance`
+    # todo: Rather than checking for both, I could check for subclass of WorkFlowNode
+    elif isinstance(process_node, (WorkChainNode, WorkFunctionNode)):
+
         called_links = process_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
 
-        # todo: Add check if flat is True, and multiple sub-workchains, that it raises exception. Otherwise, if
-        # todo: only one top-level workchain, dump everything from the single calcjob that was called in the
-        # todo: workchain in the main workchain directory
-        called_descendants = process_node.called_descendants
-        if flat and [isinstance(node, CalcJobNode) for node in called_descendants].count(True) > 1:
+        # If multiple CalcJobs contained in Workchain flat=True doesn't make sense as files would be overwritten
+        # -> Well, if different CalcJobs run, it could still make sense, but would one really want all these files in
+        # one flat directory?
+        called_calcjobs = [isinstance(node, CalcJobNode) for node in process_node.called_descendants]
+        if flat and called_calcjobs.count(True) > 1:
+            # Add error message here or when capturing `NotImplementedError`
             raise NotImplementedError
 
-        for index, link_triple in enumerate(
-            sorted(called_links, key=lambda link_triple: link_triple.node.ctime), start=1
-        ):
+        sorted_called_links = sorted(called_links, key=lambda link_triple: link_triple.node.ctime)
+
+        for index, link_triple in enumerate(sorted_called_links, start=1):
             child_node = link_triple.node
             if not flat:
-                child_label = generate_node_input_label(index=index, link_triple=link_triple)
+                child_label = generate_node_input_label(index=index, link_triple=link_triple, flat=flat)
             else:
-                child_label = ''
+                #test
+                child_label = generate_node_input_label(index=index, link_triple=link_triple, flat=flat)
+                # child_label = ''
             child_output_path = output_path.resolve() / child_label
 
             # Recursive function call for `WorkChainNode``
             # Not sure if the next two cases work for `WorkFunction` and `CalcFuncion``Node`s
             if isinstance(child_node, (WorkChainNode, WorkFunctionNode)):
-                if flat:
-                    process_dump(
-                        process_node=child_node,
-                        output_path=child_output_path,
-                        include_inputs=include_inputs,
-                        node_dumper=node_dumper,
-                        overwrite=overwrite,
-                        flat=flat,
-                    )
+                process_dump(
+                    process_node=child_node,
+                    output_path=child_output_path,
+                    include_inputs=include_inputs,
+                    node_dumper=node_dumper,
+                    overwrite=overwrite,
+                    flat=flat,
+                )
 
             elif isinstance(child_node, (CalcJobNode, CalcFunctionNode)):
                 calcjob_dump(
@@ -399,7 +417,8 @@ def calcjob_node_inputs_dump(calcjob_node: CalcJobNode | CalcFunctionNode, outpu
             if not flat:
                 input_node_path = output_path / Path(*input_node_triple.link_label.split('__'))
             else:
-                # Don't use link_label at all
+                # Don't use link_label at all -> But, relative path inside FolderData is retained
+                # ! This is not the issue why `source_file` is not dumped for MultiplyAddWorkChain when flat=True
                 input_node_path = output_path
 
             input_node_triple.node.base.repository.copy_tree(input_node_path.resolve())

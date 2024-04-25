@@ -19,11 +19,11 @@ from pathlib import Path
 
 import pytest
 from aiida.tools.dumping.processes import (
-    calcjob_dump,
+    calcjob_node_dump,
     calcjob_node_inputs_dump,
     generate_default_dump_path,
     generate_node_input_label,
-    process_dump,
+    process_node_dump,
     validate_make_dump_path,
 )
 
@@ -139,7 +139,7 @@ def test_calcjob_dump_io(generate_calcjob_node_io, tmp_path):
     # └── raw_outputs
     #    └── file.txt
 
-    calcjob_dump(calcjob_node=calcjob_node, output_path=dump_parent_path)
+    calcjob_node_dump(calcjob_node=calcjob_node, output_path=dump_parent_path)
 
     assert (dump_parent_path / default_dump_paths[0] / filename).is_file()
     assert (dump_parent_path / default_dump_paths[1] / filename).is_file()
@@ -162,7 +162,7 @@ def test_calcjob_dump_io(generate_calcjob_node_io, tmp_path):
     # └── raw_outputs_
     #    └── file.txt
 
-    calcjob_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, io_dump_paths=custom_dump_paths)
+    calcjob_node_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, io_dump_paths=custom_dump_paths)
     assert (dump_parent_path / custom_dump_paths[0] / filename).is_file()  # raw_inputs
     assert (dump_parent_path / custom_dump_paths[1] / filename).is_file()  # raw_outputs
     # node_inputs, singlefile
@@ -177,7 +177,7 @@ def test_calcjob_dump_io(generate_calcjob_node_io, tmp_path):
     # └── relative_path
     #     └── file.txt
 
-    calcjob_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, flat=True)
+    calcjob_node_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, flat=True)
     assert not (dump_parent_path / default_dump_paths[0] / filename).is_file()  # raw_inputs
     assert not (dump_parent_path / default_dump_paths[1] / filename).is_file()  # raw_outputs
     assert not (dump_parent_path / default_dump_paths[2] / filename).is_file()  # node_inputs, singlefile
@@ -202,7 +202,7 @@ def test_calcjob_dump_io(generate_calcjob_node_io, tmp_path):
 
     # todo: Test case of splitting the nested node_inputs based on double-underscore splitting not covered with the test
     # todo: setup. This might be again too specific for QE?
-    calcjob_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, io_dump_paths=custom_dump_paths, flat=True)
+    calcjob_node_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, io_dump_paths=custom_dump_paths, flat=True)
     assert (dump_parent_path / custom_dump_paths[0] / filename).is_file()  # raw_inputs
     assert (dump_parent_path / custom_dump_paths[1] / filename).is_file()  # raw_outputs
     assert (dump_parent_path / custom_dump_paths[2] / filename).is_file()  # node_inputs, singlefile
@@ -210,20 +210,20 @@ def test_calcjob_dump_io(generate_calcjob_node_io, tmp_path):
     clean_tmp_path(tmp_path=tmp_path)
 
     # Don't dump the connected node inputs for both, flat is True/False
-    calcjob_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, include_inputs=False)
+    calcjob_node_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, include_inputs=False)
     assert not (dump_parent_path / custom_dump_paths[2]).is_dir()
 
     clean_tmp_path(tmp_path=tmp_path)
 
-    calcjob_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, include_inputs=False, flat=True)
+    calcjob_node_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, include_inputs=False, flat=True)
     assert not (dump_parent_path / custom_dump_paths[2]).is_dir()
 
     clean_tmp_path(tmp_path=tmp_path)
 
     # Check that it fails when it tries to create the same directory without overwrite=True
-    calcjob_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, overwrite=False)
+    calcjob_node_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, overwrite=False)
     with pytest.raises(FileExistsError):
-        calcjob_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, overwrite=False)
+        calcjob_node_dump(calcjob_node=calcjob_node, output_path=dump_parent_path, overwrite=False)
 
 
 def test_calcjob_dump_arithmetic_add(tmp_path, aiida_localhost, generate_arithmetic_add_node):
@@ -233,7 +233,7 @@ def test_calcjob_dump_arithmetic_add(tmp_path, aiida_localhost, generate_arithme
     add_node = generate_arithmetic_add_node(computer=aiida_localhost)
 
     # Normal dumping of ArithmeticAddCalculation node
-    calcjob_dump(calcjob_node=add_node, output_path=dump_path)
+    calcjob_node_dump(calcjob_node=add_node, output_path=dump_path)
 
     raw_input_files = ['_aiidasubmit.sh', 'aiida.in', '.aiida/job_tmpl.json', '.aiida/calcinfo.json']
     raw_output_files = ['_scheduler-stderr.txt', '_scheduler-stdout.txt', 'aiida.out']
@@ -283,7 +283,7 @@ def test_process_dump_io(generate_calcjob_node_io, generate_workchain_node_io, t
     expected_files = [raw_input_path, singlefiledata_path, folderdata_path, *node_metadata_paths]
     expected_files = [dump_parent_path / expected_file for expected_file in expected_files]
 
-    process_dump(process_node=wc_node, output_path=dump_parent_path)
+    process_node_dump(process_node=wc_node, output_path=dump_parent_path)
 
     assert all([expected_file.is_file() for expected_file in expected_files])
 
@@ -297,7 +297,7 @@ def test_process_dump_io(generate_calcjob_node_io, generate_workchain_node_io, t
     # └── relative_path
     #     └── file.txt
 
-    process_dump(process_node=wc_node, output_path=dump_parent_path, flat=True)
+    process_node_dump(process_node=wc_node, output_path=dump_parent_path, flat=True)
     assert (dump_parent_path / filename).is_file()
     # Internal hierarchy of the FolderData is retained
     assert (dump_parent_path / folderdata_internal_path / filename).is_file()
@@ -308,7 +308,7 @@ def test_process_dump_io(generate_calcjob_node_io, generate_workchain_node_io, t
     cj_nodes = [generate_calcjob_node_io(attach_outputs=False), generate_calcjob_node_io(attach_outputs=False)]
     wc_node = generate_workchain_node_io(cj_nodes=cj_nodes)
     with pytest.raises(NotImplementedError):
-        process_dump(process_node=wc_node, output_path=dump_parent_path, flat=True)
+        process_node_dump(process_node=wc_node, output_path=dump_parent_path, flat=True)
 
 
 def test_process_dump_multiply_add(tmp_path, generate_multiply_add_node, aiida_localhost):
@@ -332,7 +332,7 @@ def test_process_dump_multiply_add(tmp_path, generate_multiply_add_node, aiida_l
     # ├── aiida.out
     #!└── source_file missing
 
-    process_dump(process_node=multiply_add_node, output_path=dump_parent_path, flat=True)
+    process_node_dump(process_node=multiply_add_node, output_path=dump_parent_path, flat=True)
 
     raw_input_files = ['_aiidasubmit.sh', 'aiida.in', '.aiida/job_tmpl.json', '.aiida/calcinfo.json']
     # raw_input_files += ['source_file']
@@ -370,7 +370,7 @@ def test_process_dump_multiply_add(tmp_path, generate_multiply_add_node, aiida_l
     #       ├── _scheduler-stdout.txt
     #       └── aiida.out
 
-    process_dump(process_node=multiply_add_node, output_path=dump_parent_path)
+    process_node_dump(process_node=multiply_add_node, output_path=dump_parent_path)
 
     raw_input_files = ['_aiidasubmit.sh', 'aiida.in', '.aiida/job_tmpl.json', '.aiida/calcinfo.json']
     raw_output_files = ['_scheduler-stderr.txt', '_scheduler-stdout.txt', 'aiida.out']

@@ -268,7 +268,7 @@ def generate_node_input_label(index: int, link_triple: LinkTriple, flat: bool = 
     return node_label
 
 
-def calcjob_dump(
+def calcjob_node_dump(
     calcjob_node: CalcJobNode | CalcFunctionNode,
     output_path: Path | None,
     include_inputs: bool = True,
@@ -299,7 +299,7 @@ def calcjob_dump(
 
     if flat and io_dump_paths is None:
         io_dump_paths = ['', '', '']
-        _LOGGER.info('Flat set to True and no `io_dump_paths`. Dump in a flat directory, files might be overwritten.')
+        _LOGGER.info('Flat set to True and no `io_dump_paths`. Dumping in a flat directory, files might be overwritten.')
         # raise ValueError('Flat set to False but no io_dump_paths provided.')
         # -> Can still provide paths but use flat=True to not flatten the node_inputs -> Probably this is bad design...
     elif flat and io_dump_paths is not None:
@@ -331,7 +331,7 @@ def calcjob_dump(
     node_dumper.dump_yaml(process_node=calcjob_node, output_path=output_path)
 
 
-def process_dump(
+def process_node_dump(
     process_node: WorkChainNode | CalcJobNode | WorkFunctionNode | CalcFunctionNode,
     output_path: Path | None,
     include_inputs: bool = True,
@@ -369,7 +369,7 @@ def process_dump(
     # `process_dump` function called by `verdi`, then I need to dump for a `CalcJob` here, as
     # well. Also, if I want to be able to use `process_dump` via the Python API
     if isinstance(process_node, (CalcFunctionNode, CalcJobNode)):
-        calcjob_dump(
+        calcjob_node_dump(
             calcjob_node=process_node,
             output_path=output_path,
             include_inputs=include_inputs,
@@ -406,7 +406,7 @@ def process_dump(
             # Recursive function call for `WorkChainNode``
             # Not sure if the next two cases work for `WorkFunction` and `CalcFuncion``Node`s
             if isinstance(child_node, (WorkChainNode, WorkFunctionNode)):
-                process_dump(
+                process_node_dump(
                     process_node=child_node,
                     output_path=child_output_path,
                     include_inputs=include_inputs,
@@ -416,7 +416,7 @@ def process_dump(
                 )
 
             elif isinstance(child_node, (CalcJobNode, CalcFunctionNode)):
-                calcjob_dump(
+                calcjob_node_dump(
                     calcjob_node=child_node,
                     output_path=child_output_path,
                     include_inputs=include_inputs,

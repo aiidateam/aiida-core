@@ -491,7 +491,7 @@ def process_repair(manager, broker, dry_run):
 @options.INCLUDE_EXTRAS()
 @options.OVERWRITE()
 @click.option('-f', '--flat', 'flat', is_flag=True, default=False, help='Dump all the files in one location.')
-def dump(
+def process_dump(
     process,
     path,
     include_inputs,
@@ -519,7 +519,7 @@ def dump(
         ProcessNodeYamlDumper,
         generate_default_dump_path,
         make_dump_readme,
-        process_dump,
+        process_node_dump,
         validate_make_dump_path,
     )
 
@@ -536,7 +536,7 @@ def dump(
     processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
 
     try:
-        process_dump(
+        process_node_dump(
             process_node=process,
             output_path=output_path,
             include_inputs=include_inputs,
@@ -554,7 +554,7 @@ def dump(
     #     # raise
     #     echo.echo_critical('Some files present in the dumping directory. Delete manually and try again.')
     except NotImplementedError:
-        echo.echo_critical('flat dumping not supported for `WorkChains` that call more than one `CalcJob`.')
+        echo.echo_critical('flat dumping not supported for `WorkChain`s that call more than one `CalcJob`.')
     except Exception as e:
         echo.echo_critical(f'Unexpected error ({e!s}) while dumping {process.__class__.__name__} <{process.pk}>.')
 

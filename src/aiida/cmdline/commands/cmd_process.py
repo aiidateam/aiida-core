@@ -491,12 +491,14 @@ def process_repair(manager, broker, dry_run):
 @options.INCLUDE_EXTRAS()
 @options.OVERWRITE()
 @click.option('-f', '--flat', 'flat', is_flag=True, default=False, help='Dump all the files in one location.')
+@click.option('-a', '--all-aiida-nodes', is_flag=True, default=False, help='Dump all non file-based AiiDA nodes.')
 def process_dump(
     processes,
     path,
     include_inputs,
     include_attributes,
     include_extras,
+    all_aiida_nodes,
     overwrite,
     flat,
 ) -> None:
@@ -516,41 +518,34 @@ def process_dump(
     """
 
 
-    from aiida.tools.dumping.processes import (
-        ProcessNodeYamlDumper,
-        generate_default_dump_path,
-        generate_dump_readme,
-        process_node_dump,
-        validate_make_dump_path,
-    )
+    from aiida.tools.dumping.processes import ProcessDumper
 
     for process in processes:
 
         # Generate default parent folder
+        process_dumper = ProcessDumper(
+            parent_process=process,
+            include_node_inputs=include_inputs,
+            include_attributes=include_attributes,
+            include_extras=include_extras,
+            all_aiida_nodes=all_aiida_nodes,
+            overwrite=overwrite,
+            flat=flat,
+        )
+
         if path is None:
-            output_path = generate_default_dump_path(process_node=process)
+            output_path = process_dumper.generate_default_dump_path(process_node=process)
+        else:
+            output_path = path.resolve()
 
         # Capture `FileExistsError` here already, not by trying to run the dumping
         try:
-            validate_make_dump_path(path=output_path, overwrite=overwrite)
+            process_dumper.dump_path_validate_make(validate_path=output_path)
         except FileExistsError:
             echo.echo_critical(f'Path `{output_path}` already exists and overwrite set to False.')
 
-        processnode_dumper = ProcessNodeYamlDumper(include_attributes=include_attributes, include_extras=include_extras)
-
         try:
-            process_node_dump(
-                process_node=process,
-                output_path=output_path,
-                include_inputs=include_inputs,
-                node_dumper=processnode_dumper,
-                overwrite=overwrite,
-                flat=flat,
-            )
-
-            echo.echo_success(
-                f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in `{output_path}`.'
-            )
+            process_dumper.dump(process_node=process, output_path=output_path)
 
         # ? Which exceptions do I expect here?
         except FileExistsError:
@@ -560,7 +555,10 @@ def process_dump(
         except Exception as e:
             echo.echo_critical(f'Unexpected error ({e!s}) while dumping {process.__class__.__name__} <{process.pk}>.')
 
-        # Create README in parent directory
-        # Done after dumping, so that dumping directory is there. Dumping directory is created within the calcjob_dump and
-        # process_dump files such that they can also be used from within the Python API, not just via verdi
-        generate_dump_readme(output_path=output_path, process_node=process)
+        echo.echo_success(
+            f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in `{output_path}`.'
+        )
+
+        # Create README in parent directory. Do this at the end as to not cause exceptions for the path creation, and
+        # only do it when everything ran through fine before
+        process_dumper.generate_parent_readme()

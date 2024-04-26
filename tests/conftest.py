@@ -161,7 +161,7 @@ def generate_calculation_node():
     """Generate an instance of a `CalculationNode`."""
     from aiida.engine import ProcessState
 
-    def _generate_calculation_node(process_state=ProcessState.FINISHED, exit_status=None, entry_point=None):
+    def _generate_calculation_node(process_state=ProcessState.FINISHED, exit_status=None, entry_point=None, inputs: dict | None = None,  outputs: dict | None = None, repository: str | Path = None):
         """Generate an instance of a `CalculationNode`..
 
         :param process_state: state to set

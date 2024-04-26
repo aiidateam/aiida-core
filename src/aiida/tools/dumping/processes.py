@@ -17,19 +17,28 @@ from pathlib import Path
 import yaml
 
 from aiida.common import LinkType
-from aiida.common.exceptions import NotExistentAttributeError
 from aiida.orm import (
     CalcFunctionNode,
     CalcJobNode,
+    CalculationNode,
+    FolderData,
     ProcessNode,
+    RemoteData,
+    SinglefileData,
+    UpfData,
     WorkChainNode,
+    WorkflowNode,
     WorkFunctionNode,
 )
 from aiida.orm.utils import LinkTriple
 from aiida.repository import File
 
 _LOGGER = logging.getLogger(__name__)
+FILE_NODES = (SinglefileData, FolderData, RemoteData, UpfData)
+ALL_AIIDA_NODES = True
 
+# todo: Add aiida_nodes as an optional input to cmd_process, and as a class attribute of the dumper that is passed
+# todo: through, just like flat
 
 class ProcessNodeYamlDumper:
     """Utility class to dump selected `ProcessNode` properties and, optionally, attributes and extras to yaml."""
@@ -171,11 +180,11 @@ def generate_dump_readme(process_node: ProcessNode, output_path: Path):
     (output_path / 'README').write_text(_readme_string)
 
 
-def generate_default_dump_path(process_node: WorkChainNode | CalcJobNode | CalcFunctionNode | WorkFunctionNode) -> Path:
+def generate_default_dump_path(process_node: ProcessNode) -> Path:
     """Simple helper function to generate the default parent-dumping directory if none given.
 
-    This function is not called for the sub-calls of `calcjob_dump` or during the recursive `process_dump` as it just
-    creates the default parent folder for the dumping, if no name is given.
+    This function is not called for the sub-calls of `calcjob_node_dump` or during the recursive `process_dump` as it
+    just creates the default parent folder for the dumping, if no name is given.
 
     :param process_node: The `ProcessNode` for which the directory is created.
     :return: The created parent dump path.
@@ -239,36 +248,33 @@ def generate_node_input_label(index: int, link_triple: LinkTriple, flat: bool = 
     link_label = link_triple.link_label
 
     # Generate directories with naming scheme akin to `verdi process status`
-    if not flat:
-        # node_label = f'{index:02d}-{link_label}'
-        label_list = [f'{index:02d}', link_label]
+    # node_label = f'{index:02d}-{link_label}'
+    label_list = [f'{index:02d}', link_label]
 
-        try:
-            process_label = node.process_label
-            if process_label is not None and process_label != link_label:
-                label_list += [process_label]
-                # node_label += f'-{process_label}'
+    try:
+        process_label = node.process_label
+        if process_label is not None and process_label != link_label:
+            label_list += [process_label]
+            # node_label += f'-{process_label}'
 
-        except AttributeError:
-            process_type = node.process_type
-            if process_type is not None and process_type != link_label:
-                label_list += [process_type]
-                # node_label += f'-{process_type}'
-
-    else:
-        label_list = []
+    except AttributeError:
+        process_type = node.process_type
+        if process_type is not None and process_type != link_label:
+            label_list += [process_type]
+            # node_label += f'-{process_type}'
 
     if isinstance(node, File):
         label_list += [node.name]
 
     node_label = '-'.join(label_list)
-    # `CALL-` as part of the link labels also for MultiplyAddWorkChain, so remove for generality
+    # `CALL-` as part of the link labels also for MultiplyAddWorkChain -> Seems general enough, so remove
     node_label = node_label.replace('CALL-', '')
 
     return node_label
 
 
 def generate_calcjob_io_dump_paths(calcjob_io_dump_paths: list | None = None, flat: bool = False):
+
     default_calcjob_io_dump_paths = ['raw_inputs', 'raw_outputs', 'node_inputs']
 
     if flat and calcjob_io_dump_paths is None:
@@ -278,6 +284,7 @@ def generate_calcjob_io_dump_paths(calcjob_io_dump_paths: list | None = None, fl
         )
     elif flat and calcjob_io_dump_paths is not None:
         _LOGGER.info('Flat set to True but `io_dump_paths` provided. These will be used, but `node_inputs` not nested.')
+        calcjob_io_dump_paths = default_calcjob_io_dump_paths
     elif not flat and calcjob_io_dump_paths is None:
         _LOGGER.info(
             f'Flat set to False but no `io_dump_paths` provided. Will use the defaults {default_calcjob_io_dump_paths}.'
@@ -288,12 +295,13 @@ def generate_calcjob_io_dump_paths(calcjob_io_dump_paths: list | None = None, fl
         _LOGGER.info(
             'Flat set to False but no `io_dump_paths` provided. These will be used, but `node_inputs` flattened.'
         )
+        calcjob_io_dump_paths = ['', '', '']
 
     return calcjob_io_dump_paths
 
 
-def calcjob_node_dump(
-    calcjob_node: CalcJobNode | CalcFunctionNode,
+def calculation_node_dump(
+    calcjob_node: CalculationNode,
     output_path: Path | None,
     include_inputs: bool = True,
     node_dumper: ProcessNodeYamlDumper | None = None,
@@ -321,16 +329,19 @@ def calcjob_node_dump(
 
     io_dump_paths = generate_calcjob_io_dump_paths(calcjob_io_dump_paths=io_dump_paths, flat=flat)
 
+    # These are the raw_inputs
     calcjob_node.base.repository.copy_tree(output_path.resolve() / io_dump_paths[0])
 
-    try:
-        calcjob_node.outputs.retrieved.copy_tree(output_path.resolve() / io_dump_paths[1])
-    except NotExistentAttributeError:
-        # Might not have an output with link label `retrieved`
-        pass
-
+    # These are the node_inputs
     if include_inputs:
-        calcjob_node_inputs_dump(calcjob_node=calcjob_node, output_path=output_path / io_dump_paths[2], flat=flat)
+        calculation_node_inputs_dump(calculation_node=calcjob_node, output_path=output_path / io_dump_paths[2], flat=flat)
+
+    output_nodes = [calcjob_node.outputs[output] for output in calcjob_node.outputs]
+    for output_node in output_nodes:
+        if isinstance(output_node, FILE_NODES):
+            output_node.base.repository.copy_tree(output_path.resolve() / io_dump_paths[1])
+        elif ALL_AIIDA_NODES:
+                output_node.base.repository.copy_tree(output_path.resolve() / io_dump_paths[1] / '.aiida_nodes')
 
     # This will eventually be replaced once pydantic backend PR merged
     if node_dumper is None:
@@ -339,7 +350,7 @@ def calcjob_node_dump(
 
 
 def process_node_dump(
-    process_node: WorkChainNode | CalcJobNode | WorkFunctionNode | CalcFunctionNode,
+    process_node: ProcessNode,
     output_path: Path | None,
     include_inputs: bool = True,
     node_dumper: ProcessNodeYamlDumper | None = None,
@@ -379,7 +390,7 @@ def process_node_dump(
     # `process_dump` function called by `verdi`, then I need to dump for a `CalcJob` here, as
     # well. Also, if I want to be able to use `process_dump` via the Python API
     if isinstance(process_node, (CalcFunctionNode, CalcJobNode)):
-        calcjob_node_dump(
+        calculation_node_dump(
             calcjob_node=process_node,
             output_path=output_path,
             include_inputs=include_inputs,
@@ -388,7 +399,7 @@ def process_node_dump(
             flat=flat,
         )
 
-    elif isinstance(process_node, (WorkChainNode, WorkFunctionNode)):
+    elif isinstance(process_node, WorkflowNode):
         called_links = process_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
 
         # If multiple CalcJobs contained in Workchain flat=True doesn't make sense as files would be overwritten
@@ -403,16 +414,16 @@ def process_node_dump(
 
         for index, link_triple in enumerate(sorted_called_links, start=1):
             child_node = link_triple.node
-            if not flat:
-                child_label = generate_node_input_label(index=index, link_triple=link_triple, flat=flat)
-            else:
-                child_label = ''
+            # if not flat:
+            child_label = generate_node_input_label(index=index, link_triple=link_triple, flat=flat)
+            # else:
+            #     child_label = ''
 
             child_output_path = output_path.resolve() / child_label
 
             # Recursive function call for `WorkChainNode``
             # Not sure if the next two cases work for `WorkFunction` and `CalcFuncion``Node`s
-            if isinstance(child_node, (WorkChainNode, WorkFunctionNode)):
+            if isinstance(child_node, WorkflowNode):
                 process_node_dump(
                     process_node=child_node,
                     output_path=child_output_path,
@@ -422,8 +433,8 @@ def process_node_dump(
                     flat=flat,
                 )
 
-            elif isinstance(child_node, (CalcJobNode, CalcFunctionNode)):
-                calcjob_node_dump(
+            elif isinstance(child_node, CalculationNode):
+                calculation_node_dump(
                     calcjob_node=child_node,
                     output_path=child_output_path,
                     include_inputs=include_inputs,
@@ -432,28 +443,54 @@ def process_node_dump(
                     flat=flat,
                 )
 
-            # todo: Add checks for `CalcFunctionNode` and `WorkFunctionNode` here specifically and implement the
-            # respective duming functions
 
-
-# Separate functions for CalcJob dumping using pre_submit, as well as for the node_inputs
-def calcjob_node_inputs_dump(calcjob_node: CalcJobNode | CalcFunctionNode, output_path: Path, flat: bool = False):
-    """Dump inputs of a `CalcJobNode` of type `SinglefileData` and `FolderData`.
+def calculation_node_inputs_dump(calculation_node: CalculationNode, output_path: Path, flat: bool = False):
+    """Dump inputs of a `CalcJobNode`.
 
     :param calcjob_node: The `CalcJobNode` whose inputs will be dumped.
     :param output_path: The path where the inputs will be dumped.
+    :param flat: Dump node inputs in a flat directory structure.
     """
 
-    input_node_triples = calcjob_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
+    input_node_triples = calculation_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 
     for input_node_triple in input_node_triples:
         # Select only repositories that actually hold objects
-        if len(input_node_triple.node.base.repository.list_objects()) > 0:
-            if not flat:
-                input_node_path = output_path / Path(*input_node_triple.link_label.split('__'))
-            else:
-                # Don't use link_label at all -> But, relative path inside FolderData is retained
-                # ! This is not the issue why `source_file` is not dumped for MultiplyAddWorkChain when flat=True
-                input_node_path = output_path
+        # todo: Could make this a separate function
+        # Here, the check for repository could also serve a
 
-            input_node_triple.node.base.repository.copy_tree(input_node_path.resolve())
+        input_node_path = generate_input_node_path(input_node_triple=input_node_triple, parent_path=output_path, flat=flat)
+
+        input_node_triple.node.base.repository.copy_tree(input_node_path.resolve())
+
+
+def generate_input_node_path(input_node_triple, parent_path, flat, exception_labels: list | None = None):
+
+    input_node = input_node_triple.node
+    link_label = input_node_triple.link_label
+
+    if exception_labels is None:
+        exception_labels = ['pseudos']
+
+    if len(input_node.base.repository.list_objects()) > 0:
+        # Empty repository, so it should be standard AiiDA data types, like Int, Float, etc.
+        aiida_nodes_subdir = ''
+    else:
+        aiida_nodes_subdir = '.aiida_nodes'
+
+    # ? The check if the link_label starts with pseudo is again very specific for the atomistic community/QE,
+    # ? however, I don't know how to otherwise avoid that it's put in `.aiida_nodes`, as the Node is  defined as
+    # ? Data, not UpfData, so I cannot just check against FILE_NODES
+    if isinstance(input_node, FILE_NODES) or any(link_label.startswith(label) for label in exception_labels):
+        if not flat:
+            input_node_path = parent_path / Path(*link_label.split('__'))
+        else:
+            # Don't use link_label at all -> But, relative path inside FolderData is retained
+            input_node_path = parent_path
+    elif not flat:
+        input_node_path = parent_path / aiida_nodes_subdir / Path(*link_label.split('__'))
+    else:
+        # Don't use link_label at all -> But, relative path inside FolderData is retained
+        input_node_path = parent_path / aiida_nodes_subdir
+
+    return input_node_path.resolve()

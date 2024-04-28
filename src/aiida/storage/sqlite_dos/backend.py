@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from functools import cached_property
+from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
 from typing import TYPE_CHECKING, Optional
@@ -34,6 +34,7 @@ from ..psql_dos import PsqlDosBackend
 from ..psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDosMigrator
 
 if TYPE_CHECKING:
+    from aiida.orm.entities import EntityTypes
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
 __all__ = ('SqliteDosStorage',)
@@ -208,3 +209,19 @@ class SqliteDosStorage(PsqlDosBackend):
     @cached_property
     def users(self):
         return orm.SqliteUserCollection(self)
+
+    @staticmethod
+    @lru_cache(maxsize=18)
+    def _get_mapper_from_entity(entity_type: 'EntityTypes', with_pk: bool):
+        """Return the Sqlalchemy mapper and fields corresponding to the given entity.
+
+        :param with_pk: if True, the fields returned will include the primary key
+        """
+        from sqlalchemy import inspect
+
+        from ..sqlite_zip.models import MAP_ENTITY_TYPE_TO_MODEL
+
+        model = MAP_ENTITY_TYPE_TO_MODEL[entity_type]
+        mapper = inspect(model).mapper  # type: ignore[union-attr]
+        keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
+        return mapper, keys

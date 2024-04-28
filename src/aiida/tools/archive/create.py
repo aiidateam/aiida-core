@@ -365,6 +365,8 @@ def create_archive(
 
         if filename.exists():
             filename.unlink()
+
+        filename.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(tmp_filename, filename)
 
     EXPORT_LOGGER.report('Archive created successfully')

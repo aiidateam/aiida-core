@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-import io
 import os
 import pathlib
 import types
@@ -28,7 +27,6 @@ import pytest
 from aiida import get_profile
 from aiida.common.links import LinkType
 from aiida.manage.configuration import Profile, get_config, load_profile
-from aiida.orm import FolderData, SinglefileData
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
@@ -206,7 +204,6 @@ def generate_calculation_node():
         if outputs is not None:
             calculation_node.store()
             for output_label, output_node in outputs.items():
-
                 output_node.base.links.add_incoming(
                     calculation_node, link_type=LinkType.CREATE, link_label=output_label
                 )
@@ -713,6 +710,7 @@ def reset_log_level():
 
 # todo: Provide option to manually construct the nodes or actually submit the processes
 # todo: Depending on how long this takes, replace this duplicated code around the code base with these fixtures
+
 
 @pytest.fixture
 def generate_calculation_node_add(aiida_localhost):

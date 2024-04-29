@@ -77,6 +77,7 @@ def test_entry_points_add_and_load(entry_points):
     with pytest.raises(RuntimeError, match='inline function was called'):
         entry_point()
 
-# ? 
+
+# ?
 def test_generate_calculation_node():
     pass

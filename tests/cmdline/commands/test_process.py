@@ -17,12 +17,12 @@ import uuid
 import pytest
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
+from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
-from aiida.cmdline.utils.echo import ExitCode
 
 from tests.utils.processes import WaitProcess
 

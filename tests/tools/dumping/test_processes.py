@@ -55,7 +55,7 @@ def clean_tmp_path(tmp_path: Path):
             item.unlink()
 
 
-# Helper methods to generate the actual `WorkChain`s and `CalcJob`s used for testing
+# Helper functions to generate the actual `WorkChain`s and `CalcJob`s used for testing
 @pytest.fixture
 def generate_calculation_node_io(generate_calculation_node):
     def _generate_calculation_node_io(entry_point: str | None = None, attach_outputs: bool = True):
@@ -66,7 +66,7 @@ def generate_calculation_node_io(generate_calculation_node):
         singlefiledata_input = SinglefileData.from_string(content=filecontent, filename=filename)
         # ? Use instance for folderdata
         folderdata = FolderData()
-        folderdata.put_object_from_filelike(handle=io.StringIO(filecontent), path=folderdata_relpath / filename)
+        folderdata.put_object_from_filelike(handle=io.StringIO(filecontent), path=str(folderdata_relpath / filename))  # type: ignore[arg-type]
         arraydata_input = ArrayData(arrays=np.ones(3))
 
         # Create calculation inputs, outputs
@@ -74,7 +74,6 @@ def generate_calculation_node_io(generate_calculation_node):
             singlefiledata_linklabel: singlefiledata_input,
             folderdata_linklabel: folderdata,
             arraydata_linklabel: arraydata_input,
-            # todo: also add some of the other AiiDA nodes, like Int here
         }
 
         singlefiledata_output = singlefiledata_input.clone()
@@ -84,7 +83,6 @@ def generate_calculation_node_io(generate_calculation_node):
             calculation_outputs = {
                 folderdata_linklabel: folderdata_output,
                 singlefiledata_linklabel: singlefiledata_output,
-                # todo: also add some of the other AiiDA nodes, like Int here
             }
         else:
             calculation_outputs = None
@@ -127,7 +125,6 @@ def generate_workchain_node_io():
 
 # Tests for entry-point dump method
 def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path):
-
     # Expected tree:
     # wc-dump-test-io
     # └── 01-sub_workflow
@@ -169,19 +166,18 @@ def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path
 
 
 def test_dump_flat(generate_calculation_node_io, generate_workchain_node_io, tmp_path):
-
     # Expected tree:
     # wc-dump-test-io-flat
     # └── 01-sub_workflow
-        # ├── 01-calculation
-        # │  ├── file.txt
-        # │  └── relative_path
-        # │     └── file.txt
-        # └── 02-calculation
-        #     ├── default.npy
-        #     ├── file.txt
-        #     └── relative_path
-        #         └── file.txt
+    # ├── 01-calculation
+    # │  ├── file.txt
+    # │  └── relative_path
+    # │     └── file.txt
+    # └── 02-calculation
+    #     ├── default.npy
+    #     ├── file.txt
+    #     └── relative_path
+    #         └── file.txt
 
     # Need to generate parent path for dumping, as I don't want the sub-workchains to be dumped directly into `tmp_path`
     dump_parent_path = tmp_path / 'wc-dump-test-io-flat'
@@ -290,7 +286,7 @@ def test_dump_multiply_add_flat(tmp_path, generate_workchain_multiply_add):
 
 # Tests for dump_calculation method
 def test_dump_calculation_node(tmp_path, generate_calculation_node_io):
-   # Checking the actual content should be handled by `test_copy_tree`
+    # Checking the actual content should be handled by `test_copy_tree`
     # Normal dumping -> node_inputs and not flat; no paths provided
     # Expected tree:
     # cj-dump-test-io
@@ -558,17 +554,13 @@ def test_generate_child_node_label(
     multiply_add_node = generate_workchain_multiply_add()
     output_triples = multiply_add_node.base.links.get_outgoing().all()
     output_paths = sorted(
-        [
-            process_dumper.generate_child_node_label(_, output_node)
-            for _, output_node in enumerate(output_triples)
-        ]
+        [process_dumper.generate_child_node_label(_, output_node) for _, output_node in enumerate(output_triples)]
     )
     print(output_paths)
     assert output_paths == ['00-multiply', '01-ArithmeticAddCalculation', '02-result']
 
 
 def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workchain_multiply_add):
-
     process_dumper = ProcessDumper()
     cj_node = generate_calculation_node_io(attach_outputs=False)
     process_dumper.dump_node_yaml(process_node=cj_node, output_path=tmp_path)
@@ -611,7 +603,6 @@ def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workcha
 
 
 def test_generate_parent_readme(tmp_path, generate_workchain_multiply_add):
-
     wc_node = generate_workchain_multiply_add()
     process_dumper = ProcessDumper(parent_process=wc_node, parent_path=tmp_path)
 
@@ -621,7 +612,7 @@ def test_generate_parent_readme(tmp_path, generate_workchain_multiply_add):
 
     with open(tmp_path / 'README', 'r') as dumped_file:
         contents = dumped_file.read()
-    
+
     assert 'This directory contains' in contents
     assert '`MultiplyAddWorkChain' in contents
     assert 'ArithmeticAddCalculation' in contents

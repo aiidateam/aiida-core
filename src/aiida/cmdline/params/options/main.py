@@ -756,7 +756,7 @@ PATH = OverridableOption(
     '--path',
     type=click.Path(path_type=pathlib.Path),
     show_default=False,
-    help='The directory in which the dumping folder will be created.',
+    help='Parent directory for the dumping.',
 )
 
 INCLUDE_INPUTS = OverridableOption(
@@ -768,18 +768,16 @@ INCLUDE_INPUTS = OverridableOption(
 
 INCLUDE_ATTRIBUTES = OverridableOption(
     # '-a',
-    '--include-attributes',
-    is_flag=True,
-    default=False,
+    '--include-attributes/--exclude-attributes',
+    default=True,
     show_default=True,
     help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
 )
 
 INCLUDE_EXTRAS = OverridableOption(
     # '-e',
-    '--include-extras',
-    is_flag=True,
-    default=False,
+    '--include-extras/--exclude-extras',
+    default=True,
     show_default=True,
     help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
 )

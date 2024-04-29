@@ -486,12 +486,25 @@ def process_repair(manager, broker, dry_run):
 @verdi_process.command('dump')
 @arguments.PROCESSES()
 @options.PATH()
+@click.option(
+    '-f',
+    '--flat',
+    'flat',
+    is_flag=True,
+    default=False,
+    help='Dump files in a flat directory for every step of the workflow.',
+)
+@click.option(
+    '-a',
+    '--all-aiida-nodes',
+    is_flag=True,
+    default=False,
+    help='Dump also non file-based AiiDA nodes. This can generate quite a lot of files, so use with caution.',
+)
+@options.OVERWRITE()
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
-@options.OVERWRITE()
-@click.option('-f', '--flat', 'flat', is_flag=True, default=False, help='Dump all the files in one location.')
-@click.option('-a', '--all-aiida-nodes', is_flag=True, default=False, help='Dump all non file-based AiiDA nodes.')
 def process_dump(
     processes,
     path,
@@ -509,19 +522,17 @@ def process_dump(
     mirrors the logical execution of the workflow, which can also be queried by running `verdi process status <pk>` on
     the command line.
 
-    By default, input and output files of each simulation can be found in the corresponding "raw_inputs" and
+    By default, input and output files of each calculation can be found in the corresponding "raw_inputs" and
     "raw_outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
-    settings). Additional input files (depending on the type of calculation) are placed in the "node_inputs".
+    settings). Additional input files (depending on the type of calculation) are placed in the "extra_inputs".
 
     Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
     node data for further inspection.
     """
 
-
     from aiida.tools.dumping.processes import ProcessDumper
 
     for process in processes:
-
         # Generate default parent folder
         process_dumper = ProcessDumper(
             parent_process=process,
@@ -538,9 +549,11 @@ def process_dump(
         else:
             output_path = path.resolve()
 
+        process_dumper.parent_path = output_path
+
         # Capture `FileExistsError` here already, not by trying to run the dumping
         try:
-            process_dumper.dump_path_validate_make(validate_path=output_path)
+            process_dumper.validate_make_dump_path(validate_path=output_path)
         except FileExistsError:
             echo.echo_critical(f'Path `{output_path}` already exists and overwrite set to False.')
 
@@ -550,15 +563,15 @@ def process_dump(
         # ? Which exceptions do I expect here?
         except FileExistsError:
             echo.echo_critical('Some files present in the dumping directory. Delete manually and try again.')
-        except NotImplementedError:
-            echo.echo_critical('flat dumping not supported for `WorkChain`s that call more than one `CalcJob`.')
+        # except NotImplementedError:
+        #     echo.echo_critical('flat dumping not supported for `WorkChain`s that call more than one `CalcJob`.')
         except Exception as e:
             echo.echo_critical(f'Unexpected error ({e!s}) while dumping {process.__class__.__name__} <{process.pk}>.')
-
-        echo.echo_success(
-            f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in `{output_path}`.'
-        )
 
         # Create README in parent directory. Do this at the end as to not cause exceptions for the path creation, and
         # only do it when everything ran through fine before
         process_dumper.generate_parent_readme()
+
+        echo.echo_success(
+            f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in `{output_path}`.'
+        )

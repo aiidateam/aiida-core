@@ -22,6 +22,7 @@ from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
+from aiida.cmdline.utils.echo import ExitCode
 
 from tests.utils.processes import WaitProcess
 
@@ -336,28 +337,43 @@ class TestVerdiProcess:
             assert len(result.output_lines) == 1, result.output_lines
             assert result.output_lines[0] == 'No log messages recorded for this entry'
 
-    def test_process_dump(self, run_cli_command):
+    def test_process_dump(self, run_cli_command, tmp_path, generate_workchain_multiply_add):
         """Test verdi process dump"""
-        node = WorkflowNode().store()
-        # node.set_process_state(ProcessState.RUNNING)
 
-        # # Running without identifiers should not except and not print anything
-        # options = []
-        # result = run_cli_command(cmd_process.process_status, options)
-        # assert result.exception is None, result.output
-        # assert len(result.output_lines) == 0
+        # Only test CLI interface here, the actual functionalities of the Python API are tested in `test_processes.py`
+        test_path = tmp_path / 'cli-dump'
+        node = generate_workchain_multiply_add()
 
-        # # Giving a single identifier should print a non empty string message
-        # options = [str(node.pk)]
-        # result = run_cli_command(cmd_process.process_status, options)
-        # assert result.exception is None, result.output
-        # assert len(result.output_lines) > 0
+        # Running without identifiers should not except and not print anything
+        options = []
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert len(result.output_lines) == 0
 
-        # # With max depth 0, the output should be empty
-        # options = ['--max-depth', 0, str(node.pk)]
-        # result = run_cli_command(cmd_process.process_status, options)
-        # assert result.exception is None, result.output
-        # assert len(result.output_lines) == 0
+        # Giving a single identifier should print a non empty string message
+        options = [str(node.pk), '-p', str(test_path)]
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert 'Success:' in result.output
+
+        # Trying to run the dumping again in the same path but without overwrite=True should raise exception
+        options = [str(node.pk), '-p', str(test_path)]
+        result = run_cli_command(cmd_process.process_dump, options, raises=True)
+        assert result.exit_code is ExitCode.CRITICAL
+
+        # Works fine when using overwrite=True
+        options = [str(node.pk), '-p', str(test_path), '-o']
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert 'Success:' in result.output
+
+        # Set overwrite=True but provide bad directory, i.e. missing metadata file
+        (test_path / '.aiida_node_metadata.yaml').unlink()
+
+        options = [str(node.pk), '-p', str(test_path), '-o']
+        result = run_cli_command(cmd_process.process_dump, options, raises=True)
+        assert result.exit_code is ExitCode.CRITICAL
+
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('numprocesses, percentage', ((0, 100), (1, 90)))

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any, List, Optional
 
 import yaml
 
@@ -22,22 +23,23 @@ from aiida.orm import (
     CalculationNode,
     FolderData,
     ProcessNode,
-    RemoteData,
     SinglefileData,
     WorkChainNode,
     WorkflowNode,
     WorkFunctionNode,
 )
-from aiida.orm.utils import LinkTriple
-from aiida.repository import File
+from aiida.orm.utils import LinkManager, LinkTriple
 
-FILE_NODES = (SinglefileData, FolderData, RemoteData)
+# Include RemoteData here? -> Don't think so
+FILE_CLASSES = (SinglefileData, FolderData)
+LOGGER = logging.getLogger(__name__)
 
 
 class ProcessDumper:
     def __init__(
         self,
-        parent_process: ProcessNode,
+        parent_process: Optional[ProcessNode] = None,
+        parent_path: Optional[Path] = None,
         include_node_inputs: bool = True,
         include_attributes: bool = True,
         include_extras: bool = True,
@@ -53,9 +55,11 @@ class ProcessDumper:
         self.flat = flat
         self.all_aiida_nodes = all_aiida_nodes
 
-        self.logger = logging.getLogger(__name__)
-
-        self.parent_path = self.generate_default_dump_path(process_node=self.parent_process)
+        # Automatically determine parent_path on instantiation if `parent_process` is set
+        if parent_path is None and parent_process is not None:
+            self.parent_path = self.generate_default_dump_path(process_node=self.parent_process)
+        elif parent_path is not None:
+            self.parent_path = parent_path
 
     def dump(
         self,
@@ -68,7 +72,7 @@ class ProcessDumper:
         Note that if an outgoing link is again a `WorkChainNode`, the function recursively calls itself, while files are
         only actually created when a `CalcJobNode` is reached.
 
-        :param process_node: The parent process node to be dumped. It can be either a `WorkChainNode` or a `CalcJobNode`.
+        :param process_node: The parent process node to be dumped. It can be either `WorkChainNode` or `CalcJobNode`
         :param output_path: The main output path where the directory tree will be created.
         :param include_inputs: If True, include file or folder inputs in the dump. Defaults to True.
         :param node_dumper: The ProcessNodeYamlDumper instance to use for dumping node metadata. If not provided, a new
@@ -79,7 +83,7 @@ class ProcessDumper:
             output_path = self.generate_default_dump_path(process_node=process_node)
 
         try:
-            self.dump_path_validate_make(validate_path=output_path)
+            self.validate_make_dump_path(validate_path=output_path)
         except:
             raise
 
@@ -87,10 +91,9 @@ class ProcessDumper:
         # `dump` function called by `verdi`, then I need to dump for the `CalcFunction` here already, as well.
         self.dump_node_yaml(process_node=process_node, output_path=output_path)
         if isinstance(process_node, CalcFunctionNode):
-            self.dump_calculation_node(
+            self._dump_calculation(
                 calculation_node=process_node,
                 output_path=output_path,
-                include_inputs=self.include_node_inputs,
                 io_dump_paths=io_dump_paths,
             )
 
@@ -103,7 +106,7 @@ class ProcessDumper:
 
             for index, link_triple in enumerate(sorted_called_links, start=1):
                 child_node = link_triple.node
-                child_label = self.generate_calcjob_input_node_label(index=index, link_triple=link_triple)
+                child_label = self.generate_child_node_label(index=index, link_triple=link_triple)
                 child_output_path = output_path.resolve() / child_label
 
                 # Recursive function call for `WorkFlowNode``
@@ -115,12 +118,12 @@ class ProcessDumper:
 
                 # Once a `CalculationNode` as child reached, dump it
                 elif isinstance(child_node, CalculationNode):
-                    self.dump_calculation_node(
+                    self._dump_calculation(
                         calculation_node=child_node,
                         output_path=child_output_path,
                     )
 
-    def dump_calculation_node(
+    def _dump_calculation(
         self,
         calculation_node: CalculationNode,
         output_path: Path | None,
@@ -139,41 +142,231 @@ class ProcessDumper:
             output_path = self.generate_default_dump_path(process_node=calculation_node)
 
         try:
-            self.dump_path_validate_make(validate_path=output_path)
+            self.validate_make_dump_path(validate_path=output_path)
         except:
             # raise same exception here to communicate it outwards
             raise
 
-        if io_dump_paths is None:
-            io_dump_paths = self.generate_calculation_io_dump_paths(calculation_io_dump_paths=io_dump_paths)
+        self.dump_node_yaml(process_node=calculation_node, output_path=output_path)
 
-        # Dump the raw_inputs
+        io_dump_mapping = self.generate_calculation_io_mapping(io_dump_paths=io_dump_paths)
+
+        # Dump the repository contents of the node
         # ? Rename this to node_repository or something -> Introduces AiiDA terminology.But as we provide the option to
         # ? dump *all* the outputs, we should also provide the option to dump *all* the inputs, not just `node_inputs`
-        calculation_node.base.repository.copy_tree(output_path.resolve() / io_dump_paths[0])
+        calculation_node.base.repository.copy_tree(output_path.resolve() / io_dump_mapping.repository)
 
-        # Dump the raw_outputs
-        output_nodes = [calculation_node.outputs[output] for output in calculation_node.outputs]
-        for output_node in output_nodes:
-            if isinstance(output_node, FILE_NODES):
-                output_node.base.repository.copy_tree(output_path.resolve() / io_dump_paths[1])
-            elif self.all_aiida_nodes:
-                output_node.base.repository.copy_tree(output_path.resolve() / io_dump_paths[1] / '.aiida_nodes')
-
-        # Dump the node_inputs
+        # Dump the extra_inputs
         if self.include_node_inputs:
             input_node_triples = calculation_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
+            self._dump_calculation_io(parent_path=output_path / io_dump_mapping.inputs, node_triples=input_node_triples)
 
-            for input_node_triple in input_node_triples:
-                input_node_path = self.generate_calculation_input_node_path(
-                    input_node_triple=input_node_triple,
-                    parent_path=output_path / io_dump_paths[2],
+        # Dump the raw_outputs
+        output_node_triples = calculation_node.base.links.get_outgoing(link_type=LinkType.CREATE)
+        self._dump_calculation_io(
+            parent_path=output_path / io_dump_mapping.outputs,
+            node_triples=output_node_triples,
+        )
+
+    def _dump_calculation_io(self, parent_path: Path, node_triples: LinkManager):
+        # if exception_paths is None:
+        #     exception_paths = ['/pseudos/']
+
+        for node_triple in node_triples:
+            node = node_triple.node
+            if isinstance(node, FILE_CLASSES) or any(issubclass(type(node), cls) for cls in FILE_CLASSES):
+                file_node_path = self.generate_link_triple_dump_path(
+                    link_triple=node_triple,
+                    parent_path=parent_path,
                 )
 
                 # No .resolve() required as that done in `generate_calcjob_input_node_path`
-                input_node_triple.node.base.repository.copy_tree(input_node_path)
+                node_triple.node.base.repository.copy_tree(file_node_path)
 
-        self.dump_node_yaml(process_node=calculation_node, output_path=output_path)
+            else:
+                aiida_node_path = self.generate_link_triple_dump_path(
+                    link_triple=node_triple,
+                    parent_path=parent_path / '.aiida_nodes',
+                )
+
+                # This is again QE specific, but, frankly, I don't know how to otherwise separate the pseudos from the
+                # rest of the AiiDA-nodes, as the pseudos are of `Data` type (why not UpfData?), so I cannot distinguish
+                # them from other AiiDA-nodes, such as ArrayData which we definitely want in the hidden `.aiida_nodes`
+                # subdirectory
+                # So if anybody has a better solution, I'd be happy to use that
+                # The problem might be void, though, once all the atomistic code is moved to `aiida-atomistic`
+                if node.node_type == 'data.pseudo.upf.UpfData.':
+                    node_triple.node.base.repository.copy_tree(Path(str(aiida_node_path).replace('.aiida_nodes', '')))
+                elif self.all_aiida_nodes:
+                    node_triple.node.base.repository.copy_tree(aiida_node_path)
+
+    def validate_make_dump_path(self, validate_path: Path, safeguard_file: str = '.aiida_node_metadata.yaml') -> Path:
+        """
+        Create default dumping directory for a given process node and return it as absolute path.
+
+        :param path: The base path for the dump. Defaults to the current directory.
+        :return: The created dump path.
+        """
+        import shutil
+
+        if validate_path.is_dir():
+            # Existing, empty directory -> OK
+            if not any(validate_path.iterdir()):
+                pass
+
+            # Existing, non-empty directory and overwrite False -> FileExistsError
+            elif not self.overwrite:
+                raise FileExistsError(f'Path `{validate_path}` already exists and overwrite set to False.')
+
+            # Existing, non-empty directory and overwrite True
+            # Check for safeguard file ('.aiida_node_metadata.yaml') for safety
+            # If present -> Remove directory
+            elif (validate_path / safeguard_file).is_file():
+                LOGGER.info(f'Overwrite set to true, will overwrite directory `{validate_path}`.')
+                shutil.rmtree(validate_path)
+
+            # Existing and non-empty directory and overwrite True
+            # Check for safeguard file ('.aiida_node_metadata.yaml') for safety
+            # If absent -> Don't remove directory as to not accidentally remove a wrong one
+            else:
+                raise FileExistsError(
+                    f"Path `{validate_path}` already exists and doesn't contain safeguard file {safeguard_file}."
+                    f'Not removing for safety reasons.'
+                )
+
+        # Not included in if-else as to avoid having to repeat the `mkdir` call.
+        # `exist_ok=True` as checks implemented above
+        validate_path.mkdir(exist_ok=True, parents=True)
+
+        return validate_path.resolve()
+
+    def generate_default_dump_path(self, process_node: ProcessNode | None) -> Path:
+        """Simple helper function to generate the default parent-dumping directory if none given.
+
+        This function is not called for the sub-calls of `calcjob_node_dump` or during the recursive `process_dump` as
+        it just creates the default parent folder for the dumping, if no name is given.
+
+        :param process_node: The `ProcessNode` for which the directory is created.
+        :return: The created parent dump path.
+        """
+        if process_node is None:
+            raise TypeError('`process_node` must be provided for generating the default path.')
+        else:
+            pk = process_node.pk
+            try:
+                return Path(f'dump-{process_node.process_label}-{pk}')
+            except AttributeError:
+                # ? This case came up during testing, not sure how relevant it actually is
+                return Path(f'dump-{process_node.process_type}-{pk}')
+
+    def generate_calculation_io_mapping(self, io_dump_paths: Optional[List[Any]] = None):
+        # Could turn this into a dict/mapping and use as labels what the entities actually refer to
+        # Don't use AiiDA terminology directly as it might be confusing for other users who are mainly targeted for the
+        # dumping
+        # ? Could move this outside of class and just pass flat, and not set the logger as a class attribute
+
+        from types import SimpleNamespace
+
+        aiida_entities_to_dump = ['repository', 'inputs', 'outputs']
+        default_calculation_io_dump_paths = ['raw_inputs', 'extra_inputs', 'raw_outputs']
+        empty_calculation_io_dump_paths = [''] * 3
+
+        if self.flat and io_dump_paths is None:
+            LOGGER.info(
+                'Flat set to True and no `io_dump_paths`. Dumping in a flat directory, files might be overwritten.'
+            )
+            return SimpleNamespace(**dict(zip(aiida_entities_to_dump, empty_calculation_io_dump_paths)))
+
+        elif not self.flat and io_dump_paths is None:
+            LOGGER.info(
+                'Flat set to False but no `io_dump_paths` provided. '
+                + f'Will use the defaults {default_calculation_io_dump_paths}.'
+            )
+            return SimpleNamespace(**dict(zip(aiida_entities_to_dump, default_calculation_io_dump_paths)))
+
+        elif self.flat and io_dump_paths is not None:
+            LOGGER.info(
+                'Flat set to True but `io_dump_paths` provided. These will be used, but `node_inputs` not nested.'
+            )
+            return SimpleNamespace(**dict(zip(aiida_entities_to_dump, io_dump_paths)))
+        else:
+            LOGGER.info(
+                'Flat set to False but no `io_dump_paths` provided. These will be used, but `node_inputs` flattened.'
+            )
+            return SimpleNamespace(**dict(zip(aiida_entities_to_dump, io_dump_paths)))  # type: ignore[arg-type]
+
+    def generate_link_triple_dump_path(self, link_triple: LinkTriple, parent_path: Path) -> Path:
+        node = link_triple.node
+        link_label = link_triple.link_label
+        # For convenience, remove the 'retrieved' subdirectory for the outputs
+        link_label = link_label.replace('retrieved', '')
+
+        # This is again QE specific...
+        # if exception_labels is None:
+        #     exception_labels = ['pseudos']
+
+        # ? Shouldn't this be only be applied to `CalculationNode`s?
+        # This check is necessary, as I'm now not only dumping the 'retrieved' outputs and file-based inputs, but all of
+        # the connected links if self.all_aiida_nodes is True
+        # ? This is now handled outside, before this function is called
+        # if len(node.base.repository.list_objects()) > 0:
+        #     aiida_nodes_subdir = ''
+        # else:
+        #     # Empty repository, so it should be non-file-based AiiDA data types, like ArrayData
+        #     # -> Put those into '.aiida_nodes' subdirectory
+        #     aiida_nodes_subdir = '.aiida_nodes'
+        # # aiida_nodes_subdir = ''
+
+        # ? The check if the link_label starts with pseudo is again very specific for the atomistic community/QE,
+        # ? however, I don't know how to otherwise avoid that it's put in `.aiida_nodes`, as the Node is  defined as
+        # ? Data, not UpfData, so I cannot just check against FILE_NODES
+        # if isinstance(node, FILE_CLASSES) or any(link_label.startswith(label) for label in exception_labels):
+        if isinstance(node, FILE_CLASSES):
+            if not self.flat:
+                input_node_path = parent_path / Path(*link_label.split('__'))
+            else:
+                # Don't use link_label at all -> But, relative path inside FolderData is retained
+                input_node_path = parent_path
+        elif not self.flat:
+            # input_node_path = parent_path / aiida_nodes_subdir / Path(*link_label.split('__'))
+            input_node_path = parent_path / Path(*link_label.split('__'))
+        else:
+            # Don't use link_label at all -> But, relative path inside FolderData is retained
+            # input_node_path = parent_path / aiida_nodes_subdir
+            input_node_path = parent_path
+
+        return input_node_path.resolve()
+
+    def generate_child_node_label(self, index: int, link_triple: LinkTriple) -> str:
+        """Small helper function to generate the directory label for node inputs."""
+        node = link_triple.node
+        link_label = link_triple.link_label
+
+        # Generate directories with naming scheme akin to `verdi process status`
+        # node_label = f'{index:02d}-{link_label}'
+        label_list = [f'{index:02d}', link_label]
+
+        try:
+            process_label = node.process_label
+            if process_label is not None and process_label != link_label:
+                label_list += [process_label]
+                # node_label += f'-{process_label}'
+
+        except AttributeError:
+            process_type = node.process_type
+            if process_type is not None and process_type != link_label:
+                label_list += [process_type]
+                # node_label += f'-{process_type}'
+
+        # if isinstance(node, File):
+        #     label_list += [node.name]
+
+        node_label = '-'.join(label_list)
+        # `CALL-` as part of the link labels also for MultiplyAddWorkChain -> Seems general enough, so remove
+        node_label = node_label.replace('CALL-', '')
+        node_label = node_label.replace('None-', '')
+
+        return node_label
 
     def dump_node_yaml(
         self,
@@ -249,149 +442,6 @@ class ProcessDumper:
         with open(output_file, 'w') as handle:
             yaml.dump(node_dict, handle, sort_keys=False)
 
-    def dump_path_validate_make(self, validate_path: Path, safeguard_file: str = '.aiida_node_metadata.yaml') -> Path:
-        """
-        Create default dumping directory for a given process node and return it as absolute path.
-
-        :param path: The base path for the dump. Defaults to the current directory.
-        :return: The created dump path.
-        """
-        import shutil
-
-        if validate_path.is_dir():
-            # Existing, empty directory -> OK
-            if not any(validate_path.iterdir()):
-                pass
-
-            # Existing, non-empty directory and overwrite False -> FileExistsError
-            elif not self.overwrite:
-                raise FileExistsError(f'Path `{validate_path}` already exists and overwrite set to False.')
-
-            # Existing, non-empty directory and overwrite True
-            # Check for safeguard file ('.aiida_node_metadata.yaml') for safety
-            # If present -> Remove directory
-            elif (validate_path / safeguard_file).is_file():
-                self.logger.info(f'Overwrite set to true, will overwrite directory `{validate_path}`.')
-                shutil.rmtree(validate_path)
-
-            # Existing and non-empty directory and overwrite True
-            # Check for safeguard file ('.aiida_node_metadata.yaml') for safety
-            # If absent -> Don't remove directory as to not accidentally remove a wrong one
-            else:
-                raise FileExistsError(
-                    f"Path `{validate_path}` already exists and doesn't contain safeguard file {safeguard_file}."
-                    f'Not removing for safety reasons.'
-                )
-
-        # Not included in if-else as to avoid having to repeat the `mkdir` call.
-        # `exist_ok=True` as checks implemented above
-        validate_path.mkdir(exist_ok=True, parents=True)
-
-        return validate_path.resolve()
-
-    def generate_calculation_io_dump_paths(self, calculation_io_dump_paths: list | None = None):
-        default_calculation_io_dump_paths = ['raw_inputs', 'raw_outputs', 'node_inputs']
-        empty_calculation_io_dump_paths = ['', '', '']
-
-        if self.flat and calculation_io_dump_paths is None:
-            self.logger.info(
-                'Flat set to True and no `io_dump_paths`. Dumping in a flat directory, files might be overwritten.'
-            )
-            return empty_calculation_io_dump_paths
-        elif self.flat and calculation_io_dump_paths is not None:
-            self.logger.info(
-                'Flat set to True but `io_dump_paths` provided. These will be used, but `node_inputs` not nested.'
-            )
-            return default_calculation_io_dump_paths
-        elif not self.flat and calculation_io_dump_paths is None:
-            self.logger.info(
-                f'Flat set to False but no `io_dump_paths` provided. Will use the defaults {default_calculation_io_dump_paths}.'
-            )
-            return default_calculation_io_dump_paths
-        else:
-            self.logger.info(
-                'Flat set to False but no `io_dump_paths` provided. These will be used, but `node_inputs` flattened.'
-            )
-            return empty_calculation_io_dump_paths
-
-    def generate_calculation_input_node_path(
-        self, input_node_triple, parent_path, exception_labels: list | None = None
-    ) -> Path:
-        input_node = input_node_triple.node
-        link_label = input_node_triple.link_label
-
-        if exception_labels is None:
-            exception_labels = ['pseudos']
-
-        if len(input_node.base.repository.list_objects()) > 0:
-            # Empty repository, so it should be standard AiiDA data types, like Int, Float, etc.
-            aiida_nodes_subdir = ''
-        else:
-            aiida_nodes_subdir = '.aiida_nodes'
-
-        # ? The check if the link_label starts with pseudo is again very specific for the atomistic community/QE,
-        # ? however, I don't know how to otherwise avoid that it's put in `.aiida_nodes`, as the Node is  defined as
-        # ? Data, not UpfData, so I cannot just check against FILE_NODES
-        if isinstance(input_node, FILE_NODES) or any(link_label.startswith(label) for label in exception_labels):
-            if not self.flat:
-                input_node_path = parent_path / Path(*link_label.split('__'))
-            else:
-                # Don't use link_label at all -> But, relative path inside FolderData is retained
-                input_node_path = parent_path
-        elif not self.flat:
-            input_node_path = parent_path / aiida_nodes_subdir / Path(*link_label.split('__'))
-        else:
-            # Don't use link_label at all -> But, relative path inside FolderData is retained
-            input_node_path = parent_path / aiida_nodes_subdir
-
-        return input_node_path.resolve()
-
-    def generate_calcjob_input_node_label(self, index: int, link_triple: LinkTriple) -> str:
-        """Small helper function to generate the directory label for node inputs."""
-        node = link_triple.node
-        link_label = link_triple.link_label
-
-        # Generate directories with naming scheme akin to `verdi process status`
-        # node_label = f'{index:02d}-{link_label}'
-        label_list = [f'{index:02d}', link_label]
-
-        try:
-            process_label = node.process_label
-            if process_label is not None and process_label != link_label:
-                label_list += [process_label]
-                # node_label += f'-{process_label}'
-
-        except AttributeError:
-            process_type = node.process_type
-            if process_type is not None and process_type != link_label:
-                label_list += [process_type]
-                # node_label += f'-{process_type}'
-
-        if isinstance(node, File):
-            label_list += [node.name]
-
-        node_label = '-'.join(label_list)
-        # `CALL-` as part of the link labels also for MultiplyAddWorkChain -> Seems general enough, so remove
-        node_label = node_label.replace('CALL-', '')
-
-        return node_label
-
-    def generate_default_dump_path(self, process_node: ProcessNode) -> Path:
-        """Simple helper function to generate the default parent-dumping directory if none given.
-
-        This function is not called for the sub-calls of `calcjob_node_dump` or during the recursive `process_dump` as it
-        just creates the default parent folder for the dumping, if no name is given.
-
-        :param process_node: The `ProcessNode` for which the directory is created.
-        :return: The created parent dump path.
-        """
-
-        try:
-            return Path(f'dump-{process_node.process_label}-{process_node.pk}').resolve()
-        except AttributeError:
-            # ? This case came up during testing, not sure how relevant it actually is
-            return Path(f'dump-{process_node.process_type}-{process_node.pk}').resolve()
-
     # ? Add type hints here? Would require loading from ORM in header of `cmd_` file -> Might fail CLI time validation
     def generate_parent_readme(self):
         """Generate README file in main dumping directory.
@@ -411,18 +461,21 @@ class ProcessDumper:
             get_workchain_report,
         )
 
+        if self.parent_process is None or self.parent_path is None:
+            raise TypeError('parent_process and parent_path must be set before README can be created.')
+
         _readme_string = textwrap.dedent(
             f"""\
-        This directory contains the files involved in the simulation/workflow `{self.parent_process.process_label} <{self.parent_process.pk}>` run with AiiDA.
+        This directory contains the files involved in the calculation/workflow `{self.parent_process.process_label} <{self.parent_process.pk}>` run with AiiDA.
 
-        Child simulations/workflows (also called `CalcJob`s and `WorkChain`s in AiiDA jargon) run by the parent workflow are
+        Child calculations/workflows (also called `CalcJob`s and `WorkChain`s in AiiDA jargon) run by the parent workflow are
         contained in the directory tree as sub-folders and are sorted by their creation time. The directory tree thus
         mirrors the logical execution of the workflow, which can also be queried by running `verdi process status
         {self.parent_process.pk}` on the command line.
 
         By default, input and output files of each simulation can be found in the corresponding "raw_inputs" and
         "raw_outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
-        settings). Additional input files (depending on the type of calculation) are placed in the "node_inputs".
+        settings). Additional input files (depending on the type of calculation) are placed in the "extra_inputs".
 
         Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
         node data for further inspection."""  # noqa: E501
@@ -430,7 +483,7 @@ class ProcessDumper:
 
         # `verdi process status`
         process_status = format_call_graph(calc_node=self.parent_process, max_depth=None, call_link_label=True)
-        _readme_string += f'\n\nOutput of `verdi process status`\n\n{process_status}'
+        _readme_string += f'\n\n\nOutput of `verdi process status {self.parent_process.pk}:`\n\n{process_status}'
 
         # `verdi process report`
         # Copied over from `cmd_process`
@@ -445,10 +498,11 @@ class ProcessDumper:
         else:
             process_report = f'Nothing to show for node type {self.parent_process.__class__}'
 
-        _readme_string += f'\n\nOutput of `verdi process report`\n\n{process_report}'
+        _readme_string += f'\n\n\nOutput of `verdi process report {self.parent_process.pk}`:\n\n{process_report}'
 
         # `verdi process show`?
         process_show = get_node_info(node=self.parent_process)
-        _readme_string += f'\n\nOutput of `verdi process show`\n\n{process_show}'
+        _readme_string += f'\n\n\nOutput of `verdi process show {self.parent_process.pk}`:\n\n{process_show}'
 
-        (self.parent_path / 'README').write_text(_readme_string)
+        with (self.parent_path / 'README').open('w') as handle:
+            handle.write(_readme_string)

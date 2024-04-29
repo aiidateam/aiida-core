@@ -13,6 +13,8 @@
 # ? However, when one passes tmp_dir as output_path, no automatic path is created, as not at the default value is set,
 # ? so str(output_path) == '.' is False
 
+from __future__ import annotations
+
 import io
 import shutil
 from pathlib import Path

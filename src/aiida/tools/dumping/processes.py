@@ -89,13 +89,13 @@ class ProcessDumper:
 
         # This seems a bit duplicated, but if the logic for checking the types should be contained in the recursive
         # `dump` function called by `verdi`, then I need to dump for the `CalcFunction` here already, as well.
-        self.dump_node_yaml(process_node=process_node, output_path=output_path)
         if isinstance(process_node, CalculationNode):
             self._dump_calculation(
                 calculation_node=process_node,
                 output_path=output_path,
                 io_dump_paths=io_dump_paths,
             )
+            self.dump_node_yaml(process_node=process_node, output_path=output_path)
 
         elif isinstance(process_node, WorkflowNode):
             called_links = process_node.base.links.get_outgoing(

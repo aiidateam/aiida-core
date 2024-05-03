@@ -75,7 +75,10 @@ def verdi_status(print_traceback, no_rmq):
 
         if profile is None:
             print_status(ServiceStatus.WARNING, 'profile', 'no profile configured yet')
-            echo.echo_report('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
+            echo.echo_report(
+                'Run `verdi presto` to automatically setup a profile using all defaults or use `verdi profile setup` '
+                'for more control.'
+            )
             return
 
         print_status(ServiceStatus.UP, 'profile', profile.name)

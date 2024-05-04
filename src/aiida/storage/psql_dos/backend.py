@@ -506,8 +506,6 @@ class PsqlDosBackend(StorageBackend):
         import subprocess
         import tempfile
 
-        from aiida.manage.profile_access import ProfileAccessManager
-
         STORAGE_LOGGER.report('Starting backup...')
 
         # This command calls `rsync` and `pg_dump` executables. check that they are in PATH
@@ -517,13 +515,6 @@ class PsqlDosBackend(StorageBackend):
 
         cfg = self._profile.storage_config
         container = Container(get_filepath_container(self.profile))
-
-        # check that the AiiDA profile is not locked and request access for the duration of this backup process
-        # (locked means that possibly a maintenance operation is running that could interfere with the backup)
-        try:
-            ProfileAccessManager(self._profile).request_access()
-        except exceptions.LockedProfileError as exc:
-            raise exceptions.StorageBackupError('The profile is locked!') from exc
 
         # step 1: first run the storage maintenance version that can safely be performed while aiida is running
         STORAGE_LOGGER.report('Running basic maintenance...')

@@ -331,23 +331,24 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
 
 
 def _copy_local_files(logger, node, transport, inputs, local_copy_list):
-    """Perform the copy instrctions of the ``local_copy_list``."""
-    with TemporaryDirectory() as tmpdir:
-        dirpath = pathlib.Path(tmpdir)
+    """Perform the copy instructions of the ``local_copy_list``."""
 
-        # The transport class can only copy files directly from the file system, so the files in the source node's repo
-        # have to first be copied to a temporary directory on disk.
-        for uuid, filename, target in local_copy_list:
-            logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
+    # The transport class can only copy files directly from the file system, so the files in the source node's repo
+    # have to first be copied to a temporary directory on disk.
+    for uuid, filename, target in local_copy_list:
+        logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
 
-            try:
-                data_node = load_node(uuid=uuid)
-            except exceptions.NotExistent:
-                data_node = _find_data_node(inputs, uuid) if inputs else None
+        try:
+            data_node = load_node(uuid=uuid)
+        except exceptions.NotExistent:
+            data_node = _find_data_node(inputs, uuid) if inputs else None
 
-            if data_node is None:
-                logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
-                continue
+        if data_node is None:
+            logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
+            continue
+
+        with TemporaryDirectory() as tmpdir:
+            dirpath = pathlib.Path(tmpdir)
 
             # If no explicit source filename is defined, we assume the top-level directory
             filename_source = filename or '.'
@@ -360,15 +361,14 @@ def _copy_local_files(logger, node, transport, inputs, local_copy_list):
             if data_node.base.repository.get_object(filename_source).file_type == FileType.DIRECTORY:
                 # If the source object is a directory, we copy its entire contents
                 data_node.base.repository.copy_tree(filepath_target, filename_source)
+                transport.put(f'{dirpath}/*', target or '.')
             else:
                 # Otherwise, simply copy the file
                 with filepath_target.open('wb') as handle:
                     with data_node.base.repository.open(filename_source, 'rb') as source:
                         shutil.copyfileobj(source, handle)
-
-        # Now copy the contents of the temporary folder to the remote working directory using the transport
-        for filepath in dirpath.iterdir():
-            transport.put(str(filepath), filepath.name)
+                transport.makedirs(str(pathlib.Path(target).parent), ignore_existing=True)
+                transport.put(str(filepath_target), target)
 
 
 def _copy_sandbox_files(logger, node, transport, folder):

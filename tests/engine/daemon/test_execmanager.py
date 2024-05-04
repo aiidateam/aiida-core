@@ -161,20 +161,27 @@ def test_retrieve_files_from_list(
 
 
 @pytest.mark.parametrize(
-    ('local_copy_list', 'expected_hierarchy'),
+    ('local_copy_list', 'expected_hierarchy', 'pre_create_target_dir'),
     (
-        ([None, None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
-        (['.', None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
-        ([None, '.'], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
-        (['.', '.'], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
-        ([None, ''], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
-        (['sub', None], {'b': 'file_b'}),
-        ([None, 'target'], {'target': {'sub': {'b': 'file_b'}, 'a': 'file_a'}}),
-        (['sub', 'target'], {'target': {'b': 'file_b'}}),
+        ([None, None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}, False),
+        (['.', None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}, False),
+        ([None, '.'], {'sub': {'b': 'file_b'}, 'a': 'file_a'}, False),
+        (['.', '.'], {'sub': {'b': 'file_b'}, 'a': 'file_a'}, False),
+        ([None, ''], {'sub': {'b': 'file_b'}, 'a': 'file_a'}, False),
+        (['sub', None], {'b': 'file_b'}, False),
+        ([None, 'target'], {'target': {'sub': {'b': 'file_b'}, 'a': 'file_a'}}, False),
+        (['sub', 'target'], {'target': {'b': 'file_b'}}, False),
+        (['a', 'target/filename'], {'target': {'filename': 'file_a'}}, True),
     ),
 )
 def test_upload_local_copy_list(
-    fixture_sandbox, node_and_calc_info, file_hierarchy_simple, tmp_path, local_copy_list, expected_hierarchy
+    fixture_sandbox,
+    node_and_calc_info,
+    file_hierarchy_simple,
+    tmp_path,
+    local_copy_list,
+    expected_hierarchy,
+    pre_create_target_dir,
 ):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``."""
     create_file_hierarchy(file_hierarchy_simple, tmp_path)
@@ -186,6 +193,13 @@ def test_upload_local_copy_list(
     calc_info.local_copy_list = [[folder.uuid] + local_copy_list]
 
     with LocalTransport() as transport:
+        if pre_create_target_dir:
+            # This is a regression test for a bug that was introduced in 6898ff4d8c263cf08707c61411a005f6a7f731dd. The
+            # implementation copying files from the sandbox and the ``local_copy_list`` were changed.
+            # See https://github.com/aiidateam/aiida-core/pull/6348 for detailed discussion.
+            # A situation is simulated where the directory of a nested target filename in a ``local_copy_list`` already
+            # exists in the sandbox.
+            fixture_sandbox.get_subfolder('target', create=True)
         execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated

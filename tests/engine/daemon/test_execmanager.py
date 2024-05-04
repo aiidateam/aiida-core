@@ -171,7 +171,6 @@ def test_retrieve_files_from_list(
         (['sub', None], {'b': 'file_b'}),
         ([None, 'target'], {'target': {'sub': {'b': 'file_b'}, 'a': 'file_a'}}),
         (['sub', 'target'], {'target': {'b': 'file_b'}}),
-        (['a', 'target/filename'], {'target': {'filename': 'file_a'}}),
     ),
 )
 def test_upload_local_copy_list(
@@ -187,8 +186,6 @@ def test_upload_local_copy_list(
     calc_info.local_copy_list = [[folder.uuid] + local_copy_list]
 
     with LocalTransport() as transport:
-        # Create the ``target`` subdirectory to make sure that won't cause an exception but directories are merged
-        fixture_sandbox.get_subfolder('target', create=True)
         execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated

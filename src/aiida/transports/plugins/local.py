@@ -354,7 +354,7 @@ class LocalTransport(Transport):
 
         the_destination = os.path.join(self.curdir, remotepath)
 
-        shutil.copytree(localpath, the_destination, symlinks=not dereference, dirs_exist_ok=overwrite)
+        shutil.copytree(localpath, the_destination, symlinks=not dereference)
 
     def rmtree(self, path):
         """Remove tree as rm -r would do

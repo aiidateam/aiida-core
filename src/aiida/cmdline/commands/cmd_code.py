@@ -27,10 +27,10 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls, non_interactive: bool, **kwargs):
+def create_code(ctx: click.Context, cls, **kwargs):
     """Create a new `Code` instance."""
     try:
-        instance = cls(**kwargs)
+        instance = cls.from_model(cls.Model(**kwargs))
     except (TypeError, ValueError) as exception:
         echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
 
@@ -241,21 +241,16 @@ def export(code, output_file):
     """Export code to a yaml file."""
     import yaml
 
-    code_data = {}
-
-    for key in code.Model.model_fields.keys():
-        if key == 'computer':
-            value = getattr(code, key).label
-        else:
-            value = getattr(code, key)
-
-        # If the attribute is not set, for example ``with_mpi`` do not export it, because the YAML won't be valid for
-        # use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
-        if value is not None:
-            code_data[key] = str(value)
+    from aiida.common.pydantic import get_metadata
 
     with open(output_file, 'w', encoding='utf-8') as yfhandle:
-        yaml.dump(code_data, yfhandle)
+        data = code.serialize()
+
+        for key, field in code.Model.model_fields.items():
+            if get_metadata(field, 'exclude_from_cli'):
+                data.pop(key)
+
+        yaml.dump(data, yfhandle)
 
 
 @verdi_code.command()

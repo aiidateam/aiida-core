@@ -5,8 +5,6 @@ from __future__ import annotations
 import functools
 import typing as t
 
-from packaging.version import parse
-
 from aiida.brokers.broker import Broker
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config_option
@@ -110,6 +108,8 @@ class RabbitmqBroker(Broker):
 
         :return: boolean whether the current RabbitMQ version is supported.
         """
+        from packaging.version import parse
+
         return parse('3.6.0') <= self.get_rabbitmq_version() < parse('3.8.15')
 
     def get_rabbitmq_version(self):
@@ -117,4 +117,6 @@ class RabbitmqBroker(Broker):
 
         :return: :class:`packaging.version.Version`
         """
+        from packaging.version import parse
+
         return parse(self.get_communicator().server_properties['version'].decode('utf-8'))

@@ -15,9 +15,11 @@ import io
 import pathlib
 import typing as t
 
-from aiida.repository import File
-
 from .data import Data
+
+if t.TYPE_CHECKING:
+    from aiida.repository import File
+
 
 __all__ = ('FolderData',)
 

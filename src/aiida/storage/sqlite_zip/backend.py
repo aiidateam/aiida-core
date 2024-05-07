@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, cast
 from zipfile import ZipFile, is_zipfile
 
-from archive_path import ZipPath, extract_file_in_zip
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
@@ -33,7 +32,6 @@ from aiida.orm.implementation import StorageBackend
 from aiida.repository.backend.abstract import AbstractRepositoryBackend
 
 from . import orm
-from .migrator import get_schema_version_head, migrate, validate_storage
 from .utils import (
     DB_FILENAME,
     META_FILENAME,
@@ -68,7 +66,7 @@ class SqliteZipBackend(StorageBackend):
     read_only = True
     """This plugin is read only and data cannot be created or mutated."""
 
-    class Model(BaseModel):
+    class Model(BaseModel, defer_build=True):
         """Model describing required information to configure an instance of the storage."""
 
         filepath: str = Field(title='Filepath of the archive', description='Filepath of the archive.')
@@ -83,6 +81,8 @@ class SqliteZipBackend(StorageBackend):
 
     @classmethod
     def version_head(cls) -> str:
+        from .migrator import get_schema_version_head
+
         return get_schema_version_head()
 
     @staticmethod
@@ -111,9 +111,13 @@ class SqliteZipBackend(StorageBackend):
             tests having run.
         :returns: ``True`` if the storage was initialised by the function call, ``False`` if it was already initialised.
         """
+        from archive_path import ZipPath
+
         filepath_archive = Path(profile.storage_config['filepath'])
 
         if filepath_archive.exists() and not reset:
+            from .migrator import migrate
+
             # The archive exists but ``reset == False``, so we try to migrate to the latest schema version. If the
             # migration works, we replace the original archive with the migrated one.
             with tempfile.TemporaryDirectory() as dirpath:
@@ -162,6 +166,8 @@ class SqliteZipBackend(StorageBackend):
         raise NotImplementedError('use the :func:`aiida.storage.sqlite_zip.migrator.migrate` function directly.')
 
     def __init__(self, profile: Profile):
+        from .migrator import validate_storage
+
         super().__init__(profile)
         self._path = Path(profile.storage_config['filepath'])
         validate_storage(self._path)
@@ -194,6 +200,8 @@ class SqliteZipBackend(StorageBackend):
 
     def get_session(self) -> Session:
         """Return an SQLAlchemy session."""
+        from archive_path import extract_file_in_zip
+
         if self._closed:
             raise ClosedStorage(str(self))
         if self._session is None:

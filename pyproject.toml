@@ -250,9 +250,9 @@ tui = [
 ]
 
 [project.scripts]
+aiida = 'aiida.cmdline.commands.cmd_verdi:verdi'
 runaiida = 'aiida.cmdline.commands.cmd_run:run'
 verdi = 'aiida.cmdline.commands.cmd_verdi:verdi'
-aiida = 'aiida.cmdline.commands.cmd_verdi:verdi'
 
 [project.urls]
 Documentation = 'https://aiida.readthedocs.io'

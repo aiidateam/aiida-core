@@ -98,6 +98,9 @@ class ProcessDumper:
             self.dump_node_yaml(process_node=process_node, output_path=output_path)
 
         elif isinstance(process_node, WorkflowNode):
+
+            self.dump_node_yaml(process_node=process_node, output_path=output_path)
+
             called_links = process_node.base.links.get_outgoing(
                 link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)
             ).all()

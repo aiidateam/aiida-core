@@ -12,10 +12,10 @@ import typing as t
 
 from aiida.common import exceptions
 from aiida.manage import get_config_option
-from aiida.repository import File, Repository
-from aiida.repository.backend import SandboxRepositoryBackend
 
 if t.TYPE_CHECKING:
+    from aiida.repository import File, Repository
+
     from .node import Node
 
 __all__ = ('NodeRepository',)
@@ -77,6 +77,9 @@ class NodeRepository:
 
         :return: the file repository instance.
         """
+        from aiida.repository import Repository
+        from aiida.repository.backend import SandboxRepositoryBackend
+
         if self._repository_instance is None:
             if self._node.is_stored:
                 backend = self._node.backend.get_repository()
@@ -100,6 +103,9 @@ class NodeRepository:
 
     def _store(self) -> None:
         """Store the repository in the backend."""
+        from aiida.repository import Repository
+        from aiida.repository.backend import SandboxRepositoryBackend
+
         if isinstance(self._repository.backend, SandboxRepositoryBackend):
             # Only if the backend repository is a sandbox do we have to clone its contents to the permanent repository.
             repository_backend = self._node.backend.get_repository()

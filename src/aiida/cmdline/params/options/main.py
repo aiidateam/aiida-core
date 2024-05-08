@@ -92,7 +92,6 @@ __all__ = (
     'REPOSITORY_PATH',
     'SCHEDULER',
     'SILENT',
-    'SORT_OUTPUT',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
@@ -646,14 +645,6 @@ SCHEDULER = OverridableOption(
     type=types.PluginParamType(group='schedulers'),
     required=True,
     help='A scheduler plugin (as listed in `verdi plugin list aiida.schedulers`).',
-)
-
-SORT_OUTPUT = OverridableOption(
-    '--sort-output',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help="""Sort resulting output file, e.g. when running `verdi code export`.""",
 )
 
 USER = OverridableOption('-u', '--user', 'user', type=types.UserParamType(), help='Email address of the user.')

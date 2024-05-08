@@ -244,7 +244,8 @@ def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_intera
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression):
+@pytest.mark.parametrize('unsorted', (False, True))
+def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, unsorted):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
     code = aiida_code_installed(
@@ -254,7 +255,12 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
         prepend_text=prepend_text,
     )
     filepath = tmp_path / 'code.yml'
-    options = [str(code.pk), str(filepath)]
+
+    if unsorted:
+        options = [str(code.pk), str(filepath), '-u']
+    else:
+        options = [str(code.pk), str(filepath)]
+
     run_cli_command(cmd_code.export, options)
 
     # file regression check
@@ -271,27 +277,6 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     new_code = load_code(new_label)
     assert code.base.attributes.all == new_code.base.attributes.all
     assert isinstance(new_code, InstalledCode)
-
-
-@pytest.mark.usefixtures('aiida_profile_clean')
-def test_code_export_unsorted(run_cli_command, aiida_code_installed, tmp_path, file_regression):
-    """Test export the code setup to str."""
-    prepend_text = 'module load something\n    some command'
-    code = aiida_code_installed(
-        default_calc_job_plugin='core.arithmetic.add',
-        filepath_executable='/bin/cat',
-        label='code',
-        prepend_text=prepend_text,
-    )
-    filepath = tmp_path / 'code.yml'
-    # test unsorted output
-    options = [str(code.pk), str(filepath), '-u']
-    run_cli_command(cmd_code.export, options)
-
-    # file regression check
-    with open(filepath, 'r', encoding='utf-8') as fhandle:
-        content = fhandle.read()
-    file_regression.check(content, extension='.yml')
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)

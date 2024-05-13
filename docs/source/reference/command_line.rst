@@ -313,6 +313,44 @@ Below is a list with all available subcommands.
       list  Display a list of all available plugins.
 
 
+.. _reference:command-line:verdi-presto:
+
+``verdi presto``
+----------------
+
+.. code:: console
+
+    Usage:  [OPTIONS]
+
+      Set up a new profile in a jiffy.
+
+      This command aims to make setting up a new profile as easy as possible. It intentionally
+      provides only a limited amount of options to customize the profile and by default does
+      not require any options to be specified at all. For full control, please use `verdi
+      profile setup`.
+
+      After running `verdi presto` you can immediately start using AiiDA without additional
+      setup. The created profile uses the `core.sqlite_dos` storage plugin which does not
+      require any services, such as PostgreSQL. The broker service RabbitMQ is also optional.
+      The command tries to connect to it using default settings and configures it for the
+      profile if found. Otherwise, the profile is created without a broker, in which case some
+      functionality will be unavailable, most notably running the daemon and submitting
+      processes to said daemon.
+
+      The command performs the following actions:
+
+      * Create a new profile that is set as the new default
+      * Create a default user for the profile (email can be configured through the `--email` option)
+      * Set up the localhost as a `Computer` and configure it
+      * Set a number of configuration options with sensible defaults
+
+    Options:
+      --profile-name TEXT  Name of the profile. By default, a unique name starting with
+                           `presto` is automatically generated.  [default: (dynamic)]
+      --email TEXT         Email of the default user.  [default: aiida@localhost]
+      --help               Show this message and exit.
+
+
 .. _reference:command-line:verdi-process:
 
 ``verdi process``

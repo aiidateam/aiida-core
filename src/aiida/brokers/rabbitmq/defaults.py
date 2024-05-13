@@ -1,5 +1,9 @@
 """Defaults related to RabbitMQ."""
 
+from __future__ import annotations
+
+import typing as t
+
 from aiida.common.extendeddicts import AttributeDict
 
 __all__ = ('BROKER_DEFAULTS',)
@@ -19,3 +23,20 @@ BROKER_DEFAULTS = AttributeDict(
         'heartbeat': 600,
     }
 )
+
+
+def detect_rabbitmq_config() -> dict[str, t.Any] | None:
+    """Try to connect to a RabbitMQ server with the default connection parameters.
+
+    :returns: The connection parameters if the RabbitMQ server was successfully connected to, or ``None`` otherwise.
+    """
+    from kiwipy.rmq.threadcomms import connect
+
+    connection_params = dict(BROKER_DEFAULTS)
+
+    try:
+        connect(connection_params=connection_params)
+    except ConnectionError:
+        return None
+
+    return connection_params

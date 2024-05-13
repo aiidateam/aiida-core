@@ -158,21 +158,23 @@ DbNode.user = sa_orm.relationship(
     ),
 )
 
+MAP_ENTITY_TYPE_TO_MODEL = {
+    EntityTypes.USER: DbUser,
+    EntityTypes.AUTHINFO: DbAuthInfo,
+    EntityTypes.GROUP: DbGroup,
+    EntityTypes.NODE: DbNode,
+    EntityTypes.COMMENT: DbComment,
+    EntityTypes.COMPUTER: DbComputer,
+    EntityTypes.LOG: DbLog,
+    EntityTypes.LINK: DbLink,
+    EntityTypes.GROUP_NODE: DbGroupNodes,
+}
+
 
 @functools.lru_cache(maxsize=10)
 def get_model_from_entity(entity_type: EntityTypes) -> Tuple[Any, Set[str]]:
     """Return the Sqlalchemy model and column names corresponding to the given entity."""
-    model = {
-        EntityTypes.USER: DbUser,
-        EntityTypes.AUTHINFO: DbAuthInfo,
-        EntityTypes.GROUP: DbGroup,
-        EntityTypes.NODE: DbNode,
-        EntityTypes.COMMENT: DbComment,
-        EntityTypes.COMPUTER: DbComputer,
-        EntityTypes.LOG: DbLog,
-        EntityTypes.LINK: DbLink,
-        EntityTypes.GROUP_NODE: DbGroupNodes,
-    }[entity_type]
+    model = MAP_ENTITY_TYPE_TO_MODEL[entity_type]
     mapper = sa.inspect(model).mapper
     column_names = {col.name for col in mapper.c.values()}
     return model, column_names

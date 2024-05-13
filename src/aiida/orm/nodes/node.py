@@ -38,13 +38,13 @@ from .attributes import NodeAttributes
 from .caching import NodeCaching
 from .comments import NodeComments
 from .links import NodeLinks
-from .repository import NodeRepository
 
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
     from ..implementation import StorageBackend
     from ..implementation.nodes import BackendNode  # noqa: F401
+    from .repository import NodeRepository
 
 __all__ = ('Node',)
 
@@ -107,6 +107,8 @@ class NodeBase:
     @cached_property
     def repository(self) -> 'NodeRepository':
         """Return the repository for this node."""
+        from .repository import NodeRepository
+
         return NodeRepository(self._node)
 
     @cached_property

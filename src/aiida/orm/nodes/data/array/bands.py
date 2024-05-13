@@ -1033,20 +1033,17 @@ class BandsData(KpointsData):
         script.append(f'set ylabel "Dispersion ({self.units})"')
 
         if title:
-            script.append('set title "{}"'.format(title.replace('"', '"')))
+            script.append(f'set title "{title}"')
 
         # Plot, escaping filename
+        filename = os.path.basename(dat_filename)
         if len(x) > 1:
             script.append(f'set xrange [{x_min_lim}:{x_max_lim}]')
             script.append('set grid xtics lt 1 lc rgb "#888888"')
-            script.append('plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '"')))
+            script.append(f'plot "{filename}" with l lc rgb "#000000"')
         else:
             script.append('set xrange [-1.0:1.0]')
-            script.append(
-                'plot "{}" using ($1-0.25):($2):(0.5):(0) with vectors nohead lc rgb "#000000"'.format(
-                    os.path.basename(dat_filename).replace('"', '"')
-                )
-            )
+            script.append(f'plot "{filename}" using ($1-0.25):($2):(0.5):(0) with vectors nohead lc rgb "#000000"')
 
         script_data = '\n'.join(script) + '\n'
         extra_files = {dat_filename: raw_data}

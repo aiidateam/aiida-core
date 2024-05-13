@@ -116,7 +116,10 @@ def profile_list():
         echo.echo_report(f'configuration folder: {config.dirpath}')
 
     if not config.profiles:
-        echo.echo_warning('no profiles configured: run `verdi setup` to create one')
+        echo.echo_warning(
+            'no profiles configured: Run `verdi presto` to automatically setup a profile using all defaults or use '
+            '`verdi profile setup` for more control.'
+        )
     else:
         sort = lambda profile: profile.name  # noqa: E731
         highlight = lambda profile: profile.name == config.default_profile_name  # noqa: E731

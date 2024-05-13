@@ -27,7 +27,6 @@ from aiida.repository.common import File, FileType
 from aiida.storage.log import MIGRATE_LOGGER
 
 from ..utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine
-from . import v1_db_schema as v1_schema
 from .utils import update_metadata
 
 _NODE_ENTITY_NAME = 'Node'
@@ -43,15 +42,6 @@ file_fields_to_model_fields: Dict[str, Dict[str, str]] = {
     _COMPUTER_ENTITY_NAME: {},
     _LOG_ENTITY_NAME: {'dbnode': 'dbnode_id'},
     _COMMENT_ENTITY_NAME: {'dbnode': 'dbnode_id', 'user': 'user_id'},
-}
-
-aiida_orm_to_backend = {
-    _USER_ENTITY_NAME: v1_schema.DbUser,
-    _GROUP_ENTITY_NAME: v1_schema.DbGroup,
-    _NODE_ENTITY_NAME: v1_schema.DbNode,
-    _COMMENT_ENTITY_NAME: v1_schema.DbComment,
-    _COMPUTER_ENTITY_NAME: v1_schema.DbComputer,
-    _LOG_ENTITY_NAME: v1_schema.DbLog,
 }
 
 LEGACY_TO_MAIN_REVISION = 'main_0000'
@@ -137,6 +127,17 @@ def _json_to_sqlite(
 ) -> None:
     """Convert a JSON archive format to SQLite."""
     from aiida.tools.archive.common import batch_iter
+
+    from . import v1_db_schema as v1_schema
+
+    aiida_orm_to_backend = {
+        _USER_ENTITY_NAME: v1_schema.DbUser,
+        _GROUP_ENTITY_NAME: v1_schema.DbGroup,
+        _NODE_ENTITY_NAME: v1_schema.DbNode,
+        _COMMENT_ENTITY_NAME: v1_schema.DbComment,
+        _COMPUTER_ENTITY_NAME: v1_schema.DbComputer,
+        _LOG_ENTITY_NAME: v1_schema.DbLog,
+    }
 
     MIGRATE_LOGGER.report('Converting DB to SQLite')
 

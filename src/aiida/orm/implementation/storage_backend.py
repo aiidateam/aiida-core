@@ -405,8 +405,17 @@ class StorageBackend(abc.ABC):
         :raises StorageBackupError: If an error occurred during the backup procedure.
         :raises NotImplementedError: If the storage backend doesn't implement a backup procedure.
         """
+        from aiida.common.exceptions import LockedProfileError, StorageBackupError
         from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
+        from aiida.manage.profile_access import ProfileAccessManager
         from aiida.storage.log import STORAGE_LOGGER
+
+        # check that the AiiDA profile is not locked and request access for the duration of this backup process
+        # (locked means that possibly a maintenance operation is running that could interfere with the backup)
+        try:
+            ProfileAccessManager(self._profile).request_access()
+        except LockedProfileError as exc:
+            raise StorageBackupError(f'{self._profile} is locked!') from exc
 
         backup_manager = self._validate_or_init_backup_folder(dest, keep)
 

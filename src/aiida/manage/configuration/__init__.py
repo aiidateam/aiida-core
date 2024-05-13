@@ -188,8 +188,7 @@ def profile_context(profile: 'Profile' | str | None = None, allow_switch=False) 
 
     manager = get_manager()
     current_profile = manager.get_profile()
-    manager.load_profile(profile, allow_switch)
-    yield profile
+    yield manager.load_profile(profile, allow_switch)
     if current_profile is None:
         manager.unload_profile()
     else:
@@ -234,7 +233,7 @@ def create_default_user(
         if user:
             manager.set_default_user_email(profile, user.email)
 
-    return
+    return user
 
 
 def create_profile(

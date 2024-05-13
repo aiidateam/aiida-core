@@ -9,12 +9,10 @@
 """Utilities for this backend."""
 
 import json
-import tarfile
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
-from archive_path import read_file_in_tar, read_file_in_zip
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
 
@@ -64,6 +62,10 @@ def extract_metadata(path: Union[str, Path], *, search_limit: Optional[int] = 10
 
     :param search_limit: the maximum number of records to search for the metadata file in a zip file.
     """
+    import tarfile
+
+    from archive_path import read_file_in_tar, read_file_in_zip
+
     path = Path(path)
     if not path.exists():
         raise UnreachableStorage(f'path not found: {path}')

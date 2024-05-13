@@ -210,6 +210,7 @@ notebook = [
   'notebook~=6.1,>=6.1.5'
 ]
 pre-commit = [
+  'aiida-core[atomic_tools,rest,tests,tui]',
   'mypy~=1.7.1',
   'packaging~=23.0',
   'pre-commit~=2.2',
@@ -411,6 +412,7 @@ select = [
 [tool.tox]
 legacy_tox_ini = """
 [tox]
+minversion = 3.18.0
 envlist = py39
 
 [testenv]
@@ -443,7 +445,7 @@ passenv = RUN_APIDOC
 setenv =
     update: RUN_APIDOC = False
 changedir = docs
-whitelist_externals = make
+allowlist_externals = make
 commands =
     clean: make clean
     make debug

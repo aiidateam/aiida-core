@@ -1,8 +1,8 @@
+label: code
+description: ''
+default_calc_job_plugin: core.arithmetic.add
+use_double_quotes: 'False'
+prepend_text: "module load something\n    some command"
 append_text: ''
 computer: localhost
-default_calc_job_plugin: core.arithmetic.add
-description: ''
 filepath_executable: /bin/cat
-label: code
-prepend_text: "module load something\n    some command"
-use_double_quotes: 'False'

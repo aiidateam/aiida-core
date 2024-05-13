@@ -74,10 +74,9 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo, computer
     try:
         retval, stdout, stderr = transport.exec_command_wait('echo -n')
     except NotImplementedError:
-
         return (
             True,
-            f'Skipped, remote command execution is not implemented for the `{computer.transport_type}` transport plugin'
+            f'Skipped, remote command execution is not implemented for the `{computer.transport_type}` transport plugin',
         )
 
     if retval != 0:

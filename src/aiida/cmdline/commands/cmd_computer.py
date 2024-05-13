@@ -69,11 +69,16 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo, computer
     :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
     :return: tuple of boolean indicating success or failure and an optional string message
     """
-    # Execute a command that should not return any error, except NotImplementedError (non-ssh transports)
+    # Execute a command that should not return any error, except ``NotImplementedError``
+    # since not all transport plugins implement remote command execution.
     try:
         retval, stdout, stderr = transport.exec_command_wait('echo -n')
     except NotImplementedError:
-        return True, 'Skipped, not applicable'
+
+        return (
+            True,
+            f'Skipped, remote command execution is not implemented for the `{computer.transport_type}` transport plugin'
+        )
 
     if retval != 0:
         return False, f'The command `echo -n` returned a non-zero return code ({retval})'

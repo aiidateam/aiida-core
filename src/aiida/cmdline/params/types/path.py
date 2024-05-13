@@ -9,6 +9,7 @@
 """Click parameter types for paths."""
 
 import os
+import pathlib
 
 import click
 
@@ -60,13 +61,42 @@ class AbsolutePathOrEmptyParamType(AbsolutePathParamType):
         return 'ABSOLUTEPATHEMPTY'
 
 
+def convert_possible_url(value: str, timeout: int):
+    """If ``value`` does not correspond to a path on disk, try to open it as a URL.
+
+    :param value: Potential path to file on disk or URL.
+    :param timeout: The timeout in seconds when opening the URL.
+    :param return_handle: Return the ``value`` as is. When set to ``True`` return an open file handle instead.
+    :returns: The URL if ``value`` could be opened as a URL
+    """
+    import socket
+    import urllib.error
+    import urllib.request
+
+    filepath = pathlib.Path(value)
+
+    # Check whether the path actually corresponds to a file on disk, in which case the exception is reraised.
+    if filepath.exists():
+        raise click.BadParameter(f'The path `{value}` exists but could not be read.')
+
+    try:
+        return urllib.request.urlopen(value, timeout=timeout)
+    except urllib.error.URLError:
+        raise click.BadParameter(f'The URL `{value}` could not be reached.')
+    except socket.timeout:
+        raise click.BadParameter(f'The URL `{value}` could not be reached within {timeout} seconds.')
+    except ValueError as exception_url:
+        raise click.BadParameter(
+            f'The path `{value}` does not correspond to a file and also could not be reached as a URL.\n'
+            'Please check the spelling for typos and if it is a URL, make sure to include the protocol, e.g., http://'
+        ) from exception_url
+
+
 class PathOrUrl(click.Path):
-    """Extension of click's Path-type to include URLs.
+    """Parameter type that accepts a path on the local file system or a URL.
 
-    A PathOrUrl can either be a `click.Path`-type or a URL.
-
-    :param int timeout_seconds: Maximum timeout accepted for URL response.
-        Must be an integer in the range [0;60].
+    :param timeout_seconds: Maximum timeout accepted for URL response. Must be an integer in the range [0;60].
+    :returns: The path or URL.
     """
 
     name = 'PathOrUrl'
@@ -77,34 +107,18 @@ class PathOrUrl(click.Path):
         self.timeout_seconds = check_timeout_seconds(timeout_seconds)
 
     def convert(self, value, param, ctx):
-        """Overwrite `convert` Check first if `click.Path`-type, then check if URL."""
         try:
             return super().convert(value, param, ctx)
         except click.exceptions.BadParameter:
-            return self.checks_url(value, param, ctx)
-
-    def checks_url(self, url, param, ctx):
-        """Check whether URL is reachable within timeout."""
-        import socket
-        import urllib.error
-        import urllib.request
-
-        try:
-            with urllib.request.urlopen(url, timeout=self.timeout_seconds):
-                pass
-        except (urllib.error.URLError, urllib.error.HTTPError, socket.timeout):
-            self.fail(f'{self.name} "{url}" could not be reached within {self.timeout_seconds} s.\n', param, ctx)
-
-        return url
+            convert_possible_url(value, self.timeout_seconds)
+            return value
 
 
 class FileOrUrl(click.File):
-    """Extension of click's File-type to include URLs.
+    """Parameter type that accepts a path on the local file system or a URL.
 
-    Returns handle either to local file or to remote file fetched from URL.
-
-    :param int timeout_seconds: Maximum timeout accepted for URL response.
-        Must be an integer in the range [0;60].
+    :param timeout_seconds: Maximum timeout accepted for URL response. Must be an integer in the range [0;60].
+    :returns: The file or URL.
     """
 
     name = 'FileOrUrl'
@@ -115,20 +129,7 @@ class FileOrUrl(click.File):
         self.timeout_seconds = check_timeout_seconds(timeout_seconds)
 
     def convert(self, value, param, ctx):
-        """Return file handle."""
         try:
             return super().convert(value, param, ctx)
         except click.exceptions.BadParameter:
-            handle = self.get_url(value, param, ctx)
-        return handle
-
-    def get_url(self, url, param, ctx):
-        """Retrieve file from URL."""
-        import socket
-        import urllib.error
-        import urllib.request
-
-        try:
-            return urllib.request.urlopen(url, timeout=self.timeout_seconds)
-        except (urllib.error.URLError, urllib.error.HTTPError, socket.timeout):
-            self.fail(f'{self.name} "{url}" could not be reached within {self.timeout_seconds} s.\n', param, ctx)
+            return convert_possible_url(value, self.timeout_seconds)

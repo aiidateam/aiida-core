@@ -115,7 +115,8 @@ def aiida_profile_factory():
         from aiida.manage.manager import get_manager
 
         manager = get_manager()
-        storage_config = storage_config or {'filepath': str(pathlib.Path(config.dirpath) / 'storage')}
+        name = name or secrets.token_hex(16)
+        storage_config = storage_config or {'filepath': str(pathlib.Path(config.dirpath) / name / 'storage')}
 
         if broker_backend and broker_config is None:
             broker_config = {
@@ -133,7 +134,7 @@ def aiida_profile_factory():
             storage_config=storage_config,
             broker_backend=broker_backend,
             broker_config=broker_config,
-            name=name or secrets.token_hex(16),
+            name=name,
             email=email,
             is_test_profile=True,
         )

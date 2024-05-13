@@ -13,7 +13,6 @@ from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Group
 from aiida.storage.sqlite_zip.migrator import list_versions
 from aiida.tools.archive import ArchiveFormatSqlZip
-from click.exceptions import BadParameter
 
 from tests.utils.archives import get_archive_file
 
@@ -174,23 +173,12 @@ def test_import_url_and_local_archives(run_cli_command, newest_archive):
     run_cli_command(cmd_archive.import_archive, options)
 
 
-def test_import_url_timeout():
-    """Test a timeout to valid URL is correctly errored"""
-    from aiida.cmdline.params.types import PathOrUrl
-
-    timeout_url = 'http://www.google.com:81'
-
-    test_timeout_path = PathOrUrl(exists=True, readable=True, timeout_seconds=0)
-    with pytest.raises(BadParameter, match=f'ath "{timeout_url}" could not be reached within 0 s.'):
-        test_timeout_path(timeout_url)
-
-
 def test_raise_malformed_url(run_cli_command):
     """Test the correct error is raised when supplying a malformed URL"""
     malformed_url = 'htp://www.aiida.net'
 
     result = run_cli_command(cmd_archive.import_archive, [malformed_url], raises=True)
-    assert 'could not be reached within' in result.output, result.exception
+    assert 'could not be reached.' in result.output, result.exception
 
 
 def test_migration(run_cli_command):

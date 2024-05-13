@@ -31,5 +31,5 @@ See also the `list of AiiDA-powered scientific publications <http://www.aiida.ne
 
    get_started
    ../tutorials/index
-   Cheat sheet <https://aiida-tutorials.readthedocs.io/en/legacy/_downloads/5f69c3f9ce1f31f1f959b3da46fdc99d/cheatsheet.pdf>
+   cheatsheet
    troubleshooting

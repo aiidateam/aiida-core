@@ -10,17 +10,18 @@
 
 from __future__ import annotations
 
-from functools import cached_property
+from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
 from typing import TYPE_CHECKING, Optional
 from uuid import uuid4
 
-from disk_objectstore import Container
+from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import insert
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import Profile
 from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
@@ -34,11 +35,14 @@ from ..psql_dos import PsqlDosBackend
 from ..psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDosMigrator
 
 if TYPE_CHECKING:
+    from aiida.orm.entities import EntityTypes
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
 __all__ = ('SqliteDosStorage',)
 
 LOGGER = AIIDA_LOGGER.getChild(__file__)
+FILENAME_DATABASE = 'database.sqlite'
+FILENAME_CONTAINER = 'container'
 
 
 class SqliteDosMigrator(PsqlDosMigrator):
@@ -51,7 +55,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
     """
 
     def __init__(self, profile: Profile) -> None:
-        filepath_database = Path(profile.storage_config['filepath']) / 'database.sqlite'
+        filepath_database = Path(profile.storage_config['filepath']) / FILENAME_DATABASE
         filepath_database.touch()
 
         self.profile = profile
@@ -63,7 +67,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
 
         :returns: The disk-object store container configured for the repository path of the current profile.
         """
-        filepath_container = Path(self.profile.storage_config['filepath']) / 'container'
+        filepath_container = Path(self.profile.storage_config['filepath']) / FILENAME_CONTAINER
         return Container(str(filepath_container))
 
     def initialise_database(self) -> None:
@@ -96,13 +100,13 @@ class SqliteDosStorage(PsqlDosBackend):
 
     migrator = SqliteDosMigrator
 
-    class Model(BaseModel):
+    class Model(BaseModel, defer_build=True):
         """Model describing required information to configure an instance of the storage."""
 
         filepath: str = Field(
             title='Directory of the backend',
             description='Filepath of the directory in which to store data for this backend.',
-            default_factory=lambda: AIIDA_CONFIG_FOLDER / 'repository' / f'sqlite_dos_{uuid4().hex}',
+            default_factory=lambda: str(AIIDA_CONFIG_FOLDER / 'repository' / f'sqlite_dos_{uuid4().hex}'),
         )
 
         @field_validator('filepath')
@@ -110,6 +114,18 @@ class SqliteDosStorage(PsqlDosBackend):
         def filepath_is_absolute(cls, value: str) -> str:
             """Return the resolved and absolute filepath."""
             return str(Path(value).resolve().absolute())
+
+    @property
+    def filepath_root(self) -> Path:
+        return Path(self.profile.storage_config['filepath'])
+
+    @property
+    def filepath_container(self) -> Path:
+        return self.filepath_root / FILENAME_CONTAINER
+
+    @property
+    def filepath_database(self) -> Path:
+        return self.filepath_root / FILENAME_DATABASE
 
     @classmethod
     def initialise(cls, profile: Profile, reset: bool = False) -> bool:
@@ -131,7 +147,7 @@ class SqliteDosStorage(PsqlDosBackend):
 
     def __str__(self) -> str:
         state = 'closed' if self.is_closed else 'open'
-        return f'SqliteDosStorage[{self._profile.storage_config["filepath"]}]: {state},'
+        return f'SqliteDosStorage[{self.filepath_root}]: {state},'
 
     def _initialise_session(self):
         """Initialise the SQLAlchemy session factory.
@@ -143,28 +159,22 @@ class SqliteDosStorage(PsqlDosBackend):
         Multi-thread support is currently required by the REST API.
         Although, in the future, we may want to move the multi-thread handling to higher in the AiiDA stack.
         """
-        engine = create_sqla_engine(Path(self._profile.storage_config['filepath']) / 'database.sqlite')
+        engine = create_sqla_engine(self.filepath_database)
         self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
-
-    def _backup(
-        self,
-        dest: str,
-        keep: Optional[int] = None,
-    ):
-        raise NotImplementedError
 
     def delete(self) -> None:  # type: ignore[override]
         """Delete the storage and all the data."""
-        filepath = Path(self.profile.storage_config['filepath'])
-        if filepath.exists():
-            rmtree(filepath)
-            LOGGER.report(f'Deleted storage directory at `{filepath}`.')
+        if self.filepath_root.exists():
+            rmtree(self.filepath_root)
+            LOGGER.report(f'Deleted storage directory at `{self.filepath_root}`.')
+
+    def get_container(self) -> 'Container':
+        return Container(str(self.filepath_container))
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
-        container = Container(str(Path(self.profile.storage_config['filepath']) / 'container'))
-        return DiskObjectStoreRepositoryBackend(container=container)
+        return DiskObjectStoreRepositoryBackend(container=self.get_container())
 
     @classmethod
     def version_head(cls) -> str:
@@ -208,3 +218,59 @@ class SqliteDosStorage(PsqlDosBackend):
     @cached_property
     def users(self):
         return orm.SqliteUserCollection(self)
+
+    @staticmethod
+    @lru_cache(maxsize=18)
+    def _get_mapper_from_entity(entity_type: 'EntityTypes', with_pk: bool):
+        """Return the Sqlalchemy mapper and fields corresponding to the given entity.
+
+        :param with_pk: if True, the fields returned will include the primary key
+        """
+        from sqlalchemy import inspect
+
+        from ..sqlite_zip.models import MAP_ENTITY_TYPE_TO_MODEL
+
+        model = MAP_ENTITY_TYPE_TO_MODEL[entity_type]
+        mapper = inspect(model).mapper  # type: ignore[union-attr]
+        keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
+        return mapper, keys
+
+    def _backup(
+        self,
+        dest: str,
+        keep: Optional[int] = None,
+    ):
+        """Create a backup of the storage.
+
+        :param dest: Path to where the backup will be created. Can be a path on the local file system, or a path on a
+            remote that can be accessed over SSH in the form ``<user>@<host>:<path>``.
+        :param keep: The maximum number of backups to keep. If the number of copies exceeds this number, the oldest
+            backups are removed.
+        """
+        try:
+            backup_manager = backup_utils.BackupManager(dest, keep=keep)
+            backup_manager.backup_auto_folders(lambda path, prev: self._backup_storage(backup_manager, path, prev))
+        except backup_utils.BackupError as exc:
+            raise exceptions.StorageBackupError(*exc.args) from exc
+
+    def _backup_storage(
+        self,
+        manager: backup_utils.BackupManager,
+        path: Path,
+        prev_backup: Path | None = None,
+    ) -> None:
+        """Create a backup of the sqlite database and disk-objectstore to the provided path.
+
+        :param manager: BackupManager from backup_utils containing utilities such as for calling the rsync.
+        :param path: Path to where the backup will be created.
+        :param prev_backup: Path to the previous backup. Rsync calls will be hard-linked to this path, making the backup
+            incremental and efficient.
+        """
+        LOGGER.report('Running storage maintenance')
+        self.maintain(full=False, compress=False)
+
+        LOGGER.report('Backing up disk-objectstore container')
+        manager.call_rsync(self.filepath_container, path, link_dest=prev_backup, dest_trailing_slash=True)
+
+        LOGGER.report('Backing up sqlite database')
+        manager.call_rsync(self.filepath_database, path, link_dest=prev_backup, dest_trailing_slash=True)

@@ -100,11 +100,12 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      configure  Configure the Authinfo details for a computer (and user).
+      configure  Configure the authentication info for a computer and user.
       delete     Delete a computer.
       disable    Disable the computer for the given user.
       duplicate  Duplicate a computer allowing to change some parameters.
       enable     Enable the computer for the given user.
+      export     Export the setup or configuration of a computer.
       list       List all available computers.
       relabel    Relabel a computer.
       setup      Create a new computer.

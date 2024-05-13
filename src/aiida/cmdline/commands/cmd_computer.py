@@ -8,6 +8,8 @@
 ###########################################################################
 """`verdi computer` command."""
 
+import pathlib
+import traceback
 from copy import deepcopy
 from functools import partial
 from math import isclose
@@ -673,7 +675,7 @@ class LazyConfigureGroup(VerdiCommandGroup):
 
 @verdi_computer.group('configure', cls=LazyConfigureGroup)
 def computer_configure():
-    """Configure the Authinfo details for a computer (and user)."""
+    """Configure the authentication info for a computer and user."""
 
 
 @computer_configure.command('show')
@@ -730,3 +732,75 @@ def computer_config_show(computer, user, defaults, as_option_string):
             else:
                 table.append((f'* {name}', '-'))
         echo_tabulate(table, tablefmt='plain')
+
+
+@verdi_computer.group('export')
+def computer_export():
+    """Export the setup or configuration of a computer."""
+
+
+@computer_export.command('setup')
+@arguments.COMPUTER()
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path))
+@with_dbenv()
+def computer_export_setup(computer, output_file):
+    """Export computer setup to a yaml file."""
+    import yaml
+
+    computer_setup = {
+        'label': computer.label,
+        'description': computer.description,
+        'hostname': computer.hostname,
+        'transport': computer.transport_type,
+        'scheduler': computer.scheduler_type,
+        'work_dir': computer.get_workdir(),
+        'shebang': computer.get_shebang(),
+        'mpirun_command': ' '.join(computer.get_mpirun_command()),
+        'mpiprocs_per_machine': computer.get_default_mpiprocs_per_machine(),
+        'default_memory_per_machine': computer.get_default_memory_per_machine(),
+        'prepend_text': computer.get_prepend_text(),
+        'append_text': computer.get_append_text(),
+        'use_double_quotes': computer.get_use_double_quotes(),
+    }
+    try:
+        output_file.write_text(yaml.dump(computer_setup, sort_keys=True), 'utf-8')
+        echo.echo_success(f"Computer<{computer.pk}> {computer.label} setup exported to file '{output_file}'.")
+    except Exception as e:
+        error_traceback = traceback.format_exc()
+        echo.CMDLINE_LOGGER.debug(error_traceback)
+        echo.echo_critical(
+            f'Unexpected error while exporting setup for Computer<{computer.pk}> {computer.label}:\n ({e!s}).'
+        )
+
+
+@computer_export.command('config')
+@arguments.COMPUTER()
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path))
+@options.USER(
+    help='Email address of the AiiDA user from whom to export this computer (if different from default user).'
+)
+@with_dbenv()
+def computer_export_config(computer, user, output_file):
+    """Export the configuration of the authentication info for a computer and user to a yaml file."""
+    import yaml
+
+    from aiida.orm import User
+
+    if not computer.is_configured:
+        echo.echo_critical(
+            f'Computer<{computer.pk}> {computer.label} configuration cannot be exported,'
+            ' because computer has not been configured yet.'
+        )
+    try:
+        if user is None:
+            user = User.collection.get_default()
+        computer_configuration = computer.get_configuration(user)
+        output_file.write_text(yaml.dump(computer_configuration, sort_keys=True), 'utf-8')
+        echo.echo_success(f"Computer<{computer.pk}> {computer.label} configuration exported to file '{output_file}'.")
+    except Exception as e:
+        error_traceback = traceback.format_exc()
+        echo.CMDLINE_LOGGER.debug(error_traceback)
+        echo.echo_critical(
+            f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}'
+            f' and User<{user.pk}> {user.email}: {e!s}.'
+        )

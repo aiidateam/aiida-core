@@ -14,11 +14,14 @@ import textwrap
 from collections import OrderedDict
 
 import pytest
+import yaml
 from aiida import orm
 from aiida.cmdline.commands.cmd_computer import (
     computer_configure,
     computer_delete,
     computer_duplicate,
+    computer_export_config,
+    computer_export_setup,
     computer_list,
     computer_relabel,
     computer_setup,
@@ -510,6 +513,53 @@ class TestVerdiComputerConfigure:
         )
         assert '--username=' in result.output
         assert result_cur.output == result.output
+
+    def test_computer_export_setup(self, tmp_path):
+        """Test if 'verdi computer export setup' command works"""
+        self.comp_builder.label = 'test_computer_export_setup'
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        exported_setup_filename = tmp_path / 'computer-setup.yml'
+        result = self.cli_runner(computer_export_setup, [comp.label, exported_setup_filename])
+        assert 'Success' in result.output, 'Command should have run successfull.'
+        assert f'{exported_setup_filename}' in result.output, 'Filename should be in terminal output but was not found.'
+        assert os.path.exists(exported_setup_filename), f"'{exported_setup_filename}' was not created during export."
+
+        # verifying correctness by comparing internal and loaded yml object
+        with open(exported_setup_filename, 'r', encoding='utf-8') as yfhandle:
+            configure_setup_data = yaml.safe_load(yfhandle)
+        assert configure_setup_data == self.comp_builder.get_computer_spec(
+            comp
+        ), 'Internal computer configuration does not agree with exported one.'
+
+    def test_computer_export_config(self, tmp_path):
+        """Test if 'verdi computer export config' command works"""
+        self.comp_builder.label = 'test_computer_export_config'
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        exported_config_filename = tmp_path / 'computer-configure.yml'
+        # We have not configuret the computer yet so it should raise an error
+        with pytest.raises(AssertionError):
+            self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
+
+        comp.configure(safe_interval=0.0)
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename])
+        assert 'Success' in result.output, 'Command should have run successfull.'
+        assert (
+            f'{exported_config_filename}' in result.output
+        ), 'Filename should be in terminal output but was not found.'
+        assert os.path.exists(exported_config_filename), f"'{exported_config_filename}' was not created during export."
+
+        # verifying correctness by comparing internal and loaded yml object
+        with open(exported_config_filename, 'r', encoding='utf-8') as yfhandle:
+            configure_config_data = yaml.safe_load(yfhandle)
+        assert (
+            configure_config_data == comp.get_configuration()
+        ), 'Internal computer configuration does not agree with exported one.'
 
 
 class TestVerdiComputerCommands:

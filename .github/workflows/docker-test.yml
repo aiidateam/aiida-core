@@ -11,15 +11,16 @@ on:
         description: Images built in build step
         required: true
         type: string
+      target:
+        description: Target image for testing
+        required: true
+        type: string
 
 jobs:
 
   test:
     runs-on: ${{ inputs.runsOn }}
-    timeout-minutes: 30
-    strategy:
-      matrix:
-        target: [aiida-core-base, aiida-core-with-services, aiida-core-dev]
+    timeout-minutes: 20
     defaults:
       run:
         shell: bash
@@ -38,7 +39,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set Up Python 🐍
-      if: ${{ inputs.runsOn != 'ARM64' }}
+      if: ${{ startsWith(inputs.runsOn, 'ubuntu') }}
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
@@ -50,5 +51,6 @@ jobs:
         pip freeze
 
     - name: Run tests
+              # TODO: This probably needs tweaking
       run: pytest -s
       env: ${{ fromJSON(inputs.images) }}

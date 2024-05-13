@@ -3,6 +3,8 @@ name: Build, test and push Docker Images
 on:
   pull_request:
     paths-ignore:
+    - '**.md'
+    - '**.txt'
     - docs/**
     - tests/**
   push:
@@ -22,24 +24,56 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_COLOR: 1
+
 jobs:
   build:
     uses: ./.github/workflows/docker-build.yml
     with:
       runsOn: ubuntu-22.04
+      platforms: linux/amd64,linux/arm64
 
-  test:
+  test-amd64:
     needs: build
     uses: ./.github/workflows/docker-test.yml
     strategy:
       matrix:
-        runsOn: [ARM64, ubuntu-22.04]
+        target: [aiida-core-base, aiida-core-with-services, aiida-core-dev]
     with:
-      runsOn: ${{ matrix.runsOn }}
-      images: ${{ needs.build.images }}
+      runsOn: ubuntu-22.04
+      images: ${{ needs.build.outputs.images }}
 
-  publish:
-    if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    needs: [build, test]
+  # IMPORTANT: To save arm64 runners resources,
+  # we run the test only when pushing to main.
+  # We also only test the aiida-core-dev image
+  test-arm64:
+    needs: build
+    if: >-
+      github.repository == 'aiidateam/aiida-core'
+      && (github.ref_type == 'tag' || github.ref_name == 'main')
+    uses: ./.github/workflows/docker-test.yml
+    with:
+      runsOn: buildjet-4vcpu-ubuntu-2204-arm
+      images: ${{ needs.build.outputs.images }}
+      target: aiida-core-dev
+
+  publish-ghcr:
+    needs: [build, test-amd64]
     uses: ./.github/workflows/docker-publish.yml
     secrets: inherit
+    with:
+      runsOn: ubuntu-22.04
+      images: ${{ needs.build.outputs.images }}
+      registry: ghcr.io
+
+  publish-dockerhub:
+    if: >-
+      github.repository == 'aiidateam/aiida-core'
+      && (github.ref_type == 'tag' || github.ref_name == 'main')
+    needs: [build, test-amd64, test-arm64, publish-ghcr]
+    uses: ./.github/workflows/docker-publish.yml
+    secrets: inherit
+    with:
+      images: ${{ needs.build.outputs.images }}
+      registry: docker.io

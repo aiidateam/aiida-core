@@ -1,7 +1,8 @@
-name: Publish images to DockerHub
+name: Publish images to Docker container registries
 
 env:
-  OWNER: ${{ github.repository_owner }}
+    # https://github.com/docker/metadata-action?tab=readme-ov-file#environment-variables
+  DOCKER_METADATA_PR_HEAD_SHA: true
 
 on:
   workflow_call:
@@ -14,25 +15,23 @@ on:
         description: Images built in build step
         required: true
         type: string
+      registry:
+        description: Docker container registry
+        required: true
+        type: string
 
 jobs:
-  tag-push:
-    runs-on: ubuntu-latest
+
+  release:
+    runs-on: ${{ inputs.runsOn }}
     timeout-minutes: 30
     strategy:
       fail-fast: true
       matrix:
-        image: [aiida-core-base, aiida-core-with-services, aiida-core-dev]
-    defaults:
-      run:
-        shell: bash
-        working-directory: .docker
-    permissions:
-      packages: read
+        target: [aiida-core-base, aiida-core-with-services, aiida-core-dev]
 
     steps:
-    - name: Checkout Repo ⚡️
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
     - name: Login to GitHub Container Registry 🔑
       uses: docker/login-action@v3
@@ -43,6 +42,7 @@ jobs:
 
     - name: Login to DockerHub 🔑
       uses: docker/login-action@v3
+      if: inputs.registry == 'docker.io'
       with:
         registry: docker.io
         username: ${{ secrets.DOCKER_USERNAME }}
@@ -52,33 +52,31 @@ jobs:
       id: build_vars
       run: |
         vars=$(cat build.json | jq -c '[.variable | to_entries[] | {"key": .key, "value": .value.default}] | from_entries')
-        echo "vars=$vars"
-        echo "vars=$vars" >> "${GITHUB_OUTPUT}"
+        echo "vars=$vars" | tee -a "${GITHUB_OUTPUT}"
 
-    - name: Docker meta 📝
+    - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
-      env: ${{ fromJson(steps.build_vars.outputs.vars) }}
+      env: ${{ fromJSON(steps.build_vars.outputs.vars) }}
       with:
-        images: |
-          name=docker.io/${{ env.OWNER }}/${{ matrix.image }}
+                  # e.g. ghcr.io/aiidalab/full-stack
+        images: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ matrix.target }}
         tags: |
+          type=ref,event=pr
           type=edge,enable={{is_default_branch}}
-          type=match,pattern=v(\d+\.\d+.\d+),group=1
-          type=raw,value={{tag}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-          type=raw,value=python-${{ env.PYTHON_VERSION }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-          type=raw,value=postgresql-${{ env.PGSQL_VERSION }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+          type=raw,value=aiida-${{ env.AIIDA_VERSION }},enable=${{ github.ref_type == 'tag'  && startsWith(github.ref_name, 'v') }}
+          type=raw,value=python-${{ env.PYTHON_VERSION }},enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+          type=raw,value=postgresql-${{ env.PGSQL_VERSION }},enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+          type=match,pattern=v(\d{4}\.\d{4}(-.+)?),group=1
 
-    - name: Determine src image tag
+    - name: Determine source image
       id: images
       run: |
         src=$(echo '${{ inputs.images }}'| jq -cr '.[("${{ matrix.target }}"|ascii_upcase|sub("-"; "_"; "g")) + "_IMAGE"]')
-        echo "src=$src"
-        echo "src=$src" >> "${GITHUB_OUTPUT}"
+        echo "src=$src" | tee -a "${GITHUB_OUTPUT}"
 
-    - name: Push image to docker.io
+    - name: Push image
       uses: akhilerm/tag-push-action@v2.2.0
-      if: false # TODO: Enable this!
       with:
         src: ${{ steps.images.outputs.src }}
         dst: ${{ steps.meta.outputs.tags }}

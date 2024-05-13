@@ -1,8 +1,6 @@
-name: Build image and then upload the image, tags and manifests to GitHub artifacts
+name: Build Docker images and upload them to ghcr.io
 
 env:
-  OWNER: ${{ github.repository_owner }}
-  # Full logs for CI build
   BUILDKIT_PROGRESS: plain
 
 on:
@@ -12,24 +10,36 @@ on:
         description: GitHub Actions Runner image
         required: true
         type: string
+      platforms:
+        description: Target platforms for the build (linux/amd64 and/or linux/arm64)
+        required: true
+        type: string
+    outputs:
+      images:
+        description: Images identified by digests
+        value: ${{ jobs.build.outputs.images }}
 
 jobs:
   build:
+    name: ${{ inputs.platforms }}
     runs-on: ${{ inputs.runsOn }}
+    timeout-minutes: 60
     defaults:
       run:
-        shell: bash
+            # Make sure we fail if any command in a piped command sequence fails
+        shell: bash -e -o pipefail {0}
         working-directory: .docker
 
+    outputs:
+      images: ${{ steps.bake_metadata.outputs.images }}
+
     steps:
-    - name: Checkout Repo
+
+    - name: Checkout Repo ⚡️
       uses: actions/checkout@v4
 
-    - name: Build aiida-core images for amd64
-      # The order of the buildx bake files is important, as the second one will overwrite the first one
-      run: docker buildx bake -f docker-bake.hcl -f build.json --set *.platform=linux/$amd64 --load
-
     - name: Set up QEMU
+      if: ${{ inputs.platforms != 'linux/amd64' }}
       uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
@@ -38,50 +48,30 @@ jobs:
     - name: Login to GitHub Container Registry 🔑
       uses: docker/login-action@v3
       with:
-        registry: ${{ env.REGISTRY }}
+        registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    # TODO: Separate amd64 build just just for testing now
-    - name: Build amd64 images 🏗️
-      id: build-amd64
+    - name: Build and upload to ghcr.io 📤
+      id: build
       uses: docker/bake-action@v4
       with:
         push: true
-        set: |
-          *.platform=linux/amd64
-        files: |
-          docker-bake.hcl
-          build.json
-
-    - name: Set output variables
-      run: .github/workflows/extract-docker-image-names.sh >> "${GITHUB_OUTPUT}"
-      env:
-        BAKE_METADATA: ${{ steps.build-amd64.outputs.metadata }}
-
-    # Here we build arm64 images (with help of QEMU virtualization)
-    # and upload both amd64 and arm64 images to ghcr.io
-    - name: Build ARM64 and upload to ghcr.io 🍎📤
-      id: build-upload
-      if: false
-      uses: docker/bake-action@v4
-      with:
-          # TODO: Actually push, add tags first though!
-        load: true
-        push: false
-          # Using provenance to disable default attestation so it will build only desired images:
-          # https://github.com/orgs/community/discussions/45969
+                  # Using provenance to disable default attestation so it will build only desired images:
+                  # https://github.com/orgs/community/discussions/45969
         provenance: false
-          # NOTE: linux/amd64 images are taken from previous step
         set: |
-          *.platform=linux/amd64,linux/arm64
+          *.platform=${{ inputs.platforms }}
+          *.output=type=registry,push-by-digest=true,name-canonical=true
+          *.cache-to=type=gha,scope=${{ github.workflow }},mode=max
+          *.cache-from=type=gha,scope=${{ github.workflow }}
         files: |
           docker-bake.hcl
           build.json
 
     - name: Set output variables
-      if: false
       id: bake_metadata
-      run: .github/workflows/extract-docker-image-names.sh >> "${GITHUB_OUTPUT}"
+      run: |
+        .github/workflows/extract-docker-image-names.sh | tee -a "${GITHUB_OUTPUT}"
       env:
-        BAKE_METADATA: ${{ steps.build-upload.outputs.metadata }}
+        BAKE_METADATA: ${{ steps.build.outputs.metadata }}

@@ -13,7 +13,7 @@ variable "ORGANIZATION" {
 }
 
 variable "REGISTRY" {
-  default = "docker.io/"
+  default = "ghcr.io/"
 }
 
 variable "PLATFORMS" {

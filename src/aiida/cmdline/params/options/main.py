@@ -767,7 +767,6 @@ INCLUDE_INPUTS = OverridableOption(
 )
 
 INCLUDE_ATTRIBUTES = OverridableOption(
-    # '-a',
     '--include-attributes/--exclude-attributes',
     default=True,
     show_default=True,
@@ -775,7 +774,6 @@ INCLUDE_ATTRIBUTES = OverridableOption(
 )
 
 INCLUDE_EXTRAS = OverridableOption(
-    # '-e',
     '--include-extras/--exclude-extras',
     default=True,
     show_default=True,

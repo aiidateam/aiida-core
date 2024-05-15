@@ -515,7 +515,7 @@ def process_dump(
     overwrite,
     flat,
 ) -> None:
-    """Dump files involved in the execution of a process.
+    """Dump files involved in the execution of one or multiple processes.
 
     Child calculations/workflows (also called `CalcJob`s and `WorkChain`s in AiiDA jargon) run by the parent workflow
     are contained in the directory tree as sub-folders and are sorted by their creation time. The directory tree thus
@@ -533,7 +533,6 @@ def process_dump(
     from aiida.tools.dumping.processes import ProcessDumper
 
     for process in processes:
-        # Generate default parent folder
         process_dumper = ProcessDumper(
             parent_process=process,
             include_node_inputs=include_inputs,
@@ -559,17 +558,13 @@ def process_dump(
 
         try:
             process_dumper.dump(process_node=process, output_path=output_path)
-
-        # ? Which exceptions do I expect here?
         except FileExistsError:
             echo.echo_critical('Some files present in the dumping directory. Delete manually and try again.')
-        # except NotImplementedError:
-        #     echo.echo_critical('flat dumping not supported for `WorkChain`s that call more than one `CalcJob`.')
         except Exception as e:
             echo.echo_critical(f'Unexpected error ({e!s}) while dumping {process.__class__.__name__} <{process.pk}>.')
 
-        # Create README in parent directory. Do this at the end as to not cause exceptions for the path creation, and
-        # only do it when everything ran through fine before
+        # Create README in parent directory. Do this at the end as to not cause exceptions for the path creation due to
+        # directory not being empty, and only do it when everything ran through fine before
         process_dumper.generate_parent_readme()
 
         echo.echo_success(

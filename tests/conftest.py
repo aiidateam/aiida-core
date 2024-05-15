@@ -185,12 +185,10 @@ def generate_calculation_node():
             calculation_node.set_exit_status(exit_status)
 
         if repository is not None:
-            # ? Possibly allow for other types here, and use `put_object_from_filelike`, etc.
-            # ? Or use from_tree
+            # Or use from_tree?
             calculation_node.base.repository.put_object_from_filelike(repository[0], repository[1])
 
         # For storing, need to first store the input nodes, then the CalculationNode, then the output nodes
-
         if inputs is not None:
             for input_label, input_node in inputs.items():
                 calculation_node.base.links.add_incoming(
@@ -202,6 +200,7 @@ def generate_calculation_node():
                 input_node.store()
 
         if outputs is not None:
+            # Need to first store CalculationNode before I can attach `created` outputs
             calculation_node.store()
             for output_label, output_node in outputs.items():
                 output_node.base.links.add_incoming(
@@ -210,7 +209,7 @@ def generate_calculation_node():
 
                 output_node.store()
 
-        # ? Should it be stored here
+        # Return unstored by default
         return calculation_node
 
     return _generate_calculation_node
@@ -708,13 +707,8 @@ def reset_log_level():
         log.configure_logging(with_orm=True)
 
 
-# todo: Provide option to manually construct the nodes or actually submit the processes
-# todo: Depending on how long this takes, replace this duplicated code around the code base with these fixtures
-
-
 @pytest.fixture
 def generate_calculation_node_add(aiida_localhost):
-    # todo: Benchmark how long running this takes vs. manually constructing it
     def _generate_calculation_node_add():
         from aiida.engine import run_get_node
         from aiida.orm import InstalledCode, Int
@@ -737,7 +731,6 @@ def generate_calculation_node_add(aiida_localhost):
 
 @pytest.fixture
 def generate_workchain_multiply_add(aiida_localhost):
-    # todo: Benchmark how long running this takes vs. manually constructing it
     def _generate_workchain_multiply_add():
         from aiida.engine import run_get_node
         from aiida.orm import InstalledCode, Int

@@ -139,9 +139,9 @@ Since subprocesses are explored recursively, arbitrarily complex, nested workflo
 the ``-p`` flag allows to specify a custom dumping path. If none is provided, it is automatically generated from the
 ``process_label`` (or ``process_type``) and the ``pk``. In addition, the command provides the ``-o`` flag to overwrite
 existing directories, the ``-a`` flag to dump further, non file-based AiiDA nodes (in hidden, ``.aiida_nodes``
-subdirectories), and the ``--include-inputs`` (``--exclude-exputs``) flags to also dump additional node inputs of each
+subdirectories), the ``-f`` flag to dump all files for each ``CalculationNode`` of the workflow in a flat directory
+structure, and the ``--include-inputs`` (``--exclude-inputs``) flag to also dump additional node inputs of each
 ``CalculationNode`` of the workflow. For a full list of available options, call :code:`verdi process dump --help`.
-Happy dumping!
 
 .. _how-to:data:import:provenance:
 

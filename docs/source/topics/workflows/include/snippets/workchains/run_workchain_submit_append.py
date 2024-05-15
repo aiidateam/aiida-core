@@ -1,4 +1,7 @@
 from aiida.engine import WorkChain, append_
+from aiida.plugins.factories import CalculationFactory
+
+SomeOtherWorkChain = CalculationFactory('some.module')
 
 
 class SomeWorkChain(WorkChain):
@@ -12,7 +15,7 @@ class SomeWorkChain(WorkChain):
 
     def submit_workchains(self):
         for i in range(3):
-            future = self.submit(SomeWorkChain)
+            future = self.submit(SomeOtherWorkChain)
             self.to_context(workchains=append_(future))
 
     def inspect_workchains(self):

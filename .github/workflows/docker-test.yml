@@ -23,8 +23,6 @@ jobs:
     timeout-minutes: 20
     defaults:
       run:
-        # Make sure we fail if any command in a piped command sequence fails
-        shell: bash -e -o pipefail {0}
         working-directory: .docker
 
     steps:
@@ -47,9 +45,7 @@ jobs:
         cache: pip
 
     - name: Install dependencies 📦
-      run: |
-        pip install -r requirements.txt
-        pip freeze
+      run: pip install -r requirements.txt --no-deps
 
     - name: Run tests
       run: pytest -s

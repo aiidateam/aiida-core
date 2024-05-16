@@ -16,7 +16,9 @@ build:
     # Use uv to speed up the build
     # https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-uv
     post_create_environment:
-    - pip install uv==0.1.44
+    - asdf plugin add uv
+    - asdf install uv 0.1.44
+    - asdf global uv 0.1.44
     post_install:
     - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install .[docs,tests,rest,atomic_tools]
 

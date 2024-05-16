@@ -484,38 +484,25 @@ def process_repair(manager, broker, dry_run):
 
 
 @verdi_process.command('dump')
-@arguments.PROCESSES()
+@arguments.PROCESS()
 @options.PATH()
-@click.option(
-    '-f',
-    '--flat',
-    'flat',
-    is_flag=True,
-    default=False,
-    help='Dump files in a flat directory for every step of the workflow.',
-)
-@click.option(
-    '-a',
-    '--all-aiida-nodes',
-    is_flag=True,
-    default=False,
-    help='Dump also non file-based AiiDA nodes. This can generate quite a lot of files, so use with caution.',
-)
 @options.OVERWRITE()
 @options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
+@options.FLAT()
 def process_dump(
-    processes,
+    process,
     path,
     include_inputs,
+    include_outputs,
     include_attributes,
     include_extras,
-    all_aiida_nodes,
     overwrite,
     flat,
 ) -> None:
-    """Dump files involved in the execution of one or multiple processes.
+    """Dump process input and output files to disk.
 
     Child calculations/workflows (also called `CalcJob`s and `WorkChain`s in AiiDA jargon) run by the parent workflow
     are contained in the directory tree as sub-folders and are sorted by their creation time. The directory tree thus
@@ -524,7 +511,7 @@ def process_dump(
 
     By default, input and output files of each calculation can be found in the corresponding "raw_inputs" and
     "raw_outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
-    settings). Additional input files (depending on the type of calculation) are placed in the "extra_inputs".
+    settings). Additional input files (depending on the type of calculation) are placed in the "inputs".
 
     Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
     node data for further inspection.
@@ -532,41 +519,24 @@ def process_dump(
 
     from aiida.tools.dumping.processes import ProcessDumper
 
-    for process in processes:
-        process_dumper = ProcessDumper(
-            parent_process=process,
-            include_node_inputs=include_inputs,
-            include_attributes=include_attributes,
-            include_extras=include_extras,
-            all_aiida_nodes=all_aiida_nodes,
-            overwrite=overwrite,
-            flat=flat,
+    process_dumper = ProcessDumper(
+        include_inputs=include_inputs,
+        include_outputs=include_outputs,
+        include_attributes=include_attributes,
+        include_extras=include_extras,
+        overwrite=overwrite,
+        flat=flat,
+    )
+
+    try:
+        dump_path = process_dumper.dump(process_node=process, output_path=path)
+    except FileExistsError:
+        echo.echo_critical(
+            'Dumping directory exists and overwrite is False. ' 'Set overwrite to True, or delete directory manually.'
         )
+    except Exception as e:
+        echo.echo_critical(f'Unexpected error ({e!s}) while dumping {process.__class__.__name__} <{process.pk}>.')
 
-        if path is None:
-            output_path = process_dumper.generate_default_dump_path(process_node=process)
-        else:
-            output_path = path.resolve()
-
-        process_dumper.parent_path = output_path
-
-        # Capture `FileExistsError` here already, not by trying to run the dumping
-        try:
-            process_dumper.validate_make_dump_path(validate_path=output_path)
-        except FileExistsError:
-            echo.echo_critical(f'Path `{output_path}` already exists and overwrite set to False.')
-
-        try:
-            process_dumper.dump(process_node=process, output_path=output_path)
-        except FileExistsError:
-            echo.echo_critical('Some files present in the dumping directory. Delete manually and try again.')
-        except Exception as e:
-            echo.echo_critical(f'Unexpected error ({e!s}) while dumping {process.__class__.__name__} <{process.pk}>.')
-
-        # Create README in parent directory. Do this at the end as to not cause exceptions for the path creation due to
-        # directory not being empty, and only do it when everything ran through fine before
-        process_dumper.generate_parent_readme()
-
-        echo.echo_success(
-            f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in `{output_path}`.'
-        )
+    echo.echo_success(
+        f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in `{dump_path}`.'
+    )

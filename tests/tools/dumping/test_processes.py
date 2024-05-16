@@ -27,7 +27,7 @@ filename = 'file.txt'
 filecontent = 'a'
 raw_inputs_relpath = Path('raw_inputs')
 raw_outputs_relpath = Path('raw_outputs')
-node_inputs_relpath = Path('extra_inputs')
+node_inputs_relpath = Path('inputs')
 default_dump_paths = [raw_inputs_relpath, node_inputs_relpath, raw_outputs_relpath]
 custom_dump_paths = [f'{path}_' for path in default_dump_paths]
 
@@ -125,7 +125,7 @@ def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path
     # wc-dump-test-io
     # └── 01-sub_workflow
     #     ├── 01-calculation
-    #     │  ├── extra_inputs
+    #     │  ├── inputs
     #     │  │  ├── folderdata
     #     │  │  │  └── relative_path
     #     │  │  │     └── file.txt
@@ -134,7 +134,7 @@ def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path
     #     │  └── raw_inputs
     #     │     └── file.txt
     #     └── 02-calculation
-    #         ├── extra_inputs
+    #         ├── inputs
     #         │  ├── folderdata
     #         │  │  └── relative_path
     #         │  │     └── file.txt
@@ -154,8 +154,8 @@ def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path
     # Don't test for `README` here, as this is only created when dumping is done via `verdi`
     # But, check for .aiida_node_metadata.yaml
     raw_input_path = '01-sub_workflow/01-calculation/raw_inputs/file.txt'
-    singlefiledata_path = '01-sub_workflow/01-calculation/extra_inputs/singlefile/file.txt'
-    folderdata_path = '01-sub_workflow/01-calculation/extra_inputs/folderdata/relative_path/file.txt'
+    singlefiledata_path = '01-sub_workflow/01-calculation/inputs/singlefile/file.txt'
+    folderdata_path = '01-sub_workflow/01-calculation/inputs/folderdata/relative_path/file.txt'
     node_metadata_paths = [
         node_metadata_file,
         f'01-sub_workflow/{node_metadata_file}',
@@ -282,7 +282,7 @@ def test_dump_calculation_node(tmp_path, generate_calculation_node_io):
     # Normal dumping -> node_inputs and not flat; no paths provided
     # Expected tree:
     # cj-dump-test-io
-    # ├── extra_inputs
+    # ├── inputs
     # │  ├── folderdata
     # │  │  └── relative_path
     # │  │     └── file.txt
@@ -326,7 +326,7 @@ def test_dump_calculation_custom(tmp_path, generate_calculation_node_io):
     # Normal dumping -> node_inputs and not flat; custom paths provided
     # Expected tree:
     # cj-dump-test-io
-    # ├── extra_inputs_
+    # ├── inputs_
     # │  ├── folderdata
     # │  │  └── relative_path
     # │  │     └── file.txt
@@ -391,7 +391,7 @@ def test_dump_calculation_overwrite(tmp_path, generate_calculation_node_io):
 
 def test_dump_calculation_no_inputs(tmp_path, generate_calculation_node_io):
     dump_parent_path = tmp_path / 'cj-dump-test-noinputs'
-    process_dumper = ProcessDumper(include_node_inputs=False)
+    process_dumper = ProcessDumper(include_inputs=False)
     calculation_node = generate_calculation_node_io()
     process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
     assert not (dump_parent_path / node_inputs_relpath).is_dir()
@@ -434,17 +434,17 @@ def test_validate_make_dump_path(chdir_tmp_path, tmp_path):
     # Path must be provided
     process_dumper = ProcessDumper()
     with pytest.raises(TypeError):
-        process_dumper.validate_make_dump_path()
+        process_dumper._validate_make_dump_path()
 
     # Check if path created if non-existent
-    output_path = process_dumper.validate_make_dump_path(validate_path=test_dir)
+    output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
     assert output_path == test_dir_abs
 
     clean_tmp_path(tmp_path=tmp_path)
 
     # Empty path is fine -> No error and full path returned
     test_dir_abs.mkdir()
-    output_path = process_dumper.validate_make_dump_path(validate_path=test_dir)
+    output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
     assert output_path == test_dir_abs
 
     clean_tmp_path(tmp_path=tmp_path)
@@ -453,7 +453,7 @@ def test_validate_make_dump_path(chdir_tmp_path, tmp_path):
     test_dir_abs.mkdir()
     (test_dir_abs / filename).touch()
     with pytest.raises(FileExistsError):
-        output_path = process_dumper.validate_make_dump_path(validate_path=test_dir)
+        output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
     assert (test_dir_abs / filename).is_file()
 
     clean_tmp_path(tmp_path=tmp_path)
@@ -463,7 +463,7 @@ def test_validate_make_dump_path(chdir_tmp_path, tmp_path):
     test_dir_abs.mkdir()
     (test_dir_abs / filename).touch()
     with pytest.raises(FileExistsError):
-        output_path = process_dumper.validate_make_dump_path(validate_path=test_dir)
+        output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
     assert (test_dir_abs / filename).is_file()
 
     clean_tmp_path(tmp_path=tmp_path)
@@ -471,7 +471,7 @@ def test_validate_make_dump_path(chdir_tmp_path, tmp_path):
     # Works if directory not empty, but overwrite=True and safeguard_file (e.g. `.aiida_node_metadata.yaml`) contained
     test_dir_abs.mkdir()
     (test_dir_abs / safeguard_file).touch()
-    output_path = process_dumper.validate_make_dump_path(validate_path=test_dir, safeguard_file=safeguard_file)
+    output_path = process_dumper._validate_make_dump_path(validate_path=test_dir, safeguard_file=safeguard_file)
     assert output_path == test_dir_abs
     assert not (test_dir_abs / safeguard_file).is_file()
 
@@ -483,8 +483,8 @@ def test_generate_default_dump_path(
     process_dumper = ProcessDumper()
     add_node = generate_calculation_node_add()
     multiply_add_node = generate_workchain_multiply_add()
-    add_path = process_dumper.generate_default_dump_path(process_node=add_node)
-    multiply_add_path = process_dumper.generate_default_dump_path(process_node=multiply_add_node)
+    add_path = process_dumper._generate_default_dump_path(process_node=add_node)
+    multiply_add_path = process_dumper._generate_default_dump_path(process_node=multiply_add_node)
 
     assert str(add_path) == f'dump-ArithmeticAddCalculation-{add_node.pk}'
     assert str(multiply_add_path) == f'dump-MultiplyAddWorkChain-{multiply_add_node.pk}'
@@ -492,14 +492,14 @@ def test_generate_default_dump_path(
 
 def test_generate_calculation_io_mapping():
     process_dumper = ProcessDumper()
-    calculation_io_mapping = process_dumper.generate_calculation_io_mapping()
+    calculation_io_mapping = process_dumper._generate_calculation_io_mapping()
     assert calculation_io_mapping.repository == 'raw_inputs'
-    assert calculation_io_mapping.inputs == 'extra_inputs'
+    assert calculation_io_mapping.inputs == 'inputs'
     assert calculation_io_mapping.outputs == 'raw_outputs'
 
-    calculation_io_mapping = process_dumper.generate_calculation_io_mapping(io_dump_paths=custom_dump_paths)
+    calculation_io_mapping = process_dumper._generate_calculation_io_mapping(io_dump_paths=custom_dump_paths)
     assert calculation_io_mapping.repository == 'raw_inputs_'
-    assert calculation_io_mapping.inputs == 'extra_inputs_'
+    assert calculation_io_mapping.inputs == 'inputs_'
     assert calculation_io_mapping.outputs == 'raw_outputs_'
 
 
@@ -514,7 +514,7 @@ def test_generate_link_triple_dump_path(generate_calculation_node_io, generate_w
     process_dumper = ProcessDumper()
 
     output_paths = [
-        tmp_path / process_dumper.generate_link_triple_dump_path(link_triple=output_triple, parent_path=tmp_path)
+        tmp_path / process_dumper._generate_link_triple_dump_path(link_triple=output_triple, parent_path=tmp_path)
         for output_triple in output_triples
     ]
     # 'sub_workflow' doesn't have a repository, so it is placed under '.aiida_nodes'
@@ -538,7 +538,7 @@ def test_generate_child_node_label(
 
     output_paths = sorted(
         [
-            process_dumper.generate_child_node_label(index, output_node)
+            process_dumper._generate_child_node_label(index, output_node)
             for index, output_node in enumerate(output_triples)
         ]
     )
@@ -550,7 +550,7 @@ def test_generate_child_node_label(
     # Sort by ctime here, not mtime, as I'm generating the WorkChain normally
     output_triples = sorted(output_triples, key=lambda link_triple: link_triple.node.ctime)
     output_paths = sorted(
-        [process_dumper.generate_child_node_label(_, output_node) for _, output_node in enumerate(output_triples)]
+        [process_dumper._generate_child_node_label(_, output_node) for _, output_node in enumerate(output_triples)]
     )
     assert output_paths == ['00-multiply', '01-ArithmeticAddCalculation', '02-result']
 
@@ -558,13 +558,13 @@ def test_generate_child_node_label(
 def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workchain_multiply_add):
     process_dumper = ProcessDumper()
     cj_node = generate_calculation_node_io(attach_outputs=False)
-    process_dumper.dump_node_yaml(process_node=cj_node, output_path=tmp_path)
+    process_dumper._dump_node_yaml(process_node=cj_node, output_path=tmp_path)
 
     assert (tmp_path / node_metadata_file).is_file()
 
     # Test with multiply_add
     wc_node = generate_workchain_multiply_add()
-    process_dumper.dump_node_yaml(process_node=wc_node, output_path=tmp_path)
+    process_dumper._dump_node_yaml(process_node=wc_node, output_path=tmp_path)
 
     assert (tmp_path / node_metadata_file).is_file()
 
@@ -582,7 +582,7 @@ def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workcha
 
     process_dumper = ProcessDumper(include_attributes=False, include_extras=False)
 
-    process_dumper.dump_node_yaml(process_node=wc_node, output_path=tmp_path)
+    process_dumper._dump_node_yaml(process_node=wc_node, output_path=tmp_path)
 
     # Open the dumped YAML file and read its contents
     with open(tmp_path / node_metadata_file, 'r') as dumped_file:

@@ -60,6 +60,7 @@ __all__ = (
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
+    'FLAT',
     'FORCE',
     'FORMULA_MODE',
     'FREQUENCY',
@@ -70,6 +71,7 @@ __all__ = (
     'IDENTIFIER',
     'INCLUDE_ATTRIBUTES',
     'INCLUDE_INPUTS',
+    'INCLUDE_OUTPUTS',
     'INCLUDE_EXTRAS',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
@@ -763,7 +765,14 @@ INCLUDE_INPUTS = OverridableOption(
     '--include-inputs/--exclude-inputs',
     default=True,
     show_default=True,
-    help='Include the input nodes of the `CalcJob`(s).',
+    help='Include the linked input nodes of the `CalculationNode`(s).',
+)
+
+INCLUDE_OUTPUTS = OverridableOption(
+    '--include-outputs/--exclude-outputs',
+    default=False,
+    show_default=True,
+    help='Include the linked output nodes of the `CalculationNode`(s).',
 )
 
 INCLUDE_ATTRIBUTES = OverridableOption(
@@ -786,5 +795,13 @@ OVERWRITE = OverridableOption(
     is_flag=True,
     default=False,
     show_default=True,
-    help="""Overwrite directory if it already exists.""",
+    help='Overwrite directory if it already exists.',
+)
+
+FLAT = OverridableOption(
+    '-f',
+    '--flat',
+    is_flag=True,
+    default=False,
+    help='Dump files in a flat directory for every step of the workflow.',
 )

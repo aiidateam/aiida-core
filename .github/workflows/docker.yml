@@ -76,5 +76,6 @@ jobs:
     uses: ./.github/workflows/docker-publish.yml
     secrets: inherit
     with:
+      runsOn: ubuntu-22.04
       images: ${{ needs.build.outputs.images }}
       registry: docker.io

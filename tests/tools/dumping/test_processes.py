@@ -25,10 +25,11 @@ from aiida.tools.dumping.processes import ProcessDumper
 # Non-AiiDA variables
 filename = 'file.txt'
 filecontent = 'a'
-raw_inputs_relpath = Path('raw_inputs')
-raw_outputs_relpath = Path('raw_outputs')
-node_inputs_relpath = Path('inputs')
-default_dump_paths = [raw_inputs_relpath, node_inputs_relpath, raw_outputs_relpath]
+inputs_relpath = Path('inputs')
+outputs_relpath = Path('outputs')
+node_inputs_relpath = Path('node_inputs')
+node_outputs_relpath = Path('node_outputs')
+default_dump_paths = [inputs_relpath, outputs_relpath, node_inputs_relpath, node_outputs_relpath]
 custom_dump_paths = [f'{path}_' for path in default_dump_paths]
 
 # Define variables used for constructing the nodes used to test the dumping
@@ -108,6 +109,11 @@ def generate_workchain_node_io():
         for cj_node in cj_nodes:
             cj_node.base.links.add_incoming(wc_node_sub, link_type=LinkType.CALL_CALC, link_label='calculation')
 
+        # Set process_state so that tests don't throw exception for build_call_graph of README generation
+        [cj_node.set_process_state('finished') for cj_node in cj_nodes]
+        wc_node.set_process_state('finished')
+        wc_node_sub.set_process_state('finished')
+
         # Need to store so that outputs are being dumped
         if store_all:
             wc_node.store()
@@ -119,43 +125,34 @@ def generate_workchain_node_io():
     return _generate_workchain_node_io
 
 
-# Tests for entry-point dump method
+# Only test top-level actions, like path and README creation
+# Other things tested via `_dump_workflow` and `_dump_calculation`
 def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path):
-    # Expected tree:
-    # wc-dump-test-io
-    # └── 01-sub_workflow
-    #     ├── 01-calculation
-    #     │  ├── inputs
-    #     │  │  ├── folderdata
-    #     │  │  │  └── relative_path
-    #     │  │  │     └── file.txt
-    #     │  │  └── singlefile
-    #     │  │     └── file.txt
-    #     │  └── raw_inputs
-    #     │     └── file.txt
-    #     └── 02-calculation
-    #         ├── inputs
-    #         │  ├── folderdata
-    #         │  │  └── relative_path
-    #         │  │     └── file.txt
-    #         │  └── singlefile
-    #         │     └── file.txt
-    #         └── raw_inputs
-    #             └── file.txt
-
-    # Need to generate parent path for dumping, as I don't want the sub-workchains to be dumped directly into `tmp_path`
     dump_parent_path = tmp_path / 'wc-dump-test-io'
     process_dumper = ProcessDumper()
     # Don't attach outputs, as it would require storing the calculation_node and then it cannot be used in the workchain
     cj_nodes = [generate_calculation_node_io(attach_outputs=False), generate_calculation_node_io(attach_outputs=False)]
     wc_node = generate_workchain_node_io(cj_nodes=cj_nodes)
-    process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
+    return_path = process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
 
-    # Don't test for `README` here, as this is only created when dumping is done via `verdi`
-    # But, check for .aiida_node_metadata.yaml
-    raw_input_path = '01-sub_workflow/01-calculation/raw_inputs/file.txt'
-    singlefiledata_path = '01-sub_workflow/01-calculation/inputs/singlefile/file.txt'
-    folderdata_path = '01-sub_workflow/01-calculation/inputs/folderdata/relative_path/file.txt'
+    assert dump_parent_path.is_dir()
+    assert (dump_parent_path / 'README').is_file()
+    assert return_path == dump_parent_path
+
+
+def test_dump_workflow(generate_calculation_node_io, generate_workchain_node_io, tmp_path):
+    # Need to generate parent path for dumping, as I don't want the sub-workchains to be dumped directly into `tmp_path`
+    dump_parent_path = tmp_path / 'wc-workflow_dump-test-io'
+    process_dumper = ProcessDumper()
+    # Don't attach outputs, as it would require storing the calculation_node and then it cannot be used in the workchain
+    cj_nodes = [generate_calculation_node_io(attach_outputs=False), generate_calculation_node_io(attach_outputs=False)]
+    wc_node = generate_workchain_node_io(cj_nodes=cj_nodes)
+    process_dumper._dump_workflow(workflow_node=wc_node, output_path=dump_parent_path)
+
+    input_path = '01-sub_workflow/01-calculation/inputs/file.txt'
+    singlefiledata_path = '01-sub_workflow/01-calculation/node_inputs/singlefile/file.txt'
+    folderdata_path = '01-sub_workflow/01-calculation/node_inputs/folderdata/relative_path/file.txt'
+    arraydata_path = '01-sub_workflow/01-calculation/node_inputs/arraydata/default.npy'
     node_metadata_paths = [
         node_metadata_file,
         f'01-sub_workflow/{node_metadata_file}',
@@ -163,32 +160,18 @@ def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path
         f'01-sub_workflow/02-calculation/{node_metadata_file}',
     ]
 
-    expected_files = [raw_input_path, singlefiledata_path, folderdata_path, *node_metadata_paths]
+    expected_files = [input_path, singlefiledata_path, folderdata_path, arraydata_path, *node_metadata_paths]
     expected_files = [dump_parent_path / expected_file for expected_file in expected_files]
 
     assert all([expected_file.is_file() for expected_file in expected_files])
 
-    # clean_tmp_path(dump_parent_path)
-
     # Flat dumping
-
-    # Expected tree:
-    # wc-dump-test-io-flat
-    # └── 01-sub_workflow
-    #     ├── 01-calculation
-    #     │  ├── file.txt
-    #     │  └── relative_path
-    #     │     └── file.txt
-    #     └── 02-calculation
-    #         ├── file.txt
-    #         └── relative_path
-    #             └── file.txt
-
     dump_parent_path = tmp_path / 'wc-dump-test-io-flat'
     process_dumper = ProcessDumper(flat=True)
-    process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
+    process_dumper._dump_workflow(workflow_node=wc_node, output_path=dump_parent_path)
 
-    raw_input_path = '01-sub_workflow/01-calculation/file.txt'
+    input_path = '01-sub_workflow/01-calculation/file.txt'
+    arraydata_path = '01-sub_workflow/01-calculation/default.npy'
     folderdata_path = '01-sub_workflow/01-calculation/relative_path/file.txt'
     node_metadata_paths = [
         node_metadata_file,
@@ -197,61 +180,33 @@ def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path
         f'01-sub_workflow/02-calculation/{node_metadata_file}',
     ]
 
-    expected_files = [raw_input_path, folderdata_path, *node_metadata_paths]
+    expected_files = [input_path, folderdata_path, arraydata_path, *node_metadata_paths]
     expected_files = [dump_parent_path / expected_file for expected_file in expected_files]
 
     assert all([expected_file.is_file() for expected_file in expected_files])
 
 
 def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
-    # Expected tree:
-    # wc-dump-test-multiply-add
-    # ├── 01-multiply
-    # │  └── raw_inputs
-    # │     └── source_file
-    # └── 02-ArithmeticAddCalculation
-    #     ├── raw_inputs
-    #     │  ├── _aiidasubmit.sh
-    #     │  └── aiida.in
-    #     └── raw_outputs
-    #         ├── _scheduler-stderr.txt
-    #         ├── _scheduler-stdout.txt
-    #         └── aiida.out
-
     dump_parent_path = tmp_path / 'wc-dump-test-multiply-add'
     process_dumper = ProcessDumper()
     wc_node = generate_workchain_multiply_add()
     process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
 
-    raw_input_files = ['_aiidasubmit.sh', 'aiida.in', '.aiida/job_tmpl.json', '.aiida/calcinfo.json']
-    raw_output_files = ['_scheduler-stderr.txt', '_scheduler-stdout.txt', 'aiida.out']
-    raw_input_files = [
-        dump_parent_path / '02-ArithmeticAddCalculation' / raw_inputs_relpath / raw_input_file
-        for raw_input_file in raw_input_files
+    input_files = ['_aiidasubmit.sh', 'aiida.in', '.aiida/job_tmpl.json', '.aiida/calcinfo.json']
+    output_files = ['_scheduler-stderr.txt', '_scheduler-stdout.txt', 'aiida.out']
+    input_files = [
+        dump_parent_path / '02-ArithmeticAddCalculation' / inputs_relpath / input_file for input_file in input_files
     ]
-    raw_input_files += [dump_parent_path / '01-multiply' / raw_inputs_relpath / 'source_file']
-    raw_output_files = [
-        dump_parent_path / '02-ArithmeticAddCalculation' / raw_outputs_relpath / raw_output_file
-        for raw_output_file in raw_output_files
+    input_files += [dump_parent_path / '01-multiply' / inputs_relpath / 'source_file']
+    output_files = [
+        dump_parent_path / '02-ArithmeticAddCalculation' / outputs_relpath / output_file for output_file in output_files
     ]
 
     # No node_inputs contained in MultiplyAddWorkChain
-
-    assert all([raw_input_file.is_file() for raw_input_file in raw_input_files])
-    assert all([raw_output_file.is_file() for raw_output_file in raw_output_files])
+    assert all([input_file.is_file() for input_file in input_files])
+    assert all([output_file.is_file() for output_file in output_files])
 
     # Flat dumping
-
-    # Expected tree:
-    # wc-dump-test-multiply-add-flat
-    # ├── 01-multiply
-    # │  └── source_file
-    # └── 02-ArithmeticAddCalculation
-    #     ├── _aiidasubmit.sh
-    #     ├── _scheduler-stderr.txt
-    #     ├── _scheduler-stdout.txt
-    #     ├── aiida.in
-    #     └── aiida.out
 
     dump_parent_path = tmp_path / 'wc-dump-test-multiply-add-flat'
     process_dumper = ProcessDumper(flat=True)
@@ -280,101 +235,49 @@ def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
 def test_dump_calculation_node(tmp_path, generate_calculation_node_io):
     # Checking the actual content should be handled by `test_copy_tree`
     # Normal dumping -> node_inputs and not flat; no paths provided
-    # Expected tree:
-    # cj-dump-test-io
-    # ├── inputs
-    # │  ├── folderdata
-    # │  │  └── relative_path
-    # │  │     └── file.txt
-    # │  └── singlefile
-    # │     └── file.txt
-    # ├── raw_inputs
-    # │  └── file.txt
-    # └── raw_outputs
-    #    ├── folderdata
-    #    │  └── relative_path
-    #    │     └── file.txt
-    #    └── singlefile
-    #       └── file.txt
 
     dump_parent_path = tmp_path / 'cj-dump-test-io'
-    process_dumper = ProcessDumper()
+    process_dumper = ProcessDumper(include_outputs=True)
     calculation_node = generate_calculation_node_io()
     process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
 
-    assert (dump_parent_path / raw_inputs_relpath / filename).is_file()
+    assert (dump_parent_path / inputs_relpath / filename).is_file()
     assert (dump_parent_path / node_inputs_relpath / singlefiledata_linklabel / filename).is_file()
     assert (dump_parent_path / node_inputs_relpath / folderdata_test_path / filename).is_file()
-    assert (dump_parent_path / raw_outputs_relpath / singlefiledata_linklabel / filename).is_file()
-    assert (dump_parent_path / raw_outputs_relpath / folderdata_test_path / filename).is_file()
+    assert (dump_parent_path / node_inputs_relpath / arraydata_linklabel / 'default.npy').is_file()
+
+    assert (dump_parent_path / node_outputs_relpath / singlefiledata_linklabel / filename).is_file()
+    assert (dump_parent_path / node_outputs_relpath / folderdata_test_path / filename).is_file()
 
     # Check contents once
-    with open(dump_parent_path / raw_inputs_relpath / filename, 'r') as handle:
+    with open(dump_parent_path / inputs_relpath / filename, 'r') as handle:
         assert handle.read() == filecontent
     with open(dump_parent_path / node_inputs_relpath / singlefiledata_linklabel / filename) as handle:
         assert handle.read() == filecontent
     with open(dump_parent_path / node_inputs_relpath / folderdata_test_path / filename) as handle:
         assert handle.read() == filecontent
-    with open(dump_parent_path / raw_outputs_relpath / singlefiledata_linklabel / filename) as handle:
+    with open(dump_parent_path / node_outputs_relpath / singlefiledata_linklabel / filename) as handle:
         assert handle.read() == filecontent
-    with open(dump_parent_path / raw_outputs_relpath / folderdata_test_path / filename) as handle:
+    with open(dump_parent_path / node_outputs_relpath / folderdata_test_path / filename) as handle:
         assert handle.read() == filecontent
-
-
-# Could probably be removed with proper testing of the mapping
-def test_dump_calculation_custom(tmp_path, generate_calculation_node_io):
-    # Normal dumping -> node_inputs and not flat; custom paths provided
-    # Expected tree:
-    # cj-dump-test-io
-    # ├── inputs_
-    # │  ├── folderdata
-    # │  │  └── relative_path
-    # │  │     └── file.txt
-    # │  └── singlefile
-    # │     └── file.txt
-    # ├── raw_inputs_
-    # │  └── file.txt
-    # └── raw_outputs_
-    #    ├── folderdata
-    #    │  └── relative_path
-    #    │     └── file.txt
-    #    └── singlefile
-    #       └── file.txt
-
-    dump_parent_path = tmp_path / 'cj-dump-test-custom'
-    process_dumper = ProcessDumper()
-    calculation_node = generate_calculation_node_io()
-    process_dumper._dump_calculation(
-        calculation_node=calculation_node, output_path=dump_parent_path, io_dump_paths=custom_dump_paths
-    )
-
-    assert (dump_parent_path / custom_dump_paths[0] / filename).is_file()
-    assert (dump_parent_path / custom_dump_paths[1] / singlefiledata_linklabel / filename).is_file()
-    assert (dump_parent_path / custom_dump_paths[1] / folderdata_test_path / filename).is_file()
-    assert (dump_parent_path / custom_dump_paths[2] / singlefiledata_linklabel / filename).is_file()
-    assert (dump_parent_path / custom_dump_paths[2] / folderdata_test_path / filename).is_file()
 
 
 def test_dump_calculation_flat(tmp_path, generate_calculation_node_io):
     # Flat dumping -> no paths provided -> Default paths should not be existent.
     # Internal FolderData structure retained.
-    # Expected tree:
-    # cj-dump-test-io
-    # ├── file.txt
-    # └── relative_path
-    #     └── file.txt
 
     dump_parent_path = tmp_path / 'cj-dump-test-custom'
     process_dumper = ProcessDumper(flat=True)
     calculation_node = generate_calculation_node_io()
     process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
 
-    # Here, the same file will be written by raw_inputs and raw_outputs and node_inputs
+    # Here, the same file will be written by inputs and node_outputs and node_inputs
     # So it should only be present in the parent dump directory
-    assert not (dump_parent_path / raw_inputs_relpath).is_dir()
+    assert not (dump_parent_path / inputs_relpath).is_dir()
     assert not (dump_parent_path / node_inputs_relpath).is_dir()
-    assert not (dump_parent_path / raw_outputs_relpath).is_dir()
+    assert not (dump_parent_path / outputs_relpath).is_dir()
     assert (dump_parent_path / filename).is_file()
+    assert (dump_parent_path / 'default.npy').is_file()
     assert (dump_parent_path / folderdata_relpath / filename).is_file()
 
 
@@ -389,6 +292,7 @@ def test_dump_calculation_overwrite(tmp_path, generate_calculation_node_io):
         process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
 
 
+# With both inputs and outputs being dumped is the standard test case above, so only test without inputs here
 def test_dump_calculation_no_inputs(tmp_path, generate_calculation_node_io):
     dump_parent_path = tmp_path / 'cj-dump-test-noinputs'
     process_dumper = ProcessDumper(include_inputs=False)
@@ -397,30 +301,20 @@ def test_dump_calculation_no_inputs(tmp_path, generate_calculation_node_io):
     assert not (dump_parent_path / node_inputs_relpath).is_dir()
 
 
-def test_dump_calculation_all_aiida_nodes(tmp_path, generate_calculation_node_io):
-    dump_parent_path = tmp_path / 'cj-dump-test-allaiidanodes'
-    process_dumper = ProcessDumper(all_aiida_nodes=True)
-    calculation_node = generate_calculation_node_io()
-    process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
-    assert (dump_parent_path / node_inputs_relpath / '.aiida_nodes' / arraydata_linklabel / 'default.npy').is_file()
-
-
 def test_dump_calculation_add(tmp_path, generate_calculation_node_add):
     dump_parent_path = tmp_path / 'cj-dump-test-add'
 
-    process_dumper = ProcessDumper(all_aiida_nodes=True)
+    process_dumper = ProcessDumper()
     calculation_node_add = generate_calculation_node_add()
     process_dumper._dump_calculation(calculation_node=calculation_node_add, output_path=dump_parent_path)
 
-    raw_input_files = ['_aiidasubmit.sh', 'aiida.in', '.aiida/job_tmpl.json', '.aiida/calcinfo.json']
-    raw_output_files = ['_scheduler-stderr.txt', '_scheduler-stdout.txt', 'aiida.out']
-    raw_input_files = [dump_parent_path / raw_inputs_relpath / raw_input_file for raw_input_file in raw_input_files]
-    raw_output_files = [
-        dump_parent_path / raw_outputs_relpath / raw_output_file for raw_output_file in raw_output_files
-    ]
+    input_files = ['_aiidasubmit.sh', 'aiida.in', '.aiida/job_tmpl.json', '.aiida/calcinfo.json']
+    output_files = ['_scheduler-stderr.txt', '_scheduler-stdout.txt', 'aiida.out']
+    input_files = [dump_parent_path / inputs_relpath / input_file for input_file in input_files]
+    output_files = [dump_parent_path / outputs_relpath / output_file for output_file in output_files]
 
-    assert all([raw_input_file.is_file() for raw_input_file in raw_input_files])
-    assert all([raw_output_file.is_file() for raw_output_file in raw_output_files])
+    assert all([input_file.is_file() for input_file in input_files])
+    assert all([output_file.is_file() for output_file in output_files])
 
 
 # Tests for helper methods
@@ -432,7 +326,7 @@ def test_validate_make_dump_path(chdir_tmp_path, tmp_path):
     safeguard_file = node_metadata_file
 
     # Path must be provided
-    process_dumper = ProcessDumper()
+    process_dumper = ProcessDumper(overwrite=False)
     with pytest.raises(TypeError):
         process_dumper._validate_make_dump_path()
 
@@ -449,9 +343,10 @@ def test_validate_make_dump_path(chdir_tmp_path, tmp_path):
 
     clean_tmp_path(tmp_path=tmp_path)
 
-    # Fails if directory not empty and overwrite set to False
+    # Fails if directory not empty, safeguard file existent, and overwrite set to False
     test_dir_abs.mkdir()
     (test_dir_abs / filename).touch()
+    (test_dir_abs / node_metadata_file).touch()
     with pytest.raises(FileExistsError):
         output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
     assert (test_dir_abs / filename).is_file()
@@ -460,9 +355,10 @@ def test_validate_make_dump_path(chdir_tmp_path, tmp_path):
 
     process_dumper = ProcessDumper(overwrite=True)
     # Fails if directory not empty and overwrite set to True, but safeguard_file not found (for safety reasons)
+    # Could define new Exception for this...
     test_dir_abs.mkdir()
     (test_dir_abs / filename).touch()
-    with pytest.raises(FileExistsError):
+    with pytest.raises(Exception):
         output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
     assert (test_dir_abs / filename).is_file()
 
@@ -493,32 +389,16 @@ def test_generate_default_dump_path(
 def test_generate_calculation_io_mapping():
     process_dumper = ProcessDumper()
     calculation_io_mapping = process_dumper._generate_calculation_io_mapping()
-    assert calculation_io_mapping.repository == 'raw_inputs'
-    assert calculation_io_mapping.inputs == 'inputs'
-    assert calculation_io_mapping.outputs == 'raw_outputs'
+    assert calculation_io_mapping.repository == 'inputs'
+    assert calculation_io_mapping.retrieved == 'outputs'
+    assert calculation_io_mapping.inputs == 'node_inputs'
+    assert calculation_io_mapping.outputs == 'node_outputs'
 
     calculation_io_mapping = process_dumper._generate_calculation_io_mapping(io_dump_paths=custom_dump_paths)
-    assert calculation_io_mapping.repository == 'raw_inputs_'
-    assert calculation_io_mapping.inputs == 'inputs_'
-    assert calculation_io_mapping.outputs == 'raw_outputs_'
-
-
-def test_generate_link_triple_dump_path(generate_calculation_node_io, generate_workchain_node_io, tmp_path):
-    # Need to construct WorkChain, as the path naming is based on `LinkTriple`s
-    cj_node = generate_calculation_node_io(attach_outputs=False)
-    wc_node = generate_workchain_node_io(cj_nodes=[cj_node])
-    wc_output_triples = wc_node.base.links.get_outgoing().all()
-    sub_wc_node = wc_output_triples[0].node
-    output_triples = wc_output_triples + sub_wc_node.base.links.get_outgoing().all()
-
-    process_dumper = ProcessDumper()
-
-    output_paths = [
-        tmp_path / process_dumper._generate_link_triple_dump_path(link_triple=output_triple, parent_path=tmp_path)
-        for output_triple in output_triples
-    ]
-    # 'sub_workflow' doesn't have a repository, so it is placed under '.aiida_nodes'
-    assert output_paths == [tmp_path / 'sub_workflow', tmp_path / 'calculation']
+    assert calculation_io_mapping.repository == 'inputs_'
+    assert calculation_io_mapping.retrieved == 'outputs_'
+    assert calculation_io_mapping.inputs == 'node_inputs_'
+    assert calculation_io_mapping.outputs == 'node_outputs_'
 
 
 def test_generate_child_node_label(
@@ -599,9 +479,9 @@ def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workcha
 
 def test_generate_parent_readme(tmp_path, generate_workchain_multiply_add):
     wc_node = generate_workchain_multiply_add()
-    process_dumper = ProcessDumper(parent_process=wc_node, parent_path=tmp_path)
+    process_dumper = ProcessDumper()
 
-    process_dumper.generate_parent_readme()
+    process_dumper._generate_readme(process_node=wc_node, output_path=tmp_path)
 
     assert (tmp_path / 'README').is_file()
 

@@ -23,6 +23,7 @@ from aiida.orm import (
     CalcFunctionNode,
     CalcJobNode,
     CalculationNode,
+    LinkManager,
     ProcessNode,
     WorkChainNode,
     WorkflowNode,
@@ -202,6 +203,12 @@ class ProcessDumper:
         return output_path
 
     def _dump_workflow(self, workflow_node: WorkflowNode, output_path: Path, io_dump_paths: list | None = None) -> None:
+        """Recursive function to traverse a ``WorkflowNode`` and dump its ``CalculationNode``s.
+
+        :param workflow_node: ``WorkflowNode`` to be traversed. Will be updated during recursion.
+        :param output_path: Dumping parent directory. Will be updated during recursion.
+        :param io_dump_paths: Custom subdirectories for ``CalculationNode``s, defaults to None
+        """
         self._validate_make_dump_path(validate_path=output_path)
 
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
@@ -264,8 +271,7 @@ class ProcessDumper:
 
         # Dump the node_inputs
         if self.include_inputs:
-            input_links = list(calculation_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC))
-
+            input_links = calculation_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
             self._dump_calculation_io(parent_path=output_path / io_dump_mapping.inputs, link_triples=input_links)
 
         # Dump the node_outputs apart from `retrieved`
@@ -278,7 +284,13 @@ class ProcessDumper:
                 link_triples=output_links,
             )
 
-    def _dump_calculation_io(self, parent_path: Path, link_triples: list):
+    def _dump_calculation_io(self, parent_path: Path, link_triples: LinkManager | List[LinkTriple]):
+        """Small helper function to dump linked input/output nodes of ``CalculationNode``s.
+
+        :param parent_path: Parent directory for dumping the linked node contents.
+        :param link_triples: List of link triples.
+        """
+
         for link_triple in link_triples:
             link_label = link_triple.link_label
 

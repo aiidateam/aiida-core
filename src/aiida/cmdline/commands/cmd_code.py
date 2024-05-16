@@ -236,8 +236,14 @@ def show(code):
 @verdi_code.command()
 @arguments.CODE()
 @arguments.OUTPUT_FILE(type=click.Path(exists=False))
+@click.option(
+    '--sort/--no-sort',
+    is_flag=True,
+    default=True,
+    help='Sort the keys of the output YAML.',
+)
 @with_dbenv()
-def export(code, output_file):
+def export(code, output_file, sort):
     """Export code to a yaml file."""
     import yaml
 
@@ -255,7 +261,7 @@ def export(code, output_file):
             code_data[key] = str(value)
 
     with open(output_file, 'w', encoding='utf-8') as yfhandle:
-        yaml.dump(code_data, yfhandle)
+        yaml.dump(code_data, yfhandle, sort_keys=sort)
 
 
 @verdi_code.command()

@@ -244,7 +244,8 @@ def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_intera
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression):
+@pytest.mark.parametrize('sort', (True, False))
+def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
     code = aiida_code_installed(
@@ -254,7 +255,10 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
         prepend_text=prepend_text,
     )
     filepath = tmp_path / 'code.yml'
+
     options = [str(code.pk), str(filepath)]
+    options.append('--sort' if sort else '--no-sort')
+
     run_cli_command(cmd_code.export, options)
 
     # file regression check

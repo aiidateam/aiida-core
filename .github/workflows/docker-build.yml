@@ -26,9 +26,8 @@ jobs:
     timeout-minutes: 60
     defaults:
       run:
-            # Make sure we fail if any command in a piped command sequence fails
+        # Make sure we fail if any command in a piped command sequence fails
         shell: bash -e -o pipefail {0}
-        working-directory: .docker
 
     outputs:
       images: ${{ steps.bake_metadata.outputs.images }}
@@ -57,8 +56,9 @@ jobs:
       uses: docker/bake-action@v4
       with:
         push: true
-                  # Using provenance to disable default attestation so it will build only desired images:
-                  # https://github.com/orgs/community/discussions/45969
+        workdir: .docker/
+        # Using provenance to disable default attestation so it will build only desired images:
+        # https://github.com/orgs/community/discussions/45969
         provenance: false
         set: |
           *.platform=${{ inputs.platforms }}

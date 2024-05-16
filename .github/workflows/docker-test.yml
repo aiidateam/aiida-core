@@ -23,7 +23,8 @@ jobs:
     timeout-minutes: 20
     defaults:
       run:
-        shell: bash
+        # Make sure we fail if any command in a piped command sequence fails
+        shell: bash -e -o pipefail {0}
         working-directory: .docker
 
     steps:
@@ -51,6 +52,5 @@ jobs:
         pip freeze
 
     - name: Run tests
-              # TODO: This probably needs tweaking
       run: pytest -s
       env: ${{ fromJSON(inputs.images) }}

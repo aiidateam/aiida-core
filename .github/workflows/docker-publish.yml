@@ -29,6 +29,11 @@ jobs:
       fail-fast: true
       matrix:
         target: [aiida-core-base, aiida-core-with-services, aiida-core-dev]
+    defaults:
+      run:
+        # Make sure we fail if any command in a piped command sequence fails
+        shell: bash -e -o pipefail {0}
+        working-directory: .docker
 
     steps:
     - uses: actions/checkout@v4
@@ -59,7 +64,6 @@ jobs:
       uses: docker/metadata-action@v5
       env: ${{ fromJSON(steps.build_vars.outputs.vars) }}
       with:
-                  # e.g. ghcr.io/aiidalab/full-stack
         images: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ matrix.target }}
         tags: |
           type=ref,event=pr

@@ -1,4 +1,4 @@
-name: Build, test and push Docker Images
+name: Docker Images
 
 on:
   pull_request:
@@ -43,6 +43,7 @@ jobs:
     with:
       runsOn: ubuntu-22.04
       images: ${{ needs.build.outputs.images }}
+      target: ${{ matrix.target }}
 
   # IMPORTANT: To save arm64 runners resources,
   # we run the test only when pushing to main.

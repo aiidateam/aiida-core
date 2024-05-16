@@ -32,7 +32,7 @@ jobs:
     uses: ./.github/workflows/docker-build.yml
     with:
       runsOn: ubuntu-22.04
-      platforms: linux/amd64,linux/arm64
+      platforms: linux/amd64
 
   test-amd64:
     needs: build

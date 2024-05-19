@@ -185,8 +185,7 @@ def generate_calculation_node():
             calculation_node.set_exit_status(exit_status)
 
         if repository is not None:
-            # Or use from_tree?
-            calculation_node.base.repository.put_object_from_filelike(repository[0], repository[1])
+            calculation_node.base.repository.put_object_from_tree(repository)
 
         # For storing, need to first store the input nodes, then the CalculationNode, then the output nodes
         if inputs is not None:

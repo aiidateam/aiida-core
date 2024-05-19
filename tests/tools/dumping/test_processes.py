@@ -8,14 +8,9 @@
 ###########################################################################
 """Tests for the dumping of ProcessNode data to disk."""
 
-# For testing the dumping, one either needs to cd into the tmp_path, or pass the tmp_path as argument, otherwise, the
-# files are dumped into the src -> CWD from where the script is run.
-# However, when one passes tmp_dir as output_path, no automatic, default path is created
-
 from __future__ import annotations
 
 import io
-import shutil
 from pathlib import Path
 
 import pytest
@@ -41,25 +36,13 @@ arraydata_linklabel = 'arraydata'
 node_metadata_file = '.aiida_node_metadata.yaml'
 
 
-# Move this somewhere else?
-def clean_tmp_path(tmp_path: Path):
-    """Recursively delete files and directories in a path, e.g. a temporary path used by pytest."""
-
-    for item in tmp_path.iterdir():
-        if item.is_dir():
-            shutil.rmtree(item)
-        else:
-            item.unlink()
-
-
 # Helper functions to generate the actual `WorkflowNode`s and `CalculationNode`s used for testing
 @pytest.fixture
-def generate_calculation_node_io(generate_calculation_node):
+def generate_calculation_node_io(generate_calculation_node, tmp_path):
     def _generate_calculation_node_io(entry_point: str | None = None, attach_outputs: bool = True):
         import numpy as np
         from aiida.orm import ArrayData, FolderData, SinglefileData
 
-        calculation_repository = (io.StringIO(filecontent), filename)
         singlefiledata_input = SinglefileData.from_string(content=filecontent, filename=filename)
         # ? Use instance for folderdata
         folderdata = FolderData()
@@ -84,8 +67,11 @@ def generate_calculation_node_io(generate_calculation_node):
         else:
             calculation_outputs = None
 
+        # Actually write repository file and then read it in when generating calculation_node
+        (tmp_path / filename).write_text(filecontent)
+
         calculation_node = generate_calculation_node(
-            repository=calculation_repository,
+            repository=tmp_path,
             inputs=calculation_node_inputs,
             outputs=calculation_outputs,
             entry_point=entry_point,
@@ -207,7 +193,6 @@ def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
     assert all([output_file.is_file() for output_file in output_files])
 
     # Flat dumping
-
     dump_parent_path = tmp_path / 'wc-dump-test-multiply-add-flat'
     process_dumper = ProcessDumper(flat=True)
     process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
@@ -234,8 +219,8 @@ def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
 # Tests for dump_calculation method
 def test_dump_calculation_node(tmp_path, generate_calculation_node_io):
     # Checking the actual content should be handled by `test_copy_tree`
-    # Normal dumping -> node_inputs and not flat; no paths provided
 
+    # Normal dumping -> node_inputs and not flat; no paths provided
     dump_parent_path = tmp_path / 'cj-dump-test-io'
     process_dumper = ProcessDumper(include_outputs=True)
     calculation_node = generate_calculation_node_io()
@@ -265,14 +250,13 @@ def test_dump_calculation_node(tmp_path, generate_calculation_node_io):
 def test_dump_calculation_flat(tmp_path, generate_calculation_node_io):
     # Flat dumping -> no paths provided -> Default paths should not be existent.
     # Internal FolderData structure retained.
-
     dump_parent_path = tmp_path / 'cj-dump-test-custom'
     process_dumper = ProcessDumper(flat=True)
     calculation_node = generate_calculation_node_io()
     process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
 
     # Here, the same file will be written by inputs and node_outputs and node_inputs
-    # So it should only be present in the parent dump directory
+    # So it should only be present once in the parent dump directory
     assert not (dump_parent_path / inputs_relpath).is_dir()
     assert not (dump_parent_path / node_inputs_relpath).is_dir()
     assert not (dump_parent_path / outputs_relpath).is_dir()
@@ -321,8 +305,6 @@ def test_dump_calculation_add(tmp_path, generate_calculation_node_add):
 def test_validate_make_dump_path(chdir_tmp_path, tmp_path):
     chdir_tmp_path
 
-    test_dir = Path('test-dir')
-    test_dir_abs = tmp_path / test_dir
     safeguard_file = node_metadata_file
 
     # Path must be provided
@@ -331,45 +313,34 @@ def test_validate_make_dump_path(chdir_tmp_path, tmp_path):
         process_dumper._validate_make_dump_path()
 
     # Check if path created if non-existent
+    test_dir = tmp_path / Path('test-dir')
+    test_dir.mkdir()
     output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
-    assert output_path == test_dir_abs
-
-    clean_tmp_path(tmp_path=tmp_path)
+    assert output_path == test_dir
 
     # Empty path is fine -> No error and full path returned
-    test_dir_abs.mkdir()
     output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
-    assert output_path == test_dir_abs
-
-    clean_tmp_path(tmp_path=tmp_path)
+    assert output_path == test_dir
 
     # Fails if directory not empty, safeguard file existent, and overwrite set to False
-    test_dir_abs.mkdir()
-    (test_dir_abs / filename).touch()
-    (test_dir_abs / node_metadata_file).touch()
+    (test_dir / filename).touch()
+    (test_dir / safeguard_file).touch()
     with pytest.raises(FileExistsError):
         output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
-    assert (test_dir_abs / filename).is_file()
-
-    clean_tmp_path(tmp_path=tmp_path)
-
-    process_dumper = ProcessDumper(overwrite=True)
-    # Fails if directory not empty and overwrite set to True, but safeguard_file not found (for safety reasons)
-    # Could define new Exception for this...
-    test_dir_abs.mkdir()
-    (test_dir_abs / filename).touch()
-    with pytest.raises(Exception):
-        output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
-    assert (test_dir_abs / filename).is_file()
-
-    clean_tmp_path(tmp_path=tmp_path)
+    assert (test_dir / filename).is_file()
 
     # Works if directory not empty, but overwrite=True and safeguard_file (e.g. `.aiida_node_metadata.yaml`) contained
-    test_dir_abs.mkdir()
-    (test_dir_abs / safeguard_file).touch()
+    process_dumper = ProcessDumper(overwrite=True)
     output_path = process_dumper._validate_make_dump_path(validate_path=test_dir, safeguard_file=safeguard_file)
-    assert output_path == test_dir_abs
-    assert not (test_dir_abs / safeguard_file).is_file()
+    assert output_path == test_dir
+    assert not (test_dir / safeguard_file).is_file()
+
+    # Fails if directory not empty and overwrite set to True, but safeguard_file not found (for safety reasons)
+    # Could define new Exception for this...
+    (test_dir / filename).touch()
+    with pytest.raises(Exception):
+        output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
+    assert (test_dir / filename).is_file()
 
 
 def test_generate_default_dump_path(

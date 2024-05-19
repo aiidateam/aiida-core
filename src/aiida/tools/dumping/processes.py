@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, List, Optional
+from typing import List
 
 import yaml
 
@@ -41,7 +41,7 @@ class ProcessDumper:
         include_outputs: bool = False,
         include_attributes: bool = True,
         include_extras: bool = True,
-        overwrite: bool = True,
+        overwrite: bool = False,
         flat: bool = False,
     ) -> None:
         self.include_inputs = include_inputs
@@ -98,10 +98,10 @@ class ProcessDumper:
         creation time. The directory tree thus mirrors the logical execution of the workflow, which can also be queried
         by running `verdi process status {process_node.pk}` on the command line.
 
-        By default, input and output files of each simulation can be found in the corresponding "raw_inputs" and
-        "raw_outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job
-        execution settings). Additional input files (depending on the type of calculation) are placed in the
-        "inputs".
+        By default, input and output files of each calculation can be found in the corresponding "inputs" and "outputs"
+        directories (the former also contains the hidden ".aiida" folder with machine-readable job execution settings).
+        Additional input and output files (depending on the type of calculation) are placed in the "node_inputs" and
+        "node_outputs", respectively.
 
         Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant
         AiiDA node data for further inspection."""
@@ -128,8 +128,7 @@ class ProcessDumper:
         process_show = get_node_info(node=process_node)
         _readme_string += f'\n\n\nOutput of `verdi process show {process_node.pk}`:\n\n{process_show}'
 
-        with (output_path / 'README').open('w') as handle:
-            handle.write(_readme_string)
+        (output_path / 'README').write_text(_readme_string)
 
     @staticmethod
     def _generate_child_node_label(index: int, link_triple: LinkTriple) -> str:
@@ -166,7 +165,7 @@ class ProcessDumper:
         self,
         process_node: ProcessNode,
         output_path: Path | None,
-        io_dump_paths: list | None = None,
+        io_dump_paths: List[str | Path] | None = None,
     ) -> Path:
         """Dumps all data involved in a `ProcessNode`, including its outgoing links.
 
@@ -202,27 +201,28 @@ class ProcessDumper:
 
         return output_path
 
-    def _dump_workflow(self, workflow_node: WorkflowNode, output_path: Path, io_dump_paths: list | None = None) -> None:
-        """Recursive function to traverse a ``WorkflowNode`` and dump its ``CalculationNode``s.
+    def _dump_workflow(
+        self, workflow_node: WorkflowNode, output_path: Path, io_dump_paths: List[str | Path] | None = None
+    ) -> None:
+        """Recursive function to traverse a `WorkflowNode` and dump its `CalculationNode` s.
 
-        :param workflow_node: ``WorkflowNode`` to be traversed. Will be updated during recursion.
+        :param workflow_node: `WorkflowNode` to be traversed. Will be updated during recursion.
         :param output_path: Dumping parent directory. Will be updated during recursion.
-        :param io_dump_paths: Custom subdirectories for ``CalculationNode``s, defaults to None
+        :param io_dump_paths: Custom subdirectories for `CalculationNode` s, defaults to None
         """
-        self._validate_make_dump_path(validate_path=output_path)
 
+        self._validate_make_dump_path(validate_path=output_path)
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
         called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
+        called_links = sorted(called_links, key=lambda link_triple: link_triple.node.ctime)
 
-        sorted_called_links = sorted(called_links, key=lambda link_triple: link_triple.node.ctime)
-
-        for index, link_triple in enumerate(sorted_called_links, start=1):
+        for index, link_triple in enumerate(called_links, start=1):
             child_node = link_triple.node
             child_label = self._generate_child_node_label(index=index, link_triple=link_triple)
             child_output_path = output_path.resolve() / child_label
 
-            # Recursive function call for `WorkFlowNode``
+            # Recursive function call for `WorkFlowNode`
             if isinstance(child_node, WorkflowNode):
                 self._dump_workflow(
                     workflow_node=child_node,
@@ -242,7 +242,7 @@ class ProcessDumper:
         self,
         calculation_node: CalculationNode,
         output_path: Path,
-        io_dump_paths: list | None = None,
+        io_dump_paths: List[str | Path] | None = None,
     ) -> None:
         """Dump the contents of a `CalculationNode` to a specified output path.
 
@@ -253,7 +253,6 @@ class ProcessDumper:
         """
 
         self._validate_make_dump_path(validate_path=output_path)
-
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 
         io_dump_mapping = self._generate_calculation_io_mapping(io_dump_paths=io_dump_paths)
@@ -285,7 +284,7 @@ class ProcessDumper:
             )
 
     def _dump_calculation_io(self, parent_path: Path, link_triples: LinkManager | List[LinkTriple]):
-        """Small helper function to dump linked input/output nodes of ``CalculationNode``s.
+        """Small helper function to dump linked input/output nodes of a `CalculationNode`.
 
         :param parent_path: Parent directory for dumping the linked node contents.
         :param link_triples: List of link triples.
@@ -334,7 +333,7 @@ class ProcessDumper:
             else:
                 raise Exception(
                     f"Path `{validate_path}` already exists and doesn't contain safeguard file {safeguard_file}."
-                    f'Not removing for safety reasons.'
+                    f' Not removing for safety reasons.'
                 )
 
         # Not included in if-else as to avoid having to repeat the `mkdir` call.
@@ -343,7 +342,7 @@ class ProcessDumper:
 
         return validate_path.resolve()
 
-    def _generate_calculation_io_mapping(self, io_dump_paths: Optional[List[Any]] = None) -> SimpleNamespace:
+    def _generate_calculation_io_mapping(self, io_dump_paths: List[str | Path] | None = None) -> SimpleNamespace:
         """Helper function to generate mapping for entities dumped for each `CalculationNode`.
 
         This is to avoid exposing AiiDA terminology, like `repository` to the user, while keeping track of which

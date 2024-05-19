@@ -60,7 +60,6 @@ __all__ = (
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
-    'FLAT',
     'FORCE',
     'FORMULA_MODE',
     'FREQUENCY',
@@ -69,10 +68,6 @@ __all__ = (
     'GROUP_CLEAR',
     'HOSTNAME',
     'IDENTIFIER',
-    'INCLUDE_ATTRIBUTES',
-    'INCLUDE_INPUTS',
-    'INCLUDE_OUTPUTS',
-    'INCLUDE_EXTRAS',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
@@ -758,35 +753,7 @@ PATH = OverridableOption(
     '--path',
     type=click.Path(path_type=pathlib.Path),
     show_default=False,
-    help='Parent directory for the dumping.',
-)
-
-INCLUDE_INPUTS = OverridableOption(
-    '--include-inputs/--exclude-inputs',
-    default=True,
-    show_default=True,
-    help='Include the linked input nodes of the `CalculationNode`(s).',
-)
-
-INCLUDE_OUTPUTS = OverridableOption(
-    '--include-outputs/--exclude-outputs',
-    default=False,
-    show_default=True,
-    help='Include the linked output nodes of the `CalculationNode`(s).',
-)
-
-INCLUDE_ATTRIBUTES = OverridableOption(
-    '--include-attributes/--exclude-attributes',
-    default=True,
-    show_default=True,
-    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-
-INCLUDE_EXTRAS = OverridableOption(
-    '--include-extras/--exclude-extras',
-    default=True,
-    show_default=True,
-    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+    help='Base path for operations that write to disk.',
 )
 
 OVERWRITE = OverridableOption(
@@ -795,13 +762,5 @@ OVERWRITE = OverridableOption(
     is_flag=True,
     default=False,
     show_default=True,
-    help='Overwrite directory if it already exists.',
-)
-
-FLAT = OverridableOption(
-    '-f',
-    '--flat',
-    is_flag=True,
-    default=False,
-    help='Dump files in a flat directory for every step of the workflow.',
+    help='Overwrite file/directory if writing to disk.',
 )

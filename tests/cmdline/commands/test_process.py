@@ -344,12 +344,6 @@ class TestVerdiProcess:
         test_path = tmp_path / 'cli-dump'
         node = generate_workchain_multiply_add()
 
-        # Running without identifiers should not except and not print anything
-        options = []
-        result = run_cli_command(cmd_process.process_dump, options)
-        assert result.exception is None, result.output
-        assert len(result.output_lines) == 0
-
         # Giving a single identifier should print a non empty string message
         options = [str(node.pk), '-p', str(test_path)]
         result = run_cli_command(cmd_process.process_dump, options)

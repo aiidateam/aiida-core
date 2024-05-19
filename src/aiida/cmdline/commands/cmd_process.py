@@ -487,31 +487,58 @@ def process_repair(manager, broker, dry_run):
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
-@options.INCLUDE_INPUTS()
-@options.INCLUDE_OUTPUTS()
-@options.INCLUDE_ATTRIBUTES()
-@options.INCLUDE_EXTRAS()
-@options.FLAT()
+@click.option(
+    '--include-inputs/--exclude-inputs',
+    default=True,
+    show_default=True,
+    help='Include the linked input nodes of the `CalculationNode`(s).',
+)
+@click.option(
+    '--include-outputs/--exclude-outputs',
+    default=False,
+    show_default=True,
+    help='Include the linked output nodes of the `CalculationNode`(s).',
+)
+@click.option(
+    '--include-attributes/--exclude-attributes',
+    default=True,
+    show_default=True,
+    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+@click.option(
+    '--include-extras/--exclude-extras',
+    default=True,
+    show_default=True,
+    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+@click.option(
+    '-f',
+    '--flat',
+    is_flag=True,
+    default=False,
+    help='Dump files in a flat directory for every step of the workflow.',
+)
 def process_dump(
     process,
     path,
+    overwrite,
     include_inputs,
     include_outputs,
     include_attributes,
     include_extras,
-    overwrite,
     flat,
 ) -> None:
     """Dump process input and output files to disk.
 
-    Child calculations/workflows (also called `CalcJob`s and `WorkChain`s in AiiDA jargon) run by the parent workflow
-    are contained in the directory tree as sub-folders and are sorted by their creation time. The directory tree thus
-    mirrors the logical execution of the workflow, which can also be queried by running `verdi process status <pk>` on
-    the command line.
+    Child calculations/workflows (also called `CalcJob`s/`CalcFunction`s and `WorkChain`s/`WorkFunction`s in AiiDA
+    jargon) run by the parent workflow are contained in the directory tree as sub-folders and are sorted by their
+    creation time.  The directory tree thus mirrors the logical execution of the workflow, which can also be queried by
+    running `verdi process status <pk>` on the command line.
 
-    By default, input and output files of each calculation can be found in the corresponding "raw_inputs" and
-    "raw_outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
-    settings). Additional input files (depending on the type of calculation) are placed in the "inputs".
+    By default, input and output files of each calculation can be found in the corresponding "inputs" and
+    "outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
+    settings). Additional input and output files (depending on the type of calculation) are placed in the "node_inputs"
+    and "node_outputs", respectively.
 
     Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
     node data for further inspection.
@@ -532,11 +559,9 @@ def process_dump(
         dump_path = process_dumper.dump(process_node=process, output_path=path)
     except FileExistsError:
         echo.echo_critical(
-            'Dumping directory exists and overwrite is False. ' 'Set overwrite to True, or delete directory manually.'
+            'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
         )
     except Exception as e:
-        echo.echo_critical(f'Unexpected error ({e!s}) while dumping {process.__class__.__name__} <{process.pk}>.')
+        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')
 
-    echo.echo_success(
-        f'Raw files for {process.__class__.__name__} <{process.pk}> dumped successfully in `{dump_path}`.'
-    )
+    echo.echo_success(f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.')

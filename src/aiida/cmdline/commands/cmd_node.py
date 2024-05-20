@@ -510,6 +510,9 @@ def graph_generate(
         )
         root_node = None
 
+    if not root_node and not nodes:
+        echo.echo_critical('No root node specified, please specify one or more using the `-N/--nodes` option.')
+
     if root_node:
         echo.echo_deprecated(
             'Specifying the root node positionally is deprecated, please use the `-N/--nodes` option instead.'

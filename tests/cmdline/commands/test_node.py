@@ -277,6 +277,11 @@ class TestVerdiGraph:
         finally:
             delete_temporary_file(filename)
 
+    def test_no_nodes(self, run_cli_command):
+        """Test the command raises if no root node is specified."""
+        result = run_cli_command(cmd_node.graph_generate, [], raises=True)
+        assert 'Critical: No root node specified, please specify one or more' in result.output
+
     def test_multiple_nodes(self, run_cli_command):
         """Test the `-N/--nodes` option to specify multiple root nodes."""
         node = orm.Data().store()

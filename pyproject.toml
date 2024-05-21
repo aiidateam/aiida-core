@@ -211,9 +211,9 @@ notebook = [
 ]
 pre-commit = [
   'aiida-core[atomic_tools,rest,tests,tui]',
-  'mypy~=1.7.1',
+  'mypy~=1.10.0',
   'packaging~=23.0',
-  'pre-commit~=2.2',
+  'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
   'tomli',
   'types-PyYAML'

@@ -42,14 +42,20 @@ def get_strict_version():
     :returns: StrictVersion instance with the current version
     :rtype: :class:`!distutils.version.StrictVersion`
     """
-    from distutils.version import StrictVersion
+    import sys
 
-    from aiida.common.warnings import warn_deprecation
+    if sys.version_info >= (3, 12):
+        msg = 'Cannot use get_strict_version() with Python 3.12 and newer'
+        raise RuntimeError(msg)
+    else:
+        from distutils.version import StrictVersion
 
-    warn_deprecation(
-        'This method is deprecated as the `distutils` package it uses will be removed in Python 3.12.', version=3
-    )
-    return StrictVersion(__version__)
+        from aiida.common.warnings import warn_deprecation
+
+        warn_deprecation(
+            'This method is deprecated as the `distutils` package it uses will be removed in Python 3.12.', version=3
+        )
+        return StrictVersion(__version__)
 
 
 def get_version() -> str:

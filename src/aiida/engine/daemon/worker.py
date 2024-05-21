@@ -60,7 +60,8 @@ def start_daemon_worker(foreground: bool = False) -> None:
 
     signals = (signal.SIGTERM, signal.SIGINT)
     for s in signals:
-        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))
+        # https://github.com/python/mypy/issues/12557
+        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))  # type: ignore[misc]
 
     try:
         LOGGER.info('Starting a daemon worker')

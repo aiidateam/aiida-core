@@ -3,17 +3,29 @@ from pathlib import Path
 
 import pytest
 
+TARGETS = ('aiida-core-base', 'aiida-core-base-with-services', 'aiida-core-dev')
 
-@pytest.fixture(
-    scope='session',
-    params=[
-        'aiida-core-base',
-        'aiida-core-with-services',
-        'aiida-core-dev',
-    ],
-)
-def variant(request):
-    return request.param
+
+def target_checker(value):
+    msg = f"Invalid image target '{value}', must be one of: {TARGETS}"
+    if value not in TARGETS:
+        raise pytest.UsageError(msg)
+    return value
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        '--target',
+        action='store',
+        required=True,
+        help='target (image name) of the docker-compose file to use.',
+        type=target_checker,
+    )
+
+
+@pytest.fixture(scope='session')
+def variant(pytestconfig):
+    return pytestconfig.getoption('target')
 
 
 @pytest.fixture(scope='session')

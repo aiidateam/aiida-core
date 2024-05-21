@@ -184,6 +184,10 @@ class TestMakeHashTest:
 
         assert make_hash(Decimal('3141')) == make_hash(3141)
 
+        assert make_hash(Decimal('NaN')) == make_hash('NaN')
+        assert make_hash(Decimal('Inf')) == make_hash('Infinity')
+        assert make_hash(Decimal('-Inf')) == make_hash('-Infinity')
+
     def test_unhashable_type(self):
         class MadeupClass:
             pass

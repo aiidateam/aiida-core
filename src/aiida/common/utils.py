@@ -21,7 +21,7 @@ from uuid import UUID
 from .lang import classproperty
 
 
-def get_new_uuid():
+def get_new_uuid() -> str:
     """Return a new UUID (typically to be used for new nodes)."""
     import uuid
 

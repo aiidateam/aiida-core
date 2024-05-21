@@ -20,6 +20,7 @@ working directory on the selected computer and the executable will be run there.
 from __future__ import annotations
 
 import pathlib
+import typing as t
 
 from pydantic import field_validator
 
@@ -43,7 +44,7 @@ class PortableCode(Code):
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
 
-        filepath_files: str = MetadataField(
+        filepath_files: t.Union[str, pathlib.Path] = MetadataField(
             ...,
             title='Code directory',
             description='Filepath to directory containing code files.',

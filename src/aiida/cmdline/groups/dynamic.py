@@ -5,7 +5,6 @@ from __future__ import annotations
 import functools
 import re
 import typing as t
-import warnings
 
 import click
 
@@ -179,11 +178,8 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             # we simply remove all ``NoneType`` and the remaining type should be the type of the option.
             if hasattr(field_info.annotation, '__args__'):
                 args = list(filter(lambda e: e != type(None), field_info.annotation.__args__))
-                if len(args) > 1:
-                    warnings.warn(
-                        f'field `{key}` defines multiple types, but can take only one, taking the first: `{args[0]}`',
-                        UserWarning,
-                    )
+                # Click parameters only support specifying a single type, so we default to the first one even if the
+                # pydantic model defines multiple.
                 field_type = args[0]
             else:
                 field_type = field_info.annotation

@@ -111,7 +111,7 @@ def make_hash(object_to_hash: typing.Any, **kwargs) -> str:
 
 
 @singledispatch
-def _make_hash(object_to_hash: typing.Any, **_):
+def _make_hash(object_to_hash: typing.Any, **_) -> list[bytes]:
     """Implementation of the ``make_hash`` function. The hash is created as a
     28 byte integer, and only later converted to a string.
     """
@@ -211,9 +211,11 @@ def _(val: Decimal, **kwargs) -> list[bytes]:
     for the exponent (which is negative if there is a fractional component, 0 otherwise) and get the same hash
     as for a corresponding float or int.
     """
-    # TODO: This is a possible problem!
-    # Unsupported operand types for < ("Literal['n']" and "int")
-    if val.as_tuple().exponent < 0:  # type: ignore[operator]
+    exponent = val.as_tuple().exponent
+    # This is a fallback for Decimal('NaN') and similar
+    if isinstance(exponent, str):
+        return [_single_digest('str', f'{val}'.encode('utf-8'))]
+    if exponent < 0:
         return [_single_digest('float', float_to_text(val, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
     return [_single_digest('int', f'{val}'.encode('utf-8'))]
 

@@ -37,6 +37,7 @@ __all__ = ('InstalledCode',)
 class InstalledCode(Code):
     """Data plugin representing an executable code on a remote computer."""
 
+    _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
 
     class Model(AbstractCode.Model):

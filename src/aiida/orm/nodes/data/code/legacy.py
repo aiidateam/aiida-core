@@ -75,13 +75,17 @@ class Code(AbstractCode):
     def __init__(self, remote_computer_exec=None, local_executable=None, input_plugin_name=None, files=None, **kwargs):
         super().__init__(**kwargs)
 
-        warn_deprecation(
-            'The `Code` class is deprecated. To create an instance, use the '
-            '`aiida.orm.nodes.data.code.installed.InstalledCode` or `aiida.orm.nodes.data.code.portable.PortableCode` '
-            'for a "remote" or "local" code, respectively. If you are using this class to compare type, e.g. in '
-            '`isinstance`, use `aiida.orm.nodes.data.code.abstract.AbstractCode`.',
-            version=3,
-        )
+        # The ``_EMIT_CODE_DEPRECATION_WARNING`` attribute is set in subclasses to avoid the deprecation message below
+        # is also shown when they are instantiated, since they are not deprecated.
+        if getattr(self, '_EMIT_CODE_DEPRECATION_WARNING', True):
+            warn_deprecation(
+                'The `Code` class is deprecated. To create an instance, use the '
+                '`aiida.orm.nodes.data.code.installed.InstalledCode` or '
+                '`aiida.orm.nodes.data.code.portable.PortableCode` for a "remote" or "local" code, respectively. If '
+                'you are using this class to compare type, e.g. in '
+                '`isinstance`, use `aiida.orm.nodes.data.code.abstract.AbstractCode`.',
+                version=3,
+            )
 
         if remote_computer_exec and local_executable:
             raise ValueError('cannot set `remote_computer_exec` and `local_executable` at the same time')

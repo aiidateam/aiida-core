@@ -39,6 +39,7 @@ __all__ = ('PortableCode',)
 class PortableCode(Code):
     """Data plugin representing an executable code stored in AiiDA's storage."""
 
+    _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
 
     class Model(AbstractCode.Model):

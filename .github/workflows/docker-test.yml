@@ -48,5 +48,5 @@ jobs:
       run: pip install -r requirements.txt --no-deps
 
     - name: Run tests
-      run: pytest -s --target ${{ inputs.target }}
+      run: pytest -s --target ${{ inputs.target }} tests/
       env: ${{ fromJSON(inputs.images) }}

@@ -15,7 +15,7 @@ def target_checker(value):
 
 def pytest_addoption(parser):
     parser.addoption(
-        '--target',
+        '--variant',
         action='store',
         required=True,
         help='target (image name) of the docker-compose file to use.',
@@ -25,11 +25,11 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope='session')
 def variant(pytestconfig):
-    return pytestconfig.getoption('target')
+    return pytestconfig.getoption('variant')
 
 
 @pytest.fixture(scope='session')
-def docker_compose_file(pytestconfig, variant):
+def docker_compose_file(variant):
     return f'docker-compose.{variant}.yml'
 
 

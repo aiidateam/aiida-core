@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Functionality for dumping of WorkChains and CalcJobs."""
+"""Functionality for dumping of ProcessNodes."""
 
 from __future__ import annotations
 
@@ -392,7 +392,7 @@ class ProcessDumper:
         :param output_filename: The name of the output YAML file. Defaults to `.aiida_node_metadata.yaml`.
         """
 
-        _node_properties = [
+        node_properties = [
             'label',
             'description',
             'pk',
@@ -404,15 +404,15 @@ class ProcessDumper:
             'is_finished_ok',
         ]
 
-        _user_properties = ('first_name', 'last_name', 'email', 'institution')
+        user_properties = ('first_name', 'last_name', 'email', 'institution')
 
-        _computer_properties = ('label', 'hostname', 'scheduler_type', 'transport_type')
+        computer_properties = ('label', 'hostname', 'scheduler_type', 'transport_type')
 
         node_dict = {}
         metadata_dict = {}
 
         # Add actual node `@property`s to dictionary
-        for metadata_property in _node_properties:
+        for metadata_property in node_properties:
             metadata_dict[metadata_property] = getattr(process_node, metadata_property)
 
         node_dict['Node data'] = metadata_dict
@@ -421,7 +421,7 @@ class ProcessDumper:
         try:
             node_dbuser = process_node.user
             user_dict = {}
-            for user_property in _user_properties:
+            for user_property in user_properties:
                 user_dict[user_property] = getattr(node_dbuser, user_property)
             node_dict['User data'] = user_dict
         except AttributeError:
@@ -431,7 +431,7 @@ class ProcessDumper:
         try:
             node_dbcomputer = process_node.computer
             computer_dict = {}
-            for computer_property in _computer_properties:
+            for computer_property in computer_properties:
                 computer_dict[computer_property] = getattr(node_dbcomputer, computer_property)
             node_dict['Computer data'] = computer_dict
         except AttributeError:

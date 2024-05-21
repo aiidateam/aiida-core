@@ -42,7 +42,7 @@ def get_strict_version():
     :returns: StrictVersion instance with the current version
     :rtype: :class:`!distutils.version.StrictVersion`
     """
-    from distutils.version import StrictVersion  # type: ignore[import-not-found]
+    from distutils.version import StrictVersion
 
     from aiida.common.warnings import warn_deprecation
 

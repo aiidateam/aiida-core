@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-TARGETS = ('aiida-core-base', 'aiida-core-base-with-services', 'aiida-core-dev')
+TARGETS = ('aiida-core-base', 'aiida-core-with-services', 'aiida-core-dev')
 
 
 def target_checker(value):

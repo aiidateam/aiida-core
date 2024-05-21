@@ -47,6 +47,7 @@ jobs:
       target: ${{ matrix.target }}
 
   build:
+    needs: test-amd64
     uses: ./.github/workflows/docker-build.yml
     with:
       runsOn: ubuntu-22.04

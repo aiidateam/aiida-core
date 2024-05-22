@@ -216,10 +216,10 @@ jobs:
       run: sudo apt update && sudo apt install postgresql graphviz
 
     - name: Install aiida-core
-      uses: .github/actions/install-aiida-core
+      uses: ./.github/actions/install-aiida-core
       with:
         python-version: ${{ matrix.python-version }}
-        extras: '[atomic_tools, docs, notebook, rest, tests, tui]'
+        extras: '[atomic_tools,docs,notebook,rest,tests,tui]'
         from-requirements: 'false'
 
     - name: Setup AiiDA environment
@@ -239,7 +239,7 @@ jobs:
     # updating the requirements (in case they are  inconsistent with the pyproject.toml file).
     - uses: actions/upload-artifact@v4
       with:
-        name: requirements.txt
+        name: requirements-py-${{ matrix.python-version }}.txt
         path: requirements-py-${{ matrix.python-version }}.txt
 
 # Check whether the requirements/ files are consistent with the dependency specification in the pyproject.toml file.
@@ -293,7 +293,8 @@ jobs:
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
       uses: actions/download-artifact@v4
       with:
-        name: requirements.txt
+        pattern: requirements-py-*
+        merge-multiple: true
         path: requirements
 
     - name: Commit requirements files

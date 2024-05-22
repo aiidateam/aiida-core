@@ -67,6 +67,9 @@ jobs:
   # We also only test the aiida-core-dev image.
   test-arm64:
     needs: build
+    if: >-
+      github.repository == 'aiidateam/aiida-core'
+      && (github.ref_type == 'tag' || github.ref_name == 'main')
     uses: ./.github/workflows/docker-test.yml
     with:
       runsOn: buildjet-4vcpu-ubuntu-2204-arm

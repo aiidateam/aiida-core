@@ -53,7 +53,10 @@ def plugin_list(entry_point_group, entry_point):
                 else:
                     echo.echo(str(plugin.get_description()))
             except AttributeError:
-                echo.echo_error(f'No description available for {entry_point}')
+                try:
+                    echo.echo(str(plugin.get_description()))
+                except AttributeError:
+                    echo.echo_error(f'No description available for {entry_point}')
     else:
         entry_points = get_entry_point_names(entry_point_group)
         if entry_points:

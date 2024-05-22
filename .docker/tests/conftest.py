@@ -54,7 +54,7 @@ def _docker_service_wait(docker_services):
         return '✔ broker:' in output and 'Daemon is running' in output
 
     docker_services.wait_until_responsive(
-        timeout=300.0,
+        timeout=600.0,
         pause=2,
         check=lambda: is_container_ready(),
     )

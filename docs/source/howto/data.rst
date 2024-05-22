@@ -98,7 +98,7 @@ For our beloved ``MultiplyAddWorkChain``, we obtain the following:
 .. code-block:: shell
 
     $ verdi process dump <pk> -p dump-multiply_add
-    Success: Raw files for WorkChainNode <pk> dumped successfully in `dump-multiply_add`.
+    Success: Raw files for WorkChainNode <pk> dumped into folder `dump-multiply_add`.
 
 .. code-block:: shell
 
@@ -108,17 +108,17 @@ For our beloved ``MultiplyAddWorkChain``, we obtain the following:
     ├── .aiida_node_metadata.yaml
     ├── 01-multiply
     │  ├── .aiida_node_metadata.yaml
-    │  └── raw_inputs
+    │  └── inputs
     │     └── source_file
     └── 02-ArithmeticAddCalculation
         ├── .aiida_node_metadata.yaml
-        ├── raw_inputs
+        ├── inputs
         │  ├── .aiida
         │  │  ├── calcinfo.json
         │  │  └── job_tmpl.json
         │  ├── _aiidasubmit.sh
         │  └── aiida.in
-        └── raw_outputs
+        └── outputs
             ├── _scheduler-stderr.txt
             ├── _scheduler-stdout.txt
             └── aiida.out
@@ -126,22 +126,22 @@ For our beloved ``MultiplyAddWorkChain``, we obtain the following:
 The ``README`` file provides a description of the directory structure, as well as useful information about the top-level
 process. Further, numbered subdirectories are created for each step of the workflow, resulting in the ``01-multiply``
 and ``02-ArithmeticAddCalculation`` folders. The raw calculation input and output files ``aiida.in`` and ``aiida.out``
-of the ``ArithmeticAddCalculation`` are placed in ``raw_inputs`` and ``raw_outputs``. In addition, these also contain
+of the ``ArithmeticAddCalculation`` are placed in ``inputs`` and ``outputs``. In addition, these also contain
 the submission script ``_aiidasubmit.sh``, as well as the scheduler stdout and stderr, ``_scheduler-stdout.txt`` and
-``_scheduler-stderr.txt``, respectively. Lastly, the source code of the ``multiply```` ``calcfunction`` presenting the
+``_scheduler-stderr.txt``, respectively. Lastly, the source code of the ``multiply`` ``calcfunction`` presenting the
 first step of the workflow is contained in the ``source_file``.
 
 Upon having a closer look at the directory, we also find the hidden ``.aiida_node_metadata.yaml`` files, which are
 created for every ``ProcessNode`` and contain additional information about the ``Node``, the ``User``, and the
 ``Computer``, as well as the ``.aiida`` subdirectory with machine-readable AiiDA-internal data in JSON format.
 
-Since subprocesses are explored recursively, arbitrarily complex, nested workflows can be dumped. As already seen above,
-the ``-p`` flag allows to specify a custom dumping path. If none is provided, it is automatically generated from the
-``process_label`` (or ``process_type``) and the ``pk``. In addition, the command provides the ``-o`` flag to overwrite
-existing directories, the ``-a`` flag to dump further, non file-based AiiDA nodes (in hidden, ``.aiida_nodes``
-subdirectories), the ``-f`` flag to dump all files for each ``CalculationNode`` of the workflow in a flat directory
-structure, and the ``--include-inputs`` (``--exclude-inputs``) flag to also dump additional node inputs of each
-``CalculationNode`` of the workflow. For a full list of available options, call :code:`verdi process dump --help`.
+Since child processes are explored recursively, arbitrarily complex, nested workflows can be dumped. As already seen
+above, the ``-p`` flag allows to specify a custom dumping path. If none is provided, it is automatically generated from
+the ``process_label`` (or ``process_type``) and the ``pk``. In addition, the command provides the ``-o`` flag to
+overwrite existing directories, the ``-f`` flag to dump all files for each ``CalculationNode`` of the workflow in a flat
+directory structure, and the ``--include-inputs/--exclude-inputs`` (``--include-outputs/--exclude-outputs``) flags to
+also dump additional node inputs (outputs) of each ``CalculationNode`` of the workflow into ``node_inputs``
+(``node_outputs``) subdirectories. For a full list of available options, call :code:`verdi process dump --help`.
 
 .. _how-to:data:import:provenance:
 

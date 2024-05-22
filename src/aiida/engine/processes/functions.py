@@ -91,7 +91,7 @@ def get_stack_size(size: int = 2) -> int:  # type: ignore[return]
         while frame:  # type: ignore[truthy-bool]
             frame = frame.f_back  # type: ignore[assignment]
             size += 1
-        return size - 1
+        return size - 1  # type: ignore[unreachable]
 
 
 P = ParamSpec('P')

@@ -71,7 +71,7 @@ def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
 
                 return func(self, *args, **kwargs)
         else:
-            wrapped_fn = func
+            wrapped_fn = func  # type: ignore[assignment]
 
         return wrapped_fn  # type: ignore[return-value]
 

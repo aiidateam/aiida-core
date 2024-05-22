@@ -41,7 +41,8 @@ def get_random_string(length: int = 12) -> str:
     return ''.join(secrets.choice(alphabet) for i in range(length))
 
 
-BLAKE2B_OPTIONS = {
+# Relaxed typing needed due to https://github.com/python/mypy/issues/5382
+BLAKE2B_OPTIONS: dict[str, typing.Any] = {
     'fanout': 0,  # unlimited fanout/depth mode
     'depth': 2,  # has fixed depth of 2
     'digest_size': 32,  # we do not need a cryptographically relevant digest
@@ -74,7 +75,7 @@ def chunked_file_hash(
     return hasher.hexdigest()
 
 
-def make_hash(object_to_hash, **kwargs):
+def make_hash(object_to_hash: typing.Any, **kwargs) -> str:
     """Makes a hash from a dictionary, list, tuple or set to any level, that contains
     only other hashable or nonhashable types (including lists, tuples, sets, and
     dictionaries).
@@ -110,14 +111,14 @@ def make_hash(object_to_hash, **kwargs):
 
 
 @singledispatch
-def _make_hash(object_to_hash, **_):
+def _make_hash(object_to_hash: typing.Any, **_) -> list[bytes]:
     """Implementation of the ``make_hash`` function. The hash is created as a
     28 byte integer, and only later converted to a string.
     """
     raise HashingError(f'Value of type {type(object_to_hash)} cannot be hashed')
 
 
-def _single_digest(obj_type, obj_bytes=b''):
+def _single_digest(obj_type: str, obj_bytes: bytes = b'') -> bytes:
     return hashlib.blake2b(obj_bytes, person=obj_type.encode('ascii'), node_depth=0, **BLAKE2B_OPTIONS).digest()
 
 
@@ -125,19 +126,19 @@ _END_DIGEST = _single_digest(')')
 
 
 @_make_hash.register(bytes)
-def _(bytes_obj, **kwargs):
+def _(bytes_obj: bytes, **kwargs) -> list[bytes]:
     """Hash arbitrary byte strings."""
     return [_single_digest('str', bytes_obj)]
 
 
 @_make_hash.register(str)
-def _(val, **kwargs):
+def _(val: str, **kwargs) -> list[bytes]:
     """Convert strings explicitly to bytes."""
     return [_single_digest('str', val.encode('utf-8'))]
 
 
 @_make_hash.register(abc.Sequence)
-def _(sequence_obj, **kwargs):
+def _(sequence_obj: abc.Sequence, **kwargs) -> list[bytes]:
     # unpack the list and use the elements
     return (
         [_single_digest('list(')]
@@ -147,7 +148,7 @@ def _(sequence_obj, **kwargs):
 
 
 @_make_hash.register(abc.Set)
-def _(set_obj, **kwargs):
+def _(set_obj: abc.Set, **kwargs) -> list[bytes]:
     # turn the set objects into a list of hashes which are always sortable,
     # then return a flattened list of the hashes
     return (
@@ -158,7 +159,7 @@ def _(set_obj, **kwargs):
 
 
 @_make_hash.register(abc.Mapping)
-def _(mapping, **kwargs):
+def _(mapping: abc.Mapping, **kwargs) -> list[bytes]:
     """Hashing arbitrary mapping containers (dict, OrderedDict) by first sorting by hashed keys"""
 
     def hashed_key_mapping():
@@ -178,7 +179,7 @@ def _(mapping, **kwargs):
 
 
 @_make_hash.register(OrderedDict)
-def _(mapping, **kwargs):
+def _(mapping: OrderedDict, **kwargs) -> list[bytes]:
     """Hashing of OrderedDicts
 
     :param odict_as_unordered: hash OrderedDicts as normal dicts (mostly for testing)
@@ -196,7 +197,7 @@ def _(mapping, **kwargs):
 
 
 @_make_hash.register(numbers.Real)
-def _(val, **kwargs):
+def _(val: numbers.Real, **kwargs) -> list[bytes]:
     """Before hashing a float, convert to a string (via rounding) and with a fixed number of digits after the comma.
     Note that the `_single_digest` requires a bytes object so we need to encode the utf-8 string first
     """
@@ -204,19 +205,23 @@ def _(val, **kwargs):
 
 
 @_make_hash.register(Decimal)
-def _(val, **kwargs):
+def _(val: Decimal, **kwargs) -> list[bytes]:
     """While a decimal can be converted exactly to a string which captures all characteristics of the underlying
     implementation, we also need compatibility with "equal" representations as int or float. Hence we are checking
     for the exponent (which is negative if there is a fractional component, 0 otherwise) and get the same hash
     as for a corresponding float or int.
     """
-    if val.as_tuple().exponent < 0:
+    exponent = val.as_tuple().exponent
+    # This is a fallback for Decimal('NaN') and similar
+    if isinstance(exponent, str):
+        return [_single_digest('str', f'{val}'.encode('utf-8'))]
+    if exponent < 0:
         return [_single_digest('float', float_to_text(val, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
     return [_single_digest('int', f'{val}'.encode('utf-8'))]
 
 
 @_make_hash.register(numbers.Complex)
-def _(val, **kwargs):
+def _(val: numbers.Complex, **kwargs) -> list[bytes]:
     """In case of a complex number, use the same encoding of two floats and join with a special symbol (a ! here)."""
     return [
         _single_digest(
@@ -229,23 +234,23 @@ def _(val, **kwargs):
 
 
 @_make_hash.register(numbers.Integral)
-def _(val, **kwargs):
+def _(val: numbers.Integral, **kwargs) -> list[bytes]:
     """Get the hash of the little-endian signed long long representation of the integer"""
     return [_single_digest('int', f'{val}'.encode('utf-8'))]
 
 
 @_make_hash.register(bool)
-def _(val, **kwargs):
+def _(val: bool, **kwargs) -> list[bytes]:
     return [_single_digest('bool', b'\x01' if val else b'\x00')]
 
 
 @_make_hash.register(type(None))
-def _(val, **kwargs):
+def _(val: type[None], **kwargs) -> list[bytes]:
     return [_single_digest('none')]
 
 
 @_make_hash.register(datetime)
-def _(val, **kwargs):
+def _(val: datetime, **kwargs) -> list[bytes]:
     """Hashes the little-endian rep of the float <epoch-seconds>.<subseconds>"""
     # see also https://stackoverflow.com/a/8778548 for an excellent elaboration
     if val.tzinfo is None or val.utcoffset() is None:
@@ -256,18 +261,18 @@ def _(val, **kwargs):
 
 
 @_make_hash.register(date)
-def _(val, **kwargs):
+def _(val: date, **kwargs) -> list[bytes]:
     """Hashes the string representation in ISO format of the `datetime.date` object."""
     return [_single_digest('date', val.isoformat().encode('utf-8'))]
 
 
 @_make_hash.register(uuid.UUID)
-def _(val, **kwargs):
+def _(val: uuid.UUID, **kwargs) -> list[bytes]:
     return [_single_digest('uuid', val.bytes)]
 
 
 @_make_hash.register(DatetimePrecision)
-def _(datetime_precision, **kwargs):
+def _(datetime_precision: DatetimePrecision, **kwargs) -> list[bytes]:
     """Hashes for DatetimePrecision object"""
     return (
         [_single_digest('dt_prec')]
@@ -281,7 +286,7 @@ def _(datetime_precision, **kwargs):
 
 
 @_make_hash.register(Folder)
-def _(folder, **kwargs):
+def _(folder: Folder, **kwargs) -> list[bytes]:
     """Hash the content of a Folder object. The name of the folder itself is actually ignored
     :param ignored_folder_content: list of filenames to be ignored for the hashing
     """
@@ -306,7 +311,7 @@ def _(folder, **kwargs):
     return [_single_digest('folder')] + list(folder_digests(folder))
 
 
-def float_to_text(value, sig):
+def float_to_text(value: typing.SupportsFloat, sig: int) -> str:
     """Convert float to text string for computing hash.
     Preseve up to N significant number given by sig.
 

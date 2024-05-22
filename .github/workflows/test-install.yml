@@ -216,7 +216,7 @@ jobs:
       run: sudo apt update && sudo apt install postgresql graphviz
 
     - name: Install aiida-core
-      uses: ./.github/actions/install-aiida-core
+      uses: .github/actions/install-aiida-core
       with:
         python-version: ${{ matrix.python-version }}
         extras: '[atomic_tools, docs, notebook, rest, tests, tui]'

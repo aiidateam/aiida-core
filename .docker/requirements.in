@@ -1,4 +1,4 @@
 docker
-pytest
+pytest~=7.4
 requests
 pytest-docker

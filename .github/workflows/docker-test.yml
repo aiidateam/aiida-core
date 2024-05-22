@@ -45,7 +45,7 @@ jobs:
         cache: pip
 
     - name: Install dependencies 📦
-      run: pip install -r requirements.txt --no-deps
+      run: pip install -r requirements.txt
 
     - name: Run tests
       run: pytest -s --variant ${{ inputs.target }} tests/

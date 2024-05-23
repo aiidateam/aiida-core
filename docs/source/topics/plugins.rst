@@ -786,17 +786,18 @@ Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance
 
 .. code-block:: python
 
+    from aiida.parsers import Parser
+
+    class CustomParser(Parser):
+        """Parser implementation."""
+
     def test_parser(entry_points):
         """Test a custom ``Parser`` implementation."""
-        from aiida.parsers import Parser
         from aiida.plugins import ParserFactory
-
-        class CustomParser(Parser):
-            """Parser implementation."""
 
         entry_points.add(CustomParser, 'aiida.parsers:custom.parser')
 
-        assert ParserFactory('custom.parser', CustomParser)
+        assert ParserFactory('custom.parser') is CustomParser
 
 Any entry points additions and removals are automatically undone at the end of the test.
 

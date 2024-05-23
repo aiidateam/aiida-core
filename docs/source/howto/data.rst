@@ -104,7 +104,7 @@ For our beloved ``MultiplyAddWorkChain``, we obtain the following:
 
     $ tree -a dump-multiply_add
     dump-multiply_add
-    ├── README
+    ├── README.md
     ├── .aiida_node_metadata.yaml
     ├── 01-multiply
     │  ├── .aiida_node_metadata.yaml
@@ -123,12 +123,12 @@ For our beloved ``MultiplyAddWorkChain``, we obtain the following:
             ├── _scheduler-stdout.txt
             └── aiida.out
 
-The ``README`` file provides a description of the directory structure, as well as useful information about the top-level
-process. Further, numbered subdirectories are created for each step of the workflow, resulting in the ``01-multiply``
-and ``02-ArithmeticAddCalculation`` folders. The raw calculation input and output files ``aiida.in`` and ``aiida.out``
-of the ``ArithmeticAddCalculation`` are placed in ``inputs`` and ``outputs``. In addition, these also contain
-the submission script ``_aiidasubmit.sh``, as well as the scheduler stdout and stderr, ``_scheduler-stdout.txt`` and
-``_scheduler-stderr.txt``, respectively. Lastly, the source code of the ``multiply`` ``calcfunction`` presenting the
+The ``README.md`` file provides a description of the directory structure, as well as useful information about the
+top-level process. Further, numbered subdirectories are created for each step of the workflow, resulting in the
+``01-multiply`` and ``02-ArithmeticAddCalculation`` folders. The raw calculation input and output files ``aiida.in`` and
+``aiida.out`` of the ``ArithmeticAddCalculation`` are placed in ``inputs`` and ``outputs``. In addition, these also
+contain the submission script ``_aiidasubmit.sh``, as well as the scheduler stdout and stderr, ``_scheduler-stdout.txt``
+and ``_scheduler-stderr.txt``, respectively. Lastly, the source code of the ``multiply`` ``calcfunction`` presenting the
 first step of the workflow is contained in the ``source_file``.
 
 Upon having a closer look at the directory, we also find the hidden ``.aiida_node_metadata.yaml`` files, which are

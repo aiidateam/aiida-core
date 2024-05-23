@@ -122,7 +122,7 @@ def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path
     return_path = process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
 
     assert dump_parent_path.is_dir()
-    assert (dump_parent_path / 'README').is_file()
+    assert (dump_parent_path / 'README.md').is_file()
     assert return_path == dump_parent_path
 
 
@@ -454,9 +454,9 @@ def test_generate_parent_readme(tmp_path, generate_workchain_multiply_add):
 
     process_dumper._generate_readme(process_node=wc_node, output_path=tmp_path)
 
-    assert (tmp_path / 'README').is_file()
+    assert (tmp_path / 'README.md').is_file()
 
-    with open(tmp_path / 'README', 'r') as dumped_file:
+    with open(tmp_path / 'README.md', 'r') as dumped_file:
         contents = dumped_file.read()
 
     assert 'This directory contains' in contents

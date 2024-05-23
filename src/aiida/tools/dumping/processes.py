@@ -71,7 +71,7 @@ class ProcessDumper:
 
     @staticmethod
     def _generate_readme(process_node: ProcessNode, output_path: Path) -> None:
-        """Generate README file in main dumping directory.
+        """Generate README.md file in main dumping directory.
 
         :param process_node: `CalculationNode` or `WorkflowNode`.
         :param output_path: Output path for dumping.
@@ -88,15 +88,17 @@ class ProcessDumper:
             get_workchain_report,
         )
 
+        pk = process_node.pk
+
         _readme_string = textwrap.dedent(
             f"""\
         This directory contains the files involved in the calculation/workflow
-        `{process_node.process_label} <{process_node.pk}>` run with AiiDA.
+        `{process_node.process_label} <{pk}>` run with AiiDA.
 
         Child calculations/workflows (also called `CalcJob`s/`CalcFunction`s and `WorkChain`s/`WorkFunction`s in AiiDA
         jargon) run by the parent workflow are contained in the directory tree as sub-folders and are sorted by their
         creation time. The directory tree thus mirrors the logical execution of the workflow, which can also be queried
-        by running `verdi process status {process_node.pk}` on the command line.
+        by running `verdi process status {pk}` on the command line.
 
         By default, input and output files of each calculation can be found in the corresponding "inputs" and "outputs"
         directories (the former also contains the hidden ".aiida" folder with machine-readable job execution settings).
@@ -109,7 +111,7 @@ class ProcessDumper:
 
         # `verdi process status`
         process_status = format_call_graph(calc_node=process_node, max_depth=None, call_link_label=True)
-        _readme_string += f'\n\n\nOutput of `verdi process status {process_node.pk}:`\n\n{process_status}'
+        _readme_string += f'\n\n\nOutput of `verdi process status {pk}`:\n\n```shell\n{process_status}\n```'
 
         # `verdi process report`
         # Copied over from `cmd_process`
@@ -122,13 +124,13 @@ class ProcessDumper:
         else:
             process_report = f'Nothing to show for node type {process_node.__class__}'
 
-        _readme_string += f'\n\n\nOutput of `verdi process report {process_node.pk}`:\n\n{process_report}'
+        _readme_string += f'\n\n\nOutput of `verdi process report {pk}`:\n\n```shell\n{process_report}\n```'
 
         # `verdi process show`?
         process_show = get_node_info(node=process_node)
-        _readme_string += f'\n\n\nOutput of `verdi process show {process_node.pk}`:\n\n{process_show}'
+        _readme_string += f'\n\n\nOutput of `verdi process show {pk}`:\n\n```shell\n{process_show}\n```'
 
-        (output_path / 'README').write_text(_readme_string)
+        (output_path / 'README.md').write_text(_readme_string)
 
     @staticmethod
     def _generate_child_node_label(index: int, link_triple: LinkTriple) -> str:

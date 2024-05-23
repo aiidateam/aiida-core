@@ -49,7 +49,7 @@ def plugin_list(entry_point_group, entry_point):
         else:
             try:
                 if (inspect.isclass(plugin) and issubclass(plugin, Process)) or (
-                    False if not hasattr(plugin, 'is_process_function') else plugin.is_process_function
+                    hasattr(plugin, 'is_process_function') and plugin.is_process_function
                 ):
                     print_process_info(plugin)
                 else:

@@ -38,9 +38,9 @@ set -euo pipefail
 # Example output (real output is on one line):
 #
 # images={
-#   "AIIDA_CORE_BASE_IMAGE": "ghcr.io/aiidalab/base@sha256:8e57a52b924b67567314b8ed3c968859cad99ea13521e60bbef40457e16f391d",
-#   "AIIDA_CORE_WITH_SERVICES_IMAGE": "ghcr.io/aiidalab/base-with-services@sha256:6753a809b5b2675bf4c22408e07c1df155907a465b33c369ef93ebcb1c4fec26",
-#   "AIIDA_CORE_DEV_IMAGE": "ghcr.io/aiidalab/full-stack@sha256:85ee91f61be1ea601591c785db038e5899d68d5fb89e07d66d9efbe8f352ee48",
+#   "AIIDA_CORE_BASE_IMAGE": "ghcr.io/aiidateam/aiida-core-base@sha256:8e57a52b924b67567314b8ed3c968859cad99ea13521e60bbef40457e16f391d",
+#   "AIIDA_CORE_WITH_SERVICES_IMAGE": "ghcr.io/aiidateam/aiida-core-with-services@sha256:6753a809b5b2675bf4c22408e07c1df155907a465b33c369ef93ebcb1c4fec26",
+#   "AIIDA_CORE_DEV_IMAGE": "ghcr.io/aiidateam/aiida-core-dev@sha256:85ee91f61be1ea601591c785db038e5899d68d5fb89e07d66d9efbe8f352ee48",
 # }
 #
 # This json output is later turned to environment variables using fromJson() GHA builtin

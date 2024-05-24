@@ -269,6 +269,7 @@ def profile_delete(force, delete_data, profiles):
         get_config().delete_profile(profile.name, delete_storage=delete_data)
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
 
+
 @verdi_profile.command('flush')
 @arguments.PROFILE(required=True)
 @options.FORCE(help='Skip any prompts for confirmation.')
@@ -292,7 +293,6 @@ def profile_flush(force, profile):
         echo.echo_report(f'Deleting of `{profile.name}` cancelled.')
 
     else:
-
         # Delete nodes
         qb = QueryBuilder()
         qb.append(Node)

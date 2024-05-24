@@ -72,7 +72,7 @@ def import_archive(
     group: Optional[orm.Group] = None,
     test_run: bool = False,
     backend: Optional[StorageBackend] = None,
-    packed: Optional[bool] = False
+    packed: Optional[bool] = False,
 ) -> Optional[int]:
     """Import an archive into the AiiDA backend.
 
@@ -1209,7 +1209,6 @@ def _add_files_to_repo_packed(backend_from: StorageBackend, backend_to: StorageB
     # print('repository_to', repository_to)
 
     with get_progress_reporter()(desc='Adding archive files to repository', total=len(new_keys)) as progress:
-
         from io import BytesIO
 
         from_hashes = list(repository_from.list_objects())

@@ -90,6 +90,15 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self._container as container:
             return container.add_streamed_object(handle)
 
+    def _put_objects_from_filelike_packed(self, handle_list) -> str:
+        """Store the byte contents of a list of files in the repository.
+
+        """
+        with self._container as container:
+            return container.add_streamed_objects_to_pack(
+                stream_list=handle_list,
+            )
+
     def has_objects(self, keys: t.List[str]) -> t.List[bool]:
         with self._container as container:
             return container.has_objects(keys)

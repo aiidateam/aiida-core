@@ -358,6 +358,12 @@ class ExtrasImportCode(Enum):
     is_flag=True,
     help='Determine entities to import, but do not actually import them. Deprecated, please use `--dry-run` instead.',
 )
+@click.option(
+    '--packed',
+    is_flag=True,
+    default=False,
+    help='Stream repository files directly to `packed`, rather than `loose`. Might provide speedup for large archives.',
+)
 @options.DRY_RUN(help='Determine entities to import, but do not actually import them.')
 @decorators.with_dbenv()
 @click.pass_context
@@ -375,6 +381,7 @@ def import_archive(
     group,
     test_run,
     dry_run,
+    packed,
 ):
     """Import archived data to a profile.
 
@@ -407,6 +414,7 @@ def import_archive(
         'create_group': import_group,
         'group': group,
         'test_run': dry_run,
+        'packed': packed,
     }
 
     for archive, web_based in all_archives:
@@ -466,7 +474,7 @@ def _gather_imports(archives, webpages) -> List[Tuple[str, bool]]:
 
 
 def _import_archive_and_migrate(
-    ctx: click.Context, archive: str, web_based: bool, import_kwargs: dict, try_migration: bool
+    ctx: click.Context, archive: str, web_based: bool, import_kwargs: dict, try_migration: bool, packed: bool = False
 ):
     """Perform the archive import.
 

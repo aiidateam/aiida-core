@@ -10,7 +10,8 @@
 
 import pytest
 from aiida.cmdline.commands import cmd_plugin
-from aiida.plugins import CalculationFactory, WorkflowFactory
+from aiida.parsers import Parser
+from aiida.plugins import CalculationFactory, ParserFactory, WorkflowFactory
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
 
 
@@ -56,3 +57,19 @@ def test_plugin_list_detail(run_cli_command, entry_point_string):
 
     result = run_cli_command(cmd_plugin.plugin_list, [entry_point_group, entry_point_name])
     assert entry_point.__doc__ in result.output
+
+
+class CustomParser(Parser):
+    @classmethod
+    def get_description(cls) -> str:
+        return 'str69'
+
+
+def test_plugin_description(run_cli_command, entry_points):
+    """Test that ``verdi plugin list`` uses ``get_description`` if defined."""
+
+    entry_points.add(CustomParser, 'aiida.parsers:custom.parser')
+    assert ParserFactory('custom.parser') is CustomParser
+
+    result = run_cli_command(cmd_plugin.plugin_list, ['aiida.parsers', 'custom.parser'])
+    assert result.output.strip() == 'str69'

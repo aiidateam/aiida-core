@@ -72,6 +72,7 @@ def import_archive(
     group: Optional[orm.Group] = None,
     test_run: bool = False,
     backend: Optional[StorageBackend] = None,
+    packed: Optional[bool] = False
 ) -> Optional[int]:
     """Import an archive into the AiiDA backend.
 
@@ -201,7 +202,12 @@ def import_archive(
 
             # now the transaction has been successfully populated, but not committed, we add the repository files
             # if the commit fails, this is not so much an issue, since the files can be removed on repo maintenance
-            _add_files_to_repo(backend_from, backend, new_repo_keys)
+            if packed:
+                IMPORT_LOGGER.report('Adding repository files to `packed`')
+                _add_files_to_repo_packed(backend_from, backend, new_repo_keys)
+            else:
+                IMPORT_LOGGER.report('Adding repository files to `loose`')
+                _add_files_to_repo(backend_from, backend, new_repo_keys)
 
             IMPORT_LOGGER.report('Committing transaction to database...')
 
@@ -1188,3 +1194,25 @@ def _add_files_to_repo(backend_from: StorageBackend, backend_to: StorageBackend,
                     f'Archive repository key is different to backend key: {key!r} != {backend_key!r}'
                 )
             progress.update()
+
+
+# This is probably not having any effect here, instead, I defined _put_object_from_filelike_packed in
+# AbstractRepositoryBackend
+def _add_files_to_repo_packed(backend_from: StorageBackend, backend_to: StorageBackend, new_keys: Set[str]) -> None:
+    """Add the new files to the repository."""
+    if not new_keys:
+        return None
+
+    repository_to = backend_to.get_repository()
+    repository_from = backend_from.get_repository()
+    # print('repository_from', repository_from)
+    # print('repository_to', repository_to)
+
+    with get_progress_reporter()(desc='Adding archive files to repository', total=len(new_keys)) as progress:
+
+        from io import BytesIO
+
+        from_hashes = list(repository_from.list_objects())
+        from_bytes_io_list = [BytesIO(repository_from.get_object_content(from_hash)) for from_hash in from_hashes]
+
+        backend_key = repository_to.put_objects_from_filelike_packed(from_bytes_io_list)

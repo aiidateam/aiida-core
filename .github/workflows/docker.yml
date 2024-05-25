@@ -68,9 +68,9 @@ jobs:
   # We also only test the aiida-core-dev image.
   test-arm64:
     needs: build
-    if: >-
-      github.repository == 'aiidateam/aiida-core'
-      && (github.ref_type == 'tag' || github.ref_name == 'main')
+    #if: >-
+    #  github.repository == 'aiidateam/aiida-core'
+    #  && (github.ref_type == 'tag' || github.ref_name == 'main')
     uses: ./.github/workflows/docker-test.yml
     with:
       runsOn: warp-ubuntu-latest-arm64-2x

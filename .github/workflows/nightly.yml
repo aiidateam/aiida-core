@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
 
-  tests:
+  nightly-tests:
 
     if: github.repository == 'aiidateam/aiida-core'      # Prevent running the builds on forks as well
     runs-on: ubuntu-latest
@@ -88,3 +88,49 @@ jobs:
         SLACK_COLOR: b60205
         SLACK_TITLE: Nightly build of `aiida-core/main` failed
         SLACK_MESSAGE: The tests of the `nightly.yml` GHA worklow failed.
+
+
+  # Run a subset of test suite to ensure compatibility with latest RabbitMQ releases
+  rabbitmq_tests:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Currently supported RMQ versions per:
+        # https://www.rabbitmq.com/docs/which-erlang#compatibility-matrix
+        rabbitmq-version: ['3.11', '3.12', '3.13']
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: test_aiida
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+        - 5432:5432
+      rabbitmq:
+        image: rabbitmq:${{ matrix.rabbitmq-version }}-management
+        ports:
+        - 5672:5672
+        - 15672:15672
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
+
+    - name: Install system dependencies
+      run: sudo apt update && sudo apt install postgresql
+
+    - name: Run tests
+      run: pytest -sv -k 'requires_rmq'

@@ -30,7 +30,7 @@ env:
 jobs:
   # We build only amd64 first to catch failures faster.
   build-amd64:
-    if: github.event.pull_request.head.repo.fork
+    if: ${{ ! github.event.pull_request.head.repo.fork }}
     uses: ./.github/workflows/docker-build.yml
     with:
       runsOn: ubuntu-22.04

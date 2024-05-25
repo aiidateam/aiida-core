@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Job scheduler that is interacted with through a CLI in bash."""
+
 from __future__ import annotations
 
 import abc

@@ -351,7 +351,7 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | 
 
     :param calculation: the instance of CalcJobNode to submit.
     :param transport: an already opened transport to use to submit the calculation.
-    :return: the job id as returned by the scheduler `submit_from_script` call
+    :return: the job id as returned by the scheduler `submit_job` call
     """
     job_id = calculation.get_job_id()
 
@@ -535,10 +535,10 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
 
         # If the job is returned it is still running and the kill really failed, so we raise
         if job is not None and job.job_state != JobState.DONE:
-            raise exceptions.RemoteOperationError(f'scheduler.kill({job_id}) was unsuccessful')
+            raise exceptions.RemoteOperationError(f'scheduler.kill_job({job_id}) was unsuccessful')
         else:
             EXEC_LOGGER.warning(
-                'scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id
+                'scheduler.kill_job() failed but job<{%s}> no longer seems to be running regardless', job_id
             )
 
 

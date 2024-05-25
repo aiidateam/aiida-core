@@ -73,7 +73,7 @@ jobs:
       && (github.ref_type == 'tag' || github.ref_name == 'main')
     uses: ./.github/workflows/docker-test.yml
     with:
-      runsOn: warp-ubuntu-latest-arm64-2x
+      runsOn: buildjet-4vcpu-ubuntu-2204-arm
       images: ${{ needs.build.outputs.images }}
       target: aiida-core-dev
 

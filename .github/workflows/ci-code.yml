@@ -103,8 +103,9 @@ jobs:
 
     - name: Upload coverage report
       if: matrix.python-version == 3.9 && github.repository == 'aiidateam/aiida-core'
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v4
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         name: aiida-pytests-py3.9
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails

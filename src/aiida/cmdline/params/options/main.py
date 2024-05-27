@@ -8,6 +8,8 @@
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 
+import pathlib
+
 import click
 
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
@@ -77,6 +79,8 @@ __all__ = (
     'OLDER_THAN',
     'ORDER_BY',
     'ORDER_DIRECTION',
+    'OVERWRITE',
+    'PATH',
     'PAST_DAYS',
     'PAUSED',
     'PORT',
@@ -742,4 +746,21 @@ PRINT_TRACEBACK = OverridableOption(
     '--print-traceback',
     is_flag=True,
     help='Print the full traceback in case an exception is raised.',
+)
+
+PATH = OverridableOption(
+    '-p',
+    '--path',
+    type=click.Path(path_type=pathlib.Path),
+    show_default=False,
+    help='Base path for operations that write to disk.',
+)
+
+OVERWRITE = OverridableOption(
+    '--overwrite',
+    '-o',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Overwrite file/directory if writing to disk.',
 )

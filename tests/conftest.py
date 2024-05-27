@@ -25,6 +25,7 @@ import warnings
 import click
 import pytest
 from aiida import get_profile
+from aiida.common.links import LinkType
 from aiida.manage.configuration import Profile, get_config, load_profile
 
 if t.TYPE_CHECKING:
@@ -158,7 +159,14 @@ def generate_calculation_node():
     """Generate an instance of a `CalculationNode`."""
     from aiida.engine import ProcessState
 
-    def _generate_calculation_node(process_state=ProcessState.FINISHED, exit_status=None, entry_point=None):
+    def _generate_calculation_node(
+        process_state: ProcessState = ProcessState.FINISHED,
+        exit_status: int | None = None,
+        entry_point: str | None = None,
+        inputs: dict | None = None,
+        outputs: dict | None = None,
+        repository: pathlib.Path | None = None,
+    ):
         """Generate an instance of a `CalculationNode`..
 
         :param process_state: state to set
@@ -170,13 +178,38 @@ def generate_calculation_node():
         if process_state is ProcessState.FINISHED and exit_status is None:
             exit_status = 0
 
-        node = CalculationNode(process_type=entry_point)
-        node.set_process_state(process_state)
+        calculation_node = CalculationNode(process_type=entry_point)
+        calculation_node.set_process_state(process_state)
 
         if exit_status is not None:
-            node.set_exit_status(exit_status)
+            calculation_node.set_exit_status(exit_status)
 
-        return node
+        if repository is not None:
+            calculation_node.base.repository.put_object_from_tree(repository)
+
+        # For storing, need to first store the input nodes, then the CalculationNode, then the output nodes
+        if inputs is not None:
+            for input_label, input_node in inputs.items():
+                calculation_node.base.links.add_incoming(
+                    input_node,
+                    link_type=LinkType.INPUT_CALC,
+                    link_label=input_label,
+                )
+
+                input_node.store()
+
+        if outputs is not None:
+            # Need to first store CalculationNode before I can attach `created` outputs
+            calculation_node.store()
+            for output_label, output_node in outputs.items():
+                output_node.base.links.add_incoming(
+                    calculation_node, link_type=LinkType.CREATE, link_label=output_label
+                )
+
+                output_node.store()
+
+        # Return unstored by default
+        return calculation_node
 
     return _generate_calculation_node
 
@@ -671,3 +704,48 @@ def reset_log_level():
         log.CLI_ACTIVE = None
         log.CLI_LOG_LEVEL = None
         log.configure_logging(with_orm=True)
+
+
+@pytest.fixture
+def generate_calculation_node_add(aiida_localhost):
+    def _generate_calculation_node_add():
+        from aiida.engine import run_get_node
+        from aiida.orm import InstalledCode, Int
+        from aiida.plugins import CalculationFactory
+
+        arithmetic_add = CalculationFactory('core.arithmetic.add')
+
+        add_inputs = {
+            'x': Int(1),
+            'y': Int(2),
+            'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
+        }
+
+        _, add_node = run_get_node(arithmetic_add, **add_inputs)
+
+        return add_node
+
+    return _generate_calculation_node_add
+
+
+@pytest.fixture
+def generate_workchain_multiply_add(aiida_localhost):
+    def _generate_workchain_multiply_add():
+        from aiida.engine import run_get_node
+        from aiida.orm import InstalledCode, Int
+        from aiida.plugins import WorkflowFactory
+
+        multiplyaddworkchain = WorkflowFactory('core.arithmetic.multiply_add')
+
+        multiply_add_inputs = {
+            'x': Int(1),
+            'y': Int(2),
+            'z': Int(3),
+            'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
+        }
+
+        _, multiply_add_node = run_get_node(multiplyaddworkchain, **multiply_add_inputs)
+
+        return multiply_add_node
+
+    return _generate_workchain_multiply_add

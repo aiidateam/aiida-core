@@ -751,7 +751,7 @@ def computer_export():
 )
 @with_dbenv()
 def computer_export_setup(computer, output_file, sort):
-    """Export computer setup to a yaml file."""
+    """Export computer setup to a YAML file."""
     import yaml
 
     computer_setup = {
@@ -796,7 +796,7 @@ def computer_export_setup(computer, output_file, sort):
 )
 @with_dbenv()
 def computer_export_config(computer, output_file, user, sort):
-    """Export the configuration of the authentication info for a computer and user to a yaml file."""
+    """Export the configuration of the authentication info for a computer and user to a YAML file."""
     import yaml
 
     if not computer.is_configured:

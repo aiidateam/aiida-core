@@ -746,7 +746,8 @@ def computer_export():
     '--sort/--no-sort',
     is_flag=True,
     default=True,
-    help='Sort the keys of the output YAML. Default --no-sort.',
+    help='Sort the keys of the output YAML.',
+    show_default=True,
 )
 @with_dbenv()
 def computer_export_setup(computer, output_file, sort):
@@ -790,7 +791,8 @@ def computer_export_setup(computer, output_file, sort):
     '--sort/--no-sort',
     is_flag=True,
     default=True,
-    help='Sort the keys of the output YAML. Default --no-sort.',
+    help='Sort the keys of the output YAML.',
+    show_default=True,
 )
 @with_dbenv()
 def computer_export_config(computer, output_file, user, sort):

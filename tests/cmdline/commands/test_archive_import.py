@@ -59,7 +59,6 @@ def test_import_archive(run_cli_command, newest_archive):
 def test_import_dry_run(run_cli_command, archive):
     """Test import dry-run"""
     result = run_cli_command(cmd_archive.import_archive, [archive, '--dry-run'])
-    print(result.output)
     assert f'import dry-run of archive {archive} completed' in result.output
 
 

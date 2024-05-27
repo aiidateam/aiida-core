@@ -8,6 +8,8 @@
 ###########################################################################
 """`verdi computer` command."""
 
+import pathlib
+import traceback
 from copy import deepcopy
 from functools import partial
 from math import isclose
@@ -673,7 +675,7 @@ class LazyConfigureGroup(VerdiCommandGroup):
 
 @verdi_computer.group('configure', cls=LazyConfigureGroup)
 def computer_configure():
-    """Configure the Authinfo details for a computer (and user)."""
+    """Configure the transport for a computer and user."""
 
 
 @computer_configure.command('show')
@@ -730,3 +732,92 @@ def computer_config_show(computer, user, defaults, as_option_string):
             else:
                 table.append((f'* {name}', '-'))
         echo_tabulate(table, tablefmt='plain')
+
+
+@verdi_computer.group('export')
+def computer_export():
+    """Export the setup or configuration of a computer."""
+
+
+@computer_export.command('setup')
+@arguments.COMPUTER()
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path))
+@click.option(
+    '--sort/--no-sort',
+    is_flag=True,
+    default=True,
+    help='Sort the keys of the output YAML.',
+    show_default=True,
+)
+@with_dbenv()
+def computer_export_setup(computer, output_file, sort):
+    """Export computer setup to a YAML file."""
+    import yaml
+
+    computer_setup = {
+        'label': computer.label,
+        'hostname': computer.hostname,
+        'description': computer.description,
+        'transport': computer.transport_type,
+        'scheduler': computer.scheduler_type,
+        'shebang': computer.get_shebang(),
+        'work_dir': computer.get_workdir(),
+        'mpirun_command': ' '.join(computer.get_mpirun_command()),
+        'mpiprocs_per_machine': computer.get_default_mpiprocs_per_machine(),
+        'default_memory_per_machine': computer.get_default_memory_per_machine(),
+        'use_double_quotes': computer.get_use_double_quotes(),
+        'prepend_text': computer.get_prepend_text(),
+        'append_text': computer.get_append_text(),
+    }
+    try:
+        output_file.write_text(yaml.dump(computer_setup, sort_keys=sort), 'utf-8')
+    except Exception as e:
+        error_traceback = traceback.format_exc()
+        echo.CMDLINE_LOGGER.debug(error_traceback)
+        echo.echo_critical(
+            f'Unexpected error while exporting setup for Computer<{computer.pk}> {computer.label}:\n ({e!s}).'
+        )
+    else:
+        echo.echo_success(f"Computer<{computer.pk}> {computer.label} setup exported to file '{output_file}'.")
+
+
+@computer_export.command('config')
+@arguments.COMPUTER()
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path))
+@options.USER(
+    help='Email address of the AiiDA user from whom to export this computer (if different from default user).'
+)
+@click.option(
+    '--sort/--no-sort',
+    is_flag=True,
+    default=True,
+    help='Sort the keys of the output YAML.',
+    show_default=True,
+)
+@with_dbenv()
+def computer_export_config(computer, output_file, user, sort):
+    """Export computer transport configuration for a user to a YAML file."""
+    import yaml
+
+    if not computer.is_configured:
+        echo.echo_critical(
+            f'Computer<{computer.pk}> {computer.label} configuration cannot be exported,'
+            ' because computer has not been configured yet.'
+        )
+    try:
+        computer_configuration = computer.get_configuration(user)
+        output_file.write_text(yaml.dump(computer_configuration, sort_keys=sort), 'utf-8')
+    except Exception as e:
+        error_traceback = traceback.format_exc()
+        echo.CMDLINE_LOGGER.debug(error_traceback)
+        if user is None:
+            echo.echo_critical(
+                f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}: {e!s}.'
+            )
+        else:
+            echo.echo_critical(
+                f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}'
+                f' and User<{user.pk}> {user.email}: {e!s}.'
+            )
+    else:
+        echo.echo_success(f"Computer<{computer.pk}> {computer.label} configuration exported to file '{output_file}'.")

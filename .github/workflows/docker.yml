@@ -14,6 +14,8 @@ on:
     tags:
     - v*
     paths-ignore:
+    - '**.md'
+    - '**.txt'
     - docs/**
     - tests/**
   workflow_dispatch:

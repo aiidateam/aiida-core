@@ -525,7 +525,7 @@ class TestVerdiComputerConfigure:
 
         exported_setup_filename = tmp_path / 'computer-setup.yml'
         result = self.cli_runner(computer_export_setup, [sort, comp.label, exported_setup_filename])
-        assert 'Success' in result.output, 'Command should have run successfull.'
+        assert result.exit_code == 0, 'Command should have run successfull.'
         assert f'{exported_setup_filename}' in result.output, 'Filename should be in terminal output but was not found.'
         assert os.path.exists(exported_setup_filename), f"'{exported_setup_filename}' was not created during export."
 

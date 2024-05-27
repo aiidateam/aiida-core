@@ -100,7 +100,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      configure  Configure the authentication info for a computer and user.
+      configure  Configure the transport for a computer and user.
       delete     Delete a computer.
       disable    Disable the computer for the given user.
       duplicate  Duplicate a computer allowing to change some parameters.

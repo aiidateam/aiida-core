@@ -675,7 +675,7 @@ class LazyConfigureGroup(VerdiCommandGroup):
 
 @verdi_computer.group('configure', cls=LazyConfigureGroup)
 def computer_configure():
-    """Configure the authentication info for a computer and user."""
+    """Configure the transport for a computer and user."""
 
 
 @computer_configure.command('show')
@@ -796,7 +796,7 @@ def computer_export_setup(computer, output_file, sort):
 )
 @with_dbenv()
 def computer_export_config(computer, output_file, user, sort):
-    """Export the configuration of the authentication info for a computer and user to a YAML file."""
+    """Export computer transport configuration for a user to a YAML file."""
     import yaml
 
     if not computer.is_configured:

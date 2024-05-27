@@ -528,13 +528,19 @@ class TestVerdiComputerConfigure:
         assert result.exit_code == 0, 'Command should have run successfull.'
         assert f'{exported_setup_filename}' in result.output, 'Filename should be in terminal output but was not found.'
         assert os.path.exists(exported_setup_filename), f"'{exported_setup_filename}' was not created during export."
-
         # verifying correctness by comparing internal and loaded yml object
         with open(exported_setup_filename, 'r', encoding='utf-8') as yfhandle:
             configure_setup_data = yaml.safe_load(yfhandle)
         assert configure_setup_data == self.comp_builder.get_computer_spec(
             comp
         ), 'Internal computer configuration does not agree with exported one.'
+
+        # we create a directory so we raise an error when exporting with the same name
+        # to test the except part of the function
+        already_existing_filename = tmp_path / 'tmp_dir'
+        os.mkdir(already_existing_filename)
+        result = self.cli_runner(computer_export_setup, [sort, comp.label, already_existing_filename], raises=True)
+        assert result.exit_code == ExitCode.CRITICAL
 
     @pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
     def test_computer_export_config(self, tmp_path, sort):
@@ -556,13 +562,24 @@ class TestVerdiComputerConfigure:
             f'{exported_config_filename}' in result.output
         ), 'Filename should be in terminal output but was not found.'
         assert os.path.exists(exported_config_filename), f"'{exported_config_filename}' was not created during export."
-
         # verifying correctness by comparing internal and loaded yml object
         with open(exported_config_filename, 'r', encoding='utf-8') as yfhandle:
             configure_config_data = yaml.safe_load(yfhandle)
         assert (
             configure_config_data == comp.get_configuration()
         ), 'Internal computer configuration does not agree with exported one.'
+
+        # we create a directory so we raise an error when exporting with the same name
+        # to test the except part of the function
+        already_existing_filename = tmp_path / 'tmp_dir'
+        os.mkdir(already_existing_filename)
+        result = self.cli_runner(computer_export_config, [comp.label, already_existing_filename], raises=True)
+        assert result.exit_code == ExitCode.CRITICAL
+
+        result = self.cli_runner(
+            computer_export_config, ['--user', self.user.email, comp.label, already_existing_filename], raises=True
+        )
+        assert result.exit_code == ExitCode.CRITICAL
 
 
 class TestVerdiComputerCommands:

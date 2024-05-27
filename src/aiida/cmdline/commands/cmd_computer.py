@@ -770,13 +770,14 @@ def computer_export_setup(computer, output_file, sort):
     }
     try:
         output_file.write_text(yaml.dump(computer_setup, sort_keys=sort), 'utf-8')
-        echo.echo_success(f"Computer<{computer.pk}> {computer.label} setup exported to file '{output_file}'.")
     except Exception as e:
         error_traceback = traceback.format_exc()
         echo.CMDLINE_LOGGER.debug(error_traceback)
         echo.echo_critical(
             f'Unexpected error while exporting setup for Computer<{computer.pk}> {computer.label}:\n ({e!s}).'
         )
+    else:
+        echo.echo_success(f"Computer<{computer.pk}> {computer.label} setup exported to file '{output_file}'.")
 
 
 @computer_export.command('config')
@@ -796,7 +797,6 @@ def computer_export_config(computer, user, output_file, sort):
     """Export the configuration of the authentication info for a computer and user to a yaml file."""
     import yaml
 
-    from aiida.orm import User
 
     if not computer.is_configured:
         echo.echo_critical(
@@ -804,15 +804,19 @@ def computer_export_config(computer, user, output_file, sort):
             ' because computer has not been configured yet.'
         )
     try:
-        if user is None:
-            user = User.collection.get_default()
         computer_configuration = computer.get_configuration(user)
         output_file.write_text(yaml.dump(computer_configuration, sort_keys=sort), 'utf-8')
-        echo.echo_success(f"Computer<{computer.pk}> {computer.label} configuration exported to file '{output_file}'.")
     except Exception as e:
         error_traceback = traceback.format_exc()
         echo.CMDLINE_LOGGER.debug(error_traceback)
-        echo.echo_critical(
-            f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}'
-            f' and User<{user.pk}> {user.email}: {e!s}.'
-        )
+        if user is None:
+            echo.echo_critical(
+                f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}: {e!s}.'
+            )
+        else:
+            echo.echo_critical(
+                f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}'
+                f' and User<{user.pk}> {user.email}: {e!s}.'
+            )
+    else:
+        echo.echo_success(f"Computer<{computer.pk}> {computer.label} configuration exported to file '{output_file}'.")

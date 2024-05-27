@@ -49,6 +49,19 @@ def test_import_archive(run_cli_command, newest_archive):
     run_cli_command(cmd_archive.import_archive, options)
 
 
+@pytest.mark.parametrize(
+    'archive',
+    (
+        get_archive_file('arithmetic.add.aiida', filepath='calcjob'),
+        get_archive_file('export_0.9_simple.aiida', filepath=ARCHIVE_PATH),
+    ),
+)
+def test_import_dry_run(run_cli_command, archive):
+    """Test import dry-run"""
+    result = run_cli_command(cmd_archive.import_archive, [archive, '--dry-run'])
+    assert f'import dry-run of archive {archive} completed' in result.output
+
+
 def test_import_to_group(run_cli_command, newest_archive):
     """Test import to existing Group and that Nodes are added correctly for multiple imports of the same,
     as well as separate, archives.

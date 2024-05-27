@@ -526,11 +526,10 @@ class TestVerdiComputerConfigure:
         exported_setup_filename = tmp_path / 'computer-setup.yml'
         result = self.cli_runner(computer_export_setup, [sort, comp.label, exported_setup_filename])
         assert result.exit_code == 0, 'Command should have run successfull.'
-        assert f'{exported_setup_filename}' in result.output, 'Filename should be in terminal output but was not found.'
-        assert os.path.exists(exported_setup_filename), f"'{exported_setup_filename}' was not created during export."
+        assert str(exported_setup_filename) in result.output, 'Filename should be in terminal output but was not found.'
+        assert exported_setup_filename.exists(), f"'{exported_setup_filename}' was not created during export."
         # verifying correctness by comparing internal and loaded yml object
-        with open(exported_setup_filename, 'r', encoding='utf-8') as yfhandle:
-            configure_setup_data = yaml.safe_load(yfhandle)
+        configure_setup_data = yaml.safe_load(exported_setup_filename.read_text())
         assert configure_setup_data == self.comp_builder.get_computer_spec(
             comp
         ), 'Internal computer configuration does not agree with exported one.'
@@ -538,7 +537,7 @@ class TestVerdiComputerConfigure:
         # we create a directory so we raise an error when exporting with the same name
         # to test the except part of the function
         already_existing_filename = tmp_path / 'tmp_dir'
-        os.mkdir(already_existing_filename)
+        already_existing_filename.mkdir()
         result = self.cli_runner(computer_export_setup, [sort, comp.label, already_existing_filename], raises=True)
         assert result.exit_code == ExitCode.CRITICAL
 

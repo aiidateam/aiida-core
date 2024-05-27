@@ -367,6 +367,7 @@ Below is a list with all available subcommands.
 
     Commands:
       call-root  Show root process of the call stack for the given processes.
+      dump       Dump process input and output files to disk.
       kill       Kill running processes.
       list       Show a list of running or terminated processes.
       pause      Pause running processes.

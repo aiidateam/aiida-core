@@ -793,10 +793,9 @@ def computer_export_setup(computer, output_file, sort):
     help='Sort the keys of the output YAML. Default --no-sort.',
 )
 @with_dbenv()
-def computer_export_config(computer, user, output_file, sort):
+def computer_export_config(computer, output_file, user, sort):
     """Export the configuration of the authentication info for a computer and user to a yaml file."""
     import yaml
-
 
     if not computer.is_configured:
         echo.echo_critical(

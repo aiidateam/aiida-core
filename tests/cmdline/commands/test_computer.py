@@ -28,6 +28,7 @@ from aiida.cmdline.commands.cmd_computer import (
     computer_show,
     computer_test,
 )
+from aiida.cmdline.utils.echo import ExitCode
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):
@@ -514,15 +515,16 @@ class TestVerdiComputerConfigure:
         assert '--username=' in result.output
         assert result_cur.output == result.output
 
-    def test_computer_export_setup(self, tmp_path):
+    @pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
+    def test_computer_export_setup(self, tmp_path, sort):
         """Test if 'verdi computer export setup' command works"""
-        self.comp_builder.label = 'test_computer_export_setup'
+        self.comp_builder.label = 'test_computer_export_setup' + sort
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
         exported_setup_filename = tmp_path / 'computer-setup.yml'
-        result = self.cli_runner(computer_export_setup, [comp.label, exported_setup_filename])
+        result = self.cli_runner(computer_export_setup, [sort, comp.label, exported_setup_filename])
         assert 'Success' in result.output, 'Command should have run successfull.'
         assert f'{exported_setup_filename}' in result.output, 'Filename should be in terminal output but was not found.'
         assert os.path.exists(exported_setup_filename), f"'{exported_setup_filename}' was not created during export."
@@ -534,17 +536,18 @@ class TestVerdiComputerConfigure:
             comp
         ), 'Internal computer configuration does not agree with exported one.'
 
-    def test_computer_export_config(self, tmp_path):
+    @pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
+    def test_computer_export_config(self, tmp_path, sort):
         """Test if 'verdi computer export config' command works"""
-        self.comp_builder.label = 'test_computer_export_config'
+        self.comp_builder.label = 'test_computer_export_config' + sort
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
         exported_config_filename = tmp_path / 'computer-configure.yml'
-        # We have not configuret the computer yet so it should raise an error
-        with pytest.raises(AssertionError):
-            self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
+        # We have not configured the computer yet so it should exit with an critical error
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
+        assert result.exit_code == ExitCode.CRITICAL
 
         comp.configure(safe_interval=0.0)
         result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename])

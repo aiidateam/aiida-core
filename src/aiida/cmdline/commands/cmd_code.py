@@ -240,7 +240,7 @@ def show(code):
     '--sort/--no-sort',
     is_flag=True,
     default=True,
-    help='Sort the keys of the output YAML.',
+    help='Sort the keys of the output YAML. Default --no-sort.',
 )
 @with_dbenv()
 def export(code, output_file, sort):

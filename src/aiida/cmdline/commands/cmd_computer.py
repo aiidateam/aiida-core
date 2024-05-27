@@ -742,28 +742,34 @@ def computer_export():
 @computer_export.command('setup')
 @arguments.COMPUTER()
 @arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path))
+@click.option(
+    '--sort/--no-sort',
+    is_flag=True,
+    default=True,
+    help='Sort the keys of the output YAML. Default --no-sort.',
+)
 @with_dbenv()
-def computer_export_setup(computer, output_file):
+def computer_export_setup(computer, output_file, sort):
     """Export computer setup to a yaml file."""
     import yaml
 
     computer_setup = {
         'label': computer.label,
-        'description': computer.description,
         'hostname': computer.hostname,
+        'description': computer.description,
         'transport': computer.transport_type,
         'scheduler': computer.scheduler_type,
-        'work_dir': computer.get_workdir(),
         'shebang': computer.get_shebang(),
+        'work_dir': computer.get_workdir(),
         'mpirun_command': ' '.join(computer.get_mpirun_command()),
         'mpiprocs_per_machine': computer.get_default_mpiprocs_per_machine(),
         'default_memory_per_machine': computer.get_default_memory_per_machine(),
+        'use_double_quotes': computer.get_use_double_quotes(),
         'prepend_text': computer.get_prepend_text(),
         'append_text': computer.get_append_text(),
-        'use_double_quotes': computer.get_use_double_quotes(),
     }
     try:
-        output_file.write_text(yaml.dump(computer_setup, sort_keys=True), 'utf-8')
+        output_file.write_text(yaml.dump(computer_setup, sort_keys=sort), 'utf-8')
         echo.echo_success(f"Computer<{computer.pk}> {computer.label} setup exported to file '{output_file}'.")
     except Exception as e:
         error_traceback = traceback.format_exc()
@@ -779,8 +785,14 @@ def computer_export_setup(computer, output_file):
 @options.USER(
     help='Email address of the AiiDA user from whom to export this computer (if different from default user).'
 )
+@click.option(
+    '--sort/--no-sort',
+    is_flag=True,
+    default=True,
+    help='Sort the keys of the output YAML. Default --no-sort.',
+)
 @with_dbenv()
-def computer_export_config(computer, user, output_file):
+def computer_export_config(computer, user, output_file, sort):
     """Export the configuration of the authentication info for a computer and user to a yaml file."""
     import yaml
 
@@ -795,7 +807,7 @@ def computer_export_config(computer, user, output_file):
         if user is None:
             user = User.collection.get_default()
         computer_configuration = computer.get_configuration(user)
-        output_file.write_text(yaml.dump(computer_configuration, sort_keys=True), 'utf-8')
+        output_file.write_text(yaml.dump(computer_configuration, sort_keys=sort), 'utf-8')
         echo.echo_success(f"Computer<{computer.pk}> {computer.label} configuration exported to file '{output_file}'.")
     except Exception as e:
         error_traceback = traceback.format_exc()

@@ -13,7 +13,7 @@ variable "ORGANIZATION" {
 }
 
 variable "REGISTRY" {
-  default = "docker.io/"
+  default = "ghcr.io/"
 }
 
 variable "PLATFORMS" {
@@ -27,7 +27,7 @@ variable "TARGETS" {
 function "tags" {
   params = [image]
   result = [
-    "${REGISTRY}${ORGANIZATION}/${image}:newly-baked"
+    "${REGISTRY}${ORGANIZATION}/${image}"
   ]
 }
 

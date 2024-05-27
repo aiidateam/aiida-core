@@ -2,7 +2,7 @@ name: continuous-integration-code
 
 on:
   push:
-    branches: [main]
+    branches-ignore: [gh-pages]
   pull_request:
     branches-ignore: [gh-pages]
     paths-ignore: [docs/**]

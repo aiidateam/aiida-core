@@ -282,6 +282,12 @@ class TestVerdiProcess:
         assert result.exit_code == ExitCode.USAGE_ERROR
         assert len(result.output_lines) > 0
 
+        # Running with both identifiers should raise an error and print something
+        options = ['--most-recent-node', '1']
+        result = run_cli_command(cmd_process.process_watch, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
+
     def test_process_status_call_link_label(self, run_cli_command):
         """Test ``verdi process status --call-link-label``."""
         node = WorkflowNode().store()

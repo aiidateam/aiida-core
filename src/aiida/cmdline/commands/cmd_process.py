@@ -397,14 +397,23 @@ def process_play(processes, all_entries, timeout, wait):
 
 @verdi_process.command('watch')
 @arguments.PROCESSES()
+@options.MOST_RECENT_NODE()
 @decorators.with_dbenv()
 @decorators.with_broker
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
-def process_watch(broker, processes):
+def process_watch(broker, processes, most_recent_node):
     """Watch the state transitions for a process."""
 
-    if not processes:
-        raise click.UsageError('Please specify one or multiple processes by their identifier (PK, UUID or label).')
+    if not processes and not most_recent_node:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
+
+    if processes and most_recent_node:
+        raise click.BadOptionUsage(
+            'most_recent_node',
+            'cannot specify individual processes and the `-M/--most-recent-node` flag at the same time.',
+        )
 
     from time import sleep
 
@@ -422,6 +431,9 @@ def process_watch(broker, processes):
 
     communicator = broker.get_communicator()
     echo.echo_report('watching for broadcasted messages, press CTRL+C to stop...')
+
+    if most_recent_node:
+        processes = [get_most_recent_node()]
 
     for process in processes:
         if process.is_terminated:

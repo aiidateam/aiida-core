@@ -93,9 +93,9 @@ def process_list(
     order_by,
     order_dir,
 ):
-    """Show a list of running or terminated processes.
+    """Show a list of processes.
 
-    By default, only those that are still running are shown, but there are options to show also the finished ones.
+    By default, only processes that are still running are shown, but there are options to show also the finished ones.
     """
     from tabulate import tabulate
 
@@ -185,7 +185,9 @@ def process_list(
 @options.MOST_RECENT_NODE()
 @decorators.with_dbenv()
 def process_show(processes, most_recent_node):
-    """Show details for one or multiple processes."""
+    """Show details of processes.
+
+    Show details for one or multiple processes."""
     from aiida.cmdline.utils.common import get_node_info
 
     if not processes and not most_recent_node:
@@ -210,7 +212,9 @@ def process_show(processes, most_recent_node):
 @arguments.PROCESSES()
 @decorators.with_dbenv()
 def process_call_root(processes):
-    """Show root process of the call stack for the given processes."""
+    """Show root process of processes.
+
+    Show root process(es) of the call stack for one or multiple processes."""
     if not processes:
         raise click.UsageError('Please specify one or multiple processes by their identifier (PK, UUID or label).')
     for process in processes:
@@ -247,7 +251,9 @@ def process_call_root(processes):
 )
 @decorators.with_dbenv()
 def process_report(processes, most_recent_node, levelname, indent_size, max_depth):
-    """Show the log report for one or multiple processes."""
+    """Show the log report of processes.
+
+    Show the log report for one or multiple processes."""
     from aiida.cmdline.utils.common import get_calcjob_report, get_process_function_report, get_workchain_report
     from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
 
@@ -284,7 +290,9 @@ def process_report(processes, most_recent_node, levelname, indent_size, max_dept
 )
 @arguments.PROCESSES()
 def process_status(call_link_label, most_recent_node, max_depth, processes):
-    """Print the status of one or multiple processes."""
+    """Show the status of processes.
+
+    Show the status of one or multiple processes."""
     from aiida.cmdline.utils.ascii_vis import format_call_graph
 
     if not processes and not most_recent_node:
@@ -313,7 +321,9 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
 @options.WAIT()
 @decorators.with_dbenv()
 def process_kill(processes, all_entries, timeout, wait):
-    """Kill running processes."""
+    """Kill running processes.
+
+    Kill one or multiple running processes."""
     from aiida.engine.processes import control
 
     if not processes and not all_entries:
@@ -345,7 +355,9 @@ def process_kill(processes, all_entries, timeout, wait):
 @options.WAIT()
 @decorators.with_dbenv()
 def process_pause(processes, all_entries, timeout, wait):
-    """Pause running processes."""
+    """Pause running processes.
+
+    Pause one or multiple running processes."""
     from aiida.engine.processes import control
 
     if not processes and not all_entries:
@@ -374,7 +386,9 @@ def process_pause(processes, all_entries, timeout, wait):
 @options.WAIT()
 @decorators.with_dbenv()
 def process_play(processes, all_entries, timeout, wait):
-    """Play (unpause) paused processes."""
+    """Play (unpause) paused processes.
+
+    Play (unpause) one or multiple paused processes."""
     from aiida.engine.processes import control
 
     if not processes and not all_entries:
@@ -402,7 +416,9 @@ def process_play(processes, all_entries, timeout, wait):
 @decorators.with_broker
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_watch(broker, processes, most_recent_node):
-    """Watch the state transitions for a process."""
+    """Watch the state transitions of processes.
+
+    Watch the state transitions for one or multiple running processes."""
 
     if not processes and not most_recent_node:
         raise click.UsageError(

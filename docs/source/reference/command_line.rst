@@ -363,17 +363,17 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      call-root  Show root process of the call stack for the given processes.
+      call-root  Show root process of processes.
       dump       Dump process input and output files to disk.
       kill       Kill running processes.
-      list       Show a list of running or terminated processes.
+      list       Show a list of processes.
       pause      Pause running processes.
       play       Play (unpause) paused processes.
       repair     Automatically repair all stuck processes.
-      report     Show the log report for one or multiple processes.
-      show       Show details for one or multiple processes.
-      status     Print the status of one or multiple processes.
-      watch      Watch the state transitions for a process.
+      report     Show the log report of processes.
+      show       Show details of processes.
+      status     Show the status of processes.
+      watch      Watch the state transitions of processes.
 
 
 .. _reference:command-line:verdi-profile:

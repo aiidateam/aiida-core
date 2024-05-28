@@ -1,0 +1,255 @@
+index:
+- - ix_db_dbauthinfo_db_dbauthinfo_aiidauser_id
+  - db_dbauthinfo
+  - - CREATE INDEX ix_db_dbauthinfo_db_dbauthinfo_aiidauser_id ON db_dbauthinfo (aiidauser_id)
+- - ix_db_dbauthinfo_db_dbauthinfo_dbcomputer_id
+  - db_dbauthinfo
+  - - CREATE INDEX ix_db_dbauthinfo_db_dbauthinfo_dbcomputer_id ON db_dbauthinfo (dbcomputer_id)
+- - ix_db_dbcomment_db_dbcomment_dbnode_id
+  - db_dbcomment
+  - - CREATE INDEX ix_db_dbcomment_db_dbcomment_dbnode_id ON db_dbcomment (dbnode_id)
+- - ix_db_dbcomment_db_dbcomment_user_id
+  - db_dbcomment
+  - - CREATE INDEX ix_db_dbcomment_db_dbcomment_user_id ON db_dbcomment (user_id)
+- - ix_db_dbgroup_db_dbgroup_label
+  - db_dbgroup
+  - - CREATE INDEX ix_db_dbgroup_db_dbgroup_label ON db_dbgroup (label)
+- - ix_db_dbgroup_db_dbgroup_type_string
+  - db_dbgroup
+  - - CREATE INDEX ix_db_dbgroup_db_dbgroup_type_string ON db_dbgroup (type_string)
+- - ix_db_dbgroup_db_dbgroup_user_id
+  - db_dbgroup
+  - - CREATE INDEX ix_db_dbgroup_db_dbgroup_user_id ON db_dbgroup (user_id)
+- - ix_db_dbgroup_dbnodes_db_dbgroup_dbnodes_dbgroup_id
+  - db_dbgroup_dbnodes
+  - - CREATE INDEX ix_db_dbgroup_dbnodes_db_dbgroup_dbnodes_dbgroup_id ON db_dbgroup_dbnodes
+      (dbgroup_id)
+- - ix_db_dbgroup_dbnodes_db_dbgroup_dbnodes_dbnode_id
+  - db_dbgroup_dbnodes
+  - - CREATE INDEX ix_db_dbgroup_dbnodes_db_dbgroup_dbnodes_dbnode_id ON db_dbgroup_dbnodes
+      (dbnode_id)
+- - ix_db_dblink_db_dblink_input_id
+  - db_dblink
+  - - CREATE INDEX ix_db_dblink_db_dblink_input_id ON db_dblink (input_id)
+- - ix_db_dblink_db_dblink_label
+  - db_dblink
+  - - CREATE INDEX ix_db_dblink_db_dblink_label ON db_dblink (label)
+- - ix_db_dblink_db_dblink_output_id
+  - db_dblink
+  - - CREATE INDEX ix_db_dblink_db_dblink_output_id ON db_dblink (output_id)
+- - ix_db_dblink_db_dblink_type
+  - db_dblink
+  - - CREATE INDEX ix_db_dblink_db_dblink_type ON db_dblink (type)
+- - ix_db_dblog_db_dblog_dbnode_id
+  - db_dblog
+  - - CREATE INDEX ix_db_dblog_db_dblog_dbnode_id ON db_dblog (dbnode_id)
+- - ix_db_dblog_db_dblog_levelname
+  - db_dblog
+  - - CREATE INDEX ix_db_dblog_db_dblog_levelname ON db_dblog (levelname)
+- - ix_db_dblog_db_dblog_loggername
+  - db_dblog
+  - - CREATE INDEX ix_db_dblog_db_dblog_loggername ON db_dblog (loggername)
+- - ix_db_dbnode_db_dbnode_ctime
+  - db_dbnode
+  - - CREATE INDEX ix_db_dbnode_db_dbnode_ctime ON db_dbnode (ctime)
+- - ix_db_dbnode_db_dbnode_dbcomputer_id
+  - db_dbnode
+  - - CREATE INDEX ix_db_dbnode_db_dbnode_dbcomputer_id ON db_dbnode (dbcomputer_id)
+- - ix_db_dbnode_db_dbnode_label
+  - db_dbnode
+  - - CREATE INDEX ix_db_dbnode_db_dbnode_label ON db_dbnode (label)
+- - ix_db_dbnode_db_dbnode_mtime
+  - db_dbnode
+  - - CREATE INDEX ix_db_dbnode_db_dbnode_mtime ON db_dbnode (mtime)
+- - ix_db_dbnode_db_dbnode_node_type
+  - db_dbnode
+  - - CREATE INDEX ix_db_dbnode_db_dbnode_node_type ON db_dbnode (node_type)
+- - ix_db_dbnode_db_dbnode_process_type
+  - db_dbnode
+  - - CREATE INDEX ix_db_dbnode_db_dbnode_process_type ON db_dbnode (process_type)
+- - ix_db_dbnode_db_dbnode_user_id
+  - db_dbnode
+  - - CREATE INDEX ix_db_dbnode_db_dbnode_user_id ON db_dbnode (user_id)
+- - sqlite_autoindex_alembic_version_1
+  - alembic_version
+  - []
+- - sqlite_autoindex_db_dbauthinfo_1
+  - db_dbauthinfo
+  - []
+- - sqlite_autoindex_db_dbcomment_1
+  - db_dbcomment
+  - []
+- - sqlite_autoindex_db_dbcomputer_1
+  - db_dbcomputer
+  - []
+- - sqlite_autoindex_db_dbcomputer_2
+  - db_dbcomputer
+  - []
+- - sqlite_autoindex_db_dbgroup_1
+  - db_dbgroup
+  - []
+- - sqlite_autoindex_db_dbgroup_2
+  - db_dbgroup
+  - []
+- - sqlite_autoindex_db_dbgroup_dbnodes_1
+  - db_dbgroup_dbnodes
+  - []
+- - sqlite_autoindex_db_dblog_1
+  - db_dblog
+  - []
+- - sqlite_autoindex_db_dbnode_1
+  - db_dbnode
+  - []
+- - sqlite_autoindex_db_dbuser_1
+  - db_dbuser
+  - []
+table:
+- - alembic_version
+  - alembic_version
+  - - CREATE TABLE alembic_version (
+    - version_num VARCHAR(32) NOT NULL
+    - )
+    - CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num)
+- - db_dbauthinfo
+  - db_dbauthinfo
+  - - CREATE TABLE db_dbauthinfo (
+    - id INTEGER NOT NULL
+    - aiidauser_id INTEGER NOT NULL
+    - dbcomputer_id INTEGER NOT NULL
+    - metadata JSON NOT NULL
+    - auth_params JSON NOT NULL
+    - enabled BOOLEAN NOT NULL
+    - )
+    - CONSTRAINT db_dbauthinfo_pkey PRIMARY KEY (id)
+    - CONSTRAINT fk_db_dbauthinfo_aiidauser_id_db_dbuser FOREIGN KEY(aiidauser_id)
+      REFERENCES db_dbuser (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+    - CONSTRAINT fk_db_dbauthinfo_dbcomputer_id_db_dbcomputer FOREIGN KEY(dbcomputer_id)
+      REFERENCES db_dbcomputer (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+    - CONSTRAINT uq_db_dbauthinfo_aiidauser_id_dbcomputer_id UNIQUE (aiidauser_id,
+      dbcomputer_id)
+- - db_dbcomment
+  - db_dbcomment
+  - - CREATE TABLE db_dbcomment (
+    - id INTEGER NOT NULL
+    - uuid VARCHAR(32) NOT NULL
+    - dbnode_id INTEGER NOT NULL
+    - ctime DATETIME NOT NULL
+    - mtime DATETIME NOT NULL
+    - user_id INTEGER NOT NULL
+    - content TEXT NOT NULL
+    - )
+    - CONSTRAINT db_dbcomment_pkey PRIMARY KEY (id)
+    - CONSTRAINT fk_db_dbcomment_dbnode_id_db_dbnode FOREIGN KEY(dbnode_id) REFERENCES
+      db_dbnode (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+    - CONSTRAINT fk_db_dbcomment_user_id_db_dbuser FOREIGN KEY(user_id) REFERENCES
+      db_dbuser (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+    - CONSTRAINT uq_db_dbcomment_uuid UNIQUE (uuid)
+- - db_dbcomputer
+  - db_dbcomputer
+  - - CREATE TABLE db_dbcomputer (
+    - id INTEGER NOT NULL
+    - uuid VARCHAR(32) NOT NULL
+    - label VARCHAR(255) NOT NULL
+    - hostname VARCHAR(255) NOT NULL
+    - description TEXT NOT NULL
+    - scheduler_type VARCHAR(255) NOT NULL
+    - transport_type VARCHAR(255) NOT NULL
+    - metadata JSON NOT NULL
+    - )
+    - CONSTRAINT db_dbcomputer_pkey PRIMARY KEY (id)
+    - CONSTRAINT uq_db_dbcomputer_label UNIQUE (label)
+    - CONSTRAINT uq_db_dbcomputer_uuid UNIQUE (uuid)
+- - db_dbgroup
+  - db_dbgroup
+  - - CREATE TABLE db_dbgroup (
+    - id INTEGER NOT NULL
+    - uuid VARCHAR(32) NOT NULL
+    - label VARCHAR(255) NOT NULL
+    - type_string VARCHAR(255) NOT NULL
+    - time DATETIME NOT NULL
+    - description TEXT NOT NULL
+    - extras JSON NOT NULL
+    - user_id INTEGER NOT NULL
+    - )
+    - CONSTRAINT db_dbgroup_pkey PRIMARY KEY (id)
+    - CONSTRAINT fk_db_dbgroup_user_id_db_dbuser FOREIGN KEY(user_id) REFERENCES db_dbuser
+      (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+    - CONSTRAINT uq_db_dbgroup_label_type_string UNIQUE (label, type_string)
+    - CONSTRAINT uq_db_dbgroup_uuid UNIQUE (uuid)
+- - db_dbgroup_dbnodes
+  - db_dbgroup_dbnodes
+  - - CREATE TABLE db_dbgroup_dbnodes (
+    - id INTEGER NOT NULL
+    - dbnode_id INTEGER NOT NULL
+    - dbgroup_id INTEGER NOT NULL
+    - )
+    - CONSTRAINT db_dbgroup_dbnodes_pkey PRIMARY KEY (id)
+    - CONSTRAINT fk_db_dbgroup_dbnodes_dbgroup_id_db_dbgroup FOREIGN KEY(dbgroup_id)
+      REFERENCES db_dbgroup (id) DEFERRABLE INITIALLY DEFERRED
+    - CONSTRAINT fk_db_dbgroup_dbnodes_dbnode_id_db_dbnode FOREIGN KEY(dbnode_id)
+      REFERENCES db_dbnode (id) DEFERRABLE INITIALLY DEFERRED
+    - CONSTRAINT uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id UNIQUE (dbgroup_id, dbnode_id)
+- - db_dblink
+  - db_dblink
+  - - CREATE TABLE db_dblink (
+    - id INTEGER NOT NULL
+    - input_id INTEGER NOT NULL
+    - output_id INTEGER NOT NULL
+    - label VARCHAR(255) NOT NULL
+    - type VARCHAR(255) NOT NULL
+    - )
+    - CONSTRAINT db_dblink_pkey PRIMARY KEY (id)
+    - CONSTRAINT fk_db_dblink_input_id_db_dbnode FOREIGN KEY(input_id) REFERENCES
+      db_dbnode (id) DEFERRABLE INITIALLY DEFERRED
+    - CONSTRAINT fk_db_dblink_output_id_db_dbnode FOREIGN KEY(output_id) REFERENCES
+      db_dbnode (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+- - db_dblog
+  - db_dblog
+  - - CREATE TABLE db_dblog (
+    - id INTEGER NOT NULL
+    - uuid VARCHAR(32) NOT NULL
+    - time DATETIME NOT NULL
+    - loggername VARCHAR(255) NOT NULL
+    - levelname VARCHAR(50) NOT NULL
+    - dbnode_id INTEGER NOT NULL
+    - message TEXT NOT NULL
+    - metadata JSON NOT NULL
+    - )
+    - CONSTRAINT db_dblog_pkey PRIMARY KEY (id)
+    - CONSTRAINT fk_db_dblog_dbnode_id_db_dbnode FOREIGN KEY(dbnode_id) REFERENCES
+      db_dbnode (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+    - CONSTRAINT uq_db_dblog_uuid UNIQUE (uuid)
+- - db_dbnode
+  - db_dbnode
+  - - CREATE TABLE db_dbnode (
+    - id INTEGER NOT NULL
+    - uuid VARCHAR(32) NOT NULL
+    - node_type VARCHAR(255) NOT NULL
+    - process_type VARCHAR(255)
+    - label VARCHAR(255) NOT NULL
+    - description TEXT NOT NULL
+    - ctime DATETIME NOT NULL
+    - mtime DATETIME NOT NULL
+    - attributes JSON
+    - extras JSON
+    - repository_metadata JSON NOT NULL
+    - dbcomputer_id INTEGER
+    - user_id INTEGER NOT NULL
+    - )
+    - CONSTRAINT db_dbnode_pkey PRIMARY KEY (id)
+    - CONSTRAINT fk_db_dbnode_dbcomputer_id_db_dbcomputer FOREIGN KEY(dbcomputer_id)
+      REFERENCES db_dbcomputer (id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
+    - CONSTRAINT fk_db_dbnode_user_id_db_dbuser FOREIGN KEY(user_id) REFERENCES db_dbuser
+      (id) ON DELETE restrict DEFERRABLE INITIALLY DEFERRED
+    - CONSTRAINT uq_db_dbnode_uuid UNIQUE (uuid)
+- - db_dbuser
+  - db_dbuser
+  - - CREATE TABLE db_dbuser (
+    - id INTEGER NOT NULL
+    - email VARCHAR(254) NOT NULL
+    - first_name VARCHAR(254) NOT NULL
+    - last_name VARCHAR(254) NOT NULL
+    - institution VARCHAR(254) NOT NULL
+    - )
+    - CONSTRAINT db_dbuser_pkey PRIMARY KEY (id)
+    - CONSTRAINT uq_db_dbuser_email UNIQUE (email)

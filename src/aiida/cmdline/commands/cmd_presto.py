@@ -17,6 +17,7 @@ import typing as t
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.manage.configuration import get_config_option
 
@@ -55,8 +56,41 @@ def get_default_presto_profile_name():
     show_default=True,
     help='Email of the default user.',
 )
+@click.option(
+    '--use-postgres/--no-use-postgres',
+    is_flag=True,
+    default=False,
+    help='When toggled on, the profile uses a PostgreSQL database instead of an SQLite one. The connection details to '
+    'the PostgreSQL server can be configured with the relevant options. The command attempts to automatically create a '
+    'user and database to use for the profile, but this can fail depending on the configuration of the server.',
+)
+@click.option('--postgres-hostname', type=str, default='localhost', help='The hostname of the PostgreSQL server.')
+@click.option('--postgres-port', type=int, default=5432, help='The port of the PostgreSQL server.')
+@click.option(
+    '--postgres-username',
+    type=str,
+    default='postgres',
+    help='The username of the PostgreSQL user that is authorized to create new databases.',
+)
+@click.option(
+    '--postgres-password',
+    type=str,
+    required=False,
+    help='The password of the PostgreSQL user that is authorized to create new databases.',
+)
+@options.NON_INTERACTIVE(help='Never prompt, such as for sudo password.')
 @click.pass_context
-def verdi_presto(ctx, profile_name, email):
+def verdi_presto(
+    ctx,
+    profile_name,
+    email,
+    use_postgres,
+    postgres_hostname,
+    postgres_port,
+    postgres_username,
+    postgres_password,
+    non_interactive,
+):
     """Set up a new profile in a jiffy.
 
     This command aims to make setting up a new profile as easy as possible. It intentionally provides only a limited
@@ -78,9 +112,13 @@ def verdi_presto(ctx, profile_name, email):
     * Set a number of configuration options with sensible defaults
 
     """
+    import secrets
+
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
     from aiida.common import exceptions
     from aiida.manage.configuration import create_profile, load_profile
+    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+    from aiida.manage.external.postgres import Postgres
     from aiida.orm import Computer
 
     storage_config: dict[str, t.Any] = {}
@@ -93,6 +131,40 @@ def verdi_presto(ctx, profile_name, email):
         echo.echo_report('RabbitMQ server not found: configuring the profile without a broker.')
     else:
         echo.echo_report('RabbitMQ server detected: configuring the profile with a broker.')
+
+    if use_postgres:
+        echo.echo_report('Using PostgreSQL: attempting to connect and create a user and database.')
+        dbinfo = {
+            'host': postgres_hostname,
+            'port': postgres_port,
+            'user': postgres_username,
+            'password': postgres_password,
+        }
+        postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo)
+
+        if not postgres.is_connected:
+            echo.echo_critical(f'Failed to connect to the PostgreSQL server using parameters: {dbinfo}')
+
+        database_name = f'aiida-{profile_name}'
+        database_username = f'aiida-{profile_name}'
+        database_password = secrets.token_hex(15)
+
+        try:
+            database_username, database_name = postgres.create_dbuser_db_safe(
+                dbname=database_name, dbuser=database_username, dbpass=database_password
+            )
+        except Exception as exception:
+            echo.echo_critical(f'Unable to automatically create the PostgreSQL user and database: {exception}')
+
+        storage_backend = 'core.psql_dos'
+        storage_config = {
+            'database_host': postgres_hostname,
+            'database_port': postgres_port,
+            'database_name': database_name,
+            'database_username': database_username,
+            'database_password': database_password,
+            'repository_uri': f'file://{AIIDA_CONFIG_FOLDER / "repository" / profile_name}',
+        }
 
     try:
         profile = create_profile(

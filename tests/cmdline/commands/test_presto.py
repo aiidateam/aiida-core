@@ -30,14 +30,14 @@ def test_get_default_presto_profile_name(monkeypatch, profile_names, expected):
 @pytest.mark.usefixtures('empty_config')
 @pytest.mark.parametrize('with_broker', (True, False))
 def test_presto(run_cli_command, with_broker, monkeypatch):
-    """Test the ``verdi presto``."""
+    """Test ``verdi presto`` with and without a broker present."""
     from aiida.brokers.rabbitmq import defaults
 
     if not with_broker:
         # Patch the RabbitMQ detection function to pretend it could not find the service
         monkeypatch.setattr(defaults, 'detect_rabbitmq_config', lambda: None)
 
-    result = run_cli_command(verdi_presto)
+    result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile `presto`.' in result.output
 
     with profile_context('presto', allow_switch=True) as profile:
@@ -48,3 +48,24 @@ def test_presto(run_cli_command, with_broker, monkeypatch):
             assert profile.process_control_backend == 'core.rabbitmq'
         else:
             assert profile.process_control_backend is None
+
+
+@pytest.mark.usefixtures('empty_config')
+def test_presto_use_postgres(run_cli_command):
+    """Test the ``verdi presto`` with the ``-use-postgres`` flag."""
+    result = run_cli_command(verdi_presto, ['--non-interactive', '--use-postgres'])
+    assert 'Created new profile `presto`.' in result.output
+
+    with profile_context('presto', allow_switch=True) as profile:
+        assert profile.name == 'presto'
+        localhost = Computer.collection.get(label='localhost')
+        assert localhost.is_configured
+        assert profile.storage_backend == 'core.psql_dos'
+
+
+@pytest.mark.usefixtures('empty_config')
+def test_presto_use_postgres_fail(run_cli_command):
+    """Test the ``verdi presto`` with the ``-use-postgres`` flag specifying an incorrect option."""
+    options = ['--non-interactive', '--use-postgres', '--postgres-port', str(5000)]
+    result = run_cli_command(verdi_presto, options, raises=True)
+    assert 'Failed to connect to the PostgreSQL server' in result.output

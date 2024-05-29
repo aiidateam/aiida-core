@@ -13,11 +13,12 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.params.options.commands import setup as options_setup
-from aiida.cmdline.utils import echo
+from aiida.cmdline.utils import decorators, echo
 from aiida.manage.configuration import Profile, load_profile
 
 
 @verdi.command('setup')
+@decorators.deprecated_command('This command is deprecated, use `verdi profile setup core.psql_dos` instead.')
 @options.NON_INTERACTIVE()
 @options_setup.SETUP_PROFILE()
 @options_setup.SETUP_USER_EMAIL()
@@ -137,6 +138,7 @@ def setup(
 
 
 @verdi.command('quicksetup')
+@decorators.deprecated_command('This command is deprecated, use `verdi presto --use-postgres` instead.')
 @options.NON_INTERACTIVE()
 # Cannot use `default` because that will fail validation of the `ProfileParamType` if the profile already exists and it
 # will be validated before the prompt to choose another. The `contextual_default` however, will not trigger the

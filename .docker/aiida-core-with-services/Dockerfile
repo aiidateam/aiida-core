@@ -33,7 +33,6 @@ RUN apt-get update --yes && \
      fix-permissions /opt/rabbitmq_server-${RMQ_VERSION}
 
 # s6-overlay to start services
-COPY --chown="${SYSTEM_UID}:${SYSTEM_GID}" s6-assets/config-quick-setup.yaml "/aiida/assets/config-quick-setup.yaml"
 COPY s6-assets/s6-rc.d /etc/s6-overlay/s6-rc.d
 COPY s6-assets/init /etc/init
 

@@ -46,6 +46,21 @@ def test_help(run_cli_command):
     run_cli_command(cmd_code.setup_code, ['--help'])
 
 
+def test_code_setup_deprecation(run_cli_command):
+    """Checks if a deprecation warning is printed in stdout and stderr."""
+    # Checks if the deprecation warning is present when invoking the help page
+    result = run_cli_command(cmd_code.setup_code, ['--help'])
+    assert 'Deprecated:' in result.output
+    assert 'Deprecated:' in result.stderr
+
+    # Checks if the deprecation warning is present when invoking the command
+    # Runs setup in interactive mode and sends Ctrl+D (\x04) as input so we exit the prompts.
+    # This way we can check if the deprecated message was printed with the first prompt.
+    result = run_cli_command(cmd_code.setup_code, user_input='\x04', use_subprocess=True, raises=True)
+    assert 'Deprecated:' in result.output
+    assert 'Deprecated:' in result.stderr
+
+
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_code_list_no_codes_error_message(run_cli_command):
     """Test ``verdi code list`` when no codes exist."""

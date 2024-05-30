@@ -64,6 +64,7 @@ jobs:
       run: sudo apt update && sudo apt install postgresql
 
     - name: Install aiida-core
+      id: install
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: ${{ matrix.python-version }}
@@ -79,7 +80,7 @@ jobs:
       # Always run this step (otherwise it would be skipped if any of the previous steps fail) but only if the
       # `install` or `tests` steps failed, and the `SLACK_WEBHOOK` is available. The latter is not the case for
       # pull requests that come from forks. This is a limitation of secrets on GHA
-      if: always() && (steps.install.outcome == 'Failure' || steps.tests.outcome == 'Failure') && env.SLACK_WEBHOOK != null
+      if: always() && (steps.install.outcome == 'failure' || steps.tests.outcome == 'failure') && env.SLACK_WEBHOOK != null
       uses: rtCamp/action-slack-notify@v2
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
@@ -127,19 +128,23 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install aiida-core
+      id: install
       uses: ./.github/actions/install-aiida-core
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql
 
     - name: Run tests
-      run: pytest -sv -k 'requires_rmq'
+      id: tests
+      env:
+        AIIDA_WARN_v3: 0
+      run: pytest -sv -m 'requires_rmq'
 
     - name: Slack notification
       # Always run this step (otherwise it would be skipped if any of the previous steps fail) but only if the
       # `install` or `tests` steps failed, and the `SLACK_WEBHOOK` is available. The latter is not the case for
       # pull requests that come from forks. This is a limitation of secrets on GHA
-      if: always() && (steps.install.outcome == 'Failure' || steps.tests.outcome == 'Failure') && env.SLACK_WEBHOOK != null
+      if: always() && (steps.install.outcome == 'failure' || steps.tests.outcome == 'failure') && env.SLACK_WEBHOOK != null
       uses: rtCamp/action-slack-notify@v2
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}

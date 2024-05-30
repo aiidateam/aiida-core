@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Plugin for transport over SSH (and SFTP for file transfer)."""
+
 from __future__ import annotations
 
 import enum

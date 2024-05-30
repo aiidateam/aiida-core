@@ -51,8 +51,8 @@ def test_presto(run_cli_command, with_broker, monkeypatch):
 
 
 @pytest.mark.usefixtures('empty_config')
-def test_presto_use_postgres(run_cli_command):
-    """Test the ``verdi presto`` with the ``-use-postgres`` flag."""
+def test_presto_use_postgres(run_cli_command, manager):
+    """Test the ``verdi presto`` with the ``--use-postgres`` flag."""
     result = run_cli_command(verdi_presto, ['--non-interactive', '--use-postgres'])
     assert 'Created new profile `presto`.' in result.output
 
@@ -61,6 +61,7 @@ def test_presto_use_postgres(run_cli_command):
         localhost = Computer.collection.get(label='localhost')
         assert localhost.is_configured
         assert profile.storage_backend == 'core.psql_dos'
+        assert manager.get_profile_storage()
 
 
 @pytest.mark.usefixtures('empty_config')

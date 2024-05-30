@@ -346,25 +346,23 @@ Below is a list with all available subcommands.
       * Set a number of configuration options with sensible defaults
 
     Options:
-      --profile-name TEXT             Name of the profile. By default, a unique name starting
-                                      with `presto` is automatically generated.  [default:
-                                      (dynamic)]
-      --email TEXT                    Email of the default user.  [default: aiida@localhost]
-      --use-postgres / --no-use-postgres
-                                      When toggled on, the profile uses a PostgreSQL database
-                                      instead of an SQLite one. The connection details to the
-                                      PostgreSQL server can be configured with the relevant
-                                      options. The command attempts to automatically create a
-                                      user and database to use for the profile, but this can
-                                      fail depending on the configuration of the server.
-      --postgres-hostname TEXT        The hostname of the PostgreSQL server.
-      --postgres-port INTEGER         The port of the PostgreSQL server.
-      --postgres-username TEXT        The username of the PostgreSQL user that is authorized
-                                      to create new databases.
-      --postgres-password TEXT        The password of the PostgreSQL user that is authorized
-                                      to create new databases.
-      -n, --non-interactive           Never prompt, such as for sudo password.
-      --help                          Show this message and exit.
+      --profile-name TEXT       Name of the profile. By default, a unique name starting with
+                                `presto` is automatically generated.  [default: (dynamic)]
+      --email TEXT              Email of the default user.  [default: aiida@localhost]
+      --use-postgres            When toggled on, the profile uses a PostgreSQL database
+                                instead of an SQLite one. The connection details to the
+                                PostgreSQL server can be configured with the relevant options.
+                                The command attempts to automatically create a user and
+                                database to use for the profile, but this can fail depending
+                                on the configuration of the server.
+      --postgres-hostname TEXT  The hostname of the PostgreSQL server.
+      --postgres-port INTEGER   The port of the PostgreSQL server.
+      --postgres-username TEXT  The username of the PostgreSQL user that is authorized to
+                                create new databases.
+      --postgres-password TEXT  The password of the PostgreSQL user that is authorized to
+                                create new databases.
+      -n, --non-interactive     Never prompt, such as for sudo password.
+      --help                    Show this message and exit.
 
 
 .. _reference:command-line:verdi-process:

@@ -42,6 +42,52 @@ def get_default_presto_profile_name():
     return f'{DEFAULT_PROFILE_NAME_PREFIX}-{last_index + 1}'
 
 
+def detect_postgres_config(
+    profile_name: str,
+    postgres_hostname: str,
+    postgres_port: int,
+    postgres_username: str,
+    postgres_password: str,
+    non_interactive: bool,
+) -> dict[str, t.Any]:
+    """."""
+    import secrets
+
+    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+    from aiida.manage.external.postgres import Postgres
+
+    dbinfo = {
+        'host': postgres_hostname,
+        'port': postgres_port,
+        'user': postgres_username,
+        'password': postgres_password,
+    }
+    postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo)
+
+    if not postgres.is_connected:
+        echo.echo_critical(f'Failed to connect to the PostgreSQL server using parameters: {dbinfo}')
+
+    database_name = f'aiida-{profile_name}'
+    database_username = f'aiida-{profile_name}'
+    database_password = secrets.token_hex(15)
+
+    try:
+        database_username, database_name = postgres.create_dbuser_db_safe(
+            dbname=database_name, dbuser=database_username, dbpass=database_password
+        )
+    except Exception as exception:
+        echo.echo_critical(f'Unable to automatically create the PostgreSQL user and database: {exception}')
+
+    return {
+        'database_host': postgres_hostname,
+        'database_port': postgres_port,
+        'database_name': database_name,
+        'database_username': database_username,
+        'database_password': database_password,
+        'repository_uri': f'file://{AIIDA_CONFIG_FOLDER / "repository" / profile_name}',
+    }
+
+
 @verdi.command('presto')
 @click.option(
     '--profile-name',
@@ -57,9 +103,8 @@ def get_default_presto_profile_name():
     help='Email of the default user.',
 )
 @click.option(
-    '--use-postgres/--no-use-postgres',
+    '--use-postgres',
     is_flag=True,
-    default=False,
     help='When toggled on, the profile uses a PostgreSQL database instead of an SQLite one. The connection details to '
     'the PostgreSQL server can be configured with the relevant options. The command attempts to automatically create a '
     'user and database to use for the profile, but this can fail depending on the configuration of the server.',
@@ -112,17 +157,28 @@ def verdi_presto(
     * Set a number of configuration options with sensible defaults
 
     """
-    import secrets
-
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
     from aiida.common import exceptions
     from aiida.manage.configuration import create_profile, load_profile
-    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
-    from aiida.manage.external.postgres import Postgres
     from aiida.orm import Computer
 
-    storage_config: dict[str, t.Any] = {}
-    storage_backend = 'core.sqlite_dos'
+    postgres_config_kwargs = {
+        'profile_name': profile_name,
+        'postgres_hostname': postgres_hostname,
+        'postgres_port': postgres_port,
+        'postgres_username': postgres_username,
+        'postgres_password': postgres_password,
+        'non_interactive': non_interactive,
+    }
+    storage_config: dict[str, t.Any] = detect_postgres_config(**postgres_config_kwargs) if use_postgres else {}
+    storage_backend = 'core.psql_dos' if storage_config else 'core.sqlite_dos'
+
+    if use_postgres:
+        echo.echo_report(
+            '`--use-postgres` enabled and database creation successful: configuring the profile to use PostgreSQL.'
+        )
+    else:
+        echo.echo_report('Option `--use-postgres` not enabled: configuring the profile to use SQLite.')
 
     broker_config = detect_rabbitmq_config()
     broker_backend = 'core.rabbitmq' if broker_config is not None else None
@@ -131,40 +187,6 @@ def verdi_presto(
         echo.echo_report('RabbitMQ server not found: configuring the profile without a broker.')
     else:
         echo.echo_report('RabbitMQ server detected: configuring the profile with a broker.')
-
-    if use_postgres:
-        echo.echo_report('Using PostgreSQL: attempting to connect and create a user and database.')
-        dbinfo = {
-            'host': postgres_hostname,
-            'port': postgres_port,
-            'user': postgres_username,
-            'password': postgres_password,
-        }
-        postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo)
-
-        if not postgres.is_connected:
-            echo.echo_critical(f'Failed to connect to the PostgreSQL server using parameters: {dbinfo}')
-
-        database_name = f'aiida-{profile_name}'
-        database_username = f'aiida-{profile_name}'
-        database_password = secrets.token_hex(15)
-
-        try:
-            database_username, database_name = postgres.create_dbuser_db_safe(
-                dbname=database_name, dbuser=database_username, dbpass=database_password
-            )
-        except Exception as exception:
-            echo.echo_critical(f'Unable to automatically create the PostgreSQL user and database: {exception}')
-
-        storage_backend = 'core.psql_dos'
-        storage_config = {
-            'database_host': postgres_hostname,
-            'database_port': postgres_port,
-            'database_name': database_name,
-            'database_username': database_username,
-            'database_password': database_password,
-            'repository_uri': f'file://{AIIDA_CONFIG_FOLDER / "repository" / profile_name}',
-        }
 
     try:
         profile = create_profile(

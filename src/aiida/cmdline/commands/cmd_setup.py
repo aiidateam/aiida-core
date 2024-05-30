@@ -138,7 +138,10 @@ def setup(
 
 
 @verdi.command('quicksetup')
-@decorators.deprecated_command('This command is deprecated, use `verdi presto --use-postgres` instead.')
+@decorators.deprecated_command(
+    'This command is deprecated. For a fully automated alternative, use `verdi presto --use-postgres` instead. '
+    'For full control, use `verdi profile setup core.psql_dos`.'
+)
 @options.NON_INTERACTIVE()
 # Cannot use `default` because that will fail validation of the `ProfileParamType` if the profile already exists and it
 # will be validated before the prompt to choose another. The `contextual_default` however, will not trigger the

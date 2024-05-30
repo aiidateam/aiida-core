@@ -98,7 +98,7 @@ def detect_postgres_config(
 )
 @click.option(
     '--email',
-    default=get_config_option('autofill.user.email') or 'aiida@localhost',
+    default=lambda: get_config_option('autofill.user.email') or 'aiida@localhost',
     show_default=True,
     help='Email of the default user.',
 )
@@ -138,17 +138,13 @@ def verdi_presto(
 ):
     """Set up a new profile in a jiffy.
 
-    This command aims to make setting up a new profile as easy as possible. It intentionally provides only a limited
-    amount of options to customize the profile and by default does not require any options to be specified at all. For
-    full control, please use `verdi profile setup`.
+    This command aims to make setting up a new profile as easy as possible. It does not require any services, such as
+    PostgreSQL and RabbitMQ. It intentionally provides only a limited amount of options to customize the profile and by
+    default does not require any options to be specified at all. To create a new profile with full control over its
+    configuration, please use `verdi profile setup` instead.
 
-    After running `verdi presto` you can immediately start using AiiDA without additional setup. The created profile
-    uses the `core.sqlite_dos` storage plugin which does not require any services, such as PostgreSQL. The broker
-    service RabbitMQ is also optional. The command tries to connect to it using default settings and configures it for
-    the profile if found. Otherwise, the profile is created without a broker, in which case some functionality will be
-    unavailable, most notably running the daemon and submitting processes to said daemon.
-
-    The command performs the following actions:
+    After running `verdi presto` you can immediately start using AiiDA without additional setup. The command performs
+    the following actions:
 
     \b
     * Create a new profile that is set as the new default
@@ -156,6 +152,15 @@ def verdi_presto(
     * Set up the localhost as a `Computer` and configure it
     * Set a number of configuration options with sensible defaults
 
+    By default the command creates a profile that uses SQLite for the database. It automatically checks for RabbitMQ
+    running on the localhost, and, if it can connect, configures that as the broker for the profile. Otherwise, the
+    profile is created without a broker, in which case some functionality will be unavailable, most notably running the
+    daemon and submitting processes to said daemon.
+
+    When the `--use-postgres` flag is toggled, the command tries to connect to the PostgreSQL server with connection
+    paramaters taken from the `--postgres-hostname`, `--postgres-port`, `--postgres-username` and `--postgres-password`
+    options. It uses these credentials to try and automatically create a user and database. If successful, the newly
+    created profile uses the new PostgreSQL database instead of SQLite.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
     from aiida.common import exceptions

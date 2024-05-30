@@ -17,6 +17,7 @@ import typing as t
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.manage.configuration import get_config_option
 
@@ -41,6 +42,52 @@ def get_default_presto_profile_name():
     return f'{DEFAULT_PROFILE_NAME_PREFIX}-{last_index + 1}'
 
 
+def detect_postgres_config(
+    profile_name: str,
+    postgres_hostname: str,
+    postgres_port: int,
+    postgres_username: str,
+    postgres_password: str,
+    non_interactive: bool,
+) -> dict[str, t.Any]:
+    """."""
+    import secrets
+
+    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+    from aiida.manage.external.postgres import Postgres
+
+    dbinfo = {
+        'host': postgres_hostname,
+        'port': postgres_port,
+        'user': postgres_username,
+        'password': postgres_password,
+    }
+    postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo)
+
+    if not postgres.is_connected:
+        echo.echo_critical(f'Failed to connect to the PostgreSQL server using parameters: {dbinfo}')
+
+    database_name = f'aiida-{profile_name}'
+    database_username = f'aiida-{profile_name}'
+    database_password = secrets.token_hex(15)
+
+    try:
+        database_username, database_name = postgres.create_dbuser_db_safe(
+            dbname=database_name, dbuser=database_username, dbpass=database_password
+        )
+    except Exception as exception:
+        echo.echo_critical(f'Unable to automatically create the PostgreSQL user and database: {exception}')
+
+    return {
+        'database_host': postgres_hostname,
+        'database_port': postgres_port,
+        'database_name': database_name,
+        'database_username': database_username,
+        'database_password': database_password,
+        'repository_uri': f'file://{AIIDA_CONFIG_FOLDER / "repository" / profile_name}',
+    }
+
+
 @verdi.command('presto')
 @click.option(
     '--profile-name',
@@ -51,25 +98,53 @@ def get_default_presto_profile_name():
 )
 @click.option(
     '--email',
-    default=get_config_option('autofill.user.email') or 'aiida@localhost',
+    default=lambda: get_config_option('autofill.user.email') or 'aiida@localhost',
     show_default=True,
     help='Email of the default user.',
 )
+@click.option(
+    '--use-postgres',
+    is_flag=True,
+    help='When toggled on, the profile uses a PostgreSQL database instead of an SQLite one. The connection details to '
+    'the PostgreSQL server can be configured with the relevant options. The command attempts to automatically create a '
+    'user and database to use for the profile, but this can fail depending on the configuration of the server.',
+)
+@click.option('--postgres-hostname', type=str, default='localhost', help='The hostname of the PostgreSQL server.')
+@click.option('--postgres-port', type=int, default=5432, help='The port of the PostgreSQL server.')
+@click.option(
+    '--postgres-username',
+    type=str,
+    default='postgres',
+    help='The username of the PostgreSQL user that is authorized to create new databases.',
+)
+@click.option(
+    '--postgres-password',
+    type=str,
+    required=False,
+    help='The password of the PostgreSQL user that is authorized to create new databases.',
+)
+@options.NON_INTERACTIVE(help='Never prompt, such as for sudo password.')
 @click.pass_context
-def verdi_presto(ctx, profile_name, email):
+def verdi_presto(
+    ctx,
+    profile_name,
+    email,
+    use_postgres,
+    postgres_hostname,
+    postgres_port,
+    postgres_username,
+    postgres_password,
+    non_interactive,
+):
     """Set up a new profile in a jiffy.
 
-    This command aims to make setting up a new profile as easy as possible. It intentionally provides only a limited
-    amount of options to customize the profile and by default does not require any options to be specified at all. For
-    full control, please use `verdi profile setup`.
+    This command aims to make setting up a new profile as easy as possible. It does not require any services, such as
+    PostgreSQL and RabbitMQ. It intentionally provides only a limited amount of options to customize the profile and by
+    default does not require any options to be specified at all. To create a new profile with full control over its
+    configuration, please use `verdi profile setup` instead.
 
-    After running `verdi presto` you can immediately start using AiiDA without additional setup. The created profile
-    uses the `core.sqlite_dos` storage plugin which does not require any services, such as PostgreSQL. The broker
-    service RabbitMQ is also optional. The command tries to connect to it using default settings and configures it for
-    the profile if found. Otherwise, the profile is created without a broker, in which case some functionality will be
-    unavailable, most notably running the daemon and submitting processes to said daemon.
-
-    The command performs the following actions:
+    After running `verdi presto` you can immediately start using AiiDA without additional setup. The command performs
+    the following actions:
 
     \b
     * Create a new profile that is set as the new default
@@ -77,14 +152,38 @@ def verdi_presto(ctx, profile_name, email):
     * Set up the localhost as a `Computer` and configure it
     * Set a number of configuration options with sensible defaults
 
+    By default the command creates a profile that uses SQLite for the database. It automatically checks for RabbitMQ
+    running on the localhost, and, if it can connect, configures that as the broker for the profile. Otherwise, the
+    profile is created without a broker, in which case some functionality will be unavailable, most notably running the
+    daemon and submitting processes to said daemon.
+
+    When the `--use-postgres` flag is toggled, the command tries to connect to the PostgreSQL server with connection
+    paramaters taken from the `--postgres-hostname`, `--postgres-port`, `--postgres-username` and `--postgres-password`
+    options. It uses these credentials to try and automatically create a user and database. If successful, the newly
+    created profile uses the new PostgreSQL database instead of SQLite.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
     from aiida.common import exceptions
     from aiida.manage.configuration import create_profile, load_profile
     from aiida.orm import Computer
 
-    storage_config: dict[str, t.Any] = {}
-    storage_backend = 'core.sqlite_dos'
+    postgres_config_kwargs = {
+        'profile_name': profile_name,
+        'postgres_hostname': postgres_hostname,
+        'postgres_port': postgres_port,
+        'postgres_username': postgres_username,
+        'postgres_password': postgres_password,
+        'non_interactive': non_interactive,
+    }
+    storage_config: dict[str, t.Any] = detect_postgres_config(**postgres_config_kwargs) if use_postgres else {}
+    storage_backend = 'core.psql_dos' if storage_config else 'core.sqlite_dos'
+
+    if use_postgres:
+        echo.echo_report(
+            '`--use-postgres` enabled and database creation successful: configuring the profile to use PostgreSQL.'
+        )
+    else:
+        echo.echo_report('Option `--use-postgres` not enabled: configuring the profile to use SQLite.')
 
     broker_config = detect_rabbitmq_config()
     broker_backend = 'core.rabbitmq' if broker_config is not None else None

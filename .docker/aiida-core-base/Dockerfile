@@ -163,7 +163,6 @@ RUN mkdir -p "${CONDA_DIR}/etc/conda/activate.d" && \
      fix-permissions "${CONDA_DIR}"
 
 # COPY AiiDA profile configuration for profile setup init script
-COPY --chown="${SYSTEM_UID}:${SYSTEM_GID}" s6-assets/config-quick-setup.yaml "/aiida/assets/config-quick-setup.yaml"
 COPY s6-assets/s6-rc.d /etc/s6-overlay/s6-rc.d
 COPY s6-assets/init /etc/init
 RUN mkdir /etc/init/run-before-daemon-start && \

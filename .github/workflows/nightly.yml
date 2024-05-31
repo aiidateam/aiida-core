@@ -26,10 +26,6 @@ jobs:
     if: github.repository == 'aiidateam/aiida-core'      # Prevent running the builds on forks as well
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        python-version: ['3.10']
-
     services:
       postgres:
         image: postgres:12
@@ -67,14 +63,14 @@ jobs:
       id: install
       uses: ./.github/actions/install-aiida-core
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.14'
 
     - name: Setup environment
       run: .github/workflows/setup.sh
 
     - name: Run tests
       id: tests
-      run: exit 1 && .github/workflows/tests_nightly.sh
+      run: .github/workflows/tests_nightly.sh
 
     - name: Slack notification
       # Always run this step (otherwise it would be skipped if any of the previous steps fail) but only if the
@@ -130,9 +126,11 @@ jobs:
     - name: Install aiida-core
       id: install
       uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.14'
 
     - name: Install system dependencies
-      run: exit 1 && sudo apt update && sudo apt install postgresql
+      run: sudo apt update && sudo apt install postgresql
 
     - name: Run tests
       id: tests

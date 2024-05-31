@@ -17,6 +17,7 @@ from aiida.common.lang import override
 from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
 from aiida.engine.processes.ports import PortNamespace
 from aiida.manage.caching import disable_caching, enable_caching
+from aiida.orm import to_aiida_type
 from aiida.orm.nodes.caching import NodeCaching
 from aiida.plugins import CalculationFactory
 from plumpy.utils import AttributesFrozendict
@@ -568,3 +569,28 @@ def test_metadata_disable_cache(runner, entry_points):
     with enable_caching():
         process = CachableProcess(runner=runner, inputs={'metadata': {'disable_cache': True}})
         assert not process.node.base.caching.is_created_from_cache
+
+
+def custom_serializer():
+    pass
+
+
+class AutoSerializeProcess(Process):
+    """Check the automatic assignment of ``to_aiida_type`` serializer."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('non_metadata_input')
+        spec.input('metadata_input', is_metadata=True)
+        spec.input('custom_input', serializer=custom_serializer)
+
+
+def test_auto_default_serializer():
+    """Test that all inputs ports automatically have ``to_aiida_type`` set as the serializer.
+
+    Exceptions are if the port is a metadata port or it defines an explicit serializer
+    """
+    assert AutoSerializeProcess.spec().inputs['non_metadata_input'].serializer is to_aiida_type
+    assert AutoSerializeProcess.spec().inputs['metadata_input'].serializer is None
+    assert AutoSerializeProcess.spec().inputs['custom_input'].serializer is custom_serializer

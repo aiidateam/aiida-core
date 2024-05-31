@@ -63,7 +63,7 @@ jobs:
       id: install
       uses: ./.github/actions/install-aiida-core
       with:
-        python-version: '3.14'
+        python-version: '3.11'
 
     - name: Setup environment
       run: .github/workflows/setup.sh
@@ -88,7 +88,7 @@ jobs:
 
 
   # Run a subset of test suite to ensure compatibility with latest RabbitMQ releases
-  rabbitmq_tests:
+  rabbitmq-tests:
 
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -127,7 +127,7 @@ jobs:
       id: install
       uses: ./.github/actions/install-aiida-core
       with:
-        python-version: '3.14'
+        python-version: '3.11'
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql

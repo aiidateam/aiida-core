@@ -39,7 +39,7 @@ def parse_sshconfig(computername):
     try:
         with open(os.path.expanduser('~/.ssh/config'), encoding='utf8') as fhandle:
             config.parse(fhandle)
-    except IOError:
+    except OSError:
         # No file found, so empty configuration
         pass
 
@@ -595,8 +595,8 @@ class SshTransport(Transport):
             except SFTPError as exc:
                 # e.args[0] is an error code. For instance,
                 # 20 is 'the object is not a directory'
-                # Here I just re-raise the message as IOError
-                raise IOError(exc.args[1])
+                # Here I just re-raise the message as OSError
+                raise OSError(exc.args[1])
 
         # Paramiko already checked that path is a folder, otherwise I would
         # have gotten an exception. Now, I want to check that I have read
@@ -609,10 +609,10 @@ class SshTransport(Transport):
         # read permissions, this will raise an exception.
         try:
             self.stat('.')
-        except IOError as exc:
+        except OSError as exc:
             if 'Permission denied' in str(exc):
                 self.chdir(old_path)
-            raise IOError(str(exc))
+            raise OSError(str(exc))
 
     def normalize(self, path='.'):
         """Returns the normalized path (removing double slashes, etc...)"""
@@ -703,7 +703,7 @@ class SshTransport(Transport):
 
         try:
             self.sftp.mkdir(path)
-        except IOError as exc:
+        except OSError as exc:
             if os.path.isabs(path):
                 raise OSError(
                     "Error during mkdir of '{}', "
@@ -723,7 +723,7 @@ class SshTransport(Transport):
 
         :param path: remote path to delete
 
-        :raise IOError: if the rm execution failed.
+        :raise OSError: if the rm execution failed.
         """
         # Assuming linux rm command!
 
@@ -742,7 +742,7 @@ class SshTransport(Transport):
                 self.logger.warning(f'There was nonempty stderr in the rm command: {stderr}')
             return True
         self.logger.error(f"Problem executing rm. Exit code: {retval}, stdout: '{stdout}', stderr: '{stderr}'")
-        raise IOError(f'Error while executing rm. Exit code: {retval}')
+        raise OSError(f'Error while executing rm. Exit code: {retval}')
 
     def rmdir(self, path):
         """Remove the folder named 'path' if empty."""
@@ -765,7 +765,7 @@ class SshTransport(Transport):
             return False
         try:
             return S_ISDIR(self.stat(path).st_mode)
-        except IOError as exc:
+        except OSError as exc:
             if getattr(exc, 'errno', None) == 2:
                 # errno=2 means path does not exist: I return False
                 return False
@@ -778,7 +778,7 @@ class SshTransport(Transport):
         :param mode: new permission bits (integer)
         """
         if not path:
-            raise IOError('Input path is an empty argument.')
+            raise OSError('Input path is an empty argument.')
         return self.sftp.chmod(path, mode)
 
     @staticmethod
@@ -900,7 +900,7 @@ class SshTransport(Transport):
 
         :raise ValueError: if local path is invalid
         :raise OSError: if the localpath does not exist, or trying to overwrite
-        :raise IOError: if remotepath is invalid
+        :raise OSError: if remotepath is invalid
 
         .. note:: setting dereference equal to True could cause infinite loops.
               see os.walk() documentation
@@ -918,7 +918,7 @@ class SshTransport(Transport):
             raise ValueError(f'Input localpath is not a folder: {localpath}')
 
         if not remotepath:
-            raise IOError('remotepath must be a non empty string')
+            raise OSError('remotepath must be a non empty string')
 
         if self.path_exists(remotepath) and not overwrite:
             raise OSError("Can't overwrite existing files")
@@ -937,7 +937,7 @@ class SshTransport(Transport):
 
             try:
                 self.stat(os.path.join(remotepath, this_basename))
-            except IOError as exc:
+            except OSError as exc:
                 import errno
 
                 if exc.errno == errno.ENOENT:  # Missing file
@@ -963,7 +963,7 @@ class SshTransport(Transport):
             Default = False
 
         :raise ValueError: if local path is invalid
-        :raise IOError: if the remotepath is not found
+        :raise OSError: if the remotepath is not found
         """
         if not dereference:
             raise NotImplementedError
@@ -981,7 +981,7 @@ class SshTransport(Transport):
             if len(to_copy_list) > 1:
                 # I can't scp more than one file on a single file
                 if os.path.isfile(localpath):
-                    raise IOError('Remote destination is not a directory')
+                    raise OSError('Remote destination is not a directory')
                 # I can't scp more than one file in a non existing directory
                 elif not os.path.exists(localpath):  # this should hold only for files
                     raise OSError('Remote directory does not exist')
@@ -1010,7 +1010,7 @@ class SshTransport(Transport):
         elif ignore_nonexisting:
             pass
         else:
-            raise IOError(f'The remote path {remotepath} does not exist')
+            raise OSError(f'The remote path {remotepath} does not exist')
 
     def getfile(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):
         """Get a file from remote to local.
@@ -1032,10 +1032,10 @@ class SshTransport(Transport):
         if not dereference:
             raise NotImplementedError
 
-        # Workaround for bug #724 in paramiko -- remove localpath on IOError
+        # Workaround for bug #724 in paramiko -- remove localpath on OSError
         try:
             return self.sftp.get(remotepath, localpath, callback)
-        except IOError:
+        except OSError:
             try:
                 os.remove(localpath)
             except OSError:
@@ -1054,14 +1054,14 @@ class SshTransport(Transport):
             Default = False
 
         :raise ValueError: if local path is invalid
-        :raise IOError: if the remotepath is not found
+        :raise OSError: if the remotepath is not found
         :raise OSError: if unintentionally overwriting
         """
         if not dereference:
             raise NotImplementedError
 
         if not remotepath:
-            raise IOError('Remotepath must be a non empty string')
+            raise OSError('Remotepath must be a non empty string')
         if not localpath:
             raise ValueError('Localpaths must be a non empty string')
 
@@ -1069,7 +1069,7 @@ class SshTransport(Transport):
             raise ValueError('Localpaths must be an absolute path')
 
         if not self.isdir(remotepath):
-            raise IOError(f'Input remotepath is not a folder: {localpath}')
+            raise OSError(f'Input remotepath is not a folder: {localpath}')
 
         if os.path.exists(localpath) and not overwrite:
             raise OSError("Can't overwrite existing files")
@@ -1124,7 +1124,7 @@ class SshTransport(Transport):
             Default = False.
         :param recursive: if True copy directories recursively, otherwise only copy the specified file(s)
         :type recursive: bool
-        :raise IOError: if the cp execution failed.
+        :raise OSError: if the cp execution failed.
 
         .. note:: setting dereference equal to True could cause infinite loops.
         """
@@ -1188,7 +1188,7 @@ class SshTransport(Transport):
                     retval, stdout, stderr, command
                 )
             )
-            raise IOError(
+            raise OSError(
                 'Error while executing cp. Exit code: {}, ' "stdout: '{}', stderr: '{}', " "command: '{}'".format(
                     retval, stdout, stderr, command
                 )
@@ -1238,7 +1238,7 @@ class SshTransport(Transport):
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
 
-        :raises IOError: if oldpath/newpath is not found
+        :raises OSError: if oldpath/newpath is not found
         :raises ValueError: if sroldpathc/newpath is not a valid string
         """
         if not oldpath:
@@ -1247,10 +1247,10 @@ class SshTransport(Transport):
             raise ValueError(f'Destination {newpath} is not a valid string')
         if not self.isfile(oldpath):
             if not self.isdir(oldpath):
-                raise IOError(f'Source {oldpath} does not exist')
+                raise OSError(f'Source {oldpath} does not exist')
         if not self.isfile(newpath):
             if not self.isdir(newpath):
-                raise IOError(f'Destination {newpath} does not exist')
+                raise OSError(f'Destination {newpath} does not exist')
 
         return self.sftp.rename(oldpath, newpath)
 
@@ -1268,7 +1268,7 @@ class SshTransport(Transport):
                 f"stat for path '{path}' ('{self.normalize(path)}'): {self.stat(path)} [{self.stat(path).st_mode}]"
             )
             return S_ISREG(self.stat(path).st_mode)
-        except IOError as exc:
+        except OSError as exc:
             if getattr(exc, 'errno', None) == 2:
                 # errno=2 means path does not exist: I return False
                 return False
@@ -1489,7 +1489,7 @@ class SshTransport(Transport):
 
         try:
             self.stat(path)
-        except IOError as exc:
+        except OSError as exc:
             if exc.errno == errno.ENOENT:
                 return False
             raise

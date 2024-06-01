@@ -424,7 +424,7 @@ class BaseRestartWorkChain(WorkChain):
                 try:
                     called_descendant.outputs.remote_folder._clean()
                     cleaned_calcs.append(str(called_descendant.pk))
-                except (IOError, OSError, KeyError):
+                except (OSError, OSError, KeyError):
                     pass
 
         if cleaned_calcs:

@@ -277,7 +277,7 @@ class TestDirectoryManipulation:
             transport.rmdir(dest_directory)
 
     def test_dir_permissions_creation_modification(self, custom_transport):
-        """Verify if chmod raises IOError when trying to change bits on a
+        """Verify if chmod raises OSError when trying to change bits on a
         non-existing folder
         """
         with custom_transport as transport:
@@ -315,11 +315,11 @@ class TestDirectoryManipulation:
 
             # change permissions of an empty string, non existing folder.
             fake_dir = ''
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.chmod(fake_dir, 0o777)
 
             fake_dir = 'pippo'
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 # chmod to a non existing folder
                 transport.chmod(fake_dir, 0o777)
 
@@ -350,7 +350,7 @@ class TestDirectoryManipulation:
 
             old_cwd = transport.getcwd()
 
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.chdir(directory)
 
             new_cwd = transport.getcwd()
@@ -382,7 +382,7 @@ class TestDirectoryManipulation:
             fake_folder = 'pippo'
             assert not transport.isfile(fake_folder)
             assert not transport.isdir(fake_folder)
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.chdir(fake_folder)
 
     def test_chdir_to_empty_string(self, custom_transport):
@@ -482,9 +482,9 @@ class TestPutGetFile:
                 transport.putfile(retrieved_file_name, remote_file_name)
 
             # remote_file_name does not exist
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.get(remote_file_name, retrieved_file_name)
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.getfile(remote_file_name, retrieved_file_name)
 
             transport.put(local_file_name, remote_file_name)
@@ -534,9 +534,9 @@ class TestPutGetFile:
                 transport.putfile('', remote_file_name)
 
             # remote path is an empty string
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.put(local_file_name, '')
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.putfile(local_file_name, '')
 
             transport.put(local_file_name, remote_file_name)
@@ -544,9 +544,9 @@ class TestPutGetFile:
             transport.putfile(local_file_name, remote_file_name)
 
             # remote path is an empty string
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.get('', retrieved_file_name)
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.getfile('', retrieved_file_name)
 
             # local path is an empty string
@@ -952,11 +952,11 @@ class TestPutGetTree:
                 transport.puttree(retrieved_subfolder, remote_subfolder)
 
             # remote_file_name does not exist
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.get('non_existing', retrieved_subfolder)
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.getfile('non_existing', retrieved_subfolder)
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.gettree('non_existing', retrieved_subfolder)
 
             transport.put(local_subfolder, remote_subfolder)
@@ -1010,13 +1010,13 @@ class TestPutGetTree:
                 transport.puttree('', remote_subfolder)
 
             # remote path is an empty string
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.puttree(local_subfolder, '')
 
             transport.puttree(local_subfolder, remote_subfolder)
 
             # remote path is an empty string
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 transport.gettree('', retrieved_subfolder)
 
             # local path is an empty string

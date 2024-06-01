@@ -192,7 +192,7 @@ class DaemonClient:
             try:
                 with open(self.circus_port_file, 'r', encoding='utf8') as fhandle:
                     return int(fhandle.read().strip())
-            except (ValueError, IOError):
+            except (ValueError, OSError):
                 raise RuntimeError('daemon is running so port file should have been there but could not read it')
         else:
             port = self.get_available_port()
@@ -241,7 +241,7 @@ class DaemonClient:
                 with open(self.circus_socket_file, 'r', encoding='utf8') as fhandle:
                     content = fhandle.read().strip()
                 return content
-            except (ValueError, IOError):
+            except (ValueError, OSError):
                 raise RuntimeError('daemon is running so sockets file should have been there but could not read it')
         else:
             # The SOCKET_DIRECTORY is already set, a temporary directory was already created and the same should be used
@@ -265,7 +265,7 @@ class DaemonClient:
                 with open(self.circus_pid_file, 'r', encoding='utf8') as fhandle:
                     content = fhandle.read().strip()
                 return int(content)
-            except (ValueError, IOError):
+            except (ValueError, OSError):
                 return None
         else:
             return None

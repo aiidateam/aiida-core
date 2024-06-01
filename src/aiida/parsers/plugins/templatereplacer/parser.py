@@ -30,7 +30,7 @@ class TemplatereplacerParser(Parser):
         try:
             with output_folder.base.repository.open(output_file, 'r') as handle:
                 result = handle.read()
-        except (OSError, IOError):
+        except OSError:
             self.logger.exception(f'unable to parse the output for CalcJobNode<{self.node.pk}>')
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
 

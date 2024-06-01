@@ -248,7 +248,7 @@ class Transport(abc.ABC):
         """Change directory to 'path'
 
         :param str path: path to change working directory into.
-        :raises: IOError, if the requested path does not exist
+        :raises: OSError, if the requested path does not exist
         :rtype: str
         """
 
@@ -284,7 +284,7 @@ class Transport(abc.ABC):
         :param recursive: if True copy directories recursively, otherwise only copy the specified file(s)
         :type recursive: bool
 
-        :raises: IOError, if one of src or dst does not exist
+        :raises: OSError, if one of src or dst does not exist
         """
 
     @abc.abstractmethod
@@ -297,7 +297,7 @@ class Transport(abc.ABC):
         :param dereference: if True copy the contents of any symlinks found, otherwise copy the symlinks themselves
         :type dereference: bool
 
-        :raises IOError: if one of src or dst does not exist
+        :raises OSError: if one of src or dst does not exist
         """
 
     @abc.abstractmethod
@@ -310,7 +310,7 @@ class Transport(abc.ABC):
         :param dereference: if True copy the contents of any symlinks found, otherwise copy the symlinks themselves
         :type dereference: bool
 
-        :raise IOError: if one of src or dst does not exist
+        :raise OSError: if one of src or dst does not exist
         """
 
     def copy_from_remote_to_remote(self, transportdestination, remotesource, remotedestination, **kwargs):
@@ -570,7 +570,7 @@ class Transport(abc.ABC):
 
         :param str path: path to be normalized
 
-        :raise IOError: if the path can't be resolved on the server
+        :raise OSError: if the path can't be resolved on the server
         """
 
     @abc.abstractmethod
@@ -608,7 +608,7 @@ class Transport(abc.ABC):
 
         :param str path: path to file to remove
 
-        :raise IOError: if the path is a directory
+        :raise OSError: if the path is a directory
         """
 
     @abc.abstractmethod
@@ -618,7 +618,7 @@ class Transport(abc.ABC):
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
 
-        :raises IOError: if oldpath/newpath is not found
+        :raises OSError: if oldpath/newpath is not found
         :raises ValueError: if oldpath/newpath is not a valid string
         """
 
@@ -677,7 +677,7 @@ class Transport(abc.ABC):
             return username.strip()
 
         self.logger.error(f"Problem executing whoami. Exit code: {retval}, stdout: '{username}', stderr: '{stderr}'")
-        raise IOError(f'Error while executing whoami. Exit code: {retval}')
+        raise OSError(f'Error while executing whoami. Exit code: {retval}')
 
     @abc.abstractmethod
     def path_exists(self, path):

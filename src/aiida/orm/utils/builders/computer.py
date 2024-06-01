@@ -66,6 +66,7 @@ class ComputerBuilder:
 
     def new(self):
         """Build and return a new computer instance (not stored)"""
+        from aiida.common.warnings import warn_deprecation
         from aiida.manage import get_manager
         from aiida.orm import Computer
 
@@ -89,8 +90,12 @@ class ComputerBuilder:
         computer.set_shebang(self._get_and_count('shebang', used))
 
         mpiprocs_per_machine = self._get_and_count('mpiprocs_per_machine', used)
-        # In the command line, 0 means unspecified
         if mpiprocs_per_machine == 0:
+            warn_deprecation(
+                'Specifying `0` to not set `default_mpiprocs_per_machine` is deprecated. If you are in interactive '
+                'mode on the CLI, just specify `!` instead.',
+                version=3,
+            )
             mpiprocs_per_machine = None
         if mpiprocs_per_machine is not None:
             try:

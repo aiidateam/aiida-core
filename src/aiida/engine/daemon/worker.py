@@ -46,6 +46,9 @@ def start_daemon_worker(foreground: bool = False) -> None:
     daemon_client = get_daemon_client()
     configure_logging(daemon=not foreground, daemon_log_file=daemon_client.daemon_log_file)
 
+    LOGGER.debug(f'sys.executable: {sys.executable}')
+    LOGGER.debug(f'sys.path: {sys.path}')
+
     try:
         manager = get_manager()
         runner = manager.create_daemon_runner()

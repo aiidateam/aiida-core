@@ -520,7 +520,7 @@ class CalcJobNode(CalculationNode):
 
         try:
             stdout = retrieved_node.base.repository.get_object_content(filename)
-        except IOError:
+        except OSError:
             stdout = None
 
         return stdout
@@ -538,7 +538,7 @@ class CalcJobNode(CalculationNode):
 
         try:
             stderr = retrieved_node.base.repository.get_object_content(filename)
-        except IOError:
+        except OSError:
             stderr = None
 
         return stderr

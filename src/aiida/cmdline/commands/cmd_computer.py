@@ -135,7 +135,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo, computer):
 
     try:
         transport.chdir(workdir)
-    except IOError:
+    except OSError:
         transport.makedirs(workdir)
         transport.chdir(workdir)
 

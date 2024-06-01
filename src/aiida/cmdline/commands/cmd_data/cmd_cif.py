@@ -91,7 +91,7 @@ def cif_content(data):
     for node in data:
         try:
             echo.echo(node.get_content())
-        except IOError as exception:
+        except OSError as exception:
             echo.echo_warning(f'could not read the content for CifData<{node.pk}>: {exception!s}')
 
 

@@ -143,7 +143,6 @@ def test_no_import_group(run_cli_command, newest_archive):
     assert Group.collection.count() == 6
 
 
-@pytest.mark.skip('Due to summary being logged, this can not be checked against `results.output`.')
 def test_comment_mode(run_cli_command, newest_archive):
     """Test toggling comment mode flag"""
     archives = [get_archive_file(newest_archive, filepath=ARCHIVE_PATH)]

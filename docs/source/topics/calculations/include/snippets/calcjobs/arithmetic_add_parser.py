@@ -10,7 +10,7 @@ class ArithmeticAddParser(Parser):
         try:
             with output_folder.open(self.node.get_option('output_filename'), 'r') as handle:
                 result = self.parse_stdout(handle)
-        except (OSError, IOError):
+        except OSError:
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
 
         if result is None:

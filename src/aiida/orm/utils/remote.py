@@ -34,7 +34,7 @@ def clean_remote(transport, path):
     try:
         transport.chdir(basedir)
         transport.rmtree(relative_path)
-    except IOError:
+    except OSError:
         pass
 
 

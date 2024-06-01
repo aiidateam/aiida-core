@@ -139,7 +139,7 @@ def calcjob_remotecat(calcjob, path):
             remote_folder.getfile(path, tmp_path.name)
             with open(tmp_path.name, 'rb') as handle:
                 shutil.copyfileobj(handle, sys.stdout.buffer)
-        except IOError as exception:
+        except OSError as exception:
             echo.echo_critical(str(exception))
 
 

@@ -45,7 +45,7 @@ class FunctionCalculationMixin:
 
         try:
             source_list, starting_line_number = inspect.getsourcelines(func)
-        except (IOError, OSError):
+        except OSError:
             pass
         else:
             self._set_function_starting_line_number(starting_line_number)
@@ -63,7 +63,7 @@ class FunctionCalculationMixin:
                     self.base.repository.put_object_from_filelike(  # type: ignore[attr-defined]
                         handle, self.FUNCTION_SOURCE_FILE_PATH
                     )
-        except (IOError, OSError):
+        except OSError:
             pass
 
     @property

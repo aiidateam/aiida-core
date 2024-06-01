@@ -60,8 +60,8 @@ class RemoteData(Data):
         with transport:
             try:
                 transport.chdir(self.get_remote_path())
-            except IOError:
-                # If the transport IOError the directory no longer exists and was deleted
+            except OSError:
+                # If the transport OSError the directory no longer exists and was deleted
                 return True
 
             return not transport.listdir()
@@ -78,9 +78,9 @@ class RemoteData(Data):
             try:
                 full_path = os.path.join(self.get_remote_path(), relpath)
                 transport.getfile(full_path, destpath)
-            except IOError as exception:
+            except OSError as exception:
                 if exception.errno == 2:  # file does not exist
-                    raise IOError(
+                    raise OSError(
                         'The required remote file {} on {} does not exist or has been deleted.'.format(
                             full_path, self.computer.label
                         )
@@ -99,9 +99,9 @@ class RemoteData(Data):
             try:
                 full_path = os.path.join(self.get_remote_path(), relpath)
                 transport.chdir(full_path)
-            except IOError as exception:
+            except OSError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
-                    exc = IOError(
+                    exc = OSError(
                         f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
                         'directory or has been deleted.'
                     )
@@ -112,9 +112,9 @@ class RemoteData(Data):
 
             try:
                 return transport.listdir()
-            except IOError as exception:
+            except OSError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
-                    exc = IOError(
+                    exc = OSError(
                         f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
                         'directory or has been deleted.'
                     )
@@ -135,9 +135,9 @@ class RemoteData(Data):
             try:
                 full_path = os.path.join(self.get_remote_path(), path)
                 transport.chdir(full_path)
-            except IOError as exception:
+            except OSError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
-                    exc = IOError(
+                    exc = OSError(
                         f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
                         'directory or has been deleted.'
                     )
@@ -148,9 +148,9 @@ class RemoteData(Data):
 
             try:
                 return transport.listdir_withattributes()
-            except IOError as exception:
+            except OSError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
-                    exc = IOError(
+                    exc = OSError(
                         f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
                         'directory or has been deleted.'
                     )

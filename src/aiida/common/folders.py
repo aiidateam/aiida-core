@@ -184,7 +184,7 @@ class Folder:
                     # This automatically overwrites files
                     shutil.copyfile(src, dest_abs_path)
                 else:
-                    raise IOError(f'destination already exists: {os.path.join(dest_abs_path)}')
+                    raise OSError(f'destination already exists: {os.path.join(dest_abs_path)}')
             else:
                 shutil.copyfile(src, dest_abs_path)
         elif os.path.isdir(src):
@@ -197,7 +197,7 @@ class Folder:
                     # This automatically overwrites files
                     shutil.copytree(src, dest_abs_path)
                 else:
-                    raise IOError(f'destination already exists: {os.path.join(dest_abs_path)}')
+                    raise OSError(f'destination already exists: {os.path.join(dest_abs_path)}')
             else:
                 shutil.copytree(src, dest_abs_path)
         else:
@@ -339,11 +339,11 @@ class Folder:
         :param move: if True, the srcdir is moved to the repository. Otherwise, it is only copied.
         :type move: bool
         :param overwrite: if True, the folder will be erased first.
-            if False, an IOError is raised if the folder already exists.
+            if False, an OSError is raised if the folder already exists.
             Whatever the value of this flag, parent directories will be created, if needed.
         :type overwrite: bool
 
-        :raises IOError: in case of problems accessing or writing the files.
+        :raises OSError: in case of problems accessing or writing the files.
         :raises OSError: in case of problems accessing or writing the files (from ``shutil`` module).
         :raises ValueError: if the section is not recognized.
         """
@@ -352,7 +352,7 @@ class Folder:
         if overwrite:
             self.erase()
         elif self.exists():
-            raise IOError(f'Location {self.abspath} already exists, and overwrite is set to False')
+            raise OSError(f'Location {self.abspath} already exists, and overwrite is set to False')
 
         # Create parent dir, if needed, with the right mode
         pardir = os.path.dirname(self.abspath)

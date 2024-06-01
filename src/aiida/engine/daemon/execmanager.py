@@ -116,7 +116,7 @@ def upload_calculation(
         # If it already exists, no exception is raised
         try:
             transport.chdir(remote_working_directory)
-        except IOError:
+        except OSError:
             logger.debug(
                 f'[submission of calculation {node.pk}] Unable to '
                 f'chdir in {remote_working_directory}, trying to create it'
@@ -296,7 +296,7 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
                     f'[submission of calculation {node.pk}] Unable to copy remote '
                     f'resource from {remote_abs_path} to {dest_rel_path}! NOT Stopping but just ignoring!.'
                 )
-            except (IOError, OSError):
+            except OSError:
                 logger.warning(
                     f'[submission of calculation {node.pk}] Unable to copy remote '
                     f'resource from {remote_abs_path} to {dest_rel_path}! Stopping.'
@@ -318,14 +318,14 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
             try:
                 transport.makedirs(remote_dirname, ignore_existing=True)
                 transport.symlink(remote_abs_path, dest_rel_path)
-            except (IOError, OSError):
+            except OSError:
                 logger.warning(
                     f'[submission of calculation {node.pk}] Unable to create remote symlink '
                     f'from {remote_abs_path} to {dest_rel_path}! Stopping.'
                 )
                 raise
         else:
-            raise IOError(
+            raise OSError(
                 f'It is not possible to create a symlink between two different machines for calculation {node.pk}'
             )
 
@@ -459,7 +459,7 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
 
             try:
                 transport.copy(str(source_filepath), str(target_filepath))
-            except (IOError, ValueError) as exception:
+            except (OSError, ValueError) as exception:
                 EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
             else:
                 EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')

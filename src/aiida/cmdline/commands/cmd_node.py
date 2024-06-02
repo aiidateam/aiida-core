@@ -15,6 +15,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
+from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo, echo_tabulate, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
@@ -439,8 +440,10 @@ def verdi_graph():
 )
 @click.option(
     '--identifier',
+    'identifiers',
     help='the type of identifier to use within the node text',
-    default='uuid',
+    default=('uuid',),
+    cls=MultipleValueOption,
     type=click.Choice(['pk', 'uuid', 'label']),
 )
 @click.option(
@@ -483,7 +486,7 @@ def verdi_graph():
 def graph_generate(
     root_nodes,
     link_types,
-    identifier,
+    identifiers,
     ancestor_depth,
     descendant_depth,
     process_out,
@@ -506,7 +509,7 @@ def graph_generate(
         output_file = pathlib.Path(f'{pks}.{engine}.{output_format}')
 
     echo.echo_info(f'Initiating graphviz engine: {engine}')
-    graph = Graph(engine=engine, node_id_type=identifier)
+    graph = Graph(engine=engine, node_id_type=identifiers)
     link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
 
     for root_node in root_nodes:

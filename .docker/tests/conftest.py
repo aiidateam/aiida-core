@@ -49,6 +49,7 @@ def _docker_service_wait(docker_services):
     def is_container_ready():
         try:
             output = docker_compose.execute('exec -T aiida verdi status').decode().strip()
+            print('OUTPUT', output)
         except Exception:
             return False
         return '✔ broker:' in output and 'Daemon is running' in output

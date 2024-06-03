@@ -16,6 +16,7 @@ from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, RemoteData, SinglefileData
+from aiida.plugins import entry_point
 from aiida.transports.plugins.local import LocalTransport
 
 
@@ -39,10 +40,17 @@ def file_hierarchy_simple():
     }
 
 
-@pytest.fixture
-def node_and_calc_info(aiida_localhost, aiida_code_installed):
+@pytest.fixture(params=entry_point.get_entry_point_names('aiida.transports'))
+def node_and_calc_info(aiida_localhost, aiida_computer_ssh, aiida_code_installed, request):
     """Return a ``CalcJobNode`` and associated ``CalcInfo`` instance."""
-    node = CalcJobNode(computer=aiida_localhost)
+
+    if request.param == 'core.local':
+        node = CalcJobNode(computer=aiida_localhost)
+    elif request.param == 'core.ssh':
+        node = CalcJobNode(computer=aiida_computer_ssh())
+    else:
+        raise ValueError(f'unsupported transport: {request.param}')
+
     node.store()
 
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash').store()
@@ -157,7 +165,7 @@ def test_upload_local_copy_list(
     node, calc_info = node_and_calc_info
     calc_info.local_copy_list = [[folder.uuid] + local_copy_list]
 
-    with LocalTransport() as transport:
+    with node.computer.get_transport() as transport:
         execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
@@ -194,7 +202,7 @@ def test_upload_local_copy_list_files_folders(
         (inputs['folder'].uuid, None, '.'),
     ]
 
-    with LocalTransport() as transport:
+    with node.computer.get_transport() as transport:
         execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
@@ -225,7 +233,7 @@ def test_upload_remote_symlink_list(
         (node.computer.uuid, str(tmp_path / 'file_a.txt'), 'file_a.txt'),
     ]
 
-    with LocalTransport() as transport:
+    with node.computer.get_transport() as transport:
         execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     filepath_workdir = pathlib.Path(node.get_remote_workdir())
@@ -257,8 +265,10 @@ def test_upload_remote_symlink_list(
         ),
     ),
 )
-def test_upload_file_copy_operation_order(node_and_calc_info, aiida_localhost, tmp_path, order, expected):
+def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, order, expected):
     """Test the ``CalcInfo.file_copy_operation_order`` controls the copy order."""
+    node, calc_info = node_and_calc_info
+
     dirpath_remote = tmp_path / 'remote'
     dirpath_remote.mkdir()
     dirpath_local = tmp_path / 'local'
@@ -271,7 +281,7 @@ def test_upload_file_copy_operation_order(node_and_calc_info, aiida_localhost, t
     filepath_local = dirpath_local / 'file.txt'
     filepath_local.write_text('local')
 
-    remote_data = RemoteData(remote_path=str(dirpath_remote), computer=aiida_localhost)
+    remote_data = RemoteData(remote_path=str(dirpath_remote), computer=node.computer)
     folder_data = FolderData(tree=dirpath_local)
     sandbox = SandboxFolder(dirpath_sandbox)
     sandbox.create_file_from_filelike(io.BytesIO(b'sandbox'), 'file.txt')
@@ -280,14 +290,14 @@ def test_upload_file_copy_operation_order(node_and_calc_info, aiida_localhost, t
         'local': folder_data,
         'remote': remote_data,
     }
-    node, calc_info = node_and_calc_info
-    calc_info.remote_copy_list = ((aiida_localhost.uuid, str(filepath_remote), 'file.txt'),)
+
+    calc_info.remote_copy_list = ((node.computer.uuid, str(filepath_remote), 'file.txt'),)
     calc_info.local_copy_list = ((folder_data.uuid, 'file.txt', 'file.txt'),)
 
     if order is not None:
         calc_info.file_copy_operation_order = order
 
-    with LocalTransport() as transport:
+    with node.computer.get_transport() as transport:
         execmanager.upload_calculation(node, transport, calc_info, sandbox, inputs)
         filepath = pathlib.Path(node.get_remote_workdir()) / 'file.txt'
         assert filepath.is_file()

@@ -9,9 +9,7 @@
 """Tests for the :mod:`aiida.engine.daemon.execmanager` module."""
 
 import io
-import os
 import pathlib
-import typing
 
 import pytest
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
@@ -19,45 +17,6 @@ from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, RemoteData, SinglefileData
 from aiida.transports.plugins.local import LocalTransport
-
-
-def serialize_file_hierarchy(dirpath: pathlib.Path) -> typing.Dict:
-    """Serialize the file hierarchy at ``dirpath``.
-
-    .. note:: empty directories are ignored.
-
-    :param dirpath: the base path.
-    :return: a mapping representing the file hierarchy, where keys are filenames. The leafs correspond to files and the
-        values are the text contents.
-    """
-    serialized: dict = {}
-
-    for root, _, files in os.walk(dirpath):
-        for filepath in files:
-            relpath = pathlib.Path(root).relative_to(dirpath)
-            subdir = serialized
-            if relpath.parts:
-                for part in relpath.parts:
-                    subdir = subdir.setdefault(part, {})
-            subdir[filepath] = (pathlib.Path(root) / filepath).read_text()
-
-    return serialized
-
-
-def create_file_hierarchy(hierarchy: typing.Dict, basepath: pathlib.Path) -> None:
-    """Create the file hierarchy represented by the hierarchy created by ``serialize_file_hierarchy``.
-
-    .. note:: empty directories are ignored and are not created explicitly on disk.
-
-    :param hierarchy: mapping with structure returned by ``serialize_file_hierarchy``.
-    :param basepath: the basepath where to write the hierarchy to disk.
-    """
-    for filename, value in hierarchy.items():
-        if isinstance(value, dict):
-            create_file_hierarchy(value, basepath / filename)
-        else:
-            basepath.mkdir(parents=True, exist_ok=True)
-            (basepath / filename).write_text(value)
 
 
 @pytest.fixture
@@ -97,13 +56,13 @@ def node_and_calc_info(aiida_localhost, aiida_code_installed):
     return node, calc_info
 
 
-def test_hierarchy_utility(file_hierarchy, tmp_path):
+def test_hierarchy_utility(file_hierarchy, tmp_path, create_file_hierarchy, serialize_file_hierarchy):
     """Test that the ``create_file_hierarchy`` and ``serialize_file_hierarchy`` function as intended.
 
     This is tested by performing a round-trip.
     """
     create_file_hierarchy(file_hierarchy, tmp_path)
-    assert serialize_file_hierarchy(tmp_path) == file_hierarchy
+    assert serialize_file_hierarchy(tmp_path, read_bytes=False) == file_hierarchy
 
 
 @pytest.mark.parametrize(
@@ -144,7 +103,13 @@ def test_hierarchy_utility(file_hierarchy, tmp_path):
     ),
 )
 def test_retrieve_files_from_list(
-    tmp_path_factory, generate_calculation_node, file_hierarchy, retrieve_list, expected_hierarchy
+    tmp_path_factory,
+    generate_calculation_node,
+    file_hierarchy,
+    retrieve_list,
+    expected_hierarchy,
+    create_file_hierarchy,
+    serialize_file_hierarchy,
 ):
     """Test the `retrieve_files_from_list` function."""
     source = tmp_path_factory.mktemp('source')
@@ -157,7 +122,7 @@ def test_retrieve_files_from_list(
         transport.chdir(source)
         execmanager.retrieve_files_from_list(node, transport, target, retrieve_list)
 
-    assert serialize_file_hierarchy(target) == expected_hierarchy
+    assert serialize_file_hierarchy(target, read_bytes=False) == expected_hierarchy
 
 
 @pytest.mark.parametrize(
@@ -174,7 +139,14 @@ def test_retrieve_files_from_list(
     ),
 )
 def test_upload_local_copy_list(
-    fixture_sandbox, node_and_calc_info, file_hierarchy_simple, tmp_path, local_copy_list, expected_hierarchy
+    fixture_sandbox,
+    node_and_calc_info,
+    file_hierarchy_simple,
+    tmp_path,
+    local_copy_list,
+    expected_hierarchy,
+    create_file_hierarchy,
+    serialize_file_hierarchy,
 ):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``."""
     create_file_hierarchy(file_hierarchy_simple, tmp_path)
@@ -193,11 +165,13 @@ def test_upload_local_copy_list(
     assert node.base.repository.list_object_names() == []
 
     # Now check that all contents were successfully written to the remote work directory
-    written_hierarchy = serialize_file_hierarchy(pathlib.Path(node.get_remote_workdir()))
+    written_hierarchy = serialize_file_hierarchy(pathlib.Path(node.get_remote_workdir()), read_bytes=False)
     assert written_hierarchy == expected_hierarchy
 
 
-def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path):
+def test_upload_local_copy_list_files_folders(
+    fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path, create_file_hierarchy, serialize_file_hierarchy
+):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``.
 
     Specifically, verify that files in the ``local_copy_list`` do not end up in the repository of the node.
@@ -228,7 +202,7 @@ def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_calc_inf
     assert node.base.repository.list_object_names() == []
 
     # Now check that all contents were successfully written to the remote working directory
-    written_hierarchy = serialize_file_hierarchy(pathlib.Path(node.get_remote_workdir()))
+    written_hierarchy = serialize_file_hierarchy(pathlib.Path(node.get_remote_workdir()), read_bytes=False)
     expected_hierarchy = file_hierarchy
     expected_hierarchy['files'] = {}
     expected_hierarchy['files']['file_x'] = 'content_x'
@@ -236,7 +210,9 @@ def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_calc_inf
     assert expected_hierarchy == written_hierarchy
 
 
-def test_upload_remote_symlink_list(fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path):
+def test_upload_remote_symlink_list(
+    fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path, create_file_hierarchy
+):
     """Test the ``remote_symlink_list`` functionality in ``upload_calculation``.
 
     Nested subdirectories in the target should be automatically created.

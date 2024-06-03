@@ -71,31 +71,6 @@ def tmp_path_parametrized(request, tmp_path_factory) -> t.Union[str, pathlib.Pat
     yield tmp_path
 
 
-def serialize_file_hierarchy(dirpath: pathlib.Path):
-    """Serialize the file hierarchy at ``dirpath``.
-
-    .. note:: empty directories are ignored.
-
-    :param dirpath: the base path.
-    :return: a mapping representing the file hierarchy, where keys are filenames. The leafs correspond to files and the
-        values are the text contents.
-    """
-    import os
-
-    serialized = {}
-
-    for root, _, files in os.walk(dirpath):
-        for filepath in files:
-            relpath = pathlib.Path(root).relative_to(dirpath)
-            subdir = serialized
-            if relpath.parts:
-                for part in relpath.parts:
-                    subdir = subdir.setdefault(part, {})
-            subdir[filepath] = (pathlib.Path(root) / filepath).read_bytes()
-
-    return serialized
-
-
 def test_uuid(repository_uninitialised):
     """Test the ``uuid`` property."""
     repository = repository_uninitialised
@@ -588,7 +563,9 @@ def test_walk(repository, generate_directory):
         ('relative/sub', {'file_c': b'c'}),
     ),
 )
-def test_copy_tree(repository, generate_directory, tmp_path_parametrized, path, expected_hierarchy):
+def test_copy_tree(
+    repository, generate_directory, tmp_path_parametrized, path, expected_hierarchy, serialize_file_hierarchy
+):
     """Test the ``Repository.copy_tree`` method."""
     directory = generate_directory({'file_a': b'a', 'relative': {'file_b': b'b', 'sub': {'file_c': b'c'}}})
     repository.put_object_from_tree(str(directory))

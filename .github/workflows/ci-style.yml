@@ -1,4 +1,4 @@
-name: continuous-integration-style
+name: ci-style
 
 on:
   push:

@@ -16,6 +16,8 @@ from aiida import get_profile
 from aiida.cmdline.commands import cmd_daemon
 from aiida.engine.daemon.client import DaemonClient
 
+pytestmark = pytest.mark.requires_rmq
+
 
 def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
     """Format a datetime object or UNIX timestamp in a human readable format
@@ -26,9 +28,9 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
     :param timestamp: a datetime object or a float representing a UNIX timestamp
     :param format_str: optional string format to pass to strftime
     """
-    from datetime import datetime
+    from datetime import datetime, timezone
 
-    return datetime.utcfromtimestamp(timestamp).strftime(format_str)
+    return datetime.fromtimestamp(timestamp, timezone.utc).strftime(format_str)
 
 
 def test_daemon_start(run_cli_command, stopped_daemon_client):

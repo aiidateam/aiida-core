@@ -161,7 +161,7 @@ def write_database_integrity_violation(results, headers, reason_message, action_
     :param reason_message: a human readable message detailing the reason of the integrity violation
     :param action_message: an optional human readable message detailing a performed action, if any
     """
-    from datetime import datetime
+    from datetime import datetime, timezone
     from tempfile import NamedTemporaryFile
 
     from tabulate import tabulate
@@ -183,7 +183,7 @@ def write_database_integrity_violation(results, headers, reason_message, action_
             )
         )
 
-        handle.write(f'# {datetime.utcnow().isoformat()}\n')
+        handle.write(f'# {datetime.datetime.now(timezone.utc).isoformat()}\n')
         handle.write(f'# Violation reason: {reason_message}\n')
         handle.write(f'# Performed action: {action_message}\n')
         handle.write('\n')

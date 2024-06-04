@@ -2,31 +2,42 @@
 
 from __future__ import annotations
 
+import pathlib
 import typing as t
+from uuid import uuid4
 
 import pytest
+from pgtest.pgtest import PGTest
 
 if t.TYPE_CHECKING:
     from pgtest.pgtest import PGTest
 
 
-@pytest.fixture(scope='session')
-def postgres_cluster():
-    """Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yield.
+class PostgresCluster:
+    def __init__(self):
+        # We initialize the cluster lazily
+        self.cluster = None
 
-    :param database_name: Name of the database.
-    :param database_username: Username to use for authentication.
-    :param database_password: Password to use for authentication.
-    :returns: Dictionary with parameters to connect to the PostgreSQL cluster.
-    """
-    from uuid import uuid4
+    def _create(self):
+        try:
+            self.cluster = PGTest()
+        except OSError as e:
+            raise RuntimeError('Could not initialize PostgreSQL cluster') from e
 
-    from pgtest.pgtest import PGTest
+    def _close(self):
+        if self.cluster is not None:
+            self.cluster.close()
 
     def create_database(
-        database_name: str | None = None, database_username: str | None = None, database_password: str | None = None
+        self,
+        database_name: str | None = None,
+        database_username: str | None = None,
+        database_password: str | None = None,
     ) -> dict[str, str]:
         from aiida.manage.external.postgres import Postgres
+
+        if self.cluster is None:
+            self._create()
 
         postgres_config = {
             'database_engine': 'postgresql_psycopg2',
@@ -35,7 +46,7 @@ def postgres_cluster():
             'database_password': database_password or 'guest',
         }
 
-        postgres = Postgres(interactive=False, quiet=True, dbinfo=cluster.dsn)  # type: ignore[union-attr]
+        postgres = Postgres(interactive=False, quiet=True, dbinfo=self.cluster.dsn)  # type: ignore[union-attr]
         if not postgres.dbuser_exists(postgres_config['database_username']):
             postgres.create_dbuser(
                 postgres_config['database_username'], postgres_config['database_password'], 'CREATEDB'
@@ -47,14 +58,21 @@ def postgres_cluster():
 
         return postgres_config
 
-    cluster = None
-    try:
-        cluster = PGTest()
-        cluster.create_database = create_database
-        yield cluster
-    finally:
-        if cluster is not None:
-            cluster.close()
+
+# TODO: Update docstring accordingly
+@pytest.fixture(scope='session')
+def postgres_cluster():
+    """Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yield.
+
+    :param database_name: Name of the database.
+    :param database_username: Username to use for authentication.
+    :param database_password: Password to use for authentication.
+    :returns: Dictionary with parameters to connect to the PostgreSQL cluster.
+    """
+
+    cluster = PostgresCluster()
+    yield cluster
+    cluster._close()
 
 
 @pytest.fixture(scope='session')
@@ -83,5 +101,23 @@ def config_psql_dos(
         storage_config['repository_uri'] = f'file://{tmp_path_factory.mktemp("repository")}'
 
         return storage_config
+
+    return factory
+
+
+@pytest.fixture(scope='session')
+def config_sqlite_dos(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> t.Callable[[str | pathlib.Path | None], dict[str, t.Any]]:
+    """Return a profile configuration for the :class:`~aiida.storage.sqlite_dos.backend.SqliteDosStorage`.
+
+    The factory has the following signature to allow further configuring the database that is created:
+
+    :param filepath: Optional path to the sqlite database file.
+    :returns: The dictionary with the storage configuration for the ``core.sqlite_dos`` storage plugin.
+    """
+
+    def factory(filepath: str | pathlib.Path | None = None) -> dict[str, t.Any]:
+        return {'filepath': str(filepath or tmp_path_factory.mktemp('test_sqlite_dos_storage'))}
 
     return factory

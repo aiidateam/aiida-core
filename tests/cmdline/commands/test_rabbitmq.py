@@ -16,6 +16,7 @@ from aiida.orm import Int
 from plumpy.process_comms import RemoteProcessThreadController
 
 
+@pytest.mark.requires_rmq
 def test_queues_list(run_cli_command):
     """Test the ``queues list``"""
     result = run_cli_command(cmd_rabbitmq.cmd_queues_list)

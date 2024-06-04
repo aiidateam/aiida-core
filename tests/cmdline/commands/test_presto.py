@@ -28,14 +28,12 @@ def test_get_default_presto_profile_name(monkeypatch, profile_names, expected):
 
 
 @pytest.mark.usefixtures('empty_config')
-@pytest.mark.parametrize('with_broker', (True, False))
-def test_presto(run_cli_command, with_broker, monkeypatch):
-    """Test ``verdi presto`` with and without a broker present."""
+def test_presto_without_rmq(pytestconfig, run_cli_command, monkeypatch):
+    """Test the ``verdi presto`` without RabbitMQ."""
     from aiida.brokers.rabbitmq import defaults
 
-    if not with_broker:
-        # Patch the RabbitMQ detection function to pretend it could not find the service
-        monkeypatch.setattr(defaults, 'detect_rabbitmq_config', lambda: None)
+    # Patch the RabbitMQ detection function to pretend it could not find the service
+    monkeypatch.setattr(defaults, 'detect_rabbitmq_config', lambda: None)
 
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile `presto`.' in result.output
@@ -44,12 +42,24 @@ def test_presto(run_cli_command, with_broker, monkeypatch):
         assert profile.name == 'presto'
         localhost = Computer.collection.get(label='localhost')
         assert localhost.is_configured
-        if with_broker:
-            assert profile.process_control_backend == 'core.rabbitmq'
-        else:
-            assert profile.process_control_backend is None
+        assert profile.process_control_backend is None
 
 
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('empty_config')
+def test_presto_with_rmq(pytestconfig, run_cli_command, monkeypatch):
+    """Test the ``verdi presto``."""
+    result = run_cli_command(verdi_presto, ['--non-interactive'])
+    assert 'Created new profile `presto`.' in result.output
+
+    with profile_context('presto', allow_switch=True) as profile:
+        assert profile.name == 'presto'
+        localhost = Computer.collection.get(label='localhost')
+        assert localhost.is_configured
+        assert profile.process_control_backend == 'core.rabbitmq'
+
+
+@pytest.mark.requires_psql
 @pytest.mark.usefixtures('empty_config')
 def test_presto_use_postgres(run_cli_command, manager):
     """Test the ``verdi presto`` with the ``--use-postgres`` flag."""

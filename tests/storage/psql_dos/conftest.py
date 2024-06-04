@@ -14,8 +14,13 @@ from aiida.common.exceptions import MissingConfigurationError
 from aiida.manage.configuration import get_config
 
 try:
-    STORAGE_BACKEND_ENTRY_POINT = get_config().get_profile(os.environ.get('AIIDA_TEST_PROFILE', None)).storage_backend
+    if test_profile := os.environ.get('AIIDA_TEST_PROFILE'):
+        STORAGE_BACKEND_ENTRY_POINT = get_config().get_profile(test_profile).storage_backend
+    # TODO: The else branch is wrong
+    else:
+        STORAGE_BACKEND_ENTRY_POINT = 'core.psql_dos'
 except MissingConfigurationError:
+    # TODO: This is actually not true anymore!
     # Case when ``pytest`` is invoked without existing config, in which case it will rely on the automatic test profile
     # creation which currently always uses ``core.psql_dos`` for the storage backend
     STORAGE_BACKEND_ENTRY_POINT = 'core.psql_dos'

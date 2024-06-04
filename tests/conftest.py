@@ -21,6 +21,7 @@ import pathlib
 import types
 import typing as t
 import warnings
+from pathlib import Path
 
 import click
 import pytest
@@ -34,16 +35,61 @@ if t.TYPE_CHECKING:
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
 
+def pytest_collection_modifyitems(items):
+    """Automatically generate markers for certain tests.
+
+    Most notably, we add the 'presto' marker for all tests that
+    are not marked with either requires_rmq or requires_psql.
+    """
+    filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
+    filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
+    filepath_sqla = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'sqlalchemy_branch'
+
+    for item in items:
+        filepath_item = Path(item.fspath)
+
+        # Add 'nightly' marker to all tests in 'storage/psql_dos/migrations/<django|sqlalchemy>_branch'
+        if filepath_item.is_relative_to(filepath_django) or filepath_item.is_relative_to(filepath_sqla):
+            item.add_marker('nightly')
+
+        # Add 'requires_rmq' for all tests that depend 'daemon_client' and its dependant fixtures
+        if 'daemon_client' in item.fixturenames:
+            item.add_marker('requires_rmq')
+
+        # All tests in 'storage/psql_dos' require PostgreSQL
+        if filepath_item.is_relative_to(filepath_psqldos):
+            item.add_marker('requires_psql')
+
+        # Add 'presto' marker to all tests that require neither PostgreSQL nor RabbitMQ services.
+        markers = [marker.name for marker in item.iter_markers()]
+        if 'requires_rmq' not in markers and 'requires_psql' not in markers and 'nightly' not in markers:
+            item.add_marker('presto')
+
+
 @pytest.fixture(scope='session')
-def aiida_profile(aiida_config, aiida_profile_factory, config_psql_dos):
+def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql_dos, config_sqlite_dos):
     """Create and load a profile with ``core.psql_dos`` as a storage backend and RabbitMQ as the broker.
 
     This overrides the ``aiida_profile`` fixture provided by ``aiida-core`` which runs with ``core.sqlite_dos`` and
     without broker. However, tests in this package make use of the daemon which requires a broker and the tests should
     be run against the main storage backend, which is ``core.sqlite_dos``.
     """
+    marker_opts = pytestconfig.getoption('-m')
+
+    # By default we use RabbitMQ broker and psql_dos storage
+    broker = 'core.rabbitmq'
+    if 'not requires_rmq' in marker_opts or 'presto' in marker_opts:
+        broker = None
+
+    if 'not requires_psql' in marker_opts or 'presto' in marker_opts:
+        storage = 'core.sqlite_dos'
+        config = config_sqlite_dos()
+    else:
+        storage = 'core.psql_dos'
+        config = config_psql_dos()
+
     with aiida_profile_factory(
-        aiida_config, storage_backend='core.psql_dos', storage_config=config_psql_dos(), broker_backend='core.rabbitmq'
+        aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker
     ) as profile:
         yield profile
 

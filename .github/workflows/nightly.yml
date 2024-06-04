@@ -19,6 +19,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_COLOR: 1
+
 jobs:
 
   nightly-tests:
@@ -91,7 +94,7 @@ jobs:
   rabbitmq-tests:
 
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
 
     strategy:
       fail-fast: false
@@ -131,6 +134,12 @@ jobs:
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql
+
+    - name: Setup SSH on localhost
+      run: .github/workflows/setup_ssh.sh
+
+    - name: Suppress RabbitMQ version warning
+      run: verdi config set warnings.rabbitmq_version False
 
     - name: Run tests
       id: tests

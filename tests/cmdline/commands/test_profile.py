@@ -15,6 +15,10 @@ from aiida.plugins import StorageFactory
 from aiida.tools.archive.create import create_archive
 from pgtest.pgtest import PGTest
 
+# NOTE: Most of these tests would work with sqlite_dos,
+# but would require generalizing a bunch of fixtures ('profile_factory' et al) in tests/conftest.py
+pytestmark = pytest.mark.requires_psql
+
 
 @pytest.fixture(scope='module')
 def pg_test_cluster():

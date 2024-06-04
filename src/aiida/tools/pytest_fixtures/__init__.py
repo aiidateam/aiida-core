@@ -25,7 +25,7 @@ from .orm import (
     aiida_localhost,
     ssh_key,
 )
-from .storage import config_psql_dos, postgres_cluster
+from .storage import config_psql_dos, config_sqlite_dos, postgres_cluster
 
 __all__ = (
     'aiida_code_installed',
@@ -44,6 +44,7 @@ __all__ = (
     'aiida_profile_tmp',
     'aiida_profile',
     'config_psql_dos',
+    'config_sqlite_dos',
     'daemon_client',
     'entry_points',
     'postgres_cluster',

@@ -631,57 +631,75 @@ def test_put_and_get_tree(custom_transport):
         transport.rmdir(directory)
 
 
-def test_put_and_get_overwrite(custom_transport):
-    """Test putting and getting files with overwrites."""
-    local_dir = os.path.join('/', 'tmp')
-    remote_dir = local_dir
-    directory = 'tmp_try'
+@pytest.mark.parametrize(
+    'local_hierarchy, target_hierarchy, src_dest, expected_hierarchy',
+    (
+        ({'file.txt': 'Viva verdi'}, {}, ('.', '.'), {'file.txt': 'Viva verdi'}),
+        (
+            {'local': {'file.txt': 'New verdi'}},
+            {'local': {'file.txt': 'Old verdi'}},
+            ('local', '.'),
+            {'local': {'file.txt': 'New verdi'}},
+        ),
+        (
+            {'local': {'file.txt': 'Viva verdi'}},
+            {'local': {'file.txt': 'Viva verdi'}},
+            ('local', 'local'),
+            {'local': {'file.txt': 'Viva verdi', 'local': {'file.txt': 'Viva verdi'}}},
+        ),
+    ),
+)
+def test_put_and_get_overwrite(
+    custom_transport,
+    tmp_path,
+    create_file_hierarchy,
+    serialize_file_hierarchy,
+    local_hierarchy,
+    target_hierarchy,
+    src_dest,
+    expected_hierarchy,
+):
+    """Test putting and getting files with overwrites.
+
+    The parametrized inputs are:
+
+    - local_hierarchy: the hierarchy of files to be created in the "local" folder
+    - target_hierarchy: the hierarchy of files to be created in the "remote" folder for testing `puttree`, and the
+      "retrieved" folder for testing `gettree`.
+    - src_dest: a tuple with the source and destination of the files to put/get
+    - expected_hierarchy: the expected hierarchy of files in the "remote" and "retrieved" folder after the overwrite
+    """
+
+    local_folder = tmp_path / 'local'
+    remote_folder = tmp_path / 'remote'
+    retrieved_folder = tmp_path / 'retrieved'
+
+    create_file_hierarchy(local_hierarchy, local_folder)
+    create_file_hierarchy(target_hierarchy, remote_folder)
+    create_file_hierarchy(target_hierarchy, retrieved_folder)
+
+    source, destination = src_dest
 
     with custom_transport as transport:
-        transport.chdir(remote_dir)
+        transport.puttree((local_folder / source).as_posix(), (remote_folder / destination).as_posix())
+        transport.gettree((local_folder / source).as_posix(), (retrieved_folder / destination).as_posix())
 
-        while os.path.exists(os.path.join(local_dir, directory)):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
+        assert serialize_file_hierarchy(remote_folder, read_bytes=False) == expected_hierarchy
+        assert serialize_file_hierarchy(retrieved_folder, read_bytes=False) == expected_hierarchy
 
-        local_subfolder = os.path.join(local_dir, directory, 'tmp1')
-        remote_subfolder = 'tmp2'
-        retrieved_subfolder = os.path.join(local_dir, directory, 'tmp3')
-
-        os.mkdir(os.path.join(local_dir, directory))
-        os.mkdir(os.path.join(local_dir, directory, local_subfolder))
-
-        transport.chdir(directory)
-
-        local_file_name = os.path.join(local_subfolder, 'file.txt')
-
-        text = 'Viva Verdi\n'
-        with open(local_file_name, 'w', encoding='utf8') as fhandle:
-            fhandle.write(text)
-
-        transport.put(local_subfolder, remote_subfolder)
-        transport.get(remote_subfolder, retrieved_subfolder)
-
-        # by defaults rewrite everything
-        transport.put(local_subfolder, remote_subfolder)
-        transport.get(remote_subfolder, retrieved_subfolder)
-
+        # Attempting to exectute the put/get operations with `overwrite=False` should raise an OSError
         with pytest.raises(OSError):
-            transport.put(local_subfolder, remote_subfolder, overwrite=False)
+            transport.put((tmp_path / source).as_posix(), (remote_folder / destination).as_posix(), overwrite=False)
         with pytest.raises(OSError):
-            transport.get(remote_subfolder, retrieved_subfolder, overwrite=False)
+            transport.get(
+                (remote_folder / source).as_posix(), (retrieved_folder / destination).as_posix(), overwrite=False
+            )
         with pytest.raises(OSError):
-            transport.puttree(local_subfolder, remote_subfolder, overwrite=False)
+            transport.puttree((tmp_path / source).as_posix(), (remote_folder / destination).as_posix(), overwrite=False)
         with pytest.raises(OSError):
-            transport.gettree(remote_subfolder, retrieved_subfolder, overwrite=False)
-
-        shutil.rmtree(local_subfolder)
-        shutil.rmtree(retrieved_subfolder)
-        transport.rmtree(remote_subfolder)
-        # transport.rmtree(remote_subfolder)
-        # here I am mixing inevitably the local and the remote folder
-        transport.chdir('..')
-        transport.rmtree(directory)
+            transport.gettree(
+                (remote_folder / source).as_posix(), (retrieved_folder / destination).as_posix(), overwrite=False
+            )
 
 
 def test_copy(custom_transport):

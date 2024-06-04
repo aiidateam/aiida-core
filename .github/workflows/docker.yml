@@ -44,6 +44,7 @@ jobs:
     strategy:
       matrix:
         target: [aiida-core-base, aiida-core-with-services, aiida-core-dev]
+      fail-fast: false
     with:
       runsOn: ubuntu-22.04
       images: ${{ needs.build-amd64.outputs.images }}

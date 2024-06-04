@@ -21,6 +21,8 @@ from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import JobInfo, JobState, ParEnvJobResource
 
+from .bash import BashCliScheduler
+
 # 'http://www.loni.ucla.edu/twiki/bin/view/Infrastructure/GridComputing?skin=plain':
 # Jobs Status:
 #     'qw' - Queued and waiting,
@@ -88,7 +90,7 @@ class SgeJobResource(ParEnvJobResource):
     pass
 
 
-class SgeScheduler(aiida.schedulers.Scheduler):
+class SgeScheduler(BashCliScheduler):
     """Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, Oracle Grid Engine, ...)"""
 
     _logger = aiida.schedulers.Scheduler._logger.getChild('sge')

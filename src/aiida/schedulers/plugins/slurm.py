@@ -16,6 +16,8 @@ from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
 from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
 
+from .bash import BashCliScheduler
+
 # This maps SLURM state codes to our own status list
 
 ## List of states from the man page of squeue
@@ -141,7 +143,7 @@ class SlurmJobResource(NodeNumberJobResource):
         return resources
 
 
-class SlurmScheduler(Scheduler):
+class SlurmScheduler(BashCliScheduler):
     """Support for the SLURM scheduler (http://slurm.schedmd.com/)."""
 
     _logger = Scheduler._logger.getChild('slurm')

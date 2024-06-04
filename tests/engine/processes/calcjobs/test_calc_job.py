@@ -1273,10 +1273,10 @@ def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, c
 
 
 def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
-    """Test that a job is terminated if ``Scheduler.submit_from_script`` returns an exit code.
+    """Test that a job is terminated if ``Scheduler.submit_job`` returns an exit code.
 
     To simulate this situation we monkeypatch ``DirectScheduler._parse_submit_output`` because that is the method that
-    is called internally by ``Scheduler.submit_from_script`` and it returns its result, and the ``DirectScheduler`` is
+    is called internally by ``Scheduler.submit_job`` and it returns its result, and the ``DirectScheduler`` is
     the plugin that is used by the localhost computer used in the inputs for this calcjob.
     """
     from aiida.schedulers.plugins.direct import DirectScheduler

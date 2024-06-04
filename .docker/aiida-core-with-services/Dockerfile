@@ -22,8 +22,7 @@ RUN mamba install --yes \
 # Install erlang.
 RUN apt-get update --yes && \
      apt-get install --yes --no-install-recommends \
-     erlang \
-     xz-utils && \
+     erlang && \
      apt-get clean && rm -rf /var/lib/apt/lists/* && \
      # Install rabbitmq.
      wget -c --no-check-certificate https://github.com/rabbitmq/rabbitmq-server/releases/download/v${RMQ_VERSION}/rabbitmq-server-generic-unix-${RMQ_VERSION}.tar.xz && \

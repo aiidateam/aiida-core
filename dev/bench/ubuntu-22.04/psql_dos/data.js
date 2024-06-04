@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1717532948954,
+  "lastUpdate": 1717536437010,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -45935,6 +45935,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0014689",
             "group": "node",
             "extra": "mean: 22.732 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "3.24",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.14",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "7de136c2c2144647aa71aea8675fd77ddb49a2dd",
+          "message": "🐛 Engine: Recover behavior for `upload_calculation` after refactor\n\nIn 6898ff4d8c263cf08707c61411a005f6a7f731dd the implementation of the processing of the\n`local_copy_list` in the `upload_calculation` method was changed. Originally, the files\nspecified by the `local_copy_list` were first copied into the `SandboxFolder` before\ncopying its contents to the working directory using the transport. The commit allowed\nthe order in which the local and sandbox files were copied, so the local files were now\nno longer copied through the sandbox. Rather, they were copied to a temporary directory\non disk, which was then copied over using the transport.\n\nThe problem is that this changed the behaviour of `upload_calculation` in several ways:\n\n1. if the sandbox contained the directory `folder` and the `local_copy_list` contained\n   the items `(_, 'file', './folder/file')` this would work just fine in the original\n   implementation as the `file` would be written to the `folder` on the remote folder.\n   The current implementation, however, would write the file content to `folder/file` in\n   a local temporary directory, and then iterate over the directories and copy them\n   over. Essentially it would be doing:\n\n       Transport.put('/tmpdir/folder', 'folder')\n\n   but since `folder` would already exist on the remote working directory the local\n   folder would be _nested_ and so the final path on the remote would be\n   `/workingdir/folder/folder/file`.\n\n2. if the sandbox contained the directory `folder` and the `local_copy_list` tries to\n   copy a file to that folder via e.g. `(_, 'file', 'folder')`, this would raise an\n   `IsADirectoryError` in the original implementation. Instead, the current\n   implementation creates a file named `folder` with the contents of `file` and then\n   copies this into the `folder` directory.\n\n3. if the sandbox contained the directory `folder` and the `local_copy_list` tries to\n   copy a local folder in a `FolderData` to that directory via e.g.\n   `(_, 'folder', 'folder')`, this would simply copy the _contents_ of that directory\n   to `folder` in the original implementation. The current implementation creates a\n   nested `folder/folder` hierarchy.\n\nAlthough some of the new behaviour might be more intuitive and correspond closer to\nthat of `remote_copy_list` (e.g. [3] above), changing it would be a\nbackwards-incompatible change that could break existing plugins. Here, we adapt the\n`_copy_local_files` function to replicate the original behaviour of\n`upload_calculation`:\n\n1. When copying a local directory, the contents of the temporary directory are copied\n   to the remote using the `Transport.put` interface with `overwrite` set to `True`.\n2. When copying a local directory, the parent directory is created on the remote,\n   after which the single file is copied from the temporary directory to the remote.\n3. In case the source type is `FileType.FILE` and the target is a directory, an\n   `IsADirectoryError` is raised.\n4. In case the source filename is specified and it is a directory that already exists\n   on the remote, we avoid nested directories in the target path by setting the target\n   filename to '.'. This means the contents of the node will be copied in the top level\n   of the temporary directory, whose contents are then copied into the target directory.\n\nTo verify that the behaviour is unchanged versus the original implementation, we add a\nlarge number of tests for various use cases of `upload_calculation` that have been run\nsuccessfully against the latest release tag (v2.5.1).\n\nCo-Authored-By: Sebastiaan Huber <mail@sphuber.net>",
+          "timestamp": "2024-06-04T23:19:37+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/7de136c2c2144647aa71aea8675fd77ddb49a2dd",
+          "distinct": true,
+          "tree_id": "900edc5defd9ecb8819c053fbd87ef07296c0368"
+        },
+        "date": 1717536432486,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 2.301638026797106,
+            "unit": "iter/sec",
+            "range": "stddev: 0.17891",
+            "group": "import-export",
+            "extra": "mean: 434.47 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 2.9013559055006075,
+            "unit": "iter/sec",
+            "range": "stddev: 0.063551",
+            "group": "import-export",
+            "extra": "mean: 344.67 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.331728827043993,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0068241",
+            "group": "import-export",
+            "extra": "mean: 230.85 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.178585024194699,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0052762",
+            "group": "import-export",
+            "extra": "mean: 239.32 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.5642034447868083,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0062961",
+            "group": "engine",
+            "extra": "mean: 280.57 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.7612963469151021,
+            "unit": "iter/sec",
+            "range": "stddev: 0.090165",
+            "group": "engine",
+            "extra": "mean: 1.3135 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.8590689383750854,
+            "unit": "iter/sec",
+            "range": "stddev: 0.084521",
+            "group": "engine",
+            "extra": "mean: 1.1641 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.20309630584783273,
+            "unit": "iter/sec",
+            "range": "stddev: 0.16292",
+            "group": "engine",
+            "extra": "mean: 4.9238 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.23105502328917954,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10485",
+            "group": "engine",
+            "extra": "mean: 4.3280 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.4721727116005012,
+            "unit": "iter/sec",
+            "range": "stddev: 0.014657",
+            "group": "engine",
+            "extra": "mean: 404.50 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5288013467843519,
+            "unit": "iter/sec",
+            "range": "stddev: 0.047863",
+            "group": "engine",
+            "extra": "mean: 1.8911 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.5935043769598185,
+            "unit": "iter/sec",
+            "range": "stddev: 0.078538",
+            "group": "engine",
+            "extra": "mean: 1.6849 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.15864454745417292,
+            "unit": "iter/sec",
+            "range": "stddev: 0.16565",
+            "group": "engine",
+            "extra": "mean: 6.3034 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.17819836579948317,
+            "unit": "iter/sec",
+            "range": "stddev: 0.15154",
+            "group": "engine",
+            "extra": "mean: 5.6117 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 498.11934597787246,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016661",
+            "group": "node",
+            "extra": "mean: 2.0076 msec\nrounds: 281"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 78.90690572809405,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00024066",
+            "group": "node",
+            "extra": "mean: 12.673 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 52.88028380037438,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00089036",
+            "group": "node",
+            "extra": "mean: 18.911 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 302.2431135881643,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016740",
+            "group": "node",
+            "extra": "mean: 3.3086 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 44.112056471918216,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0015630",
+            "group": "node",
+            "extra": "mean: 22.670 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 42.5252687464649,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0016523",
+            "group": "node",
+            "extra": "mean: 23.515 msec\nrounds: 100"
           }
         ]
       }

@@ -19,6 +19,8 @@ from aiida.orm import Int
 from kiwipy.rmq import RmqThreadCommunicator
 from packaging.version import parse
 
+pytestmark = pytest.mark.requires_rmq
+
 
 @pytest.mark.parametrize(
     ('version', 'supported'),
@@ -67,7 +69,6 @@ def test_get_rmq_url(args, kwargs, expected):
             utils.get_rmq_url(*args, **kwargs)
 
 
-@pytest.mark.requires_rmq
 @pytest.mark.parametrize('url', ('amqp://guest:guest@127.0.0.1:5672',))
 def test_communicator(url):
     """Test the instantiation of a ``kiwipy.rmq.RmqThreadCommunicator``.
@@ -77,19 +78,16 @@ def test_communicator(url):
     RmqThreadCommunicator.connect(connection_params={'url': url})
 
 
-@pytest.mark.requires_rmq
 def test_add_rpc_subscriber(communicator):
     """Test ``add_rpc_subscriber``."""
     communicator.add_rpc_subscriber(None)
 
 
-@pytest.mark.requires_rmq
 def test_add_broadcast_subscriber(communicator):
     """Test ``add_broadcast_subscriber``."""
     communicator.add_broadcast_subscriber(None)
 
 
-@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_duplicate_subscriber_identifier(aiida_code_installed, started_daemon_client, submit_and_await):
     """Test that a ``DuplicateSubscriberError`` in ``ProcessLauncher._continue`` does not except the process.
@@ -148,7 +146,6 @@ def rabbitmq_client(aiida_profile):
     )
 
 
-@pytest.mark.requires_rmq
 class TestRabbitmqManagementClient:
     """Tests for the :class:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient`."""
 

@@ -1,4 +1,4 @@
-name: continuous-integration-code
+name: ci-code
 
 on:
   push:
@@ -12,6 +12,9 @@ concurrency:
     # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 1
 
 jobs:
 
@@ -99,7 +102,9 @@ jobs:
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-      run: pytest --cov aiida --verbose tests -m 'not nightly'
+      # Python 3.12 has a performance regression when running with code coverage
+      # so run code coverage only for python 3.9.
+      run: pytest -v tests -m 'not nightly' ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
 
     - name: Upload coverage report
       if: matrix.python-version == 3.9 && github.repository == 'aiidateam/aiida-core'
@@ -110,15 +115,48 @@ jobs:
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
+
+  tests-presto:
+
+    needs: [check-requirements]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install graphviz
+      run: sudo apt update && sudo apt install graphviz
+
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.11'
+
+    - name: Setup SSH on localhost
+      run: .github/workflows/setup_ssh.sh
+
+    - name: Run test suite
+      env:
+        AIIDA_WARN_v3: 0
+      run: pytest -m 'presto' --cov aiida
+
+    - name: Upload coverage report
+      if: github.repository == 'aiidateam/aiida-core'
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: aiida-pytests-presto
+        flags: presto
+        file: ./coverage.xml
+        fail_ci_if_error: false  # don't fail job, if coverage upload fails
+
+
   verdi:
 
+    needs: [check-requirements]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.9', '3.12']
+    timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@v4
@@ -126,10 +164,9 @@ jobs:
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
       with:
-        python-version: ${{ matrix.python-version }}
-        from-requirements: 'false'
+        python-version: '3.12'
 
-    - name: Run verdi
+    - name: Run verdi tests
       run: |
         verdi devel check-load-time
         verdi devel check-undesired-imports

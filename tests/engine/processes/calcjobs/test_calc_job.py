@@ -1292,6 +1292,7 @@ def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
     assert node.exit_status == 418
 
 
+@pytest.mark.requires_rmq
 def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_and_await):
     """Test that a job can be restarted when it is launched and the daemon is restarted.
 

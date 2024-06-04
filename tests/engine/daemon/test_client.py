@@ -19,6 +19,8 @@ from aiida.engine.daemon.client import (
     get_daemon_client,
 )
 
+pytestmark = pytest.mark.requires_rmq
+
 
 def test_ipc_socket_file_length_limit():
     """The maximum length of socket filepaths is often limited by the operating system.

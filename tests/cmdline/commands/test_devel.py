@@ -15,6 +15,7 @@ from aiida.cmdline.commands import cmd_devel
 from aiida.orm import Node, ProcessNode, QueryBuilder
 
 
+@pytest.mark.requires_psql
 def test_run_sql(run_cli_command):
     """Test ``verdi devel run-sql``."""
     options = ['SELECT COUNT(*) FROM db_dbnode;']

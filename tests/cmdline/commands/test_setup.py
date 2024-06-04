@@ -19,6 +19,8 @@ from aiida.manage import configuration
 from aiida.manage.external.postgres import Postgres
 from pgtest.pgtest import PGTest
 
+pytestmark = pytest.mark.requires_psql
+
 
 @pytest.fixture(scope='class')
 def pg_test_cluster():

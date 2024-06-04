@@ -26,7 +26,7 @@ def test_status(run_cli_command):
     assert 'The daemon is not running' in result.output
     assert result.exit_code is ExitCode.SUCCESS.value
 
-    for string in ['config', 'profile', 'postgres', 'broker', 'daemon']:
+    for string in ['config', 'profile', 'storage', 'broker', 'daemon']:
         assert string in result.output
 
     assert __version__ in result.output
@@ -48,10 +48,11 @@ def test_status_no_rmq(run_cli_command):
     assert 'rabbitmq' not in result.output
     assert result.exit_code is ExitCode.SUCCESS.value
 
-    for string in ['config', 'profile', 'postgres', 'daemon']:
+    for string in ['config', 'profile', 'storage', 'daemon']:
         assert string in result.output
 
 
+@pytest.mark.requires_psql
 def test_storage_unable_to_connect(run_cli_command):
     """Test `verdi status` when there is an unknown error while connecting to the storage."""
     profile = get_profile()

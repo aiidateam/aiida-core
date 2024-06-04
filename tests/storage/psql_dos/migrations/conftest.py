@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for the migration engine (Alembic) as well as for the AiiDA migrations for SQLAlchemy."""
 
-from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -17,18 +16,6 @@ from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 from pgtest.pgtest import PGTest
 from sqlalchemy import text
-
-
-def pytest_collection_modifyitems(config, items):
-    """Dynamically add the ``nightly`` marker to all tests in ``django_branch`` and ``sqlalchemy_branch`` modules."""
-    filepath_django = Path(__file__).parent / 'django_branch'
-    filepath_sqla = Path(__file__).parent / 'sqlalchemy_branch'
-
-    for item in items:
-        filepath_item = Path(item.fspath)
-
-        if filepath_item.is_relative_to(filepath_django) or filepath_item.is_relative_to(filepath_sqla):
-            item.add_marker(getattr(pytest.mark, 'nightly'))
 
 
 @pytest.fixture(scope='session')

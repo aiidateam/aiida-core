@@ -79,7 +79,7 @@ def detect_postgres_config(
         echo.echo_critical(f'Unable to automatically create the PostgreSQL user and database: {exception}')
 
     return {
-        'database_host': postgres_hostname,
+        'database_hostname': postgres_hostname,
         'database_port': postgres_port,
         'database_name': database_name,
         'database_username': database_username,

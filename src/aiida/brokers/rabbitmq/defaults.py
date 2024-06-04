@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import os
 import typing as t
 
 from aiida.common.extendeddicts import AttributeDict
+from aiida.common.log import AIIDA_LOGGER
 
 __all__ = ('BROKER_DEFAULTS',)
+
+LOGGER = AIIDA_LOGGER.getChild('brokers.rabbitmq.defaults')
 
 LAUNCH_QUEUE = 'process.queue'
 MESSAGE_EXCHANGE = 'messages'
@@ -32,11 +36,22 @@ def detect_rabbitmq_config() -> dict[str, t.Any] | None:
     """
     from kiwipy.rmq.threadcomms import connect
 
-    connection_params = dict(BROKER_DEFAULTS)
+    connection_params = {
+        'protocol': os.getenv('AIIDA_BROKER_PROTOCOL', BROKER_DEFAULTS['protocol']),
+        'username': os.getenv('AIIDA_BROKER_USERNAME', BROKER_DEFAULTS['username']),
+        'password': os.getenv('AIIDA_BROKER_PASSWORD', BROKER_DEFAULTS['password']),
+        'host': os.getenv('AIIDA_BROKER_HOST', BROKER_DEFAULTS['host']),
+        'port': os.getenv('AIIDA_BROKER_PORT', BROKER_DEFAULTS['port']),
+        'virtual_host': os.getenv('AIIDA_BROKER_VIRTUAL_HOST', BROKER_DEFAULTS['virtual_host']),
+        'heartbeat': os.getenv('AIIDA_BROKER_HEARTBEAT', BROKER_DEFAULTS['heartbeat']),
+    }
+
+    LOGGER.info(f'Attempting to connect to RabbitMQ with parameters: {connection_params}')
 
     try:
         connect(connection_params=connection_params)
     except ConnectionError:
         return None
 
-    return connection_params
+    # The profile configuration expects the keys of the broker config to be prefixed with ``broker_``.
+    return {f'broker_{key}': value for key, value in connection_params.items()}

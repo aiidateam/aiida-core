@@ -39,6 +39,7 @@ def test_now():
     assert from_tz <= ref + dt
     assert from_tz >= ref - dt
 
+
 def test_make_aware_already_aware():
     """Test the :func:`aiida.common.timezone.make_aware` function for an already aware datetime.
 

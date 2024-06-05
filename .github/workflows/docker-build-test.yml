@@ -48,7 +48,7 @@ jobs:
         workdir: .docker/
         set: |
           *.platform=amd64
-          *.cache-to=type=gha,scope=${{ github.workflow }},mode=max
+          *.cache-to=type=gha,scope=${{ github.workflow }},mode=min
           *.cache-from=type=gha,scope=${{ github.workflow }}
         files: |
           docker-bake.hcl
@@ -64,10 +64,10 @@ jobs:
       run: pip install -r requirements.txt
 
     - name: Test aiida-core-base
-      run: pytest -s --variant aiida-core-base
+      run: pytest -s --variant aiida-core-base tests/
 
     - name: Test aiida-core-with-services
-      run: pytest -s --variant aiida-core-with-services
+      run: pytest -s --variant aiida-core-with-services tests/
 
     - name: Test aiida-core-dev
       run: pytest -s --variant aiida-core-dev tests/

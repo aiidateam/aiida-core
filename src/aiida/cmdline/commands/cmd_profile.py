@@ -52,6 +52,23 @@ def command_create_profile(
     _, storage_entry_point = get_entry_point_from_class(storage_cls.__module__, storage_cls.__name__)
     assert storage_entry_point is not None
 
+    if kwargs.pop('use_rabbitmq'):
+        broker_backend = 'core.rabbitmq'
+        broker_config = {
+            key: kwargs.get(key)
+            for key in (
+                'broker_protocol',
+                'broker_username',
+                'broker_password',
+                'broker_host',
+                'broker_port',
+                'broker_virtual_host',
+            )
+        }
+    else:
+        broker_backend = None
+        broker_config = None
+
     try:
         profile = create_profile(
             ctx.obj.config,
@@ -62,15 +79,8 @@ def command_create_profile(
             institution=institution,
             storage_backend=storage_entry_point.name,
             storage_config=kwargs,
-            broker_backend='core.rabbitmq',
-            broker_config={
-                'broker_protocol': 'amqp',
-                'broker_username': 'guest',
-                'broker_password': 'guest',
-                'broker_host': '127.0.0.1',
-                'broker_port': 5672,
-                'broker_virtual_host': '',
-            },
+            broker_backend=broker_backend,
+            broker_config=broker_config,
         )
     except (ValueError, TypeError, exceptions.EntryPointError, exceptions.StorageMigrationError) as exception:
         echo.echo_critical(str(exception))
@@ -93,6 +103,25 @@ def command_create_profile(
         setup.SETUP_USER_FIRST_NAME(),
         setup.SETUP_USER_LAST_NAME(),
         setup.SETUP_USER_INSTITUTION(),
+        setup.SETUP_USE_RABBITMQ(),
+        setup.SETUP_BROKER_PROTOCOL(
+            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
+        ),
+        setup.SETUP_BROKER_USERNAME(
+            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
+        ),
+        setup.SETUP_BROKER_PASSWORD(
+            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
+        ),
+        setup.SETUP_BROKER_HOST(
+            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
+        ),
+        setup.SETUP_BROKER_PORT(
+            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
+        ),
+        setup.SETUP_BROKER_VIRTUAL_HOST(
+            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
+        ),
     ],
 )
 def profile_setup():

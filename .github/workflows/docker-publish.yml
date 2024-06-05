@@ -67,7 +67,7 @@ jobs:
         images: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ matrix.target }}
         tags: |
           type=ref,event=pr
-          type=ref,event=branch,enable={{!is_default_branch}}
+          type=ref,event=branch,enable=${{ github.ref_name != 'main' }}
           type=edge,enable={{is_default_branch}}
           type=raw,value=aiida-${{ env.AIIDA_VERSION }},enable=${{ github.ref_type == 'tag'  && startsWith(github.ref_name, 'v') }}
           type=raw,value=python-${{ env.PYTHON_VERSION }},enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}

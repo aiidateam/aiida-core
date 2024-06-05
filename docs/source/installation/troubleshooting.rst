@@ -1,4 +1,4 @@
-.. _intro:troubleshooting:
+.. _installation:troubleshooting:
 
 ***************
 Troubleshooting
@@ -21,12 +21,12 @@ In the example output, all service have a green check mark and so should be runn
 If all services are up and running and you are still experiencing problems or if you have trouble with the installation of aiida-core and related services, consider the commonly encountered problems below.
 In case you are still experiencing problems, you can request support by opening a post on the `Discourse server <https://aiida.discourse.group/>`_.
 
-.. _intro:troubleshooting:installation:
+.. _installation:troubleshooting:installation:
 
 Installation issues
 -------------------
 
-.. _intro:troubleshooting:installation:rabbitmq:
+.. _installation:troubleshooting:installation:rabbitmq:
 
 RabbitMQ incompatibility
 ........................
@@ -136,16 +136,16 @@ A way to do it is to add a line similar to the following to the ``~/.bashrc`` an
 .. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
 
 
-.. _intro:troubleshooting:installation:postgresql-autodetect-issues:
+.. _installation:troubleshooting:installation:postgresql-autodetect-issues:
 
 Autodetection of the PostgreSQL setup
 .....................................
 
-Sometimes AiiDA fails to autodetect the local configuration of PostgreSQL when running ``verdi quicksetup``.
+Sometimes AiiDA fails to autodetect the local configuration of PostgreSQL when running ``verdi presto --use-postgres``.
 In that case try to:
 
-    1. Create the database manually in PostgreSQL (see :ref:`here<intro:install:database>`).
-    2. Then run the full ``verdi setup`` command (see :ref:`here<intro:install:verdi_setup>`).
+    1. Create the database manually in PostgreSQL (see :ref:`here<installation:guide-complete:create-profile:core-psql-dos>`).
+    2. Then run the full ``verdi profile setup core.psql_dos``.
 
 
 RabbitMQ Installation (Unix)

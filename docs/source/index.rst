@@ -1,9 +1,5 @@
 :sd_hide_title:
 
-#################################
-Welcome to AiiDA's documentation!
-#################################
-
 .. grid::
    :reverse:
    :gutter: 2 3 3 3
@@ -23,7 +19,8 @@ Welcome to AiiDA's documentation!
 
       .. rubric:: AiiDA
 
-      An open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data (see :ref:`features<intro:about>`).
+      An open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and
+      reproducing the complex workflows associated with modern computational science and all associated data (see :ref:`features<intro>`).
 
       **aiida-core version:** |release|
 
@@ -32,15 +29,32 @@ Welcome to AiiDA's documentation!
 .. grid:: 1 2 2 2
    :gutter: 3
 
-   .. grid-item-card:: :fa:`rocket;mr-1` Getting Started
+   .. grid-item-card:: :fa:`circle-play;mr-1` Introduction
       :text-align: center
       :shadow: md
 
-      AiiDA installation, configuration and troubleshooting.
+      Overview of what AiiDA is and what it can do.
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
-      .. button-ref:: intro/get_started
+      .. button-ref:: intro/index
+         :ref-type: doc
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
+
+         To the introduction
+
+   .. grid-item-card:: :fa:`rocket;mr-1` Installation
+      :text-align: center
+      :shadow: md
+
+      Installation guides and troubleshooting.
+
+      +++++++++++++++++++++++++++++++++++++++++++++
+
+      .. button-ref:: installation/index
          :ref-type: doc
          :click-parent:
          :expand:
@@ -87,7 +101,7 @@ Welcome to AiiDA's documentation!
       :text-align: center
       :shadow: md
 
-      Background information on AiiDA's underlying concepts.
+      Background information on AiiDA concepts.
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -104,7 +118,7 @@ Welcome to AiiDA's documentation!
       :text-align: center
       :shadow: md
 
-      Comprehensive documentation of AiiDA components: command-line interface, Python interface, and RESTful API.
+      Comprehensive documentation of CLI, Python API and REST API.
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -121,7 +135,7 @@ Welcome to AiiDA's documentation!
       :text-align: center
       :shadow: md
 
-      Notes on AiiDA's design and architecture aimed at core developers.
+      Detailed information on AiiDA's design and architecture.
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -154,15 +168,16 @@ Welcome to AiiDA's documentation!
    :hidden:
 
    intro/index
+   installation/index
    tutorials/index
    howto/index
    topics/index
    reference/index
    internals/index
 
-***********
+===========
 How to cite
-***********
+===========
 
 If you use AiiDA for your research, please cite the following work:
 
@@ -175,9 +190,9 @@ If the ADES concepts are referenced, please also cite:
 .. highlights:: Pizzi, Giovanni, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky. *AiiDA: automated interactive infrastructure and database for computational science*, Computational Materials Science **111**, 218-230 (2016); DOI: `10.1016/j.commatsci.2015.09.013 <https://doi.org/10.1016/j.commatsci.2015.09.013>`_
 
 
-****************
+================
 Acknowledgements
-****************
+================
 
 AiiDA is supported by the `MARVEL National Centre of Competence in Research`_, the `MaX European Centre of Excellence`_ and by a number of other supporting projects, partners and institutions, whose complete list is available on the `AiiDA website acknowledgements page`_.
 

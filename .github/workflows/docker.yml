@@ -1,16 +1,12 @@
 name: Docker Images
 
+# This workflow needs permissions to publish images to ghcr.io,
+# so it does not work for forks. Therefore, we only trigger it
+# on pushes to aiidateam/aiida-core repo.
 on:
-  pull_request:
-    paths-ignore:
-    - '**.md'
-    - '**.txt'
-    - docs/**
-    - tests/**
   push:
     branches:
-    - main
-    - support/**
+    - '*'
     tags:
     - v*
     paths-ignore:
@@ -32,7 +28,7 @@ env:
 jobs:
   # We build only amd64 first to catch failures faster.
   build-amd64:
-    if: ${{ ! github.event.pull_request.head.repo.fork }}
+    if: ${{ github.repository == 'aiidateam/aiida-core' }}
     uses: ./.github/workflows/docker-build.yml
     with:
       runsOn: ubuntu-22.04

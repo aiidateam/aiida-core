@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Sets up ssh keys to allow a ssh connection to localhost. This is needed
+# because localhost is used as remote address to run the tests locally.
 set -ev
 
 ssh-keygen -q -t rsa -b 4096 -N "" -f "${HOME}/.ssh/id_rsa"

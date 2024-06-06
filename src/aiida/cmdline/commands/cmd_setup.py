@@ -17,8 +17,7 @@ from aiida.cmdline.utils import decorators, echo
 from aiida.manage.configuration import Profile, load_profile
 
 
-@verdi.command('setup')
-@decorators.deprecated_command('This command is deprecated, use `verdi profile setup core.psql_dos` instead.')
+@verdi.command('setup', deprecated='Please use `verdi profile setup` instead.')
 @options.NON_INTERACTIVE()
 @options_setup.SETUP_PROFILE()
 @options_setup.SETUP_USER_EMAIL()
@@ -68,7 +67,7 @@ def setup(
     test_profile,
     profile_uuid,
 ):
-    """Setup a new profile.
+    """Setup a new profile (use `verdi profile setup`).
 
     This method assumes that an empty PSQL database has been created and that the database user has been created.
     """

@@ -80,7 +80,7 @@ Below is a list with all available subcommands.
       list       List the available codes.
       relabel    Relabel a code.
       reveal     Reveal one or more hidden codes in `verdi code list`.
-      setup      Setup a new code.
+      setup      (Deprecated) Setup a new code (use `verdi code create`).
       show       Display detailed information for a code.
       test       Run tests for the given code to check whether it is usable.
 
@@ -531,7 +531,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      Setup a new profile.
+      (Deprecated) Setup a new profile (use `verdi profile setup`).
 
       This method assumes that an empty PSQL database has been created and that the database
       user has been created.

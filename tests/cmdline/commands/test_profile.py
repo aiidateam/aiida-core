@@ -53,7 +53,7 @@ def mock_profiles(empty_config, profile_factory):
 
 @pytest.mark.parametrize(
     'command',
-    (cmd_profile.profile_list, cmd_profile.profile_setdefault, cmd_profile.profile_delete, cmd_profile.profile_show),
+    (cmd_profile.profile_list, cmd_profile.profile_set_default, cmd_profile.profile_delete, cmd_profile.profile_show),
 )
 def test_help(run_cli_command, command):
     """Tests help text for all ``verdi profile`` commands."""
@@ -73,7 +73,21 @@ def test_list(run_cli_command, mock_profiles):
 def test_setdefault(run_cli_command, mock_profiles):
     """Test the ``verdi profile setdefault`` command."""
     profile_list = mock_profiles()
-    run_cli_command(cmd_profile.profile_setdefault, [profile_list[1]], use_subprocess=False)
+    setdefault_result = run_cli_command(cmd_profile.profile_setdefault, [profile_list[1]], use_subprocess=False)
+    result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
+
+    assert 'Report: configuration folder:' in result.output
+    assert f'* {profile_list[1]}' in result.output
+
+    # test if deprecation warning is printed
+    assert 'Deprecated:' in setdefault_result.output
+    assert 'Deprecated:' in setdefault_result.stderr
+
+
+def test_set_default(run_cli_command, mock_profiles):
+    """Test the ``verdi profile set-default`` command."""
+    profile_list = mock_profiles()
+    run_cli_command(cmd_profile.profile_set_default, [profile_list[1]], use_subprocess=False)
     result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
 
     assert 'Report: configuration folder:' in result.output

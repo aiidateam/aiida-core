@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.5.2 - 2024-06-06
+
+### Fixes
+- `SshTransport`: Add channel timeout as argument to `exec_command_wait_bytes` (#6452) [[0c00815b1]](https://github.com/aiidateam/aiida-core/commit/0c00815b19e0d7b5496c577d62a32d2a5896f347)
+
 
 ## v2.5.1 - 2024-01-31
 

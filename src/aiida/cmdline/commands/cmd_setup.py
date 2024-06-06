@@ -13,7 +13,7 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.params.options.commands import setup as options_setup
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import echo
 from aiida.manage.configuration import Profile, load_profile
 
 
@@ -136,10 +136,10 @@ def setup(
     echo.echo_success(f'created new profile `{profile.name}`.')
 
 
-@verdi.command('quicksetup')
-@decorators.deprecated_command(
-    'This command is deprecated. For a fully automated alternative, use `verdi presto --use-postgres` instead. '
-    'For full control, use `verdi profile setup core.psql_dos`.'
+@verdi.command(
+    'quicksetup',
+    deprecated='This command is deprecated. For a fully automated alternative, use `verdi presto --use-postgres` '
+    'instead. For full control, use `verdi profile setup core.psql_dos`.',
 )
 @options.NON_INTERACTIVE()
 # Cannot use `default` because that will fail validation of the `ProfileParamType` if the profile already exists and it

@@ -222,10 +222,9 @@ def cmd_tasks_list(broker):
         echo.echo(pk)
 
 
-@cmd_tasks.command('analyze')
+@cmd_tasks.command('analyze', deprecated='Use `verdi process repair` instead.')
 @click.option('--fix', is_flag=True, help='Attempt to fix the inconsistencies if any are detected.')
 @decorators.only_if_daemon_not_running()
-@decorators.deprecated_command('Use `verdi process repair` instead.')
 @click.pass_context
 def cmd_tasks_analyze(ctx, fix):
     """Perform analysis of process tasks.

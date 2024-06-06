@@ -248,7 +248,16 @@ def deprecated_command(message):
         @deprecated_command('This command has been deprecated in AiiDA v1.0, please use 'foo' instead.)
         def mycommand():
             pass
+
+    .. deprecated:: 2.6
+
+        Ironically, this decorator itself has been deprecated. ``verdi`` commands that should be deprecated should
+        simply use the ``deprecated`` argument in the ``command`` decorator and specify the deprecation message.
+
     """
+    from aiida.common.warnings import warn_deprecation
+
+    warn_deprecation('The `deprecated_command` decorator is deprecated', version=3)
 
     @decorator
     def wrapper(wrapped, _, args, kwargs):

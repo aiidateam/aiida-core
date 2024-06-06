@@ -78,15 +78,13 @@ def archive_info(path, detailed):
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
 
 
-@verdi_archive.command('inspect', hidden=True)
+@verdi_archive.command(
+    'inspect', hidden=True, deprecated='Use `verdi archive version` or `verdi archive info` instead.'
+)
 @click.argument('archive', nargs=1, type=click.Path(exists=True, readable=True))
 @click.option('-v', '--version', is_flag=True, help='Print the archive format version and exit.')
 @click.option('-m', '--meta-data', is_flag=True, help='Print the meta data contents and exit.')
 @click.option('-d', '--database', is_flag=True, help='Include information on entities in the database.')
-@decorators.deprecated_command(
-    'This command has been deprecated and will be removed soon. '
-    'Please call `verdi archive version` or `verdi archive info` instead.\n'
-)
 @click.pass_context
 def inspect(ctx, archive, version, meta_data, database):
     """Inspect contents of an archive without importing it.

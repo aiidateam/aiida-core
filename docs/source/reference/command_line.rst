@@ -409,7 +409,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      Setup a new profile in a fully automated fashion.
+      (Deprecated) Setup a new profile in a fully automated fashion.
 
     Options:
       -n, --non-interactive           In non-interactive mode, the CLI never prompts but

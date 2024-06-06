@@ -23,9 +23,9 @@ def upf():
     """Manipulate UpfData objects (UPF-format pseudopotentials)."""
 
 
-@upf.command('uploadfamily')
-@decorators.deprecated_command(
-    'See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core'
+@upf.command(
+    'uploadfamily',
+    deprecated='See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core',
 )
 @click.argument('folder', type=click.Path(exists=True, file_okay=False, resolve_path=True))
 @click.argument('group_label', type=click.STRING)
@@ -50,9 +50,9 @@ def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
     echo.echo_success(f'UPF files found: {files_found}. New files uploaded: {files_uploaded}')
 
 
-@upf.command('listfamilies')
-@decorators.deprecated_command(
-    'See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core'
+@upf.command(
+    'listfamilies',
+    deprecated='See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core',
 )
 @click.option(
     '-d',
@@ -96,9 +96,9 @@ def upf_listfamilies(elements, with_description):
         echo.echo_warning('No valid UPF pseudopotential family found.')
 
 
-@upf.command('exportfamily')
-@decorators.deprecated_command(
-    'See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core'
+@upf.command(
+    'exportfamily',
+    deprecated='See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core',
 )
 @click.argument('folder', type=click.Path(exists=True, file_okay=False, resolve_path=True))
 @arguments.GROUP()
@@ -119,9 +119,9 @@ def upf_exportfamily(folder, group):
             echo.echo_warning(f'File {node.filename} is already present in the destination folder')
 
 
-@upf.command('import')
-@decorators.deprecated_command(
-    'See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core'
+@upf.command(
+    'import',
+    deprecated='See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core',
 )
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @decorators.with_dbenv()
@@ -133,9 +133,9 @@ def upf_import(filename):
     echo.echo_success(f'Imported: {node}')
 
 
-@upf.command('export')
-@decorators.deprecated_command(
-    'See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core'
+@upf.command(
+    'export',
+    deprecated='See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core',
 )
 @arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.upf',)))
 @options.EXPORT_FORMAT(

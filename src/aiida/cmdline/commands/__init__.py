@@ -20,7 +20,6 @@ from aiida.cmdline.commands import (
     cmd_config,
     cmd_daemon,
     cmd_data,
-    cmd_database,
     cmd_devel,
     cmd_group,
     cmd_help,

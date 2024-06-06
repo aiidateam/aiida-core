@@ -179,29 +179,6 @@ Below is a list with all available subcommands.
       --help                          Show this message and exit.
 
 
-.. _reference:command-line:verdi-database:
-
-``verdi database``
-------------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Inspect and manage the database.
-
-      .. deprecated:: v2.0.0
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      integrity  Check the integrity of the database and fix potential issues.
-      migrate    Migrate the database to the latest schema version.
-      summary    Summarise the entities in the database.
-      version    Show the version of the database.
-
-
 .. _reference:command-line:verdi-devel:
 
 ``verdi devel``

@@ -414,11 +414,13 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      delete      Delete one or more profiles.
-      list        Display a list of all available profiles.
-      setdefault  Set a profile as the default one.
-      setup       Set up a new profile.
-      show        Show details for a profile.
+      delete       Delete one or more profiles.
+      list         Display a list of all available profiles.
+      set-default  Set a profile as the default profile.
+      setdefault   (Deprecated) Set a profile as the default profile (use `verdi profile set-
+                   default`).
+      setup        Set up a new profile.
+      show         Show details for a profile.
 
 
 .. _reference:command-line:verdi-quicksetup:

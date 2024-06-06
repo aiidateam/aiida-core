@@ -78,7 +78,7 @@ def command_create_profile(
     echo.echo_success(f'Created new profile `{profile.name}`.')
 
     if set_as_default:
-        ctx.invoke(profile_setdefault, profile=profile)
+        ctx.invoke(profile_set_default, profile=profile)
 
 
 @verdi_profile.group(
@@ -147,10 +147,21 @@ def profile_show(profile):
     echo.echo_dictionary(config, fmt='yaml')
 
 
-@verdi_profile.command('setdefault')
+@verdi_profile.command('setdefault', deprecated='Please use `verdi profile set-default` instead.')
 @arguments.PROFILE(required=True, default=None)
 def profile_setdefault(profile):
-    """Set a profile as the default one."""
+    """Set a profile as the default profile (use `verdi profile set-default`)."""
+    _profile_set_default(profile)
+
+
+@verdi_profile.command('set-default')
+@arguments.PROFILE(required=True, default=None)
+def profile_set_default(profile):
+    """Set a profile as the default profile."""
+    _profile_set_default(profile)
+
+
+def _profile_set_default(profile):
     try:
         config = get_config()
     except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:

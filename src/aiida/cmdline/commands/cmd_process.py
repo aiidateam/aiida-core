@@ -188,6 +188,11 @@ def process_show(processes, most_recent_node):
     """Show details for one or multiple processes."""
     from aiida.cmdline.utils.common import get_node_info
 
+    if not processes and not most_recent_node:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
+
     if processes and most_recent_node:
         raise click.BadOptionUsage(
             'most_recent_node',
@@ -206,6 +211,8 @@ def process_show(processes, most_recent_node):
 @decorators.with_dbenv()
 def process_call_root(processes):
     """Show root process of the call stack for the given processes."""
+    if not processes:
+        raise click.UsageError('Please specify one or multiple processes by their identifier (PK, UUID or label).')
     for process in processes:
         caller = process.caller
 
@@ -244,6 +251,11 @@ def process_report(processes, most_recent_node, levelname, indent_size, max_dept
     from aiida.cmdline.utils.common import get_calcjob_report, get_process_function_report, get_workchain_report
     from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
 
+    if not processes and not most_recent_node:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
+
     if processes and most_recent_node:
         raise click.BadOptionUsage(
             'most_recent_node',
@@ -275,6 +287,11 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
     """Print the status of one or multiple processes."""
     from aiida.cmdline.utils.ascii_vis import format_call_graph
 
+    if not processes and not most_recent_node:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
+
     if processes and most_recent_node:
         raise click.BadOptionUsage(
             'most_recent_node',
@@ -298,6 +315,11 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
 def process_kill(processes, all_entries, timeout, wait):
     """Kill running processes."""
     from aiida.engine.processes import control
+
+    if not processes and not all_entries:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
 
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
@@ -326,6 +348,11 @@ def process_pause(processes, all_entries, timeout, wait):
     """Pause running processes."""
     from aiida.engine.processes import control
 
+    if not processes and not all_entries:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
+
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
@@ -350,6 +377,11 @@ def process_play(processes, all_entries, timeout, wait):
     """Play (unpause) paused processes."""
     from aiida.engine.processes import control
 
+    if not processes and not all_entries:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
+
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
@@ -370,6 +402,10 @@ def process_play(processes, all_entries, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_watch(broker, processes):
     """Watch the state transitions for a process."""
+
+    if not processes:
+        raise click.UsageError('Please specify one or multiple processes by their identifier (PK, UUID or label).')
+
     from time import sleep
 
     from kiwipy import BroadcastFilter

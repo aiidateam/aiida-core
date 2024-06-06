@@ -1317,7 +1317,7 @@ class SshTransport(Transport):
 
         return stdin, stdout, stderr, channel
 
-    def exec_command_wait_bytes(self, command, stdin=None, combine_stderr=False, bufsize=-1):
+    def exec_command_wait_bytes(self, command, stdin=None, combine_stderr=False, bufsize=-1, timeout=0.01):
         """Executes the specified command and waits for it to finish.
 
         :param command: the command to execute
@@ -1326,6 +1326,7 @@ class SshTransport(Transport):
         :param combine_stderr: (optional, default=False) see docstring of
                    self._exec_command_internal()
         :param bufsize: same meaning of paramiko.
+        :param timeout: ssh channel timeout for stdout, stderr.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are both bytes and the return_value is an int.
@@ -1373,8 +1374,8 @@ class SshTransport(Transport):
         # if compression is enabled).
         # It's important to mention that, for speed benchmarks, it's important to disable compression
         # in the SSH transport settings, as it will cap the max speed.
-        stdout.channel.settimeout(0.01)
-        stderr.channel.settimeout(0.01)  # Maybe redundant, as this could be the same channel.
+        stdout.channel.settimeout(timeout)
+        stderr.channel.settimeout(timeout)  # Maybe redundant, as this could be the same channel.
 
         while True:
             chunk_exists = False

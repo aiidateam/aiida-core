@@ -21,6 +21,7 @@ Provides:
 from contextlib import contextmanager
 
 from click_spinner import spinner
+from packaging.version import Version
 from wrapt import decorator
 
 from . import echo
@@ -239,13 +240,17 @@ def check_circus_zmq_version(wrapped, _, args, kwargs):
     return wrapped(*args, **kwargs)
 
 
-def deprecated_command(message):
+def deprecated_command(message: str, version: str = '3.0.0'):
     """Function decorator that will mark a click command as deprecated when invoked.
+
+    :param message: The message that should be printed with the deprecation warning.
+    :param version: Specifies the version for which the command will be removed. Any string is valid that is accepted by
+                    :class:`packaging.version.Version`.
 
     Example::
 
         @click.command()
-        @deprecated_command('This command has been deprecated in AiiDA v1.0, please use 'foo' instead.)
+        @deprecated_command('This command has been deprecated, please use 'foo' instead.' version='1.0')
         def mycommand():
             pass
     """
@@ -259,7 +264,15 @@ def deprecated_command(message):
 
         template = templates.env.get_template('deprecated.tpl')
         width = 80
-        echo.echo(template.render(msg=wrap(message, width - 4), width=width))
+        from packaging.version import InvalidVersion
+
+        try:
+            version_object = Version(version)
+        except (TypeError, InvalidVersion) as exception:
+            raise ValueError(f'`{version}` is not a valid value for `version`') from exception
+
+        extended_message = f'{message} (this will be removed in v{version_object.major}.{version_object.minor})'
+        echo.echo(template.render(msg=wrap(extended_message, width - 4), width=width))
 
         return wrapped(*args, **kwargs)
 

@@ -2,6 +2,7 @@ name: Build Docker images and upload them to ghcr.io
 
 env:
   BUILDKIT_PROGRESS: plain
+  REGISTRY: ghcr.io/
 
 on:
   workflow_call:

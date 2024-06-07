@@ -155,6 +155,7 @@ jobs:
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.12'
+        from-requirements: 'false'
 
     - name: Run verdi tests
       run: |

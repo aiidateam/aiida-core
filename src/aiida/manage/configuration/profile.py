@@ -128,7 +128,7 @@ class Profile:
     @property
     def process_control_config(self) -> Dict[str, Any]:
         """Return the configuration required by the process control backend."""
-        return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG]
+        return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG] or {}
 
     def set_process_controller(self, name: str, config: Dict[str, Any]) -> None:
         """Set the process control backend and its configuration.

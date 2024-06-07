@@ -256,3 +256,16 @@ def test_setup_email_required(run_cli_command, isolated_config, tmp_path, entry_
     else:
         result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False, raises=True)
         assert 'Invalid value for --email: The option is required for storages that are not read-only.' in result.output
+
+
+def test_setup_no_use_rabbitmq(run_cli_command, isolated_config):
+    """Test the ``--no-use-rabbitmq`` option."""
+    profile_name = 'profile-no-broker'
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile', profile_name, '--no-use-rabbitmq']
+
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    assert f'Created new profile `{profile_name}`.' in result.output
+    assert profile_name in isolated_config.profile_names
+    profile = isolated_config.get_profile(profile_name)
+    assert profile.process_control_backend is None
+    assert profile.process_control_config == {}

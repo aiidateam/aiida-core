@@ -323,6 +323,15 @@ SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
     cls=options.interactive.InteractiveOption,
 )
 
+SETUP_USE_RABBITMQ = options.OverridableOption(
+    '--use-rabbitmq/--no-use-rabbitmq',
+    prompt='Use RabbitMQ?',
+    is_flag=True,
+    default=True,
+    cls=options.interactive.InteractiveOption,
+    help='Whether to configure the RabbitMQ broker. Required to enable the daemon and submitting processes.',
+)
+
 SETUP_BROKER_PROTOCOL = QUICKSETUP_BROKER_PROTOCOL.clone(
     prompt='Broker protocol',
     required=True,

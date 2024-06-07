@@ -95,7 +95,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
 class SqliteDosStorage(PsqlDosBackend):
     """A lightweight storage that is easy to install.
 
-    This backend implementation uses an SQLite database and the a disk-objectstore container as the file repository. As
+    This backend implementation uses an SQLite database and a disk-objectstore container as the file repository. As
     such, this storage plugin does not require any services, making it easy to install and use on most systems.
     """
 

@@ -50,6 +50,8 @@ def get_profile_attribute_default(attribute_tuple, ctx):
     try:
         data = ctx.params['profile'].dictionary
         for part in parts:
+            if data is None:
+                return default
             data = data[part]
         return data
     except KeyError:

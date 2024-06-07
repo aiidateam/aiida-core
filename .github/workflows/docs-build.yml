@@ -7,6 +7,9 @@ on:
     branches-ignore: [gh-pages]
     paths: [docs/**]
 
+env:
+  FORCE_COLOR: 1
+
 jobs:
 
   docs-linkcheck:

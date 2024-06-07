@@ -6,6 +6,9 @@ on:
   pull_request:
     branches-ignore: [gh-pages]
 
+env:
+  FORCE_COLOR: 1
+
 jobs:
 
   pre-commit:

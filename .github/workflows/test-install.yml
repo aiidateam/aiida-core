@@ -81,7 +81,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@v3
       with:
         channels: conda-forge
 
@@ -148,7 +148,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@v3
       with:
         channels: conda-forge
 
@@ -274,7 +274,7 @@ jobs:
 #
     - name: Create commit comment
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: peter-evans/commit-comment@v1
+      uses: peter-evans/commit-comment@v3
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         path: pyproject.toml
@@ -306,7 +306,7 @@ jobs:
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
       id: create_update_requirements_pr
       continue-on-error: true
-      uses: peter-evans/create-pull-request@v3
+      uses: peter-evans/create-pull-request@v6
       with:
         branch: update-requirements
         commit-message: Automated update of requirements/ files.
@@ -324,7 +324,7 @@ jobs:
 
     - name: Create PR comment on success
       if: steps.create_update_requirements_pr.outcome == 'Success'
-      uses: peter-evans/create-or-update-comment@v1
+      uses: peter-evans/create-or-update-comment@v4
       with:
         issue-number: ${{ github.event.number }}
         body: |
@@ -333,7 +333,7 @@ jobs:
 
     - name: Create PR comment on failure
       if: steps.create_update_requirements_pr.outcome == 'Failure'
-      uses: peter-evans/create-or-update-comment@v1
+      uses: peter-evans/create-or-update-comment@v4
       with:
         issue-number: ${{ github.event.number }}
         body: |

@@ -128,6 +128,26 @@ def profile_setup():
     """Set up a new profile."""
 
 
+@verdi_profile.command('configure-rabbitmq')  # type: ignore[arg-type]
+@arguments.PROFILE(default=defaults.get_default_profile)
+@setup.SETUP_BROKER_PROTOCOL()
+@setup.SETUP_BROKER_USERNAME()
+@setup.SETUP_BROKER_PASSWORD()
+@setup.SETUP_BROKER_HOST()
+@setup.SETUP_BROKER_PORT()
+@setup.SETUP_BROKER_VIRTUAL_HOST()
+@options.NON_INTERACTIVE()
+@click.pass_context
+def profile_configure_rabbitmq(ctx, profile, **kwargs):
+    """Configure RabbitMQ for a profile.
+
+    Enable RabbitMQ for a profile that was created without a broker, or reconfigure existing connection details.
+    """
+    profile.set_process_controller(name='core.rabbitmq', config=kwargs)
+    ctx.obj.config.update_profile(profile)
+    ctx.obj.config.store()
+
+
 @verdi_profile.command('list')
 def profile_list():
     """Display a list of all available profiles."""
@@ -179,7 +199,7 @@ def profile_show(profile):
 @verdi_profile.command('setdefault', deprecated='Please use `verdi profile set-default` instead.')
 @arguments.PROFILE(required=True, default=None)
 def profile_setdefault(profile):
-    """Set a profile as the default profile (use `verdi profile set-default`)."""
+    """Set a profile as the default profile."""
     _profile_set_default(profile)
 
 

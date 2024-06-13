@@ -269,3 +269,26 @@ def test_setup_no_use_rabbitmq(run_cli_command, isolated_config):
     profile = isolated_config.get_profile(profile_name)
     assert profile.process_control_backend is None
     assert profile.process_control_config == {}
+
+
+def test_configure_rabbitmq(run_cli_command, isolated_config):
+    """Test the ``verdi profile configure-rabbitmq`` command."""
+    profile_name = 'profile'
+
+    # First setup a profile without a broker configured
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile', profile_name, '--no-use-rabbitmq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    profile = isolated_config.get_profile(profile_name)
+    assert profile.process_control_backend is None
+    assert profile.process_control_config == {}
+
+    # Now run the command to configure the broker
+    options = [profile_name, '-n']
+    run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
+    assert profile.process_control_backend == 'core.rabbitmq'
+
+    # Call it again to check it works to reconfigure existing broker connection parameters
+    options = [profile_name, '-n', '--broker-host', 'rabbitmq.broker.com']
+    run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
+    assert profile.process_control_backend == 'core.rabbitmq'
+    assert profile.process_control_config['broker_host'] == 'rabbitmq.broker.com'

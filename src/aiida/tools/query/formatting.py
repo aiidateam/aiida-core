@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Union
 
 from aiida.common import timezone
 from aiida.common.utils import str_timedelta
@@ -54,7 +55,7 @@ def format_state(process_state: str, paused: bool | None = None, exit_status: in
     return f'{symbol} {format_process_state(process_state)}'
 
 
-def format_process_state(process_state: str) -> str:
+def format_process_state(process_state: Union[str, None]) -> str:
     """Return a string formatted representation of the given process state.
 
     :param process_state: The process state.

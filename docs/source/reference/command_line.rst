@@ -176,6 +176,7 @@ Below is a list with all available subcommands.
     Options:
       -v, --verbosity [notset|debug|info|report|warning|error|critical]
                                       Set the verbosity of the output.
+      --color / --no-color            Set if the output should be colorized.
       --help                          Show this message and exit.
 
 

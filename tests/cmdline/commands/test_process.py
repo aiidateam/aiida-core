@@ -14,12 +14,14 @@ import time
 import typing as t
 import uuid
 
+import click
 import pytest
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.common.style import ProcessStateStyle
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
@@ -182,6 +184,16 @@ class TestVerdiProcess:
         for flag in ['-P', '--project']:
             result = run_cli_command(cmd_process.process_list, ['-r', '-X', flag, 'exit_message'])
             assert Process.exit_codes.ERROR_UNSPECIFIED.message in result.output
+
+        # check the color option works properly
+        colored_created = click.style(
+            f'{ProcessStateStyle.SYMBOL_CREATED_FINISHED} Created', ProcessStateStyle.COLOR_CREATED_RUNNING
+        )
+        result = run_cli_command(cmd_process.process_list, ['--color'])
+        assert colored_created in result.output
+
+        result = run_cli_command(cmd_process.process_list, ['--no-color'])
+        assert colored_created not in result.output
 
     def test_process_show(self, run_cli_command):
         """Test verdi process show"""

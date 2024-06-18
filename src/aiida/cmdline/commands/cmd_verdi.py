@@ -20,6 +20,7 @@ from ..params import options, types
 @click.group(cls=VerdiCommandGroup, context_settings={'help_option_names': ['--help', '-h']})
 @options.PROFILE(type=types.ProfileParamType(load_profile=True), expose_value=False)
 @options.VERBOSITY()
+@options.COLOR()
 @click.version_option(__version__, package_name='aiida_core', message='AiiDA version %(version)s')
 def verdi():
     """The command line interface of AiiDA."""

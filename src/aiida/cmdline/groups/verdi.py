@@ -136,6 +136,15 @@ class VerdiCommandGroup(click.Group):
 
         return cmd
 
+    @staticmethod
+    def add_color_option(cmd: click.Command) -> click.Command:
+        """Apply the ``color`` option to the command, which is common to all ``verdi`` commands."""
+        # Only apply the option if it hasn't been already added in a previous call.
+        if 'color' not in [param.name for param in cmd.params]:
+            cmd = options.COLOR()(cmd)
+
+        return cmd
+
     def fail_with_suggestions(self, ctx: click.Context, cmd_name: str) -> None:
         """Fail the command while trying to suggest commands to resemble the requested ``cmd_name``."""
         # We might get better results with the Levenshtein distance or more advanced methods implemented in FuzzyWuzzy
@@ -171,7 +180,9 @@ class VerdiCommandGroup(click.Group):
         cmd = super().get_command(ctx, cmd_name)
 
         if cmd is not None:
-            return self.add_verbosity_option(cmd)
+            cmd = self.add_verbosity_option(cmd)
+            cmd = self.add_color_option(cmd)
+            return cmd
 
         # If this command is called during tab-completion, we do not want to print an error message if the command can't
         # be found, but instead we want to simply return here. However, in a normal command execution, we do want to

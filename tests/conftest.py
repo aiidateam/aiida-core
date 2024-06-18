@@ -724,6 +724,7 @@ def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, 
     # ``VerdiCommandGroup``, but when testing commands, the command is retrieved directly from the module which
     # circumvents this machinery.
     command = VerdiCommandGroup.add_verbosity_option(command)
+    command = VerdiCommandGroup.add_color_option(command)
 
     runner = CliRunner(mix_stderr=False)
     result = runner.invoke(command, parameters, input=user_input, obj=obj, **kwargs)

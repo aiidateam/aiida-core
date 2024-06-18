@@ -22,6 +22,19 @@ from packaging.version import parse
 pytestmark = pytest.mark.requires_rmq
 
 
+def test_str_method(monkeypatch, manager):
+    """Test the `__str__` method of the `RabbitmqBroker`."""
+
+    def raise_connection_error():
+        raise ConnectionError
+
+    broker = manager.get_broker()
+    assert 'RabbitMQ v' in str(broker)
+
+    monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
+    assert 'RabbitMQ @' in str(broker)
+
+
 @pytest.mark.parametrize(
     ('version', 'supported'),
     (

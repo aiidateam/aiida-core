@@ -32,7 +32,7 @@ def get_default_presto_profile_name():
 
     for profile_name in profile_names:
         if match := re.search(r'presto[-]?(\d+)?', profile_name):
-            indices.append(match.group(1) or '0')
+            indices.append(int(match.group(1) or '0'))
 
     if not indices:
         return DEFAULT_PROFILE_NAME_PREFIX

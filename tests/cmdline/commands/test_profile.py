@@ -287,6 +287,13 @@ def test_configure_rabbitmq(run_cli_command, isolated_config):
     run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
     assert profile.process_control_backend == 'core.rabbitmq'
 
+    # Verify that running in non-interactive mode is the default
+    options = [
+        profile_name,
+    ]
+    run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=True)
+    assert profile.process_control_backend == 'core.rabbitmq'
+
     # Call it again to check it works to reconfigure existing broker connection parameters
     options = [profile_name, '-n', '--broker-host', 'rabbitmq.broker.com']
     run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)

@@ -136,7 +136,7 @@ def profile_setup():
 @setup.SETUP_BROKER_HOST()
 @setup.SETUP_BROKER_PORT()
 @setup.SETUP_BROKER_VIRTUAL_HOST()
-@options.NON_INTERACTIVE()
+@options.NON_INTERACTIVE(default=True, show_default='--non-interactive')
 @click.pass_context
 def profile_configure_rabbitmq(ctx, profile, **kwargs):
     """Configure RabbitMQ for a profile.

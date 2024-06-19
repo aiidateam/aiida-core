@@ -29,7 +29,15 @@ BROKER_DEFAULTS = AttributeDict(
 )
 
 
-def detect_rabbitmq_config() -> dict[str, t.Any] | None:
+def detect_rabbitmq_config(
+    protocol: str | None = None,
+    username: str | None = None,
+    password: str | None = None,
+    host: str | None = None,
+    port: int | None = None,
+    virtual_host: str | None = None,
+    heartbeat: int | None = None,
+) -> dict[str, t.Any] | None:
     """Try to connect to a RabbitMQ server with the default connection parameters.
 
     :returns: The connection parameters if the RabbitMQ server was successfully connected to, or ``None`` otherwise.
@@ -37,13 +45,13 @@ def detect_rabbitmq_config() -> dict[str, t.Any] | None:
     from kiwipy.rmq.threadcomms import connect
 
     connection_params = {
-        'protocol': os.getenv('AIIDA_BROKER_PROTOCOL', BROKER_DEFAULTS['protocol']),
-        'username': os.getenv('AIIDA_BROKER_USERNAME', BROKER_DEFAULTS['username']),
-        'password': os.getenv('AIIDA_BROKER_PASSWORD', BROKER_DEFAULTS['password']),
-        'host': os.getenv('AIIDA_BROKER_HOST', BROKER_DEFAULTS['host']),
-        'port': os.getenv('AIIDA_BROKER_PORT', BROKER_DEFAULTS['port']),
-        'virtual_host': os.getenv('AIIDA_BROKER_VIRTUAL_HOST', BROKER_DEFAULTS['virtual_host']),
-        'heartbeat': os.getenv('AIIDA_BROKER_HEARTBEAT', BROKER_DEFAULTS['heartbeat']),
+        'protocol': protocol or os.getenv('AIIDA_BROKER_PROTOCOL', BROKER_DEFAULTS['protocol']),
+        'username': username or os.getenv('AIIDA_BROKER_USERNAME', BROKER_DEFAULTS['username']),
+        'password': password or os.getenv('AIIDA_BROKER_PASSWORD', BROKER_DEFAULTS['password']),
+        'host': host or os.getenv('AIIDA_BROKER_HOST', BROKER_DEFAULTS['host']),
+        'port': port or int(os.getenv('AIIDA_BROKER_PORT', BROKER_DEFAULTS['port'])),
+        'virtual_host': virtual_host or os.getenv('AIIDA_BROKER_VIRTUAL_HOST', BROKER_DEFAULTS['virtual_host']),
+        'heartbeat': heartbeat or int(os.getenv('AIIDA_BROKER_HEARTBEAT', BROKER_DEFAULTS['heartbeat'])),
     }
 
     LOGGER.info(f'Attempting to connect to RabbitMQ with parameters: {connection_params}')

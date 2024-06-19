@@ -284,8 +284,9 @@ def test_configure_rabbitmq(run_cli_command, isolated_config):
 
     # Now run the command to configure the broker
     options = [profile_name, '-n']
-    run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
+    cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
     assert profile.process_control_backend == 'core.rabbitmq'
+    assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
 
     # Verify that running in non-interactive mode is the default
     options = [
@@ -293,9 +294,16 @@ def test_configure_rabbitmq(run_cli_command, isolated_config):
     ]
     run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=True)
     assert profile.process_control_backend == 'core.rabbitmq'
+    assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
+
+    # Verify that configuring with incorrect options and `--force` raises a warning but still configures the broker
+    options = [profile_name, '-f', '--broker-port', '1234']
+    cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
+    assert 'Unable to connect to RabbitMQ server with configuration:' in cli_result.stdout
+    assert profile.process_control_config['broker_port'] == 1234
 
     # Call it again to check it works to reconfigure existing broker connection parameters
-    options = [profile_name, '-n', '--broker-host', 'rabbitmq.broker.com']
-    run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
-    assert profile.process_control_backend == 'core.rabbitmq'
-    assert profile.process_control_config['broker_host'] == 'rabbitmq.broker.com'
+    options = [profile_name, '-n', '--broker-port', '5672']
+    cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
+    assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
+    assert profile.process_control_config['broker_port'] == 5672

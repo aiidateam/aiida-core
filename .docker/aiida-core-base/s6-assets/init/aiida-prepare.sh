@@ -26,7 +26,7 @@ if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${
     # Create AiiDA profile.
     verdi presto \
         --verbosity info \
-        --profile-name "${AIIDA_PROFILE_NAME:-default}" \
+        --profile "${AIIDA_PROFILE_NAME:-default}" \
         --email "${AIIDA_USER_EMAIL:-aiida@localhost}" \
         --use-postgres \
         --postgres-hostname "${AIIDA_POSTGRES_HOSTNAME:-localhost}" \

@@ -344,11 +344,15 @@ ARCHIVE_FORMAT = OverridableOption(
 )
 
 NON_INTERACTIVE = OverridableOption(
-    '-n',
-    '--non-interactive',
-    is_flag=True,
+    '-n/-I',
+    '--non-interactive/--interactive',
     is_eager=True,
-    help='In non-interactive mode, the CLI never prompts but simply uses default values for options that define one.',
+    help=(
+        'In non-interactive mode, the CLI never prompts for options but simply uses default values for options that '
+        'define one. In interactive mode, the CLI will prompt for each interactive option. '
+    ),
+    default=False,
+    show_default='--interactive',
 )
 
 DRY_RUN = OverridableOption('-n', '--dry-run', is_flag=True, help='Perform a dry run.')

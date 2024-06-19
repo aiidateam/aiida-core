@@ -167,9 +167,9 @@ class InteractiveOption(ConditionalOption):
     def is_interactive(ctx: click.Context) -> bool:
         """Return whether the command is being run non-interactively.
 
-        This is the case if the ``non_interactive`` parameter in the context is set to ``True``.
+        This is the case if the ``non_interactive`` parameter in the context is set to ``False``.
 
-        :return: ``True`` if being run non-interactively, ``False`` otherwise.
+        :return: ``True`` if being run interactively, ``False`` otherwise.
         """
         return not ctx.params.get('non_interactive', False)
 

@@ -80,3 +80,11 @@ def test_presto_use_postgres_fail(run_cli_command):
     options = ['--non-interactive', '--use-postgres', '--postgres-port', str(5000)]
     result = run_cli_command(verdi_presto, options, raises=True)
     assert 'Failed to connect to the PostgreSQL server' in result.output
+
+
+@pytest.mark.usefixtures('empty_config')
+def test_presto_overdose(run_cli_command, config_with_profile_factory):
+    """Test that ``verdi presto`` still works for users that have over 10 presto profiles."""
+    config_with_profile_factory(name='presto-10')
+    result = run_cli_command(verdi_presto)
+    assert 'Created new profile `presto-11`.' in result.output

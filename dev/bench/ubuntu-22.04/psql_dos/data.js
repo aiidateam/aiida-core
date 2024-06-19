@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718783240161,
+  "lastUpdate": 1718813136951,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -48680,6 +48680,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0015066",
             "group": "node",
             "extra": "mean: 24.093 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "3.25",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.14",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "c2ca6423c1803f75ef198f896cb8ba85339be3ff",
+          "message": "👌 CLI: Give feedback for `configure-rabbitmq`\n\nCurrently the `verdi profile configure-rabbitmq` command doesn't give any feedback to\nthe user whether the provided options can successfully connect to the RabbitMQ server.\nHere we adapt the `detect_rabbitmq_config` function to accept the broker configuration\nas `**kwargs`, and use it to check if the provided options in the `configure-rabbitmq`\ncan successfully connect to the RabbitMQ server. A \"success\" message is printed if\nwe can connect to the server, else a warning is printed and the user is asked for\nconfirmation before proceeding to configure the broker.\n\nA `--force` flag is also added to avoid asking for confirmation in case the command\nis unable to connect to the broker.",
+          "timestamp": "2024-06-19T17:57:49+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/c2ca6423c1803f75ef198f896cb8ba85339be3ff",
+          "distinct": true,
+          "tree_id": "c4a29b37474ab59ad9b33b6d5f33e99293b3a1f5"
+        },
+        "date": 1718813132311,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 2.6118950924996445,
+            "unit": "iter/sec",
+            "range": "stddev: 0.18124",
+            "group": "import-export",
+            "extra": "mean: 382.86 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 2.9507408929122136,
+            "unit": "iter/sec",
+            "range": "stddev: 0.060586",
+            "group": "import-export",
+            "extra": "mean: 338.90 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.316498666236434,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0058174",
+            "group": "import-export",
+            "extra": "mean: 231.67 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.175914472861887,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0087892",
+            "group": "import-export",
+            "extra": "mean: 239.47 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.587524078928004,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0076256",
+            "group": "engine",
+            "extra": "mean: 278.74 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.7636571838497546,
+            "unit": "iter/sec",
+            "range": "stddev: 0.092028",
+            "group": "engine",
+            "extra": "mean: 1.3095 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.8592258548645676,
+            "unit": "iter/sec",
+            "range": "stddev: 0.077126",
+            "group": "engine",
+            "extra": "mean: 1.1638 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.20302528315511956,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14080",
+            "group": "engine",
+            "extra": "mean: 4.9255 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.23104804495475517,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12382",
+            "group": "engine",
+            "extra": "mean: 4.3281 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.523079544020973,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0080519",
+            "group": "engine",
+            "extra": "mean: 396.34 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5408488601160637,
+            "unit": "iter/sec",
+            "range": "stddev: 0.047689",
+            "group": "engine",
+            "extra": "mean: 1.8489 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.6110649101431347,
+            "unit": "iter/sec",
+            "range": "stddev: 0.043991",
+            "group": "engine",
+            "extra": "mean: 1.6365 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.16104671201960416,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14390",
+            "group": "engine",
+            "extra": "mean: 6.2094 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.17250988664252245,
+            "unit": "iter/sec",
+            "range": "stddev: 0.20945",
+            "group": "engine",
+            "extra": "mean: 5.7968 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 487.98033758388846,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014711",
+            "group": "node",
+            "extra": "mean: 2.0493 msec\nrounds: 280"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 75.01763640248986,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00046882",
+            "group": "node",
+            "extra": "mean: 13.330 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 48.971887667336176,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0013383",
+            "group": "node",
+            "extra": "mean: 20.420 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 280.7462647851372,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00022406",
+            "group": "node",
+            "extra": "mean: 3.5619 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 40.07248013672013,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0018272",
+            "group": "node",
+            "extra": "mean: 24.955 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 40.40524240694789,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0013702",
+            "group": "node",
+            "extra": "mean: 24.749 msec\nrounds: 100"
           }
         ]
       }

@@ -32,7 +32,7 @@ class ColorConfig:
     _COLOR: Union[bool, None] = None
 
     @staticmethod
-    def get_color() -> bool | None:
+    def get_color() -> Union[bool, None]:
         """
         Returns the color value. If return value is None, the color value should be determined by caller.
         """

@@ -90,7 +90,7 @@ def detect_postgres_config(
 
 @verdi.command('presto')
 @click.option(
-    '--profile-name',
+    '--profile',
     default=lambda: get_default_presto_profile_name(),
     show_default=True,
     help=f'Name of the profile. By default, a unique name starting with `{DEFAULT_PROFILE_NAME_PREFIX}` is '
@@ -127,7 +127,7 @@ def detect_postgres_config(
 @click.pass_context
 def verdi_presto(
     ctx,
-    profile_name,
+    profile,
     email,
     use_postgres,
     postgres_hostname,
@@ -168,7 +168,7 @@ def verdi_presto(
     from aiida.orm import Computer
 
     postgres_config_kwargs = {
-        'profile_name': profile_name,
+        'profile_name': profile,
         'postgres_hostname': postgres_hostname,
         'postgres_port': postgres_port,
         'postgres_username': postgres_username,
@@ -196,7 +196,7 @@ def verdi_presto(
     try:
         profile = create_profile(
             ctx.obj.config,
-            name=profile_name,
+            name=profile,
             email=email,
             storage_backend=storage_backend,
             storage_config=storage_config,

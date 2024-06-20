@@ -633,6 +633,8 @@ def run_cli_command(reset_log_level, aiida_config, aiida_profile):
         """
         # Cast all elements in ``parameters`` to strings as that is required by ``subprocess.run``.
         parameters = [str(param) for param in parameters or []]
+        # We disable color for tests
+        os.environ['NO_COLOR'] = 'true'
 
         try:
             config_show_deprecations = aiida_config.get_option('warnings.showdeprecations')

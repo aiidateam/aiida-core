@@ -243,7 +243,9 @@ class Manager:
 
     def get_profile_storage(self) -> 'StorageBackend':
         """Return the current profile's storage backend, loading it if necessary."""
+        from aiida.cmdline.utils.defaults import get_default_profile
         from aiida.common import ConfigurationError
+        from aiida.common.exceptions import InvalidOperation
         from aiida.common.log import configure_logging
         from aiida.manage.profile_access import ProfileAccessManager
 
@@ -253,10 +255,16 @@ class Manager:
 
         # get the currently loaded profile
         profile = self.get_profile()
+
+        # try to load the default profile
         if profile is None:
-            raise ConfigurationError(
-                'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
-            )
+            try:
+                default_profile = get_default_profile()
+                profile = self.load_profile(default_profile)
+            except (TypeError, InvalidOperation) as e:
+                raise ConfigurationError(
+                    "Default profile couldn't be loaded. Consider loading one manually via `aiida.load_profile()`."
+                ) from e
 
         # request access to the profile (for example, if it is being used by a maintenance operation)
         ProfileAccessManager(profile).request_access()

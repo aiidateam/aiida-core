@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+from aiida.common.log import AIIDA_LOGGER
+
 if TYPE_CHECKING:
     import asyncio
 
@@ -29,6 +31,7 @@ if TYPE_CHECKING:
 __all__ = ('get_manager',)
 
 MANAGER: Optional['Manager'] = None
+LOGGER = AIIDA_LOGGER.getChild('manage')
 
 
 def get_manager() -> 'Manager':
@@ -261,6 +264,7 @@ class Manager:
             try:
                 default_profile = get_default_profile()
                 profile = self.load_profile(default_profile)
+                LOGGER.report(f'Loaded default profile: {profile}.')
             except (TypeError, InvalidOperation) as e:
                 raise ConfigurationError(
                     "Default profile couldn't be loaded. Consider loading one manually via `aiida.load_profile()`."

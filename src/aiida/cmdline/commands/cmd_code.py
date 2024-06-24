@@ -266,6 +266,8 @@ def export(code, output_file, sort):
     with open(output_file, 'w', encoding='utf-8') as yfhandle:
         yaml.dump(code_data, yfhandle, sort_keys=sort)
 
+    echo.echo_success(f"Code<{code.pk}> {code.label} exported to file '{output_file}'.")
+
 
 @verdi_code.command()
 @arguments.CODES()

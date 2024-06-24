@@ -234,7 +234,7 @@ def show(code):
 
 @verdi_code.command()
 @arguments.CODE()
-@arguments.OUTPUT_FILE(type=click.Path(exists=False))
+@arguments.OUTPUT_FILE(type=click.Path(exists=False), required=False)
 @click.option(
     '--sort/--no-sort',
     is_flag=True,
@@ -259,6 +259,9 @@ def export(code, output_file, sort):
         # use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
         if value is not None:
             code_data[key] = str(value)
+
+    if output_file is None:
+        output_file = f"{code_data['label']}.yml"
 
     with open(output_file, 'w', encoding='utf-8') as yfhandle:
         yaml.dump(code_data, yfhandle, sort_keys=sort)

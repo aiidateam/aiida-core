@@ -741,7 +741,7 @@ def computer_export():
 
 @computer_export.command('setup')
 @arguments.COMPUTER()
-@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path))
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
 @click.option(
     '--sort/--no-sort',
     is_flag=True,
@@ -769,6 +769,10 @@ def computer_export_setup(computer, output_file, sort):
         'prepend_text': computer.get_prepend_text(),
         'append_text': computer.get_append_text(),
     }
+
+    if output_file is None:
+        output_file = pathlib.Path(f'{computer.label}-setup.yml')
+
     try:
         output_file.write_text(yaml.dump(computer_setup, sort_keys=sort), 'utf-8')
     except Exception as e:
@@ -783,7 +787,7 @@ def computer_export_setup(computer, output_file, sort):
 
 @computer_export.command('config')
 @arguments.COMPUTER()
-@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path))
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
 @options.USER(
     help='Email address of the AiiDA user from whom to export this computer (if different from default user).'
 )
@@ -806,6 +810,8 @@ def computer_export_config(computer, output_file, user, sort):
         )
     try:
         computer_configuration = computer.get_configuration(user)
+        if output_file is None:
+            output_file = pathlib.Path(f'{computer.label}-config.yml')
         output_file.write_text(yaml.dump(computer_configuration, sort_keys=sort), 'utf-8')
     except Exception as e:
         error_traceback = traceback.format_exc()

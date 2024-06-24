@@ -8,8 +8,11 @@
 ###########################################################################
 """Functionality for dumping of ProcessNodes."""
 
+# ? Possibly add dry_run option here
+
 from __future__ import annotations
 
+import contextlib
 import logging
 from pathlib import Path
 from types import SimpleNamespace
@@ -160,9 +163,7 @@ class ProcessDumper:
         node_label = '-'.join(label_list)
         # `CALL-` as part of the link labels also for MultiplyAddWorkChain -> Seems general enough, so remove
         node_label = node_label.replace('CALL-', '')
-        node_label = node_label.replace('None-', '')
-
-        return node_label
+        return node_label.replace('None-', '')
 
     def dump(
         self,
@@ -264,12 +265,10 @@ class ProcessDumper:
         calculation_node.base.repository.copy_tree(output_path.resolve() / io_dump_mapping.repository)
 
         # Dump the repository contents of `outputs.retrieved`
-        try:
+        with contextlib.suppress(NotExistentAttributeError):
             calculation_node.outputs.retrieved.base.repository.copy_tree(
                 output_path.resolve() / io_dump_mapping.retrieved
             )
-        except NotExistentAttributeError:
-            pass
 
         # Dump the node_inputs
         if self.include_inputs:
@@ -317,12 +316,12 @@ class ProcessDumper:
 
         aiida_entities_to_dump = ['repository', 'retrieved', 'inputs', 'outputs']
         default_calculation_io_dump_paths = ['inputs', 'outputs', 'node_inputs', 'node_outputs']
-        empty_calculation_io_dump_paths = [''] * 4
-
         if self.flat and io_dump_paths is None:
             LOGGER.info(
                 'Flat set to True and no `io_dump_paths`. Dumping in a flat directory, files might be overwritten.'
             )
+            empty_calculation_io_dump_paths = [''] * 4
+
             return SimpleNamespace(**dict(zip(aiida_entities_to_dump, empty_calculation_io_dump_paths)))
 
         elif not self.flat and io_dump_paths is None:
@@ -332,7 +331,7 @@ class ProcessDumper:
             )
             return SimpleNamespace(**dict(zip(aiida_entities_to_dump, default_calculation_io_dump_paths)))
 
-        elif self.flat and io_dump_paths is not None:
+        elif self.flat:
             LOGGER.info('Flat set to True but `io_dump_paths` provided. These will be used, but `inputs` not nested.')
             return SimpleNamespace(**dict(zip(aiida_entities_to_dump, io_dump_paths)))
         else:
@@ -370,44 +369,31 @@ class ProcessDumper:
 
         computer_properties = ('label', 'hostname', 'scheduler_type', 'transport_type')
 
-        node_dict = {}
-        metadata_dict = {}
-
-        # Add actual node `@property`s to dictionary
-        for metadata_property in node_properties:
-            metadata_dict[metadata_property] = getattr(process_node, metadata_property)
-
-        node_dict['Node data'] = metadata_dict
-
+        metadata_dict = {
+            metadata_property: getattr(process_node, metadata_property) for metadata_property in node_properties
+        }
+        node_dict = {'Node data': metadata_dict}
         # Add user data
-        try:
+        with contextlib.suppress(AttributeError):
             node_dbuser = process_node.user
-            user_dict = {}
-            for user_property in user_properties:
-                user_dict[user_property] = getattr(node_dbuser, user_property)
+            user_dict = {user_property: getattr(node_dbuser, user_property) for user_property in user_properties}
             node_dict['User data'] = user_dict
-        except AttributeError:
-            pass
 
         # Add computer data
-        try:
+        with contextlib.suppress(AttributeError):
             node_dbcomputer = process_node.computer
-            computer_dict = {}
-            for computer_property in computer_properties:
-                computer_dict[computer_property] = getattr(node_dbcomputer, computer_property)
+            computer_dict = {
+                computer_property: getattr(node_dbcomputer, computer_property)
+                for computer_property in computer_properties
+            }
             node_dict['Computer data'] = computer_dict
-        except AttributeError:
-            pass
-
         # Add node attributes
         if self.include_attributes:
             node_attributes = process_node.base.attributes.all
             node_dict['Node attributes'] = node_attributes
 
-        # Add node extras
         if self.include_extras:
-            node_extras = process_node.base.extras.all
-            if node_extras:
+            if node_extras := process_node.base.extras.all:
                 node_dict['Node extras'] = node_extras
 
         output_file = output_path.resolve() / output_filename

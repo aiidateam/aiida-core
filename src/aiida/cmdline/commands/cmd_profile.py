@@ -278,7 +278,14 @@ def profile_delete(force, delete_data, profiles):
 @verdi_profile.command('dump')
 @options.PATH()
 @arguments.PROFILE(default=defaults.get_default_profile)
-def profile_dump(profile, path):
+@click.option(
+    '-f',
+    '--full',
+    is_flag=True,
+    default=False,
+    help='Dump all profile data, overwriting existing files.',
+)
+def profile_dump(profile, path, full):
     """Dump profile data to disk."""
     if profile is None:
         echo.echo_critical('No profile selected to dump')
@@ -287,7 +294,7 @@ def profile_dump(profile, path):
 
     profiledumper = ProfileDumper(
         profile='verdi-profile-dump',
-        full=False,
+        full=full,
         parent_path=path,
         organize_by_groups=True,
     )

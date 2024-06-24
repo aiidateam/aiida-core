@@ -29,21 +29,24 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
+import sys
 from pathlib import Path
+from pprint import pprint
 from typing import List
 
-from aiida.orm import Group, QueryBuilder, StructureData, WorkflowNode, CalculationNode, Code, Computer, User
+import yaml
+
+from aiida.orm import CalculationNode, Code, Computer, Group, QueryBuilder, StructureData, User, WorkflowNode
 from aiida.orm.groups import ImportGroup
 from aiida.tools.dumping.processes import ProcessDumper
-from pprint import pprint
-import sys
-import yaml
 from aiida.tools.dumping.utils import _validate_make_dump_path
-
+from aiida.manage.configuration.profile import Profile
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
+PROFILE_DUMP_JSON_FILE = 'profile-dump-info.json'
 
 
 class ProfileDumper:
@@ -79,10 +82,18 @@ class ProfileDumper:
 
         if full:
             LOGGER.report('Full set to True. Will overwrite previous directories.')
+            _validate_make_dump_path(
+                overwrite=True, validate_path=self.parent_path, logger=LOGGER, safeguard_file=PROFILE_DUMP_JSON_FILE
+            )
 
         if process_dumper_kwargs is None:
             process_dumper_kwargs = {}
         self.process_dumper_kwargs = process_dumper_kwargs
+
+        # self.entity_counter_dictionary = dict.fromkeys(self.entities_to_dump, 0)
+        self.entity_counter_dictionary = {cls.__name__: 0 for cls in self.entities_to_dump}
+
+        self.profile_dump_json_file = self.parent_path / PROFILE_DUMP_JSON_FILE
 
     @staticmethod
     def check_storage_size_user():
@@ -121,35 +132,47 @@ class ProfileDumper:
 
         return return_iterable
 
-    @staticmethod
-    def update_info_file(file_path):
+    def update_info_file(self):
         import json
         import os
         from datetime import datetime
+        from aiida.manage.configuration import get_config
 
         # Get the current timestamp
         now = datetime.now()
-        new_entry = now.strftime('%Y-%m-%d %H:%M:%S')
+        new_entry = {'timestamp': now.strftime('%Y-%m-%d %H:%M:%S')}
+
+        # Get the profile configuration
+        config = get_config()
+        profile_info = config.dictionary  # Assuming this is a dictionary
+
         run_key = 'last_run_time'
+        profile_key = 'latest_profile_info'
 
         # Read the existing data from the JSON file if it exists
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as json_file:
+        if os.path.exists(self.profile_dump_json_file):
+            with open(self.profile_dump_json_file, 'r') as json_file:
                 try:
                     data = json.load(json_file)
                 except json.JSONDecodeError:
-                    data = {run_key: []}
+                    data = {run_key: [], profile_key: {}}
         else:
-            data = {run_key: []}
+            data = {run_key: [], profile_key: {}}
 
         # Append the new entry to the existing data
         data[run_key].append(new_entry)
 
+        # Update the profile info with the latest one
+        data[profile_key] = profile_info
+
         # Write the updated data back to the JSON file
-        with open(file_path, 'w') as json_file:
+        with open(self.profile_dump_json_file, 'w') as json_file:
             json.dump(data, json_file, indent=4)
 
     def dump(self):
+        print('hello from dump')
+        print('self.entity_counter_dictionary', self.entity_counter_dictionary)
+
         if self.organize_by_groups:
             LOGGER.report('Dumping sorted by groups.')
             for group in self.profile_groups:
@@ -160,11 +183,15 @@ class ProfileDumper:
         else:
             self.resolve_dump_entities()
 
-        self.update_info_file(file_path=self.parent_path / 'profile-dump-info.json')
+        self.update_info_file()
+
+        print('hello from dump')
+        print('self.entity_counter_dictionary', self.entity_counter_dictionary)
 
     def resolve_dump_entities(self):
         if WorkflowNode in self.entities_to_dump:
             self.dump_workflows()
+
         if StructureData in self.entities_to_dump:
             self.dump_structures()
         if CalculationNode in self.entities_to_dump:
@@ -173,6 +200,10 @@ class ProfileDumper:
             self.dump_code_computers()
         if User in self.entities_to_dump:
             self.dump_user_info()
+        # ? Possibly do this by default?
+        if Profile in self.entities_to_dump:
+
+            self.dump_profile_info()
 
     def dump_structures(self, format: str = 'cif'):
         structure_datas = self.get_nodes_from_db(aiida_node_type=StructureData, with_group=self.current_group)
@@ -191,6 +222,8 @@ class ProfileDumper:
             else:
                 try:
                     structure_data.export(path=structures_path / structure_name, fileformat=format, overwrite=False)
+                    self.entities_to_dump
+                # This is basically a FileExistsError
                 except OSError:
                     continue
 
@@ -217,10 +250,11 @@ class ProfileDumper:
                 / ProcessDumper._generate_default_dump_path(process_node=workflow)
             )
 
-            try:
-                workflow_dumper.dump(process_node=workflow, output_path=workflow_dump_path)
-            except FileExistsError:
-                pass
+            if not self.dry_run:
+                with contextlib.suppress(FileExistsError):
+                    workflow_dumper.dump(process_node=workflow, output_path=workflow_dump_path)
+
+            self.entity_counter_dictionary[WorkflowNode.__name__] += 1
 
             # To make development quicker
             if iworkflow_ > 1:

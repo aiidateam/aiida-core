@@ -46,7 +46,7 @@ class ProfileDumper:
     def __init__(
         self,
         profile: str,
-        parent_path: str | Path,
+        parent_path: str | Path = Path(),
         full: bool = False,
         entities_to_dump: List | None = None,
         organize_by_groups: bool = True,

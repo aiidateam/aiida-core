@@ -19,6 +19,7 @@ from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
+from aiida.tools.dumping.profile import ProfileDumper
 
 
 @verdi.group('profile')
@@ -273,3 +274,22 @@ def profile_delete(force, delete_data, profiles):
 
         get_config().delete_profile(profile.name, delete_storage=delete_data)
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
+
+@verdi_profile.command('dump')
+@options.PATH()
+@arguments.PROFILE(default=defaults.get_default_profile)
+def profile_dump(profile, path):
+    """Dump profile data to disk."""
+    if profile is None:
+        echo.echo_critical('No profile selected to dump')
+
+    echo.echo_report(f'Dumping of profile data: {profile.name} under path `{path}`')
+
+    profiledumper = ProfileDumper(
+        profile='verdi-profile-dump',
+        full=False,
+        parent_path=path,
+        organize_by_groups=True,
+    )
+    profiledumper.dump()
+    echo.echo_success(f'Data of profile {profile.name} mirrored to disk.')

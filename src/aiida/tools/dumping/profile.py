@@ -25,6 +25,7 @@
 # ? Abstract `dump_structure_data` and `dump_workflows` so that I can iterate over them based on the entities_to_dump
 # ? Dump codes and computers YAML files
 # ? Also dump user-info
+# ? Check for safeguard file `profile-dump-info.json` when using `full` option similar to process dumping
 
 from __future__ import annotations
 
@@ -37,9 +38,12 @@ from aiida.orm.groups import ImportGroup
 from aiida.tools.dumping.processes import ProcessDumper
 from pprint import pprint
 import sys
+import yaml
+from aiida.tools.dumping.utils import _validate_make_dump_path
 
 
 LOGGER = logging.getLogger(__name__)
+DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
 
 
 class ProfileDumper:
@@ -71,7 +75,7 @@ class ProfileDumper:
         if entities_to_dump is not None:
             self.entities_to_dump = entities_to_dump
         else:
-            self.entities_to_dump = [StructureData, WorkflowNode]
+            self.entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
 
         if full:
             LOGGER.report('Full set to True. Will overwrite previous directories.')
@@ -101,17 +105,21 @@ class ProfileDumper:
                 sys.exit()
 
     @staticmethod
-    def get_nodes_from_db(aiida_node_type, with_group: str | None = None):
+    def get_nodes_from_db(aiida_node_type, with_group: str | None = None, flatten=False):
         qb = QueryBuilder()
 
-        if with_group:
+        # ? Computers cannot be associated via `with_group`
+        if with_group is not None and aiida_node_type is not Computer and aiida_node_type is not Code:
             qb.append(Group, filters={'label': with_group.label}, tag='with_group')
             qb.append(aiida_node_type, with_group='with_group')
         else:
             qb.append(aiida_node_type)
 
-        num_nodes = qb.count()
-        return qb.iterall() if num_nodes > 10 ^ 3 else qb.all()
+        return_iterable = qb.iterall() if qb.count() > 10 ^ 3 else qb.all()
+        if flatten:
+            return_iterable = [_[0] for _ in return_iterable]
+
+        return return_iterable
 
     @staticmethod
     def update_info_file(file_path):
@@ -220,12 +228,69 @@ class ProfileDumper:
 
     # Scaffolding
 
+    # ? Possibly not the best name, as user configuration could be interpreted wrongly
     @classmethod
     def read_user_config(cls):
         pass
 
     def dump_code_computers(self):
-        pass
+        computers = self.get_nodes_from_db(aiida_node_type=Computer, flatten=True)
+
+        computer_parent_path = self.parent_path / Path('computers')
+        computer_parent_path.mkdir(parents=True, exist_ok=True)
+
+        for computer in computers:
+            computer_setup_file = computer_parent_path / f'{computer.label}-setup.yaml'
+            # ? Copied over from `cmd_computer` as importing `computer_export_setup` led to click Context error:
+            # TypeError: Context.__init__() got an unexpected keyword argument 'computer'
+            computer_setup = {
+                'label': computer.label,
+                'hostname': computer.hostname,
+                'description': computer.description,
+                'transport': computer.transport_type,
+                'scheduler': computer.scheduler_type,
+                'shebang': computer.get_shebang(),
+                'work_dir': computer.get_workdir(),
+                'mpirun_command': ' '.join(computer.get_mpirun_command()),
+                'mpiprocs_per_machine': computer.get_default_mpiprocs_per_machine(),
+                'default_memory_per_machine': computer.get_default_memory_per_machine(),
+                'use_double_quotes': computer.get_use_double_quotes(),
+                'prepend_text': computer.get_prepend_text(),
+                'append_text': computer.get_append_text(),
+            }
+
+            if not computer_setup_file.is_file():
+                computer_setup_file.write_text(yaml.dump(computer_setup, sort_keys=False), 'utf-8')
+
+            computer_config_file = computer_parent_path / f'{computer.label}-config.yaml'
+
+            from aiida.orm import User
+
+            users = User.collection.all()
+            for user in users:
+                computer_configuration = computer.get_configuration(user)
+                if not computer_config_file.is_file():
+                    computer_config_file.write_text(yaml.dump(computer_configuration, sort_keys=False), 'utf-8')
+
+        codes = self.get_nodes_from_db(aiida_node_type=Code, flatten=True)
+
+        code_parent_path = self.parent_path / Path('codes')
+        code_parent_path.mkdir(parents=True, exist_ok=True)
+
+        for code in codes:
+            code_file = code_parent_path / f'{code.label}.yaml'
+            code_data = {}
+
+            # ? Copied over from `cmd_code`
+            # ? In some cases, `verdi code export` does not contain the relevant `Computer` attached to it
+            for key in code.Model.model_fields.keys():
+                value = getattr(code, key).label if key == 'computer' else getattr(code, key)
+
+                if value is not None:
+                    code_data[key] = str(value)
+
+            if not code_file.is_file():
+                code_file.write_text(yaml.dump(code_data, sort_keys=False), 'utf-8')
 
     def dump_user_info(self):
         pass

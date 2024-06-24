@@ -30,6 +30,7 @@ from aiida.orm import (
     WorkFunctionNode,
 )
 from aiida.orm.utils import LinkTriple
+from aiida.tools.dumping.utils import _validate_make_dump_path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -183,7 +184,7 @@ class ProcessDumper:
         if output_path is None:
             output_path = self._generate_default_dump_path(process_node=process_node)
 
-        self._validate_make_dump_path(validate_path=output_path)
+        _validate_make_dump_path(overwrite=self.overwrite, validate_path=output_path, logger=LOGGER)
 
         if isinstance(process_node, CalculationNode):
             self._dump_calculation(
@@ -213,7 +214,7 @@ class ProcessDumper:
         :param io_dump_paths: Custom subdirectories for `CalculationNode` s, defaults to None
         """
 
-        self._validate_make_dump_path(validate_path=output_path)
+        _validate_make_dump_path(validate_path=output_path, overwrite=self.overwrite, logger=LOGGER)
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
         called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
@@ -254,7 +255,7 @@ class ProcessDumper:
             Default: ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         """
 
-        self._validate_make_dump_path(validate_path=output_path)
+        _validate_make_dump_path(overwrite=self.overwrite, validate_path=output_path, logger=LOGGER)
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 
         io_dump_mapping = self._generate_calculation_io_mapping(io_dump_paths=io_dump_paths)
@@ -302,47 +303,6 @@ class ProcessDumper:
                 linked_node_path = parent_path
 
             link_triple.node.base.repository.copy_tree(linked_node_path.resolve())
-
-    def _validate_make_dump_path(self, validate_path: Path, safeguard_file: str = '.aiida_node_metadata.yaml') -> Path:
-        """Create default dumping directory for a given process node and return it as absolute path.
-
-        :param validate_path: Path to validate for dumping.
-        :param safeguard_file: Dumping-specific file to avoid deleting wrong directory.
-            Default: `.aiida_node_metadata.yaml`
-        :return: The absolute created dump path.
-        """
-        import shutil
-
-        if validate_path.is_dir():
-            # Existing, empty directory -> OK
-            if not any(validate_path.iterdir()):
-                pass
-
-            # Existing, non-empty directory and overwrite False -> FileExistsError
-            elif not self.overwrite:
-                raise FileExistsError(f'Path `{validate_path}` already exists and overwrite set to False.')
-
-            # Existing, non-empty directory and overwrite True
-            # Check for safeguard file ('.aiida_node_metadata.yaml') for safety
-            # If present -> Remove directory
-            elif (validate_path / safeguard_file).is_file():
-                LOGGER.info(f'Overwrite set to true, will overwrite directory `{validate_path}`.')
-                shutil.rmtree(validate_path)
-
-            # Existing and non-empty directory and overwrite True
-            # Check for safeguard file ('.aiida_node_metadata.yaml') for safety
-            # If absent -> Don't remove directory as to not accidentally remove a wrong one
-            else:
-                raise Exception(
-                    f"Path `{validate_path}` already exists and doesn't contain safeguard file {safeguard_file}."
-                    f' Not removing for safety reasons.'
-                )
-
-        # Not included in if-else as to avoid having to repeat the `mkdir` call.
-        # `exist_ok=True` as checks implemented above
-        validate_path.mkdir(exist_ok=True, parents=True)
-
-        return validate_path.resolve()
 
     def _generate_calculation_io_mapping(self, io_dump_paths: List[str | Path] | None = None) -> SimpleNamespace:
         """Helper function to generate mapping for entities dumped for each `CalculationNode`.

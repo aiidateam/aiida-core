@@ -27,7 +27,7 @@ def verdi_profile():
 
 
 def command_create_profile(
-    ctx: click.Context, storage_cls, non_interactive: bool, profile: Profile, set_as_default: bool = True, **kwargs
+    ctx: click.Context, storage_cls, non_interactive: bool, profile_name: Profile, set_as_default: bool = True, **kwargs
 ):
     """Create a new profile, initialise its storage and create a default user.
 
@@ -70,9 +70,9 @@ def command_create_profile(
         broker_config = None
 
     try:
-        profile = create_profile(
+        profile_name = create_profile(
             ctx.obj.config,
-            name=profile.name,
+            name=profile_name.name,
             email=email,
             first_name=first_name,
             last_name=last_name,
@@ -85,10 +85,10 @@ def command_create_profile(
     except (ValueError, TypeError, exceptions.EntryPointError, exceptions.StorageMigrationError) as exception:
         echo.echo_critical(str(exception))
 
-    echo.echo_success(f'Created new profile `{profile.name}`.')
+    echo.echo_success(f'Created new profile `{profile_name.name}`.')
 
     if set_as_default:
-        ctx.invoke(profile_set_default, profile=profile)
+        ctx.invoke(profile_set_default, profile=profile_name)
 
 
 @verdi_profile.group(

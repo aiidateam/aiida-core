@@ -329,7 +329,7 @@ Below is a list with all available subcommands.
       the newly created profile uses the new PostgreSQL database instead of SQLite.
 
     Options:
-      --profile TEXT            Name of the profile. By default, a unique name starting with
+      --profile-name TEXT       Name of the profile. By default, a unique name starting with
                                 `presto` is automatically generated.  [default: (dynamic)]
       --email TEXT              Email of the default user.  [default: (dynamic)]
       --use-postgres            When toggled on, the profile uses a PostgreSQL database

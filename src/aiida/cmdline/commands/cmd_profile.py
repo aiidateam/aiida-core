@@ -130,22 +130,38 @@ def profile_setup():
 
 @verdi_profile.command('configure-rabbitmq')  # type: ignore[arg-type]
 @arguments.PROFILE(default=defaults.get_default_profile)
+@options.FORCE()
 @setup.SETUP_BROKER_PROTOCOL()
 @setup.SETUP_BROKER_USERNAME()
 @setup.SETUP_BROKER_PASSWORD()
 @setup.SETUP_BROKER_HOST()
 @setup.SETUP_BROKER_PORT()
 @setup.SETUP_BROKER_VIRTUAL_HOST()
-@options.NON_INTERACTIVE()
+@options.NON_INTERACTIVE(default=True, show_default='--non-interactive')
 @click.pass_context
-def profile_configure_rabbitmq(ctx, profile, **kwargs):
+def profile_configure_rabbitmq(ctx, profile, non_interactive, force, **kwargs):
     """Configure RabbitMQ for a profile.
 
     Enable RabbitMQ for a profile that was created without a broker, or reconfigure existing connection details.
     """
+    from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
+
+    connection_params = {key.lstrip('broker_'): value for key, value in kwargs.items() if key.startswith('broker_')}
+
+    broker_config = detect_rabbitmq_config(**connection_params)
+
+    if broker_config is None:
+        echo.echo_warning(f'Unable to connect to RabbitMQ server with configuration: {connection_params}')
+        if not force:
+            click.confirm('Do you want to continue with the provided configuration?', abort=True)
+    else:
+        echo.echo_success('Connected to RabbitMQ with the provided connection parameters')
+
     profile.set_process_controller(name='core.rabbitmq', config=kwargs)
     ctx.obj.config.update_profile(profile)
     ctx.obj.config.store()
+
+    echo.echo_success(f'RabbitMQ configuration for `{profile.name}` updated to: {connection_params}')
 
 
 @verdi_profile.command('list')

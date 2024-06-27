@@ -329,23 +329,26 @@ Below is a list with all available subcommands.
       the newly created profile uses the new PostgreSQL database instead of SQLite.
 
     Options:
-      --profile-name TEXT       Name of the profile. By default, a unique name starting with
-                                `presto` is automatically generated.  [default: (dynamic)]
-      --email TEXT              Email of the default user.  [default: (dynamic)]
-      --use-postgres            When toggled on, the profile uses a PostgreSQL database
-                                instead of an SQLite one. The connection details to the
-                                PostgreSQL server can be configured with the relevant options.
-                                The command attempts to automatically create a user and
-                                database to use for the profile, but this can fail depending
-                                on the configuration of the server.
-      --postgres-hostname TEXT  The hostname of the PostgreSQL server.
-      --postgres-port INTEGER   The port of the PostgreSQL server.
-      --postgres-username TEXT  The username of the PostgreSQL user that is authorized to
-                                create new databases.
-      --postgres-password TEXT  The password of the PostgreSQL user that is authorized to
-                                create new databases.
-      -n, --non-interactive     Never prompt, such as for sudo password.
-      --help                    Show this message and exit.
+      --profile-name TEXT             Name of the profile. By default, a unique name starting
+                                      with `presto` is automatically generated.  [default:
+                                      (dynamic)]
+      --email TEXT                    Email of the default user.  [default: (dynamic)]
+      --use-postgres                  When toggled on, the profile uses a PostgreSQL database
+                                      instead of an SQLite one. The connection details to the
+                                      PostgreSQL server can be configured with the relevant
+                                      options. The command attempts to automatically create a
+                                      user and database to use for the profile, but this can
+                                      fail depending on the configuration of the server.
+      --postgres-hostname TEXT        The hostname of the PostgreSQL server.
+      --postgres-port INTEGER         The port of the PostgreSQL server.
+      --postgres-username TEXT        The username of the PostgreSQL user that is authorized
+                                      to create new databases.
+      --postgres-password TEXT        The password of the PostgreSQL user that is authorized
+                                      to create new databases.
+      -n, --non-interactive / -I, --interactive
+                                      Never prompt, such as for sudo password.  [default:
+                                      (--interactive)]
+      --help                          Show this message and exit.
 
 
 .. _reference:command-line:verdi-process:
@@ -412,8 +415,11 @@ Below is a list with all available subcommands.
       (Deprecated) Setup a new profile in a fully automated fashion.
 
     Options:
-      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
-                                      simply uses default values for options that define one.
+      -n, --non-interactive / -I, --interactive
+                                      In non-interactive mode, the CLI never prompts for
+                                      options but simply uses default values for options that
+                                      define one. In interactive mode, the CLI will prompt for
+                                      each interactive option.   [default: (--interactive)]
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when
@@ -516,8 +522,11 @@ Below is a list with all available subcommands.
       user has been created.
 
     Options:
-      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
-                                      simply uses default values for options that define one.
+      -n, --non-interactive / -I, --interactive
+                                      In non-interactive mode, the CLI never prompts for
+                                      options but simply uses default values for options that
+                                      define one. In interactive mode, the CLI will prompt for
+                                      each interactive option.   [default: (--interactive)]
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when

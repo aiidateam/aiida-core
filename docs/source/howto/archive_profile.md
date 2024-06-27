@@ -25,7 +25,7 @@ See {ref}`how-to:share:archives` for information on how to create and migrate an
 The easiest way to inspect the contents of an archive is to create a profile that "mounts" the archive as its data storage:
 
 ```{code-cell} ipython3
-!verdi profile setup core.sqlite_zip -n --profile archive --filepath process.aiida
+!verdi profile setup core.sqlite_zip -n --profile-name archive --filepath process.aiida
 ```
 
 You can now inspect the contents of the `process.aiida` archive by using the `archive` profile in the same way you would a standard AiiDA profile.

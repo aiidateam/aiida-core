@@ -97,7 +97,7 @@ def command_create_profile(
     command=command_create_profile,
     entry_point_group='aiida.storage',
     shared_options=[
-        setup.SETUP_PROFILE(),
+        setup.SETUP_PROFILE_NAME(),
         setup.SETUP_PROFILE_SET_AS_DEFAULT(),
         setup.SETUP_USER_EMAIL(required=False),
         setup.SETUP_USER_FIRST_NAME(),

@@ -181,6 +181,16 @@ SETUP_PROFILE = options.OverridableOption(
     cls=options.interactive.InteractiveOption,
 )
 
+SETUP_PROFILE_NAME = options.OverridableOption(
+    '-p',
+    '--profile-name',
+    prompt='Profile name',
+    help='The name of the new profile.',
+    required=True,
+    type=types.ProfileParamType(cannot_exist=True),
+    cls=options.interactive.InteractiveOption,
+)
+
 SETUP_PROFILE_SET_AS_DEFAULT = options.OverridableOption(
     '--set-as-default/--no-set-as-default',
     prompt='Set as default?',

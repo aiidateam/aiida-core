@@ -351,7 +351,7 @@ def profile_factory() -> Profile:
             'storage': {
                 'backend': kwargs.pop('storage_backend', 'core.psql_dos'),
                 'config': {
-                    'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
+                    'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg'),
                     'database_hostname': kwargs.pop('database_hostname', 'localhost'),
                     'database_port': kwargs.pop('database_port', 5432),
                     'database_name': kwargs.pop('database_name', name),

@@ -9,7 +9,7 @@
 """Util methods"""
 
 import urllib.parse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import jsonify
 from flask.json.provider import DefaultJSONProvider
@@ -670,7 +670,6 @@ class Utils:
         :param query_string (as obtained from request.query_string)
         :return: parsed values for the querykeys
         """
-        from psycopg2.tz import FixedOffsetTimezone
         from pyparsing import (
             Combine,
             Group,
@@ -774,10 +773,10 @@ class Utils:
             if dtobj.tzinfo is not None and dtobj.utcoffset() is not None:
                 tzoffset_minutes = int(dtobj.utcoffset().total_seconds() // 60)
                 return DatetimePrecision(
-                    dtobj.replace(tzinfo=FixedOffsetTimezone(offset=tzoffset_minutes, name=None)), precision
+                    dtobj.replace(tzinfo=timezone(offset=timedelta(minutes=tzoffset_minutes), name='UTC')), precision
                 )
 
-            return DatetimePrecision(dtobj.replace(tzinfo=FixedOffsetTimezone(offset=0, name=None)), precision)
+            return DatetimePrecision(dtobj.replace(tzinfo=timezone(offset=timedelta(minutes=0), name='UTC')), precision)
 
         ########################################################################
 

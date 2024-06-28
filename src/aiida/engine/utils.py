@@ -316,9 +316,13 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
     for process_type_key in process_types:
         key = PROCESS_STATE_CHANGE_KEY.format(process_type_key)
         try:
-            time_stamp = backend.get_global_variable(key)
-            if time_stamp is not None:
-                timestamps.append(datetime.fromisoformat(str(time_stamp)))
+            try:
+                timestamp = backend.get_global_variable(key)
+            except NotImplementedError:
+                pass
+            else:
+                if timestamp is not None:
+                    timestamps.append(datetime.fromisoformat(str(timestamp)))
         except KeyError:
             continue
 

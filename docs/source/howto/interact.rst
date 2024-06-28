@@ -125,6 +125,18 @@ Interactive notebooks
 =====================
 
 Similar to :ref:`interactive shells <how-to:interact-shell>`, AiiDA is also directly compatbile with interactive Python notebooks, such as `Jupyter <https://jupyter.org/>`_.
+To install the required Python packages, install ``aiida-core`` with the ``notebook`` extra, e.g. run:
+
+.. code-block:: console
+
+    pip install aiida-core[notebook]
+
+You should now be able to start a Jupyter notebook server:
+
+.. code-block:: console
+
+    jupyter notebook
+
 To use AiiDA's Python API in a notebook, first a profile has to be loaded:
 
 .. code-block:: ipython
@@ -142,8 +154,14 @@ The same can be accomplished using the following magic statement:
     %load_ext aiida
     %aiida
 
-This magic line will replicate the same environment as :ref:`the interactive shell <how-to:interact-shell>` provided by ``verdi shell``.
-However, it does require some one-time installation, as detailed in the section on how to :ref:`intro:install:jupyter`.
+This magic line replicates the same environment as :ref:`the interactive shell <how-to:interact-shell>` provided by ``verdi shell``.
+
+It is also possible to run ``verdi`` commands inside the notebook, for example:
+
+.. code-block:: ipython
+
+   %verdi status
+
 
 
 .. _how-to:interact-restapi:

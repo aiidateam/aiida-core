@@ -122,9 +122,9 @@ The command requires the PostgreSQL database to already exist and to be able to 
 
 .. tip::
 
-    Try the ``verdi quicksetup`` command to have the PostgreSQL database automatically created.
+    Try the ``verdi presto --use-postgres`` command to have the PostgreSQL database automatically created.
     Certain systems require root access to do so, causing the command to fail if it cannot obtain root access.
-    In this case, the database should be created manually (see :ref:`intro:install:database` for details).
+    In this case, the database should be created manually (see :ref:`installation:guide-complete:create-profile:core-psql-dos` for details).
     Once created, a profile can be created using the database with the command ``verdi profile setup core.psql_dos``.
 
 

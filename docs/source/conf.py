@@ -49,15 +49,9 @@ master_doc = 'index'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = [
-    'datatypes/**',
     'developer_guide/**',
-    'get_started/**',
-    'howto/installation_more/index.rst',
     'import_export/**',
     'internals/global_design.rst',
-    'internals/orm.rst',
-    'scheduler/index.rst',
-    'working_with_aiida/**',
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.

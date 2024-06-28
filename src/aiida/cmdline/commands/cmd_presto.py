@@ -174,6 +174,9 @@ def verdi_presto(
     from aiida.manage.configuration import create_profile, load_profile
     from aiida.orm import Computer
 
+    if profile_name in ctx.obj.config.profile_names:
+        raise click.BadParameter(f'The profile `{profile_name}` already exists.', param_hint='--profile-name')
+
     postgres_config_kwargs = {
         'profile_name': profile_name,
         'postgres_hostname': postgres_hostname,

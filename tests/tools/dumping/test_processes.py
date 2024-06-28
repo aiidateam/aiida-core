@@ -465,4 +465,4 @@ def test_generate_parent_readme(tmp_path, generate_workchain_multiply_add):
     # Check for outputs of `verdi process status/report/show`
     assert 'Finished [0] [3:result]' in contents
     assert 'Property     Value' in contents
-    assert 'No log messages' in contents
+    assert 'There are 1 log messages for this calculation' in contents

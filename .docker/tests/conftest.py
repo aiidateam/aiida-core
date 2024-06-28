@@ -3,21 +3,33 @@ from pathlib import Path
 
 import pytest
 
+TARGETS = ('aiida-core-base', 'aiida-core-with-services', 'aiida-core-dev')
 
-@pytest.fixture(
-    scope='session',
-    params=[
-        'aiida-core-base',
-        'aiida-core-with-services',
-        'aiida-core-dev',
-    ],
-)
-def variant(request):
-    return request.param
+
+def target_checker(value):
+    msg = f"Invalid image target '{value}', must be one of: {TARGETS}"
+    if value not in TARGETS:
+        raise pytest.UsageError(msg)
+    return value
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        '--variant',
+        action='store',
+        required=True,
+        help='target (image name) of the docker-compose file to use.',
+        type=target_checker,
+    )
 
 
 @pytest.fixture(scope='session')
-def docker_compose_file(pytestconfig, variant):
+def variant(pytestconfig):
+    return pytestconfig.getoption('variant')
+
+
+@pytest.fixture(scope='session')
+def docker_compose_file(variant):
     return f'docker-compose.{variant}.yml'
 
 
@@ -30,8 +42,7 @@ def docker_compose(docker_services):
 def _docker_service_wait(docker_services):
     """Container startup wait."""
 
-    # using `docker_compose` fixture would
-    # trigger a separate container
+    # using `docker_compose` fixture would trigger a separate container
     docker_compose = docker_services._docker_compose
 
     def is_container_ready():
@@ -41,11 +52,27 @@ def _docker_service_wait(docker_services):
             return False
         return '✔ broker:' in output and 'Daemon is running' in output
 
-    docker_services.wait_until_responsive(
-        timeout=600.0,
-        pause=2,
-        check=lambda: is_container_ready(),
-    )
+    try:
+        docker_services.wait_until_responsive(
+            timeout=300.0,
+            pause=10,
+            check=lambda: is_container_ready(),
+        )
+    except Exception:
+        print('Timed out waiting for the profile and daemon to be up and running.')
+
+        try:
+            docker_compose.execute('exec -T aiida verdi status').decode().strip()
+        except Exception as exception:
+            print(f'Output of `verdi status`:\n{exception}')
+
+        try:
+            docker_compose.execute('exec -T aiida verdi profile show').decode().strip()
+        except Exception as exception:
+            print(f'Output of `verdi status`:\n{exception}')
+
+        print(docker_compose.execute('logs').decode().strip())
+        raise
 
 
 @pytest.fixture

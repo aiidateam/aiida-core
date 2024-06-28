@@ -21,10 +21,13 @@ import pathlib
 import types
 import typing as t
 import warnings
+from pathlib import Path
 
 import click
 import pytest
 from aiida import get_profile
+from aiida.common.folders import Folder
+from aiida.common.links import LinkType
 from aiida.manage.configuration import Profile, get_config, load_profile
 
 if t.TYPE_CHECKING:
@@ -33,16 +36,61 @@ if t.TYPE_CHECKING:
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
 
+def pytest_collection_modifyitems(items):
+    """Automatically generate markers for certain tests.
+
+    Most notably, we add the 'presto' marker for all tests that
+    are not marked with either requires_rmq or requires_psql.
+    """
+    filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
+    filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
+    filepath_sqla = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'sqlalchemy_branch'
+
+    for item in items:
+        filepath_item = Path(item.fspath)
+
+        # Add 'nightly' marker to all tests in 'storage/psql_dos/migrations/<django|sqlalchemy>_branch'
+        if filepath_item.is_relative_to(filepath_django) or filepath_item.is_relative_to(filepath_sqla):
+            item.add_marker('nightly')
+
+        # Add 'requires_rmq' for all tests that depend 'daemon_client' and its dependant fixtures
+        if 'daemon_client' in item.fixturenames:
+            item.add_marker('requires_rmq')
+
+        # All tests in 'storage/psql_dos' require PostgreSQL
+        if filepath_item.is_relative_to(filepath_psqldos):
+            item.add_marker('requires_psql')
+
+        # Add 'presto' marker to all tests that require neither PostgreSQL nor RabbitMQ services.
+        markers = [marker.name for marker in item.iter_markers()]
+        if 'requires_rmq' not in markers and 'requires_psql' not in markers and 'nightly' not in markers:
+            item.add_marker('presto')
+
+
 @pytest.fixture(scope='session')
-def aiida_profile(aiida_config, aiida_profile_factory, config_psql_dos):
+def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql_dos, config_sqlite_dos):
     """Create and load a profile with ``core.psql_dos`` as a storage backend and RabbitMQ as the broker.
 
     This overrides the ``aiida_profile`` fixture provided by ``aiida-core`` which runs with ``core.sqlite_dos`` and
     without broker. However, tests in this package make use of the daemon which requires a broker and the tests should
     be run against the main storage backend, which is ``core.sqlite_dos``.
     """
+    marker_opts = pytestconfig.getoption('-m')
+
+    # By default we use RabbitMQ broker and psql_dos storage
+    broker = 'core.rabbitmq'
+    if 'not requires_rmq' in marker_opts or 'presto' in marker_opts:
+        broker = None
+
+    if 'not requires_psql' in marker_opts or 'presto' in marker_opts:
+        storage = 'core.sqlite_dos'
+        config = config_sqlite_dos()
+    else:
+        storage = 'core.psql_dos'
+        config = config_psql_dos()
+
     with aiida_profile_factory(
-        aiida_config, storage_backend='core.psql_dos', storage_config=config_psql_dos(), broker_backend='core.rabbitmq'
+        aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker
     ) as profile:
         yield profile
 
@@ -158,7 +206,14 @@ def generate_calculation_node():
     """Generate an instance of a `CalculationNode`."""
     from aiida.engine import ProcessState
 
-    def _generate_calculation_node(process_state=ProcessState.FINISHED, exit_status=None, entry_point=None):
+    def _generate_calculation_node(
+        process_state: ProcessState = ProcessState.FINISHED,
+        exit_status: int | None = None,
+        entry_point: str | None = None,
+        inputs: dict | None = None,
+        outputs: dict | None = None,
+        repository: pathlib.Path | None = None,
+    ):
         """Generate an instance of a `CalculationNode`..
 
         :param process_state: state to set
@@ -170,13 +225,38 @@ def generate_calculation_node():
         if process_state is ProcessState.FINISHED and exit_status is None:
             exit_status = 0
 
-        node = CalculationNode(process_type=entry_point)
-        node.set_process_state(process_state)
+        calculation_node = CalculationNode(process_type=entry_point)
+        calculation_node.set_process_state(process_state)
 
         if exit_status is not None:
-            node.set_exit_status(exit_status)
+            calculation_node.set_exit_status(exit_status)
 
-        return node
+        if repository is not None:
+            calculation_node.base.repository.put_object_from_tree(repository)
+
+        # For storing, need to first store the input nodes, then the CalculationNode, then the output nodes
+        if inputs is not None:
+            for input_label, input_node in inputs.items():
+                calculation_node.base.links.add_incoming(
+                    input_node,
+                    link_type=LinkType.INPUT_CALC,
+                    link_label=input_label,
+                )
+
+                input_node.store()
+
+        if outputs is not None:
+            # Need to first store CalculationNode before I can attach `created` outputs
+            calculation_node.store()
+            for output_label, output_node in outputs.items():
+                output_node.base.links.add_incoming(
+                    calculation_node, link_type=LinkType.CREATE, link_label=output_label
+                )
+
+                output_node.store()
+
+        # Return unstored by default
+        return calculation_node
 
     return _generate_calculation_node
 
@@ -671,3 +751,112 @@ def reset_log_level():
         log.CLI_ACTIVE = None
         log.CLI_LOG_LEVEL = None
         log.configure_logging(with_orm=True)
+
+
+@pytest.fixture
+def generate_calculation_node_add(aiida_localhost):
+    def _generate_calculation_node_add():
+        from aiida.engine import run_get_node
+        from aiida.orm import InstalledCode, Int
+        from aiida.plugins import CalculationFactory
+
+        arithmetic_add = CalculationFactory('core.arithmetic.add')
+
+        add_inputs = {
+            'x': Int(1),
+            'y': Int(2),
+            'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
+        }
+
+        _, add_node = run_get_node(arithmetic_add, **add_inputs)
+
+        return add_node
+
+    return _generate_calculation_node_add
+
+
+@pytest.fixture
+def generate_workchain_multiply_add(aiida_localhost):
+    def _generate_workchain_multiply_add():
+        from aiida.engine import run_get_node
+        from aiida.orm import InstalledCode, Int
+        from aiida.plugins import WorkflowFactory
+
+        multiplyaddworkchain = WorkflowFactory('core.arithmetic.multiply_add')
+
+        multiply_add_inputs = {
+            'x': Int(1),
+            'y': Int(2),
+            'z': Int(3),
+            'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
+        }
+
+        _, multiply_add_node = run_get_node(multiplyaddworkchain, **multiply_add_inputs)
+
+        return multiply_add_node
+
+    return _generate_workchain_multiply_add
+
+
+@pytest.fixture
+def create_file_hierarchy():
+    """Create a file hierarchy in the target location.
+
+    .. note:: empty directories are ignored and are not created explicitly.
+
+    :param hierarchy: mapping with directory structure, e.g. returned by ``serialize_file_hierarchy``.
+    :param target: the target where the hierarchy should be created.
+    """
+
+    def _create_file_hierarchy(hierarchy: t.Dict, target: t.Union[pathlib.Path, Folder]) -> None:
+        for filename, value in hierarchy.items():
+            if isinstance(value, dict):
+                if isinstance(target, pathlib.Path):
+                    _create_file_hierarchy(value, target / filename)
+                elif isinstance(target, Folder):
+                    _create_file_hierarchy(value, target.get_subfolder(filename, create=True))
+                else:
+                    raise TypeError('target must be either a `Path` or a `Folder` instance.')
+
+            elif isinstance(target, pathlib.Path):
+                target.mkdir(parents=True, exist_ok=True)
+                (target / filename).write_text(value)
+
+            elif isinstance(target, Folder):
+                with target.open(filename, 'w') as handle:
+                    handle.write(value)
+            else:
+                raise TypeError('target must be either a `Path` or a `Folder` instance.')
+
+    return _create_file_hierarchy
+
+
+@pytest.fixture
+def serialize_file_hierarchy():
+    """Serialize the file hierarchy at ``dirpath``.
+
+    .. note:: empty directories are ignored.
+
+    :param dirpath: the base path.
+    :return: a mapping representing the file hierarchy, where keys are filenames. The leafs correspond to files and the
+        values are the text contents.
+    """
+
+    def factory(dirpath: pathlib.Path, read_bytes=True) -> dict:
+        serialized = {}
+
+        for root, _, files in os.walk(dirpath):
+            for filepath in files:
+                relpath = pathlib.Path(root).relative_to(dirpath)
+                subdir = serialized
+                if relpath.parts:
+                    for part in relpath.parts:
+                        subdir = subdir.setdefault(part, {})
+                if read_bytes:
+                    subdir[filepath] = (pathlib.Path(root) / filepath).read_bytes()
+                else:
+                    subdir[filepath] = (pathlib.Path(root) / filepath).read_text()
+
+        return serialized
+
+    return factory

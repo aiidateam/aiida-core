@@ -34,7 +34,10 @@ class RabbitmqBroker(Broker):
         self._prefix = f'aiida-{self._profile.uuid}'
 
     def __str__(self):
-        return f'RabbitMQ v{self.get_rabbitmq_version()} @ {self.get_url()}'
+        try:
+            return f'RabbitMQ v{self.get_rabbitmq_version()} @ {self.get_url()}'
+        except ConnectionError:
+            return f'RabbitMQ @ {self.get_url()} <Connection failed>'
 
     def close(self):
         """Close the broker."""

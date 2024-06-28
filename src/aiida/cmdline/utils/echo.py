@@ -35,6 +35,7 @@ class ExitCode(enum.IntEnum):
     """Exit codes for the verdi command line."""
 
     CRITICAL = 1
+    USAGE_ERROR = 2
     DEPRECATED = 80
     UNKNOWN = 99
     SUCCESS = 0

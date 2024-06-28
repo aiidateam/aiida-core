@@ -24,6 +24,7 @@ from aiida.orm.utils.links import LinkQuadruple
 
 class TestBasic:
     @pytest.mark.usefixtures('aiida_profile_clean')
+    @pytest.mark.requires_psql
     def test_date_filters_support(self):
         """Verify that `datetime.date` is supported in filters."""
         from aiida.common import timezone
@@ -723,18 +724,21 @@ class TestRepresentations:
         qb = orm.QueryBuilder().append(orm.Data, project=['id', 'uuid']).order_by({orm.Data: 'id'})
         self.regress_str(str(qb))
 
+    @pytest.mark.requires_psql
     def test_as_sql(self):
         """Test ``qb.as_sql(inline=False)`` returns the correct string."""
         qb = orm.QueryBuilder()
         qb.append(orm.Node, project=['uuid'], filters={'extras.tag4': 'appl_pecoal'})
         self.regress_str(qb.as_sql(inline=False))
 
+    @pytest.mark.requires_psql
     def test_as_sql_inline(self):
         """Test ``qb.as_sql(inline=True)`` returns the correct string."""
         qb = orm.QueryBuilder()
         qb.append(orm.Node, project=['uuid'], filters={'extras.tag4': 'appl_pecoal'})
         self.regress_str(qb.as_sql(inline=True))
 
+    @pytest.mark.requires_psql
     def test_as_sql_literal_quote(self):
         """Test that literal values can be rendered."""
         qb = orm.QueryBuilder()
@@ -801,6 +805,7 @@ class TestRepresentations:
             assert sorted([uuid for (uuid,) in qb.all()]) == sorted([uuid for (uuid,) in qb_new.all()])
 
 
+@pytest.mark.requires_psql
 def test_analyze_query():
     """Test the query plan is correctly generated."""
     qb = orm.QueryBuilder()
@@ -843,6 +848,7 @@ class TestQueryBuilderCornerCases:
 
 
 class TestAttributes:
+    @pytest.mark.requires_psql
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_attribute_existence(self):
         # I'm storing a value under key whatever:
@@ -866,6 +872,7 @@ class TestAttributes:
         res_query = {str(_[0]) for _ in qb.all()}
         assert res_query == res_uuids
 
+    @pytest.mark.requires_psql
     def test_attribute_type(self):
         key = 'value_test_attr_type'
         n_int, n_float, n_str, n_str2, n_bool, n_arr = [orm.Data() for _ in range(6)]
@@ -1477,6 +1484,9 @@ class TestConsistency:
         for pk in pks:
             assert orm.load_node(pk).base.extras.get('key') == 'value'
 
+    # TODO: This test seems to hang (or takes a looong time), specifically in
+    # pydantic/_internal/_core_utils.py:400
+    @pytest.mark.requires_psql
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_iterall_with_store(self):
         """Test that nodes can be stored while being iterated using ``QueryBuilder.iterall``.
@@ -1499,6 +1509,8 @@ class TestConsistency:
         for pk, pk_clone in zip(pks, sorted(pk_clones)):
             assert orm.load_node(pk) == orm.load_node(pk_clone)
 
+    # TODO: This test seems to hang (or takes a looong time)
+    @pytest.mark.requires_psql
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_iterall_with_store_group(self):
         """Test that nodes can be stored and added to groups while being iterated using ``QueryBuilder.iterall``.
@@ -1563,6 +1575,9 @@ class TestManager:
     def init_db(self, backend):
         self.backend = backend
 
+    # This fails with sqlite with:
+    # sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such function: date_trunc
+    @pytest.mark.requires_psql
     def test_statistics(self):
         """Test if the statistics query works properly.
 
@@ -1599,6 +1614,9 @@ class TestManager:
 
         assert new_db_statistics == expected_db_statistics
 
+    # This fails with sqlite with:
+    # sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such function: date_trunc
+    @pytest.mark.requires_psql
     def test_statistics_default_class(self):
         """Test if the statistics query works properly.
 

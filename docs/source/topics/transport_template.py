@@ -18,7 +18,7 @@ class NewTransport(Transport):
         """Change directory to 'path'.
 
         :param str path: path to change working directory into.
-        :raises: IOError, if the requested path does not exist
+        :raises: OSError, if the requested path does not exist
         :rtype: string
         """
 
@@ -35,7 +35,7 @@ class NewTransport(Transport):
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
-        :raises: IOError, if source or destination does not exist
+        :raises: OSError, if source or destination does not exist
         """
 
     def copyfile(self, remotesource, remotedestination, *args, **kwargs):
@@ -44,7 +44,7 @@ class NewTransport(Transport):
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
-        :raises IOError: if one of src or dst does not exist
+        :raises OSError: if one of src or dst does not exist
         """
 
     def copytree(self, remotesource, remotedestination, *args, **kwargs):
@@ -53,7 +53,7 @@ class NewTransport(Transport):
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
-        :raise IOError: if one of src or dst does not exist
+        :raise OSError: if one of src or dst does not exist
         """
 
     def exec_command_wait_bytes(self, command, stdin=None, **kwargs):
@@ -177,7 +177,7 @@ class NewTransport(Transport):
         "current folder".
 
         :param str path: path to be normalized
-        :raise IOError: if the path can't be resolved on the server
+        :raise OSError: if the path can't be resolved on the server
         """
 
     def put(self, localpath, remotepath, *args, **kwargs):
@@ -214,7 +214,7 @@ class NewTransport(Transport):
 
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
-        :raises IOError: if src/dst is not found
+        :raises OSError: if src/dst is not found
         :raises ValueError: if src/dst is not a valid string
         """
 
@@ -224,7 +224,7 @@ class NewTransport(Transport):
         This only works on files; for removing folders (directories), use rmdir.
 
         :param str path: path to file to remove
-        :raise IOError: if the path is a directory
+        :raise OSError: if the path is a directory
         """
 
     def rmdir(self, path):

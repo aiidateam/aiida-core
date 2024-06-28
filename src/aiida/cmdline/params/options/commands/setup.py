@@ -50,6 +50,8 @@ def get_profile_attribute_default(attribute_tuple, ctx):
     try:
         data = ctx.params['profile'].dictionary
         for part in parts:
+            if data is None:
+                return default
             data = data[part]
         return data
     except KeyError:
@@ -172,6 +174,17 @@ SETUP_PROFILE_UUID = options.OverridableOption(
 
 SETUP_PROFILE = options.OverridableOption(
     '--profile',
+    prompt='Profile name',
+    help='The name of the new profile.',
+    required=True,
+    type=types.ProfileParamType(cannot_exist=True),
+    cls=options.interactive.InteractiveOption,
+)
+
+SETUP_PROFILE_NAME = options.OverridableOption(
+    '-p',
+    '--profile-name',
+    'profile',
     prompt='Profile name',
     help='The name of the new profile.',
     required=True,
@@ -321,6 +334,15 @@ SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
     required=True,
     contextual_default=functools.partial(get_profile_attribute_default, ('storage.config.database_password', None)),
     cls=options.interactive.InteractiveOption,
+)
+
+SETUP_USE_RABBITMQ = options.OverridableOption(
+    '--use-rabbitmq/--no-use-rabbitmq',
+    prompt='Use RabbitMQ?',
+    is_flag=True,
+    default=True,
+    cls=options.interactive.InteractiveOption,
+    help='Whether to configure the RabbitMQ broker. Required to enable the daemon and submitting processes.',
 )
 
 SETUP_BROKER_PROTOCOL = QUICKSETUP_BROKER_PROTOCOL.clone(

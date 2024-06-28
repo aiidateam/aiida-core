@@ -429,8 +429,8 @@ def test_function_default_label():
     assert node.description == CUSTOM_DESCRIPTION
 
 
-def test_launchers():
-    """Verify that the various launchers are working."""
+def test_run_launchers():
+    """Verify that the various non-daemon launchers are working."""
     result = run(function_return_true)
     assert result
 
@@ -439,6 +439,10 @@ def test_launchers():
     assert result == get_true_node()
     assert isinstance(node, orm.CalcFunctionNode)
 
+
+@pytest.mark.requires_rmq
+def test_submit_launchers():
+    """Verify that submit to daemon works."""
     # Process function can be submitted and will be run by a daemon worker as long as the function is importable
     # Note that the actual running is not tested here but is done so in `.github/system_tests/test_daemon.py`.
     node = submit(add_multiply, x=orm.Int(1), y=orm.Int(2), z=orm.Int(3))

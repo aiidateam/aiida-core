@@ -15,6 +15,10 @@ from aiida.plugins import StorageFactory
 from aiida.tools.archive.create import create_archive
 from pgtest.pgtest import PGTest
 
+# NOTE: Most of these tests would work with sqlite_dos,
+# but would require generalizing a bunch of fixtures ('profile_factory' et al) in tests/conftest.py
+pytestmark = pytest.mark.requires_psql
+
 
 @pytest.fixture(scope='module')
 def pg_test_cluster():
@@ -49,7 +53,7 @@ def mock_profiles(empty_config, profile_factory):
 
 @pytest.mark.parametrize(
     'command',
-    (cmd_profile.profile_list, cmd_profile.profile_setdefault, cmd_profile.profile_delete, cmd_profile.profile_show),
+    (cmd_profile.profile_list, cmd_profile.profile_set_default, cmd_profile.profile_delete, cmd_profile.profile_show),
 )
 def test_help(run_cli_command, command):
     """Tests help text for all ``verdi profile`` commands."""
@@ -69,7 +73,21 @@ def test_list(run_cli_command, mock_profiles):
 def test_setdefault(run_cli_command, mock_profiles):
     """Test the ``verdi profile setdefault`` command."""
     profile_list = mock_profiles()
-    run_cli_command(cmd_profile.profile_setdefault, [profile_list[1]], use_subprocess=False)
+    setdefault_result = run_cli_command(cmd_profile.profile_setdefault, [profile_list[1]], use_subprocess=False)
+    result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
+
+    assert 'Report: configuration folder:' in result.output
+    assert f'* {profile_list[1]}' in result.output
+
+    # test if deprecation warning is printed
+    assert 'Deprecated:' in setdefault_result.output
+    assert 'Deprecated:' in setdefault_result.stderr
+
+
+def test_set_default(run_cli_command, mock_profiles):
+    """Test the ``verdi profile set-default`` command."""
+    profile_list = mock_profiles()
+    run_cli_command(cmd_profile.profile_set_default, [profile_list[1]], use_subprocess=False)
     result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
 
     assert 'Report: configuration folder:' in result.output
@@ -155,7 +173,7 @@ def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point)
     else:
         filepath = tmp_path / 'storage'
 
-    options = [entry_point, '-n', '--filepath', str(filepath), '--profile', profile_name, '--email', 'email@host']
+    options = [entry_point, '-n', '--filepath', str(filepath), '--profile-name', profile_name, '--email', 'email@host']
     result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     assert filepath.exists()
     assert profile_name in isolated_config.profile_names
@@ -186,7 +204,7 @@ def test_setup(config_psql_dos, run_cli_command, isolated_config, tmp_path, entr
         options = ['--filepath', str(tmp_path)]
 
     profile_name = 'temp-profile'
-    options = [entry_point, '-n', '--profile', profile_name, '--email', 'email@host', *options]
+    options = [entry_point, '-n', '--profile-name', profile_name, '--email', 'email@host', *options]
     result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     assert f'Created new profile `{profile_name}`.' in result.output
     assert profile_name in isolated_config.profile_names
@@ -203,7 +221,7 @@ def test_setup_set_as_default(run_cli_command, isolated_config, tmp_path, set_as
         '-n',
         '--filepath',
         str(tmp_path),
-        '--profile',
+        '--profile-name',
         profile_name,
         '--email',
         'email@host',
@@ -229,7 +247,7 @@ def test_setup_email_required(run_cli_command, isolated_config, tmp_path, entry_
 
     isolated_config.unset_option('autofill.user.email')
 
-    options = [entry_point, '-n', '--filepath', str(tmp_path), '--profile', profile_name]
+    options = [entry_point, '-n', '--filepath', str(tmp_path), '--profile-name', profile_name]
 
     if storage_cls.read_only:
         result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
@@ -238,3 +256,54 @@ def test_setup_email_required(run_cli_command, isolated_config, tmp_path, entry_
     else:
         result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False, raises=True)
         assert 'Invalid value for --email: The option is required for storages that are not read-only.' in result.output
+
+
+def test_setup_no_use_rabbitmq(run_cli_command, isolated_config):
+    """Test the ``--no-use-rabbitmq`` option."""
+    profile_name = 'profile-no-broker'
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    assert f'Created new profile `{profile_name}`.' in result.output
+    assert profile_name in isolated_config.profile_names
+    profile = isolated_config.get_profile(profile_name)
+    assert profile.process_control_backend is None
+    assert profile.process_control_config == {}
+
+
+def test_configure_rabbitmq(run_cli_command, isolated_config):
+    """Test the ``verdi profile configure-rabbitmq`` command."""
+    profile_name = 'profile'
+
+    # First setup a profile without a broker configured
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    profile = isolated_config.get_profile(profile_name)
+    assert profile.process_control_backend is None
+    assert profile.process_control_config == {}
+
+    # Now run the command to configure the broker
+    options = [profile_name, '-n']
+    cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
+    assert profile.process_control_backend == 'core.rabbitmq'
+    assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
+
+    # Verify that running in non-interactive mode is the default
+    options = [
+        profile_name,
+    ]
+    run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=True)
+    assert profile.process_control_backend == 'core.rabbitmq'
+    assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
+
+    # Verify that configuring with incorrect options and `--force` raises a warning but still configures the broker
+    options = [profile_name, '-f', '--broker-port', '1234']
+    cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
+    assert 'Unable to connect to RabbitMQ server: Failed to connect' in cli_result.stdout
+    assert profile.process_control_config['broker_port'] == 1234
+
+    # Call it again to check it works to reconfigure existing broker connection parameters
+    options = [profile_name, '-n', '--broker-port', '5672']
+    cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
+    assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
+    assert profile.process_control_config['broker_port'] == 5672

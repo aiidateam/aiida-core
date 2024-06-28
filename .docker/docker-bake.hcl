@@ -13,7 +13,6 @@ variable "ORGANIZATION" {
 }
 
 variable "REGISTRY" {
-  default = "docker.io/"
 }
 
 variable "PLATFORMS" {
@@ -27,7 +26,7 @@ variable "TARGETS" {
 function "tags" {
   params = [image]
   result = [
-    "${REGISTRY}${ORGANIZATION}/${image}:newly-baked"
+    "${REGISTRY}${ORGANIZATION}/${image}"
   ]
 }
 
@@ -35,18 +34,8 @@ group "default" {
   targets = "${TARGETS}"
 }
 
-target "aiida-core-base-meta" {
-  tags = tags("aiida-core-base")
-}
-target "aiida-core-with-services-meta" {
-  tags = tags("aiida-core-with-services")
-}
-target "aiida-core-dev-meta" {
-  tags = tags("aiida-core-dev")
-}
-
 target "aiida-core-base" {
-  inherits = ["aiida-core-base-meta"]
+  tags = tags("aiida-core-base")
   context = "aiida-core-base"
   contexts = {
     src = ".."
@@ -54,11 +43,10 @@ target "aiida-core-base" {
   platforms = "${PLATFORMS}"
   args = {
     "PYTHON_VERSION" = "${PYTHON_VERSION}"
-    "MAMBA_VERSION" = "1.5.2"
   }
 }
 target "aiida-core-with-services" {
-  inherits = ["aiida-core-with-services-meta"]
+  tags = tags("aiida-core-with-services")
   context = "aiida-core-with-services"
   contexts = {
     aiida-core-base = "target:aiida-core-base"
@@ -70,7 +58,7 @@ target "aiida-core-with-services" {
   }
 }
 target "aiida-core-dev" {
-  inherits = ["aiida-core-dev-meta"]
+  tags = tags("aiida-core-dev")
   context = "aiida-core-dev"
   contexts = {
     src = ".."

@@ -11,7 +11,7 @@ def get_version_from_module(content: str) -> str:
     try:
         module = ast.parse(content)
     except SyntaxError as exc:
-        raise IOError(f'Unable to parse module: {exc}')
+        raise OSError(f'Unable to parse module: {exc}')
     try:
         return next(
             ast.literal_eval(statement.value)
@@ -21,7 +21,7 @@ def get_version_from_module(content: str) -> str:
             if isinstance(target, ast.Name) and target.id == '__version__'
         )
     except StopIteration:
-        raise IOError('Unable to find __version__ in module')
+        raise OSError('Unable to find __version__ in module')
 
 
 if __name__ == '__main__':

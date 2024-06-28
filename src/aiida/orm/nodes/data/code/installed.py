@@ -17,8 +17,9 @@ using an ``InstalledCode``, it will run its executable on the associated compute
 from __future__ import annotations
 
 import pathlib
+import typing as t
 
-from pydantic import field_validator, model_validator
+from pydantic import ConfigDict, field_validator, model_validator
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -36,12 +37,15 @@ __all__ = ('InstalledCode',)
 class InstalledCode(Code):
     """Data plugin representing an executable code on a remote computer."""
 
+    _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
 
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
 
-        computer: str = MetadataField(
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+
+        computer: t.Union[str, Computer] = MetadataField(
             ...,
             title='Computer',
             description='The remote computer on which the executable resides.',
@@ -78,7 +82,7 @@ class InstalledCode(Code):
             """Validate that the full label does not already exist."""
             from aiida.orm import load_code
 
-            full_label = f'{self.label}@{self.computer.label}'  # type: ignore[attr-defined]
+            full_label = f'{self.label}@{self.computer.label}'  # type: ignore[union-attr]
 
             try:
                 load_code(full_label)

@@ -17,6 +17,7 @@ import uuid
 import pytest
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
+from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
@@ -205,11 +206,11 @@ class TestVerdiProcess:
         calcjob_one.store()
         calcjob_two.store()
 
-        # Running without identifiers should not except and not print anything
+        # Running without identifiers should except and print something
         options = []
-        result = run_cli_command(cmd_process.process_show, options)
-
-        assert len(result.output_lines) == 0
+        result = run_cli_command(cmd_process.process_show, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
 
         # Giving a single identifier should print a non empty string message
         options = [str(workchain_one.pk)]
@@ -231,11 +232,11 @@ class TestVerdiProcess:
         """Test verdi process report"""
         node = WorkflowNode().store()
 
-        # Running without identifiers should not except and not print anything
+        # Running without identifiers should except and print something
         options = []
-        result = run_cli_command(cmd_process.process_report, options)
-
-        assert len(result.output_lines) == 0
+        result = run_cli_command(cmd_process.process_report, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
 
         # Giving a single identifier should print a non empty string message
         options = [str(node.pk)]
@@ -254,11 +255,11 @@ class TestVerdiProcess:
         node = WorkflowNode().store()
         node.set_process_state(ProcessState.RUNNING)
 
-        # Running without identifiers should not except and not print anything
+        # Running without identifiers should except and print something
         options = []
-        result = run_cli_command(cmd_process.process_status, options)
-        assert result.exception is None, result.output
-        assert len(result.output_lines) == 0
+        result = run_cli_command(cmd_process.process_status, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
 
         # Giving a single identifier should print a non empty string message
         options = [str(node.pk)]
@@ -271,6 +272,21 @@ class TestVerdiProcess:
         result = run_cli_command(cmd_process.process_status, options)
         assert result.exception is None, result.output
         assert len(result.output_lines) == 0
+
+    @pytest.mark.requires_rmq
+    def test_process_watch(self, run_cli_command):
+        """Test verdi process watch"""
+        # Running without identifiers should except and print something
+        options = []
+        result = run_cli_command(cmd_process.process_watch, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
+
+        # Running with both identifiers should raise an error and print something
+        options = ['--most-recent-node', '1']
+        result = run_cli_command(cmd_process.process_watch, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
 
     def test_process_status_call_link_label(self, run_cli_command):
         """Test ``verdi process status --call-link-label``."""
@@ -336,9 +352,41 @@ class TestVerdiProcess:
             assert len(result.output_lines) == 1, result.output_lines
             assert result.output_lines[0] == 'No log messages recorded for this entry'
 
+    def test_process_dump(self, run_cli_command, tmp_path, generate_workchain_multiply_add):
+        """Test verdi process dump"""
+
+        # Only test CLI interface here, the actual functionalities of the Python API are tested in `test_processes.py`
+        test_path = tmp_path / 'cli-dump'
+        node = generate_workchain_multiply_add()
+
+        # Giving a single identifier should print a non empty string message
+        options = [str(node.pk), '-p', str(test_path)]
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert 'Success:' in result.output
+
+        # Trying to run the dumping again in the same path but without overwrite=True should raise exception
+        options = [str(node.pk), '-p', str(test_path)]
+        result = run_cli_command(cmd_process.process_dump, options, raises=True)
+        assert result.exit_code is ExitCode.CRITICAL
+
+        # Works fine when using overwrite=True
+        options = [str(node.pk), '-p', str(test_path), '-o']
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert 'Success:' in result.output
+
+        # Set overwrite=True but provide bad directory, i.e. missing metadata file
+        (test_path / '.aiida_node_metadata.yaml').unlink()
+
+        options = [str(node.pk), '-p', str(test_path), '-o']
+        result = run_cli_command(cmd_process.process_dump, options, raises=True)
+        assert result.exit_code is ExitCode.CRITICAL
+
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('numprocesses, percentage', ((0, 100), (1, 90)))
+@pytest.mark.requires_rmq
 def test_list_worker_slot_warning(run_cli_command, monkeypatch, numprocesses, percentage):
     """Test that the if the number of used worker process slots exceeds a threshold,
     that the warning message is displayed to the user when running `verdi process list`
@@ -427,6 +475,13 @@ class TestVerdiProcessCallRoot:
         assert str(self.node_root.pk) in result.output_lines[1]
         assert str(self.node_root.pk) in result.output_lines[2]
 
+    def test_no_process_argument(self, run_cli_command):
+        # Running without identifiers should except and print something
+        options = []
+        result = run_cli_command(cmd_process.process_call_root, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
+
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('started_daemon_client')
@@ -437,6 +492,12 @@ def test_process_pause(submit_and_await, run_cli_command):
 
     run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
     await_condition(lambda: node.paused)
+
+    # Running without identifiers should except and print something
+    options = []
+    result = run_cli_command(cmd_process.process_pause, options, raises=True)
+    assert result.exit_code == ExitCode.USAGE_ERROR
+    assert len(result.output_lines) > 0
 
 
 @pytest.mark.requires_rmq
@@ -450,6 +511,12 @@ def test_process_play(submit_and_await, run_cli_command):
 
     run_cli_command(cmd_process.process_play, [str(node.pk), '--wait'])
     await_condition(lambda: not node.paused)
+
+    # Running without identifiers should except and print something
+    options = []
+    result = run_cli_command(cmd_process.process_play, options, raises=True)
+    assert result.exit_code == ExitCode.USAGE_ERROR
+    assert len(result.output_lines) > 0
 
 
 @pytest.mark.requires_rmq
@@ -481,6 +548,12 @@ def test_process_kill(submit_and_await, run_cli_command):
     run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
     await_condition(lambda: node.is_killed)
     assert node.process_status == 'Killed through `verdi process kill`'
+
+    # Running without identifiers should except and print something
+    options = []
+    result = run_cli_command(cmd_process.process_kill, options, raises=True)
+    assert result.exit_code == ExitCode.USAGE_ERROR
+    assert len(result.output_lines) > 0
 
 
 @pytest.mark.requires_rmq

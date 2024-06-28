@@ -372,7 +372,7 @@ def delete_numpy_array_from_repository(repository_path, uuid, name):
 
     try:
         os.remove(filepath)
-    except (IOError, OSError):
+    except OSError:
         pass
 
 

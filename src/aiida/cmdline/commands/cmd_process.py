@@ -93,9 +93,9 @@ def process_list(
     order_by,
     order_dir,
 ):
-    """Show a list of running or terminated processes.
+    """Show a list of processes.
 
-    By default, only those that are still running are shown, but there are options to show also the finished ones.
+    By default, only processes that are still running are shown, but there are options to show also the finished ones.
     """
     from tabulate import tabulate
 
@@ -185,8 +185,15 @@ def process_list(
 @options.MOST_RECENT_NODE()
 @decorators.with_dbenv()
 def process_show(processes, most_recent_node):
-    """Show details for one or multiple processes."""
+    """Show details of processes.
+
+    Show details for one or multiple processes."""
     from aiida.cmdline.utils.common import get_node_info
+
+    if not processes and not most_recent_node:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
 
     if processes and most_recent_node:
         raise click.BadOptionUsage(
@@ -205,7 +212,11 @@ def process_show(processes, most_recent_node):
 @arguments.PROCESSES()
 @decorators.with_dbenv()
 def process_call_root(processes):
-    """Show root process of the call stack for the given processes."""
+    """Show root process of processes.
+
+    Show root process(es) of the call stack for one or multiple processes."""
+    if not processes:
+        raise click.UsageError('Please specify one or multiple processes by their identifier (PK, UUID or label).')
     for process in processes:
         caller = process.caller
 
@@ -240,9 +251,16 @@ def process_call_root(processes):
 )
 @decorators.with_dbenv()
 def process_report(processes, most_recent_node, levelname, indent_size, max_depth):
-    """Show the log report for one or multiple processes."""
+    """Show the log report of processes.
+
+    Show the log report for one or multiple processes."""
     from aiida.cmdline.utils.common import get_calcjob_report, get_process_function_report, get_workchain_report
     from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
+
+    if not processes and not most_recent_node:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
 
     if processes and most_recent_node:
         raise click.BadOptionUsage(
@@ -272,8 +290,15 @@ def process_report(processes, most_recent_node, levelname, indent_size, max_dept
 )
 @arguments.PROCESSES()
 def process_status(call_link_label, most_recent_node, max_depth, processes):
-    """Print the status of one or multiple processes."""
+    """Show the status of processes.
+
+    Show the status of one or multiple processes."""
     from aiida.cmdline.utils.ascii_vis import format_call_graph
+
+    if not processes and not most_recent_node:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
 
     if processes and most_recent_node:
         raise click.BadOptionUsage(
@@ -296,8 +321,15 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
 @options.WAIT()
 @decorators.with_dbenv()
 def process_kill(processes, all_entries, timeout, wait):
-    """Kill running processes."""
+    """Kill running processes.
+
+    Kill one or multiple running processes."""
     from aiida.engine.processes import control
+
+    if not processes and not all_entries:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
 
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
@@ -323,8 +355,15 @@ def process_kill(processes, all_entries, timeout, wait):
 @options.WAIT()
 @decorators.with_dbenv()
 def process_pause(processes, all_entries, timeout, wait):
-    """Pause running processes."""
+    """Pause running processes.
+
+    Pause one or multiple running processes."""
     from aiida.engine.processes import control
+
+    if not processes and not all_entries:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
 
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
@@ -347,8 +386,15 @@ def process_pause(processes, all_entries, timeout, wait):
 @options.WAIT()
 @decorators.with_dbenv()
 def process_play(processes, all_entries, timeout, wait):
-    """Play (unpause) paused processes."""
+    """Play (unpause) paused processes.
+
+    Play (unpause) one or multiple paused processes."""
     from aiida.engine.processes import control
+
+    if not processes and not all_entries:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
 
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
@@ -365,11 +411,26 @@ def process_play(processes, all_entries, timeout, wait):
 
 @verdi_process.command('watch')
 @arguments.PROCESSES()
+@options.MOST_RECENT_NODE()
 @decorators.with_dbenv()
 @decorators.with_broker
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
-def process_watch(broker, processes):
-    """Watch the state transitions for a process."""
+def process_watch(broker, processes, most_recent_node):
+    """Watch the state transitions of processes.
+
+    Watch the state transitions for one or multiple running processes."""
+
+    if not processes and not most_recent_node:
+        raise click.UsageError(
+            'Please specify one or multiple processes by their identifier (PK, UUID or label) or use an option.'
+        )
+
+    if processes and most_recent_node:
+        raise click.BadOptionUsage(
+            'most_recent_node',
+            'cannot specify individual processes and the `-M/--most-recent-node` flag at the same time.',
+        )
+
     from time import sleep
 
     from kiwipy import BroadcastFilter
@@ -386,6 +447,9 @@ def process_watch(broker, processes):
 
     communicator = broker.get_communicator()
     echo.echo_report('watching for broadcasted messages, press CTRL+C to stop...')
+
+    if most_recent_node:
+        processes = [get_most_recent_node()]
 
     for process in processes:
         if process.is_terminated:
@@ -481,3 +545,87 @@ def process_repair(manager, broker, dry_run):
         if pid not in set_process_tasks:
             process_controller.continue_process(pid)
             echo.echo_report(f'Revived process `{pid}`')
+
+
+@verdi_process.command('dump')
+@arguments.PROCESS()
+@options.PATH()
+@options.OVERWRITE()
+@click.option(
+    '--include-inputs/--exclude-inputs',
+    default=True,
+    show_default=True,
+    help='Include the linked input nodes of the `CalculationNode`(s).',
+)
+@click.option(
+    '--include-outputs/--exclude-outputs',
+    default=False,
+    show_default=True,
+    help='Include the linked output nodes of the `CalculationNode`(s).',
+)
+@click.option(
+    '--include-attributes/--exclude-attributes',
+    default=True,
+    show_default=True,
+    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+@click.option(
+    '--include-extras/--exclude-extras',
+    default=True,
+    show_default=True,
+    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+@click.option(
+    '-f',
+    '--flat',
+    is_flag=True,
+    default=False,
+    help='Dump files in a flat directory for every step of the workflow.',
+)
+def process_dump(
+    process,
+    path,
+    overwrite,
+    include_inputs,
+    include_outputs,
+    include_attributes,
+    include_extras,
+    flat,
+) -> None:
+    """Dump process input and output files to disk.
+
+    Child calculations/workflows (also called `CalcJob`s/`CalcFunction`s and `WorkChain`s/`WorkFunction`s in AiiDA
+    jargon) run by the parent workflow are contained in the directory tree as sub-folders and are sorted by their
+    creation time.  The directory tree thus mirrors the logical execution of the workflow, which can also be queried by
+    running `verdi process status <pk>` on the command line.
+
+    By default, input and output files of each calculation can be found in the corresponding "inputs" and
+    "outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
+    settings). Additional input and output files (depending on the type of calculation) are placed in the "node_inputs"
+    and "node_outputs", respectively.
+
+    Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
+    node data for further inspection.
+    """
+
+    from aiida.tools.dumping.processes import ProcessDumper
+
+    process_dumper = ProcessDumper(
+        include_inputs=include_inputs,
+        include_outputs=include_outputs,
+        include_attributes=include_attributes,
+        include_extras=include_extras,
+        overwrite=overwrite,
+        flat=flat,
+    )
+
+    try:
+        dump_path = process_dumper.dump(process_node=process, output_path=path)
+    except FileExistsError:
+        echo.echo_critical(
+            'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
+        )
+    except Exception as e:
+        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')
+
+    echo.echo_success(f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.')

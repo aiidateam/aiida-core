@@ -141,7 +141,7 @@ A fully operational profile using this storage plugin can be created with a sing
 
 .. code-block:: console
 
-    verdi profile setup core.sqlite_dos -n --profile <PROFILE_NAME> --email <EMAIL>
+    verdi profile setup core.sqlite_dos -n --profile-name <PROFILE_NAME> --email <EMAIL>
 
 replacing ``<PROFILE_NAME>`` with the desired name for the profile and ``<EMAIL>`` with the email for the default user.
 
@@ -167,7 +167,7 @@ However, since otherwise it functions like normal storage plugins, a profile can
 
 .. code-block:: console
 
-    verdi profile setup core.sqlite_zip -n --profile <PROFILE_NAME> --filepath <ARCHIVE>
+    verdi profile setup core.sqlite_zip -n --profile-name <PROFILE_NAME> --filepath <ARCHIVE>
 
 replacing ``<PROFILE_NAME>`` with the desired name for the profile and ``<ARCHIVE>`` the path to the archive file.
 The created profile can now be loaded like any other profile, and the contents of the provenance graph can be explored as usual.

@@ -19,6 +19,8 @@ from aiida.manage import configuration
 from aiida.manage.external.postgres import Postgres
 from pgtest.pgtest import PGTest
 
+pytestmark = pytest.mark.requires_psql
+
 
 @pytest.fixture(scope='class')
 def pg_test_cluster():
@@ -37,6 +39,20 @@ class TestVerdiSetup:
         self.storage_backend_name = 'core.psql_dos'
         self.pg_test = pg_test_cluster
         self.cli_runner = run_cli_command
+
+    def test_setup_deprecation(self):
+        """Checks if a deprecation warning is printed in stdout and stderr."""
+        # Checks if the deprecation warning is present when invoking the help page
+        result = self.cli_runner(cmd_setup.setup, ['--help'])
+        assert 'Deprecated:' in result.output
+        assert 'Deprecated:' in result.stderr
+
+        # Checks if the deprecation warning is present when invoking the command
+        # Runs setup in interactive mode and sends Ctrl+D (\x04) as input so we exit the prompts.
+        # This way we can check if the deprecation warning was printed with the first prompt.
+        result = self.cli_runner(cmd_setup.setup, user_input='\x04', use_subprocess=True, raises=True)
+        assert 'Deprecated:' in result.output
+        assert 'Deprecated:' in result.stderr
 
     def test_help(self):
         """Check that the `--help` option is eager, is not overruled and will properly display the help message.

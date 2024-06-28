@@ -1,10 +1,13 @@
-name: continuous-integration-style
+name: ci-style
 
 on:
   push:
     branches-ignore: [gh-pages]
   pull_request:
     branches-ignore: [gh-pages]
+
+env:
+  FORCE_COLOR: 1
 
 jobs:
 

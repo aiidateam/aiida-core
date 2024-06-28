@@ -425,8 +425,7 @@ def verdi_graph():
 
 
 @verdi_graph.command('generate')
-@arguments.NODE('root_node', required=False)
-@options.NODES(help='The root node(s) whose provenance graph to include.')
+@arguments.NODES('root_nodes')
 @click.option(
     '-l',
     '--link-types',
@@ -477,15 +476,12 @@ def verdi_graph():
 @click.option(
     '-O',
     '--output-file',
-    'output_filename',
     type=click.Path(dir_okay=False, path_type=pathlib.Path),
     help='The file to write the output to.',
 )
-@arguments.OUTPUT_FILE(required=False)
 @decorators.with_dbenv()
 def graph_generate(
-    root_node,
-    nodes,
+    root_nodes,
     link_types,
     identifier,
     ancestor_depth,
@@ -496,44 +492,18 @@ def graph_generate(
     output_format,
     highlight_classes,
     show,
-    output_filename,
     output_file,
 ):
     """Generate a graph from one or multiple root nodes."""
     from aiida.cmdline.utils import echo
     from aiida.tools.visualization import Graph
 
-    if root_node and nodes:
-        echo.echo_warning(
-            'Specifying the root node positionally and the `-N/--nodes` option at the same time is not supported, '
-            'ignoring the `ROOT_NODE`. Please use the `-N/--nodes` option only.'
-        )
-        root_node = None
+    if not root_nodes:
+        echo.echo_critical('No root node(s) specified.')
 
-    if root_node:
-        echo.echo_deprecated(
-            'Specifying the root node positionally is deprecated, please use the `-N/--nodes` option instead.'
-        )
-
-    root_nodes = nodes or [root_node]
-
-    if output_file and output_filename:
-        echo.echo_warning(
-            'Specifying the output file positionally and the `-O/--output-file` option at the same time is not '
-            'supported, ignoring the `OUTPUF_FILE`. Please use the `-O/--output-file` option only.'
-        )
-        output_file = None
-
-    if output_file:
-        echo.echo_deprecated(
-            'Specifying the output file positionally is deprecated, please use the `-O/--output-file` option instead.'
-        )
-
-    output_filename = output_file or output_filename
-
-    if not output_filename:
+    if not output_file:
         pks = '.'.join(str(n.pk) for n in root_nodes)
-        output_filename = pathlib.Path(f'{pks}.{engine}.{output_format}')
+        output_file = pathlib.Path(f'{pks}.{engine}.{output_format}')
 
     echo.echo_info(f'Initiating graphviz engine: {engine}')
     graph = Graph(engine=engine, node_id_type=identifier)
@@ -559,7 +529,7 @@ def graph_generate(
             highlight_classes=highlight_classes,
         )
 
-    filename_written = graph.graphviz.render(outfile=output_filename, format=output_format, view=show, cleanup=True)
+    filename_written = graph.graphviz.render(outfile=output_file, format=output_format, view=show, cleanup=True)
 
     echo.echo_success(f'Output written to `{filename_written}`')
 

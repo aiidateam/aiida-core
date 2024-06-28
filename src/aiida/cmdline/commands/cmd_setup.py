@@ -17,7 +17,7 @@ from aiida.cmdline.utils import echo
 from aiida.manage.configuration import Profile, load_profile
 
 
-@verdi.command('setup')
+@verdi.command('setup', deprecated='Please use `verdi profile setup` instead.')
 @options.NON_INTERACTIVE()
 @options_setup.SETUP_PROFILE()
 @options_setup.SETUP_USER_EMAIL()
@@ -67,7 +67,7 @@ def setup(
     test_profile,
     profile_uuid,
 ):
-    """Setup a new profile.
+    """Setup a new profile (use `verdi profile setup`).
 
     This method assumes that an empty PSQL database has been created and that the database user has been created.
     """
@@ -136,7 +136,11 @@ def setup(
     echo.echo_success(f'created new profile `{profile.name}`.')
 
 
-@verdi.command('quicksetup')
+@verdi.command(
+    'quicksetup',
+    deprecated='This command is deprecated. For a fully automated alternative, use `verdi presto --use-postgres` '
+    'instead. For full control, use `verdi profile setup core.psql_dos`.',
+)
 @options.NON_INTERACTIVE()
 # Cannot use `default` because that will fail validation of the `ProfileParamType` if the profile already exists and it
 # will be validated before the prompt to choose another. The `contextual_default` however, will not trigger the

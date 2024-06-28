@@ -107,9 +107,9 @@ class LocalTransport(Transport):
         """
         new_path = os.path.join(self.curdir, path)
         if not os.path.isdir(new_path):
-            raise IOError(f"'{new_path}' is not a valid directory")
+            raise OSError(f"'{new_path}' is not a valid directory")
         elif not os.access(new_path, os.R_OK):
-            raise IOError(f"Do not have read permission to '{new_path}'")
+            raise OSError(f"Do not have read permission to '{new_path}'")
 
         self._internal_dir = os.path.normpath(new_path)
 
@@ -202,13 +202,13 @@ class LocalTransport(Transport):
         :param path: path to modify
         :param mode: permission bits
 
-        :raise IOError: if path does not exist.
+        :raise OSError: if path does not exist.
         """
         if not path:
-            raise IOError('Directory not given in input')
+            raise OSError('Directory not given in input')
         real_path = os.path.join(self.curdir, path)
         if not os.path.exists(real_path):
-            raise IOError('Directory not given in input')
+            raise OSError('Directory not given in input')
         else:
             os.chmod(real_path, mode)
 
@@ -225,14 +225,14 @@ class LocalTransport(Transport):
         :param overwrite: if True overwrites remotepath.
                                  Default = False
 
-        :raise IOError: if remotepath is not valid
+        :raise OSError: if remotepath is not valid
         :raise ValueError: if localpath is not valid
         """
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         ignore_nonexisting = kwargs.get('ignore_noexisting', args[2] if len(args) > 2 else False)
         if not remotepath:
-            raise IOError('Input remotepath to put function must be a non empty string')
+            raise OSError('Input remotepath to put function must be a non empty string')
         if not localpath:
             raise ValueError('Input localpath to put function must be a non empty string')
 
@@ -294,13 +294,13 @@ class LocalTransport(Transport):
         :param overwrite: if True overwrites remotepath
                                  Default = False
 
-        :raise IOError: if remotepath is not valid
+        :raise OSError: if remotepath is not valid
         :raise ValueError: if localpath is not valid
         :raise OSError: if localpath does not exist
         """
         overwrite = kwargs.get('overwrite', args[0] if args else True)
         if not remotepath:
-            raise IOError('Input remotepath to putfile must be a non empty string')
+            raise OSError('Input remotepath to putfile must be a non empty string')
         if not localpath:
             raise ValueError('Input localpath to putfile must be a non empty string')
 
@@ -327,14 +327,14 @@ class LocalTransport(Transport):
         :param overwrite: if True overwrites remotepath.
                                Default = False
 
-        :raise IOError: if remotepath is not valid
+        :raise OSError: if remotepath is not valid
         :raise ValueError: if localpath is not valid
         :raise OSError: if localpath does not exist
         """
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         if not remotepath:
-            raise IOError('Input remotepath to putfile must be a non empty string')
+            raise OSError('Input remotepath to putfile must be a non empty string')
         if not localpath:
             raise ValueError('Input localpath to putfile must be a non empty string')
 
@@ -354,7 +354,7 @@ class LocalTransport(Transport):
 
         the_destination = os.path.join(self.curdir, remotepath)
 
-        shutil.copytree(localpath, the_destination, symlinks=not dereference)
+        shutil.copytree(localpath, the_destination, symlinks=not dereference, dirs_exist_ok=overwrite)
 
     def rmtree(self, path):
         """Remove tree as rm -r would do
@@ -370,7 +370,7 @@ class LocalTransport(Transport):
             elif exception.errno == errno.ENOTDIR:
                 os.remove(the_path)
             else:
-                raise IOError(exception)
+                raise OSError(exception)
 
     # please refactor: issue #1781
 
@@ -386,7 +386,7 @@ class LocalTransport(Transport):
         :param overwrite: if True overwrites localpath
                                default = False
 
-        :raise IOError: if 'remote' remotepath is not valid
+        :raise OSError: if 'remote' remotepath is not valid
         :raise ValueError: if 'local' localpath is not valid
         """
         dereference = kwargs.get('dereference', args[0] if args else True)
@@ -395,7 +395,7 @@ class LocalTransport(Transport):
         if not localpath:
             raise ValueError('Input localpath to get function must be a non empty string')
         if not remotepath:
-            raise IOError('Input remotepath to get function must be a non empty string')
+            raise OSError('Input remotepath to get function must be a non empty string')
 
         if not os.path.isabs(localpath):
             raise ValueError('Destination must be an absolute path')
@@ -409,7 +409,7 @@ class LocalTransport(Transport):
             if len(to_copy_list) > 1:
                 # I can't scp more than one file on a single file
                 if os.path.isfile(localpath):
-                    raise IOError('Remote localpath is not a directory')
+                    raise OSError('Remote localpath is not a directory')
                 # I can't scp more than one file in a non existing directory
                 elif not os.path.exists(localpath):  # this should hold only for files
                     raise OSError('Remote directory does not exist')
@@ -438,7 +438,7 @@ class LocalTransport(Transport):
         elif ignore_nonexisting:
             pass
         else:
-            raise IOError(f'The remote path {remotepath} does not exist')
+            raise OSError(f'The remote path {remotepath} does not exist')
 
     def getfile(self, remotepath, localpath, *args, **kwargs):
         """Copies a file recursively from 'remote' remotepath to
@@ -449,7 +449,7 @@ class LocalTransport(Transport):
         :param overwrite: if True overwrites localpath.
                                Default = False
 
-        :raise IOError if 'remote' remotepath is not valid or not found
+        :raise OSError if 'remote' remotepath is not valid or not found
         :raise ValueError: if 'local' localpath is not valid
         :raise OSError: if unintentionally overwriting
         """
@@ -457,10 +457,10 @@ class LocalTransport(Transport):
         if not localpath:
             raise ValueError('Input localpath to get function must be a non empty string')
         if not remotepath:
-            raise IOError('Input remotepath to get function must be a non empty string')
+            raise OSError('Input remotepath to get function must be a non empty string')
         the_source = os.path.join(self.curdir, remotepath)
         if not os.path.exists(the_source):
-            raise IOError('Source not found')
+            raise OSError('Source not found')
         if not os.path.isabs(localpath):
             raise ValueError('Destination must be an absolute path')
         if os.path.exists(localpath) and not overwrite:
@@ -477,14 +477,14 @@ class LocalTransport(Transport):
         :param dereference: follow symbolic links. Default = True
         :param overwrite: if True overwrites localpath. Default = False
 
-        :raise IOError: if 'remote' remotepath is not valid
+        :raise OSError: if 'remote' remotepath is not valid
         :raise ValueError: if 'local' localpath is not valid
         :raise OSError: if unintentionally overwriting
         """
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         if not remotepath:
-            raise IOError('Remotepath must be a non empty string')
+            raise OSError('Remotepath must be a non empty string')
         if not localpath:
             raise ValueError('Localpaths must be a non empty string')
 
@@ -492,7 +492,7 @@ class LocalTransport(Transport):
             raise ValueError('Localpaths must be an absolute path')
 
         if not self.isdir(remotepath):
-            raise IOError(f'Input remotepath is not a folder: {remotepath}')
+            raise OSError(f'Input remotepath is not a folder: {remotepath}')
 
         if os.path.exists(localpath) and not overwrite:
             raise OSError("Can't overwrite existing files")
@@ -503,7 +503,7 @@ class LocalTransport(Transport):
             localpath = os.path.join(localpath, os.path.split(remotepath)[1])
 
         the_source = os.path.join(self.curdir, remotepath)
-        shutil.copytree(the_source, localpath, symlinks=not dereference)
+        shutil.copytree(the_source, localpath, symlinks=not dereference, dirs_exist_ok=overwrite)
 
     # please refactor: issue #1780 on github
 
@@ -662,7 +662,7 @@ class LocalTransport(Transport):
             try:
                 return os.listdir(the_path)
             except OSError as err:
-                exc = IOError(str(err))
+                exc = OSError(str(err))
                 exc.errno = err.errno
                 raise exc
         else:
@@ -797,7 +797,7 @@ class LocalTransport(Transport):
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
 
-        :raises IOError: if src/dst is not found
+        :raises OSError: if src/dst is not found
         :raises ValueError: if src/dst is not a valid string
         """
         if not oldpath:
@@ -805,9 +805,9 @@ class LocalTransport(Transport):
         if not newpath:
             raise ValueError(f'Destination {newpath} is not a valid string')
         if not os.path.exists(oldpath):
-            raise IOError(f'Source {oldpath} does not exist')
+            raise OSError(f'Source {oldpath} does not exist')
         if not os.path.exists(newpath):
-            raise IOError(f'Destination {newpath} does not exist')
+            raise OSError(f'Destination {newpath} does not exist')
 
         shutil.move(oldpath, newpath)
 

@@ -460,12 +460,17 @@ def _import_nodes(
 
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
+    input_id_uuid_uuids = list(input_id_uuid.values())
+
     if input_id_uuid:
-        backend_uuid_id = dict(
-            orm.QueryBuilder(backend=backend_to)
-            .append(orm.Node, filters={'uuid': {'in': list(input_id_uuid.values())}}, project=['uuid', 'id'])
-            .all(batch_size=query_params.batch_size)
-        )
+        for _, batch in batch_iter(input_id_uuid_uuids, query_params.filter_size):
+            backend_uuid_id.update(
+                dict(
+                    orm.QueryBuilder(backend=backend_to)
+                    .append(orm.Node, filters={'uuid': {'in': batch}}, project=['uuid', 'id'])
+                    .all(batch_size=query_params.batch_size)
+                )
+            )
 
     new_nodes = len(input_id_uuid) - len(backend_uuid_id)
 

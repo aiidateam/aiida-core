@@ -8,6 +8,8 @@
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 
+import pathlib
+
 import click
 
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
@@ -77,6 +79,8 @@ __all__ = (
     'OLDER_THAN',
     'ORDER_BY',
     'ORDER_DIRECTION',
+    'OVERWRITE',
+    'PATH',
     'PAST_DAYS',
     'PAUSED',
     'PORT',
@@ -340,11 +344,15 @@ ARCHIVE_FORMAT = OverridableOption(
 )
 
 NON_INTERACTIVE = OverridableOption(
-    '-n',
-    '--non-interactive',
-    is_flag=True,
+    '-n/-I',
+    '--non-interactive/--interactive',
     is_eager=True,
-    help='In non-interactive mode, the CLI never prompts but simply uses default values for options that define one.',
+    help=(
+        'In non-interactive mode, the CLI never prompts for options but simply uses default values for options that '
+        'define one. In interactive mode, the CLI will prompt for each interactive option. '
+    ),
+    default=False,
+    show_default='--interactive',
 )
 
 DRY_RUN = OverridableOption('-n', '--dry-run', is_flag=True, help='Perform a dry run.')
@@ -742,4 +750,21 @@ PRINT_TRACEBACK = OverridableOption(
     '--print-traceback',
     is_flag=True,
     help='Print the full traceback in case an exception is raised.',
+)
+
+PATH = OverridableOption(
+    '-p',
+    '--path',
+    type=click.Path(path_type=pathlib.Path),
+    show_default=False,
+    help='Base path for operations that write to disk.',
+)
+
+OVERWRITE = OverridableOption(
+    '--overwrite',
+    '-o',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Overwrite file/directory if writing to disk.',
 )

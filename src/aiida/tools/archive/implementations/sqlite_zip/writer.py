@@ -192,7 +192,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         return key
 
     def delete_object(self, key: str) -> None:
-        raise IOError(f'Cannot delete objects in {self._mode!r} mode')
+        raise OSError(f'Cannot delete objects in {self._mode!r} mode')
 
 
 class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
@@ -201,7 +201,7 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
     def delete_object(self, key: str) -> None:
         self._assert_in_context()
         if f'{utils.REPO_FOLDER}/{key}' in self._central_dir:
-            raise IOError(f'Cannot delete object {key!r} that has been added in the same append context')
+            raise OSError(f'Cannot delete object {key!r} that has been added in the same append context')
         self._deleted_paths.add(f'{utils.REPO_FOLDER}/{key}')
 
     def __enter__(self) -> 'ArchiveAppenderSqlZip':

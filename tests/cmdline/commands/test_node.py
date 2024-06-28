@@ -278,20 +278,12 @@ class TestVerdiGraph:
             delete_temporary_file(filename)
 
     def test_multiple_nodes(self, run_cli_command):
-        """Test the `-N/--nodes` option to specify multiple root nodes."""
+        """Test multiple root nodes."""
         node = orm.Data().store()
-        options = ['-N', str(self.node.pk), str(node.pk)]
+        options = [str(self.node.pk), str(node.pk)]
         result = run_cli_command(cmd_node.graph_generate, options)
         assert 'Success: Output written to' in result.output
         assert os.path.isfile(f'{self.node.pk}.{node.pk}.dot.pdf')
-
-    def test_deprecation_warnings(self, run_cli_command):
-        """Test that the positional arguments are deprecated and emit a warning."""
-        options = [str(self.node.pk), 'output.pdf']
-        result = run_cli_command(cmd_node.graph_generate, options)
-        assert 'Specifying the root node positionally is deprecated' in result.output
-        assert 'Specifying the output file positionally is deprecated' in result.output
-        assert os.path.isfile('output.pdf')
 
     def test_catch_bad_pk(self, run_cli_command):
         """Test that an invalid root_node pk (non-numeric, negative, or decimal),
@@ -409,11 +401,11 @@ class TestVerdiGraph:
 
     @pytest.mark.parametrize('output_file', ('without_extension', 'without_extension.pdf'))
     def test_output_file(self, run_cli_command, output_file):
-        """Test that the output file can be specified through an argument."""
+        """Test that the output file can be specified through ``-O/--output-file``."""
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             try:
-                run_cli_command(cmd_node.graph_generate, [str(self.node.pk), output_file])
+                run_cli_command(cmd_node.graph_generate, [str(self.node.pk), '--output-file', output_file])
                 assert os.path.isfile(output_file)
             finally:
                 delete_temporary_file(output_file)

@@ -25,7 +25,7 @@ from typing import Mapping as MappingType
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo, FileCopyOperation
-from aiida.common.folders import SandboxFolder
+from aiida.common.folders import Folder, SandboxFolder
 from aiida.common.links import LinkType
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
@@ -66,7 +66,7 @@ def upload_calculation(
     node: CalcJobNode,
     transport: Transport,
     calc_info: CalcInfo,
-    folder: SandboxFolder,
+    folder: Folder,
     inputs: Optional[MappingType[str, Any]] = None,
     dry_run: bool = False,
 ) -> RemoteData | None:
@@ -116,7 +116,7 @@ def upload_calculation(
         # If it already exists, no exception is raised
         try:
             transport.chdir(remote_working_directory)
-        except IOError:
+        except OSError:
             logger.debug(
                 f'[submission of calculation {node.pk}] Unable to '
                 f'chdir in {remote_working_directory}, trying to create it'
@@ -296,7 +296,7 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
                     f'[submission of calculation {node.pk}] Unable to copy remote '
                     f'resource from {remote_abs_path} to {dest_rel_path}! NOT Stopping but just ignoring!.'
                 )
-            except (IOError, OSError):
+            except OSError:
                 logger.warning(
                     f'[submission of calculation {node.pk}] Unable to copy remote '
                     f'resource from {remote_abs_path} to {dest_rel_path}! Stopping.'
@@ -318,57 +318,71 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
             try:
                 transport.makedirs(remote_dirname, ignore_existing=True)
                 transport.symlink(remote_abs_path, dest_rel_path)
-            except (IOError, OSError):
+            except OSError:
                 logger.warning(
                     f'[submission of calculation {node.pk}] Unable to create remote symlink '
                     f'from {remote_abs_path} to {dest_rel_path}! Stopping.'
                 )
                 raise
         else:
-            raise IOError(
+            raise OSError(
                 f'It is not possible to create a symlink between two different machines for calculation {node.pk}'
             )
 
 
 def _copy_local_files(logger, node, transport, inputs, local_copy_list):
-    """Perform the copy instrctions of the ``local_copy_list``."""
-    with TemporaryDirectory() as tmpdir:
-        dirpath = pathlib.Path(tmpdir)
+    """Perform the copy instructions of the ``local_copy_list``."""
+
+    for uuid, filename, target in local_copy_list:
+        logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
+
+        try:
+            data_node = load_node(uuid=uuid)
+        except exceptions.NotExistent:
+            data_node = _find_data_node(inputs, uuid) if inputs else None
+
+        if data_node is None:
+            logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
+            continue
 
         # The transport class can only copy files directly from the file system, so the files in the source node's repo
         # have to first be copied to a temporary directory on disk.
-        for uuid, filename, target in local_copy_list:
-            logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
-
-            try:
-                data_node = load_node(uuid=uuid)
-            except exceptions.NotExistent:
-                data_node = _find_data_node(inputs, uuid) if inputs else None
-
-            if data_node is None:
-                logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
-                continue
+        with TemporaryDirectory() as tmpdir:
+            dirpath = pathlib.Path(tmpdir)
 
             # If no explicit source filename is defined, we assume the top-level directory
             filename_source = filename or '.'
-            filename_target = target or ''
+            filename_target = target or '.'
 
-            # Make the target filepath absolute and create any intermediate directories if they don't yet exist
+            file_type_source = data_node.base.repository.get_object(filename_source).file_type
+
+            # The logic below takes care of an edge case where the source is a file but the target is a directory. In
+            # this case, the v2.5.1 implementation would raise an `IsADirectoryError` exception, because it would try
+            # to open the directory in the sandbox folder as a file when writing the contents.
+            if file_type_source == FileType.FILE and target and transport.isdir(target):
+                raise IsADirectoryError
+
+            # In case the source filename is specified and it is a directory that already exists in the remote, we
+            # want to avoid nested directories in the target path to replicate the behavior of v2.5.1. This is done by
+            # setting the target filename to '.', which means the contents of the node will be copied in the top level
+            # of the temporary directory, whose contents are then copied into the target directory.
+            if filename and transport.isdir(filename):
+                filename_target = '.'
+
             filepath_target = (dirpath / filename_target).resolve().absolute()
             filepath_target.parent.mkdir(parents=True, exist_ok=True)
 
-            if data_node.base.repository.get_object(filename_source).file_type == FileType.DIRECTORY:
+            if file_type_source == FileType.DIRECTORY:
                 # If the source object is a directory, we copy its entire contents
                 data_node.base.repository.copy_tree(filepath_target, filename_source)
+                transport.put(f'{dirpath}/*', target or '.', overwrite=True)
             else:
                 # Otherwise, simply copy the file
                 with filepath_target.open('wb') as handle:
                     with data_node.base.repository.open(filename_source, 'rb') as source:
                         shutil.copyfileobj(source, handle)
-
-        # Now copy the contents of the temporary folder to the remote working directory using the transport
-        for filepath in dirpath.iterdir():
-            transport.put(str(filepath), filepath.name)
+                transport.makedirs(str(pathlib.Path(target).parent), ignore_existing=True)
+                transport.put(str(filepath_target), target)
 
 
 def _copy_sandbox_files(logger, node, transport, folder):
@@ -459,7 +473,7 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
 
             try:
                 transport.copy(str(source_filepath), str(target_filepath))
-            except (IOError, ValueError) as exception:
+            except (OSError, ValueError) as exception:
                 EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
             else:
                 EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')

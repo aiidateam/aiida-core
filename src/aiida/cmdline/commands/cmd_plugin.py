@@ -48,7 +48,9 @@ def plugin_list(entry_point_group, entry_point):
             echo.echo_critical(str(exception))
         else:
             try:
-                if (inspect.isclass(plugin) and issubclass(plugin, Process)) or plugin.is_process_function:
+                if (inspect.isclass(plugin) and issubclass(plugin, Process)) or (
+                    hasattr(plugin, 'is_process_function') and plugin.is_process_function
+                ):
                     print_process_info(plugin)
                 else:
                     echo.echo(str(plugin.get_description()))

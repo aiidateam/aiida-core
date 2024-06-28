@@ -44,7 +44,7 @@ dependencies = [
   'pyyaml~=6.0',
   'requests~=2.0',
   'sqlalchemy~=2.0',
-  'tabulate~=0.8.5',
+  'tabulate>=0.8.0,<0.10.0',
   'tqdm~=4.45',
   'upf_to_json~=0.9.2',
   'wrapt~=1.11'
@@ -211,9 +211,9 @@ notebook = [
 ]
 pre-commit = [
   'aiida-core[atomic_tools,rest,tests,tui]',
-  'mypy~=1.7.1',
+  'mypy~=1.10.0',
   'packaging~=23.0',
-  'pre-commit~=2.2',
+  'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
   'tomli',
   'types-PyYAML'
@@ -351,8 +351,11 @@ ignore_errors = true
 module = 'plumpy'
 
 [tool.pytest.ini_options]
-addopts = '--benchmark-skip --durations=50 --strict-config --strict-markers -ra --cov-report xml --cov-append '
+addopts = '--benchmark-skip --durations=50 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
 filterwarnings = [
+  'ignore:.*and will be removed in NumPy 2.0.*:DeprecationWarning:ase:',
+  'ignore:datetime.datetime.utcfromtimestamp:DeprecationWarning:pytz|dateutil|tqdm|aio_pika:',
+  'ignore:datetime.datetime.utcnow:DeprecationWarning:aio_pika|pytz|pgtest:',
   'ignore::DeprecationWarning:babel:',
   'ignore::DeprecationWarning:frozendict:',
   'ignore::DeprecationWarning:sqlalchemy:',
@@ -360,9 +363,12 @@ filterwarnings = [
   'ignore::DeprecationWarning:pymatgen:',
   'ignore::DeprecationWarning:jsonbackend:',
   'ignore::DeprecationWarning:pkg_resources:',
+  'ignore:ast.* is deprecated.*:DeprecationWarning:docstring_parser:',
+  'ignore::SyntaxWarning:CifFile:',
   'ignore::pytest.PytestCollectionWarning',
   'ignore:Creating AiiDA configuration folder.*:UserWarning',
   'ignore:Object of type .* not in session, .* operation along .* will not proceed:sqlalchemy.exc.SAWarning',
+  'ignore:Identity map already had an identity for .* inside of an event handler within the flush?:sqlalchemy.exc.SAWarning',
   'ignore:The `aiida.orm.nodes.data.upf` module is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   'default::ResourceWarning'
@@ -370,6 +376,8 @@ filterwarnings = [
 markers = [
   'nightly: long running tests that should rarely be affected and so only run nightly',
   'requires_rmq: requires a connection (on port 5672) to RabbitMQ',
+  'requires_psql: requires a connection to PostgreSQL DB',
+  'presto: automatic marker meaning "not requires_rmq and not requires_psql"',
   'sphinx: set parameters for the sphinx `app` fixture'
 ]
 minversion = '7.0'

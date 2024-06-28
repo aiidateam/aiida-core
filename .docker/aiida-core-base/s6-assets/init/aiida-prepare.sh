@@ -18,15 +18,19 @@ verdi config set warnings.development_version False
 # If the environment variable `SETUP_DEFAULT_AIIDA_PROFILE` is not set, set it to `true`.
 if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
 
+    # For the container that includes the services, this script is called as soon as the RabbitMQ startup script has
+    # been launched, but it can take a while for the service to come up. If ``verdi presto`` is called straight away
+    # it is possible it tries to connect to the service before that and it will configure the profile without a broker.
+    sleep 5
+
     # Create AiiDA profile.
-    verdi quicksetup              \
-        --non-interactive                            \
-        --profile "${AIIDA_PROFILE_NAME:-default}"            \
-        --email "${AIIDA_USER_EMAIL:-aiida@localhost}"                \
-        --first-name "${AIIDA_USER_FIRST_NAME:-Giuseppe}"      \
-        --last-name "${AIIDA_USER_LAST_NAME:-Verdi}"        \
-        --institution "${AIIDA_USER_INSTITUTION:-Khedivial}"    \
-        --config "${AIIDA_CONFIG_FILE:-/aiida/assets/config-quick-setup.yaml}"
+    verdi presto \
+        --verbosity info \
+        --profile-name "${AIIDA_PROFILE_NAME:-default}" \
+        --email "${AIIDA_USER_EMAIL:-aiida@localhost}" \
+        --use-postgres \
+        --postgres-hostname "${AIIDA_POSTGRES_HOSTNAME:-localhost}" \
+        --postgres-password "${AIIDA_POSTGRES_PASSWORD:-password}"
 
     # Setup and configure local computer.
     computer_name=localhost

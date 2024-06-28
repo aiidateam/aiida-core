@@ -21,6 +21,14 @@ import requests
 NO_OF_REQUESTS = 100
 
 
+# This fails with SQLite backend:
+# ERROR tests/restapi/test_threaded_restapi.py::test_run_threaded_server - assert 30.0 == 1
+# where 30.0 = <bound method QueuePool.timeout of <sqlalchemy.pool.impl.QueuePool object at 0x>>()
+# where <bound method QueuePool.timeout of <sqlalchemy.pool.impl.QueuePool object at 0x>> =
+# <sqlalchemy.pool.impl.QueuePool object at 0x>.timeout
+# where <sqlalchemy.pool.impl.QueuePool object at 0x> = Engine(sqlite:////tmp/.../database.sqlite).pool
+# where Engine(sqlite:////tmp/.../database.sqlite) = <sqlalchemy.orm.session.Session object at 0x>.bind
+@pytest.mark.requires_psql
 @pytest.mark.usefixtures('restrict_db_connections')
 def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
     """Run AiiDA REST API threaded in a separate thread and perform many sequential requests.

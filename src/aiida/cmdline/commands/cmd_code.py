@@ -18,7 +18,7 @@ from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo, echo_tabulate
-from aiida.cmdline.utils.decorators import deprecated_command, with_dbenv
+from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 
 
@@ -89,7 +89,7 @@ def set_code_builder(ctx, param, value):
 # because the ``LABEL`` option has a callback that relies on the computer being already set. Execution order is
 # guaranteed only for the interactive case, however. For the non-interactive case, the callback is called explicitly
 # once more in the command body to cover the case when the label is specified before the computer.
-@verdi_code.command('setup')
+@verdi_code.command('setup', deprecated='Please use `verdi code create` instead.')
 @options_code.ON_COMPUTER()
 @options_code.COMPUTER()
 @options_code.LABEL()
@@ -105,9 +105,8 @@ def set_code_builder(ctx, param, value):
 @options.CONFIG_FILE()
 @click.pass_context
 @with_dbenv()
-@deprecated_command('This command will be removed soon, use `verdi code create` instead.')
 def setup_code(ctx, non_interactive, **kwargs):
-    """Setup a new code."""
+    """Setup a new code (use `verdi code create`)."""
     from aiida.orm.utils.builders.code import CodeBuilder
 
     options_code.validate_label_uniqueness(ctx, None, kwargs['label'])
@@ -241,6 +240,7 @@ def show(code):
     is_flag=True,
     default=True,
     help='Sort the keys of the output YAML.',
+    show_default=True,
 )
 @with_dbenv()
 def export(code, output_file, sort):

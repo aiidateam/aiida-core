@@ -192,8 +192,11 @@ py:class _asyncio.Future
 
 py:class tqdm.std.tqdm
 
+py:class _pytest.tmpdir.TempPathFactory
+py:class pytest.tmpdir.TempPathFactory
 py:class pytest.TempPathFactory
 py:class PGTest
+py:class pgtest.pgtest.PGTest
 
 py:class IPython.core.magic.Magics
 
@@ -206,8 +209,6 @@ py:class flask_restful.Api
 py:class flask_restful.Resource
 py:class flask.app.Flask
 py:class Flask
-
-py:class pytest.tmpdir.TempPathFactory
 
 py:class scoped_session
 py:class sqlalchemy.orm.decl_api.SqliteModel

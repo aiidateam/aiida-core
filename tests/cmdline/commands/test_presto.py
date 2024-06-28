@@ -1,5 +1,7 @@
 """Tests for ``verdi presto``."""
 
+import textwrap
+
 import pytest
 from aiida.cmdline.commands.cmd_presto import get_default_presto_profile_name, verdi_presto
 from aiida.manage.configuration import profile_context
@@ -50,7 +52,7 @@ def test_presto_without_rmq(pytestconfig, run_cli_command, monkeypatch):
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('empty_config')
-def test_presto_with_rmq(pytestconfig, run_cli_command, monkeypatch):
+def test_presto_with_rmq(pytestconfig, run_cli_command):
     """Test the ``verdi presto``."""
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile `presto`.' in result.output
@@ -91,3 +93,21 @@ def test_presto_overdose(run_cli_command, config_with_profile_factory):
     config_with_profile_factory(name='presto-10')
     result = run_cli_command(verdi_presto)
     assert 'Created new profile `presto-11`.' in result.output
+
+
+@pytest.mark.requires_psql
+@pytest.mark.usefixtures('empty_config')
+def test_presto_profile_name_exists(run_cli_command, config_with_profile_factory):
+    """Test ``verdi presto`` fails early if the specified profile name already exists."""
+    profile_name = 'custom-presto'
+    config_with_profile_factory(name=profile_name)
+    options = ['--non-interactive', '--use-postgres', '--profile-name', profile_name]
+    result = run_cli_command(verdi_presto, options, raises=True)
+    # Matching for the complete literal output as a way to test that nothing else of the command was run, such as
+    # configuring the broker or creating a database for PostgreSQL
+    assert result.output == textwrap.dedent("""\
+        Usage: presto [OPTIONS]
+        Try 'presto --help' for help.
+
+        Error: Invalid value for --profile-name: The profile `custom-presto` already exists.
+        """)

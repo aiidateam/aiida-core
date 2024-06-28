@@ -96,6 +96,7 @@ def detect_postgres_config(
 
 @verdi.command('presto')
 @click.option(
+    '-p',
     '--profile-name',
     default=lambda: get_default_presto_profile_name(),
     show_default=True,

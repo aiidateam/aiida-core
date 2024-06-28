@@ -27,7 +27,17 @@ def verdi_profile():
 
 
 def command_create_profile(
-    ctx: click.Context, storage_cls, non_interactive: bool, profile: Profile, set_as_default: bool = True, **kwargs
+    ctx: click.Context,
+    storage_cls,
+    non_interactive: bool,
+    profile: Profile,
+    set_as_default: bool = True,
+    email: str | None = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    institution: str | None = None,
+    use_rabbitmq: bool = True,
+    **kwargs,
 ):
     """Create a new profile, initialise its storage and create a default user.
 
@@ -37,43 +47,44 @@ def command_create_profile(
     :param profile: The profile instance. This is an empty ``Profile`` instance created by the command line argument
         which currently only contains the selected profile name for the profile that is to be created.
     :param set_as_default: Whether to set the created profile as the new default.
+    :param email: Email for the default user.
+    :param first_name: First name for the default user.
+    :param last_name: Last name for the default user.
+    :param institution: Institution for the default user.
+    :param use_rabbitmq: Whether to configure RabbitMQ as the broker.
     :param kwargs: Arguments to initialise instance of the selected storage implementation.
     """
+    from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
     from aiida.plugins.entry_point import get_entry_point_from_class
 
-    if not storage_cls.read_only and kwargs.get('email', None) is None:
+    if not storage_cls.read_only and email is None:
         raise click.BadParameter('The option is required for storages that are not read-only.', param_hint='--email')
-
-    email = kwargs.pop('email')
-    first_name = kwargs.pop('first_name')
-    last_name = kwargs.pop('last_name')
-    institution = kwargs.pop('institution')
 
     _, storage_entry_point = get_entry_point_from_class(storage_cls.__module__, storage_cls.__name__)
     assert storage_entry_point is not None
 
-    if kwargs.pop('use_rabbitmq'):
-        broker_backend = 'core.rabbitmq'
-        broker_config = {
-            key: kwargs.get(key)
-            for key in (
-                'broker_protocol',
-                'broker_username',
-                'broker_password',
-                'broker_host',
-                'broker_port',
-                'broker_virtual_host',
-            )
-        }
+    broker_backend = None
+    broker_config = None
+
+    if use_rabbitmq:
+        try:
+            broker_config = detect_rabbitmq_config()
+        except ConnectionError as exception:
+            echo.echo_warning(f'RabbitMQ server not reachable: {exception}.')
+        else:
+            echo.echo_success(f'RabbitMQ server detected with connection parameters: {broker_config}')
+            broker_backend = 'core.rabbitmq'
+
+        echo.echo_report('RabbitMQ can be reconfigured with `verdi profile configure-rabbitmq`.')
     else:
-        broker_backend = None
-        broker_config = None
+        echo.echo_report('Creating profile without RabbitMQ.')
+        echo.echo_report('It can be configured at a later point in time with `verdi profile configure-rabbitmq`.')
 
     try:
         profile = create_profile(
             ctx.obj.config,
             name=profile.name,
-            email=email,
+            email=email,  # type: ignore[arg-type]
             first_name=first_name,
             last_name=last_name,
             institution=institution,
@@ -104,24 +115,6 @@ def command_create_profile(
         setup.SETUP_USER_LAST_NAME(),
         setup.SETUP_USER_INSTITUTION(),
         setup.SETUP_USE_RABBITMQ(),
-        setup.SETUP_BROKER_PROTOCOL(
-            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
-        ),
-        setup.SETUP_BROKER_USERNAME(
-            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
-        ),
-        setup.SETUP_BROKER_PASSWORD(
-            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
-        ),
-        setup.SETUP_BROKER_HOST(
-            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
-        ),
-        setup.SETUP_BROKER_PORT(
-            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
-        ),
-        setup.SETUP_BROKER_VIRTUAL_HOST(
-            prompt_fn=lambda ctx: ctx.params['use_rabbitmq'], required_fn=lambda ctx: ctx.params['use_rabbitmq']
-        ),
     ],
 )
 def profile_setup():
@@ -146,22 +139,23 @@ def profile_configure_rabbitmq(ctx, profile, non_interactive, force, **kwargs):
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
 
-    connection_params = {key.lstrip('broker_'): value for key, value in kwargs.items() if key.startswith('broker_')}
+    broker_config = {key: value for key, value in kwargs.items() if key.startswith('broker_')}
+    connection_params = {key.lstrip('broker_'): value for key, value in broker_config.items()}
 
-    broker_config = detect_rabbitmq_config(**connection_params)
-
-    if broker_config is None:
-        echo.echo_warning(f'Unable to connect to RabbitMQ server with configuration: {connection_params}')
+    try:
+        broker_config = detect_rabbitmq_config(**connection_params)
+    except ConnectionError as exception:
+        echo.echo_warning(f'Unable to connect to RabbitMQ server: {exception}')
         if not force:
             click.confirm('Do you want to continue with the provided configuration?', abort=True)
     else:
         echo.echo_success('Connected to RabbitMQ with the provided connection parameters')
 
-    profile.set_process_controller(name='core.rabbitmq', config=kwargs)
+    profile.set_process_controller(name='core.rabbitmq', config=broker_config)
     ctx.obj.config.update_profile(profile)
     ctx.obj.config.store()
 
-    echo.echo_success(f'RabbitMQ configuration for `{profile.name}` updated to: {connection_params}')
+    echo.echo_success(f'RabbitMQ configuration for `{profile.name}` updated to: {broker_config}')
 
 
 @verdi_profile.command('list')

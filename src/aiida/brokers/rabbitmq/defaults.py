@@ -36,10 +36,10 @@ def detect_rabbitmq_config(
     host: str | None = None,
     port: int | None = None,
     virtual_host: str | None = None,
-    heartbeat: int | None = None,
-) -> dict[str, t.Any] | None:
+) -> dict[str, t.Any]:
     """Try to connect to a RabbitMQ server with the default connection parameters.
 
+    :raises ConnectionError: If the connection failed with the provided connection parameters
     :returns: The connection parameters if the RabbitMQ server was successfully connected to, or ``None`` otherwise.
     """
     from kiwipy.rmq.threadcomms import connect
@@ -51,7 +51,6 @@ def detect_rabbitmq_config(
         'host': host or os.getenv('AIIDA_BROKER_HOST', BROKER_DEFAULTS['host']),
         'port': port or int(os.getenv('AIIDA_BROKER_PORT', BROKER_DEFAULTS['port'])),
         'virtual_host': virtual_host or os.getenv('AIIDA_BROKER_VIRTUAL_HOST', BROKER_DEFAULTS['virtual_host']),
-        'heartbeat': heartbeat or int(os.getenv('AIIDA_BROKER_HEARTBEAT', BROKER_DEFAULTS['heartbeat'])),
     }
 
     LOGGER.info(f'Attempting to connect to RabbitMQ with parameters: {connection_params}')
@@ -59,7 +58,7 @@ def detect_rabbitmq_config(
     try:
         connect(connection_params=connection_params)
     except ConnectionError:
-        return None
+        raise ConnectionError(f'Failed to connect with following connection parameters: {connection_params}')
 
     # The profile configuration expects the keys of the broker config to be prefixed with ``broker_``.
     return {f'broker_{key}': value for key, value in connection_params.items()}

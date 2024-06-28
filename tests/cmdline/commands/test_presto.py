@@ -32,8 +32,11 @@ def test_presto_without_rmq(pytestconfig, run_cli_command, monkeypatch):
     """Test the ``verdi presto`` without RabbitMQ."""
     from aiida.brokers.rabbitmq import defaults
 
+    def detect_rabbitmq_config(**kwargs):
+        raise ConnectionError()
+
     # Patch the RabbitMQ detection function to pretend it could not find the service
-    monkeypatch.setattr(defaults, 'detect_rabbitmq_config', lambda: None)
+    monkeypatch.setattr(defaults, 'detect_rabbitmq_config', lambda: detect_rabbitmq_config())
 
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile `presto`.' in result.output

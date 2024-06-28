@@ -299,7 +299,7 @@ def test_configure_rabbitmq(run_cli_command, isolated_config):
     # Verify that configuring with incorrect options and `--force` raises a warning but still configures the broker
     options = [profile_name, '-f', '--broker-port', '1234']
     cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
-    assert 'Unable to connect to RabbitMQ server with configuration:' in cli_result.stdout
+    assert 'Unable to connect to RabbitMQ server: Failed to connect' in cli_result.stdout
     assert profile.process_control_config['broker_port'] == 1234
 
     # Call it again to check it works to reconfigure existing broker connection parameters

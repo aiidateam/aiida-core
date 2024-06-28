@@ -175,7 +175,7 @@ def graph_traversal_rules(rules):
     return decorator
 
 
-def set_log_level(_ctx, _param, value):
+def set_log_level(ctx, _param, value):
     """Configure the logging for the CLI command being executed.
 
     Note that we cannot use the most obvious approach of directly setting the level on the various loggers. The reason
@@ -192,12 +192,15 @@ def set_log_level(_ctx, _param, value):
     """
     from aiida.common import log
 
+    if log.CLI_ACTIVE:
+        return value
+
     log.CLI_ACTIVE = True
 
     # If the value is ``None``, it means the option was not specified, but we still configure logging for the CLI
     # However, we skip this when we are in a tab-completion context.
     if value is None:
-        if not _ctx.resilient_parsing:
+        if not ctx.resilient_parsing:
             configure_logging()
         return None
 

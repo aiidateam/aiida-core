@@ -431,6 +431,13 @@ deps =
     py311: -rrequirements/requirements-py-3.11.txt
     py312: -rrequirements/requirements-py-3.12.txt
 
+[testenv:py{39,310,311,312}-presto]
+passenv =
+    PYTHONASYNCIODEBUG
+setenv =
+    AIIDA_WARN_v3 =
+commands = pytest -m 'presto' {posargs}
+
 [testenv:py{39,310,311,312}]
 passenv =
     PYTHONASYNCIODEBUG

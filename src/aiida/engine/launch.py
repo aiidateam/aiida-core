@@ -111,8 +111,16 @@ def submit(
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
     runner = manager.get_manager().get_runner()
+
+    if runner.controller is None:
+        raise InvalidOperation(
+            'Cannot submit because the runner does not have a process controller, probably because the profile does '
+            'not define a broker like RabbitMQ. If a RabbitMQ server is available, the profile can be configured to '
+            'use it with `verdi profile configure-rabbitmq`. Otherwise, use :meth:`aiida.engine.launch.run` instead to '
+            'run the process in the local Python interpreter instead of submitting it to the daemon.'
+        )
+
     assert runner.persister is not None, 'runner does not have a persister'
-    assert runner.controller is not None, 'runner does not have a controller'
 
     process_inited = instantiate_process(runner, process, **inputs)
 

@@ -20,6 +20,16 @@ from aiida.plugins import CalculationFactory
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
+@pytest.fixture
+def arithmetic_add_builder(aiida_code_installed):
+    builder = ArithmeticAddCalculation.get_builder()
+    builder.code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+    builder.x = orm.Int(1)
+    builder.y = orm.Int(1)
+    builder.metadata = {'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}}
+    return builder
+
+
 @calcfunction
 def add(term_a, term_b):
     return term_a + term_b
@@ -69,16 +79,26 @@ class AddWorkChain(WorkChain):
 
 
 @pytest.mark.usefixtures('started_daemon_client')
-def test_submit_wait(aiida_code_installed):
+def test_submit_wait(arithmetic_add_builder):
     """Test the ``wait`` argument of :meth:`aiida.engine.launch.submit`."""
-    builder = ArithmeticAddCalculation.get_builder()
-    builder.code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
-    builder.x = orm.Int(1)
-    builder.y = orm.Int(1)
-    builder.metadata = {'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}}
-    node = launch.submit(builder, wait=True, wait_interval=0.1)
+    node = launch.submit(arithmetic_add_builder, wait=True, wait_interval=0.1)
     assert node.is_finished, node.process_state
     assert node.is_finished_ok, node.exit_code
+
+
+def test_submit_no_broker(arithmetic_add_builder, monkeypatch, manager):
+    """Test that ``submit`` raises ``InvalidOperation`` if the runner does not have a controller.
+
+    The runner does not have a controller if the runner was not provided a communicator which is the case for profiles
+    that do not define a broker.
+    """
+    runner = manager.get_runner()
+    monkeypatch.setattr(runner, '_controller', None)
+
+    with pytest.raises(
+        exceptions.InvalidOperation, match=r'Cannot submit because the runner does not have a process controller.*'
+    ):
+        launch.submit(arithmetic_add_builder)
 
 
 def test_await_processes_invalid():

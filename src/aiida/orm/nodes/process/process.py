@@ -8,7 +8,10 @@
 ###########################################################################
 """Module with `Node` sub class for processes."""
 
+from __future__ import annotations
+
 import enum
+import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from plumpy.process_states import ProcessState
@@ -163,6 +166,11 @@ class ProcessNode(Sealable, Node):
 
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
+    # This is set on the instance the first time the ``logger`` property is called. It cannot be initialized in the
+    # constructor because that would not go for instances that are loaded from the database which do not pass through
+    # the constructor.
+    _logger_adapter: logging.LoggerAdapter | None = None
+
     def __str__(self) -> str:
         base = super().__str__()
         if self.process_type:
@@ -251,7 +259,16 @@ class ProcessNode(Sealable, Node):
         """
         from aiida.orm.utils.log import create_logger_adapter
 
-        return create_logger_adapter(self._logger, self)
+        # If the node is not yet stored, there is no point in creating the logger adapter yet as the ``DbLogHandler``
+        # it configures only is triggered for stored nodes otherwise it cannot link the log message to the node.
+        if not self.pk:
+            return self._logger
+
+        # First time the property is called after the node is stored, create the logger adapter
+        if self._logger_adapter is None:
+            self._logger_adapter = create_logger_adapter(self._logger, self)
+
+        return self._logger_adapter
 
     @classmethod
     def recursive_merge(cls, left: dict[Any, Any], right: dict[Any, Any]) -> None:

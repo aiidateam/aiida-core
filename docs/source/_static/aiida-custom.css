@@ -1,3 +1,110 @@
+/* AiiDA colors in HTML format
+blue:   #0096d2
+orange: #fe7d17
+green:  #30b808
+*/
+
+html[data-theme="light"] {
+    --pst-color-primary: #0096d2;
+    --pst-color-secondary: #fe7d17;
+    --pst-color-surface: #f5f5f5;
+}
+
+html[data-theme="dark"] {
+    --pst-color-primary: #0096d2;
+    --pst-color-secondary: #fe7d17;
+}
+
+code {
+    --pst-color-inline-code: #0096d2;
+    font-weight: bold;
+}
+
+html[data-theme=light] .highlight .ch,
+html[data-theme=light] .highlight .sd {
+    color: #777777;
+    font-style: italic
+}
+
+html[data-theme=light] .highlight .s1,
+html[data-theme=light] .highlight .si {
+    color: #30b808;
+    font-weight: bold;
+}
+
+html[data-theme=light] .highlight .k,
+html[data-theme=light] .highlight .kc,
+html[data-theme=light] .highlight .kn,
+html[data-theme=light] .highlight .ow,
+html[data-theme=light] .highlight .mf,
+html[data-theme=light] .highlight .mi {
+    color: #0096d2;
+    font-weight: bold;
+}
+
+html[data-theme=dark] .highlight .ch,
+html[data-theme=dark] .highlight .sd {
+    color: #999999;
+    font-style: italic
+}
+
+html[data-theme=dark] .highlight .s1,
+html[data-theme=dark] .highlight .si {
+    color: #30b808;
+    font-weight: bold;
+}
+
+html[data-theme=dark] .highlight .k,
+html[data-theme=dark] .highlight .kc,
+html[data-theme=dark] .highlight .kn,
+html[data-theme=dark] .highlight .ow,
+html[data-theme=dark] .highlight .mf,
+html[data-theme=dark] .highlight .mi {
+    color: #0096d2;
+    font-weight: bold;
+}
+
+.sd-card-hover:hover {
+    border-color: var(--pst-color-primary);
+    transform: none;
+}
+
+.aiida-green {
+    color: #30b808;
+}
+
+.aiida-blue {
+    color: #0096d2;
+}
+
+.aiida-orange {
+    color: #fe7d17;
+}
+
+.aiida-red {
+    color: rgb(192, 11, 80);
+}
+
+img.logo-shell {
+    width: 20px;
+    padding-bottom: 3px;
+    margin-right: 3px;
+}
+
+.sd-card-footer {
+    padding-top: 0rem;
+    border-top: none !important;
+}
+
+.sd-card-footer table {
+    margin-bottom: 0rem;
+    border-color: transparent;
+}
+
+.sd-card-footer table td:last-child {
+    text-align: right;
+}
+
 /* Fix CSS of top bar link icons */
 a.nav-link.nav-external i {
     padding-left: 0.3em !important;

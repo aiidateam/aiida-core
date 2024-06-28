@@ -36,7 +36,7 @@
     command: >
       {{ venv_bin }}/verdi setup
       --non-interactive
-      --profile-name "{{ aiida_backend }}"
+      --profile "{{ aiida_backend }}"
       --email "aiida@localhost"
       --first-name "ringo"
       --last-name "starr"

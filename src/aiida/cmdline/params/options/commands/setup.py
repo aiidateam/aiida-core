@@ -184,6 +184,7 @@ SETUP_PROFILE = options.OverridableOption(
 SETUP_PROFILE_NAME = options.OverridableOption(
     '-p',
     '--profile-name',
+    'profile',
     prompt='Profile name',
     help='The name of the new profile.',
     required=True,

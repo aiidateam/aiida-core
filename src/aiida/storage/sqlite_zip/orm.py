@@ -284,17 +284,12 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             type_filter, casted_entity = _cast_json_type(database_entity, value)
             return case((type_filter, casted_entity.ilike(value, escape='\\')), else_=False)
 
-        # if operator == 'contains':
-        # to-do, see: https://github.com/sqlalchemy/sqlalchemy/discussions/7836
+        if operator == 'contains':
+            # to-do, see: https://github.com/sqlalchemy/sqlalchemy/discussions/7836
+            raise NotImplementedError('The operator `contains` is not implemented for SQLite-based storage plugins.')
 
         if operator == 'has_key':
-            return case(
-                (
-                    func.json_type(database_entity) == 'object',
-                    func.json_each(database_entity).table_valued('key', joins_implicitly=True).c.key == value,
-                ),
-                else_=False,
-            )
+            raise NotImplementedError('The operator `has_key` is not implemented for SQLite-based storage plugins.')
 
         if operator == 'in':
             type_filter, casted_entity = _cast_json_type(database_entity, value[0])

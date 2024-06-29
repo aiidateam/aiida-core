@@ -8,7 +8,6 @@
 ###########################################################################
 """Module with `Node` sub class for processes."""
 
-
 import enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 

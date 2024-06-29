@@ -8,7 +8,6 @@
 ###########################################################################
 """Module with `Node` sub class for processes."""
 
-from __future__ import annotations
 
 import enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
@@ -259,7 +258,6 @@ class ProcessNode(Sealable, Node):
             return self._logger
 
         # First time the property is called after the node is stored, create the logger adapter
-        # if self._logger_adapter is None:
         if not hasattr(self, '_logger_adapter'):
             self._logger_adapter = create_logger_adapter(self._logger, self)
 

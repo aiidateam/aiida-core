@@ -241,7 +241,10 @@ class TestVerdiCalculation:
         retrieved.base.repository._repository.put_object_from_filelike(io.BytesIO(b'5\n'), 'aiida.out')
         retrieved.base.repository._update_repository_metadata()
 
-    def test_calcjob_cleanworkdir_basic(self, pytestconfig):
+    # This currently fails with sqlite backend since the filtering relies on the `has_key` filter which is not
+    # implemented in SQLite, see https://github.com/aiidateam/aiida-core/pull/6497
+    @pytest.mark.requires_psql
+    def test_calcjob_cleanworkdir_basic(self):
         """Test verdi calcjob cleanworkdir"""
         # Specifying no filtering options and no explicit calcjobs should exit with non-zero status
         options = []
@@ -261,17 +264,12 @@ class TestVerdiCalculation:
         # The flag should have been set
         assert self.result_job.outputs.remote_folder.base.extras.get('cleaned') is True
 
-        # TODO: This currently fails with sqlite backend,
-        # since the filtering relies on the `has_key` filter which is not implemented in SQLite.
-        # https://github.com/aiidateam/aiida-core/issues/6256
-        marker_opt = pytestconfig.getoption('-m')
-        if 'not requires_psql' in marker_opt or 'presto' in marker_opt:
-            pytest.xfail('Known sqlite backend failure')
         # Do it again should fail as the calcjob has been cleaned
         options = ['-f', str(self.result_job.uuid)]
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         assert result.exception is not None, result.output
 
+    @pytest.mark.requires_psql
     def test_calcjob_cleanworkdir_advanced(self):
         # Check applying both p and o filters
         for flag_p in ['-p', '--past-days']:

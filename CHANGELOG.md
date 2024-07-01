@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.6.1 - 2024-07-01
+
+### Fixes:
+- Fixtures: Make `pgtest` truly an optional dependency [[9fe8fd2e0]](https://github.com/aiidateam/aiida-core/commit/9fe8fd2e0b88e746ee2156eccb71b7adbab6b2c5)
+
+
 ## v2.6.0 - 2024-07-01
 
 This minor release comes with a number of features that are focused on user friendliness and ease-of-use of the CLI and the API.

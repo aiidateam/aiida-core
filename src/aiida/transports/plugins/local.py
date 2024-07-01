@@ -230,7 +230,7 @@ class LocalTransport(Transport):
         """
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
-        ignore_nonexisting = kwargs.get('ignore_noexisting', args[2] if len(args) > 2 else False)
+        ignore_nonexisting = kwargs.get('ignore_nonexisting', args[2] if len(args) > 2 else False)
         if not remotepath:
             raise OSError('Input remotepath to put function must be a non empty string')
         if not localpath:

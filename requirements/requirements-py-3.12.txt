@@ -11,6 +11,7 @@ aiormq==3.3.1
 alabaster==0.7.13
 alembic==1.12.0
 aniso8601==9.0.1
+annotated-types==0.7.0
 anyio==4.0.0
 archive-path==0.4.2
 argon2-cffi==23.1.0
@@ -34,7 +35,7 @@ click==8.1.7
 click-spinner==0.1.10
 comm==0.1.4
 contourpy==1.1.1
-coverage==7.4.1
+coverage[toml]==7.4.1
 cryptography==41.0.5
 cycler==0.12.1
 debugpy==1.8.0
@@ -130,6 +131,7 @@ pybtex==0.24.0
 pycifrw==4.4.5
 pycparser==2.21
 pydantic==2.4.0
+pydantic-core==2.10.0
 pydata-sphinx-theme==0.15.1
 pygments==2.16.1
 pymatgen==2023.10.11
@@ -144,7 +146,7 @@ pytest-benchmark==4.0.0
 pytest-cov==4.1.0
 pytest-datadir==1.5.0
 pytest-regressions==2.5.0
-pytest-rerunfailures==12.0.0
+pytest-rerunfailures==12.0
 pytest-timeout==2.2.0
 python-dateutil==2.8.2
 python-json-logger==2.0.7
@@ -184,7 +186,6 @@ sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.9
 sphinxext-rediraffe==0.2.7
 sqlalchemy==2.0.23
-sqlalchemy-utils==0.37.9
 stack-data==0.6.3
 sympy==1.12
 tabulate==0.9.0

@@ -20,5 +20,5 @@ class Str(BaseType):
 
 
 @to_aiida_type.register(str)
-def _(value):
+def _(value: str) -> Str:
     return Str(value)

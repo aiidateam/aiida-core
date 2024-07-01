@@ -8,6 +8,7 @@
 ###########################################################################
 """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
+import typing as t
 from functools import singledispatch
 
 from aiida.orm.fields import add_field
@@ -18,7 +19,7 @@ __all__ = ('BaseType', 'to_aiida_type')
 
 
 @singledispatch
-def to_aiida_type(value):
+def to_aiida_type(value: t.Any) -> Data:
     """Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types."""
     raise TypeError(f'Cannot convert value of type {type(value)} to AiiDA type.')
 

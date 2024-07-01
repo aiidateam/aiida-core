@@ -7,7 +7,6 @@ import typing as t
 from uuid import uuid4
 
 import pytest
-from pgtest.pgtest import PGTest
 
 if t.TYPE_CHECKING:
     from pgtest.pgtest import PGTest
@@ -19,6 +18,8 @@ class PostgresCluster:
         self.cluster = None
 
     def _create(self):
+        from pgtest.pgtest import PGTest
+
         try:
             self.cluster = PGTest()
         except OSError as e:
@@ -59,7 +60,6 @@ class PostgresCluster:
         return postgres_config
 
 
-# TODO: Update docstring accordingly
 @pytest.fixture(scope='session')
 def postgres_cluster():
     """Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yield.

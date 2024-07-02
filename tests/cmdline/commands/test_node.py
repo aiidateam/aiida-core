@@ -392,7 +392,7 @@ class TestVerdiGraph:
         filename = f'{root_node}.dot.pdf'
 
         for id_label_type in ['uuid', 'pk', 'label']:
-            options = ['--identifier', id_label_type, root_node]
+            options = ['--identifier', id_label_type, '--', root_node]
             try:
                 run_cli_command(cmd_node.graph_generate, options)
                 assert os.path.isfile(filename)

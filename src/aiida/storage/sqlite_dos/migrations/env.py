@@ -28,6 +28,10 @@ def run_migrations_online():
         from aiida.common.exceptions import ConfigurationError
 
         raise ConfigurationError('An initialized connection is expected for the AiiDA online migrations.')
+    if aiida_profile is None:
+        from aiida.common.exceptions import ConfigurationError
+
+        raise ConfigurationError('An aiida_profile is expected for the AiiDA online migrations.')
 
     context.configure(
         connection=connection,

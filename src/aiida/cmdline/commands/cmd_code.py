@@ -236,13 +236,7 @@ def show(code):
 @arguments.CODE()
 @arguments.OUTPUT_FILE(type=click.Path(exists=False), required=False)
 @options.OVERWRITE()
-@click.option(
-    '--sort/--no-sort',
-    is_flag=True,
-    default=True,
-    help='Sort the keys of the output YAML.',
-    show_default=True,
-)
+@options.SORT()
 @with_dbenv()
 def export(code, output_file, overwrite, sort):
     """Export code to a yaml file."""
@@ -264,7 +258,7 @@ def export(code, output_file, overwrite, sort):
         output_file = f"{code_data['label']}@{code_data['computer']}.yml"
 
     if Path(output_file).is_file() and not overwrite:
-        echo.echo_critical(f'File `{output_file.resolve()}` already exists and overwrite set to abc {overwrite}.')
+        echo.echo_critical(f'File `{output_file.resolve()}` already exists and overwrite set to {overwrite}.')
 
     with open(output_file, 'w', encoding='utf-8') as yfhandle:
         yaml.dump(code_data, yfhandle, sort_keys=sort)

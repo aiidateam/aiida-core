@@ -742,15 +742,10 @@ def computer_export():
 @computer_export.command('setup')
 @arguments.COMPUTER()
 @arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
-@click.option(
-    '--sort/--no-sort',
-    is_flag=True,
-    default=True,
-    help='Sort the keys of the output YAML.',
-    show_default=True,
-)
+@options.OVERWRITE()
+@options.SORT()
 @with_dbenv()
-def computer_export_setup(computer, output_file, sort):
+def computer_export_setup(computer, output_file, overwrite, sort):
     """Export computer setup to a YAML file."""
     import yaml
 
@@ -773,6 +768,9 @@ def computer_export_setup(computer, output_file, sort):
     if output_file is None:
         output_file = pathlib.Path(f'{computer.label}-setup.yml')
 
+    if pathlib.Path(output_file).is_file() and not overwrite:
+        echo.echo_critical(f'File `{output_file.resolve()}` already exists and overwrite set to {overwrite}.')
+
     try:
         output_file.write_text(yaml.dump(computer_setup, sort_keys=sort), 'utf-8')
     except Exception as e:
@@ -791,15 +789,10 @@ def computer_export_setup(computer, output_file, sort):
 @options.USER(
     help='Email address of the AiiDA user from whom to export this computer (if different from default user).'
 )
-@click.option(
-    '--sort/--no-sort',
-    is_flag=True,
-    default=True,
-    help='Sort the keys of the output YAML.',
-    show_default=True,
-)
+@options.OVERWRITE()
+@options.SORT()
 @with_dbenv()
-def computer_export_config(computer, output_file, user, sort):
+def computer_export_config(computer, output_file, user, overwrite, sort):
     """Export computer transport configuration for a user to a YAML file."""
     import yaml
 
@@ -812,6 +805,8 @@ def computer_export_config(computer, output_file, user, sort):
         computer_configuration = computer.get_configuration(user)
         if output_file is None:
             output_file = pathlib.Path(f'{computer.label}-config.yml')
+        if pathlib.Path(output_file).is_file() and not overwrite:
+            echo.echo_critical(f'File `{output_file.resolve()}` already exists and overwrite set to {overwrite}.')
         output_file.write_text(yaml.dump(computer_configuration, sort_keys=sort), 'utf-8')
     except Exception as e:
         error_traceback = traceback.format_exc()

@@ -260,8 +260,7 @@ def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_intera
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
-def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort_option, chdir_tmp_path):
+def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, chdir_tmp_path):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
     code = aiida_code_installed(
@@ -272,7 +271,7 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     )
     filepath = tmp_path / 'code.yml'
 
-    options = [str(code.pk), str(filepath), sort_option]
+    options = [str(code.pk), str(filepath)]
 
     run_cli_command(cmd_code.export, options)
 
@@ -308,6 +307,15 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     with open(filepath, 'r', encoding='utf-8') as fhandle:
         content = fhandle.read()
     assert '/bin/echo' in content
+
+    # Check unsorted file
+    options = [str(code.pk), str(filepath), '--no-sort', '--overwrite']
+    run_cli_command(cmd_code.export, options)
+    with open(filepath, 'r', encoding='utf-8') as fhandle:
+        content = fhandle.read()
+    assert not content.startswith('append_text')
+    # This might break if the backend order changes (unlikely). Probably enough to just do the assert above?
+    assert content.startswith('label: code')
 
     # Check default name
     # Call explicitly here, rather than only for setup/tear down, as the other code above doesn't require the

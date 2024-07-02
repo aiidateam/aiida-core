@@ -19,6 +19,7 @@ import click
 import pytest
 from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
+from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.orm import Code, Computer, InstalledCode, PortableCode, QueryBuilder, load_code
 from aiida.plugins import DataFactory
@@ -259,8 +260,8 @@ def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_intera
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('sort', (True, False))
-def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort, chdir_tmp_path):
+@pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
+def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort_option, chdir_tmp_path):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
     code = aiida_code_installed(
@@ -271,7 +272,7 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     )
     filepath = tmp_path / 'code.yml'
 
-    options = [str(code.pk), str(filepath), '--sort' if sort else '--no-sort']
+    options = [str(code.pk), str(filepath), sort_option]
 
     run_cli_command(cmd_code.export, options)
 
@@ -314,7 +315,8 @@ def test_code_export_overwrite(run_cli_command, aiida_code_installed, tmp_path):
     # First export works fine
     run_cli_command(cmd_code.export, options)
     # Second export fails with file already existing
-    run_cli_command(cmd_code.export, options, raises=True)
+    result = run_cli_command(cmd_code.export, options, raises=True)
+    assert result.exit_code == ExitCode.CRITICAL
 
     # Check that overwrite actually overwrites the exported Code config with the new data
     code = aiida_code_installed(

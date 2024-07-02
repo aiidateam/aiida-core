@@ -515,16 +515,16 @@ class TestVerdiComputerConfigure:
         assert '--username=' in result.output
         assert result_cur.output == result.output
 
-    @pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
-    def test_computer_export_setup(self, tmp_path, sort):
+    @pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
+    def test_computer_export_setup(self, tmp_path, sort_option):
         """Test if 'verdi computer export setup' command works"""
-        self.comp_builder.label = 'test_computer_export_setup' + sort
+        self.comp_builder.label = f'test_computer_export_setup{sort_option}'
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
         exported_setup_filename = tmp_path / 'computer-setup.yml'
-        result = self.cli_runner(computer_export_setup, [sort, comp.label, exported_setup_filename])
+        result = self.cli_runner(computer_export_setup, [sort_option, comp.label, exported_setup_filename])
         assert result.exit_code == 0, 'Command should have run successfull.'
         assert str(exported_setup_filename) in result.output, 'Filename should be in terminal output but was not found.'
         assert exported_setup_filename.exists(), f"'{exported_setup_filename}' was not created during export."
@@ -538,24 +538,28 @@ class TestVerdiComputerConfigure:
         # to test the except part of the function
         already_existing_filename = tmp_path / 'tmp_dir'
         already_existing_filename.mkdir()
-        result = self.cli_runner(computer_export_setup, [sort, comp.label, already_existing_filename], raises=True)
+        result = self.cli_runner(
+            computer_export_setup, [sort_option, comp.label, already_existing_filename], raises=True
+        )
         assert result.exit_code == ExitCode.CRITICAL
 
-    @pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
-    def test_computer_export_config(self, tmp_path, sort):
+    @pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
+    def test_computer_export_config(self, tmp_path, sort_option):
         """Test if 'verdi computer export config' command works"""
-        self.comp_builder.label = 'test_computer_export_config'
+        self.comp_builder.label = f'test_computer_export_config{sort_option}'
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
         exported_config_filename = tmp_path / 'computer-configure.yml'
         # We have not configured the computer yet so it should exit with an critical error
-        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
+        result = self.cli_runner(
+            computer_export_config, [comp.label, exported_config_filename, sort_option], raises=True
+        )
         assert result.exit_code == ExitCode.CRITICAL
 
         comp.configure(safe_interval=0.0)
-        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename])
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename, sort_option])
         assert 'Success' in result.output, 'Command should have run successfull.'
         assert (
             str(exported_config_filename) in result.output
@@ -571,11 +575,15 @@ class TestVerdiComputerConfigure:
         # to test the except part of the function
         already_existing_filename = tmp_path / 'tmp_dir'
         already_existing_filename.mkdir()
-        result = self.cli_runner(computer_export_config, [comp.label, already_existing_filename], raises=True)
+        result = self.cli_runner(
+            computer_export_config, [comp.label, already_existing_filename, sort_option], raises=True
+        )
         assert result.exit_code == ExitCode.CRITICAL
 
         result = self.cli_runner(
-            computer_export_config, ['--user', self.user.email, comp.label, already_existing_filename], raises=True
+            computer_export_config,
+            ['--user', self.user.email, comp.label, already_existing_filename, sort_option],
+            raises=True,
         )
         assert result.exit_code == ExitCode.CRITICAL
 

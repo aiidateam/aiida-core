@@ -1,0 +1,3 @@
+#!/bin/bash
+
+exec rabbitmq-diagnostics check_running > /dev/null

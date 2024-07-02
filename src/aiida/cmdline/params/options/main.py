@@ -96,6 +96,7 @@ __all__ = (
     'REPOSITORY_PATH',
     'SCHEDULER',
     'SILENT',
+    'SORT',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
@@ -770,4 +771,13 @@ OVERWRITE = OverridableOption(
     default=False,
     show_default=True,
     help='Overwrite file/directory if writing to disk.',
+)
+
+SORT = OverridableOption(
+    '--sort/--no-sort',
+    'sort',
+    is_flag=True,
+    default=True,
+    help='Sort the keys of the output YAML.',
+    show_default=True,
 )

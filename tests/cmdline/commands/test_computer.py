@@ -515,17 +515,15 @@ class TestVerdiComputerConfigure:
         assert '--username=' in result.output
         assert result_cur.output == result.output
 
-    @pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
-    def test_computer_export_setup(self, tmp_path, sort):
+    def test_computer_export_setup(self, tmp_path):
         """Test if 'verdi computer export setup' command works"""
-        self.comp_builder.label = 'test_computer_export_setup' + sort
+        self.comp_builder.label = 'test_computer_export_setup'
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
         exported_setup_filename = tmp_path / 'computer-setup.yml'
-        result = self.cli_runner(computer_export_setup, [sort, comp.label, exported_setup_filename])
-        assert result.exit_code == 0, 'Command should have run successfull.'
+        result = self.cli_runner(computer_export_setup, [comp.label, exported_setup_filename])
         assert str(exported_setup_filename) in result.output, 'Filename should be in terminal output but was not found.'
         assert exported_setup_filename.exists(), f"'{exported_setup_filename}' was not created during export."
         # verifying correctness by comparing internal and loaded yml object
@@ -534,17 +532,42 @@ class TestVerdiComputerConfigure:
             comp
         ), 'Internal computer configuration does not agree with exported one.'
 
+        # Check that export fails if the file already exists
+        result = self.cli_runner(computer_export_setup, [comp.label, exported_setup_filename], raises=True)
+        assert result.exit_code == ExitCode.CRITICAL
+        assert 'already exists and overwrite' in result.output
+
+        # Create new instance and check that change is reflected in new YAML file output
+        self.comp_builder.label = 'test_computer_export_setup_0'
+        self.comp_builder.transport = 'core.local'
+        comp_local = self.comp_builder.new()
+        comp_local.store()
+        result = self.cli_runner(computer_export_setup, [comp_local.label, exported_setup_filename, '--overwrite'])
+        with open(exported_setup_filename, 'r', encoding='utf-8') as fhandle:
+            content = fhandle.read()
+        assert 'core.local' in content
+
+        # Check unsorted file
+        result = self.cli_runner(
+            computer_export_setup, [comp.label, exported_setup_filename, '--overwrite', '--no-sort']
+        )
+        with open(exported_setup_filename, 'r', encoding='utf-8') as fhandle:
+            content = fhandle.read()
+        print('CONTENT', content)
+        assert not content.startswith('append_text')
+        # This might break if the backend order changes (unlikely). Probably enough to just do the assert above?
+        assert content.startswith('label: test_computer_export_setup')
+
         # we create a directory so we raise an error when exporting with the same name
         # to test the except part of the function
         already_existing_filename = tmp_path / 'tmp_dir'
         already_existing_filename.mkdir()
-        result = self.cli_runner(computer_export_setup, [sort, comp.label, already_existing_filename], raises=True)
+        result = self.cli_runner(computer_export_setup, [comp.label, already_existing_filename], raises=True)
         assert result.exit_code == ExitCode.CRITICAL
 
-    @pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
-    def test_computer_export_config(self, tmp_path, sort):
+    def test_computer_export_config(self, tmp_path):
         """Test if 'verdi computer export config' command works"""
-        self.comp_builder.label = 'test_computer_export_config' + sort
+        self.comp_builder.label = 'test_computer_export_config'
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
@@ -567,6 +590,37 @@ class TestVerdiComputerConfigure:
             configure_config_data == comp.get_configuration()
         ), 'Internal computer configuration does not agree with exported one.'
 
+        # Check that export fails if the file already exists
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
+        assert result.exit_code == ExitCode.CRITICAL
+        assert 'already exists and overwrite' in result.output
+
+        # Create new instance and check that change is reflected in new YAML file output
+        self.comp_builder.label = 'test_computer_export_config_0'
+        comp_mod = self.comp_builder.new()
+        comp_mod.store()
+        comp_mod.configure(safe_interval=1.0)
+        result = self.cli_runner(computer_export_config, [comp_mod.label, exported_config_filename, '--overwrite'])
+        with open(exported_config_filename, 'r', encoding='utf-8') as fhandle:
+            content = fhandle.read()
+        assert 'safe_interval: 1.0' in content
+
+        # Check sorted file
+        comp_mod.configure(safe_interval=1.0)
+        comp_mod.configure(username='aiida')
+        result = self.cli_runner(computer_export_config, [comp_mod.label, exported_config_filename, '--overwrite'])
+        with open(exported_config_filename, 'r', encoding='utf-8') as fhandle:
+            content = fhandle.read()
+        assert content.startswith('safe_interval')
+
+        # Check unsorted file
+        result = self.cli_runner(
+            computer_export_config, [comp_mod.label, exported_config_filename, '--overwrite', '--no-sort']
+        )
+        with open(exported_config_filename, 'r', encoding='utf-8') as fhandle:
+            content = fhandle.read()
+        assert content.startswith('username')
+
         # we create a directory so we raise an error when exporting with the same name
         # to test the except part of the function
         already_existing_filename = tmp_path / 'tmp_dir'
@@ -575,7 +629,9 @@ class TestVerdiComputerConfigure:
         assert result.exit_code == ExitCode.CRITICAL
 
         result = self.cli_runner(
-            computer_export_config, ['--user', self.user.email, comp.label, already_existing_filename], raises=True
+            computer_export_config,
+            ['--user', self.user.email, comp.label, already_existing_filename],
+            raises=True,
         )
         assert result.exit_code == ExitCode.CRITICAL
 

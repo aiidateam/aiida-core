@@ -19,6 +19,7 @@ import click
 import pytest
 from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
+from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.orm import Code, Computer, InstalledCode, PortableCode, QueryBuilder, load_code
 from aiida.plugins import DataFactory
@@ -259,8 +260,7 @@ def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_intera
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('sort', (True, False))
-def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort):
+def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, chdir_tmp_path):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
     code = aiida_code_installed(
@@ -272,7 +272,6 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     filepath = tmp_path / 'code.yml'
 
     options = [str(code.pk), str(filepath)]
-    options.append('--sort' if sort else '--no-sort')
 
     run_cli_command(cmd_code.export, options)
 
@@ -280,6 +279,11 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     with open(filepath, 'r', encoding='utf-8') as fhandle:
         content = fhandle.read()
     file_regression.check(content, extension='.yml')
+
+    # Second export fails with file already existing
+    result = run_cli_command(cmd_code.export, options, raises=True)
+    assert result.exit_code == ExitCode.CRITICAL
+    assert 'already exists and overwrite' in result.output
 
     # round trip test by create code from the config file
     # we pass the new label to override since cannot have two code with same labels
@@ -290,6 +294,36 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     new_code = load_code(new_label)
     assert code.base.attributes.all == new_code.base.attributes.all
     assert isinstance(new_code, InstalledCode)
+
+    # Check that overwrite actually overwrites the exported Code config with the new data
+    code_echo = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/echo',
+        label='code1',  # Need to set different label, therefore manually specify the same output filename
+        prepend_text=prepend_text,
+    )
+    options = [str(code_echo.pk), str(filepath), '--overwrite']
+    run_cli_command(cmd_code.export, options)
+    with open(filepath, 'r', encoding='utf-8') as fhandle:
+        content = fhandle.read()
+    assert '/bin/echo' in content
+
+    # Check unsorted file
+    options = [str(code.pk), str(filepath), '--no-sort', '--overwrite']
+    run_cli_command(cmd_code.export, options)
+    with open(filepath, 'r', encoding='utf-8') as fhandle:
+        content = fhandle.read()
+    assert not content.startswith('append_text')
+    # This might break if the backend order changes (unlikely). Probably enough to just do the assert above?
+    assert content.startswith('label: code')
+
+    # Check default name
+    # Call explicitly here, rather than only for setup/tear down, as the other code above doesn't require the
+    # `chdir_tmp_path` fixture
+    chdir_tmp_path
+    options = [str(code.pk)]
+    run_cli_command(cmd_code.export, options)
+    assert pathlib.Path('code@localhost.yml').is_file()
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)

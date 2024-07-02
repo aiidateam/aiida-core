@@ -92,6 +92,7 @@ __all__ = (
     'REPOSITORY_PATH',
     'SCHEDULER',
     'SILENT',
+    'SORT',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',

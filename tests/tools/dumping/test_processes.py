@@ -302,9 +302,8 @@ def test_dump_calculation_add(tmp_path, generate_calculation_node_add):
 
 
 # Tests for helper methods
-def test_validate_make_dump_path(chdir_tmp_path, tmp_path):
-    chdir_tmp_path
-
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_validate_make_dump_path(tmp_path):
     safeguard_file = node_metadata_file
 
     # Path must be provided

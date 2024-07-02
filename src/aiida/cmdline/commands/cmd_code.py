@@ -256,12 +256,12 @@ def export(code, output_file, overwrite, sort):
 
     if output_file is None:
         output_file = f"{code_data['label']}@{code_data['computer']}.yml"
+    output_file = Path(output_file)
 
-    if Path(output_file).is_file() and not overwrite:
-        echo.echo_critical(f'File `{output_file.resolve()}` already exists and overwrite set to {overwrite}.')
+    if output_file.is_file() and not overwrite:
+        echo.echo_critical(f'File `{output_file}` already exists and overwrite set to {overwrite}.')
 
-    with open(output_file, 'w', encoding='utf-8') as yfhandle:
-        yaml.dump(code_data, yfhandle, sort_keys=sort)
+    output_file.write_text(yaml.dump(code_data, sort_keys=sort))
 
     echo.echo_success(f'Code<{code.pk}> {code.label} exported to file `{output_file}`.')
 

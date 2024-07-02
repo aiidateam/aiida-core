@@ -525,7 +525,6 @@ class TestVerdiComputerConfigure:
 
         exported_setup_filename = tmp_path / 'computer-setup.yml'
         result = self.cli_runner(computer_export_setup, [sort_option, comp.label, exported_setup_filename])
-        assert result.exit_code == 0, 'Command should have run successfull.'
         assert str(exported_setup_filename) in result.output, 'Filename should be in terminal output but was not found.'
         assert exported_setup_filename.exists(), f"'{exported_setup_filename}' was not created during export."
         # verifying correctness by comparing internal and loaded yml object
@@ -533,6 +532,23 @@ class TestVerdiComputerConfigure:
         assert configure_setup_data == self.comp_builder.get_computer_spec(
             comp
         ), 'Internal computer configuration does not agree with exported one.'
+
+        # Check that export fails if the file already exists
+        result = self.cli_runner(computer_export_setup, [sort_option, comp.label, exported_setup_filename], raises=True)
+        assert result.exit_code == ExitCode.CRITICAL
+        assert 'already exists and overwrite' in result.output
+
+        # Create new instance and check that change is reflected in new YAML file output
+        self.comp_builder.label = f'test_computer_export_setup_0{sort_option}'
+        self.comp_builder.transport = 'core.local'
+        comp_local = self.comp_builder.new()
+        comp_local.store()
+        result = self.cli_runner(
+            computer_export_setup, [sort_option, comp_local.label, exported_setup_filename, '--overwrite']
+        )
+        with open(exported_setup_filename, 'r', encoding='utf-8') as fhandle:
+            content = fhandle.read()
+        assert 'core.local' in content
 
         # we create a directory so we raise an error when exporting with the same name
         # to test the except part of the function
@@ -570,6 +586,25 @@ class TestVerdiComputerConfigure:
         assert (
             configure_config_data == comp.get_configuration()
         ), 'Internal computer configuration does not agree with exported one.'
+
+        # Check that export fails if the file already exists
+        result = self.cli_runner(
+            computer_export_setup, [sort_option, comp.label, exported_config_filename], raises=True
+        )
+        assert result.exit_code == ExitCode.CRITICAL
+        assert 'already exists and overwrite' in result.output
+
+        # Create new instance and check that change is reflected in new YAML file output
+        self.comp_builder.label = f'test_computer_export_setup_0{sort_option}'
+        self.comp_builder.transport = 'core.local'
+        comp_local = self.comp_builder.new()
+        comp_local.store()
+        result = self.cli_runner(
+            computer_export_setup, [sort_option, comp_local.label, exported_config_filename, '--overwrite']
+        )
+        with open(exported_config_filename, 'r', encoding='utf-8') as fhandle:
+            content = fhandle.read()
+        assert 'core.local' in content
 
         # we create a directory so we raise an error when exporting with the same name
         # to test the except part of the function

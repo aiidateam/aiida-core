@@ -766,9 +766,10 @@ def computer_export_setup(computer, output_file, overwrite, sort):
     }
 
     if output_file is None:
-        output_file = pathlib.Path(f'{computer.label}-setup.yml')
+        output_file = f'{computer.label}-setup.yml'
+    output_file = pathlib.Path(output_file)
 
-    if pathlib.Path(output_file).is_file() and not overwrite:
+    if output_file.is_file() and not overwrite:
         echo.echo_critical(f'File `{output_file.resolve()}` already exists and overwrite set to {overwrite}.')
 
     try:

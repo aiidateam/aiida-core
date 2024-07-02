@@ -47,6 +47,7 @@ docstring-parser==0.15
 docutils==0.20.1
 exceptiongroup==1.2.1
 executing==1.2.0
+fabric==3.2.2
 fastjsonschema==2.17.1
 flask==2.3.2
 flask-cors==3.0.10

@@ -13,8 +13,10 @@
 # fmt: off
 
 from .ssh import *
+from .ssh_fabric import *
 
 __all__ = (
+    'SshFabricTransport',
     'SshTransport',
     'convert_to_bool',
     'parse_sshconfig',

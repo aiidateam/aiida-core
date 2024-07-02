@@ -55,7 +55,7 @@ def validate_instructions(instructions, _):
         return errmsg
 
 
-def validate_transfer_inputs(inputs, _):
+def validate_transfer_inputs(inputs, _ctx):
     """Check that the instructions dict and the source nodes are consistent"""
     source_nodes = inputs['source_nodes']
     instructions = inputs['instructions']

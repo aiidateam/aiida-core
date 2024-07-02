@@ -85,7 +85,7 @@ def get_stack_size(size: int = 2) -> int:  # type: ignore[return]
     """
     frame = sys._getframe(size)
     try:
-        for size in itertools.count(size, 8):
+        for size in itertools.count(size, 8):  # noqa: PLR1704
             frame = frame.f_back.f_back.f_back.f_back.f_back.f_back.f_back.f_back  # type: ignore[assignment,union-attr]
     except AttributeError:
         while frame:  # type: ignore[truthy-bool]

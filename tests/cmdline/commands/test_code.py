@@ -259,8 +259,8 @@ def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_intera
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
-def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort):
+@pytest.mark.parametrize('sort', (True, False))
+def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort, chdir_tmp_path):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
     code = aiida_code_installed(
@@ -271,18 +271,7 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     )
     filepath = tmp_path / 'code.yml'
 
-    # Run export without explicit output_file path
-    # Don't provide output_file argument, but still export in tmp_path to avoid pollution of main repo when running test
-    cwd = os.getcwd()
-    os.chdir(tmp_path)
-    options = [str(code.pk)]
-    run_cli_command(cmd_code.export, options)
-    assert filepath.is_file
-    filepath.unlink()
-    os.chdir(cwd)
-
-    options = [str(code.pk), str(filepath)]
-    options.append('--sort' if sort else '--no-sort')
+    options = [str(code.pk), str(filepath), '--sort' if sort else '--no-sort']
 
     run_cli_command(cmd_code.export, options)
 
@@ -300,6 +289,44 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     new_code = load_code(new_label)
     assert code.base.attributes.all == new_code.base.attributes.all
     assert isinstance(new_code, InstalledCode)
+
+    # Check default name
+    # Call explicitly here, rather than only for setup/tear down, as the code above doesn't require it.
+    chdir_tmp_path
+    options = [str(code.pk)]
+    run_cli_command(cmd_code.export, options)
+    assert pathlib.Path('code@localhost.yml').is_file()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_code_export_overwrite(run_cli_command, aiida_code_installed, tmp_path):
+    """Test export the code setup to str."""
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        label='code',
+    )
+    # Run this fixture without the output_file argument
+    filepath = tmp_path / 'code.yml'
+
+    options = [str(code.pk), str(filepath)]
+
+    # First export works fine
+    run_cli_command(cmd_code.export, options)
+    # Second export fails with file already existing
+    run_cli_command(cmd_code.export, options, raises=True)
+
+    # Check that overwrite actually overwrites the exported Code config with the new data
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/echo',
+        label='code0',  # Need to set different label, therefore manually specify the same output filename
+    )
+    options = [str(code.pk), str(filepath), '--overwrite']
+    run_cli_command(cmd_code.export, options)
+    with open(filepath, 'r', encoding='utf-8') as fhandle:
+        content = fhandle.read()
+    assert '/bin/echo' in content
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)

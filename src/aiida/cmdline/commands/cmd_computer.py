@@ -826,4 +826,4 @@ def computer_export_config(computer, output_file, user, sort):
                 f' and User<{user.pk}> {user.email}: {e!s}.'
             )
     else:
-        echo.echo_success(f"Computer<{computer.pk}> {computer.label} configuration exported to file '{output_file}'.")
+        echo.echo_success(f'Computer<{computer.pk}> {computer.label} configuration exported to file `{output_file}`.')

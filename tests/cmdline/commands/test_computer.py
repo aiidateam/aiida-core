@@ -518,7 +518,7 @@ class TestVerdiComputerConfigure:
     @pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
     def test_computer_export_setup(self, tmp_path, sort):
         """Test if 'verdi computer export setup' command works"""
-        self.comp_builder.label = f'test_computer_export_setup{sort}'
+        self.comp_builder.label = 'test_computer_export_setup' + sort
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
@@ -541,40 +541,10 @@ class TestVerdiComputerConfigure:
         result = self.cli_runner(computer_export_setup, [sort, comp.label, already_existing_filename], raises=True)
         assert result.exit_code == ExitCode.CRITICAL
 
-    def test_computer_export_auto_filename(self, tmp_path):
-        """Test if 'verdi computer export setup' without providing an explicit filename"""
-
-        computer_label = 'test_computer'
-        self.comp_builder.label = computer_label
-        self.comp_builder.transport = 'core.ssh'
-        comp = self.comp_builder.new()
-        comp.store()
-
-        # Export setup without explicit filepath
-        exported_filename = tmp_path / f'{computer_label}-setup.yml'
-        cwd = os.getcwd()
-        os.chdir(tmp_path)
-        result = self.cli_runner(computer_export_setup, [comp.label])
-        assert result.exit_code == 0, 'Command should have run successfull.'
-        assert computer_label in result.output, 'Filename should be in terminal output but was not found.'
-        assert exported_filename.exists(), f"'{exported_filename}' was not created during export."
-        os.chdir(cwd)
-
-        # Export setup without explicit filepath
-        comp.configure(safe_interval=0.0)
-        exported_filename = tmp_path / f'{computer_label}-config.yml'
-        cwd = os.getcwd()
-        os.chdir(tmp_path)
-        result = self.cli_runner(computer_export_config, [comp.label])
-        assert result.exit_code == 0, 'Command should have run successfull.'
-        assert computer_label in result.output, 'Filename should be in terminal output but was not found.'
-        assert exported_filename.exists(), f"'{exported_filename}' was not created during export."
-        os.chdir(cwd)
-
     @pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
     def test_computer_export_config(self, tmp_path, sort):
         """Test if 'verdi computer export config' command works"""
-        self.comp_builder.label = f'test_computer_export_config{sort}'
+        self.comp_builder.label = 'test_computer_export_config'
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()

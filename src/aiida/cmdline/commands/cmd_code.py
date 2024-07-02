@@ -235,6 +235,7 @@ def show(code):
 @verdi_code.command()
 @arguments.CODE()
 @arguments.OUTPUT_FILE(type=click.Path(exists=False), required=False)
+@options.OVERWRITE()
 @click.option(
     '--sort/--no-sort',
     is_flag=True,
@@ -243,17 +244,16 @@ def show(code):
     show_default=True,
 )
 @with_dbenv()
-def export(code, output_file, sort):
+def export(code, output_file, overwrite, sort):
     """Export code to a yaml file."""
+    from pathlib import Path
+
     import yaml
 
     code_data = {}
 
     for key in code.Model.model_fields.keys():
-        if key == 'computer':
-            value = getattr(code, key).label
-        else:
-            value = getattr(code, key)
+        value = getattr(code, key).label if key == 'computer' else getattr(code, key)
 
         # If the attribute is not set, for example ``with_mpi`` do not export it, because the YAML won't be valid for
         # use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
@@ -261,12 +261,15 @@ def export(code, output_file, sort):
             code_data[key] = str(value)
 
     if output_file is None:
-        output_file = f"{code_data['label']}.yml"
+        output_file = f"{code_data['label']}@{code_data['computer']}.yml"
+
+    if Path(output_file).is_file() and not overwrite:
+        echo.echo_critical(f'File `{output_file.resolve()}` already exists and overwrite set to abc {overwrite}.')
 
     with open(output_file, 'w', encoding='utf-8') as yfhandle:
         yaml.dump(code_data, yfhandle, sort_keys=sort)
 
-    echo.echo_success(f"Code<{code.pk}> {code.label} exported to file '{output_file}'.")
+    echo.echo_success(f'Code<{code.pk}> {code.label} exported to file `{output_file}`.')
 
 
 @verdi_code.command()

@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Upper level SQLAlchemy migration functions."""
+"""Environment configuration to be used by alembic to perform database migrations."""
 
 from alembic import context
 
@@ -14,7 +14,7 @@ from alembic import context
 def run_migrations_online():
     """Run migrations in 'online' mode.
 
-    The connection should have been passed to the config, which we use to configue the migration context.
+    The connection should have been passed to the config, which we use to configure the migration context.
     """
     from aiida.storage.sqlite_zip.models import SqliteBase
 
@@ -28,6 +28,10 @@ def run_migrations_online():
         from aiida.common.exceptions import ConfigurationError
 
         raise ConfigurationError('An initialized connection is expected for the AiiDA online migrations.')
+    if aiida_profile is None:
+        from aiida.common.exceptions import ConfigurationError
+
+        raise ConfigurationError('An aiida_profile is expected for the AiiDA online migrations.')
 
     context.configure(
         connection=connection,

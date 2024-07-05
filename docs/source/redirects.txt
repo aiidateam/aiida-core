@@ -13,6 +13,13 @@ install/installation.rst installation/index.rst
 install/configuration.rst howto/installation.rst
 install/updating_installation.rst howto/installation.rst
 install/troubleshooting.rst installation/troubleshooting.rst
+intro/get_started.rst installation/index.rst
+intro/install_system.rst installation/index.rst
+intro/install_conda.rst installation/index.rst
+intro/installation.rst installation/index.rst
+intro/run_docker.rst installation/docker.rst
+intro/tutorial.md tutorials/index.rst
+intro/about.rst intro/index.rst
 restapi/index.rst reference/rest_api.rst
 verdi/verdi_user_guide.rst topics/cli.rst
 working_with_aiida/index.rst howto/index.rst

@@ -259,8 +259,8 @@ def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_intera
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('sort', (True, False))
-def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort):
+@pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
+def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort_option):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
     code = aiida_code_installed(
@@ -271,14 +271,11 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     )
     filepath = tmp_path / 'code.yml'
 
-    options = [str(code.pk), str(filepath)]
-    options.append('--sort' if sort else '--no-sort')
-
-    run_cli_command(cmd_code.export, options)
-
+    options = [str(code.pk), str(filepath), sort_option]
+    result = run_cli_command(cmd_code.export, options)
+    assert str(filepath) in result.output, 'Filename should be in terminal output but was not found.'
     # file regression check
-    with open(filepath, 'r', encoding='utf-8') as fhandle:
-        content = fhandle.read()
+    content = filepath.read_text()
     file_regression.check(content, extension='.yml')
 
     # round trip test by create code from the config file
@@ -290,6 +287,65 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     new_code = load_code(new_label)
     assert code.base.attributes.all == new_code.base.attributes.all
     assert isinstance(new_code, InstalledCode)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_code_export_overwrite(run_cli_command, aiida_code_installed, tmp_path):
+    prepend_text = 'module load something\n    some command'
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        label='code',
+        prepend_text=prepend_text,
+    )
+    filepath = tmp_path / 'code.yml'
+
+    options = [str(code.pk), str(filepath)]
+
+    # Create directory with the same name and check that command fails
+    filepath.mkdir()
+    result = run_cli_command(cmd_code.export, options, raises=True)
+    assert f'A directory with the name `{filepath}` already exists' in result.output
+    filepath.rmdir()
+
+    # Export fails if file already exists and overwrite set to False
+    filepath.touch()
+    result = run_cli_command(cmd_code.export, options, raises=True)
+    assert f'File `{filepath}` already exists' in result.output
+
+    # Check that overwrite actually overwrites the exported Code config with the new data
+    code_echo = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/echo',
+        # Need to set different label, therefore manually specify the same output filename
+        label='code_echo',
+        prepend_text=prepend_text,
+    )
+
+    options = [str(code_echo.pk), str(filepath), '--overwrite']
+    run_cli_command(cmd_code.export, options)
+
+    content = filepath.read_text()
+    assert '/bin/echo' in content
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_code_export_default_filename(run_cli_command, aiida_code_installed):
+    """Test default filename being created if no argument passed."""
+
+    prepend_text = 'module load something\n    some command'
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        label='code',
+        prepend_text=prepend_text,
+    )
+
+    options = [str(code.pk)]
+    run_cli_command(cmd_code.export, options)
+
+    assert pathlib.Path('code@localhost.yml').is_file()
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)

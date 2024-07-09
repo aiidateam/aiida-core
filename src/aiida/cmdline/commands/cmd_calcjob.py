@@ -43,9 +43,13 @@ def calcjob_gotocomputer(calcjob):
     if not remote_workdir:
         echo.echo_critical('no remote work directory for this calcjob, maybe the daemon did not submit it yet')
 
-    command = transport.gotocomputer_command(remote_workdir)
-    echo.echo_report('going to the remote work directory...')
-    os.system(command)
+    try:
+        command = transport.gotocomputer_command(remote_workdir)
+        echo.echo_report('going to the remote work directory...')
+        os.system(command)
+    except NotImplementedError:
+        echo.echo_report(f'gotocomputer is not implemented for {transport}')
+        echo.echo_report(f'remote work directory is {remote_workdir}')
 
 
 @verdi_calcjob.command('res')

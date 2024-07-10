@@ -356,3 +356,44 @@ class TestVerdiCalculation:
         options = [str(self.result_job.uuid), 'fileA.txt']
         result = self.cli_runner.invoke(command.calcjob_remotecat, options)
         assert result.stdout == 'test stringA'
+
+    def test_calcjob_gotocomputer(self):
+        """Test verdi calcjob gotocomputer"""
+
+        from unittest.mock import patch
+
+        from aiida.common.exceptions import NotExistent
+
+        options = [str(self.result_job.uuid)]
+
+        # Easy peasy no exception
+        with patch('os.system') as mock_os_system:
+            result = self.cli_runner.invoke(command.calcjob_gotocomputer, options)
+            mock_os_system.assert_called_once()
+            assert mock_os_system.call_args[0][0] is not None
+
+        def raise_(e):
+            raise e('something')
+
+        # Test when get_transport raises NotExistent
+        with patch(
+            'aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_transport', new=lambda _: raise_(NotExistent)
+        ):
+            result = self.cli_runner.invoke(command.calcjob_gotocomputer, options)
+            assert result.exit_code == 1
+            assert 'something' in result.output
+
+        # Test when get_remote_workdir returns None
+        with patch('aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_remote_workdir', new=lambda _: None):
+            result = self.cli_runner.invoke(command.calcjob_gotocomputer, options)
+            assert result.exit_code == 1
+            assert 'no remote work directory for this calcjob' in result.output
+
+        # Test when gotocomputer_command raises NotImplementedError
+        with patch(
+            'aiida.transports.plugins.local.LocalTransport.gotocomputer_command',
+            new=lambda _, __: raise_(NotImplementedError),
+        ):
+            result = self.cli_runner.invoke(command.calcjob_gotocomputer, options)
+            assert result.exit_code == 0
+            assert self.result_job.get_remote_workdir() in result.output

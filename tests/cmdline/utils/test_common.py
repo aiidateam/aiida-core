@@ -8,7 +8,11 @@
 ###########################################################################
 """Tests for the :mod:`aiida.cmdline.utils.common` module."""
 
+from pathlib import Path
+
+import pytest
 from aiida.cmdline.utils import common
+from aiida.cmdline.utils.common import generate_validate_output_file
 from aiida.common import LinkType
 from aiida.engine import Process, calcfunction
 from aiida.orm import CalcFunctionNode, CalculationNode, WorkflowNode
@@ -88,3 +92,38 @@ def test_print_process_info():
     common.print_process_info(TestProcessWithDocstring)
     common.print_process_info(test_without_docstring)
     common.print_process_info(test_with_docstring)
+
+
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_generate_validate_output():
+    test_entity_label = 'test_code'
+    test_appendix = '@test_computer'
+
+    expected_output_file = Path(f'{test_entity_label}{test_appendix}.yml')
+
+    # Test default label creation
+    obtained_output_file = generate_validate_output_file(
+        output_file=None, entity_label=test_entity_label, appendix=test_appendix
+    )
+    assert expected_output_file == obtained_output_file, 'Filenames differ'
+
+    # Test failure if file exists, but overwrite False
+    expected_output_file.touch()
+    with pytest.raises(FileExistsError, match='.*use `--overwrite` to overwrite.'):
+        generate_validate_output_file(
+            output_file=None, entity_label=test_entity_label, appendix=test_appendix, overwrite=False
+        )
+
+    # Test that overwrite does the job
+    obtained_output_file = generate_validate_output_file(
+        output_file=None, entity_label=test_entity_label, appendix=test_appendix, overwrite=True
+    )
+    assert expected_output_file == obtained_output_file, 'Overwrite unsuccessful'
+    expected_output_file.unlink()
+
+    # Test failure if directory exists
+    expected_output_file.mkdir()
+    with pytest.raises(IsADirectoryError, match='A directory with the name.*'):
+        generate_validate_output_file(
+            output_file=None, entity_label=test_entity_label, appendix=test_appendix, overwrite=False
+        )

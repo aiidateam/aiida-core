@@ -66,7 +66,7 @@ which should show something like::
     ✔ version:     AiiDA v2.5.1
     ✔ config:      /home/aiida/.aiida
     ✔ profile:     default
-    ✔ storage:     Storage for 'default' [open] @ postgresql://aiida:***@localhost:5432
+    ✔ storage:     Storage for 'default' [open] @ postgresql+psycopg://aiida:***@localhost:5432
     ✔ rabbitmq:    Connected to RabbitMQ v3.10.18 as amqp://guest:guest@127.0.0.1:5672
     ✔ daemon:      Daemon is running with PID 324
 

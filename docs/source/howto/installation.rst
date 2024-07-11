@@ -55,7 +55,7 @@ To display these parameters, use ``verdi profile show``:
     storage:
         backend: core.psql_dos
         config:
-            database_engine: postgresql_psycopg2
+            database_engine: postgresql_psycopg
             database_hostname: localhost
             database_name: name
             database_password: abc

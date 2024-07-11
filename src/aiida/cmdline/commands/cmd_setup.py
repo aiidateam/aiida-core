@@ -241,8 +241,8 @@ def quicksetup(
         'db_backend': db_backend,
         'db_name': db_name,
         # from now on we connect as the AiiDA DB user, which may be forbidden when going via sockets
-        'db_host': postgres.host_for_psycopg2,
-        'db_port': postgres.port_for_psycopg2,
+        'db_host': postgres.host_for_psycopg,
+        'db_port': postgres.port_for_psycopg,
         'db_username': db_username,
         'db_password': db_password,
         'broker_protocol': broker_protocol,

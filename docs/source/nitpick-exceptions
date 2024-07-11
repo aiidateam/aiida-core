@@ -236,8 +236,6 @@ py:class yaml.nodes.MappingNode
 py:class yaml.nodes.ScalarNode
 py:class uuid.UUID
 
-py:class psycopg2.extensions.cursor
-
 py:class alembic.config.Config
 py:class alembic.op
 py:class alembic.runtime.migration.MigrationContext

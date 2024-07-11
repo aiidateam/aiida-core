@@ -10,6 +10,6 @@ foreground { s6-echo "Starting RMQ server and notifying back when the service is
 # it is possible it tries to connect to the service before that and it will configure the profile without a broker.
 # Here we use s6-notifyoncheck to do the polling healthy check of the readyness of RMQ service.
 #
-# -w 500: 500 ms between two invocations of ./data/check
+# -w 1000: 1000 ms between two invocations of ./data/check
 
-s6-notifyoncheck -w 500 rabbitmq-server
+s6-notifyoncheck -w 1000 rabbitmq-server

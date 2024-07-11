@@ -6,11 +6,11 @@ if [ $? -ne '0' ]; then
     exit 1
 fi
 
-rabbitmq-diagnostics is_booting
+# rabbitmq-diagnostics is_booting
 
-if [ $? -ne '0' ]; then
-    exit 1
-fi
+# if [ $? -ne '0' ]; then
+#     exit 1
+# fi
 
 rabbitmq-diagnostics is_running
 

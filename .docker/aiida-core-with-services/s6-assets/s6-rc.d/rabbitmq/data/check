@@ -1,3 +1,4 @@
 #!/bin/bash
 
-exec rabbitmq-diagnostics ping && rabbitmq-diagnostics check_running > /dev/null
+rabbitmq-diagnostics check_running
+exit $?

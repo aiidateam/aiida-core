@@ -2,16 +2,14 @@
 
 rabbitmq-diagnostics ping
 
-if [ $? -ne '0' ]; then
+if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# rabbitmq-diagnostics is_booting
+rabbitmq-diagnostics check_running
 
-# if [ $? -ne '0' ]; then
-#     exit 1
-# fi
+if [ $? -ne 0 ]; then
+    exit 1
+fi
 
-rabbitmq-diagnostics is_running
-
-exit $?
+exit 0

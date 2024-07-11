@@ -18,6 +18,12 @@ verdi config set warnings.development_version False
 # If the environment variable `SETUP_DEFAULT_AIIDA_PROFILE` is not set, set it to `true`.
 if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
 
+    until rabbitmq-diagnostics check_running
+    do
+        echo 'RabbitMQ server not up and running yet, sleeping 1 second'
+        sleep 1
+    done
+
     # Create AiiDA profile.
     verdi presto \
         --verbosity info \

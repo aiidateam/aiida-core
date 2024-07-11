@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720706542356,
+  "lastUpdate": 1720731648642,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -53987,6 +53987,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.034451",
             "group": "node",
             "extra": "mean: 27.292 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "0.00",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.14",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "954cbdd3ee5127d6618db9d144508505e41cffcc",
+          "message": "`Scheduler`: Refactor interface to make it more generic (#6043)\n\nThe original `Scheduler` interface made the assumption that all\r\ninterfaces would interact with the scheduler through a command line\r\ninterface that would be invoked through a bash shell. However, this is\r\nnot always the case. Prime example is the new FirecREST service, being\r\ndeveloped by CSCS, that will allow to interact with the scheduler\r\nthrough a REST API. Due to the assumptions of the `Scheduler` interface,\r\nit was difficult to implement it for this use case.\r\n\r\nThe `Scheduler` interface is made more generic, by removing the\r\nfollowing (abstract) methods:\r\n\r\n * `_get_joblist_command`\r\n * `_parse_joblist_output`\r\n * `_get_submit_command`\r\n * `_parse_submit_output`\r\n * `submit_from_script`\r\n * `kill`\r\n * `_get_kill_command`\r\n * `_parse_kill_output`\r\n\r\nThey are replaced by three abstract methods:\r\n\r\n * `submit_job`\r\n * `get_jobs`\r\n * `kill_job`\r\n\r\nThe new interface no longer makes an assumption about how a plugin\r\nimplements these methods. The first one should simply submit the job,\r\ngiven the location of the submission script on the remote computer. The\r\nsecond should return the status of the list of active jobs. And the\r\nfinal should kill a job and return the result.\r\n\r\nUnfortunately, this change is backwards incompatible and will break\r\nexisting scheduler plugins. To simplify the migration pathway, a\r\nsubclass `BashCliScheduler` is added. This implements the new `Scheduler`\r\ninterface while maintaining the old interface. This means that this new\r\nclass is a drop-in replacement of the old `Scheduler` class for existing\r\nplugins. The plugins that ship with `aiida-core` are all updated to\r\nsubclass from `BashCliScheduler`. Any existing plugins that subclassed\r\nfrom these plugins will therefore not be affected whatsoever by these\r\nchanges.",
+          "timestamp": "2024-07-11T22:52:44+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/954cbdd3ee5127d6618db9d144508505e41cffcc",
+          "distinct": true,
+          "tree_id": "5e02d7b7b17911ff574677fc78927e4b33ea9edb"
+        },
+        "date": 1720731643395,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 2.2808432057458363,
+            "unit": "iter/sec",
+            "range": "stddev: 0.21174",
+            "group": "import-export",
+            "extra": "mean: 438.43 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 2.7837598534555155,
+            "unit": "iter/sec",
+            "range": "stddev: 0.060228",
+            "group": "import-export",
+            "extra": "mean: 359.23 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.077878720194334,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0070141",
+            "group": "import-export",
+            "extra": "mean: 245.23 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 3.9192577831107034,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010685",
+            "group": "import-export",
+            "extra": "mean: 255.15 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.512754683689713,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0039846",
+            "group": "engine",
+            "extra": "mean: 284.68 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.7468950966407782,
+            "unit": "iter/sec",
+            "range": "stddev: 0.079210",
+            "group": "engine",
+            "extra": "mean: 1.3389 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.8106468625439261,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12021",
+            "group": "engine",
+            "extra": "mean: 1.2336 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.19910521978835552,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13038",
+            "group": "engine",
+            "extra": "mean: 5.0225 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.21941885434559408,
+            "unit": "iter/sec",
+            "range": "stddev: 0.22896",
+            "group": "engine",
+            "extra": "mean: 4.5575 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.4335448888045854,
+            "unit": "iter/sec",
+            "range": "stddev: 0.015993",
+            "group": "engine",
+            "extra": "mean: 410.92 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5061218216479999,
+            "unit": "iter/sec",
+            "range": "stddev: 0.063089",
+            "group": "engine",
+            "extra": "mean: 1.9758 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.5569845836715221,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12416",
+            "group": "engine",
+            "extra": "mean: 1.7954 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.15470143819994417,
+            "unit": "iter/sec",
+            "range": "stddev: 0.093974",
+            "group": "engine",
+            "extra": "mean: 6.4641 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.16894372477763106,
+            "unit": "iter/sec",
+            "range": "stddev: 0.16737",
+            "group": "engine",
+            "extra": "mean: 5.9191 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 420.6475880090661,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00011298",
+            "group": "node",
+            "extra": "mean: 2.3773 msec\nrounds: 257"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 65.68862535179096,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012262",
+            "group": "node",
+            "extra": "mean: 15.223 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 44.598630274019804,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0017470",
+            "group": "node",
+            "extra": "mean: 22.422 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 254.7123886925671,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020773",
+            "group": "node",
+            "extra": "mean: 3.9260 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 38.24325954183987,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0017543",
+            "group": "node",
+            "extra": "mean: 26.148 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 33.47900660658237,
+            "unit": "iter/sec",
+            "range": "stddev: 0.035316",
+            "group": "node",
+            "extra": "mean: 29.869 msec\nrounds: 100"
           }
         ]
       }

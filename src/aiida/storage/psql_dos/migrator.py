@@ -33,6 +33,7 @@ from sqlalchemy.orm import Session
 from aiida.common import exceptions
 from aiida.manage.configuration.profile import Profile
 from aiida.storage.log import MIGRATE_LOGGER
+from aiida.storage.migrations import TEMPLATE_INVALID_SCHEMA_VERSION
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 
@@ -45,13 +46,6 @@ To migrate the database schema version to the current one, run the following com
 
     verdi -p {profile_name} storage migrate
 """
-
-TEMPLATE_INVALID_SCHEMA_VERSION = """
-Database schema version `{schema_version_database}` is incompatible with the required schema version `{schema_version_code}`.
-To migrate the database schema version to the current one, run the following command:
-
-    verdi -p {profile_name} storage migrate
-"""  # noqa: E501
 
 ALEMBIC_REL_PATH = 'migrations'
 

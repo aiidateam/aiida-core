@@ -175,8 +175,8 @@ class RemoteData(Data):
         remote_dir = self.get_remote_path()
 
         if transport is None:
-            with self.get_authinfo().get_transport() as transport:
-                clean_remote(transport, remote_dir)
+            with self.get_authinfo().get_transport() as _transport:
+                clean_remote(_transport, remote_dir)
         else:
             if transport.hostname != self.computer.hostname:
                 raise ValueError(

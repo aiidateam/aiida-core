@@ -178,11 +178,11 @@ def upload_calculation(
             # Note: this will possibly overwrite files
             for root, dirnames, filenames in code.base.repository.walk():
                 # mkdir of root
-                transport.makedirs(root, ignore_existing=True)
+                transport.makedirs(str(root), ignore_existing=True)
 
                 # remotely mkdir first
                 for dirname in dirnames:
-                    transport.makedirs((root / dirname), ignore_existing=True)
+                    transport.makedirs(str(root / dirname), ignore_existing=True)
 
                 # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
                 # combination with the new `Transport.put_object_from_filelike`
@@ -192,8 +192,8 @@ def upload_calculation(
                         content = code.base.repository.get_object_content((pathlib.Path(root) / filename), mode='rb')
                         handle.write(content)
                         handle.flush()
-                        transport.put(handle.name, (root / filename))
-            transport.chmod(code.filepath_executable, 0o755)  # rwxr-xr-x
+                        transport.put(handle.name, str(root / filename))
+            transport.chmod(str(code.filepath_executable), 0o755)  # rwxr-xr-x
 
     # local_copy_list is a list of tuples, each with (uuid, dest_path, rel_path)
     # NOTE: validation of these lists are done inside calculation.presubmit()

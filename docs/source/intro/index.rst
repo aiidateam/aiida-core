@@ -1,14 +1,12 @@
+.. _intro:
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
 ============
 Introduction
 ============
-
-.. _intro:about:
-
-
-*************
-What is AiiDA
-*************
-
 
 AiiDA is an open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data.
 
@@ -24,12 +22,3 @@ AiiDA is built to support and streamline the four core pillars of the ADES model
 *  **Open source:** AiiDA is released under the `MIT open-source license <https://github.com/aiidateam/aiida-core/blob/main/LICENSE.txt>`__.
 
 See also the `list of AiiDA-powered scientific publications <http://www.aiida.net/science/>`__ and `testimonials from AiiDA users <http://www.aiida.net/testimonials/>`__.
-
-
-.. toctree::
-   :maxdepth: 1
-
-   get_started
-   ../tutorials/index
-   cheatsheet
-   troubleshooting

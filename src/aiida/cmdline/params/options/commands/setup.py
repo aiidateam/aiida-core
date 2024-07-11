@@ -50,6 +50,8 @@ def get_profile_attribute_default(attribute_tuple, ctx):
     try:
         data = ctx.params['profile'].dictionary
         for part in parts:
+            if data is None:
+                return default
             data = data[part]
         return data
     except KeyError:
@@ -172,6 +174,17 @@ SETUP_PROFILE_UUID = options.OverridableOption(
 
 SETUP_PROFILE = options.OverridableOption(
     '--profile',
+    prompt='Profile name',
+    help='The name of the new profile.',
+    required=True,
+    type=types.ProfileParamType(cannot_exist=True),
+    cls=options.interactive.InteractiveOption,
+)
+
+SETUP_PROFILE_NAME = options.OverridableOption(
+    '-p',
+    '--profile-name',
+    'profile',
     prompt='Profile name',
     help='The name of the new profile.',
     required=True,

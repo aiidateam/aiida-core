@@ -15,7 +15,7 @@ import pytest
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
-from aiida.orm import CalcJobNode, FolderData, RemoteData, SinglefileData
+from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
 from aiida.plugins import entry_point
 from aiida.transports.plugins.local import LocalTransport
 
@@ -585,3 +585,32 @@ def test_upload_combinations(
         filepath_workdir = pathlib.Path(node.get_remote_workdir())
 
         assert serialize_file_hierarchy(filepath_workdir, read_bytes=False) == expected_hierarchy
+
+
+def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_info, tmp_path):
+    """Test ``upload_calculation`` with a ``PortableCode`` for different transports.
+
+    Regression test for https://github.com/aiidateam/aiida-core/issues/6518
+    """
+    subdir = tmp_path / 'sub'
+    subdir.mkdir()
+    (subdir / 'some-file').write_bytes(b'sub dummy')
+    (tmp_path / 'bash').write_bytes(b'bash implementation')
+
+    code = PortableCode(
+        filepath_executable='bash',
+        filepath_files=tmp_path,
+    ).store()
+
+    node, calc_info = node_and_calc_info
+    code_info = CodeInfo()
+    code_info.code_uuid = code.uuid
+    calc_info.codes_info = [code_info]
+
+    with node.computer.get_transport() as transport:
+        execmanager.upload_calculation(
+            node,
+            transport,
+            calc_info,
+            fixture_sandbox,
+        )

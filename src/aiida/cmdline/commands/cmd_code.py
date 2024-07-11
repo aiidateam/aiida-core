@@ -8,6 +8,7 @@
 ###########################################################################
 """`verdi code` command."""
 
+import pathlib
 from collections import defaultdict
 from functools import partial
 
@@ -18,6 +19,7 @@ from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo, echo_tabulate
+from aiida.cmdline.utils.common import generate_validate_output_file
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 
@@ -234,34 +236,35 @@ def show(code):
 
 @verdi_code.command()
 @arguments.CODE()
-@arguments.OUTPUT_FILE(type=click.Path(exists=False))
-@click.option(
-    '--sort/--no-sort',
-    is_flag=True,
-    default=True,
-    help='Sort the keys of the output YAML.',
-    show_default=True,
-)
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
+@options.OVERWRITE()
+@options.SORT()
 @with_dbenv()
-def export(code, output_file, sort):
+def export(code, output_file, overwrite, sort):
     """Export code to a yaml file."""
+
     import yaml
 
     code_data = {}
 
     for key in code.Model.model_fields.keys():
-        if key == 'computer':
-            value = getattr(code, key).label
-        else:
-            value = getattr(code, key)
+        value = getattr(code, key).label if key == 'computer' else getattr(code, key)
 
         # If the attribute is not set, for example ``with_mpi`` do not export it, because the YAML won't be valid for
         # use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
         if value is not None:
             code_data[key] = str(value)
 
-    with open(output_file, 'w', encoding='utf-8') as yfhandle:
-        yaml.dump(code_data, yfhandle, sort_keys=sort)
+    try:
+        output_file = generate_validate_output_file(
+            output_file=output_file, entity_label=code.label, overwrite=overwrite, appendix=f'@{code_data["computer"]}'
+        )
+    except (FileExistsError, IsADirectoryError) as exception:
+        raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
+
+    output_file.write_text(yaml.dump(code_data, sort_keys=sort))
+
+    echo.echo_success(f'Code<{code.pk}> {code.label} exported to file `{output_file}`.')
 
 
 @verdi_code.command()

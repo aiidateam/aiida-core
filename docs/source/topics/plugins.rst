@@ -344,7 +344,7 @@ To make use of these fixtures, create a ``conftest.py`` file in your ``tests`` f
 
 .. code-block:: python
 
-   pytest_plugins = 'aiida.tools.pytest_fixtures
+   pytest_plugins = 'aiida.tools.pytest_fixtures'
 
 Just by adding this line, the fixtures that are provided by the :mod:`~aiida.tools.pytest_fixtures` module are automatically imported.
 The module provides the following fixtures:

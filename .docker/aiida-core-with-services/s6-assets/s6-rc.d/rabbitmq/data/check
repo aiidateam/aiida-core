@@ -1,4 +1,17 @@
 #!/bin/bash
 
-rabbitmq-diagnostics check_running
+rabbitmq-diagnostics ping
+
+if [ $? -ne '0' ]; then
+    exit 1
+fi
+
+rabbitmq-diagnostics is_booting
+
+if [ $? -ne '0' ]; then
+    exit 1
+fi
+
+rabbitmq-diagnostics is_running
+
 exit $?

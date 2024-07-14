@@ -145,6 +145,7 @@ repos:
         src/aiida/orm/utils/builders/computer.py|
         src/aiida/orm/utils/calcjob.py|
         src/aiida/orm/utils/remote.py|
+        src/aiida/orm/utils/node.py|
         src/aiida/repository/backend/disk_object_store.py|
         src/aiida/repository/backend/sandbox.py|
         src/aiida/restapi/common/utils.py|

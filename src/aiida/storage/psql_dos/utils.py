@@ -42,7 +42,7 @@ def create_sqlalchemy_engine(config: PsqlConfig):
     separator = ':' if config['database_port'] else ''
     password = quote_plus(config['database_password'])
 
-    engine_url = 'postgresql://{user}:{password}@{hostname}{separator}{port}/{name}'.format(
+    engine_url = 'postgresql+psycopg://{user}:{password}@{hostname}{separator}{port}/{name}'.format(
         separator=separator,
         user=config['database_username'],
         password=password,

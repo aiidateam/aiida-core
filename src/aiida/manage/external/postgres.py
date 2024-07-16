@@ -96,7 +96,7 @@ class Postgres(PGSU):
 
         :param str dbuser: Name of the user to be created.
         :param str dbpass: Password the user should be given.
-        :raises: psycopg2.errors.DuplicateObject if user already exists and
+        :raises: psycopg.errors.DuplicateObject if user already exists and
             self.connection_mode == PostgresConnectionMode.PSYCOPG
         """
         self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass, privileges))
@@ -130,14 +130,13 @@ class Postgres(PGSU):
     def can_user_authenticate(self, dbuser, dbpass):
         """Check whether the database user credentials are valid.
 
-        Checks whether dbuser has access to the `template1` postgres database
-        via psycopg2.
+        Checks whether dbuser has access to the `template1` postgres database via psycopg.
 
         :param dbuser: the database user
         :param dbpass: the database password
         :return: True if the credentials are valid, False otherwise
         """
-        import psycopg2
+        import psycopg
         from pgsu import _execute_psyco
 
         dsn = self.dsn.copy()
@@ -146,7 +145,7 @@ class Postgres(PGSU):
 
         try:
             _execute_psyco('SELECT 1', dsn)
-        except psycopg2.OperationalError:
+        except psycopg.OperationalError:
             return False
 
         return True
@@ -227,8 +226,8 @@ class Postgres(PGSU):
         return dbuser, dbname
 
     @property
-    def host_for_psycopg2(self):
-        """Return correct host for psycopg2 connection (as required by regular AiiDA operation)."""
+    def host_for_psycopg(self):
+        """Return correct host for psycopg connection (as required by regular AiiDA operation)."""
         host = self.dsn.get('host')
         if self.connection_mode == PostgresConnectionMode.PSQL:
             # If "sudo su postgres" was needed to create the DB, we are likely on Ubuntu, where
@@ -238,8 +237,8 @@ class Postgres(PGSU):
         return host
 
     @property
-    def port_for_psycopg2(self):
-        """Return port for psycopg2 connection (as required by regular AiiDA operation)."""
+    def port_for_psycopg(self):
+        """Return port for psycopg connection (as required by regular AiiDA operation)."""
         return self.dsn.get('port')
 
     @property

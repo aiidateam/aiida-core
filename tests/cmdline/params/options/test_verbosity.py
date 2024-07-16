@@ -14,7 +14,7 @@ import logging
 import pytest
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import echo
-from aiida.common.log import AIIDA_LOGGER, LOG_LEVELS
+from aiida.common import log
 
 
 @pytest.fixture
@@ -29,10 +29,10 @@ def cmd():
 
     The messages to the ``verdi`` are performed indirect through the utilities of the ``echo`` module.
     """
-    assert 'cli' in [handler.name for handler in AIIDA_LOGGER.handlers]
+    assert 'cli' in [handler.name for handler in log.AIIDA_LOGGER.handlers]
 
-    for log_level in LOG_LEVELS.values():
-        AIIDA_LOGGER.log(log_level, 'aiida')
+    for log_level in log.LOG_LEVELS.values():
+        log.AIIDA_LOGGER.log(log_level, 'aiida')
 
     echo.echo_debug('verdi')
     echo.echo_info('verdi')
@@ -49,7 +49,7 @@ def verify_log_output(output: str, log_level_aiida: int, log_level_verdi: int):
     :param log_level_aiida: The expected log level of the ``aiida`` logger.
     :param log_level_verdi: The expected log level of the ``verdi`` logger.
     """
-    for log_level_name, log_level in LOG_LEVELS.items():
+    for log_level_name, log_level in log.LOG_LEVELS.items():
         prefix = log_level_name.capitalize()
 
         if log_level >= log_level_aiida:
@@ -73,7 +73,7 @@ def test_default(run_cli_command):
     verify_log_output(result.output, logging.REPORT, logging.REPORT)
 
 
-@pytest.mark.parametrize('option_log_level', [level for level in LOG_LEVELS.values() if level != logging.NOTSET])
+@pytest.mark.parametrize('option_log_level', [level for level in log.LOG_LEVELS.values() if level != logging.NOTSET])
 @pytest.mark.usefixtures('reset_log_level')
 def test_explicit(run_cli_command, option_log_level):
     """Test explicitly settings a verbosity"""
@@ -91,6 +91,9 @@ def test_config_option_override(run_cli_command, isolated_config):
     # If ``--verbosity`` is not explicitly defined, values from the config options should be used.
     result = run_cli_command(cmd, raises=True, use_subprocess=False)
     verify_log_output(result.output, logging.ERROR, logging.WARNING)
+
+    # Manually reset the ``aiida.common.log.CLI_ACTIVE`` global otherwise the verbosity callback is a no-op
+    log.CLI_ACTIVE = None
 
     # If ``--verbosity`` is explicitly defined, it override both both config options.
     result = run_cli_command(cmd, ['--verbosity', 'INFO'], raises=True, use_subprocess=False)

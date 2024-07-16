@@ -7,7 +7,6 @@ import typing as t
 from uuid import uuid4
 
 import pytest
-from pgtest.pgtest import PGTest
 
 if t.TYPE_CHECKING:
     from pgtest.pgtest import PGTest
@@ -19,6 +18,8 @@ class PostgresCluster:
         self.cluster = None
 
     def _create(self):
+        from pgtest.pgtest import PGTest
+
         try:
             self.cluster = PGTest()
         except OSError as e:
@@ -40,7 +41,7 @@ class PostgresCluster:
             self._create()
 
         postgres_config = {
-            'database_engine': 'postgresql_psycopg2',
+            'database_engine': 'postgresql_psycopg',
             'database_name': database_name or str(uuid4()),
             'database_username': database_username or 'guest',
             'database_password': database_password or 'guest',
@@ -53,13 +54,12 @@ class PostgresCluster:
             )
         postgres.create_db(postgres_config['database_username'], postgres_config['database_name'])
 
-        postgres_config['database_hostname'] = postgres.host_for_psycopg2
-        postgres_config['database_port'] = postgres.port_for_psycopg2
+        postgres_config['database_hostname'] = postgres.host_for_psycopg
+        postgres_config['database_port'] = postgres.port_for_psycopg
 
         return postgres_config
 
 
-# TODO: Update docstring accordingly
 @pytest.fixture(scope='session')
 def postgres_cluster():
     """Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yield.

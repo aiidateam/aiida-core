@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 __all__ = ('Graph', 'default_link_styles', 'default_node_styles', 'pstate_node_styles', 'default_node_sublabels')
 
 LinkAnnotateType = Literal[None, 'label', 'type', 'both']
+IdentifierType = Literal['pk', 'uuid', 'label']
 
 
 class LinkStyleFunc(Protocol):
@@ -254,18 +255,25 @@ def default_node_sublabels(node: orm.Node) -> str:
     return sublabel
 
 
-def get_node_id_label(node: orm.Node, id_type: Literal['pk', 'uuid', 'label']) -> str:
+NODE_IDENTIFIER_TO_LABEL = {
+    'pk': lambda node: str(node.pk),
+    'uuid': lambda node: node.uuid.split('-')[0],
+    'label': lambda node: node.label,
+}
+
+
+def get_node_id_label(node: orm.Node, id_type: IdentifierType | list[IdentifierType]) -> str:
     """Return an identifier str for the node"""
-    if id_type == 'pk':
-        return str(node.pk)
-    if id_type == 'uuid':
-        return node.uuid.split('-')[0]
-    if id_type == 'label':
-        return node.label
-    raise ValueError(f'node_id_type not recognised: {id_type}')
+
+    id_types = id_type if isinstance(id_type, (list, tuple)) else [id_type]
+
+    try:
+        return '|'.join(NODE_IDENTIFIER_TO_LABEL[key](node) for key in id_types)
+    except KeyError as exception:
+        raise ValueError(f'`{id_type}` is not a valid `node_id_type`, choose from: pk, uuid, label') from exception
 
 
-def _get_node_label(node: orm.Node, id_type: Literal['pk', 'uuid', 'label'] = 'pk') -> str:
+def _get_node_label(node: orm.Node, id_type: IdentifierType | list[IdentifierType] = 'pk') -> str:
     """Return a label text of node and the return format is '<NodeType> (<id>)'."""
     if isinstance(node, orm.Data):
         label = f'{node.__class__.__name__} ({get_node_id_label(node, id_type)})'
@@ -287,7 +295,7 @@ def _add_graphviz_node(
     node_sublabel_func,
     style_override: None | dict = None,
     include_sublabels: bool = True,
-    id_type: Literal['pk', 'uuid', 'label'] = 'pk',
+    id_type: IdentifierType | list[IdentifierType] = 'pk',
 ):
     """Create a node in the graph
 
@@ -360,7 +368,7 @@ class Graph:
         link_style_fn: LinkStyleFunc | None = None,
         node_style_fn: Callable[[orm.Node], dict] | None = None,
         node_sublabel_fn: Callable[[orm.Node], str] | None = None,
-        node_id_type: Literal['pk', 'uuid', 'label'] = 'pk',
+        node_id_type: IdentifierType | list[IdentifierType] = 'pk',
         backend: StorageBackend | None = None,
     ):
         """A class to create graphviz graphs of the AiiDA node provenance

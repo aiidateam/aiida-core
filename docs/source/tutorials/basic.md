@@ -31,7 +31,7 @@ At the end of this tutorial, you will know how to:
 
 :::{important}
 If you are working on your own machine, note that the tutorial assumes that you have a working AiiDA installation and have set up your AiiDA profile in the current Python environment.
-If this is not the case, consult the {ref}`getting started page<intro:get_started>`.
+If this is not the case, consult the {ref}`getting started page<installation>`.
 :::
 
 :::{tip}

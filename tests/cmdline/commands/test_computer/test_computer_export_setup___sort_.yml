@@ -1,0 +1,13 @@
+append_text: ''
+default_memory_per_machine: 100000
+description: Test Computer
+hostname: localhost
+label: test_computer_export_setup--sort
+mpiprocs_per_machine: 8
+mpirun_command: mpirun
+prepend_text: ''
+scheduler: core.direct
+shebang: '#!xonsh'
+transport: core.ssh
+use_double_quotes: false
+work_dir: /tmp/aiida

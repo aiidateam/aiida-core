@@ -837,17 +837,13 @@ class TestNodeLinks:
 class TestNodeDelete:
     """Tests for deleting nodes."""
 
-    # TODO: Why is this failing for SQLite??
-    # sqlalchemy.orm.exc.ObjectDeletedError: Instance '<DbNode at 0x7f6a68845990>' has been deleted,
-    # or its row is otherwise not present.
-    # https://github.com/aiidateam/aiida-core/issues/6436
-    @pytest.mark.requires_psql
     def test_delete_through_backend(self):
         """Test deletion works correctly through the backend."""
         backend = get_manager().get_profile_storage()
 
         data_one = Data().store()
         data_two = Data().store()
+        data_two_pk = data_two.pk
         calculation = CalculationNode()
         calculation.base.links.add_incoming(data_one, LinkType.INPUT_CALC, 'input_one')
         calculation.base.links.add_incoming(data_two, LinkType.INPUT_CALC, 'input_two')
@@ -866,7 +862,7 @@ class TestNodeDelete:
 
         assert len(Log.collection.get_logs_for(data_one)) == 1
         assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk
-        assert len(Log.collection.get_logs_for(data_two)) == 0
+        assert len(Log.collection.find({'dbnode_id': data_two_pk})) == 0
 
     def test_delete_collection_logs(self):
         """Test deletion works correctly through objects collection."""

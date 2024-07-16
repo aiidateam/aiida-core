@@ -142,6 +142,7 @@ py:meth fail
 py:class ComputedFieldInfo
 py:class pydantic.fields.Field
 py:class pydantic.main.BaseModel
+py:class PluggableSchemaValidator
 
 py:class requests.models.Response
 py:class requests.Response
@@ -234,8 +235,6 @@ py:class yaml.nodes.Node
 py:class yaml.nodes.MappingNode
 py:class yaml.nodes.ScalarNode
 py:class uuid.UUID
-
-py:class psycopg2.extensions.cursor
 
 py:class alembic.config.Config
 py:class alembic.op

@@ -1118,11 +1118,13 @@ class SshTransport(Transport):
         Flags used: ``-r``: recursive copy; ``-f``: force, makes the command non interactive;
         ``-L`` follows symbolic links
 
-        :param  remotesource: file to copy from
+        :param remotesource: file to copy from
         :param remotedestination: file to copy to
         :param dereference: if True, copy content instead of copying the symlinks only
             Default = False.
-        :param recursive: if True copy directories recursively, otherwise only copy the specified file(s)
+        :param recursive: if True copy directories recursively.
+            Note that if the `remotesource` is a directory, `recursive` should always be set to True.
+            Default = True.
         :type recursive: bool
         :raise OSError: if the cp execution failed.
 

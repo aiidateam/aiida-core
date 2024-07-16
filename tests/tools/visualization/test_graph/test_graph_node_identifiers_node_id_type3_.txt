@@ -1,0 +1,9 @@
+	NODE -> NODE [color="#000000" style=solid]
+	NODE -> NODE [color="#000000" style=solid]
+	NODE [label="CalcFunctionNode (10|16739459)
+	NODE [label="Dict (10|16739459)" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
+	NODE [label="FolderData (10|16739459)" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
+Exit Code: 200" color=red fillcolor="#de707f77" penwidth=6 shape=rectangle style=filled]
+State: finished
+digraph {
+}

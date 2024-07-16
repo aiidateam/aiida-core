@@ -181,6 +181,17 @@ SETUP_PROFILE = options.OverridableOption(
     cls=options.interactive.InteractiveOption,
 )
 
+SETUP_PROFILE_NAME = options.OverridableOption(
+    '-p',
+    '--profile-name',
+    'profile',
+    prompt='Profile name',
+    help='The name of the new profile.',
+    required=True,
+    type=types.ProfileParamType(cannot_exist=True),
+    cls=options.interactive.InteractiveOption,
+)
+
 SETUP_PROFILE_SET_AS_DEFAULT = options.OverridableOption(
     '--set-as-default/--no-set-as-default',
     prompt='Set as default?',
@@ -247,7 +258,7 @@ QUICKSETUP_SUPERUSER_DATABASE_NAME = options.OverridableOption(
     '--su-db-name',
     help='Name of the template database to connect to as the database superuser.',
     type=click.STRING,
-    default=DEFAULT_DBINFO['database'],
+    default=DEFAULT_DBINFO['dbname'],
 )
 
 QUICKSETUP_SUPERUSER_DATABASE_PASSWORD = options.OverridableOption(
@@ -277,7 +288,7 @@ QUICKSETUP_REPOSITORY_URI = options.REPOSITORY_PATH.clone(
 SETUP_DATABASE_ENGINE = QUICKSETUP_DATABASE_ENGINE.clone(
     prompt='Database engine',
     contextual_default=functools.partial(
-        get_profile_attribute_default, ('storage.config.database_engine', 'postgresql_psycopg2')
+        get_profile_attribute_default, ('storage.config.database_engine', 'postgresql_psycopg')
     ),
     cls=options.interactive.InteractiveOption,
 )

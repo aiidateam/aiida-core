@@ -49,7 +49,7 @@ class MultiplyAddWorkChain(WorkChain):
         """Add two numbers using the `ArithmeticAddCalculation` calculation job plugin."""
         inputs = {'x': self.ctx.product, 'y': self.inputs.z, 'code': self.inputs.code}
         future = self.submit(ArithmeticAddCalculation, **inputs)
-
+        self.report(f'Submitted the `ArithmeticAddCalculation`: {future}')
         return ToContext(addition=future)
 
     def validate_result(self):

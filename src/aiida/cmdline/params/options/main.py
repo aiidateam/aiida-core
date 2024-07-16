@@ -97,6 +97,7 @@ __all__ = (
     'REPOSITORY_PATH',
     'SCHEDULER',
     'SILENT',
+    'SORT',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
@@ -177,7 +178,7 @@ def graph_traversal_rules(rules):
     return decorator
 
 
-def set_log_level(_ctx, _param, value) -> str:
+def set_log_level(ctx, _param, value) -> str:
     """Configure the logging for the CLI command being executed.
 
     Note that we cannot use the most obvious approach of directly setting the level on the various loggers. The reason
@@ -194,12 +195,15 @@ def set_log_level(_ctx, _param, value) -> str:
     """
     from aiida.common import log
 
+    if log.CLI_ACTIVE:
+        return value
+
     log.CLI_ACTIVE = True
 
     # If the value is ``None``, it means the option was not specified, but we still configure logging for the CLI
     # However, we skip this when we are in a tab-completion context.
     if value is None:
-        if not _ctx.resilient_parsing:
+        if not ctx.resilient_parsing:
             configure_logging()
         return None
 
@@ -371,11 +375,15 @@ ARCHIVE_FORMAT = OverridableOption(
 )
 
 NON_INTERACTIVE = OverridableOption(
-    '-n',
-    '--non-interactive',
-    is_flag=True,
+    '-n/-I',
+    '--non-interactive/--interactive',
     is_eager=True,
-    help='In non-interactive mode, the CLI never prompts but simply uses default values for options that define one.',
+    help=(
+        'In non-interactive mode, the CLI never prompts for options but simply uses default values for options that '
+        'define one. In interactive mode, the CLI will prompt for each interactive option. '
+    ),
+    default=False,
+    show_default='--interactive',
 )
 
 DRY_RUN = OverridableOption('-n', '--dry-run', is_flag=True, help='Perform a dry run.')
@@ -402,8 +410,8 @@ DB_ENGINE = OverridableOption(
     '--db-engine',
     required=True,
     help='Engine to use to connect to the database.',
-    default='postgresql_psycopg2',
-    type=click.Choice(['postgresql_psycopg2']),
+    default='postgresql_psycopg',
+    type=click.Choice(['postgresql_psycopg']),
 )
 
 DB_BACKEND = OverridableOption(
@@ -790,4 +798,13 @@ OVERWRITE = OverridableOption(
     default=False,
     show_default=True,
     help='Overwrite file/directory if writing to disk.',
+)
+
+SORT = OverridableOption(
+    '--sort/--no-sort',
+    'sort',
+    is_flag=True,
+    default=True,
+    help='Sort the keys of the output YAML.',
+    show_default=True,
 )

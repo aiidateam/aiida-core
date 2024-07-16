@@ -1301,7 +1301,7 @@ def test_asynchronous_execution(custom_transport):
                 transport.putfile(tmpf.name, script_fname)
 
             timestamp_before = time.time()
-            job_id_string = scheduler.submit_from_script('/tmp', script_fname)
+            job_id_string = scheduler.submit_job('/tmp', script_fname)
 
             elapsed_time = time.time() - timestamp_before
             # We want to get back control. If it takes < 5 seconds, it means that it is not blocking

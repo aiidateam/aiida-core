@@ -14,7 +14,7 @@ Creating profiles
 -----------------
 Each AiiDA installation can have multiple profiles, each of which can have its own individual database and file repository to store the contents of the :ref:`provenance graph<topics:provenance:concepts>`.
 Profiles allow you to run multiple projects completely independently from one another with just a single AiiDA installation and at least one profile is required to run AiiDA.
-A new profile can be created using :ref:`verdi quicksetup<reference:command-line:verdi-quicksetup>` or :ref:`verdi setup<reference:command-line:verdi-setup>`, which works similar to the former but gives more control to the user.
+A new profile can be created using :ref:`verdi presto<reference:command-line:verdi-presto>` or :ref:`verdi profile setup<reference:command-line:verdi-profile>`, which works similar to the former but gives more control to the user.
 
 Listing profiles
 ----------------
@@ -55,7 +55,7 @@ To display these parameters, use ``verdi profile show``:
     storage:
         backend: core.psql_dos
         config:
-            database_engine: postgresql_psycopg2
+            database_engine: postgresql_psycopg
             database_hostname: localhost
             database_name: name
             database_password: abc
@@ -296,7 +296,7 @@ Isolating multiple instances
 An AiiDA instance is defined as the installed source code plus the configuration folder that stores the configuration files with all the configured profiles.
 It is possible to run multiple AiiDA instances on a single machine, simply by isolating the code and configuration in a virtual environment.
 
-To isolate the code, make sure to install AiiDA into a virtual environment, e.g., with conda or venv, as described :ref:`here <intro:get_started:setup>`.
+To isolate the code, make sure to install AiiDA into a virtual environment, e.g., with conda or venv.
 Whenever you activate this particular environment, you will be running the particular version of AiiDA (and all the plugins) that you installed specifically for it.
 
 This is separate from the configuration of AiiDA, which is stored in the configuration directory which is always named ``.aiida`` and by default is stored in the home directory.
@@ -619,12 +619,12 @@ Alternatively to the CLI command, one can also manually create a backup. This re
 .. _how-to:installation:backup:restore:
 
 Restoring data from a backup
-==================================
+============================
 
 Restoring a backed up AiiDA profile requires:
 
 * restoring the profile information in the AiiDA ``config.json`` file. Simply copy the`profiles` entry from
-  the backed up `config.json`to the one of the running AiiDA instance (see `verdi status` for exact location).
+  the backed up ``config.json`` to the one of the running AiiDA instance (see ``verdi status`` for exact location).
   Some information (e.g. the database parameters) might need to be updated.
 
 * restoring the data of of the backed up profile according to the ``config.json`` entry.
@@ -642,7 +642,7 @@ To test if the restoration worked, run ``verdi -p <profile-name> status`` to ver
 
         **PostgreSQL database**
 
-        To restore the PostgreSQL database from the ``db.psql`` file that was backed up, first you should create an empty database following the instructions described in :ref:`database <intro:install:database>` skipping the ``verdi setup`` phase.
+        To restore the PostgreSQL database from the ``db.psql`` file that was backed up, first you should create an empty database following the instructions described in :ref:`the installation guide <installation:guide-complete:create-profile:core-psql-dos>`.
         The backed up data can then be imported by calling:
 
         .. code-block:: console

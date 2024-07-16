@@ -194,7 +194,7 @@ bpython = [
 ]
 docs = [
   'pydata-sphinx-theme~=0.15.1',
-  'sphinx~=7.2',
+  'sphinx~=7.2.0',
   'sphinx-copybutton~=0.5.0',
   'sphinx-design~=0.5.0',
   'sphinx-notfound-page~=1.0',
@@ -242,7 +242,7 @@ tests = [
   'pytest-regressions~=2.2',
   'pympler~=1.0',
   'coverage~=7.0',
-  'sphinx~=7.2',
+  'sphinx~=7.2.0',
   'docutils~=0.20'
 ]
 tui = [

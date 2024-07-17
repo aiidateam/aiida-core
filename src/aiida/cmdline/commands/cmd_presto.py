@@ -25,9 +25,17 @@ DEFAULT_PROFILE_NAME_PREFIX: str = 'presto'
 
 
 def get_default_presto_profile_name():
+    from aiida.common.exceptions import ConfigurationError
     from aiida.manage import get_config
 
-    profile_names = get_config().profile_names
+    try:
+        profile_names = get_config().profile_names
+    except ConfigurationError:
+        # This can happen when tab-completing in an environment that did not create the configuration folder yet.
+        # It would have been possible to just call ``get_config(create=True)`` to create the config directory, but this
+        # should not be done during tab-completion just to generate a default value.
+        return DEFAULT_PROFILE_NAME_PREFIX
+
     indices = []
 
     for profile_name in profile_names:

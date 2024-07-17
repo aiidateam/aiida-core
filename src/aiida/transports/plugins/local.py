@@ -228,9 +228,18 @@ class LocalTransport(Transport):
         :raise OSError: if remotepath is not valid
         :raise ValueError: if localpath is not valid
         """
+        from aiida.common.warnings import warn_deprecation
+
+        if 'ignore_noexisting' in kwargs:
+            # Backwards compatibility check for old keyword that was misspelled
+            warn_deprecation(
+                'Detected `ignore_noexisting` which is now deprecated. Use `ignore_nonexisting` instead.', version=3
+            )
+            ignore_nonexisting = kwargs.get('ignore_noexisting', args[2] if len(args) > 2 else False)
+
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
-        ignore_nonexisting = kwargs.get('ignore_noexisting', args[2] if len(args) > 2 else False)
+        ignore_nonexisting = kwargs.get('ignore_nonexisting', args[2] if len(args) > 2 else False)
         if not remotepath:
             raise OSError('Input remotepath to put function must be a non empty string')
         if not localpath:

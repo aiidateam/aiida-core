@@ -605,7 +605,7 @@ def computer_test(user, print_traceback, computer):
             message += '\n  Use the `--print-traceback` option to see the full traceback.'
 
         echo.echo(message)
-        echo.echo_warning(f'{1} out of {num_tests} tests failed')
+        echo.echo_warning('1 out of 1 tests failed')
 
 
 @verdi_computer.command('delete')

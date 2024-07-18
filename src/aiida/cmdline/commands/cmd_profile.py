@@ -55,6 +55,7 @@ def command_create_profile(
     :param kwargs: Arguments to initialise instance of the selected storage implementation.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
+    from aiida.common import docs
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if not storage_cls.read_only and email is None:
@@ -79,6 +80,7 @@ def command_create_profile(
     else:
         echo.echo_report('Creating profile without RabbitMQ.')
         echo.echo_report('It can be configured at a later point in time with `verdi profile configure-rabbitmq`.')
+        echo.echo_report(f'See {docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
 
     try:
         profile = create_profile(

@@ -130,7 +130,7 @@ Although it is possible to run AiiDA without a daemon it does provide significan
         .. important::
 
             The ``aiida-core.services`` package ensures that RabbitMQ is installed in the conda environment.
-            However, it is not a _service_, in the sense that it is not automatically started, but has to be started manually.
+            However, it is not a *service*, in the sense that it is not automatically started, but has to be started manually.
 
             .. code-block:: console
 

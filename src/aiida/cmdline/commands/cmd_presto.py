@@ -178,7 +178,7 @@ def verdi_presto(
     created profile uses the new PostgreSQL database instead of SQLite.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
-    from aiida.common import exceptions
+    from aiida.common import docs, exceptions
     from aiida.manage.configuration import create_profile, load_profile
     from aiida.orm import Computer
 
@@ -217,6 +217,7 @@ def verdi_presto(
         broker_config = detect_rabbitmq_config()
     except ConnectionError as exception:
         echo.echo_report(f'RabbitMQ server not found ({exception}): configuring the profile without a broker.')
+        echo.echo_report(f'See {docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
     else:
         echo.echo_report('RabbitMQ server detected: configuring the profile with a broker.')
         broker_backend = 'core.rabbitmq'

@@ -51,13 +51,31 @@ If none of the lines show a red cross, indicating a problem, the installation wa
 Quick install limitations
 =========================
 
+By default, ``verdi presto`` creates a profile that uses SQLite instead of PostgreSQL and does not use the RabbitMQ message broker.
+The table below gives a quick overview of the functionality that is not supported in those cases:
+
++-----------------------------------------+------------------------------------------------------------------------+
+| No RabbitMQ                             | SQLite instead of PostgreSQL                                           |
++=========================================+========================================================================+
+| Cannot run the daemon                   | Not suitable for high-throughput workloads                             |
++-----------------------------------------+------------------------------------------------------------------------+
+| Cannot submit processes to the daemon\* | No support for ``has_key`` and ``contains`` operators in query builder |
++-----------------------------------------+------------------------------------------------------------------------+
+| Cannot play, pause, kill processes      | No support for ``QueryBuilder.get_creation_statistics``                |
++-----------------------------------------+------------------------------------------------------------------------+
+
+\* Calculations can still be run on remote computers
+
+.. note::
+    To enable the RabbitMQ broker for an existing profile, :ref:`install RabbitMQ <installation:guide-complete:rabbitmq>` and then run ``verdi profile configure-rabbitmq``.
+
 Functionality
 -------------
 
 Part of AiiDA's functionality requires a `message broker <https://en.wikipedia.org/wiki/Message_broker>`_, with the default implementation using `RabbitMQ <https://www.rabbitmq.com/>`_.
 The message broker is used to allow communication with the :ref:`daemon <topics:daemon>`.
 Since RabbitMQ is a separate service and is not always trivial to install, the quick installation guide sets up a profile that does not require it.
-As a result, the daemon cannot be started and processes cannot be submitted to it but can only be run locally.
+As a result, the daemon cannot be started and processes cannot be submitted to it but can only be run in the current Python interpreter.
 
 .. note::
     The ``verdi presto`` command automatically checks if RabbitMQ is running on the localhost.

@@ -101,6 +101,7 @@ def process_list(
 
     from aiida.cmdline.commands.cmd_daemon import execute_client_command
     from aiida.cmdline.utils.common import print_last_process_state_change
+    from aiida.common.docs import URL_NO_BROKER
     from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import get_daemon_client
     from aiida.orm import ProcessNode, QueryBuilder
@@ -137,7 +138,7 @@ def process_list(
     try:
         client = get_daemon_client()
     except ConfigurationError:
-        echo.echo_warning('This profile does not have a broker and so it has no daemon.')
+        echo.echo_warning(f'This profile does not have a broker and so it has no daemon. See {URL_NO_BROKER}')
         return
 
     if not client.is_daemon_running:

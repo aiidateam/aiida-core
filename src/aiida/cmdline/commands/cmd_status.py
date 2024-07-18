@@ -58,6 +58,7 @@ STATUS_SYMBOLS = {
 def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
     from aiida import __version__
+    from aiida.common.docs import URL_NO_BROKER
     from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
@@ -141,7 +142,7 @@ def verdi_status(print_traceback, no_rmq):
         print_status(
             ServiceStatus.WARNING,
             'broker',
-            'No broker defined for this profile: certain functionality not available.',
+            f'No broker defined for this profile: certain functionality not available. See {URL_NO_BROKER}',
         )
 
     # Getting the daemon status
@@ -151,7 +152,7 @@ def verdi_status(print_traceback, no_rmq):
         print_status(
             ServiceStatus.WARNING,
             'daemon',
-            'No broker defined for this profile: daemon is not available.',
+            'No broker defined for this profile: daemon is not available. See {URL_NO_BROKER}',
         )
     except DaemonNotRunningException as exception:
         print_status(ServiceStatus.WARNING, 'daemon', str(exception))

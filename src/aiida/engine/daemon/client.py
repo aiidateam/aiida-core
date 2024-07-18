@@ -91,6 +91,8 @@ class DaemonClient:
 
         :param profile: The profile instance.
         """
+        from aiida.common.docs import URL_NO_BROKER
+
         type_check(profile, Profile)
         config = get_config()
         self._profile = profile
@@ -99,7 +101,8 @@ class DaemonClient:
 
         if self._profile.process_control_backend is None:
             raise ConfigurationError(
-                f'profile `{self._profile.name}` does not define a broker so the daemon cannot be used.'
+                f'profile `{self._profile.name}` does not define a broker so the daemon cannot be used. '
+                f'See {URL_NO_BROKER} for more details.'
             )
 
     @property

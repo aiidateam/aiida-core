@@ -10,11 +10,6 @@ First, install the ``aiida-core`` Python package:
 
     pip install aiida-core
 
-.. attention::
-
-    AiiDA requires a recent version of Python.
-    Please refer to the `Python Package Index <https://pypi.org/project/aiida-core/>`_ for the minimum required version.
-
 Next, set up a profile where all data is stored:
 
 .. code-block:: console

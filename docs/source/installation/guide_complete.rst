@@ -254,7 +254,7 @@ Common options
 
 The exact options available for the ``verdi profile setup`` command depend on the selected storage plugin, but there are a number of common options and functionality:
 
-* ``--profile``: The name of the profile.
+* ``--profile-name``: The name of the profile.
 * ``--set-as-default``: Whether the new profile should be defined as the new default.
 * ``--email``: Email for the default user that is created.
 * ``--first-name``: First name for the default user that is created.
@@ -276,6 +276,10 @@ The exact options available for the ``verdi profile setup`` command depend on th
 ``core.sqlite_dos``
 -------------------
 
+.. tip::
+
+    The ``verdi presto`` command provides a fully automated way to set up a profile with the ``core.sqlite_dos`` storage plugin if no configuration is required.
+
 This storage plugin uses `SQLite <https://sqlite.org/>`_ and the `disk-objectstore <https://disk-objectstore.readthedocs.io/en/latest/>`_ to store data.
 The ``disk-objectstore`` is a Python package that is automatically installed as a dependency when installing ``aiida-core``, which was covered in the :ref:`Python package installation section <installation:guide-complete:python-package>`.
 The installation instructions for SQLite depend on your system; please visit the `SQLite website <https://www.sqlite.org/download.html>`_ for details.
@@ -296,19 +300,22 @@ The options specific to the ``core.sqlite_dos`` storage plugin are:
 ``core.psql_dos``
 -----------------
 
-This storage plugin uses `PostgreSQL <https://www.postgresql.org/>`_ and the `disk-objectstore <https://disk-objectstore.readthedocs.io/en/latest/>`_ to store data.
-The ``disk-objectstore`` is a Python package that is automatically installed as a dependency when installing ``aiida-core``, which was covered in the :ref:`Python package installation section <installation:guide-complete:python-package>`.
-The storage plugin can connect to a PostgreSQL instance running on the localhost or on a server that can be reached over the internet.
-Instructions for installing PostgreSQL is beyond the scope of this guide.
-
 .. tip::
 
     The creation of the PostgreSQL user and database as explained below is implemented in an automated way in the ``verdi presto`` command.
-    Instead of performing the steps below manually and running ``verdi profile setup core.psql_dos`` manually, it is possible to run:
+    Instead of performing the steps below manually and running ``verdi profile setup core.psql_dos``, it is possible to run:
 
     .. code-block::
 
         verdi presto --use-postgres
+
+    The ``verdi presto`` command also automatically tries to configure RabbitMQ as the broker if it is running locally.
+    Therefore, if the command succeeds in connecting to both PostgreSQL and RabbitMQ, ``verdi presto --use-postgres`` provides a fully automated way to create a profile suitable for production workloads.
+
+This storage plugin uses `PostgreSQL <https://www.postgresql.org/>`_ and the `disk-objectstore <https://disk-objectstore.readthedocs.io/en/latest/>`_ to store data.
+The ``disk-objectstore`` is a Python package that is automatically installed as a dependency when installing ``aiida-core``, which was covered in the :ref:`Python package installation section <installation:guide-complete:python-package>`.
+The storage plugin can connect to a PostgreSQL instance running on the localhost or on a server that can be reached over the internet.
+Instructions for installing PostgreSQL is beyond the scope of this guide.
 
 Before creating a profile, a database (and optionally a custom database user) has to be created.
 First, connect to PostgreSQL using ``psql``, the `native command line client for PostgreSQL <https://www.postgresql.org/docs/current/app-psql.html>`_:

@@ -114,7 +114,7 @@ class JobsList:
             self.logger.info(f'AuthInfo<{self._authinfo.pk}>: successfully retrieved status of active jobs')
 
             for job_id, job_info in scheduler_response.items():
-                jobs_cache[job_id] = job_info
+                jobs_cache[str(job_id)] = job_info
 
             return jobs_cache
 

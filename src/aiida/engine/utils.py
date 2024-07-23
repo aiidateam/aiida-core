@@ -268,6 +268,8 @@ def set_process_state_change_timestamp(node: 'ProcessNode') -> None:
 
     :param process: the Process instance that changed its state
     """
+    from sqlalchemy.exc import OperationalError
+
     from aiida.common import timezone
     from aiida.manage import get_manager
     from aiida.orm import CalculationNode, ProcessNode, WorkflowNode
@@ -287,7 +289,17 @@ def set_process_state_change_timestamp(node: 'ProcessNode') -> None:
     value = timezone.now().isoformat()
 
     backend = get_manager().get_profile_storage()
-    backend.set_global_variable(key, value, description)
+
+    try:
+        backend.set_global_variable(key, value, description)
+    except OperationalError:
+        # This typically happens for SQLite-based storage plugins like ``core.sqlite_dos``. Since this is merely an
+        # update of a timestamp that is likely to be updated soon again, just ignoring the failed update is not a
+        # problem.
+        LOGGER.warning(
+            f'Failed to write global variable `{key}` to `{value}` because the database was locked. If the storage '
+            'plugin being used is `core.sqlite_dos` this is to be expected and can be safely ignored.'
+        )
 
 
 def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Optional[datetime]:

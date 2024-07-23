@@ -431,7 +431,7 @@ class Process(PlumpyProcess):
             self.node.set_process_state(self._state.LABEL)  # type: ignore[arg-type]
 
         self._save_checkpoint()
-        set_process_state_change_timestamp(self)
+        set_process_state_change_timestamp(self.node)
         super().on_entered(from_state)
 
     @override

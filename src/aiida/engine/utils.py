@@ -18,6 +18,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union
 
 if TYPE_CHECKING:
+    from aiida.orm import ProcessNode
+
     from .processes import Process, ProcessBuilder
     from .runners import Runner
 
@@ -259,7 +261,7 @@ def loop_scope(loop) -> Iterator[None]:
         asyncio.set_event_loop(current)
 
 
-def set_process_state_change_timestamp(process: 'Process') -> None:
+def set_process_state_change_timestamp(node: 'ProcessNode') -> None:
     """Set the global setting that reflects the last time a process changed state, for the process type
     of the given process, to the current timestamp. The process type will be determined based on
     the class of the calculation node it has as its database container.
@@ -270,15 +272,15 @@ def set_process_state_change_timestamp(process: 'Process') -> None:
     from aiida.manage import get_manager
     from aiida.orm import CalculationNode, ProcessNode, WorkflowNode
 
-    if isinstance(process.node, CalculationNode):
+    if isinstance(node, CalculationNode):
         process_type = 'calculation'
-    elif isinstance(process.node, WorkflowNode):
+    elif isinstance(node, WorkflowNode):
         process_type = 'work'
-    elif isinstance(process.node, ProcessNode):
+    elif isinstance(node, ProcessNode):
         # This will only occur for testing, as in general users cannot launch plain Process classes
         return
     else:
-        raise ValueError(f'unsupported calculation node type {type(process.node)}')
+        raise ValueError(f'unsupported calculation node type {type(node)}')
 
     key = PROCESS_STATE_CHANGE_KEY.format(process_type)
     description = PROCESS_STATE_CHANGE_DESCRIPTION.format(process_type)

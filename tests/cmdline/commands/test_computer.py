@@ -971,3 +971,17 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
     result = run_cli_command(computer_test, [aiida_localhost.label], use_subprocess=False)
     assert 'Success: all 6 tests succeeded' in result.output
     assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output
+
+
+def test_computer_ssh_auto(run_cli_command, aiida_computer):
+    """Test setup of computer with ``core.ssh_auto`` entry point.
+
+    The configure step should only require the common shared options ``safe_interval`` and ``use_login_shell``.
+    """
+    computer = aiida_computer(transport_type='core.ssh_auto').store()
+    assert not computer.is_configured
+
+    # It is important that no other options (except for `--safe-interval`) have to be specified for this transport type.
+    options = ['core.ssh_auto', computer.uuid, '--non-interactive', '--safe-interval', '0']
+    run_cli_command(computer_configure, options, use_subprocess=False)
+    assert computer.is_configured

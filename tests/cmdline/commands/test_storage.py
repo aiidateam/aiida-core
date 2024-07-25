@@ -36,6 +36,15 @@ def tests_storage_info(aiida_localhost, run_cli_command):
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')
+def tests_storage_migrate_no_broker(aiida_config_tmp, aiida_profile_factory, run_cli_command):
+    """Test the ``verdi storage migrate`` command for a profile without a broker."""
+    with aiida_profile_factory(aiida_config_tmp) as profile:
+        assert profile.process_control_backend is None
+        result = run_cli_command(cmd_storage.storage_migrate, parameters=['--force'], use_subprocess=False)
+        assert 'Migrating to the head of the main branch' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
 def tests_storage_migrate_force(run_cli_command):
     """Test the ``verdi storage migrate`` command (with force option)."""
     result = run_cli_command(cmd_storage.storage_migrate, parameters=['--force'])

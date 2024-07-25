@@ -41,12 +41,14 @@ def storage_migrate(force):
     from aiida.engine.daemon.client import get_daemon_client
     from aiida.manage import get_manager
 
-    client = get_daemon_client()
-    if client.is_daemon_running:
-        echo.echo_critical('Migration aborted, the daemon for the profile is still running.')
-
     manager = get_manager()
     profile = manager.get_profile()
+
+    if profile.process_control_backend:
+        client = get_daemon_client()
+        if client.is_daemon_running:
+            echo.echo_critical('Migration aborted, the daemon for the profile is still running.')
+
     storage_cls = profile.storage_cls
 
     if not force:

@@ -23,6 +23,26 @@ def tests_storage_version(run_cli_command):
     assert version in result.output
 
 
+@pytest.mark.parametrize(
+    'exception_cls, exit_code',
+    (
+        (exceptions.CorruptStorage, 3),
+        (exceptions.UnreachableStorage, 3),
+        (exceptions.IncompatibleStorageSchema, 4),
+    ),
+)
+def tests_storage_version_non_zero_exit_code(aiida_profile, run_cli_command, monkeypatch, exception_cls, exit_code):
+    """Test the ``verdi storage version`` command when it returns a non-zero exit code."""
+
+    def validate_storage(self):
+        raise exception_cls()
+
+    with monkeypatch.context() as context:
+        context.setattr(aiida_profile.storage_cls.migrator, 'validate_storage', validate_storage)
+        result = run_cli_command(cmd_storage.storage_version, raises=True)
+        assert result.exit_code == exit_code
+
+
 def tests_storage_info(aiida_localhost, run_cli_command):
     """Test the ``verdi storage info`` command with the ``--detailed`` option."""
     from aiida import orm

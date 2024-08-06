@@ -34,12 +34,18 @@ from aiida.transports import Transport
 
 
 @pytest.fixture(scope='function', params=entry_point.get_entry_point_names('aiida.transports'))
-def custom_transport(request, tmp_path, monkeypatch) -> Transport:
+def custom_transport(request, tmp_path, monkeypatch, ssh_key) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
     plugin = TransportFactory(request.param)
 
     if request.param == 'core.ssh':
-        kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
+        kwargs = {
+            'machine': 'localhost',
+            'timeout': 30,
+            'load_system_host_keys': True,
+            'key_policy': 'AutoAddPolicy',
+            'key_filename': str(ssh_key),
+        }
     elif request.param == 'core.ssh_auto':
         kwargs = {'machine': 'localhost'}
         filepath_config = tmp_path / 'config'

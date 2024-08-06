@@ -1,7 +1,6 @@
 """Test the pytest fixtures."""
 
 
-
 def test_aiida_config(tmp_path):
     """Test that ``aiida_config`` fixture is loaded by default and creates a config instance in temp directory."""
     from aiida.manage.configuration import get_config

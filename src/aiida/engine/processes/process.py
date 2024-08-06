@@ -414,7 +414,18 @@ class Process(plumpy.processes.Process):
     @override
     def on_entered(self, from_state: Optional[plumpy.process_states.State]) -> None:
         """After entering a new state, save a checkpoint and update the latest process state change timestamp."""
+        from plumpy import ProcessState
+
         from aiida.engine.utils import set_process_state_change_timestamp
+
+        super().on_entered(from_state)
+
+        if self._state.LABEL is ProcessState.EXCEPTED:
+            # The process is already excepted so simply update the process state on the node and let the process
+            # complete the state transition to the terminal state. If another exception is raised during this exception
+            # handling, the process transitioning is cut short and never makes it to the terminal state.
+            self.node.set_process_state(self._state.LABEL)
+            return
 
         # For reasons unknown, it is important to update the outputs first, before doing anything else, otherwise there
         # is the risk that certain outputs do not get attached before the process reaches a terminal state. Nevertheless
@@ -431,7 +442,6 @@ class Process(plumpy.processes.Process):
 
         self._save_checkpoint()
         set_process_state_change_timestamp(self.node)
-        super().on_entered(from_state)
 
     @override
     def on_terminated(self) -> None:

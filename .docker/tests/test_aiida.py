@@ -1,4 +1,5 @@
 import json
+import re
 
 import pytest
 from packaging.version import parse
@@ -32,8 +33,10 @@ def test_verdi_status(aiida_exec, container_user):
     assert '✔ broker:' in output
     assert 'Daemon is running' in output
 
-    # check that we have suppressed the warnings
-    assert 'Warning' not in output
+    # Check that we have suppressed the warnings coming from using an install from repo and newer RabbitMQ version.
+    # Make sure to match only lines that start with ``Warning:`` because otherwise deprecation warnings from other
+    # packages that we cannot control may fail the test.
+    assert not re.match('^Warning:.*', output)
 
 
 def test_computer_setup_success(aiida_exec, container_user):

@@ -103,6 +103,8 @@ def submit(
     :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
     """
+    from aiida.common.docs import URL_NO_BROKER
+
     inputs = prepare_inputs(inputs, **kwargs)
 
     # Submitting from within another process requires ``self.submit``` unless it is a work function, in which case the
@@ -117,7 +119,8 @@ def submit(
             'Cannot submit because the runner does not have a process controller, probably because the profile does '
             'not define a broker like RabbitMQ. If a RabbitMQ server is available, the profile can be configured to '
             'use it with `verdi profile configure-rabbitmq`. Otherwise, use :meth:`aiida.engine.launch.run` instead to '
-            'run the process in the local Python interpreter instead of submitting it to the daemon.'
+            'run the process in the local Python interpreter instead of submitting it to the daemon. '
+            f'See {URL_NO_BROKER} for more details.'
         )
 
     assert runner.persister is not None, 'runner does not have a persister'

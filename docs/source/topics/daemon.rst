@@ -41,7 +41,7 @@ It is also possible to explicitly specify a profile:
 
 .. code-block:: python
 
-    client = get_daemon_client(profile='some-profile')
+    client = get_daemon_client(profile_name='some-profile')
 
 The daemon can be started and stopped through the client:
 

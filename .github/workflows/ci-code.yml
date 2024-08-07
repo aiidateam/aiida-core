@@ -102,6 +102,7 @@ jobs:
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
+        AIIDA_PYTEST_SSH_KEY: ${{ github.workspace }}/.ssh/id_rsa_aiida_pytest
       # Python 3.12 has a performance regression when running with code coverage
       # so run code coverage only for python 3.9.
       run: pytest -v tests -m 'not nightly' ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
@@ -139,6 +140,7 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0
+        AIIDA_PYTEST_SSH_KEY: ${{ github.workspace }}/.ssh/id_rsa_aiida_pytest
       run: pytest -m 'presto'
 
 

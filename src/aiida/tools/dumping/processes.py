@@ -182,6 +182,13 @@ class ProcessDumper:
             Default: ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         """
 
+        if not process_node.is_finished:
+            self.incremental = True
+            # Could also raise an exception here
+            # raise NotImplementedError("Node isn't finished and incremental dumping not supported yet.")
+            LOGGER.report("Node isn't finished and incremental dumping not supported yet.")
+            return
+
         if output_path is None:
             output_path = self._generate_default_dump_path(process_node=process_node)
 

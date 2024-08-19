@@ -46,6 +46,7 @@ from aiida.manage.configuration.profile import Profile
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
+DEFAULT_COLLECTIONS_TO_DUMP = [Group]  # ? Might not be needed -> Main useful collection type is just Group
 PROFILE_DUMP_JSON_FILE = 'profile-dump-info.json'
 
 
@@ -59,12 +60,14 @@ class ProfileDumper:
         organize_by_groups: bool = True,
         dry_run: bool = False,
         process_dumper_kwargs: dict | None = None,
+        config: Path | dict | None = None
     ):
         self.profile = profile
         self.parent_path = Path(parent_path)
         self.full = full
         self.organize_by_groups = organize_by_groups
         self.dry_run = dry_run
+        self.config = config
 
         # ? These here relate to sorting by groups
         self.group_sub_path = Path()
@@ -79,12 +82,6 @@ class ProfileDumper:
             self.entities_to_dump = entities_to_dump
         else:
             self.entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
-
-        if full:
-            LOGGER.report('Full set to True. Will overwrite previous directories.')
-            _validate_make_dump_path(
-                overwrite=True, validate_path=self.parent_path, logger=LOGGER, safeguard_file=PROFILE_DUMP_JSON_FILE
-            )
 
         if process_dumper_kwargs is None:
             process_dumper_kwargs = {}
@@ -170,8 +167,14 @@ class ProfileDumper:
             json.dump(data, json_file, indent=4)
 
     def dump(self):
-        print('hello from dump')
+        LOGGER.report('hello from dump')
         print('self.entity_counter_dictionary', self.entity_counter_dictionary)
+
+        if self.full:
+            LOGGER.report('Full set to True. Will overwrite previous directories.')
+            _validate_make_dump_path(
+                overwrite=True, validate_path=self.parent_path, logger=LOGGER, safeguard_file=PROFILE_DUMP_JSON_FILE
+            )
 
         if self.organize_by_groups:
             LOGGER.report('Dumping sorted by groups.')
@@ -234,6 +237,8 @@ class ProfileDumper:
             workflows = self.get_nodes_from_db(aiida_node_type=WorkflowNode, with_group=self.current_group)
         else:
             workflows = self.get_nodes_from_db(aiida_node_type=WorkflowNode)
+
+        print('len(workflows)', len(workflows))
 
         for iworkflow_, workflow_ in enumerate(workflows):
             workflow = workflow_[0]

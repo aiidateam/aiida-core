@@ -10,31 +10,36 @@
 
 from __future__ import annotations
 
+import pathlib
 from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
 from typing import TYPE_CHECKING, Optional
 from uuid import uuid4
 
+from alembic.config import Config
 from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import insert
+from sqlalchemy import insert, inspect, select
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER
-from aiida.manage import Profile
+from aiida.manage.configuration.profile import Profile
 from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 from aiida.orm.implementation import BackendEntity
+from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.sqlite_zip import models, orm
-from aiida.storage.sqlite_zip.migrator import get_schema_version_head
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 
+from ..migrations import TEMPLATE_INVALID_SCHEMA_VERSION
 from ..psql_dos import PsqlDosBackend
-from ..psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDosMigrator
+from ..psql_dos.migrator import PsqlDosMigrator
 
 if TYPE_CHECKING:
+    from disk_objectstore import Container
+
     from aiida.orm.entities import EntityTypes
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
@@ -45,14 +50,25 @@ FILENAME_DATABASE = 'database.sqlite'
 FILENAME_CONTAINER = 'container'
 
 
-class SqliteDosMigrator(PsqlDosMigrator):
-    """Storage implementation using Sqlite database and disk-objectstore container.
+ALEMBIC_REL_PATH = 'migrations'
 
-    This storage backend is not recommended for use in production. The sqlite database is not the most performant and it
-    does not support all the ``QueryBuilder`` functionality that is supported by the ``core.psql_dos`` storage backend.
-    This storage is ideally suited for use cases that want to test or demo AiiDA as it requires no server but just a
-    folder on the local filesystem.
+REPOSITORY_UUID_KEY = 'repository|uuid'
+
+
+class SqliteDosMigrator(PsqlDosMigrator):
+    """Class for validating and migrating `sqlite_dos` storage instances.
+
+    .. important:: This class should only be accessed via the storage backend class (apart from for test purposes)
+
+    The class subclasses the ``PsqlDosMigrator``. It essentially changes two things in the implementation:
+
+    * Changes the path to the migration version files. This allows custom migrations to be written for SQLite-based
+      storage plugins, which is necessary since the PSQL-based migrations may use syntax that is not compatible.
+    * The logic for validating the storage is significantly simplified since the SQLite-based storage plugins do not
+      have to take legacy Django-based implementations into account.
     """
+
+    alembic_version_tbl_name = 'alembic_version'
 
     def __init__(self, profile: Profile) -> None:
         filepath_database = Path(profile.storage_config['filepath']) / FILENAME_DATABASE
@@ -90,6 +106,86 @@ class SqliteDosMigrator(PsqlDosMigrator):
         with self._migration_context() as context:
             context.stamp(context.script, 'main@head')  # type: ignore[arg-type]
             self.connection.commit()
+
+    def get_schema_version_profile(self) -> Optional[str]:  # type: ignore[override]
+        """Return the schema version of the backend instance for this profile.
+
+        Note, the version will be None if the database is empty or is a legacy django database.
+        """
+        with self._migration_context() as context:
+            return context.get_current_revision()
+
+    @staticmethod
+    def _alembic_config():
+        """Return an instance of an Alembic `Config`."""
+        dirpath = pathlib.Path(__file__).resolve().parent
+        config = Config()
+        config.set_main_option('script_location', str(dirpath / ALEMBIC_REL_PATH))
+        return config
+
+    def validate_storage(self) -> None:
+        """Validate that the storage for this profile
+
+        1. That the database schema is at the head version, i.e. is compatible with the code API.
+        2. That the repository ID is equal to the UUID set in the database
+
+        :raises: :class:`aiida.common.exceptions.UnreachableStorage` if the storage cannot be connected to
+        :raises: :class:`aiida.common.exceptions.IncompatibleStorageSchema`
+            if the storage is not compatible with the code API.
+        :raises: :class:`aiida.common.exceptions.CorruptStorage`
+            if the repository ID is not equal to the UUID set in thedatabase.
+        """
+        # check there is an alembic_version table from which to get the schema version
+        if not inspect(self.connection).has_table(self.alembic_version_tbl_name):
+            raise exceptions.IncompatibleStorageSchema('The database has no known version.')
+
+        # now we can check that the alembic version is the latest
+        schema_version_code = self.get_schema_version_head()
+        schema_version_database = self.get_schema_version_profile()
+        if schema_version_database != schema_version_code:
+            raise exceptions.IncompatibleStorageSchema(
+                TEMPLATE_INVALID_SCHEMA_VERSION.format(
+                    schema_version_database=schema_version_database,
+                    schema_version_code=schema_version_code,
+                    profile_name=self.profile.name,
+                )
+            )
+
+        # finally, we check that the ID set within the disk-objectstore is equal to the one saved in the database,
+        # i.e. this container is indeed the one associated with the db
+        repository_uuid = self.get_repository_uuid()
+        stmt = select(DbSetting.val).where(DbSetting.key == REPOSITORY_UUID_KEY)
+        database_repository_uuid = self.connection.execute(stmt).scalar_one_or_none()
+        if database_repository_uuid is None:
+            raise exceptions.CorruptStorage('The database has no repository UUID set.')
+        if database_repository_uuid != repository_uuid:
+            raise exceptions.CorruptStorage(
+                f'The database has a repository UUID configured to {database_repository_uuid} '
+                f"but the disk-objectstore's is {repository_uuid}."
+            )
+
+    @property
+    def is_database_initialised(self) -> bool:
+        """Return whether the database is initialised.
+
+        This is the case if it contains the table that holds the schema version for alembic.
+
+        :returns: ``True`` if the database is initialised, ``False`` otherwise.
+        """
+        return inspect(self.connection).has_table(self.alembic_version_tbl_name)
+
+    def migrate(self) -> None:
+        """Migrate the storage for this profile to the head version.
+
+        :raises: :class:`~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed.
+        :raises: :class:`~aiida.common.exceptions.StorageMigrationError` if the storage is not initialised.
+        """
+        if not inspect(self.connection).has_table(self.alembic_version_tbl_name):
+            raise exceptions.StorageMigrationError('storage is uninitialised, cannot migrate.')
+
+        MIGRATE_LOGGER.report('Migrating to the head of the main branch')
+        self.migrate_up('main@head')
+        self.connection.commit()
 
 
 class SqliteDosStorage(PsqlDosBackend):
@@ -178,12 +274,9 @@ class SqliteDosStorage(PsqlDosBackend):
         return DiskObjectStoreRepositoryBackend(container=self.get_container())
 
     @classmethod
-    def version_head(cls) -> str:
-        return get_schema_version_head()
-
-    @classmethod
-    def version_profile(cls, profile: Profile) -> str | None:
-        return get_schema_version_head()
+    def version_profile(cls, profile: Profile) -> Optional[str]:
+        with cls.migrator_context(profile) as migrator:
+            return migrator.get_schema_version_profile()
 
     def query(self) -> orm.SqliteQueryBuilder:
         return orm.SqliteQueryBuilder(self)

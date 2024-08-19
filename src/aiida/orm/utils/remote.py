@@ -8,12 +8,22 @@
 ###########################################################################
 """Utilities for operations on files on remote computers."""
 
+from __future__ import annotations
+
 import os
+import typing as t
 
 from aiida.orm.nodes.data.remote.base import RemoteData
 
+if t.TYPE_CHECKING:
+    from collections.abc import Sequence
 
-def clean_remote(transport, path):
+    from aiida import orm
+    from aiida.orm.implementation import StorageBackend
+    from aiida.transports import Transport
+
+
+def clean_remote(transport: Transport, path: str) -> None:
     """Recursively remove a remote folder, with the given absolute path, and all its contents. The path should be
     made accessible through the transport channel, which should already be open
 
@@ -39,15 +49,15 @@ def clean_remote(transport, path):
 
 
 def get_calcjob_remote_paths(
-    pks=None,
-    past_days=None,
-    older_than=None,
-    computers=None,
-    user=None,
-    backend=None,
-    exit_status=None,
-    only_not_cleaned=False,
-):
+    pks: list[int] | None = None,
+    past_days: int | None = None,
+    older_than: int | None = None,
+    computers: Sequence[orm.Computer] | None = None,
+    user: orm.User | None = None,
+    backend: StorageBackend | None = None,
+    exit_status: int | None = None,
+    only_not_cleaned: bool = False,
+) -> dict[str, list[RemoteData]] | None:
     """Return a mapping of computer uuids to a list of remote paths, for a given set of calcjobs. The set of
     calcjobs will be determined by a query with filters based on the pks, past_days, older_than,
     computers and user arguments.
@@ -67,7 +77,7 @@ def get_calcjob_remote_paths(
     from aiida.common import timezone
     from aiida.orm import CalcJobNode
 
-    filters_calc = {}
+    filters_calc: dict[str, t.Any] = {}
     filters_computer = {}
     filters_remote = {}
 
@@ -110,12 +120,12 @@ def get_calcjob_remote_paths(
         RemoteData, tag='remote', project=['*'], edge_filters={'label': 'remote_folder'}, filters=filters_remote
     )
     query.append(orm.Computer, with_node='calc', tag='computer', project=['uuid'], filters=filters_computer)
-    query.append(orm.User, with_node='calc', filters={'email': user.email})
+    query.append(orm.User, with_node='calc', filters={'email': user.email})  # type: ignore[union-attr]
 
     if query.count() == 0:
         return None
 
-    path_mapping = {}
+    path_mapping: dict[str, list[RemoteData]] = {}
 
     for remote_data, computer_uuid in query.iterall():
         path_mapping.setdefault(computer_uuid, []).append(remote_data)

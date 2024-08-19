@@ -9,6 +9,7 @@
 """Tests for the 'verdi computer' command."""
 
 import os
+import pathlib
 import tempfile
 import textwrap
 from collections import OrderedDict
@@ -515,69 +516,167 @@ class TestVerdiComputerConfigure:
         assert '--username=' in result.output
         assert result_cur.output == result.output
 
-    @pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
-    def test_computer_export_setup(self, tmp_path, sort):
-        """Test if 'verdi computer export setup' command works"""
-        self.comp_builder.label = 'test_computer_export_setup' + sort
+    @pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
+    def test_computer_export_setup(self, tmp_path, file_regression, sort_option):
+        """Test if `verdi computer export setup` command works"""
+        self.comp_builder.label = f'test_computer_export_setup{sort_option}'
+        # Label needs to be unique during parametrization
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
         exported_setup_filename = tmp_path / 'computer-setup.yml'
-        result = self.cli_runner(computer_export_setup, [sort, comp.label, exported_setup_filename])
-        assert result.exit_code == 0, 'Command should have run successfull.'
+
+        # Successfull write behavior
+        result = self.cli_runner(computer_export_setup, [comp.label, exported_setup_filename, sort_option])
         assert str(exported_setup_filename) in result.output, 'Filename should be in terminal output but was not found.'
         assert exported_setup_filename.exists(), f"'{exported_setup_filename}' was not created during export."
+
+        # file regresssion check
+        content = exported_setup_filename.read_text()
+        file_regression.check(content, extension='.yml')
+
         # verifying correctness by comparing internal and loaded yml object
         configure_setup_data = yaml.safe_load(exported_setup_filename.read_text())
         assert configure_setup_data == self.comp_builder.get_computer_spec(
             comp
         ), 'Internal computer configuration does not agree with exported one.'
 
-        # we create a directory so we raise an error when exporting with the same name
-        # to test the except part of the function
-        already_existing_filename = tmp_path / 'tmp_dir'
-        already_existing_filename.mkdir()
-        result = self.cli_runner(computer_export_setup, [sort, comp.label, already_existing_filename], raises=True)
-        assert result.exit_code == ExitCode.CRITICAL
+    def test_computer_export_setup_overwrite(self, tmp_path):
+        """Test if overwriting behavior of `verdi computer export setup` command works as expected"""
 
-    @pytest.mark.parametrize('sort', ['--sort', '--no-sort'])
-    def test_computer_export_config(self, tmp_path, sort):
+        self.comp_builder.label = 'test_computer_export_setup'
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        exported_setup_filename = tmp_path / 'computer-setup.yml'
+        # Check that export fails if the file already exists
+        exported_setup_filename.touch()
+        result = self.cli_runner(computer_export_setup, [comp.label, exported_setup_filename], raises=True)
+        # assert 'already exists, use `--overwrite`' in result.output
+
+        # Create new instance and check that change is reflected in new YAML file output
+        self.comp_builder.label = 'test_computer_export_setup_local'
+        self.comp_builder.transport = 'core.local'
+        comp_local = self.comp_builder.new()
+        comp_local.store()
+        result = self.cli_runner(computer_export_setup, [comp_local.label, exported_setup_filename, '--overwrite'])
+        content = exported_setup_filename.read_text()
+        assert 'core.local' in content
+
+        # we create a directory so we raise an error when exporting with the same name
+        already_existing_directory = tmp_path / 'tmp_dir'
+        already_existing_directory.mkdir()
+        result = self.cli_runner(computer_export_setup, [comp.label, already_existing_directory], raises=True)
+        assert f'A directory with the name `{already_existing_directory}` already exists.' in result.output
+
+    @pytest.mark.usefixtures('chdir_tmp_path')
+    def test_computer_export_setup_default_filename(self):
+        """Test that default filename is as expected when not specified for `verdi computer export setup`."""
+        comp_label = 'test_computer_export_setup_default'
+        self.comp_builder.label = comp_label
+        # Label needs to be unique during parametrization
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        exported_setup_filename = f'{comp_label}-setup.yml'
+
+        self.cli_runner(computer_export_setup, [comp.label])
+        assert pathlib.Path(exported_setup_filename).is_file()
+
+    def test_computer_export_config(self, tmp_path):
         """Test if 'verdi computer export config' command works"""
-        self.comp_builder.label = 'test_computer_export_config' + sort
+        self.comp_builder.label = 'test_computer_export_config'
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
         exported_config_filename = tmp_path / 'computer-configure.yml'
+
         # We have not configured the computer yet so it should exit with an critical error
         result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
         assert result.exit_code == ExitCode.CRITICAL
 
         comp.configure(safe_interval=0.0)
+        comp.configure(username='aiida')
+
+        # Write sorted output file
         result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename])
         assert 'Success' in result.output, 'Command should have run successfull.'
         assert (
             str(exported_config_filename) in result.output
         ), 'Filename should be in terminal output but was not found.'
         assert exported_config_filename.exists(), f"'{exported_config_filename}' was not created during export."
+
+        content = exported_config_filename.read_text()
+        assert content.startswith('safe_interval: 0.0')
+
         # verifying correctness by comparing internal and loaded yml object
         configure_config_data = yaml.safe_load(exported_config_filename.read_text())
         assert (
             configure_config_data == comp.get_configuration()
         ), 'Internal computer configuration does not agree with exported one.'
 
-        # we create a directory so we raise an error when exporting with the same name
-        # to test the except part of the function
-        already_existing_filename = tmp_path / 'tmp_dir'
-        already_existing_filename.mkdir()
-        result = self.cli_runner(computer_export_config, [comp.label, already_existing_filename], raises=True)
-        assert result.exit_code == ExitCode.CRITICAL
+        # Check that unsorted output file creation works as expected
+        exported_config_filename.unlink()
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename, '--no-sort'])
+        assert 'Success' in result.output, 'Command should have run successfull.'
+        assert (
+            str(exported_config_filename) in result.output
+        ), 'Filename should be in terminal output but was not found.'
+        assert exported_config_filename.exists(), f"'{exported_config_filename}' was not created during export."
 
-        result = self.cli_runner(
-            computer_export_config, ['--user', self.user.email, comp.label, already_existing_filename], raises=True
-        )
-        assert result.exit_code == ExitCode.CRITICAL
+        # Check contents
+        content = exported_config_filename.read_text()
+        assert 'username: aiida' in content, 'username not in output YAML'
+        assert 'safe_interval: 0.0' in content, 'safe_interval not in output YAML'
+
+    def test_computer_export_config_overwrite(self, tmp_path):
+        """Test if overwrite behavior of `verdi computer export config` command works"""
+        self.comp_builder.label = 'test_computer_export_config_overwrite'
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+        comp.configure(safe_interval=0.0)
+
+        exported_config_filename = tmp_path / 'computer-configure.yml'
+
+        # Create directory with the same name and check that command fails
+        exported_config_filename.mkdir()
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
+        assert f'A directory with the name `{exported_config_filename}` already exists' in result.output
+        exported_config_filename.rmdir()
+
+        # Check that export fails if the file already exists
+        exported_config_filename.touch()
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
+        assert 'already exists, use `--overwrite`' in result.output
+
+        # Create new instance and check that change is reflected in overwritten YAML output file
+        self.comp_builder.label = 'test_computer_export_config_0'
+        comp_mod = self.comp_builder.new()
+        comp_mod.store()
+        comp_mod.configure(safe_interval=1.0)
+        self.cli_runner(computer_export_config, [comp_mod.label, exported_config_filename, '--overwrite'])
+        content = exported_config_filename.read_text()
+        assert 'safe_interval: 1.0' in content
+
+    @pytest.mark.usefixtures('chdir_tmp_path')
+    def test_computer_export_config_default_filename(self):
+        """Test that default filename is as expected when not specified for `verdi computer export config`."""
+        comp_label = 'test_computer_export_config_default'
+        self.comp_builder.label = comp_label
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+        comp.configure(safe_interval=0.0)
+
+        exported_config_filename = f'{comp_label}-config.yml'
+
+        self.cli_runner(computer_export_config, [comp.label])
+        assert pathlib.Path(exported_config_filename).is_file()
 
 
 class TestVerdiComputerCommands:
@@ -872,3 +971,17 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
     result = run_cli_command(computer_test, [aiida_localhost.label], use_subprocess=False)
     assert 'Success: all 6 tests succeeded' in result.output
     assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output
+
+
+def test_computer_ssh_auto(run_cli_command, aiida_computer):
+    """Test setup of computer with ``core.ssh_auto`` entry point.
+
+    The configure step should only require the common shared options ``safe_interval`` and ``use_login_shell``.
+    """
+    computer = aiida_computer(transport_type='core.ssh_auto').store()
+    assert not computer.is_configured
+
+    # It is important that no other options (except for `--safe-interval`) have to be specified for this transport type.
+    options = ['core.ssh_auto', computer.uuid, '--non-interactive', '--safe-interval', '0']
+    run_cli_command(computer_configure, options, use_subprocess=False)
+    assert computer.is_configured

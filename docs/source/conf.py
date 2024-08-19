@@ -49,15 +49,9 @@ master_doc = 'index'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = [
-    'datatypes/**',
     'developer_guide/**',
-    'get_started/**',
-    'howto/installation_more/index.rst',
     'import_export/**',
     'internals/global_design.rst',
-    'internals/orm.rst',
-    'scheduler/index.rst',
-    'working_with_aiida/**',
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -103,7 +97,7 @@ todo_include_todos = False
 ipython_mplbackend = ''
 
 myst_enable_extensions = ['colon_fence', 'deflist']
-myst_heading_anchors = 3
+myst_heading_anchors = 4
 nb_execution_show_tb = 'READTHEDOCS' in os.environ
 nb_merge_streams = True
 nb_mime_priority_overrides = [
@@ -176,6 +170,9 @@ html_show_sphinx = False
 
 # If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
 html_show_copyright = False
+
+# This is to tell search engines to index only stable and latest version
+html_extra_path = ['robots.txt']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

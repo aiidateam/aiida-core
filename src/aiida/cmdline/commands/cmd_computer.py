@@ -20,6 +20,7 @@ from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
+from aiida.cmdline.utils.common import generate_validate_output_file
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
@@ -604,7 +605,7 @@ def computer_test(user, print_traceback, computer):
             message += '\n  Use the `--print-traceback` option to see the full traceback.'
 
         echo.echo(message)
-        echo.echo_warning(f'{1} out of {num_tests} tests failed')
+        echo.echo_warning('1 out of 1 tests failed')
 
 
 @verdi_computer.command('delete')
@@ -741,16 +742,11 @@ def computer_export():
 
 @computer_export.command('setup')
 @arguments.COMPUTER()
-@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path))
-@click.option(
-    '--sort/--no-sort',
-    is_flag=True,
-    default=True,
-    help='Sort the keys of the output YAML.',
-    show_default=True,
-)
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
+@options.OVERWRITE()
+@options.SORT()
 @with_dbenv()
-def computer_export_setup(computer, output_file, sort):
+def computer_export_setup(computer, output_file, overwrite, sort):
     """Export computer setup to a YAML file."""
     import yaml
 
@@ -769,6 +765,14 @@ def computer_export_setup(computer, output_file, sort):
         'prepend_text': computer.get_prepend_text(),
         'append_text': computer.get_append_text(),
     }
+
+    try:
+        output_file = generate_validate_output_file(
+            output_file=output_file, entity_label=computer.label, overwrite=overwrite, appendix='-setup'
+        )
+    except (FileExistsError, IsADirectoryError) as exception:
+        raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
+
     try:
         output_file.write_text(yaml.dump(computer_setup, sort_keys=sort), 'utf-8')
     except Exception as e:
@@ -783,19 +787,14 @@ def computer_export_setup(computer, output_file, sort):
 
 @computer_export.command('config')
 @arguments.COMPUTER()
-@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path))
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
 @options.USER(
     help='Email address of the AiiDA user from whom to export this computer (if different from default user).'
 )
-@click.option(
-    '--sort/--no-sort',
-    is_flag=True,
-    default=True,
-    help='Sort the keys of the output YAML.',
-    show_default=True,
-)
+@options.OVERWRITE()
+@options.SORT()
 @with_dbenv()
-def computer_export_config(computer, output_file, user, sort):
+def computer_export_config(computer, output_file, user, overwrite, sort):
     """Export computer transport configuration for a user to a YAML file."""
     import yaml
 
@@ -804,20 +803,29 @@ def computer_export_config(computer, output_file, user, sort):
             f'Computer<{computer.pk}> {computer.label} configuration cannot be exported,'
             ' because computer has not been configured yet.'
         )
+    else:
+        try:
+            output_file = generate_validate_output_file(
+                output_file=output_file, entity_label=computer.label, overwrite=overwrite, appendix='-config'
+            )
+        except (FileExistsError, IsADirectoryError) as exception:
+            raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
+
     try:
         computer_configuration = computer.get_configuration(user)
         output_file.write_text(yaml.dump(computer_configuration, sort_keys=sort), 'utf-8')
-    except Exception as e:
+
+    except Exception as exception:
         error_traceback = traceback.format_exc()
         echo.CMDLINE_LOGGER.debug(error_traceback)
         if user is None:
             echo.echo_critical(
-                f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}: {e!s}.'
+                f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}: {exception!s}.'  # noqa: E501
             )
         else:
             echo.echo_critical(
                 f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}'
-                f' and User<{user.pk}> {user.email}: {e!s}.'
+                f' and User<{user.pk}> {user.email}: {exception!s}.'
             )
     else:
-        echo.echo_success(f"Computer<{computer.pk}> {computer.label} configuration exported to file '{output_file}'.")
+        echo.echo_success(f'Computer<{computer.pk}> {computer.label} configuration exported to file `{output_file}`.')

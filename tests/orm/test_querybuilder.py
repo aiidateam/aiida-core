@@ -1537,6 +1537,7 @@ class TestConsistency:
         for pk, pk_clone in zip(pks, [e[1] for e in sorted(pks_clone)]):
             assert orm.load_node(pk) == orm.load_node(pk_clone)
 
+    @pytest.mark.requires_psql
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_iterall_persistence(self, manager):
         """Test that mutations made during ``QueryBuilder.iterall`` context are automatically committed and persisted.

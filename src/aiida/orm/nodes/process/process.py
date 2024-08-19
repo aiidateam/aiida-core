@@ -251,7 +251,16 @@ class ProcessNode(Sealable, Node):
         """
         from aiida.orm.utils.log import create_logger_adapter
 
-        return create_logger_adapter(self._logger, self)
+        # If the node is not yet stored, there is no point in creating the logger adapter yet, as the ``DbLogHandler``
+        # it configures, is only triggered for stored nodes, otherwise it cannot link the log message to the node.
+        if not self.pk:
+            return self._logger
+
+        # First time the property is called after the node is stored, create the logger adapter
+        if not hasattr(self, '_logger_adapter'):
+            self._logger_adapter = create_logger_adapter(self._logger, self)
+
+        return self._logger_adapter
 
     @classmethod
     def recursive_merge(cls, left: dict[Any, Any], right: dict[Any, Any]) -> None:

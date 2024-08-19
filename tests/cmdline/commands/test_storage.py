@@ -23,6 +23,26 @@ def tests_storage_version(run_cli_command):
     assert version in result.output
 
 
+@pytest.mark.parametrize(
+    'exception_cls, exit_code',
+    (
+        (exceptions.CorruptStorage, 3),
+        (exceptions.UnreachableStorage, 3),
+        (exceptions.IncompatibleStorageSchema, 4),
+    ),
+)
+def tests_storage_version_non_zero_exit_code(aiida_profile, run_cli_command, monkeypatch, exception_cls, exit_code):
+    """Test the ``verdi storage version`` command when it returns a non-zero exit code."""
+
+    def validate_storage(self):
+        raise exception_cls()
+
+    with monkeypatch.context() as context:
+        context.setattr(aiida_profile.storage_cls.migrator, 'validate_storage', validate_storage)
+        result = run_cli_command(cmd_storage.storage_version, raises=True)
+        assert result.exit_code == exit_code
+
+
 def tests_storage_info(aiida_localhost, run_cli_command):
     """Test the ``verdi storage info`` command with the ``--detailed`` option."""
     from aiida import orm
@@ -33,6 +53,15 @@ def tests_storage_info(aiida_localhost, run_cli_command):
 
     assert aiida_localhost.label in result.output
     assert node.node_type in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def tests_storage_migrate_no_broker(aiida_config_tmp, aiida_profile_factory, run_cli_command):
+    """Test the ``verdi storage migrate`` command for a profile without a broker."""
+    with aiida_profile_factory(aiida_config_tmp) as profile:
+        assert profile.process_control_backend is None
+        result = run_cli_command(cmd_storage.storage_migrate, parameters=['--force'], use_subprocess=False)
+        assert 'Migrating to the head of the main branch' in result.output
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')

@@ -89,8 +89,9 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
         ({'attributes.integer': {'in': [5, 6, 7]}}, 0),
         ({'attributes.integer': {'in': [1, 2, 3]}}, 1),
         # object operators
-        ({'attributes.dict': {'has_key': 'k'}}, 0),
-        ({'attributes.dict': {'has_key': 'key1'}}, 1),
+        # Reenable when ``has_key`` operator is implemented, see https://github.com/aiidateam/aiida-core/issues/6498
+        # ({'attributes.dict': {'has_key': 'k'}}, 0),
+        # ({'attributes.dict': {'has_key': 'key1'}}, 1),
     ),
     ids=json.dumps,
 )

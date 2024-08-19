@@ -510,7 +510,7 @@ class Waiting(plumpy.process_states.Waiting):
                 result = await self._launch_task(task_submit_job, node, transport_queue)
 
                 if isinstance(result, ExitCode):
-                    # The scheduler plugin returned an exit code from ``Scheduler.submit_from_script`` indicating the
+                    # The scheduler plugin returned an exit code from ``Scheduler.submit_job`` indicating the
                     # job submission failed due to a non-transient problem and the job should be terminated.
                     return self.create_state(ProcessState.RUNNING, self.process.terminate, result)
 

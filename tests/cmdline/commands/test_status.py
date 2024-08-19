@@ -68,6 +68,7 @@ def test_storage_unable_to_connect(run_cli_command):
         profile._attributes['storage']['config']['database_port'] = old_port
 
 
+@pytest.mark.requires_psql
 def test_storage_incompatible(run_cli_command, monkeypatch):
     """Test `verdi status` when storage schema version is incompatible with that of the code."""
 
@@ -83,6 +84,7 @@ def test_storage_incompatible(run_cli_command, monkeypatch):
     assert result.exit_code is ExitCode.CRITICAL
 
 
+@pytest.mark.requires_psql
 def test_storage_corrupted(run_cli_command, monkeypatch):
     """Test `verdi status` when the storage is found to be corrupt (e.g. non-matching repository UUIDs)."""
 

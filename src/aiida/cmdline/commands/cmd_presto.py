@@ -25,9 +25,17 @@ DEFAULT_PROFILE_NAME_PREFIX: str = 'presto'
 
 
 def get_default_presto_profile_name():
+    from aiida.common.exceptions import ConfigurationError
     from aiida.manage import get_config
 
-    profile_names = get_config().profile_names
+    try:
+        profile_names = get_config().profile_names
+    except ConfigurationError:
+        # This can happen when tab-completing in an environment that did not create the configuration folder yet.
+        # It would have been possible to just call ``get_config(create=True)`` to create the config directory, but this
+        # should not be done during tab-completion just to generate a default value.
+        return DEFAULT_PROFILE_NAME_PREFIX
+
     indices = []
 
     for profile_name in profile_names:
@@ -50,7 +58,13 @@ def detect_postgres_config(
     postgres_password: str,
     non_interactive: bool,
 ) -> dict[str, t.Any]:
-    """."""
+    """Attempt to connect to the given PostgreSQL server and create a new user and database.
+
+    :raises ConnectionError: If no connection could be established to the PostgreSQL server or a user and database
+        could not be created.
+    :returns: The connection configuration for the newly created user and database as can be used directly for the
+        storage configuration of the ``core.psql_dos`` storage plugin.
+    """
     import secrets
 
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
@@ -65,7 +79,7 @@ def detect_postgres_config(
     postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo)
 
     if not postgres.is_connected:
-        echo.echo_critical(f'Failed to connect to the PostgreSQL server using parameters: {dbinfo}')
+        raise ConnectionError(f'Failed to connect to the PostgreSQL server using parameters: {dbinfo}')
 
     database_name = f'aiida-{profile_name}'
     database_username = f'aiida-{profile_name}'
@@ -76,7 +90,7 @@ def detect_postgres_config(
             dbname=database_name, dbuser=database_username, dbpass=database_password
         )
     except Exception as exception:
-        echo.echo_critical(f'Unable to automatically create the PostgreSQL user and database: {exception}')
+        raise ConnectionError(f'Unable to automatically create the PostgreSQL user and database: {exception}')
 
     return {
         'database_hostname': postgres_hostname,
@@ -90,6 +104,7 @@ def detect_postgres_config(
 
 @verdi.command('presto')
 @click.option(
+    '-p',
     '--profile-name',
     default=lambda: get_default_presto_profile_name(),
     show_default=True,
@@ -163,9 +178,12 @@ def verdi_presto(
     created profile uses the new PostgreSQL database instead of SQLite.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
-    from aiida.common import exceptions
+    from aiida.common import docs, exceptions
     from aiida.manage.configuration import create_profile, load_profile
     from aiida.orm import Computer
+
+    if profile_name in ctx.obj.config.profile_names:
+        raise click.BadParameter(f'The profile `{profile_name}` already exists.', param_hint='--profile-name')
 
     postgres_config_kwargs = {
         'profile_name': profile_name,
@@ -175,23 +193,34 @@ def verdi_presto(
         'postgres_password': postgres_password,
         'non_interactive': non_interactive,
     }
-    storage_config: dict[str, t.Any] = detect_postgres_config(**postgres_config_kwargs) if use_postgres else {}
-    storage_backend = 'core.psql_dos' if storage_config else 'core.sqlite_dos'
+
+    storage_backend: str = 'core.sqlite_dos'
+    storage_config: dict[str, t.Any] = {}
 
     if use_postgres:
-        echo.echo_report(
-            '`--use-postgres` enabled and database creation successful: configuring the profile to use PostgreSQL.'
-        )
+        try:
+            storage_config = detect_postgres_config(**postgres_config_kwargs)
+        except ConnectionError as exception:
+            echo.echo_critical(str(exception))
+        else:
+            echo.echo_report(
+                '`--use-postgres` enabled and database creation successful: configuring the profile to use PostgreSQL.'
+            )
+            storage_backend = 'core.psql_dos'
     else:
         echo.echo_report('Option `--use-postgres` not enabled: configuring the profile to use SQLite.')
 
-    broker_config = detect_rabbitmq_config()
-    broker_backend = 'core.rabbitmq' if broker_config is not None else None
+    broker_backend = None
+    broker_config = None
 
-    if broker_config is None:
-        echo.echo_report('RabbitMQ server not found: configuring the profile without a broker.')
+    try:
+        broker_config = detect_rabbitmq_config()
+    except ConnectionError as exception:
+        echo.echo_report(f'RabbitMQ server not found ({exception}): configuring the profile without a broker.')
+        echo.echo_report(f'See {docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
     else:
         echo.echo_report('RabbitMQ server detected: configuring the profile with a broker.')
+        broker_backend = 'core.rabbitmq'
 
     try:
         profile = create_profile(

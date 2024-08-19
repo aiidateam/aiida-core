@@ -59,6 +59,12 @@ jobs:
         vars=$(cat build.json | jq -c '[.variable | to_entries[] | {"key": .key, "value": .value.default}] | from_entries')
         echo "vars=$vars" | tee -a "${GITHUB_OUTPUT}"
 
+    - id: get-version
+      if: ${{ github.ref_type == 'tag'  && startsWith(github.ref_name, 'v') }}
+      run: |
+        tag="${{ github.ref_name }}"
+        echo "AIIDA_VERSION=${tag#v}" >> $GITHUB_OUTPUT
+
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
@@ -69,7 +75,7 @@ jobs:
           type=ref,event=pr
           type=ref,event=branch,enable=${{ github.ref_name != 'main' }}
           type=edge,enable={{is_default_branch}}
-          type=raw,value=aiida-${{ env.AIIDA_VERSION }},enable=${{ github.ref_type == 'tag'  && startsWith(github.ref_name, 'v') }}
+          type=raw,value=aiida-${{ steps.get-version.outputs.AIIDA_VERSION }},enable=${{ github.ref_type == 'tag'  && startsWith(github.ref_name, 'v') }}
           type=raw,value=python-${{ env.PYTHON_VERSION }},enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
           type=raw,value=postgresql-${{ env.PGSQL_VERSION }},enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
           type=match,pattern=v(\d{4}\.\d{4}(-.+)?),group=1

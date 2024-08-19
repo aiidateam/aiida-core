@@ -422,6 +422,7 @@ class TestWorkchain:
             orm.QueryBuilder().append(orm.ProcessNode, tag='node').order_by({'node': {'id': 'desc'}}).first(flat=True)
         )
         assert node.is_excepted
+        assert node.is_sealed
         assert 'ValueError: Workflow<IllegalWorkChain> tried returning an unstored `Data` node.' in node.exception
 
     def test_same_input_node(self):

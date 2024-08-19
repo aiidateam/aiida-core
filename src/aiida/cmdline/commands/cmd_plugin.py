@@ -47,14 +47,13 @@ def plugin_list(entry_point_group, entry_point):
         except EntryPointError as exception:
             echo.echo_critical(str(exception))
         else:
-            try:
-                if (inspect.isclass(plugin) and issubclass(plugin, Process)) or (
-                    hasattr(plugin, 'is_process_function') and plugin.is_process_function
-                ):
-                    print_process_info(plugin)
-                else:
-                    echo.echo(str(plugin.get_description()))
-            except AttributeError:
+            if (inspect.isclass(plugin) and issubclass(plugin, Process)) or (
+                hasattr(plugin, 'is_process_function') and plugin.is_process_function
+            ):
+                print_process_info(plugin)
+            elif plugin.__doc__:
+                echo.echo(plugin.__doc__)
+            else:
                 echo.echo_error(f'No description available for {entry_point}')
     else:
         entry_points = get_entry_point_names(entry_point_group)

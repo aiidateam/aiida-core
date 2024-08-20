@@ -33,7 +33,7 @@ dependencies = [
   'kiwipy[rmq]~=0.8.4',
   'importlib-metadata~=6.0',
   'numpy~=1.21',
-  'paramiko~=2.7,>=2.7.2',
+  'paramiko~=3.0',
   'plumpy~=0.22.3',
   'pgsu~=0.3.0',
   'psutil~=5.6',

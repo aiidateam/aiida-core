@@ -41,7 +41,8 @@ from aiida.manage.configuration.profile import Profile
 from aiida.orm import CalculationNode, Code, Computer, Group, QueryBuilder, StructureData, User, WorkflowNode
 from aiida.orm.groups import ImportGroup
 from aiida.tools.dumping.processes import ProcessDumper
-from aiida.tools.dumping.utils import _validate_make_dump_path
+from aiida.tools.dumping.utils import _validate_make_dump_path, get_nodes_from_db
+
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
@@ -111,22 +112,6 @@ class ProfileDumper:
             if user_input != 'y':
                 sys.exit()
 
-    @staticmethod
-    def get_nodes_from_db(aiida_node_type, with_group: str | None = None, flatten=False):
-        qb = QueryBuilder()
-
-        # ? Computers cannot be associated via `with_group`
-        if with_group is not None and aiida_node_type is not Computer and aiida_node_type is not Code:
-            qb.append(Group, filters={'label': with_group.label}, tag='with_group')
-            qb.append(aiida_node_type, with_group='with_group')
-        else:
-            qb.append(aiida_node_type)
-
-        return_iterable = qb.iterall() if qb.count() > 10 ^ 3 else qb.all()
-        if flatten:
-            return_iterable = [_[0] for _ in return_iterable]
-
-        return return_iterable
 
     def update_info_file(self):
         import json
@@ -194,7 +179,6 @@ class ProfileDumper:
     def resolve_dump_entities(self):
         if WorkflowNode in self.entities_to_dump:
             self.dump_workflows()
-
         if StructureData in self.entities_to_dump:
             self.dump_structures()
         if CalculationNode in self.entities_to_dump:
@@ -208,7 +192,7 @@ class ProfileDumper:
             self.dump_profile_info()
 
     def dump_structures(self, format: str = 'cif'):
-        structure_datas = self.get_nodes_from_db(aiida_node_type=StructureData, with_group=self.current_group)
+        structure_datas = get_nodes_from_db(aiida_node_type=StructureData, with_group=self.current_group)
 
         for structure_data_ in structure_datas:
             # QB returns list...
@@ -233,11 +217,9 @@ class ProfileDumper:
         # ? Dump only top-level workchains, as that includes sub-workchains already
 
         if self.organize_by_groups:
-            workflows = self.get_nodes_from_db(aiida_node_type=WorkflowNode, with_group=self.current_group)
+            workflows = get_nodes_from_db(aiida_node_type=WorkflowNode, with_group=self.current_group)
         else:
-            workflows = self.get_nodes_from_db(aiida_node_type=WorkflowNode)
-
-        print('len(workflows)', len(workflows))
+            workflows = get_nodes_from_db(aiida_node_type=WorkflowNode)
 
         for iworkflow_, workflow_ in enumerate(workflows):
             workflow = workflow_[0]
@@ -250,7 +232,6 @@ class ProfileDumper:
             workflow_dump_path = (
                 self.parent_path
                 / self.group_sub_path
-                / 'workflows'
                 / ProcessDumper._generate_default_dump_path(process_node=workflow)
             )
 
@@ -272,7 +253,7 @@ class ProfileDumper:
         pass
 
     def dump_code_computers(self):
-        computers = self.get_nodes_from_db(aiida_node_type=Computer, flatten=True)
+        computers = get_nodes_from_db(aiida_node_type=Computer, flatten=True)
 
         computer_parent_path = self.parent_path / Path('computers')
         computer_parent_path.mkdir(parents=True, exist_ok=True)
@@ -310,7 +291,7 @@ class ProfileDumper:
                 if not computer_config_file.is_file():
                     computer_config_file.write_text(yaml.dump(computer_configuration, sort_keys=False), 'utf-8')
 
-        codes = self.get_nodes_from_db(aiida_node_type=Code, flatten=True)
+        codes = get_nodes_from_db(aiida_node_type=Code, flatten=True)
 
         code_parent_path = self.parent_path / Path('codes')
         code_parent_path.mkdir(parents=True, exist_ok=True)

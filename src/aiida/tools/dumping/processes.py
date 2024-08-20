@@ -9,6 +9,16 @@
 """Functionality for dumping of ProcessNodes."""
 
 # ? Possibly add dry_run option here
+# TODO: Add symlinking feature
+# -> This would be for calculations which are subprocesses of the workflow
+# -> But also PPs
+# -> Could define a symlink-mapping based on a dict in the form:
+# {
+    # CalculationNode: <Path-to-calculations>,
+    # PPs: <Path-to-PPs>
+# }
+# Based on this, I could check the linked directory for the entity based on its UUID
+# TODO: Or, could add a `programmatic` option that doesn't create the README.md, and does a few other things, as well
 
 from __future__ import annotations
 

@@ -1,5 +1,6 @@
 from logging import Logger
 from pathlib import Path
+from aiida.orm import QueryBuilder, Group, Computer, Code
 
 
 def _validate_make_dump_path(
@@ -44,3 +45,20 @@ def _validate_make_dump_path(
     validate_path.mkdir(exist_ok=True, parents=True)
 
     return validate_path.resolve()
+
+def get_nodes_from_db(aiida_node_type, with_group: str | None = None, flatten=False):
+    qb = QueryBuilder()
+
+    # ? Computers cannot be associated via `with_group`
+    if with_group is not None and aiida_node_type is not Computer and aiida_node_type is not Code:
+        qb.append(Group, filters={'label': with_group.label}, tag='with_group')
+        qb.append(aiida_node_type, with_group='with_group')
+    else:
+        qb.append(aiida_node_type)
+
+    return_iterable = qb.iterall() if qb.count() > 10 ^ 3 else qb.all()
+
+    if flatten:
+        return_iterable = [_[0] for _ in return_iterable]
+
+    return return_iterable

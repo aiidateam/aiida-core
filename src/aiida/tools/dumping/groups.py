@@ -1,17 +1,97 @@
 # Could also be a more general CollectionDumper class, actually
+
+import contextlib
 from aiida.common import timezone
+from aiida.orm import CalculationNode, Code, Computer, Group, QueryBuilder, StructureData, User, WorkflowNode
+from typing import List
+from aiida.tools.dumping.utils import _validate_make_dump_path, get_nodes_from_db
+from pathlib import Path
+from aiida.tools.dumping.processes import ProcessDumper
+
+# DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
+DEFAULT_ENTITIES_TO_DUMP = [CalculationNode, WorkflowNode]  # , StructureData, User, Code, Computer]
+
 # from aiida.common.utils import str_timedelta
 
+
 class GroupDumper:
-    def __init__(self) -> None:
-        self.timestamp = None
+    def __init__(self, entities_to_dump: List | None = None) -> None:
+        if entities_to_dump is None:
+            self.entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
 
-    def dump(self, groups):
-        self.timestamp = timezone.now()
-        for group in groups:
-            self._dump_group(group=group)
+        from aiida.manage import get_manager
+
+        self.profile = get_manager().get_profile()
+
+    def dump(self, group):
+        self.last_dumped = timezone.now()
+
+        try:
+            group_name = group.label
+        except AttributeError:
+            group_name = group
+
+        self.parent_path = Path(f'group-dump_{self.profile.name}_{group_name}_{self.last_dumped.strftime("%Y-%m-%d")}')
+        self.hidden_aiida_path = self.parent_path / '.aiida-dump'
+
+        # First dump empty in default, hidden AiiDA dumping directory
+        # Then create the symlinking
+
+        print('GROUP', group)
+        for entity in self.entities_to_dump:
+            group_nodes = get_nodes_from_db(aiida_node_type=entity, with_group=group, flatten=True)
+
+            print('_DUMP_TO_HIDDEN(SELF, AIIDA_ENTITY, AIIDA_NODES)')
+            print(type(entity), entity, len(group_nodes))
+
+            # print("ABC", aiida_entity==CalculationNode)
+            if entity==CalculationNode:
+                print('SELF._DUMP_CALCULATIONS_HIDDEN', len(group_nodes))
+                self._dump_calculations_hidden(calculations=group_nodes)
+
+            if entity==WorkflowNode:
+                print('SELF._DUMP_WORKFLOWS_HIDDEN', len(group_nodes))
+                self._dump_workflows_hidden(workflows=group_nodes)
+
+    def _dump_calculations_hidden(self, calculations):
+        # ? Dump only top-level workchains, as that includes sub-workchains already
+
+        for calculation in calculations:
+
+            # ? Hardcode overwrite=True for now
+            calculation_dumper = ProcessDumper(overwrite=True)
+
+            calculation_dump_path = self.hidden_aiida_path / 'calculations' / calculation.uuid
+            print(calculation_dump_path)
+
+            # if not self.dry_run:
+            with contextlib.suppress(FileExistsError):
+                calculation_dumper.dump(process_node=calculation, output_path=calculation_dump_path)
 
 
-    def _dump_group(self, group):
-        pass
+            # # To make development quicker
+            # if iworkflow_ > 1:
+            #     break
 
+    def _dump_workflows_hidden(self, workflows, only_parents: bool = True):
+        # ? Dump only top-level workchains, as that includes sub-workchains already
+
+        for iworkflow_, workflow in enumerate(workflows):
+            # if only_parents and workflow.caller is not None:
+            #     continue
+
+            # ? Hardcode overwrite=True for now
+            workflow_dumper = ProcessDumper(overwrite=True)
+
+            workflow_dump_path = self.hidden_aiida_path / 'workflows' / workflow.uuid
+            print(workflow_dump_path)
+
+            # if not self.dry_run:
+            with contextlib.suppress(FileExistsError):
+                workflow_dumper.dump(process_node=workflow, output_path=workflow_dump_path)
+
+            # self.entity_counter_dictionary[WorkflowNode.__name__] += 1
+
+            # # To make development quicker
+            # if iworkflow_ > 1:
+            #     break

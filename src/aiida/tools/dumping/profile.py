@@ -33,16 +33,15 @@ import contextlib
 import logging
 import sys
 from pathlib import Path
-from pprint import pprint
 from typing import List
 
 import yaml
 
+from aiida.manage.configuration.profile import Profile
 from aiida.orm import CalculationNode, Code, Computer, Group, QueryBuilder, StructureData, User, WorkflowNode
 from aiida.orm.groups import ImportGroup
 from aiida.tools.dumping.processes import ProcessDumper
 from aiida.tools.dumping.utils import _validate_make_dump_path
-from aiida.manage.configuration.profile import Profile
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
@@ -60,7 +59,7 @@ class ProfileDumper:
         organize_by_groups: bool = True,
         dry_run: bool = False,
         process_dumper_kwargs: dict | None = None,
-        config: Path | dict | None = None
+        config: Path | dict | None = None,
     ):
         self.profile = profile
         self.parent_path = Path(parent_path)
@@ -133,6 +132,7 @@ class ProfileDumper:
         import json
         import os
         from datetime import datetime
+
         from aiida.manage.configuration import get_config
 
         # Get the current timestamp
@@ -205,7 +205,6 @@ class ProfileDumper:
             self.dump_user_info()
         # ? Possibly do this by default?
         if Profile in self.entities_to_dump:
-
             self.dump_profile_info()
 
     def dump_structures(self, format: str = 'cif'):

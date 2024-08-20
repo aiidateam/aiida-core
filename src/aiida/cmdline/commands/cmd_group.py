@@ -507,3 +507,34 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
             if no_virtual and child.is_virtual:
                 continue
             echo.echo(child.path, bold=not child.is_virtual)
+
+@verdi_group.command('dump')
+@arguments.GROUPS('groups')
+# @with_dbenv()
+# TODO: Eventually use regex instead of startswith, endswith, and contains?
+# @click.option(
+#     '-s',
+#     '--startswith',
+#     type=click.STRING,
+#     default=None,
+#     help='Add a filter to show only groups for which the label begins with STRING.',
+# )
+# @click.option(
+#     '-e',
+#     '--endswith',
+#     type=click.STRING,
+#     default=None,
+#     help='Add a filter to show only groups for which the label ends with STRING.',
+# )
+# @click.option(
+#     '-c',
+#     '--contains',
+#     type=click.STRING,
+#     default=None,
+#     help='Add a filter to show only groups for which the label contains STRING.',
+# )
+def group_dump(groups, ):
+
+    print(groups)
+
+    pass

@@ -14,14 +14,15 @@
 # -> But also PPs
 # -> Could define a symlink-mapping based on a dict in the form:
 # {
-    # CalculationNode: <Path-to-calculations>,
-    # PPs: <Path-to-PPs>
+# CalculationNode: <Path-to-calculations>,
+# PPs: <Path-to-PPs>
 # }
 # Based on this, I could check the linked directory for the entity based on its UUID
 # TODO: Or, could add a `programmatic` option that doesn't create the README.md, and does a few other things, as well
 
 from __future__ import annotations
 
+import os
 import contextlib
 import logging
 from pathlib import Path
@@ -53,15 +54,11 @@ class ProcessDumper:
         self,
         include_inputs: bool = True,
         include_outputs: bool = False,
-        include_attributes: bool = True,
-        include_extras: bool = True,
         overwrite: bool = False,
         flat: bool = False,
     ) -> None:
         self.include_inputs = include_inputs
         self.include_outputs = include_outputs
-        self.include_attributes = include_attributes
-        self.include_extras = include_extras
         self.overwrite = overwrite
         self.flat = flat
 
@@ -180,6 +177,8 @@ class ProcessDumper:
         process_node: ProcessNode,
         output_path: Path | None,
         io_dump_paths: List[str | Path] | None = None,
+        *args,
+        **kwargs
     ) -> Path:
         """Dumps all data involved in a `ProcessNode`, including its outgoing links.
 
@@ -198,6 +197,13 @@ class ProcessDumper:
             # raise NotImplementedError("Node isn't finished and incremental dumping not supported yet.")
             LOGGER.report("Node isn't finished and incremental dumping not supported yet.")
             return
+
+        # This here is mainly for `include_attributes` and `include_extras`.
+        # I don't want to include them in the general class `__init__`, as they don't really fit there.
+        # But the `_dump_node_yaml` function is private, so it's never called outside by the user.
+        # Setting the class attributes here dynamically is probably not a good solution, but it works for now.
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
         if output_path is None:
             output_path = self._generate_default_dump_path(process_node=process_node)
@@ -223,7 +229,12 @@ class ProcessDumper:
         return output_path
 
     def _dump_workflow(
-        self, workflow_node: WorkflowNode, output_path: Path, io_dump_paths: List[str | Path] | None = None
+        self,
+        workflow_node: WorkflowNode,
+        output_path: Path,
+        io_dump_paths: List[str | Path] | None = None,
+        link_calculation: bool = False,
+        calculation_dir: str | None = None,
     ) -> None:
         """Recursive function to traverse a `WorkflowNode` and dump its `CalculationNode` s.
 
@@ -249,15 +260,27 @@ class ProcessDumper:
                     workflow_node=child_node,
                     output_path=child_output_path,
                     io_dump_paths=io_dump_paths,
+                    # TODO: Always need to pass this stuff through due to the recursive nature of the function call...
+                    link_calculation=link_calculation,
+                    calculation_dir=calculation_dir
                 )
 
             # Once a `CalculationNode` as child reached, dump it
             elif isinstance(child_node, CalculationNode):
-                self._dump_calculation(
-                    calculation_node=child_node,
-                    output_path=child_output_path,
-                    io_dump_paths=io_dump_paths,
-                )
+                if not link_calculation:
+                    self._dump_calculation(
+                        calculation_node=child_node,
+                        output_path=child_output_path,
+                        io_dump_paths=io_dump_paths,
+                    )
+                else:
+                    print('OUTPUT_PATH', output_path)
+                    print('CHILD_OUTPUT_PATH', child_output_path)
+                    print(child_node.uuid)
+                    os.symlink(calculation_dir / child_node.uuid, child_output_path)
+
+
+
 
     def _dump_calculation(
         self,
@@ -362,6 +385,8 @@ class ProcessDumper:
         process_node: ProcessNode,
         output_path: Path,
         output_filename: str = '.aiida_node_metadata.yaml',
+        include_attributes: bool = True,
+        include_extras: bool = True
     ) -> None:
         """Dump the selected `ProcessNode` properties, attributes, and extras to a YAML file.
 
@@ -405,11 +430,11 @@ class ProcessDumper:
             }
             node_dict['Computer data'] = computer_dict
         # Add node attributes
-        if self.include_attributes:
+        if include_attributes:
             node_attributes = process_node.base.attributes.all
             node_dict['Node attributes'] = node_attributes
 
-        if self.include_extras:
+        if include_extras:
             if node_extras := process_node.base.extras.all:
                 node_dict['Node extras'] = node_extras
 

@@ -509,7 +509,7 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
             echo.echo(child.path, bold=not child.is_virtual)
 
 @verdi_group.command('dump')
-@arguments.GROUPS('groups')
+@arguments.GROUP()
 # @with_dbenv()
 # TODO: Eventually use regex instead of startswith, endswith, and contains?
 # @click.option(
@@ -533,12 +533,11 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
 #     default=None,
 #     help='Add a filter to show only groups for which the label contains STRING.',
 # )
-def group_dump(groups, ):
+def group_dump(group):
 
-    print(groups)
-    from aiida.tools.dumping.groups import GroupDumper
+    print(group)
+    from aiida.tools.dumping.collection import GroupDumper
 
-    for group in groups:
-        group_dumper = GroupDumper()
-        group_dumper.dump(group)
+    group_dumper = GroupDumper()
+    group_dumper.dump(group)
 

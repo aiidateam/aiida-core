@@ -27,6 +27,8 @@
 # ? Also dump user-info
 # ? Check for safeguard file `profile-dump-info.json` when using `full` option similar to process dumping
 
+# ? Here just call the GroupDumper
+
 from __future__ import annotations
 
 import contextlib
@@ -40,7 +42,7 @@ import yaml
 from aiida.manage.configuration.profile import Profile
 from aiida.orm import CalculationNode, Code, Computer, Group, QueryBuilder, StructureData, User, WorkflowNode
 from aiida.orm.groups import ImportGroup
-from aiida.tools.dumping.processes import ProcessDumper
+from aiida.tools.dumping.process import ProcessDumper
 from aiida.tools.dumping.utils import _validate_make_dump_path, get_nodes_from_db
 
 
@@ -197,6 +199,7 @@ class ProfileDumper:
         for structure_data_ in structure_datas:
             # QB returns list...
             structure_data = structure_data_[0]
+
             structures_path = Path(self.parent_path / self.group_sub_path / 'structures')
 
             structures_path.mkdir(exist_ok=True, parents=True)

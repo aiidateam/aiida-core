@@ -609,19 +609,22 @@ def process_dump(
     node data for further inspection.
     """
 
-    from aiida.tools.dumping.processes import ProcessDumper
+    from aiida.tools.dumping.process import ProcessDumper
 
     process_dumper = ProcessDumper(
         include_inputs=include_inputs,
         include_outputs=include_outputs,
-        include_attributes=include_attributes,
-        include_extras=include_extras,
         overwrite=overwrite,
         flat=flat,
     )
 
     try:
-        dump_path = process_dumper.dump(process_node=process, output_path=path)
+        dump_path = process_dumper.dump(
+            process_node=process,
+            output_path=path,
+            include_attributes=include_attributes,
+            include_extras=include_extras
+        )
     except FileExistsError:
         echo.echo_critical(
             'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'

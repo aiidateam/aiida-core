@@ -8,4 +8,4 @@
 ###########################################################################
 """Modules related to the dumping of AiiDA data."""
 
-__all__ = ('processes',)
+__all__ = ('process',)

@@ -286,13 +286,13 @@ def profile_dump(profile, path, full):
     if profile is None:
         echo.echo_critical('No profile selected to dump')
 
-    echo.echo_report(f'Dumping of profile data: {profile.name} under path `{path}`')
+    echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`")
 
-    profiledumper = ProfileDumper(
+    profile_dumper = ProfileDumper(
         profile='verdi-profile-dump',
         full=full,
         parent_path=path,
         organize_by_groups=True,
     )
-    profiledumper.dump()
-    echo.echo_success(f'Data of profile {profile.name} mirrored to disk.')
+    profile_dumper.dump()
+    echo.echo_success(f'Data of profile `{profile.name}` mirrored to disk.')

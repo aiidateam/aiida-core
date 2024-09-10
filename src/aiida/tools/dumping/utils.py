@@ -46,7 +46,7 @@ def _validate_make_dump_path(
 
     return validate_path.resolve()
 
-def get_nodes_from_db(aiida_node_type, with_group: str | None = None, flatten=False):
+def get_nodes_from_db(aiida_node_type, with_group: str | None = None, flat=False):
     qb = QueryBuilder()
 
     # ? Computers cannot be associated via `with_group`
@@ -58,7 +58,8 @@ def get_nodes_from_db(aiida_node_type, with_group: str | None = None, flatten=Fa
 
     return_iterable = qb.iterall() if qb.count() > 10 ^ 3 else qb.all()
 
-    if flatten:
+    # Manual flattening as `iterall` doesn't have `flat` option unlike `all`
+    if flat:
         return_iterable = [_[0] for _ in return_iterable]
 
     return return_iterable

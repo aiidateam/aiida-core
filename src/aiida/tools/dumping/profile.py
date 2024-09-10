@@ -43,10 +43,12 @@ from aiida.manage.configuration.profile import Profile
 from aiida.orm import CalculationNode, Code, Computer, Group, QueryBuilder, StructureData, User, WorkflowNode
 from aiida.orm.groups import ImportGroup
 from aiida.tools.dumping.process import ProcessDumper
+from aiida.tools.dumping.group import GroupDumper
+
 from aiida.tools.dumping.utils import _validate_make_dump_path, get_nodes_from_db
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
 DEFAULT_COLLECTIONS_TO_DUMP = [Group]  # ? Might not be needed -> Main useful collection type is just Group
 PROFILE_DUMP_JSON_FILE = 'profile-dump-info.json'
@@ -70,15 +72,6 @@ class ProfileDumper:
         self.organize_by_groups = organize_by_groups
         self.dry_run = dry_run
         self.config = config
-
-        # ? These here relate to sorting by groups
-        self.group_sub_path = Path()
-        self.current_group = None
-
-        if self.organize_by_groups:
-            profile_groups = QueryBuilder().append(Group).all(flat=True)
-            profile_groups = [group for group in profile_groups if not isinstance(group, ImportGroup)]
-            self.profile_groups = profile_groups
 
         if entities_to_dump is not None:
             self.entities_to_dump = entities_to_dump
@@ -113,7 +106,6 @@ class ProfileDumper:
 
             if user_input != 'y':
                 sys.exit()
-
 
     def update_info_file(self):
         import json
@@ -154,29 +146,55 @@ class ProfileDumper:
             json.dump(data, json_file, indent=4)
 
     def dump(self):
-        LOGGER.report('hello from dump')
-        print('self.entity_counter_dictionary', self.entity_counter_dictionary)
-
         if self.full:
-            LOGGER.report('Full set to True. Will overwrite previous directories.')
+            logger.report('Full set to True. Will overwrite previous directories.')
             _validate_make_dump_path(
-                overwrite=True, validate_path=self.parent_path, logger=LOGGER, safeguard_file=PROFILE_DUMP_JSON_FILE
+                overwrite=True, validate_path=self.parent_path, logger=logger, safeguard_file=PROFILE_DUMP_JSON_FILE
             )
 
-        if self.organize_by_groups:
-            LOGGER.report('Dumping sorted by groups.')
-            for group in self.profile_groups:
-                LOGGER.report(f'Dumping group: {group}')
-                self.current_group = group
-                self.group_sub_path = self.parent_path / 'groups' / Path(self.current_group.label)
-                self.resolve_dump_entities()
-        else:
-            self.resolve_dump_entities()
+        logger.report('Dumping groups...')
 
-        self.update_info_file()
+        self._dump_groups()
 
-        print('hello from dump')
-        print('self.entity_counter_dictionary', self.entity_counter_dictionary)
+    def _dump_groups(self):
+        # # ? These here relate to sorting by groups
+        # self.group_sub_path = Path()
+
+        profile_groups = QueryBuilder().append(Group).all(flat=True)
+        # core_groups = [group for group in profile_groups if group.type_string == 'core']
+        # import_groups = [group for group in profile_groups if group.type_string == 'core.import']
+        non_import_groups = [group for group in profile_groups if not group.type_string.startswith('core.import')]
+        # pseudo_groups = [group for group in profile_groups if group.type_string.startswith('pseudo')]
+
+        # self.profile_groups = profile_groups
+
+        for group in non_import_groups:
+            group_subdir = Path(*group.type_string.split('.'))
+            group_dumper = GroupDumper(parent_path=self.parent_path)
+            logger.report(
+                f'self.parent_path / "groups" / group_subdir / group.label: {self.parent_path / group_subdir / group.label}'
+            )
+            group_dumper.dump(
+                group=group,
+                output_path=self.parent_path / 'groups' / group_subdir / group.label,
+            )
+
+            # structures_path.mkdir(exist_ok=True, parents=True)
+
+        # if self.organize_by_groups:
+        #     LOGGER.report('Dumping sorted by groups.')
+        #     for group in self.profile_groups:
+        #         LOGGER.report(f'Dumping group: {group}')
+        #         self.current_group = group
+        #         self.group_sub_path = self.parent_path / 'groups' / Path(self.current_group.label)
+        #         self.resolve_dump_entities()
+        # else:
+        #     self.resolve_dump_entities()
+
+        # self.update_info_file()
+
+        # print('hello from dump')
+        # print('self.entity_counter_dictionary', self.entity_counter_dictionary)
 
     def resolve_dump_entities(self):
         if WorkflowNode in self.entities_to_dump:
@@ -256,7 +274,7 @@ class ProfileDumper:
         pass
 
     def dump_code_computers(self):
-        computers = get_nodes_from_db(aiida_node_type=Computer, flatten=True)
+        computers = get_nodes_from_db(aiida_node_type=Computer, flat=True)
 
         computer_parent_path = self.parent_path / Path('computers')
         computer_parent_path.mkdir(parents=True, exist_ok=True)
@@ -294,7 +312,7 @@ class ProfileDumper:
                 if not computer_config_file.is_file():
                     computer_config_file.write_text(yaml.dump(computer_configuration, sort_keys=False), 'utf-8')
 
-        codes = get_nodes_from_db(aiida_node_type=Code, flatten=True)
+        codes = get_nodes_from_db(aiida_node_type=Code, flat=True)
 
         code_parent_path = self.parent_path / Path('codes')
         code_parent_path.mkdir(parents=True, exist_ok=True)

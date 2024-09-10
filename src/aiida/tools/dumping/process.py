@@ -178,7 +178,7 @@ class ProcessDumper:
         output_path: Path | None,
         io_dump_paths: List[str | Path] | None = None,
         *args,
-        **kwargs
+        **kwargs,
     ) -> Path:
         """Dumps all data involved in a `ProcessNode`, including its outgoing links.
 
@@ -233,8 +233,8 @@ class ProcessDumper:
         workflow_node: WorkflowNode,
         output_path: Path,
         io_dump_paths: List[str | Path] | None = None,
-        link_calculation: bool = False,
-        calculation_dir: str | None = None,
+        link_calculations: bool = False,
+        link_calculations_dir: str | None = None,
     ) -> None:
         """Recursive function to traverse a `WorkflowNode` and dump its `CalculationNode` s.
 
@@ -261,26 +261,21 @@ class ProcessDumper:
                     output_path=child_output_path,
                     io_dump_paths=io_dump_paths,
                     # TODO: Always need to pass this stuff through due to the recursive nature of the function call...
-                    link_calculation=link_calculation,
-                    calculation_dir=calculation_dir
+                    # TODO: Maybe one can make a separate method that only does the linking
+                    link_calculations=link_calculations,
+                    link_calculations_dir=link_calculations_dir,
                 )
 
             # Once a `CalculationNode` as child reached, dump it
             elif isinstance(child_node, CalculationNode):
-                if not link_calculation:
+                if not link_calculations:
                     self._dump_calculation(
                         calculation_node=child_node,
                         output_path=child_output_path,
                         io_dump_paths=io_dump_paths,
                     )
                 else:
-                    print('OUTPUT_PATH', output_path)
-                    print('CHILD_OUTPUT_PATH', child_output_path)
-                    print(child_node.uuid)
-                    os.symlink(calculation_dir / child_node.uuid, child_output_path)
-
-
-
+                    os.symlink(link_calculations_dir / child_node.uuid, child_output_path)
 
     def _dump_calculation(
         self,
@@ -386,7 +381,7 @@ class ProcessDumper:
         output_path: Path,
         output_filename: str = '.aiida_node_metadata.yaml',
         include_attributes: bool = True,
-        include_extras: bool = True
+        include_extras: bool = True,
     ) -> None:
         """Dump the selected `ProcessNode` properties, attributes, and extras to a YAML file.
 

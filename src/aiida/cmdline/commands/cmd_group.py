@@ -536,7 +536,7 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
 def group_dump(group):
 
     print(group)
-    from aiida.tools.dumping.collection import GroupDumper
+    from aiida.tools.dumping.group import GroupDumper
 
     group_dumper = GroupDumper()
     group_dumper.dump(group)

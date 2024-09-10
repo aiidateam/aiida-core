@@ -39,7 +39,7 @@ class GroupDumper:
 
         print('GROUP', group)
         for entity in self.entities_to_dump:
-            group_nodes = get_nodes_from_db(aiida_node_type=entity, with_group=group, flatten=True)
+            group_nodes = get_nodes_from_db(aiida_node_type=entity, with_group=group, flat=True)
 
             print('_DUMP_TO_HIDDEN(SELF, AIIDA_ENTITY, AIIDA_NODES)')
             print(type(entity), entity, len(group_nodes))

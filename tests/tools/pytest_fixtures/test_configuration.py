@@ -1,22 +1,22 @@
 """Test the pytest fixtures."""
 
 
-def test_aiida_config(tmp_path):
+def test_aiida_config(tmp_path_factory):
     """Test that ``aiida_config`` fixture is loaded by default and creates a config instance in temp directory."""
     from aiida.manage.configuration import get_config
     from aiida.manage.configuration.config import Config
 
     config = get_config()
     assert isinstance(config, Config)
-    assert config.dirpath.startswith(str(tmp_path.parent))
+    assert config.dirpath.startswith(tmp_path_factory.getbasetemp())
 
 
-def test_aiida_config_tmp(aiida_config_tmp, tmp_path):
+def test_aiida_config_tmp(tmp_path_factory):
     """Test that ``aiida_config_tmp`` returns a config instance in temp directory."""
     from aiida.manage.configuration.config import Config
 
     assert isinstance(aiida_config_tmp, Config)
-    assert aiida_config_tmp.dirpath.startswith(str(tmp_path.parent))
+    assert aiida_config_tmp.dirpath.startswith(tmp_path_factory.getbasetemp())
 
 
 def test_aiida_profile():

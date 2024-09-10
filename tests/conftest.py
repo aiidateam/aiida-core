@@ -863,14 +863,14 @@ def serialize_file_hierarchy():
     return factory
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def bash_path() -> Path:
     run_process = subprocess.run(['which', 'bash'], capture_output=True, check=True)
     path = run_process.stdout.decode('utf-8').strip()
     return Path(path)
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def cat_path() -> Path:
     run_process = subprocess.run(['which', 'cat'], capture_output=True, check=True)
     path = run_process.stdout.decode('utf-8').strip()

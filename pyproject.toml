@@ -430,12 +430,15 @@ deps =
     py310: -rrequirements/requirements-py-3.10.txt
     py311: -rrequirements/requirements-py-3.11.txt
     py312: -rrequirements/requirements-py-3.12.txt
+setenv =
+    AIIDA_PYTEST_SSH_KEY = $HOME/.ssh/id_rsa_aiida_pytest
 
 [testenv:py{39,310,311,312}-presto]
 passenv =
     PYTHONASYNCIODEBUG
 setenv =
     AIIDA_WARN_v3 =
+    AIIDA_PYTEST_SSH_KEY = $HOME/.ssh/id_rsa_aiida_pytest
 commands = pytest -m 'presto' {posargs}
 
 [testenv:py{39,310,311,312}]
@@ -443,6 +446,7 @@ passenv =
     PYTHONASYNCIODEBUG
 setenv =
     AIIDA_WARN_v3 =
+    AIIDA_PYTEST_SSH_KEY = $HOME/.ssh/id_rsa_aiida_pytest
 commands = pytest {posargs}
 
 [testenv:py{39,310,311,312}-verdi]

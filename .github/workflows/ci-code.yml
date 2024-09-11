@@ -104,7 +104,10 @@ jobs:
         AIIDA_WARN_v3: 1
       # Python 3.12 has a performance regression when running with code coverage
       # so run code coverage only for python 3.9.
-      run: pytest -v tests -m 'not nightly' ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
+      run: |
+        # this env needs to set in run and not env, because we need to access $HOME
+        export AIIDA_PYTEST_SSH_KEY=$HOME/.ssh/id_rsa_aiida_pytest
+        pytest -v tests -m 'not nightly' ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
 
     - name: Upload coverage report
       if: matrix.python-version == 3.9 && github.repository == 'aiidateam/aiida-core'
@@ -139,8 +142,10 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0
-      run: pytest -m 'presto'
-
+      run: |
+        # this env needs to set in run and not env, because we need to access $HOME
+        export AIIDA_PYTEST_SSH_KEY=$HOME/.ssh/id_rsa_aiida_pytest
+        pytest -m 'presto'
 
   verdi:
 

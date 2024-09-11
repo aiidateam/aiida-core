@@ -8,23 +8,12 @@
 ###########################################################################
 """Functionality for dumping of ProcessNodes."""
 
-# ? Possibly add dry_run option here
-# TODO: Add symlinking feature
-# -> This would be for calculations which are subprocesses of the workflow
-# -> But also PPs
-# -> Could define a symlink-mapping based on a dict in the form:
-# {
-# CalculationNode: <Path-to-calculations>,
-# PPs: <Path-to-PPs>
-# }
-# Based on this, I could check the linked directory for the entity based on its UUID
-# TODO: Or, could add a `programmatic` option that doesn't create the README.md, and does a few other things, as well
 
 from __future__ import annotations
 
-import os
 import contextlib
 import logging
+import os
 from pathlib import Path
 from types import SimpleNamespace
 from typing import List
@@ -46,7 +35,7 @@ from aiida.orm import (
 from aiida.orm.utils import LinkTriple
 from aiida.tools.dumping.utils import _validate_make_dump_path
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ProcessDumper:
@@ -195,7 +184,7 @@ class ProcessDumper:
             self.incremental = True
             # Could also raise an exception here
             # raise NotImplementedError("Node isn't finished and incremental dumping not supported yet.")
-            LOGGER.report("Node isn't finished and incremental dumping not supported yet.")
+            logger.report("Node isn't finished and incremental dumping not supported yet.")
             return
 
         # This here is mainly for `include_attributes` and `include_extras`.
@@ -208,7 +197,7 @@ class ProcessDumper:
         if output_path is None:
             output_path = self._generate_default_dump_path(process_node=process_node)
 
-        _validate_make_dump_path(overwrite=self.overwrite, validate_path=output_path, logger=LOGGER)
+        _validate_make_dump_path(overwrite=self.overwrite, validate_path=output_path, logger=logger)
 
         if isinstance(process_node, CalculationNode):
             self._dump_calculation(
@@ -243,7 +232,7 @@ class ProcessDumper:
         :param io_dump_paths: Custom subdirectories for `CalculationNode` s, defaults to None
         """
 
-        _validate_make_dump_path(validate_path=output_path, overwrite=self.overwrite, logger=LOGGER)
+        _validate_make_dump_path(validate_path=output_path, overwrite=self.overwrite, logger=logger)
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
         called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
@@ -291,7 +280,7 @@ class ProcessDumper:
             Default: ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         """
 
-        _validate_make_dump_path(overwrite=self.overwrite, validate_path=output_path, logger=LOGGER)
+        _validate_make_dump_path(overwrite=self.overwrite, validate_path=output_path, logger=logger)
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 
         io_dump_mapping = self._generate_calculation_io_mapping(io_dump_paths=io_dump_paths)
@@ -352,7 +341,7 @@ class ProcessDumper:
         aiida_entities_to_dump = ['repository', 'retrieved', 'inputs', 'outputs']
         default_calculation_io_dump_paths = ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         if self.flat and io_dump_paths is None:
-            LOGGER.info(
+            logger.info(
                 'Flat set to True and no `io_dump_paths`. Dumping in a flat directory, files might be overwritten.'
             )
             empty_calculation_io_dump_paths = [''] * 4
@@ -360,17 +349,17 @@ class ProcessDumper:
             return SimpleNamespace(**dict(zip(aiida_entities_to_dump, empty_calculation_io_dump_paths)))
 
         elif not self.flat and io_dump_paths is None:
-            LOGGER.info(
+            logger.info(
                 'Flat set to False but no `io_dump_paths` provided. '
                 + f'Will use the defaults {default_calculation_io_dump_paths}.'
             )
             return SimpleNamespace(**dict(zip(aiida_entities_to_dump, default_calculation_io_dump_paths)))
 
         elif self.flat:
-            LOGGER.info('Flat set to True but `io_dump_paths` provided. These will be used, but `inputs` not nested.')
+            logger.info('Flat set to True but `io_dump_paths` provided. These will be used, but `inputs` not nested.')
             return SimpleNamespace(**dict(zip(aiida_entities_to_dump, io_dump_paths)))
         else:
-            LOGGER.info(
+            logger.info(
                 'Flat set to False but no `io_dump_paths` provided. These will be used, but `node_inputs` flattened.'
             )
             return SimpleNamespace(**dict(zip(aiida_entities_to_dump, io_dump_paths)))  # type: ignore[arg-type]

@@ -286,6 +286,9 @@ def profile_dump(profile, path, full):
     if profile is None:
         echo.echo_critical('No profile selected to dump')
 
+    if not str(path).endswith(profile.name):
+        path /= profile.name
+
     echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`")
 
     profile_dumper = ProfileDumper(

@@ -1,33 +1,12 @@
-# Maybe abstract this, as one might not only want to dump an archive, but also a group, or other collections of nodes?
-# Generally work with uuids, not Node instances, until the node instance is actually required, for performance reasons
-# Need skip-existing option, either for the AbstractDumper, or the dumpers in general
-#
-# ? Possibly make first get_entity functions and then dump functions; or _get_entity functions that are called by the
-# dumping
-# ? Could implement incremental dumping via try-except on FileExistsError, or write the list of hashes of the dumped
-# entities to disk, and then read that in for each dumping call
-# ? Check for self.full inside each dumping function or once in a `full_rewrite` function?
-# ? How to handle nested workchains
-# ? Add some extras configuration to the directory naming?
-# ❯ verdi node extras 41
-# PK: 41
-# {
-#     "configuration": "X/Diamond",
-#     "element": "Ta"
-# }
-# ? How to handle `ImportGroup`s?
-# ? Implement `dry_run` option
-# ? Should add a function to dump only CalcJob?
-# ? Use normal logger or AiiDA_LOGGER?
-# ? Add clean_before option in addition to "full"?
-# ? Automatically remove "structure" or "workflows" from path, if group name contains that? -> Don't think this is a
-# good idea
-# ? Abstract `dump_structure_data` and `dump_workflows` so that I can iterate over them based on the entities_to_dump
-# ? Dump codes and computers YAML files
-# ? Also dump user-info
-# ? Check for safeguard file `profile-dump-info.json` when using `full` option similar to process dumping
-
-# ? Here just call the GroupDumper
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Functionality for dumping of profile data."""
 
 from __future__ import annotations
 
@@ -39,19 +18,25 @@ from typing import List
 
 import yaml
 
+from aiida import orm
 from aiida.manage.configuration.profile import Profile
 from aiida.orm import CalculationNode, Code, Computer, Group, QueryBuilder, StructureData, User, WorkflowNode
 from aiida.orm.groups import ImportGroup
-from aiida.tools.dumping.process import ProcessDumper
+
+from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.group import GroupDumper
+from aiida.tools.dumping.process import ProcessDumper
+from aiida.tools.dumping.data import DataDumper
 
 from aiida.tools.dumping.utils import _validate_make_dump_path, get_nodes_from_db
-
 
 logger = logging.getLogger(__name__)
 DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
 DEFAULT_COLLECTIONS_TO_DUMP = [Group]  # ? Might not be needed -> Main useful collection type is just Group
 PROFILE_DUMP_JSON_FILE = 'profile-dump-info.json'
+DEFAULT_PROCESSES_TO_DUMP = [orm.CalculationNode, orm.WorkflowNode]  # , StructureData, User, Code, Computer]
+DEFAULT_DATA_TO_DUMP = [orm.StructureData, orm.Code, orm.Computer, ]  # , StructureData, User, Code, Computer]
+DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP + DEFAULT_DATA_TO_DUMP
 
 
 class ProfileDumper:
@@ -152,9 +137,12 @@ class ProfileDumper:
                 overwrite=True, validate_path=self.parent_path, logger=logger, safeguard_file=PROFILE_DUMP_JSON_FILE
             )
 
-        logger.report('Dumping groups...')
+        # logger.report('Dumping groups...')
 
         self._dump_groups()
+
+        logger.report('Dumping data nodes.')
+        self._dump_data()
 
     def _dump_groups(self):
         # # ? These here relate to sorting by groups
@@ -171,9 +159,9 @@ class ProfileDumper:
         for group in non_import_groups:
             group_subdir = Path(*group.type_string.split('.'))
             group_dumper = GroupDumper(parent_path=self.parent_path)
-            logger.report(
-                f'self.parent_path / "groups" / group_subdir / group.label: {self.parent_path / group_subdir / group.label}'
-            )
+            # logger.report(
+            #     f'self.parent_path / "groups" / group_subdir / group.label: {self.parent_path / group_subdir / group.label}'
+            # )
             group_dumper.dump(
                 group=group,
                 output_path=self.parent_path / 'groups' / group_subdir / group.label,
@@ -266,13 +254,6 @@ class ProfileDumper:
             if iworkflow_ > 1:
                 break
 
-    # Scaffolding
-
-    # ? Possibly not the best name, as user configuration could be interpreted wrongly
-    @classmethod
-    def read_user_config(cls):
-        pass
-
     def dump_code_computers(self):
         computers = get_nodes_from_db(aiida_node_type=Computer, flat=True)
 
@@ -340,3 +321,27 @@ class ProfileDumper:
 
     def dump_calculations(self):
         pass
+
+    def _dump_data(self):
+        # logger.report(f'entity_counter: {self.entity_counter}')
+
+        self.entity_counter = CollectionDumper.create_entity_counter()
+
+        for data_class in DEFAULT_DATA_TO_DUMP:
+            # ? Could also do try/except, as key only in `entity_counter` when instances of type in group
+            if self.entity_counter.get(data_class, 0) > 0:
+                # logger.report(data_class)
+                data_nodes = get_nodes_from_db(aiida_node_type=data_class, flat=True)
+                for data_node in data_nodes:
+                    # logger.report(f'{type(data_node)}: {data_node}')
+                    # logger.report(f'{isinstance(data_node, orm.StructureData)}')
+
+                    datadumper = DataDumper(overwrite=True)
+
+                    # Must pass them implicitly here, rather than, e.g. `data_node=data_node`
+                    # Otherwise `singledispatch` raises: `IndexError: tuple index out of range`
+                    datadumper.dump(data_node, self.parent_path)
+
+                # print(data_nodes)
+
+

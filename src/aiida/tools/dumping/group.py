@@ -1,22 +1,24 @@
-# Could also be a more general CollectionDumper class, actually
-# TODO: Have a `full_raw` flag or sthg that dumps all the raw calculations to disk anyway
 
 import contextlib
-import os
 import itertools
 import logging
+import os
 from pathlib import Path
 from typing import List
 
 from aiida import orm
 from aiida.common import timezone
-from aiida.orm import CalculationNode, Code, Computer, Group, QueryBuilder, StructureData, User, WorkflowNode
+
 from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.process import ProcessDumper
+from aiida.tools.dumping.data import DataDumper
+
 from aiida.tools.dumping.utils import _validate_make_dump_path, get_nodes_from_db
 
 # DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
-DEFAULT_ENTITIES_TO_DUMP = [CalculationNode, WorkflowNode]  # , StructureData, User, Code, Computer]
+DEFAULT_PROCESSES_TO_DUMP = [orm.CalculationNode, orm.WorkflowNode]  # , StructureData, User, Code, Computer]
+DEFAULT_DATA_TO_DUMP = [orm.StructureData, orm.Code, orm.Computer, ]  # , StructureData, User, Code, Computer]
+DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP + DEFAULT_DATA_TO_DUMP
 
 # from aiida.common.utils import str_timedelta
 
@@ -75,12 +77,19 @@ class GroupDumper(CollectionDumper):
         # self.group_path = Path.cwd() / 'groups'
         # self.group_path = self.output_path / 'groups' / group_name
 
-        logger.report(f'self.entity_counter for Group <{self.group}>: {self.entity_counter}')
-        logger.report(f'Dumping calculations and workflows of group {group_name}...')
+      # logger.report(f'self.entity_counter for Group <{self.group}>: {self.entity_counter}')
+      # logger.report(f'Dumping calculations and workflows of group {group_name}...')
 
         # TODO: This shouldn't be on a per-group basis? Possibly dump all data for the whole profile.
         # TODO: Though, now that I think about it, it might actually be desirable to only limit that to the group only.
-        logger.report(f'Dumping raw calculation data for group {group_name}...')
+      # logger.report(f'Dumping raw calculation data for group {group_name}...')
+
+        logger.report(f'Dumping processes for group {group_name}...')
+        self._dump_processes()
+
+
+    def _dump_processes(self):
+
         if (
             sum(
                 self.entity_counter.get(orm_process_class, 0)
@@ -94,7 +103,7 @@ class GroupDumper(CollectionDumper):
             self._dump_calculations_hidden()
             self._link_calculations_hidden()
 
-        logger.report(f'Linking workflows to calculations for group {group_name}...')
+        # logger.report(f'Linking workflows to calculations for group {group_name}...')
         if (
             sum(
                 self.entity_counter.get(orm_process_class, 0)
@@ -128,12 +137,12 @@ class GroupDumper(CollectionDumper):
             )
             > 0
         ):
-            logger.report('GROUP 3 DUMP CALCULATIONS')
+            # logger.report('GROUP 3 DUMP CALCULATIONS')
             # if self.entity_counter.get(orm.WorkChainNode, 0):
             self._dump_calculations_hidden()
             self._link_calculations_hidden()
 
-        logger.report(f'Dumping other data nodes of group {group_name}...')
+      # logger.report(f'Dumping other data nodes of group {group_name}...')
 
         # TODO: Here might also be pseudo.family.sssp, not just workflows/calculations
 
@@ -160,7 +169,7 @@ class GroupDumper(CollectionDumper):
         if self.group is None:
             raise Exception('`group` must be set.')
 
-        direct_calc_nodes = get_nodes_from_db(aiida_node_type=CalculationNode, with_group=self.group, flat=True)
+        direct_calc_nodes = get_nodes_from_db(aiida_node_type=orm.CalculationNode, with_group=self.group, flat=True)
 
         # Obtain all `CalculationNode`s that were called within
         workflow_nodes = get_nodes_from_db(aiida_node_type=orm.WorkflowNode, with_group=self.group, flat=True)
@@ -168,7 +177,7 @@ class GroupDumper(CollectionDumper):
         indirect_calc_nodes = [
             workflow_sub_node
             for workflow_sub_node in workflow_sub_nodes
-            if isinstance(workflow_sub_node, CalculationNode)
+            if isinstance(workflow_sub_node, orm.CalculationNode)
         ]
 
         calculations = set(direct_calc_nodes + indirect_calc_nodes)
@@ -202,7 +211,7 @@ class GroupDumper(CollectionDumper):
             workflow_dump_path = (
                 self.output_path / 'workflows' / workflow_dumper._generate_default_dump_path(process_node=workflow_node)
             )
-            logger.report(f'WORKFLOW_DUMP_PATH: {workflow_dump_path}')
+          # logger.report(f'WORKFLOW_DUMP_PATH: {workflow_dump_path}')
 
             workflow_dumper._dump_workflow(
                 workflow_node=workflow_node,
@@ -225,31 +234,7 @@ class GroupDumper(CollectionDumper):
             calculation_dump_path = calculation_dump_path / calculation_dumper._generate_default_dump_path(
                 process_node=calculation_node
             )
-            logger.report(f'CALCULATION_DUMP_PATH: {calculation_dump_path}')
+          # logger.report(f'CALCULATION_DUMP_PATH: {calculation_dump_path}')
 
             with contextlib.suppress(FileExistsError):
                 os.symlink(link_calculations_dir / calculation_node.uuid, calculation_dump_path)
-
-    # def _dump_workflows_hidden(self, workflows, only_parents: bool = True):
-    #     # ? Dump only top-level workchains, as that includes sub-workchains already
-    #     # ? Apart from the yaml files, all the files are contained in the calculations anyways??
-
-    #     for iworkflow_, workflow in enumerate(workflows):
-    #         # if only_parents and workflow.caller is not None:
-    #         #     continue
-
-    #         # ? Hardcode overwrite=True for now
-    #         workflow_dumper = ProcessDumper(overwrite=True)
-
-    #         workflow_dump_path = self.hidden_aiida_path / 'workflows' / workflow.uuid
-    #         print(workflow_dump_path)
-
-    #         # if not self.dry_run:
-    #         with contextlib.suppress(FileExistsError):
-    #             workflow_dumper.dump(process_node=workflow, output_path=workflow_dump_path)
-
-    #         # self.entity_counter_dictionary[WorkflowNode.__name__] += 1
-
-    #         # # To make development quicker
-    #         # if iworkflow_ > 1:
-    #         #     break

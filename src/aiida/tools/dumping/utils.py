@@ -49,7 +49,7 @@ def _validate_make_dump_path(
 def get_nodes_from_db(aiida_node_type, with_group: str | None = None, flat=False):
     qb = QueryBuilder()
 
-    # ? Computers cannot be associated via `with_group`
+    # Computers cannot be associated via `with_group`
     if with_group is not None and aiida_node_type is not Computer and aiida_node_type is not Code:
         qb.append(Group, filters={'label': with_group.label}, tag='with_group')
         qb.append(aiida_node_type, with_group='with_group')

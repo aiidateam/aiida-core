@@ -1,9 +1,19 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Functionality for dumping of a Collections of AiiDA ORMs."""
+
 from aiida import orm
 import logging
 from collections import Counter
 
 LOGGER = logging.getLogger(__name__)
-# TODO: Could also get the entities, or UUIDs, rather than just counting them here
+# TODO: Could also get the entities, or UUIDs directly, rather than just counting them here
 
 class CollectionDumper:
 
@@ -47,6 +57,8 @@ class CollectionDumper:
         # type_dict = dict(type_counter)
 
         return type_counter
+
+
 
     # @staticmethod
     # def _create_entity_counter_storage():

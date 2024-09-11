@@ -8,7 +8,7 @@ def test_aiida_config(tmp_path_factory):
 
     config = get_config()
     assert isinstance(config, Config)
-    assert config.dirpath.startswith(tmp_path_factory.getbasetemp())
+    assert config.dirpath.startswith(str(tmp_path_factory.getbasetemp()))
 
 
 def test_aiida_config_tmp(aiida_config_tmp, tmp_path_factory):
@@ -16,7 +16,7 @@ def test_aiida_config_tmp(aiida_config_tmp, tmp_path_factory):
     from aiida.manage.configuration.config import Config
 
     assert isinstance(aiida_config_tmp, Config)
-    assert aiida_config_tmp.dirpath.startswith(tmp_path_factory.getbasetemp())
+    assert aiida_config_tmp.dirpath.startswith(str(tmp_path_factory.getbasetemp()))
 
 
 def test_aiida_profile():

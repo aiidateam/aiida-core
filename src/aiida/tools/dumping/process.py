@@ -52,7 +52,7 @@ class ProcessDumper:
         self.flat = flat
 
     @staticmethod
-    def _generate_default_dump_path(process_node: ProcessNode) -> Path:
+    def _generate_default_dump_path(process_node: ProcessNode, prefix: str = 'dump') -> Path:
         """Simple helper function to generate the default parent-dumping directory if none given.
 
         This function is not called for the recursive sub-calls of `_dump_calculation` as it just creates the default
@@ -64,10 +64,10 @@ class ProcessDumper:
 
         pk = process_node.pk
         try:
-            return Path(f'dump-{process_node.process_label}-{pk}')
+            return Path(f'{prefix}-{process_node.process_label}-{pk}')
         except AttributeError:
             # This case came up during testing, not sure how relevant it actually is
-            return Path(f'dump-{process_node.process_type}-{pk}')
+            return Path(f'{prefix}-{process_node.process_type}-{pk}')
 
     @staticmethod
     def _generate_readme(process_node: ProcessNode, output_path: Path) -> None:

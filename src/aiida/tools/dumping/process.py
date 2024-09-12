@@ -8,7 +8,6 @@
 ###########################################################################
 """Functionality for dumping of ProcessNodes."""
 
-
 from __future__ import annotations
 
 import contextlib
@@ -45,11 +44,15 @@ class ProcessDumper:
         include_outputs: bool = False,
         overwrite: bool = False,
         flat: bool = False,
+        also_raw: bool = False,
+        also_rich: bool = False,
     ) -> None:
         self.include_inputs = include_inputs
         self.include_outputs = include_outputs
         self.overwrite = overwrite
         self.flat = flat
+        self.also_raw = also_raw
+        self.also_rich = also_rich
 
     @staticmethod
     def _generate_default_dump_path(process_node: ProcessNode, prefix: str = 'dump') -> Path:
@@ -286,7 +289,8 @@ class ProcessDumper:
         io_dump_mapping = self._generate_calculation_io_mapping(io_dump_paths=io_dump_paths)
 
         # Dump the repository contents of the node
-        calculation_node.base.repository.copy_tree(output_path.resolve() / io_dump_mapping.repository)
+        calculation_node_repo = calculation_node.base.repository
+        calculation_node_repo.copy_tree(output_path.resolve() / io_dump_mapping.repository)
 
         # Dump the repository contents of `outputs.retrieved`
         with contextlib.suppress(NotExistentAttributeError):
@@ -297,25 +301,47 @@ class ProcessDumper:
         # Dump the node_inputs
         if self.include_inputs:
             input_links = calculation_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
-            self._dump_calculation_io(parent_path=output_path / io_dump_mapping.inputs, link_triples=input_links)
+            # Need to create the path before, otherwise getting Exception
+            input_path = output_path / io_dump_mapping.inputs
+            input_path.mkdir(parents=True, exist_ok=True)
+
+            self._dump_calculation_io_files(parent_path=output_path / io_dump_mapping.inputs, link_triples=input_links)
+
+            if self.also_raw:
+                self._dump_calculation_io_raw(
+                    parent_path=output_path / io_dump_mapping.inputs, link_triples=input_links
+                )
 
         # Dump the node_outputs apart from `retrieved`
         if self.include_outputs:
             output_links = list(calculation_node.base.links.get_outgoing(link_type=LinkType.CREATE))
             output_links = [output_link for output_link in output_links if output_link.link_label != 'retrieved']
+            node_output_path = output_path / io_dump_mapping.outputs
+            node_output_path.mkdir(parents=True, exist_ok=True)
 
-            self._dump_calculation_io(
+            self._dump_calculation_io_files(
                 parent_path=output_path / io_dump_mapping.outputs,
                 link_triples=output_links,
             )
 
-    def _dump_calculation_io(self, parent_path: Path, link_triples: LinkManager | List[LinkTriple]):
+            if self.also_raw:
+                self._dump_calculation_io_raw(
+                    parent_path=output_path / io_dump_mapping.outputs,
+                    link_triples=output_links,
+                )
+
+    def _dump_calculation_io_files(
+        self,
+        parent_path: Path,
+        link_triples: LinkManager | List[LinkTriple],
+    ):
         """Small helper function to dump linked input/output nodes of a `CalculationNode`.
 
         :param parent_path: Parent directory for dumping the linked node contents.
         :param link_triples: List of link triples.
         """
 
+        # Dump the actual files of each node, e.g. `.npy` files for arrays
         for link_triple in link_triples:
             link_label = link_triple.link_label
 
@@ -326,6 +352,34 @@ class ProcessDumper:
                 linked_node_path = parent_path
 
             link_triple.node.base.repository.copy_tree(linked_node_path.resolve())
+
+    def _dump_calculation_io_raw(
+        self,
+        parent_path: Path,
+        link_triples: LinkManager | List[LinkTriple],
+    ):
+        """Small helper function to dump linked input/output nodes of a `CalculationNode`.
+
+        :param parent_path: Parent directory for dumping the linked node contents.
+        :param link_triples: List of link triples.
+        """
+
+        # Dump first the actual files of each node, e.g. `.npy` files for arrays
+        for link_triple in link_triples:
+            link_label = link_triple.link_label
+
+            if not self.flat:
+                linked_node_path = parent_path / Path(*link_label.split('__'))
+            else:
+                # Don't use link_label at all -> But, relative path inside FolderData is retained
+                linked_node_path = parent_path
+
+            # Then dump the node attributes for each node
+            # Second time using the loop, as, for whatever reason, when doing it in one loop, once this is
+            node_attributes_file = Path(f'{linked_node_path!s}_attrs.yaml')
+
+            with open(node_attributes_file, 'w') as handle:
+                yaml.dump(link_triple.node.attributes, handle)
 
     def _generate_calculation_io_mapping(self, io_dump_paths: List[str | Path] | None = None) -> SimpleNamespace:
         """Helper function to generate mapping for entities dumped for each `CalculationNode`.

@@ -85,13 +85,19 @@ class DataDumper:
         except OSError as exc:
             raise exc
 
+    @staticmethod
     def _dump_code(
-        self, data_node: orm.AbstractCode, output_path: Path | None = None, file_name: str | Path | None = None
+        # ? Should have same signature as `data_export function
+        data_node: orm.AbstractCode,
+        output_path: Path | None = None,
+        file_name: str | Path | None = None,
+        file_format: str = 'yaml',
+        *args,
+        **kwargs
     ):
-
         if output_path is None:
             output_path = Path.cwd()
-        output_path /= 'codes'
+        # output_path /= 'codes'
 
         output_path.mkdir(exist_ok=True, parents=True)
 
@@ -106,9 +112,9 @@ class DataDumper:
                 code_data[key] = str(value)
         if file_name is None:
             try:
-                file_name = f"{code_data['label']}@{code_data['computer']}.yaml"
+                file_name = f"{code_data['label']}@{code_data['computer']}.{file_format}"
             except KeyError:
-                file_name = f"{code_data['label']}.yaml"
+                file_name = f"{code_data['label']}.{file_format}"
 
         code_file = output_path / file_name
 

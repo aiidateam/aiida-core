@@ -94,6 +94,7 @@ __all__ = (
     'PROJECT',
     'RAW',
     'REPOSITORY_PATH',
+    'RICH_CONFIG_FILE',
     'SCHEDULER',
     'SILENT',
     'SORT',
@@ -720,6 +721,13 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
 CONFIG_FILE = ConfigFileOption(
     '--config',
     type=types.FileOrUrl(),
+    help='Load option values from configuration file in yaml format (local path or URL).',
+)
+
+RICH_CONFIG_FILE = ConfigFileOption(
+    '--rich-config',
+    type=types.FileOrUrl(),
+    default=None,
     help='Load option values from configuration file in yaml format (local path or URL).',
 )
 

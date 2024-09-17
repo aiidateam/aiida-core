@@ -583,6 +583,60 @@ def process_repair(manager, broker, dry_run):
     default=False,
     help='Dump files in a flat directory for every step of the workflow.',
 )
+@click.option(
+    '--also-raw',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Dump the `attributes` of all nodes related to the Process.',
+)
+@click.option(
+    '--also-rich',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Dump also nicely prepared outputs, e.g. CIF for structures or PDF image for bands.',
+)
+@click.option(
+    '--rich-options',
+    default=None,
+    help='Options for rich data dumping.',
+)
+@click.option(
+    '--rich-config',
+    default=None,
+    type=types.FileOrUrl(),
+    help='Options for rich data dumping.',
+)
+# @click.option(
+#     '--rich-dump-all',
+#     default=False,
+#     is_flag=True,
+#     type=bool,
+#     help=(
+#         'By default, only nodes for which dumping options are given are dumped for rich dump. '
+#         'Enable this to dump _all_ nodes, using the default export mappings and file types.'
+#     ),
+# )
+# @click.option(
+#     '--rich-use-defaults',
+#     default=False,
+#     is_flag=True,
+#     type=bool,
+#     help=(
+#         'Try to use the default mappings. If hardcoded, this only works for core data types.'
+#         'When using plugins, the plugins should provide default dumpers, which should be loadable from the entry'
+#         'points.'
+#     ),
+# )
+# RICH_CONFIG_FILE = ConfigFileOption(
+#     '--rich-config',
+#     type=types.FileOrUrl(),
+#     default=None,
+#     help='Load option values from configuration file in yaml format (local path or URL).',
+# )
+# @options.RICH_CONFIG_FILE()
+# @click.pass_context
 def process_dump(
     process,
     path,
@@ -592,6 +646,10 @@ def process_dump(
     include_attributes,
     include_extras,
     flat,
+    also_raw,
+    also_rich,
+    rich_options,
+    rich_config,
 ) -> None:
     """Dump process input and output files to disk.
 
@@ -616,6 +674,10 @@ def process_dump(
         include_outputs=include_outputs,
         overwrite=overwrite,
         flat=flat,
+        also_raw=also_raw,
+        also_rich=also_rich,
+        rich_options=rich_options,
+        rich_config=rich_config,
     )
 
     try:

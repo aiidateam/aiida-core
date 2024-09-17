@@ -180,6 +180,10 @@ requires-python = '>=3.9'
 'core.arithmetic.add_multiply' = 'aiida.workflows.arithmetic.add_multiply:add_multiply'
 'core.arithmetic.multiply_add' = 'aiida.workflows.arithmetic.multiply_add:MultiplyAddWorkChain'
 
+[project.entry-points.'aiida.exporters']
+# 'core.arithmetic.add_multiply' = 'aiida.workflows.arithmetic.add_multiply:add_multiply'
+# 'core.arithmetic.multiply_add' = 'aiida.workflows.arithmetic.multiply_add:MultiplyAddWorkChain'
+
 [project.optional-dependencies]
 atomic_tools = [
   'PyCifRW~=4.4',

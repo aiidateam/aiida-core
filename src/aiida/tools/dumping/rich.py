@@ -38,40 +38,40 @@ core_data_entry_points = [
     'core.upf',
 ]
 
-default_core_export_mapping = dict.fromkeys(core_data_entry_points, None)
+# default_core_export_mapping = dict.fromkeys(core_data_entry_points, None)
 
-core_data_with_exports = [
-    # 'core.array',
-    'core.array.bands',  # ? -> Yes, though `core.bands` on CLI
-    # 'core.array.kpoints',  # ? -> Doesn't have a `verdi data` CLI endpoint
-    # 'core.array.projection',  # ? -> Doesn't have a `verdi data` CLI endpoint
-    'core.array.trajectory',  # ? -> Yes, though `core.trajectory` on CLI
-    # 'core.array.xy',  # ? -> Doesn't have a `verdi data` CLI endpoint
-    # 'core.base',  # ? -> Here it doesn't make sense
-    # 'core.bool',  # ? -> Would we even need to dump bools?
-    'core.cif',
-    # 'core.code',  # ? -> Not a `data` command. However, code export exists
-    # 'core.code.containerized',
-    # 'core.code.installed',
-    # 'core.code.portable',
-    # 'core.dict',  # ? No `export` CLI command, but should be easy as .txt
-    # 'core.enum',
-    # 'core.float',
-    # 'core.folder',  # ? No `verdi data export` endpoint, but should already be dumped anyway?
-    # 'core.int',
-    # 'core.jsonable',  # ? This implements `to_dict`, which should be easily exportable in JSON format then
-    # 'core.list',
-    # 'core.numeric',
-    # 'core.orbital',
-    # 'core.remote',
-    # 'core.remote.stash',
-    # 'core.remote.stash.folder',
-    # 'core.singlefile',  # ? Doesn't implement export, but should be simple enough to use method of class to write the
-    # file to disk
-    # 'core.str',
-    'core.structure',  # ? Yes, implements export nicely
-    'core.upf',  # ? Also implements it, but deprecated
-]
+# core_data_with_exports = [
+#     # 'core.array',
+#     'core.array.bands',  # ? -> Yes, though `core.bands` on CLI
+#     # 'core.array.kpoints',  # ? -> Doesn't have a `verdi data` CLI endpoint
+#     # 'core.array.projection',  # ? -> Doesn't have a `verdi data` CLI endpoint
+#     'core.array.trajectory',  # ? -> Yes, though `core.trajectory` on CLI
+#     # 'core.array.xy',  # ? -> Doesn't have a `verdi data` CLI endpoint
+#     # 'core.base',  # ? -> Here it doesn't make sense
+#     # 'core.bool',  # ? -> Would we even need to dump bools?
+#     'core.cif',
+#     # 'core.code',  # ? -> Not a `data` command. However, code export exists
+#     # 'core.code.containerized',
+#     # 'core.code.installed',
+#     # 'core.code.portable',
+#     # 'core.dict',  # ? No `export` CLI command, but should be easy as .txt
+#     # 'core.enum',
+#     # 'core.float',
+#     # 'core.folder',  # ? No `verdi data export` endpoint, but should already be dumped anyway?
+#     # 'core.int',
+#     # 'core.jsonable',  # ? This implements `to_dict`, which should be easily exportable in JSON format then
+#     # 'core.list',
+#     # 'core.numeric',
+#     # 'core.orbital',
+#     # 'core.remote',
+#     # 'core.remote.stash',
+#     # 'core.remote.stash.folder',
+#     # 'core.singlefile',  # ? Doesn't implement export, but should be simple enough to use method of class to write the
+#     # file to disk
+#     # 'core.str',
+#     'core.structure',  # ? Yes, implements export nicely
+#     'core.upf',  # ? Also implements it, but deprecated
+# ]
 
 # Default for the ones that have `verdi data core.XXX export` endpoint
 # ! Is this actually preferred, rather than hardcoding. Hardcoding shouldn't be too fragile, and we don't expect to
@@ -81,70 +81,127 @@ core_data_with_exports = [
 
 # TODO: `core.jsonable` that should be easy via dict -> .json, or `code export`
 default_core_export_mapping = {
-    'core.array': None,
-    'core.array.bands': data_export,
-    'core.array.kpoints': None,
-    'core.array.projection': None,
-    'core.array.trajectory': data_export,
-    'core.array.xy': None,
-    'core.base': None,
-    'core.bool': None,
-    'core.cif': data_export,
-    'core.code': DataDumper._dump_code,
-    'core.code.containerized': DataDumper._dump_code,
-    'core.code.installed': DataDumper._dump_code,
-    'core.code.portable': DataDumper._dump_code,
-    'core.dict': None,
-    'core.enum': None,
-    'core.float': None,
-    'core.folder': None,
-    'core.int': None,
-    'core.jsonable': None,
-    'core.list': None,
-    'core.numeric': None,
-    'core.orbital': None,
-    'core.remote': None,
-    'core.remote.stash': None,
-    'core.remote.stash.folder': None,
-    'core.singlefile': None,
-    'core.str': None,
-    'core.structure': data_export,
-    'core.upf': data_export,
+    'core.array': {
+        'exporter': data_export,
+        'export_format': 'json'
+    },
+    'core.array.bands': {
+        'exporter': data_export,
+        'export_format': 'mpl_pdf'
+    },
+    'core.array.kpoints': {
+        'exporter': data_export,
+        'export_format': 'json'
+    },
+    'core.array.projection': {
+        'exporter': data_export,
+        'export_format': 'json'
+    },
+    'core.array.trajectory': {
+        'exporter': data_export,
+        'export_format': 'cif'
+    },
+    'core.array.xy': {
+        'exporter': data_export,
+        'export_format': 'json'
+    },
+    'core.base': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.bool': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.cif': {
+        'exporter': data_export,
+        'export_format': 'cif'
+    },
+    # TODO: These should by written via the `data_export` function instead
+    'core.code': {
+        'exporter': DataDumper._dump_code,
+        'export_format': 'yaml'
+    },
+    'core.code.containerized': {
+        'exporter': DataDumper._dump_code,
+        'export_format': 'yaml'
+    },
+    'core.code.installed': {
+        'exporter': DataDumper._dump_code,
+        'export_format': 'yaml'
+    },
+    'core.code.portable': {
+        'exporter': DataDumper._dump_code,
+        'export_format': 'yaml'
+    },
+    'core.dict': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.enum': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.float': {
+        'exporter': None,
+        'export_format': None
+    },
+    # TODO: Just use copy-tree
+    'core.folder': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.int': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.jsonable': {
+        'exporter': data_export,
+        'export_format': 'json'  # duh
+    },
+    'core.list': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.numeric': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.orbital': {
+        'exporter': None,
+        'export_format': None
+    },
+    # TODO: Here, try-except existance on remote and if so, dump it here locally
+    'core.remote': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.remote.stash': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.remote.stash.folder': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.singlefile': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.str': {
+        'exporter': None,
+        'export_format': None
+    },
+    'core.structure': {
+        'exporter': data_export,
+        'export_format': 'cif'
+    },
+    'core.upf': {
+        'exporter': data_export,
+        'export_format': 'upf'
+    }
 }
 
-
-default_core_format_mapping = {
-    # TODO: File formats lower- or upper-case?
-    'core.array': None,
-    'core.array.bands': 'mpl_pdf',
-    'core.array.kpoints': None,
-    'core.array.projection': None,
-    'core.array.trajectory': 'cif',
-    'core.array.xy': None,
-    'core.base': None,
-    'core.bool': None,
-    'core.cif': 'cif',
-    'core.code': 'yaml',
-    'core.code.containerized': 'yaml',
-    'core.code.installed': 'yaml',
-    'core.code.portable': 'yaml',
-    'core.dict': None,
-    'core.enum': None,
-    'core.float': None,
-    'core.folder': None,
-    'core.int': None,
-    'core.jsonable': None,
-    'core.list': None,
-    'core.numeric': None,
-    'core.orbital': None,
-    'core.remote': None,
-    'core.remote.stash': None,
-    'core.remote.stash.folder': None,
-    'core.singlefile': None,
-    'core.str': None,
-    'core.structure': 'cif',
-    'core.upf': 'upf',
-}
 
 # Dynamically generated entry_points via
 # `entry_point_group = entry_points(group='aiida.data')`
@@ -268,31 +325,29 @@ class RichParser:
         # -> It would be annoying then to manually turn off all the file types. There should be some option to `invert`,
         # e.g. `--rich-invert`, or in the config-file/rich-options
 
-        # ? Here, only setting defaults could be just the hardcoded dictionary
+        # from importlib.metadata import entry_points
 
-        from importlib.metadata import entry_points
+        # options_dict = {}
 
-        options_dict = {}
+        # # Load all entry points under the specified group
+        # entry_point_group = entry_points(group='aiida.data')
 
-        # Load all entry points under the specified group
-        entry_point_group = entry_points(group='aiida.data')
+        # # print('USING DEFAULTS')
 
-        # print('USING DEFAULTS')
+        # for entry_point in entry_point_group:
+        #     entry_point_name = entry_point.name
+        #     # print(entry_point_name)
 
-        for entry_point in entry_point_group:
-            entry_point_name = entry_point.name
-            # print(entry_point_name)
+        #     try:
+        #         value_dict =
+        #             default_core_export_mapping[entry_point_name],
+        #             default_core_format_mapping[entry_point_name],
+        #         )
+        #         options_dict[entry_point_name] = value_tuple
+        #     except:
+        #         pass
 
-            try:
-                value_tuple = (
-                    default_core_export_mapping[entry_point_name],
-                    default_core_format_mapping[entry_point_name],
-                )
-                options_dict[entry_point_name] = value_tuple
-            except:
-                pass
-
-        return options_dict
+        return default_core_export_mapping
 
     def extend_by_entry_points(self): ...
 

@@ -423,7 +423,7 @@ class ProcessDumper:
         parent_path /= 'rich'
 
         # Set up the rich parsing functions
-        from aiida.tools.dumping.rich import RichParser
+        from aiida.tools.dumping.rich import RichParser  #, default_core_export_mapping
 
         # Extend (at least the keys) by the dynamic entry points
 
@@ -431,6 +431,8 @@ class ProcessDumper:
             raise ValueError('Specify rich options either via CLI or config file, not both.')
 
         # Automatically and always set the defaults
+        # TODO: Currently dummy implementation that only returns the hardcoded dict. Use it like this when the
+        # TODO: entry_points might change. For `core`, they should always be the same hardcoded ones.
         options_dict = RichParser.set_core_defaults()
         print(options_dict)
         # pprint('options_dict', options_dict)
@@ -475,20 +477,22 @@ class ProcessDumper:
                 # print('linked_node_path', linked_node_path)
                 # export_function
 
-                linked_node_path.mkdir(parents=True, exist_ok=True)
 
                 # Obtain settings from the export dict
                 # TODO: -> This might break when plugin is missing
-                export_function = options_dict[node_entry_point_name][0]
-                fileformat = options_dict[node_entry_point_name][1]
+                exporter = options_dict[node_entry_point_name]['exporter']
+                fileformat = options_dict[node_entry_point_name]['export_format']
                 rich_output_file = linked_node_path / f'{node.__class__.__name__}-{node.pk}.{fileformat}'
 
                 # No exporter set
-                if export_function is None:
+                if exporter is None:
                     continue
 
-                if export_function.__name__ == 'data_export':
-                    export_function(
+                # Only create subdirectory if `Data` node has an exporter
+                linked_node_path.mkdir(parents=True, exist_ok=True)
+
+                if exporter.__name__ == 'data_export':
+                    exporter(
                         node=node,
                         output_fname=rich_output_file,
                         fileformat=fileformat,
@@ -498,26 +502,14 @@ class ProcessDumper:
 
                 # TODO: This should be top-level singledispatched `dump`. Use `_dump_code` for now.
                 # TODO: Eventually, all these functions should all have the same signature...
-                elif export_function.__name__ == '_dump_code':
-                    export_function(
+                elif exporter.__name__ == '_dump_code':
+                    exporter(
                         data_node=node,
                         output_path=rich_output_file.parent,
                         file_name=None,
                         file_format=fileformat
                     )
 
-                try:...
-
-                    # print('fileformat', fileformat)
-                except TypeError:  # 'NoneType' object is not callable
-                    raise
-                    pass
-                except AttributeError:
-                    pass
-                except Exception:
-                    pass
-
-                # rich_output_file.mkdir(parents=True, exist_ok=True)
 
     def _generate_calculation_io_mapping(self, io_dump_paths: List[str | Path] | None = None) -> SimpleNamespace:
         """Helper function to generate mapping for entities dumped for each `orm.CalculationNode`.

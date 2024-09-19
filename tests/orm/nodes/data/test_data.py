@@ -109,6 +109,25 @@ def generate_class_instance():
             )
             return instance
 
+        if (
+            data_class is orm.AbstractCode
+            or data_class is orm.Code
+            or data_class is orm.InstalledCode
+            or data_class is orm.ContainerizedCode
+            or data_class is orm.PortableCode
+        ):
+            # Taken from `test_code.py`
+            import uuid
+
+            computer = orm.Computer(
+                label=uuid.uuid4().hex,
+                transport_type='core.local',
+                hostname='localhost',
+                scheduler_type='core.slurm',
+            ).store()
+            instance = orm.Code(remote_computer_exec=(computer, '/bin/cat'))
+            return instance
+
         raise RuntimeError(
             'no instance generator implemented for class `{}`. If you have added a `_prepare_*` method '
             'for this data class, add a generator of a dummy instance here'.format(data_class)

@@ -486,13 +486,14 @@ def print_process_spec(process_spec):
         echo.echo(style('\nExit codes that invalidate the cache are marked in bold red.\n', italic=True))
 
 
-def generate_validate_output_file(
-    output_file: Path | None, entity_label: str, appendix: str = '', overwrite: bool = False
+def validate_output_filename(
+    output_file: Path | None,
+    overwrite: bool = False,
 ):
-    """Generate default output filename for `Code`/`Computer` export and validate."""
+    """Validate output filename."""
 
     if output_file is None:
-        output_file = Path(f'{entity_label}{appendix}.yml')
+        raise ValueError('Output filename must be passed for validation.')
 
     if output_file.is_dir():
         raise IsADirectoryError(
@@ -501,5 +502,3 @@ def generate_validate_output_file(
 
     if output_file.is_file() and not overwrite:
         raise FileExistsError(f'File `{output_file}` already exists, use `--overwrite` to overwrite.')
-
-    return output_file

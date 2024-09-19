@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 from aiida.cmdline.utils import common
-from aiida.cmdline.utils.common import generate_validate_output_file
+from aiida.cmdline.utils.common import validate_output_filename
 from aiida.common import LinkType
 from aiida.engine import Process, calcfunction
 from aiida.orm import CalcFunctionNode, CalculationNode, WorkflowNode
@@ -95,35 +95,29 @@ def test_print_process_info():
 
 
 @pytest.mark.usefixtures('chdir_tmp_path')
-def test_generate_validate_output():
+def test_validate_output_filename():
     test_entity_label = 'test_code'
     test_appendix = '@test_computer'
+    fileformat = 'yml'
 
-    expected_output_file = Path(f'{test_entity_label}{test_appendix}.yml')
-
-    # Test default label creation
-    obtained_output_file = generate_validate_output_file(
-        output_file=None, entity_label=test_entity_label, appendix=test_appendix
-    )
-    assert expected_output_file == obtained_output_file, 'Filenames differ'
+    expected_output_file = Path(f'{test_entity_label}{test_appendix}.{fileformat}')
 
     # Test failure if file exists, but overwrite False
     expected_output_file.touch()
     with pytest.raises(FileExistsError, match='.*use `--overwrite` to overwrite.'):
-        generate_validate_output_file(
-            output_file=None, entity_label=test_entity_label, appendix=test_appendix, overwrite=False
-        )
+        validate_output_filename(output_file=None, overwrite=False)
 
     # Test that overwrite does the job
-    obtained_output_file = generate_validate_output_file(
-        output_file=None, entity_label=test_entity_label, appendix=test_appendix, overwrite=True
-    )
+    obtained_output_file = validate_output_filename(output_file=None, overwrite=True)
     assert expected_output_file == obtained_output_file, 'Overwrite unsuccessful'
     expected_output_file.unlink()
 
     # Test failure if directory exists
     expected_output_file.mkdir()
     with pytest.raises(IsADirectoryError, match='A directory with the name.*'):
-        generate_validate_output_file(
-            output_file=None, entity_label=test_entity_label, appendix=test_appendix, overwrite=False
+        validate_output_filename(
+            output_file=None,
+            entity_label=test_entity_label,
+            appendix=test_appendix,
+            overwrite=False,
         )

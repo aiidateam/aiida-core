@@ -381,3 +381,21 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         builder.code = self
 
         return builder
+
+    def _prepare_yml(self, main_file_name='', *args, **kwargs):
+        """Export code to a yaml file."""
+        import yaml
+
+        code_data = {}
+        sort = kwargs.get('sort', False)
+
+        for key in self.Model.model_fields.keys():
+            value = getattr(self, key).label if key == 'computer' else getattr(self, key)
+
+            # If the attribute is not set, for example ``with_mpi`` do not export it, because the YAML won't be valid
+            # for use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
+            # TODO: Better handling of this should eventually be implemented in ``verdi code create``
+            if value is not None:
+                code_data[key] = str(value)
+
+        return yaml.dump(code_data, sort_keys=sort, encoding='utf-8'), {}

@@ -102,22 +102,23 @@ def test_validate_output_filename():
 
     expected_output_file = Path(f'{test_entity_label}{test_appendix}.{fileformat}')
 
+    # Test failure if no actual file to be validated is passed
+    with pytest.raises(ValueError, match='.*passed for validation.'):
+        validate_output_filename(output_file=None)
+
     # Test failure if file exists, but overwrite False
     expected_output_file.touch()
     with pytest.raises(FileExistsError, match='.*use `--overwrite` to overwrite.'):
-        validate_output_filename(output_file=None, overwrite=False)
+        validate_output_filename(output_file=expected_output_file, overwrite=False)
 
-    # Test that overwrite does the job
-    obtained_output_file = validate_output_filename(output_file=None, overwrite=True)
-    assert expected_output_file == obtained_output_file, 'Overwrite unsuccessful'
+    # Test that overwrite does the job -> No exception raised
+    validate_output_filename(output_file=expected_output_file, overwrite=True)
     expected_output_file.unlink()
 
     # Test failure if directory exists
     expected_output_file.mkdir()
     with pytest.raises(IsADirectoryError, match='A directory with the name.*'):
         validate_output_filename(
-            output_file=None,
-            entity_label=test_entity_label,
-            appendix=test_appendix,
+            output_file=expected_output_file,
             overwrite=False,
         )

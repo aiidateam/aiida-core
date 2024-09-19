@@ -487,13 +487,16 @@ def print_process_spec(process_spec):
 
 
 def validate_output_filename(
-    output_file: Path | None,
+    output_file: Path | str | None,
     overwrite: bool = False,
 ):
     """Validate output filename."""
 
     if output_file is None:
         raise ValueError('Output filename must be passed for validation.')
+
+    if isinstance(output_file, str):
+        output_file = Path(output_file)
 
     if output_file.is_dir():
         raise IsADirectoryError(

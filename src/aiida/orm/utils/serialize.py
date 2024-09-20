@@ -48,7 +48,7 @@ def represent_enum(dumper: yaml.Dumper, enum: Enum) -> yaml.ScalarNode:
 
 def enum_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Enum:
     """Construct an enum from the serialized representation."""
-    deserialized: str = loader.construct_scalar(serialized)  # type: ignore[arg-type,assignment]
+    deserialized: str = loader.construct_scalar(serialized)  # type: ignore[arg-type]
     identifier, value = deserialized.split('|')
     cls = get_object_loader().load_object(identifier)
     enum = cls(value)

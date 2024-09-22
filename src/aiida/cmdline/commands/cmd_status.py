@@ -16,7 +16,12 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
-from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
+from aiida.common.exceptions import (
+    CorruptStorage,
+    IncompatibleExternalDependencies,
+    IncompatibleStorageSchema,
+    UnreachableStorage,
+)
 from aiida.common.log import override_log_level
 from aiida.common.warnings import warn_deprecation
 
@@ -96,6 +101,12 @@ def verdi_status(print_traceback, no_rmq):
             storage_cls = profile.storage_cls
             storage_head_version = storage_cls.version_head()
             storage_backend = storage_cls(profile)
+
+            if storage_cls.__name__ in ['SqliteZipBackend', 'SqliteDosStorage']:
+                from aiida.storage.sqlite_zip.backend import validate_sqlite_version
+
+                validate_sqlite_version()
+
     except UnreachableStorage as exc:
         message = "Unable to connect to profile's storage."
         print_status(ServiceStatus.DOWN, 'storage', message, exception=exc, print_traceback=print_traceback)
@@ -110,6 +121,10 @@ def verdi_status(print_traceback, no_rmq):
     except CorruptStorage as exc:
         message = 'Storage is corrupted.'
         print_status(ServiceStatus.DOWN, 'storage', message, exception=exc, print_traceback=print_traceback)
+        exit_code = ExitCode.CRITICAL
+    except IncompatibleExternalDependencies as exc:
+        message = "Storage backend version doesn't satisfy the requirements of the installed AiiDA version. "
+        print_status(ServiceStatus.DOWN, 'storage', message, exception=exc)
         exit_code = ExitCode.CRITICAL
     except Exception as exc:
         message = "Unable to instatiate profile's storage."

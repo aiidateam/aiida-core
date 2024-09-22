@@ -1,9 +1,11 @@
 """Tests for :mod:`aiida.storage.sqlite_zip.backend`."""
 
 import pathlib
+from unittest.mock import MagicMock
 
 import pytest
-from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+from aiida.common.exceptions import IncompatibleExternalDependencies
+from aiida.storage.sqlite_zip.backend import SqliteZipBackend, validate_sqlite_version
 from aiida.storage.sqlite_zip.migrator import validate_storage
 from pydantic_core import ValidationError
 
@@ -62,3 +64,34 @@ def test_model():
 
     model = SqliteZipBackend.Model(filepath=filepath.name)
     assert pathlib.Path(model.filepath).is_absolute()
+
+
+def test_validate_sqlite_version(monkeypatch):
+    """Test :meth:`aiida.storage.sqlite_zip.backend.validate_sqlite_version`."""
+
+    # Test when sqlite version is not supported, should read sqlite version from sqlite3.sqlite_version
+    monkeypatch.setattr('sqlite3.sqlite_version', '0.0.0')
+    monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '100.0.0')
+    with pytest.raises(
+        IncompatibleExternalDependencies, match=r'.*Storage backend requires sqlite 100.0.0 or higher.*'
+    ):
+        validate_sqlite_version()
+
+    # Test when sqlite version is supported
+    monkeypatch.setattr('sqlite3.sqlite_version', '100.0.0')
+    monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '0.0.0')
+    validate_sqlite_version()
+
+
+def test_initialise_version_check(tmp_path, monkeypatch):
+    """Test :meth:`aiida.storage.sqlite_zip.backend.SqliteZipBackend.create_profile`
+    only if calls on validate_sqlite_version."""
+
+    filepath_archive = tmp_path / 'archive.zip'
+
+    mock_ = MagicMock()
+    monkeypatch.setattr('aiida.storage.sqlite_zip.backend.validate_sqlite_version', mock_)
+    profile = SqliteZipBackend.create_profile(filepath_archive)
+    assert mock_.call_count == 1
+    SqliteZipBackend.initialise(profile)
+    assert mock_.call_count == 2

@@ -241,18 +241,25 @@ def show(code):
 @options.OVERWRITE()
 @options.SORT()
 @with_dbenv()
-def export(code, output_file, overwrite, sort, **kwargs):
-    """Export code to a yaml file."""
+def export(code, output_file, overwrite, sort):
+    """Export code to a yaml file. If no output file is given"""
 
-    other_args = {'sort': sort, **kwargs}
+    other_args = {'sort': sort}
 
     if output_file is not None:
+        if not str(output_file).endswith('.yml') and not str(output_file).endswith('.yaml'):
+            format_str = 'Given Fileformat not supported. Only .yml and .yaml supported for now.'
+            raise click.BadParameter(format_str, param_hint='OUTPUT_FILE')
         fileformat = output_file.suffix[1:]
     else:
-        fileformat = 'yml'
-        output_file = pathlib.Path(f'{code.label}@{code.computer.label}.{fileformat}')
+        fileformat = 'yaml'
+        output_file = pathlib.Path(f'{code.full_label}.{fileformat}')
 
     try:
+        # In principle, output file validation is also done in the `data_export` function. However, the
+        # `validate_output_filename` function is applied here, as well, as it is also used in the `Computer` export, and
+        # as `Computer` is not derived from `Data`, it cannot be exported by `data_export`, so
+        # `validate_output_filename` cannot be removed in favor of the validation done in `data_export`.
         validate_output_filename(
             output_file=output_file,
             overwrite=overwrite,
@@ -260,9 +267,6 @@ def export(code, output_file, overwrite, sort, **kwargs):
     except (FileExistsError, IsADirectoryError) as exception:
         raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
 
-    # TODO: In principle, output file validation is also done in the `data_export` function. However, I keep the
-    # `validate_output_file_name` function for now, as it is also used in the `Computer` export, and, as `Computer` is
-    # not derived from `Data`, it cannot be exported by `data_export`.
     data_export(
         node=code,
         output_fname=output_file,

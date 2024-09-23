@@ -382,7 +382,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
 
         return builder
 
-    def _prepare_yml(self, main_file_name='', *args, **kwargs):
+    def _prepare_yml(self, *args, **kwargs):
         """Export code to a yaml file."""
         import yaml
 
@@ -392,7 +392,13 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         for key in self.Model.model_fields.keys():
             value = getattr(self, key).label if key == 'computer' else getattr(self, key)
 
+            # If the attribute is not set, for example ``with_mpi`` do not export it, so that there are no null-values
+            # in the resulting YAML file
             if value is not None:
                 code_data[key] = str(value)
 
         return yaml.dump(code_data, sort_keys=sort, encoding='utf-8'), {}
+
+    def _prepare_yaml(self, *args, **kwargs):
+        """Also allow for export as .yaml"""
+        return self._prepare_yml(*args, **kwargs)

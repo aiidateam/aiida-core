@@ -145,7 +145,33 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
 
 
 @verdi_group.command('delete')
-@arguments.GROUP()
+@arguments.GROUPS()
+@options.ALL_USERS(help='Filter and delete groups for all users, rather than only for the current user.')
+@options.USER(help='Add a filter to delete groups belonging to a specific user.')
+@options.TYPE_STRING(help='Filter to only include groups of this type string.')
+@options.PAST_DAYS(help='Add a filter to delete only groups created in the past N days.', default=None)
+@click.option(
+    '-s',
+    '--startswith',
+    type=click.STRING,
+    default=None,
+    help='Add a filter to delete only groups for which the label begins with STRING.',
+)
+@click.option(
+    '-e',
+    '--endswith',
+    type=click.STRING,
+    default=None,
+    help='Add a filter to delete only groups for which the label ends with STRING.',
+)
+@click.option(
+    '-c',
+    '--contains',
+    type=click.STRING,
+    default=None,
+    help='Add a filter to delete only groups for which the label contains STRING.',
+)
+@options.NODE(help='Delete only the groups that contain a node.')
 @options.FORCE()
 @click.option(
     '--delete-nodes', is_flag=True, default=False, help='Delete all nodes in the group along with the group itself.'
@@ -153,33 +179,138 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @options.DRY_RUN()
 @with_dbenv()
-def group_delete(group, delete_nodes, dry_run, force, **traversal_rules):
-    """Delete a group and (optionally) the nodes it contains."""
+def group_delete(
+    groups,
+    delete_nodes,
+    dry_run,
+    force,
+    all_users,
+    user,
+    type_string,
+    past_days,
+    startswith,
+    endswith,
+    contains,
+    node,
+    **traversal_rules,
+):
+    """Delete groups and (optionally) the nodes they contain."""
+    from tabulate import tabulate
+
     from aiida import orm
     from aiida.tools import delete_group_nodes
 
-    if not (force or dry_run):
-        click.confirm(f'Are you sure you want to delete {group}?', abort=True)
-    elif dry_run:
-        echo.echo_report(f'Would have deleted {group}.')
+    filters_provided = any(
+        [all_users or user or past_days or startswith or endswith or contains or node or type_string]
+    )
 
-    if delete_nodes:
+    if groups and filters_provided:
+        echo.echo_critical('Cannot specify both GROUPS and any of the other filters.')
 
-        def _dry_run_callback(pks):
-            if not pks or force:
-                return False
-            echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
-            return not click.confirm('Do you want to continue?', abort=True)
+    if not groups and filters_provided:
+        import datetime
 
-        _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
-        if not nodes_deleted:
-            # don't delete the group if the nodes were not deleted
+        from aiida.common import timezone
+        from aiida.common.escaping import escape_for_sql_like
+
+        builder = orm.QueryBuilder()
+        filters = {}
+
+        # Note: we could have set 'core' as a default value for type_string,
+        # but for the sake of uniform interface, we decided to keep the default value of None.
+        # Otherwise `verdi group delete 123 -T core` would have worked, but we say
+        #  'Cannot specify both GROUPS and any of the other filters'.
+        if type_string is None:
+            type_string = 'core'
+
+        if '%' in type_string or '_' in type_string:
+            filters['type_string'] = {'like': type_string}
+        else:
+            filters['type_string'] = type_string
+
+        # Creation time
+        if past_days:
+            filters['time'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
+
+        # Query for specific group labels
+        filters['or'] = []
+        if startswith:
+            filters['or'].append({'label': {'like': f'{escape_for_sql_like(startswith)}%'}})
+        if endswith:
+            filters['or'].append({'label': {'like': f'%{escape_for_sql_like(endswith)}'}})
+        if contains:
+            filters['or'].append({'label': {'like': f'%{escape_for_sql_like(contains)}%'}})
+
+        builder.append(orm.Group, filters=filters, tag='group', project='*')
+
+        # Query groups that belong to specific user
+        if user:
+            user_email = user.email
+        else:
+            # By default: only groups of this user
+            user_email = orm.User.collection.get_default().email
+
+        # Query groups that belong to all users
+        if not all_users:
+            builder.append(orm.User, filters={'email': user_email}, with_group='group')
+
+        # Query groups that contain a particular node
+        if node:
+            builder.append(orm.Node, filters={'id': node.pk}, with_group='group')
+
+        groups = builder.all(flat=True)
+        if not groups:
+            echo.echo_report('No groups found matching the specified criteria.')
             return
 
-    if not dry_run:
+    elif not groups and not filters_provided:
+        echo.echo_report('Nothing happened. Please specify at least one group or provide filters to query groups.')
+        return
+
+    projection_lambdas = {
+        'pk': lambda group: str(group.pk),
+        'label': lambda group: group.label,
+        'type_string': lambda group: group.type_string,
+        'count': lambda group: group.count(),
+        'user': lambda group: group.user.email.strip(),
+        'description': lambda group: group.description,
+    }
+
+    table = []
+    projection_header = ['PK', 'Label', 'Type string', 'User']
+    projection_fields = ['pk', 'label', 'type_string', 'user']
+    for group in groups:
+        table.append([projection_lambdas[field](group) for field in projection_fields])
+
+    if not (force or dry_run):
+        echo.echo_report('The following groups will be deleted:')
+        echo.echo(tabulate(table, headers=projection_header))
+        click.confirm('Are you sure you want to continue?', abort=True)
+    elif dry_run:
+        echo.echo_report('Would have deleted:')
+        echo.echo(tabulate(table, headers=projection_header))
+
+    for group in groups:
         group_str = str(group)
-        orm.Group.collection.delete(group.pk)
-        echo.echo_success(f'{group_str} deleted.')
+
+        if delete_nodes:
+
+            def _dry_run_callback(pks):
+                if not pks or force:
+                    return False
+                echo.echo_warning(
+                    f'YOU ARE ABOUT TO DELETE {len(pks)} NODES ASSOCIATED WITH {group_str}! THIS CANNOT BE UNDONE!'
+                )
+                return not click.confirm('Do you want to continue?', abort=True)
+
+            _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
+            if not nodes_deleted:
+                # don't delete the group if the nodes were not deleted
+                return
+
+        if not dry_run:
+            orm.Group.collection.delete(group.pk)
+            echo.echo_success(f'{group_str} deleted.')
 
 
 @verdi_group.command('relabel')
@@ -273,7 +404,7 @@ def group_show(group, raw, limit, uuid):
 @options.ALL_USERS(help='Show groups for all users, rather than only for the current user.')
 @options.USER(help='Add a filter to show only groups belonging to a specific user.')
 @options.ALL(help='Show groups of all types.')
-@options.TYPE_STRING()
+@options.TYPE_STRING(default='core', help='Filter to only include groups of this type string.')
 @click.option(
     '-d', '--with-description', 'with_description', is_flag=True, default=False, help='Show also the group description.'
 )
@@ -302,7 +433,7 @@ def group_show(group, raw, limit, uuid):
 )
 @options.ORDER_BY(type=click.Choice(['id', 'label', 'ctime']), default='label')
 @options.ORDER_DIRECTION()
-@options.NODE(help='Show only the groups that contain the node.')
+@options.NODE(help='Show only the groups that contain this node.')
 @with_dbenv()
 def group_list(
     all_users,
@@ -330,12 +461,6 @@ def group_list(
 
     builder = orm.QueryBuilder()
     filters = {}
-
-    # Have to specify the default for `type_string` here instead of directly in the option otherwise it will always
-    # raise above if the user specifies just the `--group-type` option. Once that option is removed, the default can
-    # be moved to the option itself.
-    if type_string is None:
-        type_string = 'core'
 
     if not all_entries:
         if '%' in type_string or '_' in type_string:
@@ -367,11 +492,11 @@ def group_list(
 
     # Query groups that belong to all users
     if not all_users:
-        builder.append(orm.User, filters={'email': {'==': user_email}}, with_group='group')
+        builder.append(orm.User, filters={'email': user_email}, with_group='group')
 
     # Query groups that contain a particular node
     if node:
-        builder.append(orm.Node, filters={'id': {'==': node.pk}}, with_group='group')
+        builder.append(orm.Node, filters={'id': node.pk}, with_group='group')
 
     builder.order_by({orm.Group: {order_by: order_dir}})
 

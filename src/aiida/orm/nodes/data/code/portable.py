@@ -198,6 +198,9 @@ class PortableCode(Code):
         if not pathlib.PurePosixPath(value).is_absolute():
             raise ValueError('`filepath_files` must be an absolute path.')
 
+        if not pathlib.Path(value).exists():
+            raise ValueError('`filepath_files` must be an existing directory.')
+
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_FILES, str(value))
 
         if len(self.base.repository.list_object_names()) > 0:

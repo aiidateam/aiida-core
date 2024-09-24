@@ -41,6 +41,7 @@ class PortableCode(Code):
 
     _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
+    _KEY_ATTRIBUTE_FILEPATH_FILES: str = 'filepath_files'
 
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
@@ -90,8 +91,7 @@ class PortableCode(Code):
         super().__init__(**kwargs)
         type_check(filepath_files, pathlib.Path)
         self.filepath_executable = filepath_executable  # type: ignore[assignment]
-        self.filepath_files = filepath_files
-        self.base.repository.put_object_from_tree(str(filepath_files))
+        self.filepath_files = filepath_files  # type: ignore[assignment]
 
     def _validate(self):
         """Validate the instance by checking that an executable is defined and it is part of the repository files.
@@ -178,3 +178,28 @@ class PortableCode(Code):
             raise ValueError('The `filepath_executable` should not be absolute.')
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
+
+    @property
+    def filepath_files(self) -> pathlib.PurePosixPath:
+        """Return the absolute path of the directory that contains the code files.
+
+        :return: The directory of the code files required for the `filepath_executable`.
+        """
+        return pathlib.PurePosixPath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_FILES))
+
+    @filepath_files.setter
+    def filepath_files(self, value: t.Union[str, pathlib.Path]) -> None:
+        """Set the absolute path of the directory that contains the code files.
+
+        :param value: The absolute filepath of the directory of the uploaded code files.
+        """
+        type_check(value, (str, pathlib.Path))
+
+        if not pathlib.PurePosixPath(value).is_absolute():
+            raise ValueError('`filepath_files` must be an absolute path.')
+
+        self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_FILES, str(value))
+
+        if len(self.base.repository.list_object_names()) > 0:
+            self.base.repository.erase()
+        self.base.repository.put_object_from_tree(str(value))

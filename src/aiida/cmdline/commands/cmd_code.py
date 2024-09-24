@@ -242,13 +242,13 @@ def show(code):
 @options.SORT()
 @with_dbenv()
 def export(code, output_file, overwrite, sort):
-    """Export code to a yaml file. If no output file is given"""
+    """Export code to a yaml file. If no output file is given, default name is created based on the code label."""
 
     other_args = {'sort': sort}
 
     if output_file is not None:
         if not str(output_file).endswith('.yml') and not str(output_file).endswith('.yaml'):
-            format_str = 'Given Fileformat not supported. Only .yml and .yaml supported for now.'
+            format_str = 'Given fileformat not supported. Only .yml and .yaml supported for now.'
             raise click.BadParameter(format_str, param_hint='OUTPUT_FILE')
         fileformat = output_file.suffix[1:]
     else:

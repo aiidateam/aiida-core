@@ -345,7 +345,7 @@ def test_code_export_default_filename(run_cli_command, aiida_code_installed):
     options = [str(code.pk)]
     run_cli_command(cmd_code.export, options)
 
-    assert pathlib.Path('code@localhost.yml').is_file()
+    assert pathlib.Path('code@localhost.yaml').is_file()
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)

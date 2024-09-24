@@ -127,7 +127,6 @@ def generate_class_instance(tmp_path, aiida_localhost):
 
         if data_class is orm.PortableCode:
             (tmp_path / 'bash').touch()
-            (tmp_path / 'alternate').touch()
             filepath_executable = 'bash'
             instance = data_class(
                 label='test_portable_code',

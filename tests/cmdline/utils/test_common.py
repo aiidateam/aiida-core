@@ -98,7 +98,7 @@ def test_print_process_info():
 def test_validate_output_filename():
     test_entity_label = 'test_code'
     test_appendix = '@test_computer'
-    fileformat = 'yml'
+    fileformat = 'yaml'
 
     expected_output_file = Path(f'{test_entity_label}{test_appendix}.{fileformat}')
 

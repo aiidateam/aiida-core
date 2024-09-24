@@ -90,6 +90,7 @@ class PortableCode(Code):
         super().__init__(**kwargs)
         type_check(filepath_files, pathlib.Path)
         self.filepath_executable = filepath_executable  # type: ignore[assignment]
+        self.filepath_files = filepath_files
         self.base.repository.put_object_from_tree(str(filepath_files))
 
     def _validate(self):

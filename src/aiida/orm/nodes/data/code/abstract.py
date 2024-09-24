@@ -383,7 +383,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         return builder
 
     def _prepare_yml(self, *args, **kwargs):
-        """Export code to a yaml file."""
+        """Export code to a yml file."""
         import yaml
 
         code_data = {}

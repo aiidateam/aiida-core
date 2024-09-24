@@ -18,7 +18,7 @@ from tests.static import STATIC_DIR
 
 
 @pytest.fixture
-def generate_class_instance():
+def generate_class_instance(tmp_path, aiida_localhost):
     """Generate a dummy `Data` instance for the given sub class."""
 
     def _generate_class_instance(data_class):
@@ -109,24 +109,41 @@ def generate_class_instance():
             )
             return instance
 
-        if (
-            data_class is orm.AbstractCode
-            or data_class is orm.Code
-            or data_class is orm.InstalledCode
-            or data_class is orm.ContainerizedCode
-            or data_class is orm.PortableCode
-        ):
-            # Taken from `test_code.py`
-            import uuid
-
-            computer = orm.Computer(
-                label=uuid.uuid4().hex,
-                transport_type='core.local',
-                hostname='localhost',
-                scheduler_type='core.slurm',
-            ).store()
-            instance = orm.Code(remote_computer_exec=(computer, '/bin/cat'))
+        if data_class is orm.AbstractCode:
+            instance = data_class(label='test_abstract_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
             return instance
+
+        if data_class is orm.Code:
+            instance = data_class(label='test_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
+            return instance
+
+        if data_class is orm.InstalledCode:
+            instance = data_class(
+                label='test_installed_code',
+                computer=aiida_localhost,
+                filepath_executable='/bin/cat',
+            )
+            return instance
+
+        if data_class is orm.PortableCode:
+            (tmp_path / 'bash').touch()
+            (tmp_path / 'alternate').touch()
+            filepath_executable = 'bash'
+            instance = data_class(
+                label='test_portable_code',
+                filepath_executable=filepath_executable,
+                filepath_files=tmp_path,
+            )
+            return instance
+
+        if data_class is orm.ContainerizedCode:
+            return orm.ContainerizedCode(
+                label='test_containerized_code',
+                computer=aiida_localhost,
+                image_name='image',
+                filepath_executable='bash',
+                engine_command='docker {image_name}',
+            )
 
         raise RuntimeError(
             'no instance generator implemented for class `{}`. If you have added a `_prepare_*` method '

@@ -23,13 +23,13 @@ from aiida import orm
 from aiida.cmdline.params.types.path import FileOrUrl
 from aiida.common import LinkType
 from aiida.common.exceptions import NotExistentAttributeError
-from aiida.tools.dumping.utils import _validate_make_dump_path
 from aiida.tools.dumping.abstract import AbstractDumper
-from rich.console import Console
-from rich.table import Table
+from aiida.tools.dumping.utils import validate_make_dump_path
 
 logger = logging.getLogger(__name__)
-from pprint import pprint
+from rich.pretty import pprint
+
+SAFEGUARD_FILE = '.aiida_node_metadata.yaml'
 
 
 class ProcessDumper(AbstractDumper):
@@ -54,7 +54,7 @@ class ProcessDumper(AbstractDumper):
         self.rich_config = rich_config
 
     @staticmethod
-    def _generate_default_dump_path(process_node: orm.ProcessNode, prefix: str = 'dump') -> Path:
+    def _generate_default_dump_path(process_node: orm.ProcessNode, prefix: str | None = None) -> Path:
         """Simple helper function to generate the default parent-dumping directory if none given.
 
         This function is not called for the recursive sub-calls of `_dump_calculation` as it just creates the default
@@ -66,10 +66,10 @@ class ProcessDumper(AbstractDumper):
 
         pk = process_node.pk
         try:
-            return Path(f'{prefix}-{process_node.process_label}-{pk}')
+            return Path('-'.join(filter(None, [prefix, process_node.process_label, str(pk)])))
         except AttributeError:
             # This case came up during testing, not sure how relevant it actually is
-            return Path(f'{prefix}-{process_node.process_type}-{pk}')
+            return Path('-'.join(filter(None, [prefix, process_node.process_type, pk])))
 
     @staticmethod
     def _generate_readme(process_node: orm.ProcessNode, output_path: Path) -> None:
@@ -179,7 +179,6 @@ class ProcessDumper(AbstractDumper):
     #     # Create a table using tabulate
     #     return tabulate(table_data, headers, tablefmt="grid")
 
-        
     def dump(
         self,
         process_node: orm.ProcessNode,
@@ -216,7 +215,9 @@ class ProcessDumper(AbstractDumper):
         if output_path is None:
             output_path = self._generate_default_dump_path(process_node=process_node)
 
-        _validate_make_dump_path(overwrite=self.overwrite, validate_path=output_path, logger=logger)
+        validate_make_dump_path(
+            overwrite=self.overwrite, path_to_validate=output_path, logger=logger, safeguard_file=SAFEGUARD_FILE
+        )
 
         if isinstance(process_node, orm.CalculationNode):
             self._dump_calculation(
@@ -251,7 +252,9 @@ class ProcessDumper(AbstractDumper):
         :param io_dump_paths: Custom subdirectories for `orm.CalculationNode` s, defaults to None
         """
 
-        _validate_make_dump_path(validate_path=output_path, overwrite=self.overwrite, logger=logger)
+        validate_make_dump_path(
+            path_to_validate=output_path, overwrite=self.overwrite, logger=logger, safeguard_file=SAFEGUARD_FILE
+        )
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
         called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
@@ -299,7 +302,9 @@ class ProcessDumper(AbstractDumper):
             Default: ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         """
 
-        _validate_make_dump_path(overwrite=self.overwrite, validate_path=output_path, logger=logger)
+        validate_make_dump_path(
+            overwrite=self.overwrite, path_to_validate=output_path, logger=logger, safeguard_file=SAFEGUARD_FILE
+        )
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 
         io_dump_mapping = self._generate_calculation_io_mapping(io_dump_paths=io_dump_paths)
@@ -443,7 +448,7 @@ class ProcessDumper(AbstractDumper):
         parent_path /= 'rich'
 
         # Set up the rich parsing functions
-        from aiida.tools.dumping.rich import RichParser  #, default_core_export_mapping
+        from aiida.tools.dumping.rich import RichParser  # , default_core_export_mapping
 
         # Extend (at least the keys) by the dynamic entry points
 
@@ -466,18 +471,15 @@ class ProcessDumper(AbstractDumper):
         else:
             logger.report('Neither `--rich-options` nor `--rich-config` set, using defaults.')
 
-
         for link_triple in link_triples:
             link_label = link_triple.link_label
-            linked_node_path = (
-                parent_path if self.flat else parent_path / Path(*link_label.split('__'))
-            )
+            linked_node_path = parent_path if self.flat else parent_path / Path(*link_label.split('__'))
 
             node_entry_point = link_triple.node.entry_point
             node_entry_point_name = node_entry_point.name
 
             try:
-                print(f"{node_entry_point_name}: ", f"{options_dict[node_entry_point_name][0].__name__}")
+                print(f'{node_entry_point_name}: ', f'{options_dict[node_entry_point_name][0].__name__}')
             except:
                 pass
 
@@ -486,7 +488,7 @@ class ProcessDumper(AbstractDumper):
             if node_entry_point_name.startswith('core'):
                 node = link_triple.node
 
-            # if isinstance(node, orm.Data):
+                # if isinstance(node, orm.Data):
                 # ? Here, instead one could check for `core_data_with_exports` explicitly
                 # ? Check here if exporter or fileformat not None, then create the path
                 # All orm.Data types implement `export`, `_get_exporters`, `get_export_formats`, and `_exportcontent`
@@ -496,7 +498,6 @@ class ProcessDumper(AbstractDumper):
                 # print(link_triple.node)
                 # print('linked_node_path', linked_node_path)
                 # export_function
-
 
                 # Obtain settings from the export dict
                 # TODO: -> This might break when plugin is missing
@@ -524,12 +525,8 @@ class ProcessDumper(AbstractDumper):
                 # TODO: Eventually, all these functions should all have the same signature...
                 elif exporter.__name__ == '_dump_code':
                     exporter(
-                        data_node=node,
-                        output_path=rich_output_file.parent,
-                        file_name=None,
-                        file_format=fileformat
+                        data_node=node, output_path=rich_output_file.parent, file_name=None, file_format=fileformat
                     )
-
 
     def _generate_calculation_io_mapping(self, io_dump_paths: List[str | Path] | None = None) -> SimpleNamespace:
         """Helper function to generate mapping for entities dumped for each `orm.CalculationNode`.

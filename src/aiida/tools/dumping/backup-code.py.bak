@@ -97,3 +97,101 @@ class GroupDumper(AbstractDumper):
             # # To make development quicker
             # if iworkflow_ > 1:
             #     break
+
+    # if entities is not None and "groups" in entities:
+
+    #     if dump_data:
+    #         # process_qb = orm.QueryBuilder()
+    #         # process_qb.append(orm.ProcessNode).all()
+    #         if entities is not None and "groups" in entities:
+    #             # Dynamically add groups to the query
+    #             group_filters = entities["groups"]
+
+    #             # If multiple groups are provided, we need to make sure nodes are in any one of them
+    #             group_conditions = []
+
+    #             for group in group_filters:
+    #                 print('GROUP', group)
+
+    #                 # Apply the 'OR' condition for the groups, so that the nodes are in at least one group
+    #                 process_qb = orm.QueryBuilder()
+    #                 process_qb.append(orm.Group, filters={'label': group.label}, tag='group')
+    #                 process_qb.append(orm.ProcessNode, with_group='group')
+
+    #                 process_collection_dumper = CollectionDumper(
+    #                     parent_path=path,
+    #                     also_raw=also_raw,
+    #                     also_rich=also_rich,
+    #                     qb_instance=process_qb,
+    #                     **kwargs
+    #                 )
+    #                 process_collection_dumper.dump()
+
+    #     if dump_processes:
+    #             # Dynamically add groups to the query
+    #             group_filters = entities["groups"]
+
+    #             # If multiple groups are provided, we need to make sure nodes are in any one of them
+    #             group_conditions = []
+
+    #             for group in group_filters:
+    #                 # group_conditions.append({"with_group": group})
+
+    #                 # Apply the 'OR' condition for the groups, so that the nodes are in at least one group
+    #                 data_qb = orm.QueryBuilder()
+    #                 data_qb.append(orm.Group, filters={'label': group.label}, tag='group')
+    #                 data_qb.append(orm.ProcessNode, with_group='group')
+    #                 # data_qb.append(orm.Data).all()
+    #                 # data_qb.add_filter(orm.Data, with_group=group)
+
+    #                 data_collection_dumper = CollectionDumper(
+    #                     parent_path=path,
+    #                     also_raw=also_raw,
+    #                     also_rich=also_rich,
+    #                     qb_instance=data_qb,
+    #                     **kwargs,
+    #                 )
+    #                 data_collection_dumper.dump()
+
+    # profile_dumper = ProfileDumper(
+    #     profile='verdi-profile-dump_dev_tiny',
+    #     full=True,
+    #     parent_path=path,
+    #     organize_by_groups=True,
+    # )
+    # profile_dumper.dump()
+    # echo.echo_success(f'Data of profile `{profile.name}` mirrored to disk.')
+
+        # def _dump_processes(self):
+    #     print(self.should_dump_calculations())
+    #     print(self.should_dump_workflows())
+        # self._dump_calculations_hidden()
+        # self._link_calculations_hidden()
+        # self._dump_link_workflows()
+        # # logger.report(f'Linking workflows to calculations for group {group_name}...')
+
+        # # Special case in which no `WorkflowNode`s are contained in the group
+        #     # logger.report('GROUP 3 DUMP CALCULATIONS')
+        #     # if self.entity_counter.get(orm.WorkChainNode, 0):
+        #     self._dump_calculations_hidden()
+        #     self._link_calculations_hidden()
+
+                # Special case in which no workflows are contained in the group, but calculations
+        # or (
+        #     sum(
+        #         self.entity_counter.get(orm_process_class, 0)
+        #         for orm_process_class in [
+        #             orm.WorkChainNode,
+        #             orm.WorkFunctionNode,
+        #         ]
+        #     )
+        #     == 0
+        #     and sum(
+        #         self.entity_counter.get(orm_process_class, 0)
+        #         for orm_process_class in [
+        #             orm.CalcJobNode,
+        #             orm.CalcFunctionNode,
+        #         ]
+        #     )
+        #     > 0
+        # )

@@ -8,120 +8,175 @@
 ###########################################################################
 """Functionality for dumping of a Collections of AiiDA ORMs."""
 
-from aiida import orm
+from __future__ import annotations
+
 import logging
 from collections import Counter
+import os
+from typing import List
+
+from rich.pretty import pprint
+
+from aiida import orm
+from aiida.manage.configuration import Profile
 from aiida.tools.dumping.abstract import AbstractDumper
 from aiida.tools.dumping.data import DataDumper
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.manage.configuration import Profile
-from rich.pretty import pprint
-from rich.console import Console
-from rich.table import Table
+from aiida.tools.dumping.utils import get_nodes_from_db
+import itertools
+import contextlib
 
 LOGGER = logging.getLogger(__name__)
 # TODO: Could also get the entities, or UUIDs directly, rather than just counting them here
+
+DEFAULT_PROCESSES_TO_DUMP = [orm.CalculationNode, orm.WorkflowNode]
+DEFAULT_DATA_TO_DUMP = [
+    orm.StructureData,
+    orm.Code,
+    orm.Computer,
+]
+DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP + DEFAULT_DATA_TO_DUMP
 
 
 class CollectionDumper(AbstractDumper):
     def __init__(
         self,
-        profile: Profile | None = None,
+        # profile: Profile | None = None,
         qb_instance: orm.QueryBuilder | None = None,
-        data_only: bool = False,
-        process_only: bool = False,
+        dump_processes: bool = False,
+        dump_data: bool = False,
+        link_processes: bool = False,
+        link_data: bool = False,
+        entities_to_dump: List | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        if profile is None:
-            from aiida.manage import get_manager
 
-            profile = get_manager().get_profile()
-
-        self.profile = profile
-        self.data_only = data_only
-        self.process_only = process_only
+        # self.profile = profile
         self.qb_instance = qb_instance
+        self.dump_processes = dump_processes
+        self.dump_data = dump_data
+        self.link_processe = link_processes
+        self.link_data = link_data
+
+        if entities_to_dump is None:
+            entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
+        self.entities_to_dump = entities_to_dump
+
         self.kwargs = kwargs
 
-    def _retrieve_orm_entities(self):
-        self.orm_entities = self.qb_instance.all(flat=True)
-        print('self.orm_entities[0]')
-        pprint(self.orm_entities[0])
-
-    def dump(self):
-        self._retrieve_orm_entities()
-        for orm_entity in self.orm_entities:
-            if isinstance(orm_entity, orm.ProcessNode):
-                process_dumper = ProcessDumper(**self.kwargs)
-                # process_dumper.pretty_print()
-                print(process_dumper)
-            elif isinstance(orm_entity, orm.Data):
-                data_dumper = DataDumper(**self.kwargs)
-            break
+    @staticmethod
+    def create_entity_counter():
+        raise NotImplementedError('This should be implemented in subclasses.')
 
     @staticmethod
-    def create_entity_counter(orm_collection: orm.Group | orm.Collection | None = None):
-        if orm_collection is None:
-            return CollectionDumper._create_entity_counter_profile()
-        if isinstance(orm_collection, orm.Group):
-            return CollectionDumper._create_entity_counter_group(group=orm_collection)
+    def _obtain_calculations():
+        raise NotImplementedError('This should be implemented in subclasses.')
 
     @staticmethod
-    def _create_entity_counter_profile():
-        nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
-        type_counter = Counter()
+    def _obtain_workflows():
+        raise NotImplementedError('This should be implemented in subclasses.')
 
-        # Iterate over all the entities in the group
-        for entity in nodes:
-            # Count the type string of each entity
-            type_counter[entity.__class__] += 1
+    # def dump(self):
+    #     orm_entities = self._retrieve_orm_entities()
 
-        # Convert the Counter to a dictionary (optional)
-        # type_dict = dict(type_counter)
+    #     for orm_entity in orm_entities:
+    #         if isinstance(orm_entity, orm.ProcessNode):
+    #             process_dumper = ProcessDumper(**self.kwargs)
+    #             # process_dumper.pretty_print()
+    #             print(process_dumper)
+    #         elif isinstance(orm_entity, orm.Data):
+    #             data_dumper = DataDumper(**self.kwargs)
+    #         break
 
-        return type_counter
+    def should_dump_calculations(self) -> bool:
+        return (
+            sum(
+                self.entity_counter.get(orm_process_class, 0)
+                for orm_process_class in [orm.CalcJobNode, orm.CalcFunctionNode]
+            )
+            > 0
+        )
 
-    @staticmethod
-    def _create_entity_counter_group(group: orm.Group | str):
-        # ? If the group only has one WorkChain assigned to it, this will only return a count of 1 for the
-        # ? WorkChainNode, nothing more, that is, not recursively.
-        if isinstance(group, str):
-            group = orm.Group.get(group)
-        type_counter = Counter()
+    def should_dump_workflows(self) -> bool:
+        return (
+            sum(
+                self.entity_counter.get(orm_process_class, 0)
+                for orm_process_class in [orm.WorkChainNode, orm.WorkFunctionNode]
+            )
+            > 0
+        )
 
-        # Iterate over all the entities in the group
-        for entity in group.nodes:
-            # Count the type string of each entity
-            type_counter[entity.__class__] += 1
+    def _dump_calculations_hidden(self, calculations):
+        # ? Dump only top-level workchains, as that includes sub-workchains already
 
-        # Convert the Counter to a dictionary (optional)
-        # type_dict = dict(type_counter)
+        for calculation in calculations:
+            calculation_dumper = ProcessDumper(overwrite=self.overwrite)
 
-        return type_counter
+            calculation_dump_path = self.hidden_aiida_path / 'calculations' / calculation.uuid
 
-    # @staticmethod
-    # def _create_entity_counter_storage():
-    #     # ? If the group only has one WorkChain assigned to it, this will only return a count of 1 for the
-    #     # ? WorkChainNode, nothing more, that is, not recursively.
+            # if not self.dry_run:
+            # with contextlib.suppress(FileExistsError):
+            try:
+                calculation_dumper._dump_calculation(calculation_node=calculation, output_path=calculation_dump_path)
+            except:
+                raise
 
-    #     from aiida.manage.manager import get_manager
+            # # To make development quicker
+            # if iworkflow_ > 1:
+            #     break
 
-    #     manager = get_manager()
-    #     storage = manager.get_profile_storage()
+    def _dump_link_workflows(self, workflows, link_calculations: bool = True):
+        # workflow_nodes = get_nodes_from_db(aiida_node_type=orm.WorkflowNode, with_group=self.group, flat=True)
+        for workflow in workflows:
+            workflow_dumper = ProcessDumper(overwrite=True)
 
-    #     LOGGER.report(storage)
+            link_calculations_dir = self.hidden_aiida_path / 'calculations'
+            # TODO: If the GroupDumper is called from somewhere else outside, prefix the path with `groups/core` etc
+            workflow_dump_path = (
+                self.output_path
+                / 'workflows'
+                / workflow_dumper._generate_default_dump_path(process_node=workflow, prefix=None)
+            )
+            # logger.report(f'WORKFLOW_DUMP_PATH: {workflow_dump_path}')
 
-    #     # if isinstance(group, str):
-    #     #     group = orm.Group.get(group)
-    #     # type_counter = Counter()
+            workflow_dumper._dump_workflow(
+                workflow_node=workflow,
+                output_path=workflow_dump_path,
+                link_calculations=link_calculations,
+                link_calculations_dir=link_calculations_dir,
+            )
 
-    #     # # Iterate over all the entities in the group
-    #     # for entity in group.nodes:
-    #     #     # Count the type string of each entity
-    #     #     type_counter[entity.__class__.__name__] += 1
+    def _link_calculations_hidden(self, calculations):
+        # calculation_nodes = get_nodes_from_db(aiida_node_type=orm.CalculationNode, with_group=self.group, flat=True)
+        for calculation_node in calculations:
+            calculation_dumper = ProcessDumper(overwrite=True)
 
-    #     # # Convert the Counter to a dictionary (optional)
-    #     # # type_dict = dict(type_counter)
+            link_calculations_dir = self.hidden_aiida_path / 'calculations'
+            # link_calculations_dir.mkdir(parents=True, exist_ok=True)
 
-    #     # return type_counter
+            # TODO: If the GroupDumper is called from somewhere else outside, prefix the path with `groups/core` etc
+            calculation_dump_path = self.output_path / 'calculations'
+            calculation_dump_path.mkdir(parents=True, exist_ok=True)
+            calculation_dump_path = calculation_dump_path / calculation_dumper._generate_default_dump_path(
+                process_node=calculation_node
+            )
+            # logger.report(f'CALCULATION_DUMP_PATH: {calculation_dump_path}')
+
+            with contextlib.suppress(FileExistsError):
+                os.symlink(link_calculations_dir / calculation_node.uuid, calculation_dump_path)
+
+    def _dump_data_hidden(self, data_nodes):
+        # data_nodes = get_nodes_from_db(aiida_node_type=orm.Data, with_group=self.group, flat=True)
+        for data_node in data_nodes:
+            data_dump_path = self.hidden_aiida_path / 'data' / data_node.uuid
+            data_dumper = DataDumper(overwrite=self.overwrite)
+            data_dumper.pretty_print()
+
+            try:
+                data_dumper.dump(data_node=data_node, output_path=data_dump_path)
+            except:
+                # pass
+                print(f'data_dumper.dump(data_node=data_node, output_path=data_dump_path{data_node, data_dump_path}')
+                # pass
+                raise

@@ -22,13 +22,14 @@ from aiida import orm
 from aiida.manage.configuration.profile import Profile
 from aiida.orm import CalculationNode, Code, Computer, Group, QueryBuilder, StructureData, User, WorkflowNode
 from aiida.orm.groups import ImportGroup
+from collections import Counter
 
 from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.group import GroupDumper
 from aiida.tools.dumping.process import ProcessDumper
 from aiida.tools.dumping.data import DataDumper
 
-from aiida.tools.dumping.utils import _validate_make_dump_path, get_nodes_from_db
+from aiida.tools.dumping.utils import validate_make_dump_path, get_nodes_from_db
 
 logger = logging.getLogger(__name__)
 DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
@@ -74,6 +75,16 @@ class ProfileDumper(CollectionDumper):
         self.entity_counter_dictionary = {cls.__name__: 0 for cls in self.entities_to_dump}
 
         self.profile_dump_json_file = self.parent_path / PROFILE_DUMP_JSON_FILE
+    
+    @staticmethod
+    def _create_entity_counter_profile():
+        nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
+        type_counter = Counter()
+
+        for entity in nodes:
+            type_counter[entity.__class__] += 1
+
+        return type_counter
 
     @staticmethod
     def check_storage_size_user():
@@ -136,8 +147,8 @@ class ProfileDumper(CollectionDumper):
     def dump(self):
         if self.full:
             logger.report('Full set to True. Will overwrite previous directories.')
-            _validate_make_dump_path(
-                overwrite=True, validate_path=self.parent_path, logger=logger, safeguard_file=PROFILE_DUMP_JSON_FILE
+            validate_make_dump_path(
+                overwrite=True, path_to_validate=self.parent_path, logger=logger, safeguard_file=PROFILE_DUMP_JSON_FILE
             )
 
         # logger.report('Dumping groups...')

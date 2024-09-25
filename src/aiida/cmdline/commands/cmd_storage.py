@@ -15,7 +15,7 @@ import click
 from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import options, arguments, types
 from aiida.cmdline.utils import decorators, echo, defaults
 from aiida.common import exceptions
 from aiida.tools.dumping import ProfileDumper, CollectionDumper, ProcessDumper, DataDumper, GroupDumper
@@ -247,164 +247,161 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 # ? Specify groups via giving the groups, or just enabling "groups" and then all are dumped?
 # ? Provide some mechanism to allow for both, e.g. if no argument is provided, all groups are dumped
 @verdi_storage.command("mirror")
-@arguments.PROFILE(default=defaults.get_default_profile)
+# @arguments.PROFILE(default=defaults.get_default_profile)
 # Custom `--path` option, otherwise conflicting `-p` with `profile` argument
-@click.option(
-    "--path",
-    type=click.Path(path_type=pathlib.Path),
-    show_default=True,
-    default=None,
-    help="Base path for operations that write to disk.",
-)
-# @options.PATH()
+# @click.option(
+#     "--path",
+#     type=click.Path(path_type=pathlib.Path),
+#     show_default=True,
+#     default=None,
+#     help="Base path for operations that write to disk.",
+# )
+@options.PATH()
 @options.ALL()
 @options.NODES()
 @options.CODES()
 @options.COMPUTERS()
 @options.GROUPS()
+@options.OVERWRITE()
 @options.ALSO_RAW()
 @options.ALSO_RICH()
-# @click.option(
-#     '-f',
-#     '--full',
-#     is_flag=True,
-#     default=False,
-#     help='Dump all profile data, overwriting existing files.',
-# )
 @click.option(
-    "-p",
-    "--process-only",
+    # '-f',
+    '--incremental',
     is_flag=True,
     default=False,
-    help="Dump only processes, no explicit data nodes",
+    help='Incremental dumping',
 )
 @click.option(
-    "-d",
-    "--data-only",
+    "--dump-data",
     is_flag=True,
     default=False,
+    show_default=True,
+    help="Dump data nodes explicitly.",
+)
+@click.option(
+    "--dump-processes",
+    is_flag=True,
+    default=True,
+    show_default=True,
     help="Dump only data nodes, no processes",
 )
+@click.option(
+    "--link-processes",
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help="Dump all `orm.CalculationNode`s in the hidden directory and link to there. If False, dump all of the process data into each workflow directory.",
+)
+@click.option(
+    "--link-data",
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help="Dump all `orm.Data` in the hidden directory and link to there. If False, dump the data nodes into each workflow directory.",
+)
+@click.option(
+    '--rich-options',
+    default=None,
+    help='Options for rich data dumping.',
+)
+@click.option(
+    '--rich-config',
+    default=None,
+    type=types.FileOrUrl(),
+    help='Options for rich data dumping.',
+)
+@options.DRY_RUN()
 def archive_mirror(
-    profile,
+    # profile,
     path,
+    overwrite,
+    incremental,
     all_entries,
     nodes,
     groups,
     codes,
     computers,
+    dump_processes,
+    dump_data,
+    link_processes,
+    link_data,
     also_raw,
     also_rich,
-    process_only,
-    data_only,
-    **kwargs
+    rich_options,
+    rich_config,
+    dry_run,
 ):
     """Dump profile data to disk."""
     from rich.pretty import pprint
-
-    pprint(locals())
-
+    from aiida.manage import get_manager
     from aiida import orm
+    from aiida.tools.dumping.collection import DEFAULT_ENTITIES_TO_DUMP
 
-    if profile is None:
-        echo.echo_critical("No profile selected to dump")
+    profile = get_manager().get_profile()
+    SAFEGUARD_FILE = ".verdi_archive_mirror"  # noqa: N806
 
-    # if path is
     if not str(path).endswith(profile.name):
         path /= profile.name
-    
-    inheritance_kwargs = {
-            'profile': profile,
-            'parent_path': path,
-            **kwargs,
-        }
 
     echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`")
+    from aiida.tools.dumping.utils import validate_make_dump_path
+
+    print("PATH", path)
+    # raise SystemExit()
+    validate_make_dump_path(
+        overwrite=overwrite,
+        path_to_validate=path,
+        enforce_safeguard=True,
+        safeguard_file=SAFEGUARD_FILE,
+    )
+    (path / SAFEGUARD_FILE).touch()
 
     if all_entries:
-        entities = None
+        entries_to_dump = None
+        entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
     else:
-        entities = {}
+        entries_to_dump = {}
+        entities_to_dump = set()
 
         if nodes:
-            entities["nodes"] = nodes
+            entries_to_dump["nodes"] = nodes
+            entities_to_dump.extend({type(node) for node in nodes})
 
         if codes:
-            entities["codes"] = codes
+            entries_to_dump["codes"] = codes
+            entities_to_dump.add(orm.Code)
 
         if computers:
-            entities["computers"] = computers
+            entries_to_dump["computers"] = computers
+            entities_to_dump.add(orm.Computer)
 
         if groups:
-            entities["groups"] = groups
-    
+            entries_to_dump["groups"] = groups
 
-    for group in groups:
-        print('GROUP', group)
-        group_dumper = GroupDumper(**inheritance_kwargs)
-        group_dumper.pretty_print()
-        group_dumper.dump(group)
-        
-    # if entities is not None and "groups" in entities:
+    # === Group dumping ===
 
-    #     if not data_only:
-    #         # process_qb = orm.QueryBuilder()
-    #         # process_qb.append(orm.ProcessNode).all()
-    #         if entities is not None and "groups" in entities:
-    #             # Dynamically add groups to the query
-    #             group_filters = entities["groups"]
+    group_dumper_kwargs = {
+        "parent_path": path,
+        "overwrite": overwrite,
+        "also_raw": also_raw,
+        "also_rich": also_rich,
+        "dump_processes": dump_processes,
+        "link_processes": link_processes,
+        "dump_data": dump_data,
+        "link_data": link_data,
+        "entities_to_dump": entities_to_dump,
+    }
 
-    #             # If multiple groups are provided, we need to make sure nodes are in any one of them
-    #             group_conditions = []
+    if groups is None:
+        groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
+    if len(groups) > 0:
+        for group in groups:
+            print("GROUP", group)
+            group_dumper = GroupDumper(**group_dumper_kwargs)
+            # print("GROUP_DUMPER.PRETTY_PRINT()")
+            # group_dumper.pretty_print()
+            group_dumper.dump(group)
 
-    #             for group in group_filters:
-    #                 print('GROUP', group)
-
-    #                 # Apply the 'OR' condition for the groups, so that the nodes are in at least one group
-    #                 process_qb = orm.QueryBuilder()
-    #                 process_qb.append(orm.Group, filters={'label': group.label}, tag='group')
-    #                 process_qb.append(orm.ProcessNode, with_group='group')
-
-    #                 process_collection_dumper = CollectionDumper(
-    #                     parent_path=path,
-    #                     also_raw=also_raw,
-    #                     also_rich=also_rich,
-    #                     qb_instance=process_qb,
-    #                     **kwargs
-    #                 )
-    #                 process_collection_dumper.dump()
-
-    #     if not process_only:
-    #             # Dynamically add groups to the query
-    #             group_filters = entities["groups"]
-
-    #             # If multiple groups are provided, we need to make sure nodes are in any one of them
-    #             group_conditions = []
-
-    #             for group in group_filters:
-    #                 # group_conditions.append({"with_group": group})
-
-    #                 # Apply the 'OR' condition for the groups, so that the nodes are in at least one group
-    #                 data_qb = orm.QueryBuilder()
-    #                 data_qb.append(orm.Group, filters={'label': group.label}, tag='group')
-    #                 data_qb.append(orm.ProcessNode, with_group='group')
-    #                 # data_qb.append(orm.Data).all()
-    #                 # data_qb.add_filter(orm.Data, with_group=group)
-
-    #                 data_collection_dumper = CollectionDumper(
-    #                     parent_path=path,
-    #                     also_raw=also_raw,
-    #                     also_rich=also_rich,
-    #                     qb_instance=data_qb,
-    #                     **kwargs,
-    #                 )
-    #                 data_collection_dumper.dump()
-
-    # profile_dumper = ProfileDumper(
-    #     profile='verdi-profile-dump_dev_tiny',
-    #     full=True,
-    #     parent_path=path,
-    #     organize_by_groups=True,
-    # )
-    # profile_dumper.dump()
-    # echo.echo_success(f'Data of profile `{profile.name}` mirrored to disk.')
+    # === Dumping of no Groups exist ===
+    # TODO: Test with such a profile

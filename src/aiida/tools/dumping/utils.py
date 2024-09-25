@@ -1,10 +1,29 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Utility functions for dumping features."""
+
+from __future__ import annotations
+
 from logging import Logger
 from pathlib import Path
-from aiida.orm import QueryBuilder, Group, Computer, Code
+
+from aiida import orm
+
+__all__ = ('validate_make_dump_path', 'get_nodes_from_db')
 
 
-def _validate_make_dump_path(
-    overwrite: bool, validate_path: Path, logger: Logger, safeguard_file: str = '.aiida_node_metadata.yaml'
+def validate_make_dump_path(
+    overwrite: bool,
+    path_to_validate: Path,
+    logger: Logger | None = None,
+    safeguard_file: str | None = '.aiida_node_metadata.yaml',
+    enforce_safeguard: bool = True,
 ) -> Path:
     """Create default dumping directory for a given process node and return it as absolute path.
 
@@ -15,48 +34,76 @@ def _validate_make_dump_path(
     """
     import shutil
 
-    if validate_path.is_dir():
+    if path_to_validate.is_dir():
         # Existing, empty directory -> OK
-        if not any(validate_path.iterdir()):
+        if not any(path_to_validate.iterdir()):
             pass
 
         # Existing, non-empty directory and overwrite False -> FileExistsError
         elif not overwrite:
-            raise FileExistsError(f'Path `{validate_path}` already exists and overwrite set to False.')
+            raise FileExistsError(f'Path `{path_to_validate}` already exists and overwrite set to False.')
 
         # Existing, non-empty directory and overwrite True
         # Check for safeguard file ('.aiida_node_metadata.yaml') for safety
         # If present -> Remove directory
-        elif (validate_path / safeguard_file).is_file():
-            logger.info(f'Overwrite set to true, will overwrite directory `{validate_path}`.')
-            shutil.rmtree(validate_path)
+        elif enforce_safeguard and safeguard_file is not None:
+            if (path_to_validate / safeguard_file).is_file():
+                if logger is not None:
+                    logger.info(f'Overwrite set to true, will overwrite directory `{path_to_validate}`.')
+                shutil.rmtree(path_to_validate)
+
+            else:
+                raise Exception(
+                    f"Path `{path_to_validate}` already exists and doesn't contain safeguard file {safeguard_file}."
+                    f' Not removing for safety reasons. Delete manually.'
+                )
+
+        elif enforce_safeguard and safeguard_file is None:
+            raise Exception('Safeguard enforced  but no safeguard_file provided. Must provide safeguard file.')
 
         # Existing and non-empty directory and overwrite True
         # Check for safeguard file ('.aiida_node_metadata.yaml') for safety
         # If absent -> Don't remove directory as to not accidentally remove a wrong one
         else:
             raise Exception(
-                f"Path `{validate_path}` already exists and doesn't contain safeguard file {safeguard_file}."
+                f"Path `{path_to_validate}` already exists and doesn't contain safeguard file {safeguard_file}."
                 f' Not removing for safety reasons.'
             )
 
     # Not included in if-else as to avoid having to repeat the `mkdir` call.
     # `exist_ok=True` as checks implemented above
-    validate_path.mkdir(exist_ok=True, parents=True)
+    path_to_validate.mkdir(exist_ok=True, parents=True)
 
-    return validate_path.resolve()
+    return path_to_validate.resolve()
 
-def get_nodes_from_db(aiida_node_type, with_group: str | None = None, flat=False):
-    qb = QueryBuilder()
 
+# def get_nodes_from_db(aiida_node_type, with_group: str | None = None, flat=False):
+#     qb = orm.QueryBuilder()
+
+#     # Computers cannot be associated via `with_group`
+#     if with_group is not None and aiida_node_type is not orm.Computer and aiida_node_type is not orm.Code:
+#         qb.append(orm.Group, filters={'label': with_group.label}, tag='with_group')
+#         qb.append(aiida_node_type, with_group='with_group')
+#     else:
+#         qb.append(aiida_node_type)
+
+#     return_iterable = qb.iterall() if qb.count() > 10 ^ 3 else qb.all()
+
+#     # Manual flattening as `iterall` doesn't have `flat` option unlike `all`
+#     if flat:
+#         return_iterable = [_[0] for _ in return_iterable]
+
+#     return return_iterable
+
+import typing as t
+
+
+def get_nodes_from_db(qb_instance, qb_filters: t.List | None = None, flat=False):
     # Computers cannot be associated via `with_group`
-    if with_group is not None and aiida_node_type is not Computer and aiida_node_type is not Code:
-        qb.append(Group, filters={'label': with_group.label}, tag='with_group')
-        qb.append(aiida_node_type, with_group='with_group')
-    else:
-        qb.append(aiida_node_type)
+    # for qb_filter in qb_filters:
+    #     qb.add_filter(**qb_filter)
 
-    return_iterable = qb.iterall() if qb.count() > 10 ^ 3 else qb.all()
+    return_iterable = qb_instance.iterall() if qb_instance.count() > 10 ^ 3 else qb_instance.all()
 
     # Manual flattening as `iterall` doesn't have `flat` option unlike `all`
     if flat:

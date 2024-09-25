@@ -7,6 +7,7 @@ from typing import List
 from aiida.tools.dumping.utils import _validate_make_dump_path, get_nodes_from_db
 from pathlib import Path
 from aiida.tools.dumping.processes import ProcessDumper
+from aiida.tools.dumping.abstract import AbstractDumper
 
 # DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
 DEFAULT_ENTITIES_TO_DUMP = [CalculationNode, WorkflowNode]  # , StructureData, User, Code, Computer]
@@ -14,8 +15,9 @@ DEFAULT_ENTITIES_TO_DUMP = [CalculationNode, WorkflowNode]  # , StructureData, U
 # from aiida.common.utils import str_timedelta
 
 
-class GroupDumper:
-    def __init__(self, entities_to_dump: List | None = None) -> None:
+class GroupDumper(AbstractDumper):
+    def __init__(self, entities_to_dump: List | None = None, **kwargs) -> None:
+        super().__init__(self, **kwargs)
         if entities_to_dump is None:
             self.entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
 

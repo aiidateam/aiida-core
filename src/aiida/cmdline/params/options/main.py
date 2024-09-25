@@ -27,6 +27,8 @@ __all__ = (
     'ALL',
     'ALL_STATES',
     'ALL_USERS',
+    'ALSO_RAW',
+    'ALSO_RICH',
     'APPEND_TEXT',
     'ARCHIVE_FORMAT',
     'BROKER_HOST',
@@ -788,4 +790,20 @@ SORT = OverridableOption(
     default=True,
     help='Sort the keys of the output YAML.',
     show_default=True,
+)
+
+ALSO_RAW = OverridableOption(
+    '--also-raw',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Dump the `attributes` of all nodes related to the Process.',
+)
+
+ALSO_RICH = OverridableOption(
+    '--also-rich',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Dump also nicely prepared outputs, e.g. CIF for structures or PDF image for bands.',
 )

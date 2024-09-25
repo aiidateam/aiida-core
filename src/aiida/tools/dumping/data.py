@@ -16,17 +16,15 @@ from aiida.orm.nodes.data.structure import StructureData
 from pathlib import Path
 import logging
 import yaml
+from aiida.tools.dumping.abstract import AbstractDumper
 
 
 logger = logging.getLogger(__name__)
 
 
-class DataDumper:
-    def __init__(
-        self,
-        overwrite: bool = False,
-    ) -> None:
-        self.overwrite = overwrite  # ? Does this make sense here
+class DataDumper(AbstractDumper):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def generate_output_name(self):
         pass
@@ -120,48 +118,5 @@ class DataDumper:
 
         if not code_file.is_file():
             code_file.write_text(yaml.dump(code_data, sort_keys=False), 'utf-8')
-
-    # def _dump_computer(self):
-    #     # `Computer` not derived from orm.Data
-
-    #     computers = get_nodes_from_db(aiida_node_type=Computer, flat=True)
-
-    #     computer_parent_path = self.parent_path / Path('computers')
-    #     computer_parent_path.mkdir(parents=True, exist_ok=True)
-
-    #     for computer in computers:
-    #         computer_setup_file = computer_parent_path / f'{computer.label}-setup.yaml'
-    #         # ? Copied over from `cmd_computer` as importing `computer_export_setup` led to click Context error:
-    #         # TypeError: Context.__init__() got an unexpected keyword argument 'computer'
-    #         computer_setup = {
-    #             'label': computer.label,
-    #             'hostname': computer.hostname,
-    #             'description': computer.description,
-    #             'transport': computer.transport_type,
-    #             'scheduler': computer.scheduler_type,
-    #             'shebang': computer.get_shebang(),
-    #             'work_dir': computer.get_workdir(),
-    #             'mpirun_command': ' '.join(computer.get_mpirun_command()),
-    #             'mpiprocs_per_machine': computer.get_default_mpiprocs_per_machine(),
-    #             'default_memory_per_machine': computer.get_default_memory_per_machine(),
-    #             'use_double_quotes': computer.get_use_double_quotes(),
-    #             'prepend_text': computer.get_prepend_text(),
-    #             'append_text': computer.get_append_text(),
-    #         }
-
-    #         if not computer_setup_file.is_file():
-    #             computer_setup_file.write_text(yaml.dump(computer_setup, sort_keys=False), 'utf-8')
-
-    #         computer_config_file = computer_parent_path / f'{computer.label}-config.yaml'
-
-    #         from aiida.orm import User
-
-    #         users = User.collection.all()
-    #         for user in users:
-    #             computer_configuration = computer.get_configuration(user)
-    #             if not computer_config_file.is_file():
-    #                 computer_config_file.write_text(yaml.dump(computer_configuration, sort_keys=False), 'utf-8')
-
-    #     pass
 
     def _dump_user_info(self): ...

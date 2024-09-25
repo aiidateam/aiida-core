@@ -24,29 +24,32 @@ from aiida.cmdline.params.types.path import FileOrUrl
 from aiida.common import LinkType
 from aiida.common.exceptions import NotExistentAttributeError
 from aiida.tools.dumping.utils import _validate_make_dump_path
+from aiida.tools.dumping.abstract import AbstractDumper
+from rich.console import Console
+from rich.table import Table
 
 logger = logging.getLogger(__name__)
 from pprint import pprint
 
 
-class ProcessDumper:
+class ProcessDumper(AbstractDumper):
     def __init__(
         self,
         include_inputs: bool = True,
         include_outputs: bool = False,
-        overwrite: bool = False,
         flat: bool = False,
-        also_raw: bool = False,
-        also_rich: bool = False,
+        # also_raw: bool = False,
+        # also_rich: bool = False,
         rich_options: str | None = None,
         rich_config: FileOrUrl | None = None,
+        **kwargs,
     ) -> None:
+        super().__init__(**kwargs)
         self.include_inputs = include_inputs
         self.include_outputs = include_outputs
-        self.overwrite = overwrite
         self.flat = flat
-        self.also_raw = also_raw
-        self.also_rich = also_rich
+        # self.also_raw = also_raw
+        # self.also_rich = also_rich
         self.rich_options = rich_options
         self.rich_config = rich_config
 
@@ -160,6 +163,23 @@ class ProcessDumper:
         node_label = node_label.replace('CALL-', '')
         return node_label.replace('None-', '')
 
+    # def __str__(self):
+    #     from tabulate import tabulate
+    #     # Prepare data for the table
+    #     table_data = []
+    #     headers = ["Attribute", "Value"]
+
+    #     # Iterate over the class attributes
+    #     for attr_name in dir(self):
+    #         # Exclude private attributes and dunder methods
+    #         if not (attr_name.startswith('_') or attr_name.endswith('_')):
+    #             attr_value = getattr(self, attr_name)
+    #             table_data.append([attr_name, str(attr_value)])
+
+    #     # Create a table using tabulate
+    #     return tabulate(table_data, headers, tablefmt="grid")
+
+        
     def dump(
         self,
         process_node: orm.ProcessNode,

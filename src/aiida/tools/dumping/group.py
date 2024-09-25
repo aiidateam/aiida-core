@@ -26,21 +26,12 @@ logger = logging.getLogger(__name__)
 
 
 class GroupDumper(CollectionDumper):
-    def __init__(
-        self,
-        # group: orm.Group | str | None = None,
-        entities_to_dump: List | None = None,
-        parent_path: Path | str | None = None,
-    ) -> None:
+    
+    def __init__(self, entities_to_dump: List | None = None, **kwargs) -> None:
+        super().__init__(**kwargs)
+
         if entities_to_dump is None:
             self.entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
-
-        from aiida.manage import get_manager
-
-        self.profile = get_manager().get_profile()
-
-        self.parent_path = parent_path
-        # self.group = group
 
     # ? For now, only set dumping
     def dump(self, group: orm.Group | str | None = None, output_path: Path | str | None = None):
@@ -51,7 +42,14 @@ class GroupDumper(CollectionDumper):
         self.last_dumped = timezone.now()
         self.group = group
 
-        output_path.mkdir(exist_ok=True, parents=True)
+        if output_path is None:
+            try:
+                output_path = self.parent_path / 'groups'
+            except:
+                raise ValueError("Error setting up `output_path`. Must be set manually.")
+        else:
+            # TODO: Add validation here
+            output_path.mkdir(exist_ok=True, parents=True)
 
         if isinstance(group, orm.Group):
             group_name = group.label

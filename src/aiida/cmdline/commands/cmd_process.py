@@ -584,20 +584,6 @@ def process_repair(manager, broker, dry_run):
     help='Dump files in a flat directory for every step of the workflow.',
 )
 @click.option(
-    '--also-raw',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Dump the `attributes` of all nodes related to the Process.',
-)
-@click.option(
-    '--also-rich',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Dump also nicely prepared outputs, e.g. CIF for structures or PDF image for bands.',
-)
-@click.option(
     '--rich-options',
     default=None,
     help='Options for rich data dumping.',
@@ -608,6 +594,8 @@ def process_repair(manager, broker, dry_run):
     type=types.FileOrUrl(),
     help='Options for rich data dumping.',
 )
+@options.ALSO_RAW()
+@options.ALSO_RICH()
 # @click.option(
 #     '--rich-dump-all',
 #     default=False,

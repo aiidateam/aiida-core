@@ -9,14 +9,16 @@
 """`verdi storage` commands."""
 
 import sys
+import pathlib
 
 import click
 from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.params import options, arguments
+from aiida.cmdline.utils import decorators, echo, defaults
 from aiida.common import exceptions
+from aiida.tools.dumping import ProfileDumper, CollectionDumper, ProcessDumper, DataDumper, GroupDumper
 
 
 @verdi.group('storage')
@@ -239,3 +241,170 @@ def storage_backup(ctx, manager, dest: str, keep: int):
     except (ValueError, exceptions.StorageBackupError) as exception:
         echo.echo_critical(str(exception))
     echo.echo_success(f'Data storage of profile `{profile.name}` backed up to `{dest}`.')
+
+
+# TODO: Follow API of `verdi archive create`
+# ? Specify groups via giving the groups, or just enabling "groups" and then all are dumped?
+# ? Provide some mechanism to allow for both, e.g. if no argument is provided, all groups are dumped
+@verdi_storage.command("mirror")
+@arguments.PROFILE(default=defaults.get_default_profile)
+# Custom `--path` option, otherwise conflicting `-p` with `profile` argument
+@click.option(
+    "--path",
+    type=click.Path(path_type=pathlib.Path),
+    show_default=True,
+    default=None,
+    help="Base path for operations that write to disk.",
+)
+# @options.PATH()
+@options.ALL()
+@options.NODES()
+@options.CODES()
+@options.COMPUTERS()
+@options.GROUPS()
+@options.ALSO_RAW()
+@options.ALSO_RICH()
+# @click.option(
+#     '-f',
+#     '--full',
+#     is_flag=True,
+#     default=False,
+#     help='Dump all profile data, overwriting existing files.',
+# )
+@click.option(
+    "-p",
+    "--process-only",
+    is_flag=True,
+    default=False,
+    help="Dump only processes, no explicit data nodes",
+)
+@click.option(
+    "-d",
+    "--data-only",
+    is_flag=True,
+    default=False,
+    help="Dump only data nodes, no processes",
+)
+def archive_mirror(
+    profile,
+    path,
+    all_entries,
+    nodes,
+    groups,
+    codes,
+    computers,
+    also_raw,
+    also_rich,
+    process_only,
+    data_only,
+    **kwargs
+):
+    """Dump profile data to disk."""
+    from rich.pretty import pprint
+
+    pprint(locals())
+
+    from aiida import orm
+
+    if profile is None:
+        echo.echo_critical("No profile selected to dump")
+
+    # if path is
+    if not str(path).endswith(profile.name):
+        path /= profile.name
+    
+    inheritance_kwargs = {
+            'profile': profile,
+            'parent_path': path,
+            **kwargs,
+        }
+
+    echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`")
+
+    if all_entries:
+        entities = None
+    else:
+        entities = {}
+
+        if nodes:
+            entities["nodes"] = nodes
+
+        if codes:
+            entities["codes"] = codes
+
+        if computers:
+            entities["computers"] = computers
+
+        if groups:
+            entities["groups"] = groups
+    
+
+    for group in groups:
+        print('GROUP', group)
+        group_dumper = GroupDumper(**inheritance_kwargs)
+        group_dumper.pretty_print()
+        group_dumper.dump(group)
+        
+    # if entities is not None and "groups" in entities:
+
+    #     if not data_only:
+    #         # process_qb = orm.QueryBuilder()
+    #         # process_qb.append(orm.ProcessNode).all()
+    #         if entities is not None and "groups" in entities:
+    #             # Dynamically add groups to the query
+    #             group_filters = entities["groups"]
+
+    #             # If multiple groups are provided, we need to make sure nodes are in any one of them
+    #             group_conditions = []
+
+    #             for group in group_filters:
+    #                 print('GROUP', group)
+
+    #                 # Apply the 'OR' condition for the groups, so that the nodes are in at least one group
+    #                 process_qb = orm.QueryBuilder()
+    #                 process_qb.append(orm.Group, filters={'label': group.label}, tag='group')
+    #                 process_qb.append(orm.ProcessNode, with_group='group')
+
+    #                 process_collection_dumper = CollectionDumper(
+    #                     parent_path=path,
+    #                     also_raw=also_raw,
+    #                     also_rich=also_rich,
+    #                     qb_instance=process_qb,
+    #                     **kwargs
+    #                 )
+    #                 process_collection_dumper.dump()
+
+    #     if not process_only:
+    #             # Dynamically add groups to the query
+    #             group_filters = entities["groups"]
+
+    #             # If multiple groups are provided, we need to make sure nodes are in any one of them
+    #             group_conditions = []
+
+    #             for group in group_filters:
+    #                 # group_conditions.append({"with_group": group})
+
+    #                 # Apply the 'OR' condition for the groups, so that the nodes are in at least one group
+    #                 data_qb = orm.QueryBuilder()
+    #                 data_qb.append(orm.Group, filters={'label': group.label}, tag='group')
+    #                 data_qb.append(orm.ProcessNode, with_group='group')
+    #                 # data_qb.append(orm.Data).all()
+    #                 # data_qb.add_filter(orm.Data, with_group=group)
+
+    #                 data_collection_dumper = CollectionDumper(
+    #                     parent_path=path,
+    #                     also_raw=also_raw,
+    #                     also_rich=also_rich,
+    #                     qb_instance=data_qb,
+    #                     **kwargs,
+    #                 )
+    #                 data_collection_dumper.dump()
+
+    # profile_dumper = ProfileDumper(
+    #     profile='verdi-profile-dump_dev_tiny',
+    #     full=True,
+    #     parent_path=path,
+    #     organize_by_groups=True,
+    # )
+    # profile_dumper.dump()
+    # echo.echo_success(f'Data of profile `{profile.name}` mirrored to disk.')

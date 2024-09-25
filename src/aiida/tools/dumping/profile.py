@@ -39,23 +39,26 @@ DEFAULT_DATA_TO_DUMP = [orm.StructureData, orm.Code, orm.Computer, ]  # , Struct
 DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP + DEFAULT_DATA_TO_DUMP
 
 
-class ProfileDumper:
+class ProfileDumper(CollectionDumper):
     def __init__(
         self,
-        profile: str,
-        parent_path: str | Path = Path(),
-        full: bool = False,
+        # profile: str,
+        # parent_path: str | Path = Path(),
+        # full: bool = False,
         entities_to_dump: List | None = None,
         organize_by_groups: bool = True,
-        dry_run: bool = False,
         process_dumper_kwargs: dict | None = None,
         config: Path | dict | None = None,
+        **kwargs
     ):
-        self.profile = profile
-        self.parent_path = Path(parent_path)
-        self.full = full
+        super().__init__(**kwargs)
+        self.kwargs = kwargs
+
+        # self.profile = profile
+        # self.parent_path = Path(parent_path)
+        # self.full = full
         self.organize_by_groups = organize_by_groups
-        self.dry_run = dry_run
+        # self.dry_run = dry_run
         self.config = config
 
         if entities_to_dump is not None:

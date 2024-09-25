@@ -119,19 +119,19 @@ default_core_export_mapping = {
     },
     # TODO: These should by written via the `data_export` function instead
     'core.code': {
-        'exporter': data_export,
+        'exporter': DataDumper._dump_code,
         'export_format': 'yaml'
     },
     'core.code.containerized': {
-        'exporter': data_export,
+        'exporter': DataDumper._dump_code,
         'export_format': 'yaml'
     },
     'core.code.installed': {
-        'exporter': data_export,
+        'exporter': DataDumper._dump_code,
         'export_format': 'yaml'
     },
     'core.code.portable': {
-        'exporter': data_export,
+        'exporter': DataDumper._dump_code,
         'export_format': 'yaml'
     },
     'core.dict': {

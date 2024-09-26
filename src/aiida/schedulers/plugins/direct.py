@@ -356,7 +356,15 @@ class DirectScheduler(BashCliScheduler):
 
     def _get_kill_command(self, jobid):
         """Return the command to kill the job with specified jobid."""
-        submit_command = f'kill {jobid}'
+        from psutil import Process
+
+        process = Process(int(jobid))
+        children = process.children(recursive=True)
+        jobids = [jobid]
+        jobids.extend([str(child.pid) for child in children])
+        jobids_str = ' '.join(jobids)
+
+        submit_command = f'kill {jobids_str}'
 
         self.logger.info(f'killing job {jobid}')
 

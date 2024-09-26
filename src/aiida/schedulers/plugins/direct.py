@@ -355,7 +355,7 @@ class DirectScheduler(BashCliScheduler):
         return stdout.strip()
 
     def _get_kill_command(self, process_id):
-        """Return the command to kill the process with specified pid and all its descendants."""
+        """Return the command to kill the process with specified id and all its descendants."""
         from psutil import Process
 
         # get a list of the process id of all descendants

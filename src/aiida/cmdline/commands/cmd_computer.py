@@ -767,7 +767,7 @@ def computer_export_setup(computer, output_file, overwrite, sort):
     }
 
     if output_file is None:
-        output_file = pathlib.Path(f'{computer.label}-setup.yml')
+        output_file = pathlib.Path(f'{computer.label}-setup.yaml')
     try:
         validate_output_filename(output_file=output_file, overwrite=overwrite)
     except (FileExistsError, IsADirectoryError) as exception:
@@ -805,7 +805,7 @@ def computer_export_config(computer, output_file, user, overwrite, sort):
         )
     else:
         if output_file is None:
-            output_file = pathlib.Path(f'{computer.label}-config.yml')
+            output_file = pathlib.Path(f'{computer.label}-config.yaml')
         try:
             validate_output_filename(output_file=output_file, overwrite=overwrite)
         except (FileExistsError, IsADirectoryError) as exception:

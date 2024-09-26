@@ -363,7 +363,7 @@ class DirectScheduler(BashCliScheduler):
         children = process.children(recursive=True)
         process_ids = [process_id]
         process_ids.extend([str(child.pid) for child in children])
-        process_ids_str = ' '.join(jobids)
+        process_ids_str = ' '.join(process_ids)
 
         submit_command = f'kill {process_ids_str}'
 

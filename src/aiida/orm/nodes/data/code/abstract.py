@@ -15,7 +15,7 @@ import functools
 import pathlib
 import typing as t
 
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
 
 from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
@@ -45,7 +45,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
     _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
 
-    class Model(BaseModel, defer_build=True):
+    class Model(Data.Model, defer_build=True):
         """Model describing required information to create an instance."""
 
         label: str = MetadataField(

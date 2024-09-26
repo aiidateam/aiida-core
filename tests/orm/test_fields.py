@@ -10,6 +10,7 @@
 
 import pytest
 from aiida import orm
+from aiida.common.pydantic import MetadataField
 from aiida.orm.fields import add_field
 from importlib_metadata import entry_points
 
@@ -36,6 +37,7 @@ def test_all_entity_fields(entity_cls, data_regression):
             'aiida.data',
         )
         for name in EPS.select(group=group).names
+        if name.startswith('core.')
     ),
 )
 def test_all_node_fields(group, name, data_regression):
@@ -51,13 +53,10 @@ def test_add_field():
     """Test the `add_field` API."""
 
     class NewNode(orm.Data):
-        __qb_fields__ = (
-            add_field(
-                'key1',
-                dtype=str,
+        class Model(orm.Data.Model):
+            key1: str = MetadataField(  # type: ignore[annotation-unchecked]
                 is_subscriptable=False,
-            ),
-        )
+            )
 
     node = NewNode()
 
@@ -102,10 +101,9 @@ def test_query_new_class(monkeypatch):
     )
 
     class NewNode(orm.Data):
-        __qb_fields__ = [
-            add_field('some_label', dtype=str),
-            add_field('some_value', dtype=int),
-        ]
+        class Model(orm.Data.Model):
+            some_label: str = MetadataField()  # type: ignore[annotation-unchecked]
+            some_value: int = MetadataField()  # type: ignore[annotation-unchecked]
 
     node = NewNode()
     node.base.attributes.set_many({'some_label': 'A', 'some_value': 1})
@@ -208,14 +206,14 @@ def test_query_filters():
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_query_subscriptable():
     """Test using subscriptable fields in a query."""
-    node = orm.Dict(dict={'a': 1}).store()
+    node = orm.Dict({'a': 1}).store()
     node.base.extras.set('b', 2)
     result = (
         orm.QueryBuilder()
         .append(
             orm.Dict,
             project=[
-                orm.Dict.fields.dict['a'],
+                orm.Dict.fields.attributes['a'],
                 orm.Dict.fields.extras['b'],
             ],
         )

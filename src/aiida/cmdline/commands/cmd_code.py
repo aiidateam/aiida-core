@@ -29,10 +29,10 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls, non_interactive: bool, **kwargs):
+def create_code(ctx: click.Context, cls, **kwargs):
     """Create a new `Code` instance."""
     try:
-        instance = cls(**kwargs)
+        instance = cls.from_model(cls.Model(**kwargs))
     except (TypeError, ValueError) as exception:
         echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
 
@@ -245,24 +245,22 @@ def export(code, output_file, overwrite, sort):
 
     import yaml
 
-    code_data = {}
+    from aiida.common.pydantic import get_metadata
 
-    for key in code.Model.model_fields.keys():
-        value = getattr(code, key).label if key == 'computer' else getattr(code, key)
+    data = code.serialize()
 
-        # If the attribute is not set, for example ``with_mpi`` do not export it, because the YAML won't be valid for
-        # use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
-        if value is not None:
-            code_data[key] = str(value)
+    for key, field in code.Model.model_fields.items():
+        if get_metadata(field, 'exclude_from_cli'):
+            data.pop(key)
 
     try:
         output_file = generate_validate_output_file(
-            output_file=output_file, entity_label=code.label, overwrite=overwrite, appendix=f'@{code_data["computer"]}'
+            output_file=output_file, entity_label=code.label, overwrite=overwrite, appendix=f'@{data["computer"]}'
         )
     except (FileExistsError, IsADirectoryError) as exception:
         raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
 
-    output_file.write_text(yaml.dump(code_data, sort_keys=sort))
+    output_file.write_text(yaml.dump(data, sort_keys=sort))
 
     echo.echo_success(f'Code<{code.pk}> {code.label} exported to file `{output_file}`.')
 

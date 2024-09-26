@@ -70,6 +70,9 @@ jobs:
           docker-bake.hcl
           build.json
 
+    - name: Setup upterm session
+      uses: lhotari/action-upterm@v1
+
     - name: Set output variables
       id: bake_metadata
       run: |

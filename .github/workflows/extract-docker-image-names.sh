@@ -49,7 +49,7 @@ if [[ -z ${BAKE_METADATA-} ]];then
     exit 1
 fi
 
-images=$(echo "${BAKE_METADATA}" \
+images=$(echo "${BAKE_METADATA}" |
 jq -c 'to_entries | map(select(.key | startswith("aiida"))) | from_entries' | # filters out every key that does not start with aiida
 jq -c '. as $base |[to_entries[] |{"key": (.key|ascii_upcase|sub("-"; "_"; "g") + "_IMAGE"), "value": [(.value."image.name"|split(",")[0]),.value."containerimage.digest"]|join("@")}] |from_entries')
 echo "images=$images"

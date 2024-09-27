@@ -201,7 +201,9 @@ def kill_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.kill_process, 'kill', 'killing', timeout, wait, msg=message, force_kill=force_kill)
+    _perform_actions(
+        processes, controller.kill_process, 'kill', 'killing', timeout, wait, msg=message, force_kill=force_kill
+    )
 
 
 def _perform_actions(

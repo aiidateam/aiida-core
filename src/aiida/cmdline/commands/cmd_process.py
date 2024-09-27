@@ -342,7 +342,9 @@ def process_kill(processes, all_entries, timeout, wait, force_kill):
     with capture_logging() as stream:
         try:
             message = 'Killed through `verdi process kill`'
-            control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message, force_kill=force_kill)
+            control.kill_processes(
+                processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message, force_kill=force_kill
+            )
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
 

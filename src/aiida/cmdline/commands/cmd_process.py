@@ -320,8 +320,9 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
 @options.ALL(help='Kill all processes if no specific processes are specified.')
 @options.TIMEOUT()
 @options.WAIT()
+@options.FORCE_KILL()
 @decorators.with_dbenv()
-def process_kill(processes, all_entries, timeout, wait):
+def process_kill(processes, all_entries, timeout, wait, force_kill):
     """Kill running processes.
 
     Kill one or multiple running processes."""
@@ -341,7 +342,7 @@ def process_kill(processes, all_entries, timeout, wait):
     with capture_logging() as stream:
         try:
             message = 'Killed through `verdi process kill`'
-            control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
+            control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message, force_kill=force_kill)
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
 

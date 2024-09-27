@@ -412,6 +412,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
 
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
+    breakpoint()
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
 
@@ -422,6 +423,8 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
     authinfo = node.get_authinfo()
 
     async def do_kill():
+        # this function fails when there is no transport
+        # then the exponential backof raises an exception
         with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return execmanager.kill_calculation(node, transport)

@@ -174,6 +174,7 @@ def kill_processes(
     all_entries: bool = False,
     timeout: float = 5.0,
     wait: bool = False,
+    force_kill: bool = False,
 ) -> None:
     """Kill running processes.
 
@@ -183,6 +184,7 @@ def kill_processes(
     :param all_entries: Kill all active processes.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
     :param wait: Set to ``True`` to wait for process response, for ``False`` the action is fire-and-forget.
+    :param force_kill: ... TODO
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
     if not get_daemon_client().is_daemon_running:
@@ -199,7 +201,7 @@ def kill_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.kill_process, 'kill', 'killing', timeout, wait, msg=message)
+    _perform_actions(processes, controller.kill_process, 'kill', 'killing', timeout, wait, msg=message, force_kill=force_kill)
 
 
 def _perform_actions(

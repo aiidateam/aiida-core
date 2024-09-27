@@ -61,6 +61,7 @@ __all__ = (
     'EXPORT_FORMAT',
     'FAILED',
     'FORCE',
+    'FORCE_KILL',
     'FORMULA_MODE',
     'FREQUENCY',
     'GROUP',
@@ -327,6 +328,8 @@ NODES = OverridableOption(
 )
 
 FORCE = OverridableOption('-f', '--force', is_flag=True, default=False, help='Do not ask for confirmation.')
+
+FORCE_KILL = OverridableOption('-fk', '--force-kill', is_flag=True, default=False, help='Kills the process without waiting for a response if the job is killed.')
 
 SILENT = OverridableOption('-s', '--silent', is_flag=True, default=False, help='Suppress any output printed to stdout.')
 

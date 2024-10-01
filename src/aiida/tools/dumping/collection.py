@@ -24,9 +24,12 @@ from aiida.tools.dumping.data import DataDumper
 from aiida.tools.dumping.process import ProcessDumper
 from aiida.tools.dumping.utils import get_nodes_from_db
 import itertools
+from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 import contextlib
+from pathlib import Path
+from aiida.common import timezone
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 # TODO: Could also get the entities, or UUIDs directly, rather than just counting them here
 
 DEFAULT_PROCESSES_TO_DUMP = [orm.CalculationNode, orm.WorkflowNode]
@@ -41,10 +44,9 @@ DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP + DEFAULT_DATA_TO_DUMP
 class CollectionDumper(AbstractDumper):
     def __init__(
         self,
-        # profile: Profile | None = None,
         qb_instance: orm.QueryBuilder | None = None,
-        dump_processes: bool = False,
-        dump_data: bool = False,
+        should_dump_processes: bool = False,
+        should_dump_data: bool = False,
         link_processes: bool = False,
         link_data: bool = False,
         entities_to_dump: List | None = None,
@@ -54,8 +56,8 @@ class CollectionDumper(AbstractDumper):
 
         # self.profile = profile
         self.qb_instance = qb_instance
-        self.dump_processes = dump_processes
-        self.dump_data = dump_data
+        self.should_dump_processes = should_dump_processes
+        self.should_dump_data = should_dump_data
         self.link_processe = link_processes
         self.link_data = link_data
 
@@ -76,36 +78,6 @@ class CollectionDumper(AbstractDumper):
     @staticmethod
     def _obtain_workflows():
         raise NotImplementedError('This should be implemented in subclasses.')
-
-    # def dump(self):
-    #     orm_entities = self._retrieve_orm_entities()
-
-    #     for orm_entity in orm_entities:
-    #         if isinstance(orm_entity, orm.ProcessNode):
-    #             process_dumper = ProcessDumper(**self.kwargs)
-    #             # process_dumper.pretty_print()
-    #             print(process_dumper)
-    #         elif isinstance(orm_entity, orm.Data):
-    #             data_dumper = DataDumper(**self.kwargs)
-    #         break
-
-    def should_dump_calculations(self) -> bool:
-        return (
-            sum(
-                self.entity_counter.get(orm_process_class, 0)
-                for orm_process_class in [orm.CalcJobNode, orm.CalcFunctionNode]
-            )
-            > 0
-        )
-
-    def should_dump_workflows(self) -> bool:
-        return (
-            sum(
-                self.entity_counter.get(orm_process_class, 0)
-                for orm_process_class in [orm.WorkChainNode, orm.WorkFunctionNode]
-            )
-            > 0
-        )
 
     def _dump_calculations_hidden(self, calculations):
         # ? Dump only top-level workchains, as that includes sub-workchains already
@@ -169,12 +141,15 @@ class CollectionDumper(AbstractDumper):
     def _dump_data_hidden(self, data_nodes):
         # data_nodes = get_nodes_from_db(aiida_node_type=orm.Data, with_group=self.group, flat=True)
         for data_node in data_nodes:
-            data_dump_path = self.hidden_aiida_path / 'data' / data_node.uuid
+            data_dump_path = self.hidden_aiida_path / 'data'
+            data_dump_path.mkdir(exist_ok=True, parents=True)
             data_dumper = DataDumper(overwrite=self.overwrite)
-            data_dumper.pretty_print()
+            # data_dumper.pretty_print()
 
             try:
-                data_dumper.dump(data_node=data_node, output_path=data_dump_path)
+                # Must pass them implicitly here, rather than, e.g. `data_node=data_node`
+                # Otherwise `singledispatch` raises: `IndexError: tuple index out of range`
+                data_dumper.dump(data_node, data_dump_path)
             except:
                 # pass
                 print(f'data_dumper.dump(data_node=data_node, output_path=data_dump_path{data_node, data_dump_path}')

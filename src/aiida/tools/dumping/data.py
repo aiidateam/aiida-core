@@ -9,16 +9,20 @@
 """Functionality for dumping of Data nodes."""
 
 from __future__ import annotations
+
+import logging
 from functools import singledispatchmethod
+from pathlib import Path
+
+import yaml
 
 from aiida import orm
-from pathlib import Path
-import logging
-import yaml
-from aiida.tools.dumping.abstract import AbstractDumper
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
+from aiida.tools.dumping.abstract import AbstractDumper
+from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING
 
 logger = logging.getLogger(__name__)
+
 
 
 class DataDumper(AbstractDumper):
@@ -28,94 +32,168 @@ class DataDumper(AbstractDumper):
     def generate_output_name(self):
         pass
 
-    def dump(self, *args, **kwargs):
-        data_export(*args, **kwargs)
+    # def dump(self, *args, **kwargs):
+    #     data_export(*args, **kwargs)
 
-    # @singledispatchmethod
-    # def dump(self, data_node, output_path):
-    #     # raise NotImplementedError(f'Dumping not implemented for type {type(data_node)}')
-    #     print(f'No specific handler found for type <{type(data_node)}> <{data_node}>, doing nothing.')
+    @singledispatchmethod
+    def dump(self, data_node, output_path):
+        # raise NotImplementedError(f'Dumping not implemented for type {type(data_node)}')
+        # print(f'No specific handler found for type <{type(data_node)}> <{data_node}>, doing nothing.')
+        output_path /= 'general'
+        output_path.mkdir(exist_ok=True, parents=True)
+        output_fname = output_path / f'{data_node.__class__.__name__}-{data_node.pk}.json'
+        # This is effectively the `raw` dumping
+        if self.also_raw:
+            try:
+                export_settings = DEFAULT_CORE_EXPORT_MAPPING[data_node.entry_point.name]
+                exporter = export_settings['exporter']
+                export_format = export_settings['export_format']
+                exporter(
+                    node=data_node,
+                    output_fname=output_fname,
+                    fileformat=export_format,
+                    overwrite=self.overwrite,
+                )
+            # This is for orm.Data types for which no default dumping is implemented, e.g. Bool or Float
+            except ValueError:
+                pass
 
-    # @dump.register
-    # def _(self, data_node: orm.StructureData, output_path: str | Path | None = None):
-    #     print(f'self, data_node, output_path{self, data_node, output_path}')
-    #     self._dump_structuredata(data_node=data_node, output_path=output_path)
+    @dump.register
+    def _(self, data_node: orm.StructureData, output_path: str | Path | None = None):
+        self._dump_structuredata(data_node, output_path=output_path)
 
-    # @dump.register
-    # def _(self, data_node: orm.AbstractCode, output_path: str | Path | None = None):
-    #     self._dump_code(data_node=data_node, output_path=output_path)
+    @dump.register
+    def _(
+        self,
+        data_node: orm.Code,
+        output_path: str | Path | None = None,
+    ):
+        self._dump_code(data_node=data_node, output_path=output_path)
 
-    # @dump.register
-    # def _(self, data_node: orm.AbstractCode, output_path: str | Path | None = None):
-    #     self._dump_code(data_node=data_node, output_path=output_path)
+    @dump.register
+    def _(
+        self,
+        data_node: orm.Computer,
+        output_path: str | Path | None = None,
+    ):
+        self._dump_computer(data_node=data_node, output_path=output_path)
 
-    # elif isinstance(data_node, orm.FolderData):
-    #     pass
-    #     # self._dump_folderdata(output_path=output_path)
+    @dump.register
+    def _(
+        self,
+        data_node: orm.BandsData,
+        output_path: str | Path | None = None,
+    ):
+        self._dump_bandsdata(data_node=data_node, output_path=output_path)
 
-    # elif isinstance(data_node, orm.RemoteData):
-    #     pass
-    #     # self._dump_folderdata(output_path=output_path)
+    @dump.register
+    def _(
+        self,
+        data_node: orm.TrajectoryData,
+        output_path: str | Path | None = None,
+    ):
+        self._dump_trajectorydata(data_node=data_node, output_path=output_path)
 
-    # elif isinstance(data_node, orm.JsonableData):
-    #     pass
-    #     # self._dump_jsonable(output_path=output_path)
+    def _dump_structuredata(
+        self,
+        data_node: orm.StructureData,
+        output_path: Path | None = None,
+    ):
+        # ? There also exists a CifData file type
+        output_path /= 'structures'
+        output_path.mkdir(exist_ok=True, parents=True)
+        output_fname = output_path / f'{data_node.get_formula()}-{data_node.pk}.cif'
+        data_export(
+            node=data_node,
+            output_fname=output_fname,
+            fileformat='cif',
+            overwrite=self.overwrite,
+        )
 
-    # def _dump_structuredata(
-    #     self,
-    #     data_node: orm.StructureData,
-    #     output_path: Path | None = None,
-    # ):
-    #     # ? There also exists a CifData file type
+    def _dump_code(
+        self,
+        data_node: orm.Code,
+        output_path: Path | None = None,
+    ):
+        output_path /= 'codes'
+        output_path.mkdir(exist_ok=True, parents=True)
+        output_fname = output_path / f'{data_node.full_label}-{data_node.pk}.yaml'
+        data_export(
+            node=data_node,
+            output_fname=output_fname,
+            fileformat='yaml',
+            overwrite=self.overwrite,
+        )
 
-    #     if output_path is None:
-    #         output_path = Path.cwd()
+    def _dump_computer(
+        self,
+        data_node: orm.Computer,
+        output_path: Path | None = None,
+    ):
+        output_path /= 'computers'
+        output_path.mkdir(exist_ok=True, parents=True)
+        computer_setup_fname = output_path / f'{data_node.full_label}-setup-{data_node.pk}.yaml'
+        computer_config_fname = output_path / f'{data_node.full_label}-config-{data_node.pk}.yaml'
 
-    #     output_path /= 'structures'
+        # ? Copied over from `cmd_computer` as importing `computer_export_setup` led to click Context error:
+        # TypeError: Context.__init__() got an unexpected keyword argument 'computer'
+        computer_setup = {
+            'label': data_node.label,
+            'hostname': data_node.hostname,
+            'description': data_node.description,
+            'transport': data_node.transport_type,
+            'scheduler': data_node.scheduler_type,
+            'shebang': data_node.get_shebang(),
+            'work_dir': data_node.get_workdir(),
+            'mpirun_command': ' '.join(data_node.get_mpirun_command()),
+            'mpiprocs_per_machine': data_node.get_default_mpiprocs_per_machine(),
+            'default_memory_per_machine': data_node.get_default_memory_per_machine(),
+            'use_double_quotes': data_node.get_use_double_quotes(),
+            'prepend_text': data_node.get_prepend_text(),
+            'append_text': data_node.get_append_text(),
+        }
 
-    #     output_path.mkdir(exist_ok=True, parents=True)
+        if not computer_setup_fname.is_file():
+            computer_setup_fname.write_text(yaml.dump(computer_setup, sort_keys=False), 'utf-8')
 
-    #     file_name = f'{data_node.get_formula()}-{data_node.pk}.cif'
+        from aiida.orm import User
 
-    #     try:
-    #         data_node.export(path=output_path / file_name, fileformat='cif', overwrite=True)
-    #     except OSError as exc:
-    #         raise exc
+        users = User.collection.all()
+        for user in users:
+            computer_configuration = data_node.get_configuration(user)
+            if not computer_config_fname.is_file():
+                computer_config_fname.write_text(yaml.dump(computer_configuration, sort_keys=False), 'utf-8')
 
-    # @staticmethod
-    # def _dump_code(
-    #     # ? Should have same signature as `data_export function
-    #     data_node: orm.AbstractCode,
-    #     output_path: Path | None = None,
-    #     file_name: str | Path | None = None,
-    #     file_format: str = 'yaml',
-    #     *args,
-    #     **kwargs
-    # ):
-    #     if output_path is None:
-    #         output_path = Path.cwd()
-    #     # output_path /= 'codes'
+    def _dump_bandsdata(
+        self,
+        data_node: orm.BandsData,
+        output_path: Path | None = None,
+    ):
+        # ? There also exists a CifData file type
+        output_path /= 'bandstructures'
+        output_path.mkdir(exist_ok=True, parents=True)
+        output_fname = output_path / f'{data_node.pk}.pdf'
+        data_export(
+            node=data_node,
+            output_fname=output_fname,
+            fileformat='mpl_pdf',
+            overwrite=self.overwrite,
+        )
 
-    #     output_path.mkdir(exist_ok=True, parents=True)
-
-    #     code_data = {}
-
-    #     # ? Copied over from `cmd_code`
-    #     # ? In some cases, `verdi code export` does not contain the relevant `Computer` attached to it
-    #     for key in data_node.Model.model_fields.keys():
-    #         value = getattr(data_node, key).label if key == 'computer' else getattr(data_node, key)
-
-    #         if value is not None:
-    #             code_data[key] = str(value)
-    #     if file_name is None:
-    #         try:
-    #             file_name = f"{code_data['label']}@{code_data['computer']}.{file_format}"
-    #         except KeyError:
-    #             file_name = f"{code_data['label']}.{file_format}"
-
-    #     code_file = output_path / file_name
-
-    #     if not code_file.is_file():
-    #         code_file.write_text(yaml.dump(code_data, sort_keys=False), 'utf-8')
+    def _dump_trajectorydata(
+        self,
+        data_node: orm.TrajectoryData,
+        output_path: Path | None = None,
+    ):
+        # ? There also exists a CifData file type
+        output_path /= 'trajectories'
+        output_path.mkdir(exist_ok=True, parents=True)
+        output_fname = output_path / f'{data_node.pk}.cif'
+        data_export(
+            node=data_node,
+            output_fname=output_fname,
+            fileformat='cif',
+            overwrite=self.overwrite,
+        )
 
     def _dump_user_info(self): ...

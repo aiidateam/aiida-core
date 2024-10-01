@@ -51,7 +51,7 @@ class GroupDumper(CollectionDumper):
         self.entity_counter = entity_counter
         return entity_counter
 
-    def dump(self, group: orm.Group | str | None = None, output_path: Path | str | None = None):
+    def dump_processes(self, group: orm.Group | str | None = None, output_path: Path | str | None = None):
         # ? Here, these could be all kinds of entities that could be grouped in AiiDA
         # if output_path is None:
         #     output_path = Path.cwd()
@@ -74,7 +74,7 @@ class GroupDumper(CollectionDumper):
             output_path.mkdir(exist_ok=True, parents=True)
 
         self.create_entity_counter(group=group)
-        pprint(self.entity_counter)
+        # pprint(self.entity_counter)
 
         self.hidden_aiida_path = self.parent_path / '.aiida-raw-data'
 
@@ -113,10 +113,6 @@ class GroupDumper(CollectionDumper):
             self._dump_link_workflows(workflows=workflows)
             self._link_calculations_hidden(calculations=calculations)
 
-        if self.dump_data:
-            logger.report(f'Dumping data for group {self.group_name}...')
-            # data = [node for node in self.group.nodes if isinstance(node, orm.Data)]
-            data = [node for node in self.group.nodes if isinstance(node, orm.StructureData)]
-            print('DATA', data)
-            self._dump_data_hidden(data_nodes=data)
-
+    def dump_data(self):
+        data = [node for node in self.group.nodes if isinstance(node, (orm.Data, orm.Computer))]
+        self._dump_data_hidden(data_nodes=data)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pathlib
 from rich.console import Console
 from rich.table import Table
+import sys
 
 
 class AbstractDumper:
@@ -58,7 +59,7 @@ class AbstractDumper:
                 attr_value = getattr(self, attr_name)
                 entry_type = "Attribute" if not callable(attr_value) else "Method"
                 entries.append((attr_name, entry_type, str(attr_value)))
-                
+
 
         # Sort entries: attributes first, then methods
         entries.sort(key=lambda x: (x[1] == "Method", x[0]))
@@ -69,3 +70,24 @@ class AbstractDumper:
 
         # Print the formatted table
         console.print(table)
+
+    @staticmethod
+    def check_storage_size_user():
+        from aiida.manage.manager import get_manager
+
+        manager = get_manager()
+        storage = manager.get_profile_storage()
+
+        data = storage.get_info(detailed=True)
+        repository_data = data['repository']['Size (MB)']
+        total_size_gb = sum(repository_data.values()) / 1024
+        if total_size_gb > 10:
+            user_input = (
+                input('Repository size larger than 10gb. Do you still want to dump the profile data? (y/N): ')
+                .strip()
+                .lower()
+            )
+
+            if user_input != 'y':
+                sys.exit()
+

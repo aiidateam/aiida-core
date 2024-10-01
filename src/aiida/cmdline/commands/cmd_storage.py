@@ -395,22 +395,39 @@ def archive_mirror(
         "overwrite": overwrite,
         "also_raw": also_raw,
         "also_rich": also_rich,
-        "dump_processes": dump_processes,
+        "should_dump_processes": dump_processes,
         "link_processes": link_processes,
-        "dump_data": dump_data,
+        "should_dump_data": dump_data,
         "link_data": link_data,
         "entities_to_dump": entities_to_dump,
     }
 
     if groups is None:
         groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
+
     if len(groups) > 0:
         for group in groups:
-            print("GROUP", group)
             group_dumper = GroupDumper(**group_dumper_kwargs)
             # print("GROUP_DUMPER.PRETTY_PRINT()")
             # group_dumper.pretty_print()
-            group_dumper.dump(group)
+
+        if dump_processes:
+            echo.echo_report(f'Dumping processes for group `{group.label}`...')
+            group_dumper.dump_processes(group)
+        if dump_data:
+            echo.echo_report(f'Dumping data for group `{group.label}`...')
+            group_dumper.dump_data(group)
 
     # === Dumping of no Groups exist ===
     # TODO: Test with such a profile
+    else:
+        from aiida import get_profile
+        profile = get_profile()
+        profile_dumper = ProfileDumper(**group_dumper_kwargs)
+        print(f'profile_dumper: {profile_dumper}')
+        if dump_processes:
+            echo.echo_report(f'Dumping processes for profile `{profile.name}`...')
+            profile_dumper.dump_processes()
+        if dump_data:
+            echo.echo_report(f'Dumping data for profile {profile.name}...')
+            profile_dumper.dump_data()

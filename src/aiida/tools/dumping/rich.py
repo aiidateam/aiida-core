@@ -1,7 +1,6 @@
 from importlib_metadata import EntryPoint
 
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
-from aiida.tools.dumping.data import DataDumper
 
 __all__ = ('RichParser', 'default_core_export_mapping')
 
@@ -80,7 +79,7 @@ core_data_entry_points = [
 #     default_core_export_mapping[core_data_with_export] = data_export
 
 # TODO: `core.jsonable` that should be easy via dict -> .json, or `code export`
-default_core_export_mapping = {
+DEFAULT_CORE_EXPORT_MAPPING = {
     'core.array': {
         'exporter': data_export,
         'export_format': 'json'
@@ -119,19 +118,19 @@ default_core_export_mapping = {
     },
     # TODO: These should by written via the `data_export` function instead
     'core.code': {
-        'exporter': DataDumper._dump_code,
+        'exporter': data_export,
         'export_format': 'yaml'
     },
     'core.code.containerized': {
-        'exporter': DataDumper._dump_code,
+        'exporter': data_export,
         'export_format': 'yaml'
     },
     'core.code.installed': {
-        'exporter': DataDumper._dump_code,
+        'exporter': data_export,
         'export_format': 'yaml'
     },
     'core.code.portable': {
-        'exporter': DataDumper._dump_code,
+        'exporter': data_export,
         'export_format': 'yaml'
     },
     'core.dict': {

@@ -90,7 +90,8 @@ class PortableCode(Code):
         super().__init__(**kwargs)
         type_check(filepath_files, pathlib.Path)
         self.filepath_executable = filepath_executable  # type: ignore[assignment]
-        self._filepath_files = filepath_files
+        # self.base.repository.put_object_from_tree(str(filepath_files))
+        self.filepath_files = filepath_files
 
     def _validate(self):
         """Validate the instance by checking that an executable is defined and it is part of the repository files.

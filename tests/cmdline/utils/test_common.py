@@ -103,7 +103,7 @@ def test_validate_output_filename():
     expected_output_file = Path(f'{test_entity_label}{test_appendix}.{fileformat}')
 
     # Test failure if no actual file to be validated is passed
-    with pytest.raises(ValueError, match='.*passed for validation.'):
+    with pytest.raises(TypeError, match='.*passed for validation.'):
         validate_output_filename(output_file=None)
 
     # Test failure if file exists, but overwrite False

@@ -464,7 +464,7 @@ def test_code_setup_local_duplicate_full_label_interactive(run_cli_command, non_
 def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command):
     """Test ``verdi code setup`` for a local code in non-interactive mode specifying an existing full label."""
     label = 'some-label'
-    code = PortableCode(filepath_executable='bash', filepath_files=pathlib.Path('/bin/bash'))
+    code = PortableCode(filepath_executable='bash', filepath_files=pathlib.Path('/bin/'))
     code.label = label
     code.base.repository.put_object_from_filelike(io.BytesIO(b''), 'bash')
     code.store()

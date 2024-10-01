@@ -306,7 +306,7 @@ jobs:
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
       id: create_update_requirements_pr
       continue-on-error: true
-      uses: peter-evans/create-pull-request@v6
+      uses: peter-evans/create-pull-request@v7
       with:
         branch: update-requirements
         commit-message: Automated update of requirements/ files.

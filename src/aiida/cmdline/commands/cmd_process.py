@@ -320,7 +320,10 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
 @options.ALL(help='Kill all processes if no specific processes are specified.')
 @options.TIMEOUT()
 @options.WAIT()
-@options.FORCE_KILL()
+@options.FORCE_KILL(
+    help='Force kill the process if it does not respond to the initial kill signal.\n'
+    ' Note: This may lead to orphaned jobs on your HPC and should be used with caution.'
+)
 @decorators.with_dbenv()
 def process_kill(processes, all_entries, timeout, wait, force_kill):
     """Kill running processes.
@@ -341,10 +344,13 @@ def process_kill(processes, all_entries, timeout, wait, force_kill):
 
     with capture_logging() as stream:
         try:
-            message = 'Killed through `verdi process kill`'
-            control.kill_processes(
-                processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message, force_kill=force_kill
-            )
+            if force_kill:
+                echo.echo_warning('Force kill is enabled. This may lead to orphaned jobs on your HPC.')
+                # note: It's important to include -F in the message, as this is used to identify force-killed processes.
+                message = 'Force killed through `verdi process kill -F`'
+            else:
+                message = 'Killed through `verdi process kill`'
+            control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
 

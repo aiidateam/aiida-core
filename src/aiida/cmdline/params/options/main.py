@@ -330,11 +330,11 @@ NODES = OverridableOption(
 FORCE = OverridableOption('-f', '--force', is_flag=True, default=False, help='Do not ask for confirmation.')
 
 FORCE_KILL = OverridableOption(
-    '-fk',
+    '-F',
     '--force-kill',
     is_flag=True,
     default=False,
-    help='Kills the process without waiting for a response if the job is killed.',
+    help='Kills the process without waiting for a confirmation if the job has been killed from remote.',
 )
 
 SILENT = OverridableOption('-s', '--silent', is_flag=True, default=False, help='Suppress any output printed to stdout.')

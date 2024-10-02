@@ -101,9 +101,9 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
 
     try:
         logger.info(f'scheduled request to upload CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.futures.CancelledError, PreSubmitException, plumpy.process_states.Interruption)
+        breaking_exceptions = (plumpy.futures.CancelledError, PreSubmitException, plumpy.process_states.Interruption)
         skip_submit = await exponential_backoff_retry(
-            do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
+            do_upload, initial_interval, max_attempts, logger=node.logger, breaking_exceptions=breaking_exceptions
         )
     except PreSubmitException:
         raise
@@ -149,9 +149,9 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
 
     try:
         logger.info(f'scheduled request to submit CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
+        breaking_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
         result = await exponential_backoff_retry(
-            do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
+            do_submit, initial_interval, max_attempts, logger=node.logger, breaking_exceptions=breaking_exceptions
         )
     except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
@@ -207,9 +207,9 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
 
     try:
         logger.info(f'scheduled request to update CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
+        breaking_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
         job_done = await exponential_backoff_retry(
-            do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
+            do_update, initial_interval, max_attempts, logger=node.logger, breaking_exceptions=breaking_exceptions
         )
     except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
@@ -258,9 +258,9 @@ async def task_monitor_job(
 
     try:
         logger.info(f'scheduled request to monitor CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
+        breaking_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
         monitor_result = await exponential_backoff_retry(
-            do_monitor, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
+            do_monitor, initial_interval, max_attempts, logger=node.logger, breaking_exceptions=breaking_exceptions
         )
     except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
@@ -334,9 +334,9 @@ async def task_retrieve_job(
 
     try:
         logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
+        breaking_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
         result = await exponential_backoff_retry(
-            do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
+            do_retrieve, initial_interval, max_attempts, logger=node.logger, breaking_exceptions=breaking_exceptions
         )
     except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
@@ -385,7 +385,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
             initial_interval,
             max_attempts,
             logger=node.logger,
-            ignore_exceptions=plumpy.process_states.Interruption,
+            breaking_exceptions=plumpy.process_states.Interruption,
         )
     except plumpy.process_states.Interruption:
         raise
@@ -398,7 +398,9 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
         return
 
 
-async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture):
+async def task_kill_job(
+    node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture, force_kill: bool = False
+):
     """Transport task that will attempt to kill a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -412,7 +414,6 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
 
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
-    breakpoint()
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
 
@@ -423,19 +424,23 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
     authinfo = node.get_authinfo()
 
     async def do_kill():
-        # this function fails when there is no transport
-        # then the exponential backof raises an exception
         with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return execmanager.kill_calculation(node, transport)
 
+    if force_kill:
+        logger.warning(f'Process<{node.pk}> has been force killed! this may result in orphaned jobs.')
+        raise plumpy.process_states.ForceKillInterruption('Force killing CalcJob')
     try:
         logger.info(f'scheduled request to kill CalcJob<{node.pk}>')
         result = await exponential_backoff_retry(do_kill, initial_interval, max_attempts, logger=node.logger)
+    # Note: any exception raised here, will result in the process being excepted. not killed!
+    # There for it can result in orphaned jobs!
     except plumpy.process_states.Interruption:
+        logger.warning(f'killing CalcJob<{node.pk}> excepted, the job might be orphaned.')
         raise
     except Exception as exception:
-        logger.warning(f'killing CalcJob<{node.pk}> failed')
+        logger.warning(f'killing CalcJob<{node.pk}> excepted, the job might be orphaned.')
         raise TransportTaskException(f'kill_calculation failed {max_attempts} times consecutively') from exception
     else:
         logger.info(f'killing CalcJob<{node.pk}> successful')
@@ -531,7 +536,7 @@ class Waiting(plumpy.process_states.Waiting):
                     monitor_result = await self._monitor_job(node, transport_queue, self.monitors)
 
                     if monitor_result and monitor_result.action is CalcJobMonitorAction.KILL:
-                        await self._kill_job(node, transport_queue)
+                        await self._kill_job(node, transport_queue, force_kill=False)
                         job_done = True
 
                     if monitor_result and not monitor_result.retrieve:
@@ -570,7 +575,11 @@ class Waiting(plumpy.process_states.Waiting):
         except TransportTaskException as exception:
             raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
         except plumpy.process_states.KillInterruption as exception:
-            await self._kill_job(node, transport_queue)
+            await self._kill_job(node, transport_queue, force_kill=False)
+            node.set_process_status(str(exception))
+            return self.retrieve(monitor_result=self._monitor_result)
+        except plumpy.process_states.ForceKillInterruption as exception:
+            await self._kill_job(node, transport_queue, force_kill=True)
             node.set_process_status(str(exception))
             return self.retrieve(monitor_result=self._monitor_result)
         except (plumpy.futures.CancelledError, asyncio.CancelledError):
@@ -610,9 +619,9 @@ class Waiting(plumpy.process_states.Waiting):
 
         return monitor_result
 
-    async def _kill_job(self, node, transport_queue) -> None:
+    async def _kill_job(self, node, transport_queue, force_kill) -> None:
         """Kill the job."""
-        await self._launch_task(task_kill_job, node, transport_queue)
+        await self._launch_task(task_kill_job, node, transport_queue, force_kill=force_kill)
         if self._killing is not None:
             self._killing.set_result(True)
         else:

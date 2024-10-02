@@ -101,7 +101,7 @@ class InterruptableFuture(asyncio.Future):
             import asyncio
             loop = asyncio.get_event_loop()
 
-            interruptable = InterutableFuture()
+            interruptable = InterruptableFuture()
             loop.call_soon(interruptable.interrupt, RuntimeError("STOP"))
             loop.run_until_complete(interruptable.with_interrupt(asyncio.sleep(2.)))
             >>> RuntimeError: STOP
@@ -124,7 +124,7 @@ def interruptable_task(
 ) -> InterruptableFuture:
     """Turn the given coroutine into an interruptable task by turning it into an InterruptableFuture and returning it.
 
-    :param coro: the coroutine that should be made interruptable with object of InterutableFuture as last paramenter
+    :param coro: the coroutine that should be made interruptable with object of InterruptableFuture as last parameter
     :param loop: the event loop in which to run the coroutine, by default uses asyncio.get_event_loop()
     :return: an InterruptableFuture
     """
@@ -178,7 +178,7 @@ async def exponential_backoff_retry(
     initial_interval: Union[int, float] = 10.0,
     max_attempts: int = 5,
     logger: Optional[logging.Logger] = None,
-    ignore_exceptions: Union[None, Type[Exception], Tuple[Type[Exception], ...]] = None,
+    breaking_exceptions: Union[None, Type[Exception], Tuple[Type[Exception], ...]] = None,
 ) -> Any:
     """Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
 
@@ -190,7 +190,8 @@ async def exponential_backoff_retry(
     :param fct: the function to call, which will be turned into a coroutine first if it is not already
     :param initial_interval: the time to wait after the first caught exception before calling the coroutine again
     :param max_attempts: the maximum number of times to call the coroutine before re-raising the exception
-    :param ignore_exceptions: exceptions to ignore, i.e. when caught do nothing and simply re-raise
+    :param breaking_exceptions: exceptions that breaks EBM loop. These exceptions are re-raise.
+        If None, all exceptions are raised only after max_attempts reached.
     :return: result if the ``coro`` call completes within ``max_attempts`` retries without raising
     """
     if logger is None:
@@ -205,8 +206,7 @@ async def exponential_backoff_retry(
             result = await coro()
             break  # Finished successfully
         except Exception as exception:
-            # Re-raise exceptions that should be ignored
-            if ignore_exceptions is not None and isinstance(exception, ignore_exceptions):
+            if breaking_exceptions is not None and isinstance(exception, breaking_exceptions):
                 raise
 
             count = iteration + 1

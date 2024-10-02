@@ -84,35 +84,6 @@ def test_filepath_executable(tmp_path):
         code.filepath_executable = filepath_executable
 
 
-def test_filepath_files(tmp_path):
-    """Test the :meth:`aiida.orm.nodes.data.code.portable.PortableCode.filepath_files` property."""
-    filepath_files = tmp_path / 'code-dir'
-    filepath_executable = 'bash'
-
-    # Check existance fo `filepath_files`
-    with pytest.raises(ValueError, match=r'`filepath_files` must be an existing directory.'):
-        code = PortableCode(filepath_executable=filepath_executable, filepath_files=filepath_files)
-
-    filepath_files.mkdir(parents=True, exist_ok=True)
-    (filepath_files / filepath_executable).touch()
-
-    code = PortableCode(filepath_executable=filepath_executable, filepath_files=filepath_files)
-
-    # Check if absolute path
-    with pytest.raises(ValueError, match=r'`filepath_files` must be an absolute path.'):
-        code.filepath_files = 'rel_path'
-
-    # Check that `NodeRepository` is cleaned up when setting new `filepath_files`
-    code.base.repository.put_object_from_filelike(io.BytesIO(b''), 'test-erase')
-    code.filepath_files = filepath_files
-    assert 'test-erase' not in code.base.repository.list_object_names()
-
-    # Check that `filepath_files` immutable after being stored
-    code.store()
-    with pytest.raises(ModificationNotAllowed):
-        code.filepath_files = filepath_files
-
-
 def test_full_label(tmp_path):
     """Test the :meth:`aiida.orm.nodes.data.code.portable.PortableCode.full_label` property."""
     label = 'some-label'

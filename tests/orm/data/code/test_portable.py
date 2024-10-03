@@ -96,3 +96,20 @@ def test_get_execname(tmp_path):
     code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=tmp_path)
     with pytest.warns(AiidaDeprecationWarning):
         assert code.get_execname() == 'bash'
+
+
+def test_portablecode_repo_dump(tmp_path, chdir_tmp_path):
+    """Test that the node repository contents of an orm.PortableCode are dumped upon YAML export."""
+    filepath_files = tmp_path / 'tmp'
+    filepath_files.mkdir()
+    (filepath_files / 'bash').touch()
+    (filepath_files / 'subdir').mkdir()
+    (filepath_files / 'subdir/test').touch()
+    code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=filepath_files)
+    code.store()
+    chdir_tmp_path
+    code._prepare_yaml()
+    repo_dump_path = tmp_path / f'portablecode-{code.pk}'
+    assert repo_dump_path.is_dir()
+    assert (repo_dump_path / 'bash').is_file()
+    assert (repo_dump_path / 'subdir/test').is_file()

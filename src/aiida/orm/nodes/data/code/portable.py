@@ -19,6 +19,7 @@ working directory on the selected computer and the executable will be run there.
 
 from __future__ import annotations
 
+import logging
 import pathlib
 import typing as t
 
@@ -34,6 +35,7 @@ from .abstract import AbstractCode
 from .legacy import Code
 
 __all__ = ('PortableCode',)
+_LOGGER = logging.getLogger(__name__)
 
 
 class PortableCode(Code):
@@ -177,3 +179,16 @@ class PortableCode(Code):
             raise ValueError('The `filepath_executable` should not be absolute.')
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
+
+    def _prepare_yaml(self, *args, **kwargs):
+        """Export code to a YAML file."""
+        target_path = pathlib.Path().cwd() / f'portablecode-{self.pk}'
+        setattr(self, 'filepath_files', str(target_path))
+        self.base.repository.copy_tree(target=target_path)
+        _LOGGER.warning(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target_path}`.')
+
+        return super()._prepare_yaml(*args, **kwargs)
+
+    def _prepare_yml(self, *args, **kwargs):
+        """Also allow for export as .yml"""
+        return self._prepare_yaml(*args, **kwargs)

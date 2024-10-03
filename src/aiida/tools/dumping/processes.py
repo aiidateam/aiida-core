@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import itertools as it
 import logging
 from pathlib import Path
 from types import SimpleNamespace
@@ -18,7 +19,7 @@ from typing import List
 import yaml
 
 from aiida.common import LinkType
-from aiida.common.exceptions import NotExistentAttributeError
+from aiida.common.exceptions import ConfigurationError, NotExistentAttributeError
 from aiida.orm import (
     CalcFunctionNode,
     CalcJobNode,
@@ -30,6 +31,7 @@ from aiida.orm import (
     WorkFunctionNode,
 )
 from aiida.orm.utils import LinkTriple
+from aiida.orm.utils.remote import get_calcjob_remote_paths
 
 LOGGER = logging.getLogger(__name__)
 
@@ -42,6 +44,7 @@ class ProcessDumper:
         include_attributes: bool = True,
         include_extras: bool = True,
         overwrite: bool = False,
+        also_remote: bool = False,
         flat: bool = False,
     ) -> None:
         self.include_inputs = include_inputs
@@ -49,6 +52,7 @@ class ProcessDumper:
         self.include_attributes = include_attributes
         self.include_extras = include_extras
         self.overwrite = overwrite
+        self.also_remote = also_remote
         self.flat = flat
 
     @staticmethod
@@ -284,6 +288,53 @@ class ProcessDumper:
                 parent_path=output_path / io_dump_mapping.outputs,
                 link_triples=output_links,
             )
+
+        # Additional remote file retrieval should only apply for CalcJobNodes, not CalcFunctionNodes
+        if self.also_remote and isinstance(calculation_node, CalcJobNode):
+            self._dump_calculation_remote_files(calcjob_node=calculation_node, output_path=output_path)
+
+    def _dump_calculation_remote_files(self, calcjob_node: CalcJobNode, output_path: Path) -> None:
+        """Dump the additional remote files attached to a `CalcJobNode` to a specified output path.
+
+        :param calcjob_node: The `CalcJobNode` to be dumped.
+        :param output_path: The path where the files will be dumped.
+        """
+
+        remote_workdir = calcjob_node.get_remote_workdir()
+        if remote_workdir is None:
+            raise NotExistentAttributeError(f"CalcJobNode <{calcjob_node.pk}> doesn't have a `remote_workdir`.")
+
+        # Exclude the objects that were already dumped, as they were either originally retrieved via `retrieve_list`
+        # or are already part of the file repository of the CalcJobNode, e.g. the `aiida.in` and `_aiidasubmit.sh`
+        retrieve_list = list(calcjob_node.get_retrieve_list())  # type: ignore[arg-type]
+        repository_list = calcjob_node.base.repository.list_object_names()
+        exclude_list = retrieve_list + repository_list
+
+        # Obtain a flattened list of the `RemoteData` objects.
+        # The computer UUIDs that are the keys of the returned dictionary of `get_calcjob_remote_paths` aren't
+        # needed, as we only run the function for a single CalcJobNode using its associated transport to get the files
+        calcjob_remote_paths = get_calcjob_remote_paths(pks=[calcjob_node.pk])  # type: ignore[list-item]
+        calcjob_remote_datas = list(it.chain.from_iterable(calcjob_remote_paths.values()))  # type: ignore[union-attr]
+
+        # Unlike for the `retrieve_files_from_list` in `execmanager.py`, we only dump the files to disk, rather than
+        # also storing them in the repository via `FolderData`
+        try:
+            with calcjob_node.get_transport() as transport:
+                for calcjob_remote_data in calcjob_remote_datas:
+                    # Obtain all objects from each of the RemoteDatas associated with the CalcJobNode
+                    # (could this even be more than one?)
+                    retrieve_objects = [_ for _ in calcjob_remote_data.listdir() if _ not in exclude_list]
+                    remote_paths = [(Path(remote_workdir) / _).resolve() for _ in retrieve_objects]
+                    local_paths = [(output_path / 'remote_files' / _).resolve() for _ in retrieve_objects]
+
+                    # Transport.get() works for files and folders, so we don't need to make a distinction
+                    for rem, loc in zip(remote_paths, local_paths):
+                        transport.get(str(rem), str(loc), ignore_nonexisting=True)
+
+        # Getting the transport fails, propagate exception outwards
+        # (could just remove the except, but being explicit might make it clearer here)
+        except ConfigurationError:
+            raise
 
     def _dump_calculation_io(self, parent_path: Path, link_triples: LinkManager | List[LinkTriple]):
         """Small helper function to dump linked input/output nodes of a `CalculationNode`.

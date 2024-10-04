@@ -24,7 +24,6 @@ from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING
 logger = logging.getLogger(__name__)
 
 
-
 class DataDumper(AbstractDumper):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -36,33 +35,37 @@ class DataDumper(AbstractDumper):
     #     data_export(*args, **kwargs)
 
     @singledispatchmethod
-    def dump(self, data_node, output_path):
+    def dump_rich(self, data_node, output_path):
         # raise NotImplementedError(f'Dumping not implemented for type {type(data_node)}')
         # print(f'No specific handler found for type <{type(data_node)}> <{data_node}>, doing nothing.')
-        output_path /= 'general'
+        # output_path /= 'general'
         output_path.mkdir(exist_ok=True, parents=True)
-        output_fname = output_path / f'{data_node.__class__.__name__}-{data_node.pk}.json'
-        # This is effectively the `raw` dumping
-        if self.also_raw:
-            try:
-                export_settings = DEFAULT_CORE_EXPORT_MAPPING[data_node.entry_point.name]
-                exporter = export_settings['exporter']
-                export_format = export_settings['export_format']
-                exporter(
-                    node=data_node,
-                    output_fname=output_fname,
-                    fileformat=export_format,
-                    overwrite=self.overwrite,
-                )
-            # This is for orm.Data types for which no default dumping is implemented, e.g. Bool or Float
-            except ValueError:
-                pass
+        # This is effectively the `rich` dumping
+        try:
+            export_settings = DEFAULT_CORE_EXPORT_MAPPING[data_node.entry_point.name]
+            exporter = export_settings['exporter']
+            fileformat = export_settings['export_format']
+            output_fname = output_path / f'{data_node.__class__.__name__}-{data_node.pk}.{fileformat}'
+            exporter(
+                node=data_node,
+                output_fname=output_fname,
+                fileformat=fileformat,
+                overwrite=self.overwrite,
+            )
+        # This is for orm.Data types for which no default dumping is implemented, e.g. Bool or Float
+        except ValueError:
+            pass
 
-    @dump.register
+    @dump_rich.register
     def _(self, data_node: orm.StructureData, output_path: str | Path | None = None):
-        self._dump_structuredata(data_node, output_path=output_path)
+        if type(data_node) is orm.StructureData:
+            self._dump_structuredata(data_node, output_path=output_path)
+        else:
+            # Handle the case where data_node is a subclass of orm.StructureData
+            # Just use the default dispatch function implementation
+            self.dump_rich.dispatch(object)(self, data_node, output_path)
 
-    @dump.register
+    @dump_rich.register
     def _(
         self,
         data_node: orm.Code,
@@ -70,7 +73,7 @@ class DataDumper(AbstractDumper):
     ):
         self._dump_code(data_node=data_node, output_path=output_path)
 
-    @dump.register
+    @dump_rich.register
     def _(
         self,
         data_node: orm.Computer,
@@ -78,7 +81,7 @@ class DataDumper(AbstractDumper):
     ):
         self._dump_computer(data_node=data_node, output_path=output_path)
 
-    @dump.register
+    @dump_rich.register
     def _(
         self,
         data_node: orm.BandsData,
@@ -86,7 +89,7 @@ class DataDumper(AbstractDumper):
     ):
         self._dump_bandsdata(data_node=data_node, output_path=output_path)
 
-    @dump.register
+    @dump_rich.register
     def _(
         self,
         data_node: orm.TrajectoryData,
@@ -94,46 +97,62 @@ class DataDumper(AbstractDumper):
     ):
         self._dump_trajectorydata(data_node=data_node, output_path=output_path)
 
-    def _dump_structuredata(
+    @dump_rich.register
+    def _(
         self,
-        data_node: orm.StructureData,
-        output_path: Path | None = None,
+        data_node: orm.UpfData,
+        output_path: str | Path | None = None,
     ):
+        self._dump_upfdata(data_node=data_node, output_path=output_path)
+
+    def _dump_structuredata(
+        self, data_node: orm.StructureData, output_path: Path | None = None, fileformat: str = 'cif'
+    ):
+        from aiida.common.exceptions import UnsupportedSpeciesError
+
         # ? There also exists a CifData file type
-        output_path /= 'structures'
+        # output_path /= 'structures'
         output_path.mkdir(exist_ok=True, parents=True)
-        output_fname = output_path / f'{data_node.get_formula()}-{data_node.pk}.cif'
-        data_export(
-            node=data_node,
-            output_fname=output_fname,
-            fileformat='cif',
-            overwrite=self.overwrite,
-        )
+        output_fname = output_path / f'{data_node.get_formula()}-{data_node.pk}.{fileformat}'
+        try:
+            data_export(
+                node=data_node,
+                output_fname=output_fname,
+                fileformat=fileformat,
+                overwrite=self.overwrite,
+            )
+        except UnsupportedSpeciesError:
+            # This is the case for, e.g. HubbardStructureData that has species like `Mn0`
+            # Not sure how to resolve this. Wouldn't add a singledispatch for data types defined in plugins. Currently,
+            # do strict type check. HubbardStructureData doesn't implement an export method itself, though.
+            pass
 
     def _dump_code(
         self,
         data_node: orm.Code,
         output_path: Path | None = None,
+        fileformat: str = 'yaml',
     ):
-        output_path /= 'codes'
+        # output_path /= 'codes'
+        if fileformat != 'yaml':
+            raise NotImplementedError('No other fileformats supported so far apart from YAML.')
         output_path.mkdir(exist_ok=True, parents=True)
-        output_fname = output_path / f'{data_node.full_label}-{data_node.pk}.yaml'
+        output_fname = output_path / f'{data_node.full_label}-{data_node.pk}.{fileformat}'
         data_export(
             node=data_node,
             output_fname=output_fname,
-            fileformat='yaml',
+            fileformat=fileformat,
             overwrite=self.overwrite,
         )
 
-    def _dump_computer(
-        self,
-        data_node: orm.Computer,
-        output_path: Path | None = None,
-    ):
-        output_path /= 'computers'
+    def _dump_computer(self, data_node: orm.Computer, output_path: Path | None = None, fileformat: str = 'yaml'):
+        # output_path /= 'computers'
+        if fileformat != 'yaml':
+            raise NotImplementedError('No other fileformats supported so far apart from YAML.')
+
         output_path.mkdir(exist_ok=True, parents=True)
-        computer_setup_fname = output_path / f'{data_node.full_label}-setup-{data_node.pk}.yaml'
-        computer_config_fname = output_path / f'{data_node.full_label}-config-{data_node.pk}.yaml'
+        computer_setup_fname = output_path / f'{data_node.full_label}-setup-{data_node.pk}.{fileformat}'
+        computer_config_fname = output_path / f'{data_node.full_label}-config-{data_node.pk}.{fileformat}'
 
         # ? Copied over from `cmd_computer` as importing `computer_export_setup` led to click Context error:
         # TypeError: Context.__init__() got an unexpected keyword argument 'computer'
@@ -164,19 +183,18 @@ class DataDumper(AbstractDumper):
             if not computer_config_fname.is_file():
                 computer_config_fname.write_text(yaml.dump(computer_configuration, sort_keys=False), 'utf-8')
 
-    def _dump_bandsdata(
-        self,
-        data_node: orm.BandsData,
-        output_path: Path | None = None,
-    ):
+    def _dump_bandsdata(self, data_node: orm.BandsData, output_path: Path | None = None, fileformat: str = 'mpl_pdf'):
         # ? There also exists a CifData file type
-        output_path /= 'bandstructures'
+        # output_path /= 'bandstructures'
         output_path.mkdir(exist_ok=True, parents=True)
-        output_fname = output_path / f'{data_node.pk}.pdf'
+        print(f'FILEFORMAT: {fileformat}')
+        if fileformat == 'mpl_pdf':
+            fileextension = 'pdf'
+        output_fname = output_path / f'{data_node.__class__.__name__}-{data_node.pk}.{fileextension}'
         data_export(
             node=data_node,
             output_fname=output_fname,
-            fileformat='mpl_pdf',
+            fileformat=fileformat,
             overwrite=self.overwrite,
         )
 
@@ -184,16 +202,20 @@ class DataDumper(AbstractDumper):
         self,
         data_node: orm.TrajectoryData,
         output_path: Path | None = None,
+        fileformat: str = 'cif',
     ):
         # ? There also exists a CifData file type
-        output_path /= 'trajectories'
+        # output_path /= 'trajectories'
         output_path.mkdir(exist_ok=True, parents=True)
-        output_fname = output_path / f'{data_node.pk}.cif'
+        output_fname = output_path / f'{data_node.__class__.__name__}-{data_node.pk}.{fileformat}'
         data_export(
             node=data_node,
             output_fname=output_fname,
-            fileformat='cif',
+            fileformat=fileformat,
             overwrite=self.overwrite,
         )
 
     def _dump_user_info(self): ...
+
+    def dump_raw(self):
+        pass

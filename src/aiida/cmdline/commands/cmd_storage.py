@@ -256,15 +256,6 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 # ? Specify groups via giving the groups, or just enabling "groups" and then all are dumped?
 # ? Provide some mechanism to allow for both, e.g. if no argument is provided, all groups are dumped
 @verdi_storage.command("mirror")
-# @arguments.PROFILE(default=defaults.get_default_profile)
-# Custom `--path` option, otherwise conflicting `-p` with `profile` argument
-# @click.option(
-#     "--path",
-#     type=click.Path(path_type=pathlib.Path),
-#     show_default=True,
-#     default=None,
-#     help="Base path for operations that write to disk.",
-# )
 @options.PATH()
 @options.ALL()
 @options.NODES()
@@ -296,14 +287,14 @@ def storage_backup(ctx, manager, dest: str, keep: int):
     help="Dump only data nodes, no processes",
 )
 @click.option(
-    "--link-processes",
+    "--calculations-hidden",
     is_flag=True,
-    default=True,
+    default=False,
     show_default=True,
     help="Dump all `orm.CalculationNode`s in the hidden directory and link to there. If False, dump all of the process data into each workflow directory.",
 )
 @click.option(
-    "--link-data",
+    "--data-hidden",
     is_flag=True,
     default=True,
     show_default=True,
@@ -333,8 +324,8 @@ def archive_mirror(
     computers,
     dump_processes,
     dump_data,
-    link_processes,
-    link_data,
+    calculations_hidden,
+    data_hidden,
     also_raw,
     also_rich,
     rich_options,
@@ -356,8 +347,6 @@ def archive_mirror(
     echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`")
     from aiida.tools.dumping.utils import validate_make_dump_path
 
-    print("PATH", path)
-    # raise SystemExit()
     validate_make_dump_path(
         overwrite=overwrite,
         path_to_validate=path,
@@ -388,46 +377,59 @@ def archive_mirror(
         if groups:
             entries_to_dump["groups"] = groups
 
-    # === Group dumping ===
-
-    group_dumper_kwargs = {
+    collection_dumper_kwargs = {
         "parent_path": path,
         "overwrite": overwrite,
         "also_raw": also_raw,
         "also_rich": also_rich,
         "should_dump_processes": dump_processes,
-        "link_processes": link_processes,
+        "calculations_hidden": calculations_hidden,
         "should_dump_data": dump_data,
-        "link_data": link_data,
+        "data_hidden": data_hidden,
         "entities_to_dump": entities_to_dump,
     }
+
+    # === Group dumping ===
 
     if groups is None:
         groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
 
     if len(groups) > 0:
         for group in groups:
-            group_dumper = GroupDumper(**group_dumper_kwargs)
-            # print("GROUP_DUMPER.PRETTY_PRINT()")
+            group_dumper = GroupDumper(group=group, **collection_dumper_kwargs)
+            group_dumper.create_entity_counter()
             # group_dumper.pretty_print()
 
-        if dump_processes:
-            echo.echo_report(f'Dumping processes for group `{group.label}`...')
-            group_dumper.dump_processes(group)
-        if dump_data:
-            echo.echo_report(f'Dumping data for group `{group.label}`...')
-            group_dumper.dump_data(group)
+            if dump_processes:
+                # The additional `_should_dump_processes` check here ensures that no reporting like
+                # "Dumping processes for group `SSSP/1.3/PBE/efficiency`" is printed for groups that don't contain processes
+                if group_dumper._should_dump_processes():
+                    echo.echo_report(f'Dumping processes for group `{group.label}`...')
+                    group_dumper.dump_processes()
+            if dump_data:
+                if not also_rich and not also_raw:
+                    echo.echo_critical("`--dump-data was given, but neither --also-raw or --also-rich specified.")
+                echo.echo_report(f'Dumping data for group `{group.label}`...')
+                group_dumper.dump_core_data()
+                group_dumper.dump_plugin_data()
 
-    # === Dumping of no Groups exist ===
-    # TODO: Test with such a profile
+
+            # raise SystemExit
+
+    # === Dumping if no Groups exist ===
+
     else:
         from aiida import get_profile
         profile = get_profile()
-        profile_dumper = ProfileDumper(**group_dumper_kwargs)
+        profile_dumper = ProfileDumper(**collection_dumper_kwargs)
+        profile_dumper.create_entity_counter()
         print(f'profile_dumper: {profile_dumper}')
+        profile_dumper.pretty_print()
         if dump_processes:
-            echo.echo_report(f'Dumping processes for profile `{profile.name}`...')
-            profile_dumper.dump_processes()
+            if profile_dumper._should_dump_processes():
+                echo.echo_report(f'Dumping processes for profile `{profile.name}`...')
+                profile_dumper.dump_processes()
         if dump_data:
             echo.echo_report(f'Dumping data for profile {profile.name}...')
-            profile_dumper.dump_data()
+            profile_dumper.dump_core_data()
+            profile_dumper.dump_plugin_data()

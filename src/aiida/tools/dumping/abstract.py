@@ -14,7 +14,8 @@ class AbstractDumper:
         incremental: bool = False,
         also_raw: bool = False,
         also_rich: bool = False,
-        dry_run: bool = False
+        dry_run: bool = False,
+        rich_kwargs: dict = {}
     ):
         self.parent_path = parent_path
         self.overwrite = overwrite
@@ -22,6 +23,7 @@ class AbstractDumper:
         self.also_raw = also_raw
         self.also_rich = also_rich
         self.dry_run = dry_run
+        self.rich_kwargs = rich_kwargs
 
     def pretty_print(self, also_private: bool = True, also_dunder: bool = False):
         console = Console()

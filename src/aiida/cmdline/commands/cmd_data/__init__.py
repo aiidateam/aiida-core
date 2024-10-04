@@ -45,4 +45,4 @@ def data_dump(
     # Probs shouldn't do that. Quick hack.
     data=data[0]
 
-    data_dumper.dump(data_node=data, output_path=path)
+    data_dumper.dump_rich(data_node=data, output_path=path)

@@ -2,83 +2,8 @@ from importlib_metadata import EntryPoint
 
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 
-__all__ = ('RichParser', 'default_core_export_mapping')
+__all__ = ('RichParser', 'DEFAULT_CORE_EXPORT_MAPPING')
 
-# AiiDA core entry points
-core_data_entry_points = [
-    'core.array',
-    'core.array.bands',
-    'core.array.kpoints',
-    'core.array.projection',
-    'core.array.trajectory',
-    'core.array.xy',
-    'core.base',
-    'core.bool',
-    'core.cif',
-    'core.code',
-    'core.code.containerized',
-    'core.code.installed',
-    'core.code.portable',
-    'core.dict',
-    'core.enum',
-    'core.float',
-    'core.folder',
-    'core.int',
-    'core.jsonable',
-    'core.list',
-    'core.numeric',
-    'core.orbital',
-    'core.remote',
-    'core.remote.stash',
-    'core.remote.stash.folder',
-    'core.singlefile',
-    'core.str',
-    'core.structure',
-    'core.upf',
-]
-
-# default_core_export_mapping = dict.fromkeys(core_data_entry_points, None)
-
-# core_data_with_exports = [
-#     # 'core.array',
-#     'core.array.bands',  # ? -> Yes, though `core.bands` on CLI
-#     # 'core.array.kpoints',  # ? -> Doesn't have a `verdi data` CLI endpoint
-#     # 'core.array.projection',  # ? -> Doesn't have a `verdi data` CLI endpoint
-#     'core.array.trajectory',  # ? -> Yes, though `core.trajectory` on CLI
-#     # 'core.array.xy',  # ? -> Doesn't have a `verdi data` CLI endpoint
-#     # 'core.base',  # ? -> Here it doesn't make sense
-#     # 'core.bool',  # ? -> Would we even need to dump bools?
-#     'core.cif',
-#     # 'core.code',  # ? -> Not a `data` command. However, code export exists
-#     # 'core.code.containerized',
-#     # 'core.code.installed',
-#     # 'core.code.portable',
-#     # 'core.dict',  # ? No `export` CLI command, but should be easy as .txt
-#     # 'core.enum',
-#     # 'core.float',
-#     # 'core.folder',  # ? No `verdi data export` endpoint, but should already be dumped anyway?
-#     # 'core.int',
-#     # 'core.jsonable',  # ? This implements `to_dict`, which should be easily exportable in JSON format then
-#     # 'core.list',
-#     # 'core.numeric',
-#     # 'core.orbital',
-#     # 'core.remote',
-#     # 'core.remote.stash',
-#     # 'core.remote.stash.folder',
-#     # 'core.singlefile',  # ? Doesn't implement export, but should be simple enough to use method of class to write the
-#     # file to disk
-#     # 'core.str',
-#     'core.structure',  # ? Yes, implements export nicely
-#     'core.upf',  # ? Also implements it, but deprecated
-# ]
-
-# Default for the ones that have `verdi data core.XXX export` endpoint
-# ! Is this actually preferred, rather than hardcoding. Hardcoding shouldn't be too fragile, and we don't expect to
-# ! introduce new core data types...
-# for core_data_with_export in core_data_with_exports:
-#     default_core_export_mapping[core_data_with_export] = data_export
-
-# TODO: `core.jsonable` that should be easy via dict -> .json, or `code export`
 DEFAULT_CORE_EXPORT_MAPPING = {
     'core.array': {
         'exporter': data_export,
@@ -203,7 +128,6 @@ DEFAULT_CORE_EXPORT_MAPPING = {
 
 
 # Dynamically generated entry_points via
-# `entry_point_group = entry_points(group='aiida.data')`
 # entry_points_from_importlib = [
 #     EntryPoint(
 #         name='quantumespresso.force_constants',
@@ -302,10 +226,10 @@ class RichParser:
                         type_value = component
                     elif export_value is None:
                         # TODO: this is only for core data types
-                        export_value = default_core_export_mapping[type_value]
+                        export_value = DEFAULT_CORE_EXPORT_MAPPING[type_value]
                     elif format_value is None:
                         # format_value = component
-                        format_value = default_core_export_mapping[type_value]
+                        format_value = DEFAULT_CORE_EXPORT_MAPPING[type_value]
 
             if type_value:
                 options_dict[type_value] = (export_value, format_value)
@@ -314,39 +238,6 @@ class RichParser:
 
     @classmethod
     def from_config(cls): ...
-
-    @classmethod
-    def set_core_defaults(cls):
-        # This uses the entry points and the default mapping
-        # By default, the default exporters and formats are being used
-        # If the user provides an empty entry, it is set to null
-        # Like this, file types can be selective turned off
-        # -> It would be annoying then to manually turn off all the file types. There should be some option to `invert`,
-        # e.g. `--rich-invert`, or in the config-file/rich-options
-
-        # from importlib.metadata import entry_points
-
-        # options_dict = {}
-
-        # # Load all entry points under the specified group
-        # entry_point_group = entry_points(group='aiida.data')
-
-        # # print('USING DEFAULTS')
-
-        # for entry_point in entry_point_group:
-        #     entry_point_name = entry_point.name
-        #     # print(entry_point_name)
-
-        #     try:
-        #         value_dict =
-        #             default_core_export_mapping[entry_point_name],
-        #             default_core_format_mapping[entry_point_name],
-        #         )
-        #         options_dict[entry_point_name] = value_tuple
-        #     except:
-        #         pass
-
-        return default_core_export_mapping
 
     def extend_by_entry_points(self): ...
 

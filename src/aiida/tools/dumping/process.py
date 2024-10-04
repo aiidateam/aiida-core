@@ -18,16 +18,18 @@ from types import SimpleNamespace
 from typing import List
 
 import yaml
+from rich.pretty import pprint
 
 from aiida import orm
 from aiida.cmdline.params.types.path import FileOrUrl
 from aiida.common import LinkType
 from aiida.common.exceptions import NotExistentAttributeError
 from aiida.tools.dumping.abstract import AbstractDumper
+from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING, RichParser
 from aiida.tools.dumping.utils import validate_make_dump_path
+from aiida.tools.dumping.data import DataDumper
 
 logger = logging.getLogger(__name__)
-from rich.pretty import pprint
 
 SAFEGUARD_FILE = '.aiida_node_metadata.yaml'
 
@@ -38,8 +40,6 @@ class ProcessDumper(AbstractDumper):
         include_inputs: bool = True,
         include_outputs: bool = False,
         flat: bool = False,
-        # also_raw: bool = False,
-        # also_rich: bool = False,
         rich_options: str | None = None,
         rich_config: FileOrUrl | None = None,
         **kwargs,
@@ -48,10 +48,9 @@ class ProcessDumper(AbstractDumper):
         self.include_inputs = include_inputs
         self.include_outputs = include_outputs
         self.flat = flat
-        # self.also_raw = also_raw
-        # self.also_rich = also_rich
         self.rich_options = rich_options
         self.rich_config = rich_config
+        self.kwargs = kwargs
 
     @staticmethod
     def _generate_default_dump_path(process_node: orm.ProcessNode, prefix: str | None = None) -> Path:
@@ -163,22 +162,6 @@ class ProcessDumper(AbstractDumper):
         node_label = node_label.replace('CALL-', '')
         return node_label.replace('None-', '')
 
-    # def __str__(self):
-    #     from tabulate import tabulate
-    #     # Prepare data for the table
-    #     table_data = []
-    #     headers = ["Attribute", "Value"]
-
-    #     # Iterate over the class attributes
-    #     for attr_name in dir(self):
-    #         # Exclude private attributes and dunder methods
-    #         if not (attr_name.startswith('_') or attr_name.endswith('_')):
-    #             attr_value = getattr(self, attr_name)
-    #             table_data.append([attr_name, str(attr_value)])
-
-    #     # Create a table using tabulate
-    #     return tabulate(table_data, headers, tablefmt="grid")
-
     def dump(
         self,
         process_node: orm.ProcessNode,
@@ -257,6 +240,10 @@ class ProcessDumper(AbstractDumper):
         )
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
+        # if self.also_raw:
+        #     with open(output_path.resolve() / 'workflow_node_attrs.yaml', 'w') as handle:
+        #         yaml.dump(workflow_node.attributes, handle)
+
         called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
         called_links = sorted(called_links, key=lambda link_triple: link_triple.node.ctime)
 
@@ -319,14 +306,9 @@ class ProcessDumper(AbstractDumper):
                 output_path.resolve() / io_dump_mapping.retrieved
             )
 
-        # Dump the raw data of the repository contents and `outputs.retrieved`
-        # print(calculation_node.attributes)
-        #         node_attributes_file = Path(f'{linked_node_path!s}_attrs.yaml')
-
-        # with open(node_attributes_file, 'w') as handle:
-        #     yaml.dump(link_triple.node.attributes, handle)
-        with open(output_path.resolve() / 'calculation_node_attrs.yaml', 'w') as handle:
-            yaml.dump(calculation_node.attributes, handle)
+        if self.also_raw:
+            with open(output_path.resolve() / 'calculation_node_attrs.yaml', 'w') as handle:
+                yaml.dump(calculation_node.attributes, handle)
 
         # print(
         #     type(calculation_node.outputs.retrieved.base.repository), calculation_node.outputs.retrieved.base.repository
@@ -344,12 +326,12 @@ class ProcessDumper(AbstractDumper):
             self._dump_calculation_io_files(parent_path=output_path / io_dump_mapping.inputs, link_triples=input_links)
 
             if self.also_raw:
-                self._dump_calculation_io_raw(
+                self._dump_calculation_io_files_raw(
                     parent_path=output_path / io_dump_mapping.inputs, link_triples=input_links
                 )
 
             if self.also_rich:
-                self._dump_calculation_io_rich(
+                self._dump_calculation_io_files_rich(
                     parent_path=output_path / io_dump_mapping.inputs, link_triples=input_links
                 )
 
@@ -366,14 +348,13 @@ class ProcessDumper(AbstractDumper):
             )
 
             if self.also_raw:
-                self._dump_calculation_io_raw(
+                self._dump_calculation_io_files_raw(
                     parent_path=output_path / io_dump_mapping.outputs,
                     link_triples=output_links,
                 )
 
             if self.also_rich:
-                print('ALSO RICH')
-                self._dump_calculation_io_rich(
+                self._dump_calculation_io_files_rich(
                     parent_path=output_path / io_dump_mapping.outputs,
                     link_triples=output_links,
                 )
@@ -401,7 +382,7 @@ class ProcessDumper(AbstractDumper):
 
             link_triple.node.base.repository.copy_tree(linked_node_path.resolve())
 
-    def _dump_calculation_io_raw(
+    def _dump_calculation_io_files_raw(
         self,
         parent_path: Path,
         link_triples: orm.LinkManager | List[orm.LinkTriple],
@@ -432,7 +413,7 @@ class ProcessDumper(AbstractDumper):
             with open(node_attributes_file, 'w') as handle:
                 yaml.dump(link_triple.node.attributes, handle)
 
-    def _dump_calculation_io_rich(
+    def _dump_calculation_io_files_rich(
         self,
         parent_path: Path,
         link_triples: orm.LinkManager | List[orm.LinkTriple],
@@ -443,12 +424,9 @@ class ProcessDumper(AbstractDumper):
         :param link_triples: List of link triples.
         """
 
-        print('RICH DUMPING')
-
         parent_path /= 'rich'
 
         # Set up the rich parsing functions
-        from aiida.tools.dumping.rich import RichParser  # , default_core_export_mapping
 
         # Extend (at least the keys) by the dynamic entry points
 
@@ -458,52 +436,41 @@ class ProcessDumper(AbstractDumper):
         # Automatically and always set the defaults
         # TODO: Currently dummy implementation that only returns the hardcoded dict. Use it like this when the
         # TODO: entry_points might change. For `core`, they should always be the same hardcoded ones.
-        options_dict = RichParser.set_core_defaults()
-        print(options_dict)
-        # pprint('options_dict', options_dict)
 
         if self.rich_options is not None:
-            options_dict = RichParser.from_cli(rich_options=self.rich_options)
+            rich_options_dict = RichParser.from_cli(rich_options=self.rich_options)
 
         elif self.rich_config is not None:
-            options_dict = RichParser.from_config(rich_options=self.rich_config)
+            rich_options_dict = RichParser.from_config(rich_options=self.rich_config)
 
         else:
             logger.report('Neither `--rich-options` nor `--rich-config` set, using defaults.')
+            rich_options_dict = DEFAULT_CORE_EXPORT_MAPPING
+            # pprint(rich_options_dict)
 
         for link_triple in link_triples:
             link_label = link_triple.link_label
             linked_node_path = parent_path if self.flat else parent_path / Path(*link_label.split('__'))
+            linked_node_path = parent_path # if self.flat else parent_path / Path(*link_label.split('__'))
 
-            node_entry_point = link_triple.node.entry_point
+            node = link_triple.node
+            node_entry_point = node.entry_point
             node_entry_point_name = node_entry_point.name
-
-            try:
-                print(f'{node_entry_point_name}: ', f'{options_dict[node_entry_point_name][0].__name__}')
-            except:
-                pass
 
             # TODO: Somehow obtain sensible filenames -> Should this be done here, or by the export function that is
             # TODO: possibly written by the plugin developer
             if node_entry_point_name.startswith('core'):
-                node = link_triple.node
-
-                # if isinstance(node, orm.Data):
-                # ? Here, instead one could check for `core_data_with_exports` explicitly
-                # ? Check here if exporter or fileformat not None, then create the path
-                # All orm.Data types implement `export`, `_get_exporters`, `get_export_formats`, and `_exportcontent`
-
-                # print('DUMP RICH STRUCTURE')
-                # print(node_entry_point)
-                # print(link_triple.node)
-                # print('linked_node_path', linked_node_path)
-                # export_function
-
                 # Obtain settings from the export dict
                 # TODO: -> This might break when plugin is missing
-                exporter = options_dict[node_entry_point_name]['exporter']
-                fileformat = options_dict[node_entry_point_name]['export_format']
-                rich_output_file = linked_node_path / f'{node.__class__.__name__}-{node.pk}.{fileformat}'
+                try:
+                    exporter = rich_options_dict[node_entry_point_name]['exporter']
+                except:
+                    raise
+
+                # fileformat = rich_options_dict[node_entry_point_name]['export_format']
+                # if fileformat == 'mpl_pdf':
+
+                # rich_output_file = linked_node_path / f'{node.__class__.__name__}-{node.pk}.{fileformat}'
 
                 # No exporter set
                 if exporter is None:
@@ -512,21 +479,8 @@ class ProcessDumper(AbstractDumper):
                 # Only create subdirectory if `Data` node has an exporter
                 linked_node_path.mkdir(parents=True, exist_ok=True)
 
-                if exporter.__name__ == 'data_export':
-                    exporter(
-                        node=node,
-                        output_fname=rich_output_file,
-                        fileformat=fileformat,
-                        other_args=None,
-                        overwrite=True,
-                    )
-
-                # TODO: This should be top-level singledispatched `dump`. Use `_dump_code` for now.
-                # TODO: Eventually, all these functions should all have the same signature...
-                elif exporter.__name__ == '_dump_code':
-                    exporter(
-                        data_node=node, output_path=rich_output_file.parent, file_name=None, file_format=fileformat
-                    )
+                data_dumper = DataDumper(**self.kwargs)
+                data_dumper.dump_rich(node, linked_node_path)
 
     def _generate_calculation_io_mapping(self, io_dump_paths: List[str | Path] | None = None) -> SimpleNamespace:
         """Helper function to generate mapping for entities dumped for each `orm.CalculationNode`.

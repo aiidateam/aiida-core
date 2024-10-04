@@ -96,7 +96,10 @@ __all__ = (
     'PROJECT',
     'RAW',
     'REPOSITORY_PATH',
+    'RICH_OPTIONS',
     'RICH_CONFIG_FILE',
+    'RICH_DUMP_ALL',
+    'RICH_USE_DEFAULTS',
     'SCHEDULER',
     'SILENT',
     'SORT',
@@ -726,13 +729,6 @@ CONFIG_FILE = ConfigFileOption(
     help='Load option values from configuration file in yaml format (local path or URL).',
 )
 
-RICH_CONFIG_FILE = ConfigFileOption(
-    '--rich-config',
-    type=types.FileOrUrl(),
-    default=None,
-    help='Load option values from configuration file in yaml format (local path or URL).',
-)
-
 IDENTIFIER = OverridableOption(
     '-i',
     '--identifier',
@@ -806,4 +802,39 @@ ALSO_RICH = OverridableOption(
     default=False,
     show_default=True,
     help='Dump also nicely prepared outputs, e.g. CIF for structures or PDF image for bands.',
+)
+
+RICH_OPTIONS = OverridableOption(
+    '--rich-options',
+    default=None,
+    type=str,
+    help='Options for rich data dumping.',
+)
+
+RICH_CONFIG_FILE = OverridableOption(
+    '--rich-config-file',
+    default=None,
+    type=types.FileOrUrl(),
+    help='Options for rich data dumping.',
+)
+RICH_DUMP_ALL = OverridableOption(
+    '--rich-dump-all',
+    default=False,
+    is_flag=True,
+    type=bool,
+    help=(
+        'By default, only nodes for which dumping options are given are dumped for rich dump. '
+        'Enable this to dump _all_ nodes, using the default export mappings and file types.'
+    ),
+)
+RICH_USE_DEFAULTS = OverridableOption(
+    '--rich-use-defaults',
+    default=False,
+    is_flag=True,
+    type=bool,
+    help=(
+        'Try to use the default mappings. If hardcoded, this only works for core data types.'
+        'When using plugins, the plugins should provide default dumpers, which should be loadable from the entry'
+        'points.'
+    ),
 )

@@ -135,10 +135,9 @@ class ProfileDumper(CollectionDumper):
 
         output_path.mkdir(exist_ok=True, parents=True)
 
-        self._create_entity_counter()
+        if not hasattr(self, 'entity_counter'):
+            self.create_entity_counter()
         # pprint(self.entity_counter)
-
-        self.hidden_aiida_path = self.parent_path / '.aiida-raw-data'
 
         # ? This here now really relates to each individual group
         self.output_path = output_path
@@ -161,7 +160,16 @@ class ProfileDumper(CollectionDumper):
         self._dump_link_workflows(workflows=workflows)
         self._link_calculations_hidden(calculations=calculations)
 
-    def dump_data(self):
+    def dump_core_data(self):
         nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
         data = [node for node in nodes if isinstance(node, (orm.Data, orm.Computer))]
-        self._dump_data_hidden(data_nodes=data)
+        if self.data_hidden:
+            self._dump_data_hidden(data_nodes=data)
+        else:
+            pass
+
+    def dump_plugin_data(self):
+        from importlib.metadata import entry_points
+
+        plugin_data_entry_points = entry_points(group='aiida.data')
+        print(plugin_data_entry_points)

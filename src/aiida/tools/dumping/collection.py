@@ -44,40 +44,46 @@ DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP + DEFAULT_DATA_TO_DUMP
 class CollectionDumper(AbstractDumper):
     def __init__(
         self,
-        qb_instance: orm.QueryBuilder | None = None,
         should_dump_processes: bool = False,
         should_dump_data: bool = False,
-        link_processes: bool = False,
-        link_data: bool = False,
+        calculations_hidden: bool = False,
+        data_hidden: bool = False,
         entities_to_dump: List | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
 
         # self.profile = profile
-        self.qb_instance = qb_instance
         self.should_dump_processes = should_dump_processes
         self.should_dump_data = should_dump_data
-        self.link_processe = link_processes
-        self.link_data = link_data
+        self.calculations_hidden = calculations_hidden
+        self.data_hidden = data_hidden
 
         if entities_to_dump is None:
             entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
         self.entities_to_dump = entities_to_dump
 
+        self.hidden_aiida_path = self.parent_path / '.aiida-raw-data'
         self.kwargs = kwargs
 
     @staticmethod
     def create_entity_counter():
         raise NotImplementedError('This should be implemented in subclasses.')
 
-    @staticmethod
-    def _obtain_calculations():
-        raise NotImplementedError('This should be implemented in subclasses.')
-
-    @staticmethod
-    def _obtain_workflows():
-        raise NotImplementedError('This should be implemented in subclasses.')
+    def _should_dump_processes(self) -> bool:
+        return (
+            sum(
+                self.entity_counter.get(orm_process_class, 0)
+                for orm_process_class in [
+                    orm.CalcJobNode,
+                    orm.CalcFunctionNode,
+                    orm.WorkChainNode,
+                    orm.WorkFunctionNode,
+                    orm.ProcessNode,
+                ]
+            )
+            > 0
+        )
 
     def _dump_calculations_hidden(self, calculations):
         # ? Dump only top-level workchains, as that includes sub-workchains already
@@ -140,16 +146,17 @@ class CollectionDumper(AbstractDumper):
 
     def _dump_data_hidden(self, data_nodes):
         # data_nodes = get_nodes_from_db(aiida_node_type=orm.Data, with_group=self.group, flat=True)
+        data_dump_path = self.hidden_aiida_path / 'data'
+        data_dump_path.mkdir(exist_ok=True, parents=True)
+
         for data_node in data_nodes:
-            data_dump_path = self.hidden_aiida_path / 'data'
-            data_dump_path.mkdir(exist_ok=True, parents=True)
             data_dumper = DataDumper(overwrite=self.overwrite)
             # data_dumper.pretty_print()
 
             try:
                 # Must pass them implicitly here, rather than, e.g. `data_node=data_node`
                 # Otherwise `singledispatch` raises: `IndexError: tuple index out of range`
-                data_dumper.dump(data_node, data_dump_path)
+                data_dumper.dump_rich(data_node, data_dump_path)
             except:
                 # pass
                 print(f'data_dumper.dump(data_node=data_node, output_path=data_dump_path{data_node, data_dump_path}')

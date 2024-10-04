@@ -583,48 +583,12 @@ def process_repair(manager, broker, dry_run):
     default=False,
     help='Dump files in a flat directory for every step of the workflow.',
 )
-@click.option(
-    '--rich-options',
-    default=None,
-    help='Options for rich data dumping.',
-)
-@click.option(
-    '--rich-config',
-    default=None,
-    type=types.FileOrUrl(),
-    help='Options for rich data dumping.',
-)
 @options.ALSO_RAW()
 @options.ALSO_RICH()
-# @click.option(
-#     '--rich-dump-all',
-#     default=False,
-#     is_flag=True,
-#     type=bool,
-#     help=(
-#         'By default, only nodes for which dumping options are given are dumped for rich dump. '
-#         'Enable this to dump _all_ nodes, using the default export mappings and file types.'
-#     ),
-# )
-# @click.option(
-#     '--rich-use-defaults',
-#     default=False,
-#     is_flag=True,
-#     type=bool,
-#     help=(
-#         'Try to use the default mappings. If hardcoded, this only works for core data types.'
-#         'When using plugins, the plugins should provide default dumpers, which should be loadable from the entry'
-#         'points.'
-#     ),
-# )
-# RICH_CONFIG_FILE = ConfigFileOption(
-#     '--rich-config',
-#     type=types.FileOrUrl(),
-#     default=None,
-#     help='Load option values from configuration file in yaml format (local path or URL).',
-# )
-# @options.RICH_CONFIG_FILE()
-# @click.pass_context
+@options.RICH_OPTIONS()
+@options.RICH_CONFIG_FILE()
+@options.RICH_DUMP_ALL()
+@options.RICH_USE_DEFAULTS()
 def process_dump(
     process,
     path,
@@ -637,7 +601,9 @@ def process_dump(
     also_raw,
     also_rich,
     rich_options,
-    rich_config,
+    rich_config_file,
+    rich_dump_all,
+    rich_use_defaults
 ) -> None:
     """Dump process input and output files to disk.
 
@@ -657,6 +623,13 @@ def process_dump(
 
     from aiida.tools.dumping.process import ProcessDumper
 
+    rich_kwargs = {
+        'rich_options': rich_options,
+        'rich_config_file': rich_config_file,
+        'rich_dump_all': rich_dump_all,
+        'rich_use_defaults': rich_use_defaults
+    }
+
     process_dumper = ProcessDumper(
         include_inputs=include_inputs,
         include_outputs=include_outputs,
@@ -664,8 +637,7 @@ def process_dump(
         flat=flat,
         also_raw=also_raw,
         also_rich=also_rich,
-        rich_options=rich_options,
-        rich_config=rich_config,
+        rich_kwargs=rich_kwargs
     )
 
     try:

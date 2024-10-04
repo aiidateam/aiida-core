@@ -419,8 +419,6 @@ class Process(PlumpyProcess):
 
         from aiida.engine.utils import set_process_state_change_timestamp
 
-        super().on_entered(from_state)
-
         if self._state.LABEL is ProcessState.EXCEPTED:
             # The process is already excepted so simply update the process state on the node and let the process
             # complete the state transition to the terminal state. If another exception is raised during this exception
@@ -443,6 +441,8 @@ class Process(PlumpyProcess):
 
         self._save_checkpoint()
         set_process_state_change_timestamp(self.node)
+
+        super().on_entered(from_state)
 
     @override
     def on_terminated(self) -> None:

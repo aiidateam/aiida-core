@@ -6,16 +6,19 @@ from rich.table import Table
 import sys
 
 
+# TODO: Check if dataclass is suitable here
 class AbstractDumper:
     def __init__(
         self,
+        *args,
         parent_path: str | pathlib.Path = pathlib.Path(),
         overwrite: bool = False,
         incremental: bool = False,
         also_raw: bool = False,
         also_rich: bool = False,
         dry_run: bool = False,
-        rich_kwargs: dict = {}
+        rich_kwargs: dict = {},
+        **kwargs,
     ):
         self.parent_path = parent_path
         self.overwrite = overwrite

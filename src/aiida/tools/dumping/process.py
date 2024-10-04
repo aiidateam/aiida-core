@@ -40,17 +40,14 @@ class ProcessDumper(AbstractDumper):
         include_inputs: bool = True,
         include_outputs: bool = False,
         flat: bool = False,
-        rich_options: str | None = None,
-        rich_config: FileOrUrl | None = None,
-        **kwargs,
+        rich_kwargs: dict = {},
+        **kwargs
     ) -> None:
         super().__init__(**kwargs)
         self.include_inputs = include_inputs
         self.include_outputs = include_outputs
         self.flat = flat
-        self.rich_options = rich_options
-        self.rich_config = rich_config
-        self.kwargs = kwargs
+        self.rich_kwargs = rich_kwargs
 
     @staticmethod
     def _generate_default_dump_path(process_node: orm.ProcessNode, prefix: str | None = None) -> Path:
@@ -430,21 +427,11 @@ class ProcessDumper(AbstractDumper):
 
         # Extend (at least the keys) by the dynamic entry points
 
-        if self.rich_options is not None and self.rich_config is not None:
-            raise ValueError('Specify rich options either via CLI or config file, not both.')
-
-        # Automatically and always set the defaults
-        # TODO: Currently dummy implementation that only returns the hardcoded dict. Use it like this when the
-        # TODO: entry_points might change. For `core`, they should always be the same hardcoded ones.
-
         if self.rich_options is not None:
             rich_options_dict = RichParser.from_cli(rich_options=self.rich_options)
 
         elif self.rich_config is not None:
             rich_options_dict = RichParser.from_config(rich_options=self.rich_config)
-
-        else:
-            logger.report('Neither `--rich-options` nor `--rich-config` set, using defaults.')
             rich_options_dict = DEFAULT_CORE_EXPORT_MAPPING
             # pprint(rich_options_dict)
 
@@ -480,7 +467,7 @@ class ProcessDumper(AbstractDumper):
                 linked_node_path.mkdir(parents=True, exist_ok=True)
 
                 data_dumper = DataDumper(**self.kwargs)
-                data_dumper.dump_rich(node, linked_node_path)
+                data_dumper.dump_rich_core(node, linked_node_path)
 
     def _generate_calculation_io_mapping(self, io_dump_paths: List[str | Path] | None = None) -> SimpleNamespace:
         """Helper function to generate mapping for entities dumped for each `orm.CalculationNode`.

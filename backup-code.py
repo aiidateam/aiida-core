@@ -371,3 +371,23 @@ def set_core_defaults(cls):
                 #         other_args=None,
                 #         overwrite=True,
                 #     )
+
+##### `utils.py`
+
+# def get_nodes_from_db(aiida_node_type, with_group: str | None = None, flat=False):
+#     qb = orm.QueryBuilder()
+
+#     # Computers cannot be associated via `with_group`
+#     if with_group is not None and aiida_node_type is not orm.Computer and aiida_node_type is not orm.Code:
+#         qb.append(orm.Group, filters={'label': with_group.label}, tag='with_group')
+#         qb.append(aiida_node_type, with_group='with_group')
+#     else:
+#         qb.append(aiida_node_type)
+
+#     return_iterable = qb.iterall() if qb.count() > 10 ^ 3 else qb.all()
+
+#     # Manual flattening as `iterall` doesn't have `flat` option unlike `all`
+#     if flat:
+#         return_iterable = [_[0] for _ in return_iterable]
+
+#     return return_iterable

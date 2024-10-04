@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import List
 
 from aiida import orm
-from aiida.common import timezone
 from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.data import DataDumper
 from aiida.tools.dumping.process import ProcessDumper
@@ -73,8 +72,6 @@ class GroupDumper(CollectionDumper):
         # if output_path is None:
         #     output_path = Path.cwd()
 
-        self.last_dumped = timezone.now()
-
         workflows = [node for node in self.group.nodes if isinstance(node, orm.WorkflowNode)]
 
         # Also need to obtain sub-calculations that were called by workflows of the group
@@ -95,16 +92,28 @@ class GroupDumper(CollectionDumper):
             self._link_calculations_hidden(calculations=calculations)
         else:
             for workflow in workflows:
-                process_dumper = ProcessDumper(**self.kwargs)
-                workflow_path = process_dumper._generate_default_dump_path(process_node=workflow)
+                process_dumper = ProcessDumper(**self.rich_kwargs, **self.kwargs)
+                # process_dumper.pretty_print()
+                workflow_path = (
+                    self.output_path
+                    / "workflows"
+                    / process_dumper._generate_default_dump_path(process_node=workflow)
+                )
+                # print('WORKFLOW_PATH', workflow_path)
                 process_dumper.dump(process_node=workflow, output_path=workflow_path)
 
     def dump_core_data(self):
         if self.data_hidden:
-            data = [node for node in self.group.nodes if isinstance(node, (orm.Data, orm.Computer))]
-            self._dump_data_hidden(data_nodes=data)
+            data_nodes = [
+                node
+                for node in self.group.nodes
+                if isinstance(node, (orm.Data, orm.Computer))
+                if node.entry_point.name.startswith("core")
+            ]
+            self._dump_data_hidden_core(data_nodes=data_nodes)
         else:
             # TODO: Add functionality of ProcessDumper to also dump the associated data nodes directly
+            # TODO: Add dumping of additional Data types that originate from plugins, such as `pseudo.upf`
             pass
 
     def dump_plugin_data(self):

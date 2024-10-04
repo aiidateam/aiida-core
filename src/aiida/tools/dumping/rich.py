@@ -41,7 +41,6 @@ DEFAULT_CORE_EXPORT_MAPPING = {
         'exporter': data_export,
         'export_format': 'cif'
     },
-    # TODO: These should by written via the `data_export` function instead
     'core.code': {
         'exporter': data_export,
         'export_format': 'yaml'

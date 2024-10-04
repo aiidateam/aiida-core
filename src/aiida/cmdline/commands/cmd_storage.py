@@ -255,7 +255,7 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 # TODO: Follow API of `verdi archive create`
 # ? Specify groups via giving the groups, or just enabling "groups" and then all are dumped?
 # ? Provide some mechanism to allow for both, e.g. if no argument is provided, all groups are dumped
-@verdi_storage.command("mirror")
+@verdi_storage.command("dump")
 @options.PATH()
 @options.ALL()
 @options.NODES()
@@ -266,25 +266,19 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @options.ALSO_RAW()
 @options.ALSO_RICH()
 @click.option(
-    # '-f',
-    '--incremental',
+    # TODO: Invert the logic here, as processes are (should be?) dumped by default
+    "--dump-processes",
     is_flag=True,
-    default=False,
-    help='Incremental dumping',
+    default=True,
+    show_default=True,
+    help="Turn off dumping of processes.",
 )
 @click.option(
     "--dump-data",
     is_flag=True,
     default=False,
     show_default=True,
-    help="Dump data nodes explicitly.",
-)
-@click.option(
-    "--dump-processes",
-    is_flag=True,
-    default=True,
-    show_default=True,
-    help="Dump only data nodes, no processes",
+    help="Dump also data nodes in a dedicated directory.",
 )
 @click.option(
     "--calculations-hidden",
@@ -300,24 +294,16 @@ def storage_backup(ctx, manager, dest: str, keep: int):
     show_default=True,
     help="Dump all `orm.Data` in the hidden directory and link to there. If False, dump the data nodes into each workflow directory.",
 )
-@click.option(
-    '--rich-options',
-    default=None,
-    help='Options for rich data dumping.',
-)
-@click.option(
-    '--rich-config',
-    default=None,
-    type=types.FileOrUrl(),
-    help='Options for rich data dumping.',
-)
+@options.RICH_OPTIONS()
+@options.RICH_CONFIG_FILE()
+@options.RICH_DUMP_ALL()
+@options.RICH_USE_DEFAULTS()
 @options.DRY_RUN()
-def archive_mirror(
+def archive_dump(
     # profile,
     path,
-    overwrite,
-    incremental,
     all_entries,
+    overwrite,
     nodes,
     groups,
     codes,
@@ -329,7 +315,9 @@ def archive_mirror(
     also_raw,
     also_rich,
     rich_options,
-    rich_config,
+    rich_config_file,
+    rich_dump_all,
+    rich_use_defaults,
     dry_run,
 ):
     """Dump profile data to disk."""
@@ -339,29 +327,58 @@ def archive_mirror(
     from aiida.tools.dumping.collection import DEFAULT_ENTITIES_TO_DUMP
 
     profile = get_manager().get_profile()
-    SAFEGUARD_FILE = ".verdi_archive_mirror"  # noqa: N806
+    SAFEGUARD_FILE = ".verdi_storage_dump"  # noqa: N806
 
-    if not str(path).endswith(profile.name):
-        path /= profile.name
+    dry_run_message = f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\nOnly directories will be created."
 
-    echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`")
-    from aiida.tools.dumping.utils import validate_make_dump_path
+    if dry_run:
+        dump_processes = False
+        dump_data = False
+        echo.echo_report(dry_run_message)
 
-    validate_make_dump_path(
-        overwrite=overwrite,
-        path_to_validate=path,
-        enforce_safeguard=True,
-        safeguard_file=SAFEGUARD_FILE,
-    )
-    (path / SAFEGUARD_FILE).touch()
+    elif not dump_processes and not dump_data:
+        echo.echo_report(dry_run_message)
+
+    else:
+        echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
+
+        if not str(path).endswith(profile.name):
+            path /= profile.name
+
+        from aiida.tools.dumping.utils import validate_make_dump_path
+
+        try:
+            validate_make_dump_path(
+                overwrite=overwrite,
+                path_to_validate=path,
+                enforce_safeguard=True,
+                safeguard_file=SAFEGUARD_FILE,
+            )
+        except FileExistsError as exc:
+            echo.echo_critical(str(exc))
+
+        (path / SAFEGUARD_FILE).touch()
+
+    collection_kwargs = {
+        "should_dump_processes": dump_processes,
+        "should_dump_data": dump_data,
+        "calculations_hidden": calculations_hidden,
+        "data_hidden": data_hidden,
+    }
+
+    rich_kwargs = {
+        "rich_options": rich_options,
+        "rich_config_file": rich_config_file,
+        "rich_dump_all": rich_dump_all,
+        "rich_use_defaults": rich_use_defaults,
+    }
 
     if all_entries:
         entries_to_dump = None
         entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
-    else:
-        entries_to_dump = {}
-        entities_to_dump = set()
 
+    else:
+        entities_to_dump = set()
         if nodes:
             entries_to_dump["nodes"] = nodes
             entities_to_dump.extend({type(node) for node in nodes})
@@ -376,33 +393,27 @@ def archive_mirror(
 
         if groups:
             entries_to_dump["groups"] = groups
+            entities_to_dump.add(orm.Group)
 
-    collection_dumper_kwargs = {
-        "parent_path": path,
-        "overwrite": overwrite,
-        "also_raw": also_raw,
-        "also_rich": also_rich,
-        "should_dump_processes": dump_processes,
-        "calculations_hidden": calculations_hidden,
-        "should_dump_data": dump_data,
-        "data_hidden": data_hidden,
-        "entities_to_dump": entities_to_dump,
-    }
+    collection_kwargs['entities_to_dump'] = entities_to_dump
 
     # === Group dumping ===
 
+    # If no specific groups selected, dump all groups contained in the profile
     if groups is None:
         groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
 
     if len(groups) > 0:
         for group in groups:
-            group_dumper = GroupDumper(group=group, **collection_dumper_kwargs)
+            group_path = path / group.label
+            group_dumper = GroupDumper(group=group, output_path=group_path, **collection_kwargs, **rich_kwargs)
             group_dumper.create_entity_counter()
             # group_dumper.pretty_print()
 
             if dump_processes:
                 # The additional `_should_dump_processes` check here ensures that no reporting like
-                # "Dumping processes for group `SSSP/1.3/PBE/efficiency`" is printed for groups that don't contain processes
+                # "Dumping processes for group `SSSP/1.3/PBE/efficiency`" is printed for groups that
+                # don't contain processes
                 if group_dumper._should_dump_processes():
                     echo.echo_report(f'Dumping processes for group `{group.label}`...')
                     group_dumper.dump_processes()
@@ -413,7 +424,6 @@ def archive_mirror(
                 group_dumper.dump_core_data()
                 group_dumper.dump_plugin_data()
 
-
             # raise SystemExit
 
     # === Dumping if no Groups exist ===
@@ -421,7 +431,7 @@ def archive_mirror(
     else:
         from aiida import get_profile
         profile = get_profile()
-        profile_dumper = ProfileDumper(**collection_dumper_kwargs)
+        profile_dumper = ProfileDumper(**collection_kwargs, **rich_kwargs)
         profile_dumper.create_entity_counter()
         print(f'profile_dumper: {profile_dumper}')
         profile_dumper.pretty_print()

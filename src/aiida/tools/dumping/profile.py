@@ -164,7 +164,7 @@ class ProfileDumper(CollectionDumper):
         nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
         data = [node for node in nodes if isinstance(node, (orm.Data, orm.Computer))]
         if self.data_hidden:
-            self._dump_data_hidden(data_nodes=data)
+            self._dump_data_hidden_core(data_nodes=data)
         else:
             pass
 

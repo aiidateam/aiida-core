@@ -37,7 +37,10 @@ DEFAULT_DATA_TO_DUMP = [
     orm.StructureData,
     orm.Code,
     orm.Computer,
+    orm.BandsData,
+    orm.UpfData
 ]
+# DEFAULT_COLLECTIONS_TO_DUMP ??
 DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP + DEFAULT_DATA_TO_DUMP
 
 
@@ -144,21 +147,24 @@ class CollectionDumper(AbstractDumper):
             with contextlib.suppress(FileExistsError):
                 os.symlink(link_calculations_dir / calculation_node.uuid, calculation_dump_path)
 
-    def _dump_data_hidden(self, data_nodes):
+    def _dump_data_hidden_core(self, data_nodes):
         # data_nodes = get_nodes_from_db(aiida_node_type=orm.Data, with_group=self.group, flat=True)
         data_dump_path = self.hidden_aiida_path / 'data'
         data_dump_path.mkdir(exist_ok=True, parents=True)
 
         for data_node in data_nodes:
+            data_dump_path = data_dump_path / data_node.__class__.__name__.lower()
             data_dumper = DataDumper(overwrite=self.overwrite)
             # data_dumper.pretty_print()
 
             try:
                 # Must pass them implicitly here, rather than, e.g. `data_node=data_node`
                 # Otherwise `singledispatch` raises: `IndexError: tuple index out of range`
-                data_dumper.dump_rich(data_node, data_dump_path)
-            except:
-                # pass
+                data_dumper.dump_rich_core(data_node, data_dump_path)
+            except TypeError:
+                # This is the case if no exporter implemented for a given data_node type
+                # Thus the call to exporter() results in `TypeError: 'NoneType' object is not callable`
+                pass
+            except Exception as exc:
                 print(f'data_dumper.dump(data_node=data_node, output_path=data_dump_path{data_node, data_dump_path}')
-                # pass
                 raise

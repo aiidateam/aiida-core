@@ -548,40 +548,40 @@ def process_repair(manager, broker, dry_run):
             echo.echo_report(f'Revived process `{pid}`')
 
 
-@verdi_process.command('dump')
+@verdi_process.command("dump")
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
 @click.option(
-    '--include-inputs/--exclude-inputs',
+    "--include-inputs/--exclude-inputs",
     default=True,
     show_default=True,
-    help='Include the linked input nodes of the `CalculationNode`(s).',
+    help="Include the linked input nodes of the `CalculationNode`(s).",
 )
 @click.option(
-    '--include-outputs/--exclude-outputs',
+    "--include-outputs/--exclude-outputs",
     default=False,
     show_default=True,
-    help='Include the linked output nodes of the `CalculationNode`(s).',
+    help="Include the linked output nodes of the `CalculationNode`(s).",
 )
 @click.option(
-    '--include-attributes/--exclude-attributes',
+    "--include-attributes/--exclude-attributes",
     default=True,
     show_default=True,
-    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+    help="Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.",
 )
 @click.option(
-    '--include-extras/--exclude-extras',
+    "--include-extras/--exclude-extras",
     default=True,
     show_default=True,
-    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+    help="Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.",
 )
 @click.option(
-    '-f',
-    '--flat',
+    "-f",
+    "--flat",
     is_flag=True,
     default=False,
-    help='Dump files in a flat directory for every step of the workflow.',
+    help="Dump files in a flat directory for every step of the workflow.",
 )
 @options.ALSO_RAW()
 @options.ALSO_RICH()
@@ -603,7 +603,7 @@ def process_dump(
     rich_options,
     rich_config_file,
     rich_dump_all,
-    rich_use_defaults
+    rich_use_defaults,
 ) -> None:
     """Dump process input and output files to disk.
 
@@ -622,13 +622,21 @@ def process_dump(
     """
 
     from aiida.tools.dumping.process import ProcessDumper
+    from aiida.tools.dumping.utils import validate_rich_options
 
     rich_kwargs = {
-        'rich_options': rich_options,
-        'rich_config_file': rich_config_file,
-        'rich_dump_all': rich_dump_all,
-        'rich_use_defaults': rich_use_defaults
+        "rich_options": rich_options,
+        "rich_config_file": rich_config_file,
+        "rich_dump_all": rich_dump_all,
+        "rich_use_defaults": rich_use_defaults,
     }
+
+    try:
+        validate_rich_options(
+            rich_options=rich_options, rich_config_file=rich_config_file
+        )
+    except ValueError as exc:
+        echo.echo_critical(f"{exc!s}")
 
     process_dumper = ProcessDumper(
         include_inputs=include_inputs,
@@ -637,7 +645,7 @@ def process_dump(
         flat=flat,
         also_raw=also_raw,
         also_rich=also_rich,
-        rich_kwargs=rich_kwargs
+        rich_kwargs=rich_kwargs,
     )
 
     try:
@@ -645,13 +653,17 @@ def process_dump(
             process_node=process,
             output_path=path,
             include_attributes=include_attributes,
-            include_extras=include_extras
+            include_extras=include_extras,
         )
     except FileExistsError:
         echo.echo_critical(
-            'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
+            "Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually."
         )
-    except Exception as e:
-        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')
+    except Exception as exc:
+        echo.echo_critical(
+            f"Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({exc!s})."
+        )
 
-    echo.echo_success(f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.')
+    echo.echo_success(
+        f"Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`."
+    )

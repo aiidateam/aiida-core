@@ -35,14 +35,15 @@ class DataDumper(AbstractDumper):
     #     data_export(*args, **kwargs)
 
     @singledispatchmethod
-    def dump_rich(self, data_node, output_path):
+    def dump_rich_core(self, data_node, output_path):
         # raise NotImplementedError(f'Dumping not implemented for type {type(data_node)}')
         # print(f'No specific handler found for type <{type(data_node)}> <{data_node}>, doing nothing.')
         # output_path /= 'general'
         output_path.mkdir(exist_ok=True, parents=True)
         # This is effectively the `rich` dumping
+        data_node_entry_point_name = data_node.entry_point.name
         try:
-            export_settings = DEFAULT_CORE_EXPORT_MAPPING[data_node.entry_point.name]
+            export_settings = DEFAULT_CORE_EXPORT_MAPPING[data_node_entry_point_name]
             exporter = export_settings['exporter']
             fileformat = export_settings['export_format']
             output_fname = output_path / f'{data_node.__class__.__name__}-{data_node.pk}.{fileformat}'
@@ -55,17 +56,21 @@ class DataDumper(AbstractDumper):
         # This is for orm.Data types for which no default dumping is implemented, e.g. Bool or Float
         except ValueError:
             pass
+        # This is for orm.Data types for whose entry_point names no entry exists in the DEFAULT_CORE_EXPORT_MAPPING
+        # This is now captured outside in the `CollectionDumper`, so should not be relevant anymore
+        except TypeError:
+            raise
 
-    @dump_rich.register
+    @dump_rich_core.register
     def _(self, data_node: orm.StructureData, output_path: str | Path | None = None):
         if type(data_node) is orm.StructureData:
             self._dump_structuredata(data_node, output_path=output_path)
         else:
             # Handle the case where data_node is a subclass of orm.StructureData
             # Just use the default dispatch function implementation
-            self.dump_rich.dispatch(object)(self, data_node, output_path)
+            self.dump_rich_core.dispatch(object)(self, data_node, output_path)
 
-    @dump_rich.register
+    @dump_rich_core.register
     def _(
         self,
         data_node: orm.Code,
@@ -73,7 +78,7 @@ class DataDumper(AbstractDumper):
     ):
         self._dump_code(data_node=data_node, output_path=output_path)
 
-    @dump_rich.register
+    @dump_rich_core.register
     def _(
         self,
         data_node: orm.Computer,
@@ -81,7 +86,7 @@ class DataDumper(AbstractDumper):
     ):
         self._dump_computer(data_node=data_node, output_path=output_path)
 
-    @dump_rich.register
+    @dump_rich_core.register
     def _(
         self,
         data_node: orm.BandsData,
@@ -89,7 +94,7 @@ class DataDumper(AbstractDumper):
     ):
         self._dump_bandsdata(data_node=data_node, output_path=output_path)
 
-    @dump_rich.register
+    @dump_rich_core.register
     def _(
         self,
         data_node: orm.TrajectoryData,
@@ -97,7 +102,7 @@ class DataDumper(AbstractDumper):
     ):
         self._dump_trajectorydata(data_node=data_node, output_path=output_path)
 
-    @dump_rich.register
+    @dump_rich_core.register
     def _(
         self,
         data_node: orm.UpfData,
@@ -187,7 +192,7 @@ class DataDumper(AbstractDumper):
         # ? There also exists a CifData file type
         # output_path /= 'bandstructures'
         output_path.mkdir(exist_ok=True, parents=True)
-        print(f'FILEFORMAT: {fileformat}')
+        # print(f'FILEFORMAT: {fileformat}')
         if fileformat == 'mpl_pdf':
             fileextension = 'pdf'
         output_fname = output_path / f'{data_node.__class__.__name__}-{data_node.pk}.{fileextension}'

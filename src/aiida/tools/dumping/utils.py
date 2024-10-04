@@ -10,12 +10,16 @@
 
 from __future__ import annotations
 
+import logging
 from logging import Logger
 from pathlib import Path
+import typing as t
 
 from aiida import orm
 
 __all__ = ('validate_make_dump_path', 'get_nodes_from_db')
+
+logger = logging.getLogger(__name__)
 
 
 def validate_make_dump_path(
@@ -77,27 +81,6 @@ def validate_make_dump_path(
     return path_to_validate.resolve()
 
 
-# def get_nodes_from_db(aiida_node_type, with_group: str | None = None, flat=False):
-#     qb = orm.QueryBuilder()
-
-#     # Computers cannot be associated via `with_group`
-#     if with_group is not None and aiida_node_type is not orm.Computer and aiida_node_type is not orm.Code:
-#         qb.append(orm.Group, filters={'label': with_group.label}, tag='with_group')
-#         qb.append(aiida_node_type, with_group='with_group')
-#     else:
-#         qb.append(aiida_node_type)
-
-#     return_iterable = qb.iterall() if qb.count() > 10 ^ 3 else qb.all()
-
-#     # Manual flattening as `iterall` doesn't have `flat` option unlike `all`
-#     if flat:
-#         return_iterable = [_[0] for _ in return_iterable]
-
-#     return return_iterable
-
-import typing as t
-
-
 def get_nodes_from_db(qb_instance, qb_filters: t.List | None = None, flat=False):
     # Computers cannot be associated via `with_group`
     # for qb_filter in qb_filters:
@@ -110,3 +93,12 @@ def get_nodes_from_db(qb_instance, qb_filters: t.List | None = None, flat=False)
         return_iterable = [_[0] for _ in return_iterable]
 
     return return_iterable
+
+
+def validate_rich_options(rich_options, rich_config):
+
+    if rich_options is not None and rich_config is not None:
+        raise ValueError('Specify rich options either via CLI or config file, not both.')
+
+    else:
+        logger.report('Neither `--rich-options` nor `--rich-config` set, using defaults.')

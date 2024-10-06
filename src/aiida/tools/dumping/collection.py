@@ -20,6 +20,7 @@ from typing import List
 from aiida import orm
 from aiida.tools.dumping.data import DataDumper
 from aiida.tools.dumping.processes import ProcessDumper
+from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING
 
 logger = logging.getLogger(__name__)
 
@@ -166,28 +167,6 @@ class CollectionDumper:
             with contextlib.suppress(FileExistsError):
                 os.symlink(link_calculations_dir / calculation_node.uuid, calculation_dump_path)
 
-    def _dump_data_hidden_core(self, data_nodes):
-        data_dump_path = self.hidden_aiida_path / 'data'
-        data_dump_path.mkdir(exist_ok=True, parents=True)
-        data_dumper = self.data_dumper
-        setattr(data_dumper, 'output_path', data_dump_path)
-
-        for data_node in data_nodes:
-            data_dump_path = data_dump_path / data_node.__class__.__name__.lower()
-
-            try:
-                # Must pass them implicitly here, rather than, e.g. `data_node=data_node`
-                # Otherwise `singledispatch` raises: `IndexError: tuple index out of range`
-
-                data_dumper.dump_rich_core(data_node, data_dump_path)
-            except TypeError:
-                # This is the case if no exporter implemented for a given data_node type
-                # Thus the call to exporter() results in `TypeError: 'NoneType' object is not callable`
-                pass
-            except Exception:
-                print(f'data_dumper.dump(data_node=data_node, output_path=data_dump_path{data_node, data_dump_path}')
-                raise
-
     def get_collection_nodes(self):
         if hasattr(self, 'collection_nodes'):
             return self.collection_nodes
@@ -236,23 +215,40 @@ class CollectionDumper:
                 )
                 self.process_dumper.dump(process_node=workflow, output_path=workflow_path)
 
-    def dump_core_data(self):
+    def dump_core_data_rich(self):
         # TODO: Also here just obtain the nodes first, and then make the implementation the same if groups or no groups
         # present
         nodes = self.get_collection_nodes()
+        nodes = [node for node in nodes if isinstance(node, (orm.Data, orm.Computer))]
+        nodes = [node for node in nodes if node.entry_point.name.startswith('core')]
 
-        if self.data_hidden:
-            data_nodes = [
-                node
-                for node in nodes
-                if isinstance(node, (orm.Data, orm.Computer))
-                if node.entry_point.name.startswith('core')
-            ]
-            self._dump_data_hidden_core(data_nodes=data_nodes)
-        else:
-            # TODO: Add functionality of ProcessDumper to also dump the associated data nodes directly
-            # TODO: Add dumping of additional Data types that originate from plugins, such as `pseudo.upf`
-            pass
+        for data_node in nodes:
+            if self.data_hidden:
+                data_dump_path = self.hidden_aiida_path
+            else:
+                data_dump_path = self.output_path
+            data_dump_path = data_dump_path / 'data' / data_node.__class__.__name__.lower()
+
+            # print(f'DATA_DUMP_PATH: {data_dump_path}')
+
+            try:
+                # Must pass them implicitly here, rather than, e.g. `data_node=data_node`
+                # Otherwise `singledispatch` raises: `IndexError: tuple index out of range`
+
+                node_entry_point_name = data_node.entry_point.name
+                # exporter = rich_options_dict[node_entry_point_name]['exporter']
+                fileformat = self.data_dumper.rich_options_dict[node_entry_point_name]['export_format']
+                output_fname = self.data_dumper.generate_output_fname_rich(data_node=data_node, fileformat=fileformat)
+                output_fname = output_fname.replace('__', '_')
+                self.data_dumper.dump_rich_core(data_node, data_dump_path, output_fname)
+            except TypeError:
+                # This is the case if no exporter implemented for a given data_node type
+                # Thus the call to exporter() results in `TypeError: 'NoneType' object is not callable`
+                # raise
+                pass
+            except Exception:
+                print(f'data_dumper.dump(data_node=data_node, output_path=data_dump_path{data_node, data_dump_path}')
+                raise
 
     def dump_plugin_data(self):
         return

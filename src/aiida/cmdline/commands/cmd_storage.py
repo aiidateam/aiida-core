@@ -309,6 +309,7 @@ def archive_dump(
     from aiida import orm
     from aiida.manage import get_manager
     from aiida.tools.dumping.collection import DEFAULT_ENTITIES_TO_DUMP
+    from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING
 
     profile = get_manager().get_profile()
     SAFEGUARD_FILE = '.verdi_storage_dump'  # noqa: N806
@@ -360,8 +361,8 @@ def archive_dump(
     collection_kwargs = {
         'should_dump_processes': dump_processes,
         'should_dump_data': dump_data,
-        'calculations_hidden': calculations_hidden,
-        'data_hidden': data_hidden,
+        # 'calculations_hidden': calculations_hidden,
+        # 'data_hidden': data_hidden,
         'organize_by_groups': organize_by_groups,
     }
 
@@ -371,15 +372,26 @@ def archive_dump(
         'rich_dump_all': rich_dump_all,
     }
 
-    process_dumper = ProcessDumper(
+    # hiding_kwargs = {
+    #     'calculations_hidden': calculations_hidden,
+    #     'data_hidden': data_hidden
+    # }
+
+    data_dumper = DataDumper(
+        dump_parent_path=path,
         overwrite=overwrite,
-        **processdumper_kwargs,
+        data_hidden=data_hidden,
+        rich_options_dict=DEFAULT_CORE_EXPORT_MAPPING,
         **datadumper_kwargs,
         **rich_kwargs,
     )
 
-    data_dumper = DataDumper(
+    process_dumper = ProcessDumper(
+        dump_parent_path=path,
         overwrite=overwrite,
+        data_dumper=data_dumper,
+        calculations_hidden=calculations_hidden,
+        **processdumper_kwargs,
         **datadumper_kwargs,
         **rich_kwargs,
     )
@@ -413,21 +425,29 @@ def archive_dump(
     collection_dumper = CollectionDumper(
         dump_parent_path=path,
         output_path=path / 'no_groups',
+        calculations_hidden=calculations_hidden,
+        data_hidden=data_hidden,
         **collection_kwargs,
         **rich_kwargs,
         data_dumper=data_dumper,
         process_dumper=process_dumper,
     )
     collection_dumper.create_entity_counter()
-    dumper_pretty_print(collection_dumper)
+    # dumper_pretty_print(collection_dumper)
+
+    
+    
     if dump_processes:
         # if collection_dumper._should_dump_processes():
         if collection_dumper._should_dump_processes():
             echo.echo_report(f'Dumping processes not in any group for profile `{profile.name}`...')
             collection_dumper.dump_processes()
     if dump_data:
+        if not also_rich and not also_raw:
+            echo.echo_critical('`--dump-data was given, but neither --also-raw or --also-rich specified.')
         echo.echo_report(f'Dumping data not in any group for profile {profile.name}...')
-        collection_dumper.dump_core_data()
+        
+        collection_dumper.dump_core_data_rich()
         # collection_dumper.dump_plugin_data()
 
     # === Dump data per-group if Groups exist in profile or are selected ===
@@ -464,8 +484,6 @@ def archive_dump(
                     echo.echo_report(f'Dumping processes for group `{group.label}`...')
                     collection_dumper.dump_processes()
             if dump_data:
-                if not also_rich and not also_raw:
-                    echo.echo_critical('`--dump-data was given, but neither --also-raw or --also-rich specified.')
                 echo.echo_report(f'Dumping data for group `{group.label}`...')
-                collection_dumper.dump_core_data()
+                collection_dumper.dump_core_data_rich()
                 # collection_dumper.dump_plugin_data()

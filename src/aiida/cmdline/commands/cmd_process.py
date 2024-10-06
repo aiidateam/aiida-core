@@ -575,7 +575,6 @@ def process_dump(
     rich_options,
     rich_config_file,
     rich_dump_all,
-    rich_use_defaults,
 ) -> None:
     """Dump process input and output files to disk.
 
@@ -594,30 +593,47 @@ def process_dump(
     """
 
     from aiida.tools.dumping.processes import ProcessDumper
+    from aiida.tools.dumping.data import DataDumper
     from aiida.tools.dumping.utils import validate_rich_options
 
-    process_kwargs = {
-        'include_inputs': include_inputs,
-        'include_outputs': include_outputs,
-        'include_attributes': include_attributes,
-        'include_extras': include_extras,
+    processdumper_kwargs = {
+        "include_inputs": include_inputs,
+        "include_outputs": include_outputs,
+        "include_attributes": include_attributes,
+        "include_extras": include_extras,
+        "flat": flat,
     }
 
     rich_kwargs = {
-        'rich_options': rich_options,
-        'rich_config_file': rich_config_file,
-        'rich_dump_all': rich_dump_all,
-        'rich_use_defaults': rich_use_defaults,
+        "rich_options": rich_options,
+        "rich_config_file": rich_config_file,
+        "rich_dump_all": rich_dump_all,
+    }
+
+    datadumper_kwargs = {
+        "also_raw": also_raw,
+        "also_rich": also_rich,
     }
 
     if also_rich:
         try:
-            validate_rich_options(rich_options=rich_options, rich_config_file=rich_config_file)
+            validate_rich_options(
+                rich_options=rich_options, rich_config_file=rich_config_file
+            )
         except ValueError as exc:
-            echo.echo_critical(f'{exc!s}')
+            echo.echo_critical(f"{exc!s}")
+
+    data_dumper = DataDumper(
+        overwrite=overwrite,
+        **datadumper_kwargs,
+        **rich_kwargs,
+    )
 
     process_dumper = ProcessDumper(
-        overwrite=overwrite, flat=flat, also_raw=also_raw, also_rich=also_rich, **process_kwargs, **rich_kwargs
+        overwrite=overwrite,
+        **processdumper_kwargs,
+        **rich_kwargs,
+        data_dumper=data_dumper,
     )
 
     try:
@@ -627,9 +643,13 @@ def process_dump(
         )
     except FileExistsError:
         echo.echo_critical(
-            'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
+            "Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually."
         )
     except Exception as exc:
-        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({exc!s}).')
+        echo.echo_critical(
+            f"Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({exc!s})."
+        )
 
-    echo.echo_success(f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.')
+    echo.echo_success(
+        f"Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`."
+    )

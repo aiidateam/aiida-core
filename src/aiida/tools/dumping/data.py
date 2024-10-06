@@ -26,39 +26,44 @@ class DataDumper:
     def __init__(
         self,
         *args,
+        dump_parent_path: Path = Path.cwd(),
         overwrite: bool = False,
+        data_hidden: bool = False,
         also_raw: bool = False,
         also_rich: bool = False,
         rich_options: str = '',
         rich_config_file: FileOrUrl | None = None,
         rich_dump_all: bool = True,
-        rich_use_defaults: bool = True,
+        rich_options_dict: dict | None = None,
         **kwargs,
     ) -> None:
-        # super().__init__(*args, **kwargs)
         self.args = args
+        self.dump_parent_path = dump_parent_path
         self.overwrite = overwrite
+        self.data_hidden = data_hidden
         self.also_raw = also_raw
         self.also_rich = also_rich
         self.rich_options = rich_options
         self.rich_config_file = rich_config_file
         self.rich_dump_all = rich_dump_all
-        self.rich_use_defaults = rich_use_defaults
         self.kwargs = kwargs
 
+        self.rich_options_dict = rich_options_dict
+
+        self.hidden_aiida_path = dump_parent_path / '.aiida-raw-data'
+
     @singledispatchmethod
-    def dump_rich_core(self, data_node, rich_options_dict, output_path, output_fname):
+    def dump_rich_core(self, data_node, output_path, output_fname):
         # raise NotImplementedError(f'Dumping not implemented for type {type(data_node)}')
         # print(f'No specific handler found for type <{type(data_node)}> <{data_node}>, doing nothing.')
         # output_path /= 'general'
-        output_path.mkdir(exist_ok=True, parents=True)
         # This is effectively the `rich` dumping
         data_node_entry_point_name = data_node.entry_point.name
-        try:
-            export_settings = rich_options_dict[data_node_entry_point_name]
-            exporter = export_settings['exporter']
-            fileformat = export_settings['export_format']
-
+        export_settings = self.rich_options_dict[data_node_entry_point_name]
+        exporter = export_settings['exporter']
+        fileformat = export_settings['export_format']
+        if exporter is not None:
+            output_path.mkdir(exist_ok=True, parents=True)
             exporter(
                 node=data_node,
                 output_fname=output_path / output_fname,
@@ -66,93 +71,85 @@ class DataDumper:
                 overwrite=self.overwrite,
             )
         # This is for orm.Data types for which no default dumping is implemented, e.g. Bool or Float
-        except ValueError:
-            pass
+        # except ValueError:
+        #     pass
         # This is for orm.Data types for whose entry_point names no entry exists in the DEFAULT_CORE_EXPORT_MAPPING
         # This is now captured outside in the `CollectionDumper`, so should not be relevant anymore
-        except TypeError:
-            raise
+        # except TypeError:
+        #     raise
 
     @dump_rich_core.register
     def _(
         self,
         data_node: orm.StructureData,
-        rich_options_dict: dict,
         output_path: str | Path | None = None,
         output_fname: str | None = None,
     ):
         if type(data_node) is orm.StructureData:
             self._dump_structuredata(
-                data_node, output_path=output_path, output_fname=output_fname, rich_options_dict=rich_options_dict
+                data_node, output_path=output_path, output_fname=output_fname
             )
         else:
             # Handle the case where data_node is a subclass of orm.StructureData
             # Just use the default dispatch function implementation
-            self.dump_rich_core.dispatch(object)(self, data_node, rich_options_dict, output_path, output_fname)
+            self.dump_rich_core.dispatch(object)(self, data_node, output_path, output_fname)
 
     @dump_rich_core.register
     def _(
         self,
         data_node: orm.Code,
-        rich_options_dict: dict,
         output_path: str | Path | None = None,
         output_fname: str | None = None,
     ):
         self._dump_code(
-            data_node=data_node, output_path=output_path, output_fname=output_fname, rich_options_dict=rich_options_dict
-        )
+            data_node=data_node, output_path=output_path, output_fname=output_fname)
 
     @dump_rich_core.register
     def _(
         self,
         data_node: orm.Computer,
-        rich_options_dict: dict,
         output_path: str | Path | None = None,
         output_fname: str | None = None,
     ):
         self._dump_computer_setup(
-            data_node=data_node, output_path=output_path, output_fname=output_fname, rich_options_dict=rich_options_dict
-        )
+            data_node=data_node, output_path=output_path, output_fname=output_fname)
         self._dump_computer_config(
-            data_node=data_node, output_path=output_path, output_fname=output_fname, rich_options_dict=rich_options_dict
+            data_node=data_node, output_path=output_path, output_fname=output_fname
         )
 
     @dump_rich_core.register
     def _(
         self,
         data_node: orm.BandsData,
-        rich_options_dict: dict,
         output_path: str | Path | None = None,
         output_fname: str | None = None,
     ):
         self._dump_bandsdata(
-            data_node=data_node, output_path=output_path, output_fname=output_fname, rich_options_dict=rich_options_dict
+            data_node=data_node, output_path=output_path, output_fname=output_fname
         )
 
     # These are the rich dumping implementations that actually differ from the default dispatch
     def _dump_structuredata(
         self,
         data_node: orm.StructureData,
-        rich_options_dict: dict,
         output_path: Path | None = None,
         output_fname: str | None = None,
-        fileformat: str | None = 'cif',
     ):
         from aiida.common.exceptions import UnsupportedSpeciesError
 
+        node_entry_point_name = data_node.entry_point.name
+        exporter = self.rich_options_dict[node_entry_point_name]['exporter']
+        fileformat = self.rich_options_dict[node_entry_point_name]['export_format']
+
         if output_fname is None:
             output_fname = DataDumper.generate_output_fname_rich(
-                data_node=data_node, fileformat=fileformat, rich_options_dict=rich_options_dict
+                data_node=data_node, fileformat=fileformat
             )
 
         # ? There also exists a CifData file type
         # output_path /= 'structures'
         output_path.mkdir(exist_ok=True, parents=True)
         try:
-            node_entry_point_name = data_node.entry_point.name
-            exporter = rich_options_dict[node_entry_point_name]['exporter']
-            fileformat = rich_options_dict[node_entry_point_name]['export_format']
-
             exporter(
                 node=data_node,
                 output_fname=output_path / output_fname,
@@ -168,15 +165,14 @@ class DataDumper:
     def _dump_code(
         self,
         data_node: orm.Code,
-        rich_options_dict: dict,
         output_path: Path | None = None,
         output_fname: str | None = None,
     ):
         # output_path /= 'codes'
 
         node_entry_point_name = data_node.entry_point.name
-        exporter = rich_options_dict[node_entry_point_name]['exporter']
-        fileformat = rich_options_dict[node_entry_point_name]['export_format']
+        exporter = self.rich_options_dict[node_entry_point_name]['exporter']
+        fileformat = self.rich_options_dict[node_entry_point_name]['export_format']
 
         if fileformat != 'yaml':
             raise NotImplementedError('No other fileformats supported so far apart from YAML.')
@@ -194,15 +190,13 @@ class DataDumper:
     def _dump_computer_setup(
         self,
         data_node: orm.Computer,
-        rich_options_dict: dict,
         output_path: Path | None = None,
         output_fname: str | None = None,
         fileformat: str = 'yaml',
     ):
         node_entry_point_name = data_node.entry_point.name
         # TODO: Don't use the `exporter` here, as `Computer` doesn't derive from Data, so custom implementation
-        # exporter = rich_options_dict[node_entry_point_name]['exporter']
-        fileformat = rich_options_dict[node_entry_point_name]['export_format']
+        fileformat = self.rich_options_dict[node_entry_point_name]['export_format']
 
         if fileformat != 'yaml':
             raise NotImplementedError('No other fileformats supported so far apart from YAML.')
@@ -237,7 +231,6 @@ class DataDumper:
     def _dump_computer_config(
         self,
         data_node: orm.Computer,
-        rich_options_dict: dict,
         output_path: Path | None = None,
         output_fname: str | None = None,
     ):
@@ -245,8 +238,7 @@ class DataDumper:
 
         node_entry_point_name = data_node.entry_point.name
         # TODO: Don't use the `exporter` here, as `Computer` doesn't derive from Data, so custom implementation
-        # exporter = rich_options_dict[node_entry_point_name]['exporter']
-        fileformat = rich_options_dict[node_entry_point_name]['export_format']
+        fileformat = self.rich_options_dict[node_entry_point_name]['export_format']
 
         # output_path /= 'computers'
         if fileformat != 'yaml':
@@ -267,13 +259,14 @@ class DataDumper:
     def _dump_bandsdata(
         self,
         data_node: orm.BandsData,
-        rich_options_dict: dict,
         output_path: Path | None = None,
         output_fname: str | None = None,
+        fileformat: str ='mpl_pdf'
     ):
         node_entry_point_name = data_node.entry_point.name
-        exporter = rich_options_dict[node_entry_point_name]['exporter']
-        fileformat = rich_options_dict[node_entry_point_name]['export_format']
+        exporter = self.rich_options_dict[node_entry_point_name]['exporter']
+        fileformat = self.rich_options_dict[node_entry_point_name]['export_format']
+        # print(f'node_entry_point_name: {node_entry_point_name}, exporter: {exporter}, fileformat: {fileformat}')
 
         output_path.mkdir(exist_ok=True, parents=True)
 

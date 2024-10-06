@@ -36,8 +36,10 @@ class ProcessDumper:
     def __init__(
         self,
         *args,
+        dump_parent_path: Path = Path.cwd(),
         overwrite: bool = False,
         flat: bool = False,
+        calculations_hidden: bool = False,
         include_inputs: bool = True,
         include_outputs: bool = False,
         include_attributes: bool = True,
@@ -51,8 +53,10 @@ class ProcessDumper:
         **kwargs,
     ) -> None:
         self.args = args
+        self.dump_parent_path = dump_parent_path
         self.overwrite = overwrite
         self.flat = flat
+        self.calculations_hidden = calculations_hidden,
         self.include_inputs = include_inputs
         self.include_outputs = include_outputs
         self.include_attributes = include_attributes
@@ -64,6 +68,8 @@ class ProcessDumper:
         self.rich_dump_all = rich_dump_all
         self.data_dumper = data_dumper
         self.kwargs = kwargs
+
+        self.hidden_aiida_path = dump_parent_path / '.aiida-raw-data'
 
     @staticmethod
     def _generate_default_dump_path(process_node: orm.ProcessNode, prefix: str | None = None) -> Path:
@@ -317,7 +323,7 @@ class ProcessDumper:
 
         if self.also_raw:
             # TODO: Replace with attached self.data_dumper attribute
-            DataDumper().dump_raw(data_node=calculation_node, output_path=output_path)
+            self.data_dumper.dump_raw(data_node=calculation_node, output_path=output_path)
 
         # Dump the node_inputs
         if self.include_inputs:
@@ -329,14 +335,19 @@ class ProcessDumper:
             self._dump_calculation_io_files(parent_path=output_path / io_dump_mapping.inputs, link_triples=input_links)
 
             if self.also_raw:
+                # Always dump the `raw` data inside the calculation directories
+                # I don't see a reason why one would want all the node attribute files in a centralized location
                 self._dump_calculation_io_files_raw(
                     output_path=output_path / io_dump_mapping.inputs, link_triples=input_links
                 )
 
             if self.also_rich:
-                self._dump_calculation_io_files_rich(
-                    output_path=output_path / io_dump_mapping.inputs, link_triples=input_links
-                )
+                if not self.data_dumper.data_hidden:
+                    rich_data_output_path = output_path / io_dump_mapping.inputs
+                    # Only dump the rich data output files in the process directories if data_hidden is False
+                    self._dump_calculation_io_files_rich(
+                        output_path=rich_data_output_path, link_triples=input_links
+                    )
 
         # Dump the node_outputs apart from `retrieved`
         if self.include_outputs:
@@ -409,7 +420,9 @@ class ProcessDumper:
             output_fname = DataDumper.generate_output_fname_raw(prefix=link_label, data_node=data_node)
             output_fname = output_fname.replace('__', '_')
 
-            DataDumper().dump_raw(data_node=data_node, output_path=output_path, output_fname=output_fname)
+            if self.data_dumper.data_hidden:
+                self.data_dumper.dump_raw(data_node=data_node, output_path=output_path, output_fname=output_fname)
+            self.data_dumper.dump_raw(data_node=data_node, output_path=output_path, output_fname=output_fname)
 
     def _dump_calculation_io_files_rich(
         self,
@@ -453,7 +466,7 @@ class ProcessDumper:
                 try:
                     exporter = rich_options_dict[node_entry_point_name]['exporter']
                     fileformat = rich_options_dict[node_entry_point_name]['export_format']
-                    output_fname = DataDumper.generate_output_fname_rich(
+                    output_fname = self.data_dumper.generate_output_fname_rich(
                         prefix=link_label, data_node=data_node, fileformat=fileformat
                     )
                     output_fname = output_fname.replace('__', '_')
@@ -467,9 +480,9 @@ class ProcessDumper:
                 # Only create subdirectory if `Data` node has an exporter
                 output_path.mkdir(parents=True, exist_ok=True)
 
-                DataDumper().dump_rich_core(
+                # TODO: Here, if data_hidden is True, dump in hidden directory, else in output_path
+                self.data_dumper.dump_rich_core(
                     node,
-                    rich_options_dict=rich_options_dict,
                     output_path=output_path,
                     output_fname=output_fname,
                 )

@@ -825,7 +825,7 @@ CALCULATIONS_HIDDEN = OverridableOption(
 DATA_HIDDEN = OverridableOption(
     '--data-hidden',
     is_flag=True,
-    default=True,
+    default=False,
     show_default=True,
     help='Dump all `orm.Data` in the hidden directory and link to there.',
 )

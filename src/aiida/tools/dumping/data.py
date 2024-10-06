@@ -17,25 +17,38 @@ from pathlib import Path
 import yaml
 
 from aiida import orm
-from aiida.cmdline.commands.cmd_data.cmd_export import data_export
+from aiida.cmdline.params.types import FileOrUrl
 from aiida.tools.dumping.abstract import AbstractDumper
-from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING
 
 logger = logging.getLogger(__name__)
 
 
 class DataDumper(AbstractDumper):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def generate_output_name(self):
-        pass
-
-    # def dump(self, *args, **kwargs):
-    #     data_export(*args, **kwargs)
+    def __init__(
+        self,
+        *args,
+        overwrite: bool = False,
+        also_raw: bool = False,
+        also_rich: bool = False,
+        rich_options: str = '',
+        rich_config_file: FileOrUrl | None = None,
+        rich_dump_all: bool = True,
+        rich_use_defaults: bool = True,
+        **kwargs,
+    ) -> None:
+        # super().__init__(*args, **kwargs)
+        self.args = args
+        self.overwrite = overwrite
+        self.also_raw = also_raw
+        self.also_rich = also_rich
+        self.rich_options = rich_options
+        self.rich_config_file = rich_config_file
+        self.rich_dump_all = rich_dump_all
+        self.rich_use_defaults = rich_use_defaults
+        self.kwargs = kwargs
 
     @singledispatchmethod
-    def dump_rich_core(self, data_node, output_path):
+    def dump_rich_core(self, data_node, rich_options_dict, output_path, output_fname):
         # raise NotImplementedError(f'Dumping not implemented for type {type(data_node)}')
         # print(f'No specific handler found for type <{type(data_node)}> <{data_node}>, doing nothing.')
         # output_path /= 'general'
@@ -43,13 +56,13 @@ class DataDumper(AbstractDumper):
         # This is effectively the `rich` dumping
         data_node_entry_point_name = data_node.entry_point.name
         try:
-            export_settings = DEFAULT_CORE_EXPORT_MAPPING[data_node_entry_point_name]
+            export_settings = rich_options_dict[data_node_entry_point_name]
             exporter = export_settings['exporter']
             fileformat = export_settings['export_format']
-            output_fname = output_path / f'{data_node.__class__.__name__}-{data_node.pk}.{fileformat}'
+
             exporter(
                 node=data_node,
-                output_fname=output_fname,
+                output_fname=output_path / output_fname,
                 fileformat=fileformat,
                 overwrite=self.overwrite,
             )
@@ -62,67 +75,88 @@ class DataDumper(AbstractDumper):
             raise
 
     @dump_rich_core.register
-    def _(self, data_node: orm.StructureData, output_path: str | Path | None = None):
+    def _(
+        self,
+        data_node: orm.StructureData,
+        rich_options_dict: dict,
+        output_path: str | Path | None = None,
+        output_fname: str | None = None,
+    ):
         if type(data_node) is orm.StructureData:
-            self._dump_structuredata(data_node, output_path=output_path)
+            self._dump_structuredata(
+                data_node, output_path=output_path, output_fname=output_fname, rich_options_dict=rich_options_dict
+            )
         else:
             # Handle the case where data_node is a subclass of orm.StructureData
             # Just use the default dispatch function implementation
-            self.dump_rich_core.dispatch(object)(self, data_node, output_path)
+            self.dump_rich_core.dispatch(object)(self, data_node, rich_options_dict, output_path, output_fname)
 
     @dump_rich_core.register
     def _(
         self,
         data_node: orm.Code,
+        rich_options_dict: dict,
         output_path: str | Path | None = None,
+        output_fname: str | None = None,
     ):
-        self._dump_code(data_node=data_node, output_path=output_path)
+        self._dump_code(
+            data_node=data_node, output_path=output_path, output_fname=output_fname, rich_options_dict=rich_options_dict
+        )
 
     @dump_rich_core.register
     def _(
         self,
         data_node: orm.Computer,
+        rich_options_dict: dict,
         output_path: str | Path | None = None,
+        output_fname: str | None = None,
     ):
-        self._dump_computer(data_node=data_node, output_path=output_path)
+        self._dump_computer_setup(
+            data_node=data_node, output_path=output_path, output_fname=output_fname, rich_options_dict=rich_options_dict
+        )
+        self._dump_computer_config(
+            data_node=data_node, output_path=output_path, output_fname=output_fname, rich_options_dict=rich_options_dict
+        )
 
     @dump_rich_core.register
     def _(
         self,
         data_node: orm.BandsData,
+        rich_options_dict: dict,
         output_path: str | Path | None = None,
+        output_fname: str | None = None,
     ):
-        self._dump_bandsdata(data_node=data_node, output_path=output_path)
+        self._dump_bandsdata(
+            data_node=data_node, output_path=output_path, output_fname=output_fname, rich_options_dict=rich_options_dict
+        )
 
-    @dump_rich_core.register
-    def _(
-        self,
-        data_node: orm.TrajectoryData,
-        output_path: str | Path | None = None,
-    ):
-        self._dump_trajectorydata(data_node=data_node, output_path=output_path)
-
-    @dump_rich_core.register
-    def _(
-        self,
-        data_node: orm.UpfData,
-        output_path: str | Path | None = None,
-    ):
-        self._dump_upfdata(data_node=data_node, output_path=output_path)
-
+    # These are the rich dumping implementations that actually differ from the default dispatch
     def _dump_structuredata(
-        self, data_node: orm.StructureData, output_path: Path | None = None, fileformat: str = 'cif'
+        self,
+        data_node: orm.StructureData,
+        rich_options_dict: dict,
+        output_path: Path | None = None,
+        output_fname: str | None = None,
+        fileformat: str | None = 'cif',
     ):
         from aiida.common.exceptions import UnsupportedSpeciesError
+
+        if output_fname is None:
+            output_fname = DataDumper.generate_output_fname_rich(
+                data_node=data_node, fileformat=fileformat, rich_options_dict=rich_options_dict
+            )
 
         # ? There also exists a CifData file type
         # output_path /= 'structures'
         output_path.mkdir(exist_ok=True, parents=True)
-        output_fname = output_path / f'{data_node.get_formula()}-{data_node.pk}.{fileformat}'
         try:
-            data_export(
+            node_entry_point_name = data_node.entry_point.name
+            exporter = rich_options_dict[node_entry_point_name]['exporter']
+            fileformat = rich_options_dict[node_entry_point_name]['export_format']
+
+            exporter(
                 node=data_node,
-                output_fname=output_fname,
+                output_fname=output_path / output_fname,
                 fileformat=fileformat,
                 overwrite=self.overwrite,
             )
@@ -135,29 +169,51 @@ class DataDumper(AbstractDumper):
     def _dump_code(
         self,
         data_node: orm.Code,
+        rich_options_dict: dict,
         output_path: Path | None = None,
-        fileformat: str = 'yaml',
+        output_fname: str | None = None,
     ):
         # output_path /= 'codes'
+
+        node_entry_point_name = data_node.entry_point.name
+        exporter = rich_options_dict[node_entry_point_name]['exporter']
+        fileformat = rich_options_dict[node_entry_point_name]['export_format']
+
         if fileformat != 'yaml':
             raise NotImplementedError('No other fileformats supported so far apart from YAML.')
         output_path.mkdir(exist_ok=True, parents=True)
-        output_fname = output_path / f'{data_node.full_label}-{data_node.pk}.{fileformat}'
-        data_export(
+        if output_fname is None:
+            output_fname = DataDumper.generate_output_fname_rich(data_node=data_node, fileformat=fileformat)
+
+        exporter(
             node=data_node,
-            output_fname=output_fname,
+            output_fname=output_path / output_fname,
             fileformat=fileformat,
             overwrite=self.overwrite,
         )
 
-    def _dump_computer(self, data_node: orm.Computer, output_path: Path | None = None, fileformat: str = 'yaml'):
-        # output_path /= 'computers'
+    def _dump_computer_setup(
+        self,
+        data_node: orm.Computer,
+        rich_options_dict: dict,
+        output_path: Path | None = None,
+        output_fname: str | None = None,
+        fileformat: str = 'yaml',
+    ):
+
+        node_entry_point_name = data_node.entry_point.name
+        # TODO: Don't use the `exporter` here, as `Computer` doesn't derive from Data, so custom implementation
+        # exporter = rich_options_dict[node_entry_point_name]['exporter']
+        fileformat = rich_options_dict[node_entry_point_name]['export_format']
+
         if fileformat != 'yaml':
             raise NotImplementedError('No other fileformats supported so far apart from YAML.')
 
         output_path.mkdir(exist_ok=True, parents=True)
-        computer_setup_fname = output_path / f'{data_node.full_label}-setup-{data_node.pk}.{fileformat}'
-        computer_config_fname = output_path / f'{data_node.full_label}-config-{data_node.pk}.{fileformat}'
+
+        # This is a bit of a hack. Should split this up into two different functions.
+        if output_fname is None:
+            output_fname = output_path / f'{data_node.full_label}-setup-{data_node.pk}.{fileformat}'
 
         # ? Copied over from `cmd_computer` as importing `computer_export_setup` led to click Context error:
         # TypeError: Context.__init__() got an unexpected keyword argument 'computer'
@@ -177,50 +233,87 @@ class DataDumper(AbstractDumper):
             'append_text': data_node.get_append_text(),
         }
 
-        if not computer_setup_fname.is_file():
-            computer_setup_fname.write_text(yaml.dump(computer_setup, sort_keys=False), 'utf-8')
+        if not output_fname.is_file():
+            output_fname.write_text(yaml.dump(computer_setup, sort_keys=False), 'utf-8')
 
+
+    def _dump_computer_config(
+        self,
+        data_node: orm.Computer,
+        rich_options_dict: dict,
+        output_path: Path | None = None,
+        output_fname: str | None = None,
+    ):
         from aiida.orm import User
+
+        node_entry_point_name = data_node.entry_point.name
+        # TODO: Don't use the `exporter` here, as `Computer` doesn't derive from Data, so custom implementation
+        # exporter = rich_options_dict[node_entry_point_name]['exporter']
+        fileformat = rich_options_dict[node_entry_point_name]['export_format']
+
+        # output_path /= 'computers'
+        if fileformat != 'yaml':
+            raise NotImplementedError('No other fileformats supported so far apart from YAML.')
+
+        output_path.mkdir(exist_ok=True, parents=True)
+
+        # This is a bit of a hack. Should split this up into two different functions.
+        if output_fname is None:
+            output_fname = output_path / f'{data_node.full_label}-config-{data_node.pk}.{fileformat}'
 
         users = User.collection.all()
         for user in users:
             computer_configuration = data_node.get_configuration(user)
-            if not computer_config_fname.is_file():
-                computer_config_fname.write_text(yaml.dump(computer_configuration, sort_keys=False), 'utf-8')
+            if not output_fname.is_file():
+                output_fname.write_text(yaml.dump(computer_configuration, sort_keys=False), 'utf-8')
 
-    def _dump_bandsdata(self, data_node: orm.BandsData, output_path: Path | None = None, fileformat: str = 'mpl_pdf'):
-        # ? There also exists a CifData file type
-        # output_path /= 'bandstructures'
-        output_path.mkdir(exist_ok=True, parents=True)
-        # print(f'FILEFORMAT: {fileformat}')
-        if fileformat == 'mpl_pdf':
-            fileextension = 'pdf'
-        output_fname = output_path / f'{data_node.__class__.__name__}-{data_node.pk}.{fileextension}'
-        data_export(
-            node=data_node,
-            output_fname=output_fname,
-            fileformat=fileformat,
-            overwrite=self.overwrite,
-        )
-
-    def _dump_trajectorydata(
+    def _dump_bandsdata(
         self,
-        data_node: orm.TrajectoryData,
+        data_node: orm.BandsData,
+        rich_options_dict: dict,
         output_path: Path | None = None,
-        fileformat: str = 'cif',
+        output_fname: str | None = None,
     ):
-        # ? There also exists a CifData file type
-        # output_path /= 'trajectories'
+
+        node_entry_point_name = data_node.entry_point.name
+        exporter = rich_options_dict[node_entry_point_name]['exporter']
+        fileformat = rich_options_dict[node_entry_point_name]['export_format']
+
         output_path.mkdir(exist_ok=True, parents=True)
-        output_fname = output_path / f'{data_node.__class__.__name__}-{data_node.pk}.{fileformat}'
-        data_export(
+
+        if output_fname is None:
+            output_fname = DataDumper.generate_output_fname_rich(data_node=data_node, fileformat=fileformat)
+        output_fname = output_fname.replace('mpl_pdf', 'pdf')
+
+        exporter(
             node=data_node,
-            output_fname=output_fname,
+            output_fname=output_path / output_fname,
             fileformat=fileformat,
             overwrite=self.overwrite,
         )
 
     def _dump_user_info(self): ...
 
-    def dump_raw(self):
-        pass
+    def dump_raw(self, data_node: orm.Data, output_path: Path, output_fname: str | None = None):
+
+        output_path.mkdir(exist_ok=True, parents=True)
+
+        if output_fname is None:
+            output_fname = DataDumper.generate_output_fname_raw(data_node=data_node)
+
+        with open(output_path.resolve() / output_fname, 'w') as handle:
+            yaml.dump(data_node.attributes, handle)
+
+    @staticmethod
+    def generate_output_fname_raw(data_node, prefix: str | None = None):
+        if prefix is None:
+            return f'{data_node.__class__.__name__}-{data_node.pk}_attrs.yaml'
+        else:
+            return f'{prefix}-{data_node.__class__.__name__}-{data_node.pk}_attrs.yaml'
+
+    @staticmethod
+    def generate_output_fname_rich(data_node, fileformat, prefix: str | None = None):
+        if prefix is None:
+            return f'{data_node.__class__.__name__}-{data_node.pk}.{fileformat}'
+        else:
+            return f'{prefix}-{data_node.__class__.__name__}-{data_node.pk}.{fileformat}'

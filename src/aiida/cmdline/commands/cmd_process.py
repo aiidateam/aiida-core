@@ -552,52 +552,24 @@ def process_repair(manager, broker, dry_run):
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
-@click.option(
-    "--include-inputs/--exclude-inputs",
-    default=True,
-    show_default=True,
-    help="Include the linked input nodes of the `CalculationNode`(s).",
-)
-@click.option(
-    "--include-outputs/--exclude-outputs",
-    default=False,
-    show_default=True,
-    help="Include the linked output nodes of the `CalculationNode`(s).",
-)
-@click.option(
-    "--include-attributes/--exclude-attributes",
-    default=True,
-    show_default=True,
-    help="Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.",
-)
-@click.option(
-    "--include-extras/--exclude-extras",
-    default=True,
-    show_default=True,
-    help="Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.",
-)
-@click.option(
-    "-f",
-    "--flat",
-    is_flag=True,
-    default=False,
-    help="Dump files in a flat directory for every step of the workflow.",
-)
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
 @options.ALSO_RAW()
 @options.ALSO_RICH()
 @options.RICH_OPTIONS()
 @options.RICH_CONFIG_FILE()
 @options.RICH_DUMP_ALL()
-@options.RICH_USE_DEFAULTS()
 def process_dump(
     process,
     path,
     overwrite,
+    flat,
     include_inputs,
     include_outputs,
     include_attributes,
     include_extras,
-    flat,
     also_raw,
     also_rich,
     rich_options,
@@ -624,6 +596,13 @@ def process_dump(
     from aiida.tools.dumping.process import ProcessDumper
     from aiida.tools.dumping.utils import validate_rich_options
 
+    process_kwargs = {
+        "include_inputs": include_inputs,
+        "include_outputs": include_outputs,
+        "include_attributes": include_attributes,
+        "include_extras": include_extras,
+    }
+
     rich_kwargs = {
         "rich_options": rich_options,
         "rich_config_file": rich_config_file,
@@ -631,29 +610,27 @@ def process_dump(
         "rich_use_defaults": rich_use_defaults,
     }
 
-    try:
-        validate_rich_options(
-            rich_options=rich_options, rich_config_file=rich_config_file
-        )
-    except ValueError as exc:
-        echo.echo_critical(f"{exc!s}")
+    if also_rich:
+        try:
+            validate_rich_options(
+                rich_options=rich_options, rich_config_file=rich_config_file
+            )
+        except ValueError as exc:
+            echo.echo_critical(f"{exc!s}")
 
     process_dumper = ProcessDumper(
-        include_inputs=include_inputs,
-        include_outputs=include_outputs,
         overwrite=overwrite,
         flat=flat,
         also_raw=also_raw,
         also_rich=also_rich,
-        rich_kwargs=rich_kwargs,
+        **process_kwargs,
+        **rich_kwargs
     )
 
     try:
         dump_path = process_dumper.dump(
             process_node=process,
             output_path=path,
-            include_attributes=include_attributes,
-            include_extras=include_extras,
         )
     except FileExistsError:
         echo.echo_critical(

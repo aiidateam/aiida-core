@@ -39,6 +39,7 @@ __all__ = (
     'BROKER_VIRTUAL_HOST',
     'CALCULATION',
     'CALCULATIONS',
+    'CALCULATIONS_HIDDEN',
     'CALC_JOB_STATE',
     'CODE',
     'CODES',
@@ -46,6 +47,7 @@ __all__ = (
     'COMPUTERS',
     'CONFIG_FILE',
     'DATA',
+    'DATA_HIDDEN',
     'DATUM',
     'DB_BACKEND',
     'DB_ENGINE',
@@ -59,9 +61,12 @@ __all__ = (
     'DICT_FORMAT',
     'DICT_KEYS',
     'DRY_RUN',
+    'DUMP_PROCESSES',
+    'DUMP_DATA',
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
+    'FLAT',
     'FORCE',
     'FORMULA_MODE',
     'FREQUENCY',
@@ -70,6 +75,10 @@ __all__ = (
     'GROUP_CLEAR',
     'HOSTNAME',
     'IDENTIFIER',
+    'INCLUDE_INPUTS',
+    'INCLUDE_OUTPUTS',
+    'INCLUDE_ATTRIBUTES',
+    'INCLUDE_EXTRAS',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
@@ -81,6 +90,7 @@ __all__ = (
     'OLDER_THAN',
     'ORDER_BY',
     'ORDER_DIRECTION',
+    'ORGANIZE_BY_GROUPS',
     'OVERWRITE',
     'PATH',
     'PAST_DAYS',
@@ -99,7 +109,6 @@ __all__ = (
     'RICH_OPTIONS',
     'RICH_CONFIG_FILE',
     'RICH_DUMP_ALL',
-    'RICH_USE_DEFAULTS',
     'SCHEDULER',
     'SILENT',
     'SORT',
@@ -788,53 +797,119 @@ SORT = OverridableOption(
     show_default=True,
 )
 
-ALSO_RAW = OverridableOption(
-    '--also-raw',
+DUMP_PROCESSES = OverridableOption(
+    # TODO: Invert the logic here, as processes are (should be?) dumped by default
+    "--dump-processes",
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help="Turn off dumping of processes.",
+)
+
+DUMP_DATA = OverridableOption(
+    "--dump-data",
     is_flag=True,
     default=False,
     show_default=True,
-    help='Dump the `attributes` of all nodes related to the Process.',
+    help="Dump also data nodes in a dedicated directory.",
+)
+
+CALCULATIONS_HIDDEN = OverridableOption(
+    "--calculations-hidden",
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help="Dump all `orm.CalculationNode`s in the hidden directory and link to there.",
+)
+
+DATA_HIDDEN = OverridableOption(
+    "--data-hidden",
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help="Dump all `orm.Data` in the hidden directory and link to there.",
+)
+
+ALSO_RAW = OverridableOption(
+    "--also-raw",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Dump the `attributes` of all nodes related to the Process.",
 )
 
 ALSO_RICH = OverridableOption(
-    '--also-rich',
+    "--also-rich",
     is_flag=True,
     default=False,
     show_default=True,
-    help='Dump also nicely prepared outputs, e.g. CIF for structures or PDF image for bands.',
+    help="Dump also nicely prepared outputs, e.g. CIF for structures or PDF image for bands.",
 )
 
 RICH_OPTIONS = OverridableOption(
-    '--rich-options',
+    "--rich-options",
     default=None,
     type=str,
-    help='Options for rich data dumping.',
+    help="Options for rich data dumping.",
 )
 
 RICH_CONFIG_FILE = OverridableOption(
-    '--rich-config-file',
+    "--rich-config-file",
     default=None,
     type=types.FileOrUrl(),
-    help='Options for rich data dumping.',
+    help="Options for rich data dumping.",
 )
 RICH_DUMP_ALL = OverridableOption(
-    '--rich-dump-all',
-    default=False,
+    "--rich-dump-all",
+    default=True,
     is_flag=True,
     type=bool,
     help=(
-        'By default, only nodes for which dumping options are given are dumped for rich dump. '
-        'Enable this to dump _all_ nodes, using the default export mappings and file types.'
+        "By default, only nodes for which dumping options are given are dumped for rich dump. "
+        "Enable this to dump _all_ nodes, using the default export mappings and file types."
     ),
 )
-RICH_USE_DEFAULTS = OverridableOption(
-    '--rich-use-defaults',
-    default=False,
+
+ORGANIZE_BY_GROUPS = OverridableOption(
+    "--organize-by-groups",
+    default=True,
     is_flag=True,
     type=bool,
-    help=(
-        'Try to use the default mappings. If hardcoded, this only works for core data types.'
-        'When using plugins, the plugins should provide default dumpers, which should be loadable from the entry'
-        'points.'
-    ),
+    help="If the collection of nodes to be dumped is organized in groups, reproduce its hierarchy.",
+)
+
+INCLUDE_INPUTS = OverridableOption(
+    "--include-inputs/--exclude-inputs",
+    default=True,
+    show_default=True,
+    help="Include the linked input nodes of the `CalculationNode`(s).",
+)
+
+INCLUDE_OUTPUTS = OverridableOption(
+    "--include-outputs/--exclude-outputs",
+    default=False,
+    show_default=True,
+    help="Include the linked output nodes of the `CalculationNode`(s).",
+)
+
+INCLUDE_ATTRIBUTES = OverridableOption(
+    "--include-attributes/--exclude-attributes",
+    default=True,
+    show_default=True,
+    help="Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.",
+)
+
+INCLUDE_EXTRAS = OverridableOption(
+    "--include-extras/--exclude-extras",
+    default=True,
+    show_default=True,
+    help="Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.",
+)
+
+FLAT = OverridableOption(
+    "-f",
+    "--flat",
+    is_flag=True,
+    default=False,
+    help="Dump files in a flat directory for every step of the workflow.",
 )

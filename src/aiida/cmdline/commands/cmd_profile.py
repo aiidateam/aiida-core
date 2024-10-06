@@ -19,7 +19,6 @@ from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
-from aiida.tools.dumping.profile import ProfileDumper
 
 
 @verdi.group('profile')
@@ -271,31 +270,31 @@ def profile_delete(force, delete_data, profiles):
         get_config().delete_profile(profile.name, delete_storage=delete_data)
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
 
-@verdi_profile.command('dump')
-@options.PATH()
-@arguments.PROFILE(default=defaults.get_default_profile)
-@click.option(
-    '-f',
-    '--full',
-    is_flag=True,
-    default=False,
-    help='Dump all profile data, overwriting existing files.',
-)
-def profile_dump(profile, path, full):
-    """Dump profile data to disk."""
-    if profile is None:
-        echo.echo_critical('No profile selected to dump')
+# @verdi_profile.command('dump')
+# @options.PATH()
+# @arguments.PROFILE(default=defaults.get_default_profile)
+# @click.option(
+#     '-f',
+#     '--full',
+#     is_flag=True,
+#     default=False,
+#     help='Dump all profile data, overwriting existing files.',
+# )
+# def profile_dump(profile, path, full):
+#     """Dump profile data to disk."""
+#     if profile is None:
+#         echo.echo_critical('No profile selected to dump')
 
-    if not str(path).endswith(profile.name):
-        path /= profile.name
+#     if not str(path).endswith(profile.name):
+#         path /= profile.name
 
-    echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`")
+#     echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`")
 
-    profile_dumper = ProfileDumper(
-        profile='verdi-profile-dump',
-        full=full,
-        parent_path=path,
-        organize_by_groups=True,
-    )
-    profile_dumper.dump()
-    echo.echo_success(f'Data of profile `{profile.name}` mirrored to disk.')
+#     profile_dumper = ProfileDumper(
+#         profile='verdi-profile-dump',
+#         full=full,
+#         parent_path=path,
+#         organize_by_groups=True,
+#     )
+#     profile_dumper.dump()
+#     echo.echo_success(f'Data of profile `{profile.name}` mirrored to disk.')

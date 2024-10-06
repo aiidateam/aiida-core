@@ -121,53 +121,6 @@ class ProfileDumper(CollectionDumper):
         with open(self.profile_dump_json_file, 'w') as json_file:
             json.dump(data, json_file, indent=4)
 
-    def dump_processes(self, output_path: Path | str | None = None):
-        # ? Here, these could be all kinds of entities that could be grouped in AiiDA
-        # if output_path is None:
-        #     output_path = Path.cwd()
-
-        self.last_dumped = timezone.now()
-        nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
-
-        # TODO: Add validation here
-        if output_path is None:
-            output_path = self.parent_path
-
-        output_path.mkdir(exist_ok=True, parents=True)
-
-        if not hasattr(self, 'entity_counter'):
-            self.create_entity_counter()
-        # pprint(self.entity_counter)
-
-        # ? This here now really relates to each individual group
-        self.output_path = output_path
-
-        workflows = [node for node in nodes if isinstance(node, orm.WorkflowNode)]
-
-        # Also need to obtain sub-calculations that were called by workflows of the group
-        # These are not contained in the group.nodes directly
-        called_calculations = []
-        for workflow in workflows:
-            called_calculations += [
-                node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)
-            ]
-
-        calculations = set(
-            [node for node in nodes if isinstance(node, orm.CalculationNode)] + called_calculations
-        )
-
-        self._dump_calculations_hidden(calculations=calculations)
-        self._dump_link_workflows(workflows=workflows)
-        self._link_calculations_hidden(calculations=calculations)
-
-    def dump_core_data(self):
-        nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
-        data = [node for node in nodes if isinstance(node, (orm.Data, orm.Computer))]
-        if self.data_hidden:
-            self._dump_data_hidden_core(data_nodes=data)
-        else:
-            pass
-
     def dump_plugin_data(self):
         from importlib.metadata import entry_points
 

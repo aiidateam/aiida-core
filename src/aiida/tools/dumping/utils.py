@@ -95,9 +95,9 @@ def get_nodes_from_db(qb_instance, qb_filters: t.List | None = None, flat=False)
     return return_iterable
 
 
-def validate_rich_options(rich_options, rich_config):
+def validate_rich_options(rich_options, rich_config_file):
 
-    if rich_options is not None and rich_config is not None:
+    if rich_options is not None and rich_config_file is not None:
         raise ValueError('Specify rich options either via CLI or config file, not both.')
 
     else:

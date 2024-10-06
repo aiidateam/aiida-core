@@ -148,6 +148,93 @@
 
 ##### `collection.py`
 
+        # process_dumper = ProcessDumper(
+        #     args=self.args,
+        #     overwrite=self.overwrite,
+        #     flat=self.flat,
+        #     include_inputs=self.include_inputs,
+        #     include_outputs=self.include_outputs,
+        #     include_attributes=self.include_attributes,
+        #     include_extras=self.include_extras,
+        #     also_raw=self.also_raw,
+        #     also_rich=self.also_rich,
+        #     rich_options=self.rich_options,
+        #     rich_config_file=self.rich_config_file,
+        #     rich_dump_all=self.rich_dump_all,
+        #     kwargs=self.kwargs,
+        # )
+        # self.process_dumper = process_dumper
+
+        # data_dumper = DataDumper(
+        #     args=self.args,
+        #     overwrite=self.overwrite,
+        #     also_raw=self.also_raw,
+        #     also_rich=self.also_rich,
+        #     rich_options=self.rich_options,
+        #     rich_config_file=self.rich_config_file,
+        #     rich_dump_all=self.rich_dump_all,
+        #     kwargs=self.kwargs,
+        # )
+        # self.data_dumper = data_dumper
+        # # data_dumper.pretty_print()
+
+        class CollectionDumper(AbstractDumper):
+    def __init__(
+        self,
+        *args,
+        dump_parent_path: Path = Path().cwd(),
+        output_path: Path = Path().cwd(),
+        overwrite: bool = False,
+        also_raw: bool = False,
+        also_rich: bool = False,
+        include_inputs: bool = True,
+        include_outputs: bool = False,
+        include_attributes: bool = True,
+        include_extras: bool = False,
+        flat: bool = False,
+        should_dump_processes: bool = False,
+        should_dump_data: bool = False,
+        calculations_hidden: bool = False,
+        data_hidden: bool = False,
+        organize_by_groups: bool = True,
+        rich_options: str | None = None,
+        rich_config_file: FileOrUrl | None = None,
+        rich_dump_all: bool = True,
+        entities_to_dump: List | None = None,
+        group: orm.Group | None = None,
+        process_dumper: ProcessDumper | None = None,
+        data_dumper: DataDumper | None = None,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+
+        # TODO: See if I can remove passing all the arguments by passing the instance of the `ProcessDumper` and
+        # TODO:`DataDumper` instead
+        self.args = args
+        self.dump_parent_path = dump_parent_path
+        self.output_path = output_path
+        self.overwrite = overwrite
+        self.also_raw = also_raw
+        self.also_rich = also_rich
+        self.include_inputs = include_inputs
+        self.include_outputs = include_outputs
+        self.include_attributes = include_attributes
+        self.include_extras = include_extras
+        self.flat = flat
+        self.should_dump_processes = should_dump_processes
+        self.should_dump_data = should_dump_data
+        self.calculations_hidden = calculations_hidden
+        self.data_hidden = data_hidden
+        self.organize_by_groups = organize_by_groups
+        self.rich_options = rich_options
+        self.rich_config_file = rich_config_file
+        self.rich_dump_all = rich_dump_all
+        self.entities_to_dump = entities_to_dump
+        self.process_dumper = process_dumper
+        self.data_dumper = data_dumper
+        self.kwargs = kwargs
+
+
     # def dump(self):
     #     orm_entities = self._retrieve_orm_entities()
 
@@ -236,6 +323,28 @@
     def _obtain_workflows():
         raise NotImplementedError('This should be implemented in subclasses.')
 
+    def dump_processes_profile(self, output_path: Path | str | None = None):
+        # ? Here, these could be all kinds of entities that could be grouped in AiiDA
+        # if output_path is None:
+        #     output_path = Path.cwd()
+
+        workflows = [node for node in nodes if isinstance(node, orm.WorkflowNode)]
+
+        # Also need to obtain sub-calculations that were called by workflows of the group
+        # These are not contained in the group.nodes directly
+        called_calculations = []
+        for workflow in workflows:
+            called_calculations += [
+                node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)
+            ]
+
+        calculations = set(
+            [node for node in nodes if isinstance(node, orm.CalculationNode)] + called_calculations
+        )
+
+        self._dump_calculations_hidden(calculations=calculations)
+        self._dump_link_workflows(workflows=workflows)
+        self._link_calculations_hidden(calculations=calculations)
 
 ##### `rich.py`
 
@@ -391,3 +500,32 @@ def set_core_defaults(cls):
 #         return_iterable = [_[0] for _ in return_iterable]
 
 #     return return_iterable
+
+
+##### `data.py`
+
+    # def _dump_trajectorydata(
+    #     self,
+    #     data_node: orm.TrajectoryData,
+    #     output_path: Path | None = None,
+    #     fileformat: str = 'cif',
+    # ):
+    #     # ? There also exists a CifData file type
+    #     # output_path /= 'trajectories'
+    #     output_path.mkdir(exist_ok=True, parents=True)
+    #     output_fname = generate_output_fname_rich(data_node=data_node, fileformat=fileformat)
+    #     data_export(
+    #         node=data_node,
+    #         output_fname=output_fname,
+    #         fileformat=fileformat,
+    #         overwrite=self.overwrite,
+    #     )
+
+
+    @dump_rich_core.register
+    def _(
+        self,
+        data_node: orm.UpfData,
+        output_path: str | Path | None = None,
+    ):
+        self._dump_upfdata(data_node=data_node, output_path=output_path)

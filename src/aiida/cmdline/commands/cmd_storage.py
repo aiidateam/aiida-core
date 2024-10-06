@@ -9,17 +9,17 @@
 """`verdi storage` commands."""
 
 import logging
+from pathlib import Path
 import sys
-import pathlib
 
 import click
 from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments, types
-from aiida.cmdline.utils import decorators, echo, defaults
+from aiida.cmdline.params import arguments, options, types
+from aiida.cmdline.utils import decorators, defaults, echo
 from aiida.common import exceptions
-from aiida.tools.dumping import ProfileDumper, CollectionDumper, ProcessDumper, DataDumper, GroupDumper
+from aiida.tools.dumping import CollectionDumper, DataDumper, ProcessDumper
 
 
 @verdi.group('storage')
@@ -265,42 +265,21 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @options.OVERWRITE()
 @options.ALSO_RAW()
 @options.ALSO_RICH()
-@click.option(
-    # TODO: Invert the logic here, as processes are (should be?) dumped by default
-    "--dump-processes",
-    is_flag=True,
-    default=True,
-    show_default=True,
-    help="Turn off dumping of processes.",
-)
-@click.option(
-    "--dump-data",
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help="Dump also data nodes in a dedicated directory.",
-)
-@click.option(
-    "--calculations-hidden",
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help="Dump all `orm.CalculationNode`s in the hidden directory and link to there. If False, dump all of the process data into each workflow directory.",
-)
-@click.option(
-    "--data-hidden",
-    is_flag=True,
-    default=True,
-    show_default=True,
-    help="Dump all `orm.Data` in the hidden directory and link to there. If False, dump the data nodes into each workflow directory.",
-)
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+@options.DUMP_PROCESSES()
+@options.DUMP_DATA()
+@options.CALCULATIONS_HIDDEN()
+@options.DATA_HIDDEN()
+@options.ORGANIZE_BY_GROUPS()
 @options.RICH_OPTIONS()
 @options.RICH_CONFIG_FILE()
 @options.RICH_DUMP_ALL()
-@options.RICH_USE_DEFAULTS()
 @options.DRY_RUN()
 def archive_dump(
-    # profile,
     path,
     all_entries,
     overwrite,
@@ -308,28 +287,38 @@ def archive_dump(
     groups,
     codes,
     computers,
+    also_raw,
+    also_rich,
+    include_inputs,
+    include_outputs,
+    include_attributes,
+    include_extras,
+    flat,
     dump_processes,
     dump_data,
     calculations_hidden,
     data_hidden,
-    also_raw,
-    also_rich,
+    organize_by_groups,
     rich_options,
     rich_config_file,
     rich_dump_all,
-    rich_use_defaults,
     dry_run,
 ):
-    """Dump profile data to disk."""
-    from rich.pretty import pprint
-    from aiida.manage import get_manager
+    """Dump all data in an AiiDA profile's storage to disk."""
     from aiida import orm
+    from aiida.manage import get_manager
     from aiida.tools.dumping.collection import DEFAULT_ENTITIES_TO_DUMP
 
     profile = get_manager().get_profile()
     SAFEGUARD_FILE = ".verdi_storage_dump"  # noqa: N806
 
-    dry_run_message = f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\nOnly directories will be created."
+    if not str(path).endswith(profile.name):
+        path /= profile.name
+
+    dry_run_message = (
+        f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\n"
+    )
+    dry_run_message += "Only directories will be created."
 
     if dry_run:
         dump_processes = False
@@ -340,10 +329,9 @@ def archive_dump(
         echo.echo_report(dry_run_message)
 
     else:
-        echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
-
-        if not str(path).endswith(profile.name):
-            path /= profile.name
+        echo.echo_report(
+            f"Dumping of profile `{profile.name}`'s data at path: `{path}`."
+        )
 
         from aiida.tools.dumping.utils import validate_make_dump_path
 
@@ -359,19 +347,45 @@ def archive_dump(
 
         (path / SAFEGUARD_FILE).touch()
 
+    processdumper_kwargs = {
+        "include_inputs": include_inputs,
+        "include_outputs": include_outputs,
+        "include_attributes": include_attributes,
+        "include_extras": include_extras,
+        "flat": flat,
+    }
+
+    datadumper_kwargs = {
+        "also_raw": also_raw,
+        "also_rich": also_rich,
+    }
+
     collection_kwargs = {
         "should_dump_processes": dump_processes,
         "should_dump_data": dump_data,
         "calculations_hidden": calculations_hidden,
         "data_hidden": data_hidden,
+        "organize_by_groups": organize_by_groups,
     }
 
     rich_kwargs = {
         "rich_options": rich_options,
         "rich_config_file": rich_config_file,
         "rich_dump_all": rich_dump_all,
-        "rich_use_defaults": rich_use_defaults,
     }
+
+    process_dumper = ProcessDumper(
+        overwrite=overwrite,
+        **processdumper_kwargs,
+        **datadumper_kwargs,
+        **rich_kwargs,
+    )
+
+    data_dumper = DataDumper(
+        overwrite=overwrite,
+        **datadumper_kwargs,
+        **rich_kwargs,
+    )
 
     if all_entries:
         entries_to_dump = None
@@ -395,51 +409,72 @@ def archive_dump(
             entries_to_dump["groups"] = groups
             entities_to_dump.add(orm.Group)
 
-    collection_kwargs['entities_to_dump'] = entities_to_dump
+    collection_kwargs["entities_to_dump"] = entities_to_dump
 
     # === Group dumping ===
 
-    # If no specific groups selected, dump all groups contained in the profile
+    # === Dumping of all profile data if no Groups exist ===
+    # === Also, dump the data that is not associated with any group ===
+
+    collection_dumper = CollectionDumper(
+        dump_parent_path=path,
+        output_path=path / "no_groups",
+        **collection_kwargs,
+        **rich_kwargs,
+        data_dumper=data_dumper,
+        process_dumper=process_dumper,
+    )
+    collection_dumper.create_entity_counter()
+    collection_dumper.pretty_print()
+    if dump_processes:
+        # if collection_dumper._should_dump_processes():
+        if collection_dumper._should_dump_processes():
+            echo.echo_report(
+                f"Dumping processes not in any group for profile `{profile.name}`..."
+            )
+            collection_dumper.dump_processes()
+    if dump_data:
+        echo.echo_report(f"Dumping data not in any group for profile {profile.name}...")
+        collection_dumper.dump_core_data()
+        # collection_dumper.dump_plugin_data()
+
     if groups is None:
         groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
 
+    # === Dump data per-group if Groups exist in profile ===
     if len(groups) > 0:
         for group in groups:
-            group_path = path / group.label
-            group_dumper = GroupDumper(group=group, output_path=group_path, **collection_kwargs, **rich_kwargs)
-            group_dumper.create_entity_counter()
+            # group_path = path / group.label
+            group_subdir = Path(*group.type_string.split("."))
+            group_path = path / "groups" / group_subdir / group.label
+
+            collection_dumper = CollectionDumper(
+                dump_parent_path=path,
+                output_path=group_path,
+                overwrite=overwrite,
+                group=group,
+                **processdumper_kwargs,
+                **datadumper_kwargs,
+                **collection_kwargs,
+                **rich_kwargs,
+                process_dumper=process_dumper,
+                data_dumper=data_dumper
+            )
+            collection_dumper.create_entity_counter()
             # group_dumper.pretty_print()
 
             if dump_processes:
                 # The additional `_should_dump_processes` check here ensures that no reporting like
                 # "Dumping processes for group `SSSP/1.3/PBE/efficiency`" is printed for groups that
                 # don't contain processes
-                if group_dumper._should_dump_processes():
-                    echo.echo_report(f'Dumping processes for group `{group.label}`...')
-                    group_dumper.dump_processes()
+                if collection_dumper._should_dump_processes():
+                    echo.echo_report(f"Dumping processes for group `{group.label}`...")
+                    collection_dumper.dump_processes()
             if dump_data:
                 if not also_rich and not also_raw:
-                    echo.echo_critical("`--dump-data was given, but neither --also-raw or --also-rich specified.")
-                echo.echo_report(f'Dumping data for group `{group.label}`...')
-                group_dumper.dump_core_data()
-                group_dumper.dump_plugin_data()
-
-            # raise SystemExit
-
-    # === Dumping if no Groups exist ===
-
-    else:
-        from aiida import get_profile
-        profile = get_profile()
-        profile_dumper = ProfileDumper(**collection_kwargs, **rich_kwargs)
-        profile_dumper.create_entity_counter()
-        print(f'profile_dumper: {profile_dumper}')
-        profile_dumper.pretty_print()
-        if dump_processes:
-            if profile_dumper._should_dump_processes():
-                echo.echo_report(f'Dumping processes for profile `{profile.name}`...')
-                profile_dumper.dump_processes()
-        if dump_data:
-            echo.echo_report(f'Dumping data for profile {profile.name}...')
-            profile_dumper.dump_core_data()
-            profile_dumper.dump_plugin_data()
+                    echo.echo_critical(
+                        "`--dump-data was given, but neither --also-raw or --also-rich specified."
+                    )
+                echo.echo_report(f"Dumping data for group `{group.label}`...")
+                collection_dumper.dump_core_data()
+                # collection_dumper.dump_plugin_data()

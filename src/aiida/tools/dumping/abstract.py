@@ -8,25 +8,9 @@ import sys
 
 # TODO: Check if dataclass is suitable here
 class AbstractDumper:
-    def __init__(
-        self,
-        *args,
-        parent_path: str | pathlib.Path = pathlib.Path(),
-        overwrite: bool = False,
-        incremental: bool = False,
-        also_raw: bool = False,
-        also_rich: bool = False,
-        dry_run: bool = False,
-        rich_kwargs: dict = {},
-        **kwargs,
-    ):
-        self.parent_path = parent_path
-        self.overwrite = overwrite
-        self.incremental = incremental
-        self.also_raw = also_raw
-        self.also_rich = also_rich
-        self.dry_run = dry_run
-        self.rich_kwargs = rich_kwargs
+    # TODO: This one could possibly compile the `datadumper_kwargs`, `processdumper_kwargs`, `collection_kwargs`, and `rich_kwargs`  # noqa: E501
+    def __init__(self):
+        pass
 
     def pretty_print(self, also_private: bool = True, also_dunder: bool = False):
         console = Console()

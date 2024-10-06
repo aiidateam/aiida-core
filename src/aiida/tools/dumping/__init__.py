@@ -10,8 +10,6 @@
 
 from .collection import CollectionDumper
 from .data import DataDumper
-from .group import GroupDumper
 from .process import ProcessDumper
-from .profile import ProfileDumper
 
-__all__ = ('ProcessDumper', 'GroupDumper', 'CollectionDumper', 'DataDumper', 'ProfileDumper')
+__all__ = ('ProcessDumper', 'DataDumper', 'CollectionDumper')

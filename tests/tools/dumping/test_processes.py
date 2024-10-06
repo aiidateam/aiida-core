@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 from aiida.common.links import LinkType
-from aiida.tools.dumping.processeses import ProcessDumper
+from aiida.tools.dumping.processes import ProcessDumper
 
 # Non-AiiDA variables
 filename = 'file.txt'

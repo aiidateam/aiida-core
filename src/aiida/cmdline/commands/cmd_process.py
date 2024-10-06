@@ -593,7 +593,7 @@ def process_dump(
     node data for further inspection.
     """
 
-    from aiida.tools.dumping.processeses import ProcessDumper
+    from aiida.tools.dumping.processes import ProcessDumper
     from aiida.tools.dumping.utils import validate_rich_options
 
     process_kwargs = {

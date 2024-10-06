@@ -9,15 +9,15 @@
 """`verdi storage` commands."""
 
 import logging
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import click
 from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import arguments, options, types
-from aiida.cmdline.utils import decorators, defaults, echo
+from aiida.cmdline.params import options
+from aiida.cmdline.utils import decorators, echo
 from aiida.common import exceptions
 from aiida.tools.dumping import CollectionDumper, DataDumper, ProcessDumper
 from aiida.tools.dumping.utils import dumper_pretty_print
@@ -256,7 +256,7 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 # TODO: Follow API of `verdi archive create`
 # ? Specify groups via giving the groups, or just enabling "groups" and then all are dumped?
 # ? Provide some mechanism to allow for both, e.g. if no argument is provided, all groups are dumped
-@verdi_storage.command("dump")
+@verdi_storage.command('dump')
 @options.PATH()
 @options.ALL()
 @options.NODES()
@@ -311,15 +311,13 @@ def archive_dump(
     from aiida.tools.dumping.collection import DEFAULT_ENTITIES_TO_DUMP
 
     profile = get_manager().get_profile()
-    SAFEGUARD_FILE = ".verdi_storage_dump"  # noqa: N806
+    SAFEGUARD_FILE = '.verdi_storage_dump'  # noqa: N806
 
     if not str(path).endswith(profile.name):
         path /= profile.name
 
-    dry_run_message = (
-        f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\n"
-    )
-    dry_run_message += "Only directories will be created."
+    dry_run_message = f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\n"
+    dry_run_message += 'Only directories will be created.'
 
     if dry_run:
         dump_processes = False
@@ -330,9 +328,7 @@ def archive_dump(
         echo.echo_report(dry_run_message)
 
     else:
-        echo.echo_report(
-            f"Dumping of profile `{profile.name}`'s data at path: `{path}`."
-        )
+        echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
 
         from aiida.tools.dumping.utils import validate_make_dump_path
 
@@ -349,30 +345,30 @@ def archive_dump(
         (path / SAFEGUARD_FILE).touch()
 
     processdumper_kwargs = {
-        "include_inputs": include_inputs,
-        "include_outputs": include_outputs,
-        "include_attributes": include_attributes,
-        "include_extras": include_extras,
-        "flat": flat,
+        'include_inputs': include_inputs,
+        'include_outputs': include_outputs,
+        'include_attributes': include_attributes,
+        'include_extras': include_extras,
+        'flat': flat,
     }
 
     datadumper_kwargs = {
-        "also_raw": also_raw,
-        "also_rich": also_rich,
+        'also_raw': also_raw,
+        'also_rich': also_rich,
     }
 
     collection_kwargs = {
-        "should_dump_processes": dump_processes,
-        "should_dump_data": dump_data,
-        "calculations_hidden": calculations_hidden,
-        "data_hidden": data_hidden,
-        "organize_by_groups": organize_by_groups,
+        'should_dump_processes': dump_processes,
+        'should_dump_data': dump_data,
+        'calculations_hidden': calculations_hidden,
+        'data_hidden': data_hidden,
+        'organize_by_groups': organize_by_groups,
     }
 
     rich_kwargs = {
-        "rich_options": rich_options,
-        "rich_config_file": rich_config_file,
-        "rich_dump_all": rich_dump_all,
+        'rich_options': rich_options,
+        'rich_config_file': rich_config_file,
+        'rich_dump_all': rich_dump_all,
     }
 
     process_dumper = ProcessDumper(
@@ -395,28 +391,28 @@ def archive_dump(
     else:
         entities_to_dump = set()
         if nodes:
-            entries_to_dump["nodes"] = nodes
+            entries_to_dump['nodes'] = nodes
             entities_to_dump.extend({type(node) for node in nodes})
 
         if codes:
-            entries_to_dump["codes"] = codes
+            entries_to_dump['codes'] = codes
             entities_to_dump.add(orm.Code)
 
         if computers:
-            entries_to_dump["computers"] = computers
+            entries_to_dump['computers'] = computers
             entities_to_dump.add(orm.Computer)
 
         if groups:
-            entries_to_dump["groups"] = groups
+            entries_to_dump['groups'] = groups
             entities_to_dump.add(orm.Group)
 
-    collection_kwargs["entities_to_dump"] = entities_to_dump
+    collection_kwargs['entities_to_dump'] = entities_to_dump
 
     # === Dump the data that is not associated with any group ===
 
     collection_dumper = CollectionDumper(
         dump_parent_path=path,
-        output_path=path / "no_groups",
+        output_path=path / 'no_groups',
         **collection_kwargs,
         **rich_kwargs,
         data_dumper=data_dumper,
@@ -427,12 +423,10 @@ def archive_dump(
     if dump_processes:
         # if collection_dumper._should_dump_processes():
         if collection_dumper._should_dump_processes():
-            echo.echo_report(
-                f"Dumping processes not in any group for profile `{profile.name}`..."
-            )
+            echo.echo_report(f'Dumping processes not in any group for profile `{profile.name}`...')
             collection_dumper.dump_processes()
     if dump_data:
-        echo.echo_report(f"Dumping data not in any group for profile {profile.name}...")
+        echo.echo_report(f'Dumping data not in any group for profile {profile.name}...')
         collection_dumper.dump_core_data()
         # collection_dumper.dump_plugin_data()
 
@@ -444,8 +438,8 @@ def archive_dump(
     if len(groups) > 0:
         for group in groups:
             # group_path = path / group.label
-            group_subdir = Path(*group.type_string.split("."))
-            group_path = path / "groups" / group_subdir / group.label
+            group_subdir = Path(*group.type_string.split('.'))
+            group_path = path / 'groups' / group_subdir / group.label
 
             collection_dumper = CollectionDumper(
                 dump_parent_path=path,
@@ -457,7 +451,7 @@ def archive_dump(
                 **collection_kwargs,
                 **rich_kwargs,
                 process_dumper=process_dumper,
-                data_dumper=data_dumper
+                data_dumper=data_dumper,
             )
             collection_dumper.create_entity_counter()
             # group_dumper.pretty_print()
@@ -467,13 +461,11 @@ def archive_dump(
                 # "Dumping processes for group `SSSP/1.3/PBE/efficiency`" is printed for groups that
                 # don't contain processes
                 if collection_dumper._should_dump_processes():
-                    echo.echo_report(f"Dumping processes for group `{group.label}`...")
+                    echo.echo_report(f'Dumping processes for group `{group.label}`...')
                     collection_dumper.dump_processes()
             if dump_data:
                 if not also_rich and not also_raw:
-                    echo.echo_critical(
-                        "`--dump-data was given, but neither --also-raw or --also-rich specified."
-                    )
-                echo.echo_report(f"Dumping data for group `{group.label}`...")
+                    echo.echo_critical('`--dump-data was given, but neither --also-raw or --also-rich specified.')
+                echo.echo_report(f'Dumping data for group `{group.label}`...')
                 collection_dumper.dump_core_data()
                 # collection_dumper.dump_plugin_data()

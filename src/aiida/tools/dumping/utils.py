@@ -11,16 +11,12 @@
 from __future__ import annotations
 
 import logging
-import pathlib
-import sys
 import typing as t
 from logging import Logger
 from pathlib import Path
 
 from rich.console import Console
 from rich.table import Table
-
-from aiida import orm
 
 __all__ = ('validate_make_dump_path', 'get_nodes_from_db')
 

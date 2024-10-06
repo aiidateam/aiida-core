@@ -548,7 +548,7 @@ def process_repair(manager, broker, dry_run):
             echo.echo_report(f'Revived process `{pid}`')
 
 
-@verdi_process.command("dump")
+@verdi_process.command('dump')
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
@@ -597,34 +597,27 @@ def process_dump(
     from aiida.tools.dumping.utils import validate_rich_options
 
     process_kwargs = {
-        "include_inputs": include_inputs,
-        "include_outputs": include_outputs,
-        "include_attributes": include_attributes,
-        "include_extras": include_extras,
+        'include_inputs': include_inputs,
+        'include_outputs': include_outputs,
+        'include_attributes': include_attributes,
+        'include_extras': include_extras,
     }
 
     rich_kwargs = {
-        "rich_options": rich_options,
-        "rich_config_file": rich_config_file,
-        "rich_dump_all": rich_dump_all,
-        "rich_use_defaults": rich_use_defaults,
+        'rich_options': rich_options,
+        'rich_config_file': rich_config_file,
+        'rich_dump_all': rich_dump_all,
+        'rich_use_defaults': rich_use_defaults,
     }
 
     if also_rich:
         try:
-            validate_rich_options(
-                rich_options=rich_options, rich_config_file=rich_config_file
-            )
+            validate_rich_options(rich_options=rich_options, rich_config_file=rich_config_file)
         except ValueError as exc:
-            echo.echo_critical(f"{exc!s}")
+            echo.echo_critical(f'{exc!s}')
 
     process_dumper = ProcessDumper(
-        overwrite=overwrite,
-        flat=flat,
-        also_raw=also_raw,
-        also_rich=also_rich,
-        **process_kwargs,
-        **rich_kwargs
+        overwrite=overwrite, flat=flat, also_raw=also_raw, also_rich=also_rich, **process_kwargs, **rich_kwargs
     )
 
     try:
@@ -634,13 +627,9 @@ def process_dump(
         )
     except FileExistsError:
         echo.echo_critical(
-            "Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually."
+            'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
         )
     except Exception as exc:
-        echo.echo_critical(
-            f"Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({exc!s})."
-        )
+        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({exc!s}).')
 
-    echo.echo_success(
-        f"Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`."
-    )
+    echo.echo_success(f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.')

@@ -1,128 +1,43 @@
-from importlib_metadata import EntryPoint
 
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 
 __all__ = ('RichParser', 'DEFAULT_CORE_EXPORT_MAPPING')
 
 DEFAULT_CORE_EXPORT_MAPPING = {
-    'core.array': {
-        'exporter': data_export,
-        'export_format': 'json'
-    },
-    'core.array.bands': {
-        'exporter': data_export,
-        'export_format': 'mpl_pdf'
-    },
-    'core.array.kpoints': {
-        'exporter': data_export,
-        'export_format': 'json'
-    },
-    'core.array.projection': {
-        'exporter': data_export,
-        'export_format': 'json'
-    },
-    'core.array.trajectory': {
-        'exporter': data_export,
-        'export_format': 'cif'
-    },
-    'core.array.xy': {
-        'exporter': data_export,
-        'export_format': 'json'
-    },
-    'core.base': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.bool': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.cif': {
-        'exporter': data_export,
-        'export_format': 'cif'
-    },
-    'core.code': {
-        'exporter': data_export,
-        'export_format': 'yaml'
-    },
-    'core.code.containerized': {
-        'exporter': data_export,
-        'export_format': 'yaml'
-    },
-    'core.code.installed': {
-        'exporter': data_export,
-        'export_format': 'yaml'
-    },
-    'core.code.portable': {
-        'exporter': data_export,
-        'export_format': 'yaml'
-    },
-    'core.dict': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.enum': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.float': {
-        'exporter': None,
-        'export_format': None
-    },
+    'core.array': {'exporter': data_export, 'export_format': 'json'},
+    'core.array.bands': {'exporter': data_export, 'export_format': 'mpl_pdf'},
+    'core.array.kpoints': {'exporter': data_export, 'export_format': 'json'},
+    'core.array.projection': {'exporter': data_export, 'export_format': 'json'},
+    'core.array.trajectory': {'exporter': data_export, 'export_format': 'cif'},
+    'core.array.xy': {'exporter': data_export, 'export_format': 'json'},
+    'core.base': {'exporter': None, 'export_format': None},
+    'core.bool': {'exporter': None, 'export_format': None},
+    'core.cif': {'exporter': data_export, 'export_format': 'cif'},
+    'core.code': {'exporter': data_export, 'export_format': 'yaml'},
+    'core.code.containerized': {'exporter': data_export, 'export_format': 'yaml'},
+    'core.code.installed': {'exporter': data_export, 'export_format': 'yaml'},
+    'core.code.portable': {'exporter': data_export, 'export_format': 'yaml'},
+    'core.dict': {'exporter': None, 'export_format': None},
+    'core.enum': {'exporter': None, 'export_format': None},
+    'core.float': {'exporter': None, 'export_format': None},
     # TODO: Just use copy-tree
-    'core.folder': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.int': {
-        'exporter': None,
-        'export_format': None
-    },
+    'core.folder': {'exporter': None, 'export_format': None},
+    'core.int': {'exporter': None, 'export_format': None},
     'core.jsonable': {
         'exporter': data_export,
-        'export_format': 'json'  # duh
+        'export_format': 'json',  # duh
     },
-    'core.list': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.numeric': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.orbital': {
-        'exporter': None,
-        'export_format': None
-    },
+    'core.list': {'exporter': None, 'export_format': None},
+    'core.numeric': {'exporter': None, 'export_format': None},
+    'core.orbital': {'exporter': None, 'export_format': None},
     # TODO: Here, try-except existance on remote and if so, dump it here locally
-    'core.remote': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.remote.stash': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.remote.stash.folder': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.singlefile': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.str': {
-        'exporter': None,
-        'export_format': None
-    },
-    'core.structure': {
-        'exporter': data_export,
-        'export_format': 'cif'
-    },
-    'core.upf': {
-        'exporter': data_export,
-        'export_format': 'upf'
-    }
+    'core.remote': {'exporter': None, 'export_format': None},
+    'core.remote.stash': {'exporter': None, 'export_format': None},
+    'core.remote.stash.folder': {'exporter': None, 'export_format': None},
+    'core.singlefile': {'exporter': None, 'export_format': None},
+    'core.str': {'exporter': None, 'export_format': None},
+    'core.structure': {'exporter': data_export, 'export_format': 'cif'},
+    'core.upf': {'exporter': data_export, 'export_format': 'upf'},
 }
 
 
@@ -220,15 +135,14 @@ class RichParser:
                         export_value = value
                     elif key == 'format':
                         format_value = value
-                else:
-                    if type_value is None:
-                        type_value = component
-                    elif export_value is None:
-                        # TODO: this is only for core data types
-                        export_value = DEFAULT_CORE_EXPORT_MAPPING[type_value]
-                    elif format_value is None:
-                        # format_value = component
-                        format_value = DEFAULT_CORE_EXPORT_MAPPING[type_value]
+                elif type_value is None:
+                    type_value = component
+                elif export_value is None:
+                    # TODO: this is only for core data types
+                    export_value = DEFAULT_CORE_EXPORT_MAPPING[type_value]
+                elif format_value is None:
+                    # format_value = component
+                    format_value = DEFAULT_CORE_EXPORT_MAPPING[type_value]
 
             if type_value:
                 options_dict[type_value] = (export_value, format_value)

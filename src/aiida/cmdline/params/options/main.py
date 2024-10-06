@@ -799,117 +799,117 @@ SORT = OverridableOption(
 
 DUMP_PROCESSES = OverridableOption(
     # TODO: Invert the logic here, as processes are (should be?) dumped by default
-    "--dump-processes",
+    '--dump-processes',
     is_flag=True,
     default=True,
     show_default=True,
-    help="Turn off dumping of processes.",
+    help='Turn off dumping of processes.',
 )
 
 DUMP_DATA = OverridableOption(
-    "--dump-data",
+    '--dump-data',
     is_flag=True,
     default=False,
     show_default=True,
-    help="Dump also data nodes in a dedicated directory.",
+    help='Dump also data nodes in a dedicated directory.',
 )
 
 CALCULATIONS_HIDDEN = OverridableOption(
-    "--calculations-hidden",
+    '--calculations-hidden',
     is_flag=True,
     default=True,
     show_default=True,
-    help="Dump all `orm.CalculationNode`s in the hidden directory and link to there.",
+    help='Dump all `orm.CalculationNode`s in the hidden directory and link to there.',
 )
 
 DATA_HIDDEN = OverridableOption(
-    "--data-hidden",
+    '--data-hidden',
     is_flag=True,
     default=True,
     show_default=True,
-    help="Dump all `orm.Data` in the hidden directory and link to there.",
+    help='Dump all `orm.Data` in the hidden directory and link to there.',
 )
 
 ALSO_RAW = OverridableOption(
-    "--also-raw",
+    '--also-raw',
     is_flag=True,
     default=False,
     show_default=True,
-    help="Dump the `attributes` of all nodes related to the Process.",
+    help='Dump the `attributes` of all nodes related to the Process.',
 )
 
 ALSO_RICH = OverridableOption(
-    "--also-rich",
+    '--also-rich',
     is_flag=True,
     default=False,
     show_default=True,
-    help="Dump also nicely prepared outputs, e.g. CIF for structures or PDF image for bands.",
+    help='Dump also nicely prepared outputs, e.g. CIF for structures or PDF image for bands.',
 )
 
 RICH_OPTIONS = OverridableOption(
-    "--rich-options",
+    '--rich-options',
     default=None,
     type=str,
-    help="Options for rich data dumping.",
+    help='Options for rich data dumping.',
 )
 
 RICH_CONFIG_FILE = OverridableOption(
-    "--rich-config-file",
+    '--rich-config-file',
     default=None,
     type=types.FileOrUrl(),
-    help="Options for rich data dumping.",
+    help='Options for rich data dumping.',
 )
 RICH_DUMP_ALL = OverridableOption(
-    "--rich-dump-all",
+    '--rich-dump-all',
     default=True,
     is_flag=True,
     type=bool,
     help=(
-        "By default, only nodes for which dumping options are given are dumped for rich dump. "
-        "Enable this to dump _all_ nodes, using the default export mappings and file types."
+        'By default, only nodes for which dumping options are given are dumped for rich dump. '
+        'Enable this to dump _all_ nodes, using the default export mappings and file types.'
     ),
 )
 
 ORGANIZE_BY_GROUPS = OverridableOption(
-    "--organize-by-groups",
+    '--organize-by-groups',
     default=True,
     is_flag=True,
     type=bool,
-    help="If the collection of nodes to be dumped is organized in groups, reproduce its hierarchy.",
+    help='If the collection of nodes to be dumped is organized in groups, reproduce its hierarchy.',
 )
 
 INCLUDE_INPUTS = OverridableOption(
-    "--include-inputs/--exclude-inputs",
+    '--include-inputs/--exclude-inputs',
     default=True,
     show_default=True,
-    help="Include the linked input nodes of the `CalculationNode`(s).",
+    help='Include the linked input nodes of the `CalculationNode`(s).',
 )
 
 INCLUDE_OUTPUTS = OverridableOption(
-    "--include-outputs/--exclude-outputs",
+    '--include-outputs/--exclude-outputs',
     default=False,
     show_default=True,
-    help="Include the linked output nodes of the `CalculationNode`(s).",
+    help='Include the linked output nodes of the `CalculationNode`(s).',
 )
 
 INCLUDE_ATTRIBUTES = OverridableOption(
-    "--include-attributes/--exclude-attributes",
+    '--include-attributes/--exclude-attributes',
     default=True,
     show_default=True,
-    help="Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.",
+    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
 )
 
 INCLUDE_EXTRAS = OverridableOption(
-    "--include-extras/--exclude-extras",
+    '--include-extras/--exclude-extras',
     default=True,
     show_default=True,
-    help="Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.",
+    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
 )
 
 FLAT = OverridableOption(
-    "-f",
-    "--flat",
+    '-f',
+    '--flat',
     is_flag=True,
     default=False,
-    help="Dump files in a flat directory for every step of the workflow.",
+    help='Dump files in a flat directory for every step of the workflow.',
 )

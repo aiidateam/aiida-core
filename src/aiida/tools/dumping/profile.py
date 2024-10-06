@@ -10,35 +10,25 @@
 
 from __future__ import annotations
 
-import contextlib
 import logging
-import sys
+from collections import Counter
 from pathlib import Path
 from typing import List
 
-import yaml
-
 from aiida import orm
-from aiida.manage.configuration.profile import Profile
-from aiida.orm import CalculationNode, Code, Computer, Group, QueryBuilder, StructureData, User, WorkflowNode
-from aiida.orm.groups import ImportGroup
-from collections import Counter
-
+from aiida.orm import Code, Computer, Group, StructureData, User, WorkflowNode
 from aiida.tools.dumping.collection import CollectionDumper
-from aiida.tools.dumping.group import GroupDumper
-from aiida.tools.dumping.processes import ProcessDumper
-from aiida.tools.dumping.data import DataDumper
-
-from aiida.tools.dumping.utils import validate_make_dump_path, get_nodes_from_db
-from aiida.common import timezone
-from rich.pretty import pprint
 
 logger = logging.getLogger(__name__)
 DEFAULT_ENTITIES_TO_DUMP = [WorkflowNode, StructureData, User, Code, Computer]
 DEFAULT_COLLECTIONS_TO_DUMP = [Group]  # ? Might not be needed -> Main useful collection type is just Group
 PROFILE_DUMP_JSON_FILE = 'profile-dump-info.json'
 DEFAULT_PROCESSES_TO_DUMP = [orm.CalculationNode, orm.WorkflowNode]  # , StructureData, User, Code, Computer]
-DEFAULT_DATA_TO_DUMP = [orm.StructureData, orm.Code, orm.Computer, ]  # , StructureData, User, Code, Computer]
+DEFAULT_DATA_TO_DUMP = [
+    orm.StructureData,
+    orm.Code,
+    orm.Computer,
+]  # , StructureData, User, Code, Computer]
 DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP + DEFAULT_DATA_TO_DUMP
 
 
@@ -52,7 +42,7 @@ class ProfileDumper(CollectionDumper):
         organize_by_groups: bool = True,
         process_dumper_kwargs: dict | None = None,
         config: Path | dict | None = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.kwargs = kwargs

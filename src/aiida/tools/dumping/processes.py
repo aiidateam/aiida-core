@@ -18,7 +18,6 @@ from types import SimpleNamespace
 from typing import List
 
 import yaml
-from rich.pretty import pprint
 
 from aiida import orm
 from aiida.cmdline.params.types import FileOrUrl
@@ -469,7 +468,10 @@ class ProcessDumper:
                 output_path.mkdir(parents=True, exist_ok=True)
 
                 DataDumper().dump_rich_core(
-                    node, rich_options_dict=rich_options_dict, output_path=output_path, output_fname=output_fname,
+                    node,
+                    rich_options_dict=rich_options_dict,
+                    output_path=output_path,
+                    output_fname=output_fname,
                 )
 
     def _generate_calculation_io_mapping(self, io_dump_paths: List[str | Path] | None = None) -> SimpleNamespace:

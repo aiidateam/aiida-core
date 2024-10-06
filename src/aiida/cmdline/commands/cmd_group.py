@@ -633,6 +633,7 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
                 continue
             echo.echo(child.path, bold=not child.is_virtual)
 
+
 @verdi_group.command('dump')
 @arguments.GROUP()
 # @with_dbenv()
@@ -659,10 +660,8 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
 #     help='Add a filter to show only groups for which the label contains STRING.',
 # )
 def group_dump(group):
-
     print(group)
     from aiida.tools.dumping.group import GroupDumper
 
     group_dumper = GroupDumper()
     group_dumper.dump(group)
-

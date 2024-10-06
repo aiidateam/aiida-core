@@ -199,7 +199,6 @@ class DataDumper:
         output_fname: str | None = None,
         fileformat: str = 'yaml',
     ):
-
         node_entry_point_name = data_node.entry_point.name
         # TODO: Don't use the `exporter` here, as `Computer` doesn't derive from Data, so custom implementation
         # exporter = rich_options_dict[node_entry_point_name]['exporter']
@@ -234,7 +233,6 @@ class DataDumper:
 
         if not output_fname.is_file():
             output_fname.write_text(yaml.dump(computer_setup, sort_keys=False), 'utf-8')
-
 
     def _dump_computer_config(
         self,
@@ -273,7 +271,6 @@ class DataDumper:
         output_path: Path | None = None,
         output_fname: str | None = None,
     ):
-
         node_entry_point_name = data_node.entry_point.name
         exporter = rich_options_dict[node_entry_point_name]['exporter']
         fileformat = rich_options_dict[node_entry_point_name]['export_format']
@@ -294,7 +291,6 @@ class DataDumper:
     def _dump_user_info(self): ...
 
     def dump_raw(self, data_node: orm.Data, output_path: Path, output_fname: str | None = None):
-
         output_path.mkdir(exist_ok=True, parents=True)
 
         if output_fname is None:

@@ -11,20 +11,15 @@
 from __future__ import annotations
 
 import contextlib
-import itertools
 import logging
 import os
 from collections import Counter
 from pathlib import Path
 from typing import List
 
-from rich.pretty import pprint
-
 from aiida import orm
-from aiida.cmdline.params.types import FileOrUrl
 from aiida.tools.dumping.data import DataDumper
 from aiida.tools.dumping.processes import ProcessDumper
-from aiida.tools.dumping.utils import get_nodes_from_db, validate_make_dump_path
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +48,6 @@ class CollectionDumper:
         data_dumper: DataDumper | None = None,
         **kwargs,
     ):
-
         self.args = args
         self.dump_parent_path = dump_parent_path
         self.output_path = output_path
@@ -190,7 +184,7 @@ class CollectionDumper:
                 # This is the case if no exporter implemented for a given data_node type
                 # Thus the call to exporter() results in `TypeError: 'NoneType' object is not callable`
                 pass
-            except Exception as exc:
+            except Exception:
                 print(f'data_dumper.dump(data_node=data_node, output_path=data_dump_path{data_node, data_dump_path}')
                 raise
 

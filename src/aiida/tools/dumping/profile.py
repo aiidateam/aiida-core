@@ -26,7 +26,7 @@ from collections import Counter
 
 from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.group import GroupDumper
-from aiida.tools.dumping.process import ProcessDumper
+from aiida.tools.dumping.processeses import ProcessDumper
 from aiida.tools.dumping.data import DataDumper
 
 from aiida.tools.dumping.utils import validate_make_dump_path, get_nodes_from_db

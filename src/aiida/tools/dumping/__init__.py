@@ -10,6 +10,6 @@
 
 from .collection import CollectionDumper
 from .data import DataDumper
-from .process import ProcessDumper
+from .processes import ProcessDumper
 
 __all__ = ('ProcessDumper', 'DataDumper', 'CollectionDumper')

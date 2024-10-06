@@ -23,7 +23,7 @@ from rich.pretty import pprint
 from aiida import orm
 from aiida.cmdline.params.types import FileOrUrl
 from aiida.tools.dumping.data import DataDumper
-from aiida.tools.dumping.process import ProcessDumper
+from aiida.tools.dumping.processeses import ProcessDumper
 from aiida.tools.dumping.utils import get_nodes_from_db, validate_make_dump_path
 
 logger = logging.getLogger(__name__)

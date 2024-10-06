@@ -1,4 +1,3 @@
-
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 
 __all__ = ('RichParser', 'DEFAULT_CORE_EXPORT_MAPPING')

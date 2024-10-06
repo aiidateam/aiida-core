@@ -20,6 +20,7 @@ from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, defaults, echo
 from aiida.common import exceptions
 from aiida.tools.dumping import CollectionDumper, DataDumper, ProcessDumper
+from aiida.tools.dumping.utils import dumper_pretty_print
 
 
 @verdi.group('storage')
@@ -411,10 +412,7 @@ def archive_dump(
 
     collection_kwargs["entities_to_dump"] = entities_to_dump
 
-    # === Group dumping ===
-
-    # === Dumping of all profile data if no Groups exist ===
-    # === Also, dump the data that is not associated with any group ===
+    # === Dump the data that is not associated with any group ===
 
     collection_dumper = CollectionDumper(
         dump_parent_path=path,
@@ -425,7 +423,7 @@ def archive_dump(
         process_dumper=process_dumper,
     )
     collection_dumper.create_entity_counter()
-    collection_dumper.pretty_print()
+    dumper_pretty_print(collection_dumper)
     if dump_processes:
         # if collection_dumper._should_dump_processes():
         if collection_dumper._should_dump_processes():
@@ -438,10 +436,11 @@ def archive_dump(
         collection_dumper.dump_core_data()
         # collection_dumper.dump_plugin_data()
 
+    # === Dump data per-group if Groups exist in profile or are selected ===
+
     if groups is None:
         groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
 
-    # === Dump data per-group if Groups exist in profile ===
     if len(groups) > 0:
         for group in groups:
             # group_path = path / group.label

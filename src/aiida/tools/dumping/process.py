@@ -24,7 +24,6 @@ from aiida import orm
 from aiida.cmdline.params.types import FileOrUrl
 from aiida.common import LinkType
 from aiida.common.exceptions import NotExistentAttributeError
-from aiida.tools.dumping.abstract import AbstractDumper
 from aiida.tools.dumping.data import DataDumper
 from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING, RichParser
 from aiida.tools.dumping.utils import validate_make_dump_path
@@ -34,7 +33,7 @@ logger = logging.getLogger(__name__)
 SAFEGUARD_FILE = '.aiida_node_metadata.yaml'
 
 
-class ProcessDumper(AbstractDumper):
+class ProcessDumper:
     def __init__(
         self,
         *args,
@@ -52,7 +51,6 @@ class ProcessDumper(AbstractDumper):
         data_dumper: DataDumper | None = None,
         **kwargs,
     ) -> None:
-        # super().__init__(*args, **kwargs)
         self.args = args
         self.overwrite = overwrite
         self.flat = flat

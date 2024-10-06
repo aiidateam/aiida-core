@@ -11,9 +11,14 @@
 from __future__ import annotations
 
 import logging
+import pathlib
+import sys
+import typing as t
 from logging import Logger
 from pathlib import Path
-import typing as t
+
+from rich.console import Console
+from rich.table import Table
 
 from aiida import orm
 
@@ -96,9 +101,77 @@ def get_nodes_from_db(qb_instance, qb_filters: t.List | None = None, flat=False)
 
 
 def validate_rich_options(rich_options, rich_config_file):
-
     if rich_options is not None and rich_config_file is not None:
         raise ValueError('Specify rich options either via CLI or config file, not both.')
 
     else:
         logger.report('Neither `--rich-options` nor `--rich-config` set, using defaults.')
+
+
+@staticmethod
+def dumper_pretty_print(dumper_instance, also_private: bool = True, also_dunder: bool = False):
+    console = Console()
+    table = Table(title=f'Attributes and Methods of {dumper_instance.__class__.__name__}')
+
+    # Adding columns to the table
+    table.add_column('Name', justify='left')
+    table.add_column('Type', justify='left')
+    table.add_column('Value', justify='left')
+
+    # Lists to store attributes and methods
+    entries = []
+
+    # Iterate over the class attributes and methods
+    for attr_name in dir(dumper_instance):
+        # Exclude private attributes and dunder methods
+        if not also_private and not also_dunder:
+            if not (attr_name.startswith('_') or attr_name.endswith('_')):
+                attr_value = getattr(dumper_instance, attr_name)
+                entry_type = 'Attribute' if not callable(attr_value) else 'Method'
+                entries.append((attr_name, entry_type, str(attr_value)))
+
+        if not also_private:
+            if attr_name.startswith('__'):
+                attr_value = getattr(dumper_instance, attr_name)
+                entry_type = 'Attribute' if not callable(attr_value) else 'Method'
+                entries.append((attr_name, entry_type, str(attr_value)))
+
+        if not also_dunder:
+            if not attr_name.startswith('__'):
+                attr_value = getattr(dumper_instance, attr_name)
+                entry_type = 'Attribute' if not callable(attr_value) else 'Method'
+                entries.append((attr_name, entry_type, str(attr_value)))
+        else:
+            attr_value = getattr(dumper_instance, attr_name)
+            entry_type = 'Attribute' if not callable(attr_value) else 'Method'
+            entries.append((attr_name, entry_type, str(attr_value)))
+
+    # Sort entries: attributes first, then methods
+    entries.sort(key=lambda x: (x[1] == 'Method', x[0]))
+
+    # Add sorted entries to the table
+    for name, entry_type, value in entries:
+        table.add_row(name, entry_type, value)
+
+    # Print the formatted table
+    console.print(table)
+
+
+# def check_storage_size_user():
+#     from aiida.manage.manager import get_manager
+
+#     manager = get_manager()
+#     storage = manager.get_profile_storage()
+
+#     data = storage.get_info(detailed=True)
+#     repository_data = data['repository']['Size (MB)']
+#     total_size_gb = sum(repository_data.values()) / 1024
+#     if total_size_gb > 10:
+#         user_input = (
+#             input('Repository size larger than 10gb. Do you still want to dump the profile data? (y/N): ')
+#             .strip()
+#             .lower()
+#         )
+
+#         if user_input != 'y':
+#             sys.exit()

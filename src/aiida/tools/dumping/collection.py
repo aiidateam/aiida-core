@@ -22,7 +22,6 @@ from rich.pretty import pprint
 
 from aiida import orm
 from aiida.cmdline.params.types import FileOrUrl
-from aiida.tools.dumping.abstract import AbstractDumper
 from aiida.tools.dumping.data import DataDumper
 from aiida.tools.dumping.process import ProcessDumper
 from aiida.tools.dumping.utils import get_nodes_from_db, validate_make_dump_path
@@ -36,7 +35,7 @@ DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP + DEFAULT_DATA_TO_DUMP
 
 
 # ! This class is instantiated once for every group, or once for the full profile
-class CollectionDumper(AbstractDumper):
+class CollectionDumper:
     def __init__(
         self,
         *args,
@@ -54,10 +53,7 @@ class CollectionDumper(AbstractDumper):
         data_dumper: DataDumper | None = None,
         **kwargs,
     ):
-        super().__init__(*args, **kwargs)
 
-        # TODO: See if I can remove passing all the arguments by passing the instance of the `ProcessDumper` and
-        # TODO:`DataDumper` instead
         self.args = args
         self.dump_parent_path = dump_parent_path
         self.output_path = output_path

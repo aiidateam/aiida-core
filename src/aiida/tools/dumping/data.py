@@ -18,12 +18,11 @@ import yaml
 
 from aiida import orm
 from aiida.cmdline.params.types import FileOrUrl
-from aiida.tools.dumping.abstract import AbstractDumper
 
 logger = logging.getLogger(__name__)
 
 
-class DataDumper(AbstractDumper):
+class DataDumper:
     def __init__(
         self,
         *args,

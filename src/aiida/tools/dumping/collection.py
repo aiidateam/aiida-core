@@ -190,11 +190,11 @@ class CollectionDumper:
 
     def dump_processes(self):
         # ? Here, these could be all kinds of entities that could be grouped in AiiDA
-        if len(self.entities_to_dump) > 0:
-            pass
-            # nodes = self.entities_to_dump
-        else:
-            nodes = self.get_collection_nodes()
+        # if len(self.entities_to_dump) > 0:
+        #     pass
+        #     # nodes = self.entities_to_dump
+        # else:
+        nodes = self.get_collection_nodes()
         workflows = [node for node in nodes if isinstance(node, orm.WorkflowNode)]
 
         # Also need to obtain sub-calculations that were called by workflows of the group
@@ -221,18 +221,24 @@ class CollectionDumper:
                 self.process_dumper.dump(process_node=workflow, output_path=workflow_path)
 
     def dump_core_data_rich(self):
+
         nodes = self.get_collection_nodes()
         nodes = [node for node in nodes if isinstance(node, (orm.Data, orm.Computer))]
         nodes = [node for node in nodes if node.entry_point.name.startswith('core')]
         data_dumper = self.data_dumper
 
         for data_node in nodes:
+            node_entry_point_name = data_node.entry_point.name
+
+            # Get the file format for the data node
+            fileformat = data_dumper.rich_options_dict[node_entry_point_name]['export_format']
+            # Don't go further if no importer implemented for a data type anyway
+            exporter = data_dumper.rich_options_dict[node_entry_point_name]['exporter']
+            print(f'data_node: {data_node}, fileformat: {fileformat}, exporter: {exporter}')
+            if exporter is None:
+                continue
+
             try:
-                node_entry_point_name = data_node.entry_point.name
-
-                # Get the file format for the data node
-                fileformat = data_dumper.rich_options_dict[node_entry_point_name]['export_format']
-
                 # Generate a nice filename and sanitize it
                 nice_output_path = self.output_path / 'data' / data_node.__class__.__name__.lower()
                 nice_fname = data_dumper.generate_output_fname_rich(data_node=data_node, fileformat=fileformat).replace(

@@ -90,7 +90,7 @@ __all__ = (
     'OLDER_THAN',
     'ORDER_BY',
     'ORDER_DIRECTION',
-    'NO_ORGANIZE_BY_GROUPS',
+    'ORGANIZE_BY_GROUPS',
     'OVERWRITE',
     'PATH',
     'PAST_DAYS',
@@ -798,12 +798,11 @@ SORT = OverridableOption(
 )
 
 DUMP_PROCESSES = OverridableOption(
-    # TODO: Invert the logic here, as processes are (should be?) dumped by default
-    '--dump-processes',
+    '--dump-processes/--no-dump-processes',
     is_flag=True,
     default=True,
     show_default=True,
-    help='Turn off dumping of processes.',
+    help='Dump process data.',
 )
 
 DUMP_DATA = OverridableOption(
@@ -812,7 +811,7 @@ DUMP_DATA = OverridableOption(
     default=False,
     type=bool,
     show_default=True,
-    help='Dump also data nodes in a dedicated directory.',
+    help='Dump data nodes in a dedicated directory.',
 )
 
 CALCULATIONS_HIDDEN = OverridableOption(
@@ -873,9 +872,9 @@ RICH_DUMP_ALL = OverridableOption(
     ),
 )
 
-NO_ORGANIZE_BY_GROUPS = OverridableOption(
-    '--no-organize-by-groups',
-    default=False,
+ORGANIZE_BY_GROUPS = OverridableOption(
+    '--organize-by-groups/--no-organize-by-groups',
+    default=True,
     is_flag=True,
     type=bool,
     show_default=True,

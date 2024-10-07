@@ -258,48 +258,48 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 # ? Provide some mechanism to allow for both, e.g. if no argument is provided, all groups are dumped
 @verdi_storage.command('dump')
 @options.PATH()
-@options.ALL()
-@options.NODES()
-@options.CODES()
-@options.COMPUTERS()
-@options.GROUPS()
+# @options.ALL()
+# @options.NODES()
+# @options.CODES()
+# @options.COMPUTERS()
+# @options.GROUPS()
 @options.OVERWRITE()
+@options.ORGANIZE_BY_GROUPS()
+@options.DUMP_PROCESSES()
+@options.FLAT()
+@options.DUMP_DATA()
+@options.CALCULATIONS_HIDDEN()
+@options.DATA_HIDDEN()
 @options.ALSO_RAW()
 @options.ALSO_RICH()
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
-@options.FLAT()
-@options.DUMP_PROCESSES()
-@options.DUMP_DATA()
-@options.CALCULATIONS_HIDDEN()
-@options.DATA_HIDDEN()
-@options.NO_ORGANIZE_BY_GROUPS()
 @options.RICH_OPTIONS()
 @options.RICH_CONFIG_FILE()
 @options.RICH_DUMP_ALL()
 @options.DRY_RUN()
 def storage_dump(
     path,
-    all_entries,
+    # all_entries,
     overwrite,
-    nodes,
-    groups,
-    codes,
-    computers,
+    # nodes,
+    # groups,
+    # codes,
+    # computers,
+    organize_by_groups,
+    dump_processes,
+    flat,
+    dump_data,
+    calculations_hidden,
+    data_hidden,
     also_raw,
     also_rich,
     include_inputs,
     include_outputs,
     include_attributes,
     include_extras,
-    flat,
-    dump_processes,
-    dump_data,
-    calculations_hidden,
-    data_hidden,
-    no_organize_by_groups,
     rich_options,
     rich_config_file,
     rich_dump_all,
@@ -367,7 +367,7 @@ def storage_dump(
     collection_kwargs = {
         "should_dump_processes": dump_processes,
         "should_dump_data": dump_data,
-        "no_organize_by_groups": no_organize_by_groups,
+        "no_organize_by_groups": organize_by_groups,
     }
 
     rich_kwargs = {
@@ -399,35 +399,37 @@ def storage_dump(
         **rich_kwargs,
     )
 
-    if all_entries:
-        entries_to_dump = None
-        entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
+    # if all_entries:
+    #     entries_to_dump = None
+    #     entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
 
-    else:
-        entities_to_dump = set()
-        if nodes:
-            entries_to_dump["nodes"] = nodes
-            entities_to_dump.extend({type(node) for node in nodes})
+    # else:
+    #     entities_to_dump = set()
+    #     if nodes:
+    #         entries_to_dump["nodes"] = nodes
+    #         entities_to_dump.extend({type(node) for node in nodes})
 
-        if codes:
-            entries_to_dump["codes"] = codes
-            entities_to_dump.add(orm.Code)
+    #     if codes:
+    #         entries_to_dump["codes"] = codes
+    #         entities_to_dump.add(orm.Code)
 
-        if computers:
-            entries_to_dump["computers"] = computers
-            entities_to_dump.add(orm.Computer)
+    #     if computers:
+    #         entries_to_dump["computers"] = computers
+    #         entities_to_dump.add(orm.Computer)
 
-        if groups:
-            entries_to_dump["groups"] = groups
-            entities_to_dump.add(orm.Group)
+    #     if groups:
+    #         entries_to_dump["groups"] = groups
+    #         entities_to_dump.add(orm.Group)
 
-    collection_kwargs["entities_to_dump"] = entities_to_dump
+    # collection_kwargs["entities_to_dump"] = entites_to_dump
+
+    collection_kwargs["entities_to_dump"] = DEFAULT_ENTITIES_TO_DUMP
 
     # === Dump the data that is not associated with any group ===
-    if no_organize_by_groups:
-        no_group_path = path
-    else:
+    if organize_by_groups:
         no_group_path = path / "no_groups"
+    else:
+        no_group_path = path
 
     collection_dumper = CollectionDumper(
         dump_parent_path=path,
@@ -443,7 +445,6 @@ def storage_dump(
     # dumper_pretty_print(collection_dumper)
 
     if dump_processes:
-        # if collection_dumper._should_dump_processes():
         if collection_dumper._should_dump_processes():
             echo.echo_report(
                 f"Dumping processes not in any group for profile `{profile.name}`..."
@@ -461,17 +462,17 @@ def storage_dump(
 
     # === Dump data per-group if Groups exist in profile or are selected ===
 
-    if groups is None:
-        groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
+    # if groups is None:
+    groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
 
     if len(groups) > 0:
         for group in groups:
 
-            if no_organize_by_groups:
-                group_path = path
-            else:
+            if organize_by_groups:
                 group_subdir = Path(*group.type_string.split("."))
                 group_path = path / "groups" / group_subdir / group.label
+            else:
+                group_path = path
 
             collection_dumper = CollectionDumper(
                 dump_parent_path=path,

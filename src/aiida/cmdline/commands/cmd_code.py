@@ -251,9 +251,6 @@ def export(code, output_file, overwrite, sort):
     if output_file is None:
         output_file = pathlib.Path(f'{code.full_label}.{fileformat}')
 
-    elif not str(output_file).endswith('.yml') and not str(output_file).endswith('.yaml'):
-        output_file = pathlib.Path(f'{output_file!s}.{fileformat}')
-
     try:
         # In principle, output file validation is also done in the `data_export` function. However, the
         # `validate_output_filename` function is applied here, as well, as it is also used in the `Computer` export, and

@@ -266,13 +266,16 @@ def export(code, output_file, overwrite, sort):
     except (FileExistsError, IsADirectoryError) as exception:
         raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
 
-    data_export(
-        node=code,
-        output_fname=output_file,
-        fileformat=fileformat,
-        other_args=other_args,
-        overwrite=overwrite,
-    )
+    try:
+        data_export(
+            node=code,
+            output_fname=output_file,
+            fileformat=fileformat,
+            other_args=other_args,
+            overwrite=overwrite,
+        )
+    except Exception as exception:
+        echo.echo_critical(f'Error in the `data_export` function: {exception}')
 
     echo.echo_success(f'Code<{code.pk}> {code.label} exported to file `{output_file}`.')
 

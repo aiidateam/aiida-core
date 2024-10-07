@@ -90,7 +90,7 @@ __all__ = (
     'OLDER_THAN',
     'ORDER_BY',
     'ORDER_DIRECTION',
-    'ORGANIZE_BY_GROUPS',
+    'NO_ORGANIZE_BY_GROUPS',
     'OVERWRITE',
     'PATH',
     'PAST_DAYS',
@@ -810,22 +810,24 @@ DUMP_DATA = OverridableOption(
     '--dump-data',
     is_flag=True,
     default=False,
+    type=bool,
     show_default=True,
     help='Dump also data nodes in a dedicated directory.',
 )
 
 CALCULATIONS_HIDDEN = OverridableOption(
-    '--calculations-hidden',
+    '--calculations-hidden/--calculations-non-hidden',
     is_flag=True,
     default=True,
+    type=bool,
     show_default=True,
     help='Dump all `orm.CalculationNode`s in the hidden directory and link to there.',
 )
 
 DATA_HIDDEN = OverridableOption(
-    '--data-hidden',
+    '--data-hidden/--data-non-hidden',
     is_flag=True,
-    default=False,
+    default=True,
     show_default=True,
     help='Dump all `orm.Data` in the hidden directory and link to there.',
 )
@@ -864,17 +866,19 @@ RICH_DUMP_ALL = OverridableOption(
     default=True,
     is_flag=True,
     type=bool,
+    show_default=True,
     help=(
         'By default, only nodes for which dumping options are given are dumped for rich dump. '
         'Enable this to dump _all_ nodes, using the default export mappings and file types.'
     ),
 )
 
-ORGANIZE_BY_GROUPS = OverridableOption(
-    '--organize-by-groups',
-    default=True,
+NO_ORGANIZE_BY_GROUPS = OverridableOption(
+    '--no-organize-by-groups',
+    default=False,
     is_flag=True,
     type=bool,
+    show_default=True,
     help='If the collection of nodes to be dumped is organized in groups, reproduce its hierarchy.',
 )
 

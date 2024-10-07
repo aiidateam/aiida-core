@@ -39,13 +39,11 @@ class ProcessDumper:
         dump_parent_path: Path = Path.cwd(),
         overwrite: bool = False,
         flat: bool = False,
-        calculations_hidden: bool = False,
+        calculations_hidden: bool = True,
         include_inputs: bool = True,
         include_outputs: bool = False,
         include_attributes: bool = True,
         include_extras: bool = True,
-        also_raw: bool = False,
-        also_rich: bool = False,
         rich_options: str = '',
         rich_config_file: FileOrUrl | None = None,
         rich_dump_all: bool = True,
@@ -61,8 +59,6 @@ class ProcessDumper:
         self.include_outputs = include_outputs
         self.include_attributes = include_attributes
         self.include_extras = include_extras
-        self.also_raw = also_raw
-        self.also_rich = also_rich
         self.rich_options = rich_options
         self.rich_config_file = rich_config_file
         self.rich_dump_all = rich_dump_all
@@ -321,7 +317,7 @@ class ProcessDumper:
                 output_path.resolve() / io_dump_mapping.retrieved
             )
 
-        if self.also_raw:
+        if self.data_dumper.also_raw:
             # TODO: Replace with attached self.data_dumper attribute
             self.data_dumper.dump_raw(data_node=calculation_node, output_path=output_path)
 
@@ -334,14 +330,14 @@ class ProcessDumper:
 
             self._dump_calculation_io_files(parent_path=output_path / io_dump_mapping.inputs, link_triples=input_links)
 
-            if self.also_raw:
+            if self.data_dumper.also_raw:
                 # Always dump the `raw` data inside the calculation directories
                 # I don't see a reason why one would want all the node attribute files in a centralized location
                 self._dump_calculation_io_files_raw(
                     output_path=output_path / io_dump_mapping.inputs, link_triples=input_links
                 )
 
-            if self.also_rich:
+            if self.data_dumper.also_rich:
                 if not self.data_dumper.data_hidden:
                     rich_data_output_path = output_path / io_dump_mapping.inputs
                     # Only dump the rich data output files in the process directories if data_hidden is False
@@ -361,13 +357,13 @@ class ProcessDumper:
                 link_triples=output_links,
             )
 
-            if self.also_raw:
+            if self.data_dumper.also_raw:
                 self._dump_calculation_io_files_raw(
                     output_path=output_path / io_dump_mapping.outputs,
                     link_triples=output_links,
                 )
 
-            if self.also_rich:
+            if self.data_dumper.also_rich:
                 self._dump_calculation_io_files_rich(
                     output_path=output_path / io_dump_mapping.outputs,
                     link_triples=output_links,

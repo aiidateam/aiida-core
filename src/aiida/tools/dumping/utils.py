@@ -171,3 +171,13 @@ def dumper_pretty_print(dumper_instance, also_private: bool = True, also_dunder:
 
 #         if user_input != 'y':
 #             sys.exit()
+
+def sanitize_file_extension(filename: str | Path):
+    if isinstance(filename, Path):
+        filename = str(filename)
+    if filename.endswith('.mpl_pdf'):
+        filename = filename.replace('.mpl_pdf', '.pdf')
+    if filename.endswith('.mpl_png'):
+        filename = filename.replace('.mpl_png', '.png')
+
+    return Path(filename)

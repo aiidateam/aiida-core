@@ -21,6 +21,7 @@ from aiida import orm
 from aiida.tools.dumping.data import DataDumper
 from aiida.tools.dumping.processes import ProcessDumper
 from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING
+from aiida.tools.dumping.utils import sanitize_file_extension
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,8 @@ class CollectionDumper:
         should_dump_data: bool = False,
         calculations_hidden: bool = False,
         data_hidden: bool = False,
-        organize_by_groups: bool = True,
-        entities_to_dump: List | None = None,
+        no_organize_by_groups: bool = False,
+        entities_to_dump: set = {},
         group: orm.Group | None = None,
         process_dumper: ProcessDumper | None = None,
         data_dumper: DataDumper | None = None,
@@ -57,7 +58,7 @@ class CollectionDumper:
         self.should_dump_data = should_dump_data
         self.calculations_hidden = calculations_hidden
         self.data_hidden = data_hidden
-        self.organize_by_groups = organize_by_groups
+        self.no_organize_by_groups = no_organize_by_groups
         self.entities_to_dump = entities_to_dump
         self.process_dumper = process_dumper
         self.data_dumper = data_dumper
@@ -189,7 +190,11 @@ class CollectionDumper:
 
     def dump_processes(self):
         # ? Here, these could be all kinds of entities that could be grouped in AiiDA
-        nodes = self.get_collection_nodes()
+        if len(self.entities_to_dump) > 0:
+            pass
+            # nodes = self.entities_to_dump
+        else:
+            nodes = self.get_collection_nodes()
         workflows = [node for node in nodes if isinstance(node, orm.WorkflowNode)]
 
         # Also need to obtain sub-calculations that were called by workflows of the group
@@ -216,38 +221,45 @@ class CollectionDumper:
                 self.process_dumper.dump(process_node=workflow, output_path=workflow_path)
 
     def dump_core_data_rich(self):
-        # TODO: Also here just obtain the nodes first, and then make the implementation the same if groups or no groups
-        # present
         nodes = self.get_collection_nodes()
         nodes = [node for node in nodes if isinstance(node, (orm.Data, orm.Computer))]
         nodes = [node for node in nodes if node.entry_point.name.startswith('core')]
+        data_dumper = self.data_dumper
 
         for data_node in nodes:
-            if self.data_hidden:
-                data_dump_path = self.hidden_aiida_path
-            else:
-                data_dump_path = self.output_path
-            data_dump_path = data_dump_path / 'data' / data_node.__class__.__name__.lower()
-
-            # print(f'DATA_DUMP_PATH: {data_dump_path}')
-
             try:
-                # Must pass them implicitly here, rather than, e.g. `data_node=data_node`
-                # Otherwise `singledispatch` raises: `IndexError: tuple index out of range`
-
                 node_entry_point_name = data_node.entry_point.name
-                # exporter = rich_options_dict[node_entry_point_name]['exporter']
-                fileformat = self.data_dumper.rich_options_dict[node_entry_point_name]['export_format']
-                output_fname = self.data_dumper.generate_output_fname_rich(data_node=data_node, fileformat=fileformat)
-                output_fname = output_fname.replace('__', '_')
-                self.data_dumper.dump_rich_core(data_node, data_dump_path, output_fname)
+
+                # Get the file format for the data node
+                fileformat = data_dumper.rich_options_dict[node_entry_point_name]['export_format']
+
+                # Generate a nice filename and sanitize it
+                nice_output_path = self.output_path / 'data' / data_node.__class__.__name__.lower()
+                nice_fname = data_dumper.generate_output_fname_rich(data_node=data_node, fileformat=fileformat).replace(
+                    '__', '_'
+                )
+                nice_fname = sanitize_file_extension(nice_fname)
+
+                if data_dumper.data_hidden:
+                    # Define paths for hidden dump and linking
+                    hidden_dump_path = self.hidden_aiida_path / 'data' / data_node.__class__.__name__.lower()
+                    uuid_fname = sanitize_file_extension(f'{data_node.uuid}.{fileformat}')
+
+                    # Dump the data in the hidden directory
+                    data_dumper.dump_rich_core(data_node, hidden_dump_path, uuid_fname)
+
+                    # Link the hidden file to the expected output path
+                    (nice_output_path / nice_fname).parent.mkdir(exist_ok=True, parents=True)
+                    os.symlink(hidden_dump_path / uuid_fname, nice_output_path / nice_fname)
+
+                else:
+                    # Dump the data in the non-hidden directory
+                    data_dumper.dump_rich_core(data_node, nice_output_path, nice_fname)
+
             except TypeError:
-                # This is the case if no exporter implemented for a given data_node type
-                # Thus the call to exporter() results in `TypeError: 'NoneType' object is not callable`
-                # raise
+                # Handle case when no exporter is implemented for a given data_node type
                 pass
             except Exception:
-                print(f'data_dumper.dump(data_node=data_node, output_path=data_dump_path{data_node, data_dump_path}')
                 raise
 
     def dump_plugin_data(self):

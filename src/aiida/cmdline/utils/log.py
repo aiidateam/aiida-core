@@ -4,6 +4,8 @@ import logging
 
 import click
 
+from aiida.common.style import ColorConfig
+
 from .echo import COLORS
 
 
@@ -35,7 +37,7 @@ class CliHandler(logging.Handler):
 
         try:
             msg = self.format(record)
-            click.echo(msg, err=err, nl=nl)
+            click.echo(msg, err=err, nl=nl, color=ColorConfig.get_color())
         except Exception:
             self.handleError(record)
 
@@ -59,5 +61,4 @@ class CliFormatter(logging.Formatter):
 
         if prefix:
             return f'{click.style(record.levelname.capitalize(), fg=fg, bold=True)}: {formatted}'
-
         return formatted

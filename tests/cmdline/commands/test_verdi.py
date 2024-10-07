@@ -65,3 +65,22 @@ def test_verbosity_options():
     leaf_commands = []
     ctx = click.Context(cmd_verdi.verdi)
     recursively_check_leaf_commands(ctx, cmd_verdi.verdi, leaf_commands)
+
+
+def test_color_options():
+    """Recursively find all leaf commands of ``verdi`` and ensure they have the ``--color`` option."""
+
+    def recursively_check_leaf_commands(ctx, command, leaf_commands):
+        """Recursively return the leaf commands of the given command."""
+        try:
+            for subcommand in command.commands:
+                # We need to fetch the subcommand through the ``get_command``, because that is what the ``verdi``
+                # command does when a subcommand is invoked on the command line.
+                recursively_check_leaf_commands(ctx, command.get_command(ctx, subcommand), leaf_commands)
+        except AttributeError:
+            # There are not subcommands so this is a leaf command, verify it has the color option
+            assert 'color' in [p.name for p in command.params], f'`{command.name} does not have color option'
+
+    leaf_commands = []
+    ctx = click.Context(cmd_verdi.verdi)
+    recursively_check_leaf_commands(ctx, cmd_verdi.verdi, leaf_commands)

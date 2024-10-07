@@ -11,8 +11,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Union
+
+import click
 
 from aiida.common import timezone
+from aiida.common.style import ColorConfig, ProcessStateStyle
 from aiida.common.utils import str_timedelta
 
 
@@ -34,27 +38,40 @@ def format_state(process_state: str, paused: bool | None = None, exit_status: in
     :return: String representation of the process' state.
     """
     if process_state in ['excepted']:
-        symbol = '\u2a2f'
+        symbol = ProcessStateStyle.SYMBOL_EXPECTED
     elif process_state in ['killed']:
-        symbol = '\u2620'
+        symbol = ProcessStateStyle.SYMBOL_KILLED
     elif process_state in ['created', 'finished']:
-        symbol = '\u23f9'
+        symbol = ProcessStateStyle.SYMBOL_CREATED_FINISHED
     elif process_state in ['running', 'waiting']:
         if paused is True:
-            symbol = '\u23f8'
+            symbol = ProcessStateStyle.SYMBOL_RUNNING_WAITING_PAUSED
         else:
-            symbol = '\u23f5'
+            symbol = ProcessStateStyle.SYMBOL_RUNNING_WAITING
     else:
         # Unknown process state, use invisible separator
         symbol = '\u00b7'  # middle dot
 
+    output = f'{symbol} {format_process_state(process_state)}'
     if process_state == 'finished' and exit_status is not None:
-        return f'{symbol} {format_process_state(process_state)} [{exit_status}]'
+        output += f' [{exit_status}]'
+    if ColorConfig.get_color():
+        if process_state in ['created', 'running']:
+            color = ProcessStateStyle.COLOR_CREATED_RUNNING
+        elif process_state in ['waiting']:
+            color = ProcessStateStyle.COLOR_WAITING
+        elif process_state in ['finished']:
+            color = ProcessStateStyle.COLOR_FINISHED
+        elif process_state in ['killed', 'excepted']:
+            color = ProcessStateStyle.COLOR_KILLED_EXPECTED
+        else:
+            color = None
+        return click.style(output, color)
+    else:
+        return output
 
-    return f'{symbol} {format_process_state(process_state)}'
 
-
-def format_process_state(process_state: str) -> str:
+def format_process_state(process_state: Union[str, None]) -> str:
     """Return a string formatted representation of the given process state.
 
     :param process_state: The process state.

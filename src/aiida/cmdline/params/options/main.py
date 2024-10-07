@@ -9,6 +9,7 @@
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 
 import pathlib
+from typing import Union
 
 import click
 
@@ -108,6 +109,7 @@ __all__ = (
     'USER_INSTITUTION',
     'USER_LAST_NAME',
     'VERBOSITY',
+    'COLOR',
     'VISUALIZATION_FORMAT',
     'WAIT',
     'WITH_ELEMENTS',
@@ -176,7 +178,7 @@ def graph_traversal_rules(rules):
     return decorator
 
 
-def set_log_level(ctx, _param, value):
+def set_log_level(ctx, _param, value) -> str:
     """Configure the logging for the CLI command being executed.
 
     Note that we cannot use the most obvious approach of directly setting the level on the various loggers. The reason
@@ -228,6 +230,31 @@ VERBOSITY = OverridableOption(
     callback=set_log_level,
     expose_value=False,  # Ensures that the option is not actually passed to the command, because it doesn't need it
     help='Set the verbosity of the output.',
+)
+
+
+def set_color_option(ctx: click.Context, _, value: Union[bool, None]) -> bool:
+    """Sets the coloring for the CLI command outputs from given color option and returns if.
+
+    :param ctx: The :class:`click.Command` that gives further information how the command was invoked.
+    :param value: The color option value given over the CLI.
+    """
+
+    from aiida.common.style import ColorConfig  # We skip this when we are in a tab-completion context.
+
+    if value is None and ctx.resilient_parsing:
+        return None
+
+    ColorConfig.set_color(value)
+    return ColorConfig.get_color()
+
+
+COLOR = OverridableOption(
+    '--color/--no-color',
+    default=None,
+    callback=set_color_option,
+    expose_value=False,  # Ensures that the option is not actually passed to the command, because it doesn't need it
+    help='Set if the output should be colorized.',
 )
 
 PROFILE = OverridableOption(

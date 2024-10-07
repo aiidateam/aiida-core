@@ -19,6 +19,7 @@ working directory on the selected computer and the executable will be run there.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import pathlib
 import typing as t
@@ -182,13 +183,13 @@ class PortableCode(Code):
 
     def _prepare_yaml(self, *args, **kwargs):
         """Export code to a YAML file."""
-        target_path = pathlib.Path().cwd() / f'portablecode-{self.pk}'
-        setattr(self, 'filepath_files', str(target_path))
-        self.base.repository.copy_tree(target=target_path)
-        _LOGGER.warning(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target_path}`.')
-
-        return super()._prepare_yaml(*args, **kwargs)
-
-    def _prepare_yml(self, *args, **kwargs):
-        """Also allow for export as .yml"""
-        return self._prepare_yaml(*args, **kwargs)
+        try:
+            target_path = pathlib.Path().cwd() / f'portablecode-{self.pk}'
+            setattr(self, 'filepath_files', str(target_path))
+            self.base.repository.copy_tree(target=target_path)
+            _LOGGER.warning(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target_path}`.')
+            result = super()._prepare_yaml(*args, **kwargs)
+        finally:
+            with contextlib.suppress(AttributeError):
+                delattr(self, 'filepath_files')
+        return result

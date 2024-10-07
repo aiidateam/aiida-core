@@ -461,10 +461,13 @@ def test_code_setup_local_duplicate_full_label_interactive(run_cli_command, non_
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command):
+def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command, tmp_path):
     """Test ``verdi code setup`` for a local code in non-interactive mode specifying an existing full label."""
     label = 'some-label'
-    code = PortableCode(filepath_executable='bash', filepath_files=pathlib.Path('/bin/'))
+    tmp_bin_dir = tmp_path / 'bin'
+    tmp_bin_dir.mkdir()
+    (tmp_bin_dir / 'bash').touch()
+    code = PortableCode(filepath_executable='bash', filepath_files=tmp_bin_dir)
     code.label = label
     code.base.repository.put_object_from_filelike(io.BytesIO(b''), 'bash')
     code.store()
@@ -477,7 +480,7 @@ def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command):
         '-P',
         'core.arithmetic.add',
         '--store-in-db',
-        '--code-folder=/bin',
+        f'--code-folder={tmp_bin_dir}',
         '--code-rel-path=bash',
         '--label',
         label,

@@ -246,14 +246,13 @@ def export(code, output_file, overwrite, sort):
 
     other_args = {'sort': sort}
 
-    if output_file is not None:
-        if not str(output_file).endswith('.yml') and not str(output_file).endswith('.yaml'):
-            format_str = 'Given fileformat not supported. Only .yml and .yaml supported for now.'
-            raise click.BadParameter(format_str, param_hint='OUTPUT_FILE')
-        fileformat = output_file.suffix[1:]
-    else:
-        fileformat = 'yaml'
+    fileformat = 'yaml'
+
+    if output_file is None:
         output_file = pathlib.Path(f'{code.full_label}.{fileformat}')
+
+    elif not str(output_file).endswith('.yml') and not str(output_file).endswith('.yaml'):
+        output_file = pathlib.Path(f'{output_file!s}.{fileformat}')
 
     try:
         # In principle, output file validation is also done in the `data_export` function. However, the

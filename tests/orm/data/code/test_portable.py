@@ -98,17 +98,19 @@ def test_get_execname(tmp_path):
         assert code.get_execname() == 'bash'
 
 
-def test_portablecode_repo_dump(tmp_path, chdir_tmp_path):
+def test_portablecode_extra_files(tmp_path, chdir_tmp_path):
     """Test that the node repository contents of an orm.PortableCode are dumped upon YAML export."""
     filepath_files = tmp_path / 'tmp'
     filepath_files.mkdir()
-    (filepath_files / 'bash').touch()
+    # (filepath_files / 'bash').touch()
+    (filepath_files / 'bash').write_text('bash')
     (filepath_files / 'subdir').mkdir()
-    (filepath_files / 'subdir/test').touch()
+    (filepath_files / 'subdir/test').write_text('test')
     code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=filepath_files)
     code.store()
-    code._prepare_yaml()
-    repo_dump_path = tmp_path / f'portablecode-{code.pk}'
-    assert repo_dump_path.is_dir()
-    assert (repo_dump_path / 'bash').is_file()
-    assert (repo_dump_path / 'subdir/test').is_file()
+    extra_files = code._prepare_yaml()[1]
+    repo_dump_path = tmp_path / code.label
+    extra_files_keys = sorted([str(repo_dump_path / _) for _ in ('subdir/test', 'bash')])
+    assert sorted(extra_files.keys()) == extra_files_keys
+    assert extra_files[str(repo_dump_path / 'bash')] == 'bash'.encode('utf-8')
+    assert extra_files[str(repo_dump_path / 'subdir/test')] == 'test'.encode('utf-8')

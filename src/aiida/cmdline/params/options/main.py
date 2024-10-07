@@ -87,6 +87,7 @@ __all__ = (
     'NODE',
     'NODES',
     'NON_INTERACTIVE',
+    'ONLY_TOP_LEVEL_WORKFLOWS',
     'OLDER_THAN',
     'ORDER_BY',
     'ORDER_DIRECTION',
@@ -806,7 +807,7 @@ DUMP_PROCESSES = OverridableOption(
 )
 
 DUMP_DATA = OverridableOption(
-    '--dump-data',
+    '--dump-data/--no-dump-data',
     is_flag=True,
     default=False,
     type=bool,
@@ -860,16 +861,17 @@ RICH_CONFIG_FILE = OverridableOption(
     type=types.FileOrUrl(),
     help='Options for rich data dumping.',
 )
+
 RICH_DUMP_ALL = OverridableOption(
-    '--rich-dump-all',
+    '--rich-dump-all/--no-rich-dump-all',
     default=True,
     is_flag=True,
     type=bool,
     show_default=True,
-    help=(
-        'By default, only nodes for which dumping options are given are dumped for rich dump. '
-        'Enable this to dump _all_ nodes, using the default export mappings and file types.'
-    ),
+    # help=(
+    #     'By default, only nodes for which dumping options are given are dumped for rich dump. '
+    #     'Enable this to dump _all_ nodes, using the default export mappings and file types.'
+    # ),
 )
 
 ORGANIZE_BY_GROUPS = OverridableOption(
@@ -914,5 +916,14 @@ FLAT = OverridableOption(
     '--flat',
     is_flag=True,
     default=False,
-    help='Dump files in a flat directory for every step of the workflow.',
+    help='Dump files in a flat directory for every step of a workflow.',
+)
+
+ONLY_TOP_LEVEL_WORKFLOWS = OverridableOption(
+    '--only-top-level-workflows/--not-only-top-level-workflows',
+    is_flag=True,
+    default=True,
+    type=bool,
+    show_default=True,
+    help='Dump only the top-level workflows in their own dedicated directories.',
 )

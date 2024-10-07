@@ -105,7 +105,8 @@ def validate_rich_options(rich_options, rich_config_file):
 
 
 @staticmethod
-def dumper_pretty_print(dumper_instance, also_private: bool = True, also_dunder: bool = False):
+def dumper_pretty_print(dumper_instance, include_private_and_dunder: bool = False):
+
     console = Console()
     table = Table(title=f'Attributes and Methods of {dumper_instance.__class__.__name__}')
 
@@ -120,26 +121,15 @@ def dumper_pretty_print(dumper_instance, also_private: bool = True, also_dunder:
     # Iterate over the class attributes and methods
     for attr_name in dir(dumper_instance):
         # Exclude private attributes and dunder methods
-        if not also_private and not also_dunder:
-            if not (attr_name.startswith('_') or attr_name.endswith('_')):
-                attr_value = getattr(dumper_instance, attr_name)
-                entry_type = 'Attribute' if not callable(attr_value) else 'Method'
-                entries.append((attr_name, entry_type, str(attr_value)))
+        attr_value = getattr(dumper_instance, attr_name)
+        entry_type = 'Attribute' if not callable(attr_value) else 'Method'
 
-        if not also_private:
-            if attr_name.startswith('__'):
-                attr_value = getattr(dumper_instance, attr_name)
-                entry_type = 'Attribute' if not callable(attr_value) else 'Method'
+        if attr_name.startswith('_'):
+            if include_private_and_dunder:
                 entries.append((attr_name, entry_type, str(attr_value)))
-
-        if not also_dunder:
-            if not attr_name.startswith('__'):
-                attr_value = getattr(dumper_instance, attr_name)
-                entry_type = 'Attribute' if not callable(attr_value) else 'Method'
-                entries.append((attr_name, entry_type, str(attr_value)))
+            else:
+                pass
         else:
-            attr_value = getattr(dumper_instance, attr_name)
-            entry_type = 'Attribute' if not callable(attr_value) else 'Method'
             entries.append((attr_name, entry_type, str(attr_value)))
 
     # Sort entries: attributes first, then methods

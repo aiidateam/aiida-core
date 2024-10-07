@@ -258,14 +258,15 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 # ? Provide some mechanism to allow for both, e.g. if no argument is provided, all groups are dumped
 @verdi_storage.command('dump')
 @options.PATH()
+@options.OVERWRITE()
 # @options.ALL()
 # @options.NODES()
 # @options.CODES()
 # @options.COMPUTERS()
 # @options.GROUPS()
-@options.OVERWRITE()
 @options.ORGANIZE_BY_GROUPS()
 @options.DUMP_PROCESSES()
+@options.ONLY_TOP_LEVEL_WORKFLOWS()
 @options.FLAT()
 @options.DUMP_DATA()
 @options.CALCULATIONS_HIDDEN()
@@ -282,14 +283,15 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @options.DRY_RUN()
 def storage_dump(
     path,
-    # all_entries,
     overwrite,
+    # all_entries,
     # nodes,
-    # groups,
     # codes,
     # computers,
+    # groups,
     organize_by_groups,
     dump_processes,
+    only_top_level_workflows,
     flat,
     dump_data,
     calculations_hidden,
@@ -311,6 +313,7 @@ def storage_dump(
     from aiida.tools.dumping.collection import DEFAULT_ENTITIES_TO_DUMP
     from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING
     from aiida.tools.dumping.utils import validate_make_dump_path
+    from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING, RichParser
 
     profile = get_manager().get_profile()
     SAFEGUARD_FILE = ".verdi_storage_dump"  # noqa: N806
@@ -318,6 +321,7 @@ def storage_dump(
     if not str(path).endswith(profile.name):
         path /= profile.name
 
+    # TODO: Implement proper dry-run feature
     dry_run_message = (
         f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\n"
     )
@@ -367,12 +371,13 @@ def storage_dump(
     collection_kwargs = {
         "should_dump_processes": dump_processes,
         "should_dump_data": dump_data,
-        "no_organize_by_groups": organize_by_groups,
+        # "organize_by_groups": organize_by_groups,
+        "only_top_level_workflows": only_top_level_workflows
     }
 
-    rich_kwargs = {
-        "rich_options": rich_options,
-        "rich_config_file": rich_config_file,
+    richparser_kwargs = {
+        # "rich_options": rich_options,
+        # "rich_config_file": rich_config_file,
         "rich_dump_all": rich_dump_all,
     }
 
@@ -381,14 +386,30 @@ def storage_dump(
         "data_hidden": data_hidden,
     }
 
-    # print(f"hiding_kwargs: {hiding_kwargs}")
+    rich_parser = RichParser(**richparser_kwargs)
+
+
+    if rich_options is not None:
+        rich_options_dict = rich_parser.from_cli(rich_options=rich_options)
+
+    elif rich_config_file is not None:
+        rich_options_dict = rich_parser.from_config(rich_options=rich_config_file)
+
+    else:
+        rich_options_dict = DEFAULT_CORE_EXPORT_MAPPING
+
+    from rich.pretty import pprint
+    print(f'rich_options: {rich_options}')
+    print('rich_options_dict')
+    pprint(rich_options_dict)
+
+    # raise SystemExit
 
     data_dumper = DataDumper(
         dump_parent_path=path,
         overwrite=overwrite,
-        rich_options_dict=DEFAULT_CORE_EXPORT_MAPPING,
+        rich_options_dict=rich_options_dict,
         **datadumper_kwargs,
-        **rich_kwargs,
     )
 
     process_dumper = ProcessDumper(
@@ -396,7 +417,6 @@ def storage_dump(
         overwrite=overwrite,
         data_dumper=data_dumper,
         **processdumper_kwargs,
-        **rich_kwargs,
     )
 
     # if all_entries:
@@ -426,23 +446,24 @@ def storage_dump(
     collection_kwargs["entities_to_dump"] = DEFAULT_ENTITIES_TO_DUMP
 
     # === Dump the data that is not associated with any group ===
-    if organize_by_groups:
-        no_group_path = path / "no_groups"
-    else:
-        no_group_path = path
+    # if organize_by_groups:
+    #     no_group_path = path / "no_groups"
+    # else:
+    #     no_group_path = path
 
     collection_dumper = CollectionDumper(
         dump_parent_path=path,
-        output_path=no_group_path,
+        output_path=path,
+        overwrite=overwrite,
         # TODO: Still keep here or use the ones from the ProcessDumper?
         **collection_kwargs,
-        **rich_kwargs,
+        **richparser_kwargs,
         **hiding_kwargs,
         data_dumper=data_dumper,
         process_dumper=process_dumper,
     )
     collection_dumper.create_entity_counter()
-    # dumper_pretty_print(collection_dumper)
+    # dumper_pretty_print(collection_dumper, include_private_and_dunder=False)
 
     if dump_processes:
         if collection_dumper._should_dump_processes():
@@ -457,7 +478,7 @@ def storage_dump(
             )
         echo.echo_report(f"Dumping data not in any group for profile {profile.name}...")
 
-        collection_dumper.dump_core_data_rich()
+        collection_dumper.dump_data_rich()
         # collection_dumper.dump_plugin_data()
 
     # === Dump data per-group if Groups exist in profile or are selected ===
@@ -480,7 +501,7 @@ def storage_dump(
                 overwrite=overwrite,
                 group=group,
                 **collection_kwargs,
-                **rich_kwargs,
+                **richparser_kwargs,
                 **hiding_kwargs,
                 process_dumper=process_dumper,
                 data_dumper=data_dumper,
@@ -497,5 +518,5 @@ def storage_dump(
                     collection_dumper.dump_processes()
             if dump_data:
                 echo.echo_report(f"Dumping data for group `{group.label}`...")
-                collection_dumper.dump_core_data_rich()
+                collection_dumper.dump_data_rich()
                 # collection_dumper.dump_plugin_data()

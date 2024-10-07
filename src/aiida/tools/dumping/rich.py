@@ -40,111 +40,38 @@ DEFAULT_CORE_EXPORT_MAPPING = {
 }
 
 
-# Dynamically generated entry_points via
-# entry_points_from_importlib = [
-#     EntryPoint(
-#         name='quantumespresso.force_constants',
-#         value='aiida_quantumespresso.data.force_constants:ForceConstantsData',
-#         group='aiida.data',
-#     ),
-#     EntryPoint(
-#         name='quantumespresso.hubbard_structure',
-#         value='aiida_quantumespresso.data.hubbard_structure:HubbardStructureData',
-#         group='aiida.data',
-#     ),
-#     EntryPoint(name='core.array', value='aiida.orm.nodes.data.array.array:ArrayData', group='aiida.data'),
-#     EntryPoint(name='core.array.bands', value='aiida.orm.nodes.data.array.bands:BandsData', group='aiida.data'),
-#     EntryPoint(name='core.array.kpoints', value='aiida.orm.nodes.data.array.kpoints:KpointsData', group='aiida.data'),
-#     EntryPoint(
-#         name='core.array.projection', value='aiida.orm.nodes.data.array.projection:ProjectionData', group='aiida.data'
-#     ),
-#     EntryPoint(
-#         name='core.array.trajectory', value='aiida.orm.nodes.data.array.trajectory:TrajectoryData', group='aiida.data'
-#     ),
-#     EntryPoint(name='core.array.xy', value='aiida.orm.nodes.data.array.xy:XyData', group='aiida.data'),
-#     EntryPoint(name='core.base', value='aiida.orm.nodes.data:BaseType', group='aiida.data'),
-#     EntryPoint(name='core.bool', value='aiida.orm.nodes.data.bool:Bool', group='aiida.data'),
-#     EntryPoint(name='core.cif', value='aiida.orm.nodes.data.cif:CifData', group='aiida.data'),
-#     EntryPoint(name='core.code', value='aiida.orm.nodes.data.code.legacy:Code', group='aiida.data'),
-#     EntryPoint(
-#         name='core.code.containerized',
-#         value='aiida.orm.nodes.data.code.containerized:ContainerizedCode',
-#         group='aiida.data',
-#     ),
-#     EntryPoint(
-#         name='core.code.installed', value='aiida.orm.nodes.data.code.installed:InstalledCode', group='aiida.data'
-#     ),
-#     EntryPoint(name='core.code.portable', value='aiida.orm.nodes.data.code.portable:PortableCode', group='aiida.data'),
-#     EntryPoint(name='core.dict', value='aiida.orm.nodes.data.dict:Dict', group='aiida.data'),
-#     EntryPoint(name='core.enum', value='aiida.orm.nodes.data.enum:EnumData', group='aiida.data'),
-#     EntryPoint(name='core.float', value='aiida.orm.nodes.data.float:Float', group='aiida.data'),
-#     EntryPoint(name='core.folder', value='aiida.orm.nodes.data.folder:FolderData', group='aiida.data'),
-#     EntryPoint(name='core.int', value='aiida.orm.nodes.data.int:Int', group='aiida.data'),
-#     EntryPoint(name='core.jsonable', value='aiida.orm.nodes.data.jsonable:JsonableData', group='aiida.data'),
-#     EntryPoint(name='core.list', value='aiida.orm.nodes.data.list:List', group='aiida.data'),
-#     EntryPoint(name='core.numeric', value='aiida.orm.nodes.data.numeric:NumericType', group='aiida.data'),
-#     EntryPoint(name='core.orbital', value='aiida.orm.nodes.data.orbital:OrbitalData', group='aiida.data'),
-#     EntryPoint(name='core.remote', value='aiida.orm.nodes.data.remote.base:RemoteData', group='aiida.data'),
-#     EntryPoint(
-#         name='core.remote.stash', value='aiida.orm.nodes.data.remote.stash.base:RemoteStashData', group='aiida.data'
-#     ),
-#     EntryPoint(
-#         name='core.remote.stash.folder',
-#         value='aiida.orm.nodes.data.remote.stash.folder:RemoteStashFolderData',
-#         group='aiida.data',
-#     ),
-#     EntryPoint(name='core.singlefile', value='aiida.orm.nodes.data.singlefile:SinglefileData', group='aiida.data'),
-#     EntryPoint(name='core.str', value='aiida.orm.nodes.data.str:Str', group='aiida.data'),
-#     EntryPoint(name='core.structure', value='aiida.orm.nodes.data.structure:StructureData', group='aiida.data'),
-#     EntryPoint(name='core.upf', value='aiida.orm.nodes.data.upf:UpfData', group='aiida.data'),
-#     EntryPoint(name='pseudo', value='aiida_pseudo.data.pseudo.pseudo:PseudoPotentialData', group='aiida.data'),
-#     EntryPoint(name='pseudo.jthxml', value='aiida_pseudo.data.pseudo.jthxml:JthXmlData', group='aiida.data'),
-#     EntryPoint(name='pseudo.psf', value='aiida_pseudo.data.pseudo.psf:PsfData', group='aiida.data'),
-#     EntryPoint(name='pseudo.psml', value='aiida_pseudo.data.pseudo.psml:PsmlData', group='aiida.data'),
-#     EntryPoint(name='pseudo.psp8', value='aiida_pseudo.data.pseudo.psp8:Psp8Data', group='aiida.data'),
-#     EntryPoint(name='pseudo.upf', value='aiida_pseudo.data.pseudo.upf:UpfData', group='aiida.data'),
-#     EntryPoint(name='pseudo.vps', value='aiida_pseudo.data.pseudo.vps:VpsData', group='aiida.data'),
-# ]
-
-
 class RichParser:
     # ? If someone provides options, should the rest be dumped as rich, or not
 
-    @classmethod
-    def from_cli(cls, rich_options):
-        options_dict = RichParser.parse_rich_options(rich_options)
-        return options_dict
+    def __init__(self, rich_dump_all):
+        self.rich_dump_all = rich_dump_all
 
-    # options_dict = self.
-    @staticmethod
-    def parse_rich_options(rich_options):
-        options_dict = {}
+    def from_cli(self, rich_options):
+        # If all, also non-specified data types should be exported, then set the default exporter dict here
+        if self.rich_dump_all:
+            options_dict = DEFAULT_CORE_EXPORT_MAPPING
+        else:
+            options_dict = {}
+
         if rich_options:
-            components = rich_options.split(':')
-            type_value = None
-            export_value = None
-            format_value = None
+            entries = rich_options.split(',')
+            # print(f'ENTRIES: {entries}')
+            for entry in entries:
+                entry_list = entry.split(':')
+                # options_dict
+                # This is the case if no exporter explicitly provided, then we set it to the default exporter
+                if len(entry_list[1]) == 0:
+                    entry_list[1] = DEFAULT_CORE_EXPORT_MAPPING[entry_list[0]]['exporter']
+                # This is the case if no fileformat explicitly provided, then we set it to the default fileformat
+                if len(entry_list[2]) == 0:
+                    entry_list[1] = DEFAULT_CORE_EXPORT_MAPPING[entry_list[0]]['export_format']
 
-            for component in components:
-                if '=' in component:
-                    key, value = component.split('=', 1)
-                    if key == 'type':
-                        type_value = value
-                    elif key == 'export':
-                        export_value = value
-                    elif key == 'format':
-                        format_value = value
-                elif type_value is None:
-                    type_value = component
-                elif export_value is None:
-                    # TODO: this is only for core data types
-                    export_value = DEFAULT_CORE_EXPORT_MAPPING[type_value]
-                elif format_value is None:
-                    # format_value = component
-                    format_value = DEFAULT_CORE_EXPORT_MAPPING[type_value]
+                if '=' in entry_list[2]:
+                    entry_list[2] = entry_list[2].split('=')[1]
 
-            if type_value:
-                options_dict[type_value] = (export_value, format_value)
+                # print(f'ENTRY_LIST: {entry_list}')
+
+                options_dict[entry_list[0]] = {'exporter': entry_list[1], 'export_format': entry_list[2]}
 
         return options_dict
 
@@ -153,11 +80,11 @@ class RichParser:
 
     def extend_by_entry_points(self): ...
 
-    def __init__(self, data_types, export_functions, export_formats):
-        # TODO: Rather than having three lists, could have a list of tuples of something
-        # TODO: Or a dictionary with the keys being the entry points, the values tuples of (class, function, format)
-        self.data_types = data_types
-        self.export_functions = export_functions
-        self.export_formats = export_formats
+    # def __init__(self, data_types, export_functions, export_formats):
+    #     # TODO: Rather than having three lists, could have a list of tuples of something
+    #     # TODO: Or a dictionary with the keys being the entry points, the values tuples of (class, function, format)
+    #     self.data_types = data_types
+    #     self.export_functions = export_functions
+    #     self.export_formats = export_formats
 
     # returns the different mappings?

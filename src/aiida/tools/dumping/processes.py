@@ -24,7 +24,6 @@ from aiida.cmdline.params.types import FileOrUrl
 from aiida.common import LinkType
 from aiida.common.exceptions import NotExistentAttributeError
 from aiida.tools.dumping.data import DataDumper
-from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING, RichParser
 from aiida.tools.dumping.utils import validate_make_dump_path
 
 logger = logging.getLogger(__name__)
@@ -436,15 +435,7 @@ class ProcessDumper:
         # Set up the rich parsing functions
 
         # Extend (at least the keys) by the dynamic entry points
-
-        if self.rich_options is not None:
-            rich_options_dict = RichParser.from_cli(rich_options=self.rich_options)
-
-        elif self.rich_config_file is not None:
-            rich_options_dict = RichParser.from_config(rich_options=self.rich_config_file)
-
-        else:
-            rich_options_dict = DEFAULT_CORE_EXPORT_MAPPING
+        rich_options_dict = self.data_dumper.rich_options_dict
 
         for link_triple in link_triples:
             link_label = link_triple.link_label
@@ -466,8 +457,8 @@ class ProcessDumper:
                         prefix=link_label, data_node=data_node, fileformat=fileformat
                     )
                     output_fname = output_fname.replace('__', '_')
-                except:
-                    raise
+                except KeyError:
+                    continue
 
                 # No exporter set
                 if exporter is None:
@@ -477,7 +468,7 @@ class ProcessDumper:
                 output_path.mkdir(parents=True, exist_ok=True)
 
                 # TODO: Here, if data_hidden is True, dump in hidden directory, else in output_path
-                self.data_dumper.dump_rich_core(
+                self.data_dumper.dump_core_data_node_rich(
                     node,
                     output_path=output_path,
                     output_fname=output_fname,

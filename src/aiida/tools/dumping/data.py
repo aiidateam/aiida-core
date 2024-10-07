@@ -31,9 +31,6 @@ class DataDumper:
         data_hidden: bool = False,
         also_raw: bool = False,
         also_rich: bool = False,
-        rich_options: str = '',
-        rich_config_file: FileOrUrl | None = None,
-        rich_dump_all: bool = True,
         rich_options_dict: dict | None = None,
         **kwargs,
     ) -> None:
@@ -43,9 +40,6 @@ class DataDumper:
         self.data_hidden = data_hidden
         self.also_raw = also_raw
         self.also_rich = also_rich
-        self.rich_options = rich_options
-        self.rich_config_file = rich_config_file
-        self.rich_dump_all = rich_dump_all
         self.kwargs = kwargs
 
         self.rich_options_dict = rich_options_dict
@@ -53,7 +47,7 @@ class DataDumper:
         self.hidden_aiida_path = dump_parent_path / '.aiida-raw-data'
 
     @singledispatchmethod
-    def dump_rich_core(self, data_node, output_path, output_fname):
+    def dump_core_data_node_rich(self, data_node, output_path, output_fname):
         # raise NotImplementedError(f'Dumping not implemented for type {type(data_node)}')
         # print(f'No specific handler found for type <{type(data_node)}> <{data_node}>, doing nothing.')
         # output_path /= 'general'
@@ -78,7 +72,7 @@ class DataDumper:
         # except TypeError:
         #     raise
 
-    @dump_rich_core.register
+    @dump_core_data_node_rich.register
     def _(
         self,
         data_node: orm.StructureData,
@@ -92,9 +86,9 @@ class DataDumper:
         else:
             # Handle the case where data_node is a subclass of orm.StructureData
             # Just use the default dispatch function implementation
-            self.dump_rich_core.dispatch(object)(self, data_node, output_path, output_fname)
+            self.dump_core_data_node_rich.dispatch(object)(self, data_node, output_path, output_fname)
 
-    @dump_rich_core.register
+    @dump_core_data_node_rich.register
     def _(
         self,
         data_node: orm.Code,
@@ -104,7 +98,7 @@ class DataDumper:
         self._dump_code(
             data_node=data_node, output_path=output_path, output_fname=output_fname)
 
-    @dump_rich_core.register
+    @dump_core_data_node_rich.register
     def _(
         self,
         data_node: orm.Computer,
@@ -117,7 +111,7 @@ class DataDumper:
             data_node=data_node, output_path=output_path, output_fname=output_fname
         )
 
-    @dump_rich_core.register
+    @dump_core_data_node_rich.register
     def _(
         self,
         data_node: orm.BandsData,
@@ -192,7 +186,6 @@ class DataDumper:
         data_node: orm.Computer,
         output_path: Path | None = None,
         output_fname: str | None = None,
-        fileformat: str = 'yaml',
     ):
         node_entry_point_name = data_node.entry_point.name
         # TODO: Don't use the `exporter` here, as `Computer` doesn't derive from Data, so custom implementation
@@ -261,18 +254,19 @@ class DataDumper:
         data_node: orm.BandsData,
         output_path: Path | None = None,
         output_fname: str | None = None,
-        fileformat: str ='mpl_pdf'
     ):
         node_entry_point_name = data_node.entry_point.name
         exporter = self.rich_options_dict[node_entry_point_name]['exporter']
         fileformat = self.rich_options_dict[node_entry_point_name]['export_format']
-        # print(f'node_entry_point_name: {node_entry_point_name}, exporter: {exporter}, fileformat: {fileformat}')
+
+        from aiida.tools.dumping.utils import sanitize_file_extension
 
         output_path.mkdir(exist_ok=True, parents=True)
 
         if output_fname is None:
             output_fname = DataDumper.generate_output_fname_rich(data_node=data_node, fileformat=fileformat)
-        output_fname = output_fname.replace('mpl_pdf', 'pdf')
+
+        output_fname = sanitize_file_extension(output_fname)
 
         exporter(
             node=data_node,

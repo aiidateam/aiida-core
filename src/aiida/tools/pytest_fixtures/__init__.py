@@ -16,6 +16,7 @@ from .configuration import (
 from .daemon import daemon_client, started_daemon_client, stopped_daemon_client, submit_and_await
 from .entry_points import entry_points
 from .globals import aiida_manager
+from .hardpatch import inject_patch
 from .orm import (
     aiida_code,
     aiida_code_installed,
@@ -52,6 +53,7 @@ __all__ = (
     'started_daemon_client',
     'stopped_daemon_client',
     'submit_and_await',
+    'inject_patch',
 )
 
 

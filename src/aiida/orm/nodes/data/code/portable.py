@@ -19,6 +19,8 @@ working directory on the selected computer and the executable will be run there.
 
 from __future__ import annotations
 
+import contextlib
+import logging
 import pathlib
 import typing as t
 
@@ -34,6 +36,7 @@ from .abstract import AbstractCode
 from .legacy import Code
 
 __all__ = ('PortableCode',)
+_LOGGER = logging.getLogger(__name__)
 
 
 class PortableCode(Code):
@@ -179,28 +182,32 @@ class PortableCode(Code):
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
 
-    @property
-    def filepath_files(self) -> str | pathlib.Path:
-        """Return the absolute path of the directory that contains the code files.
+    def _prepare_yaml(self, *args, **kwargs):
+        """Export code to a YAML file."""
+        try:
+            target = pathlib.Path().cwd() / f'{self.label}'
+            setattr(self, 'filepath_files', str(target))
+            result = super()._prepare_yaml(*args, **kwargs)[0]
 
-        :return: The directory of the code files required for the `filepath_executable`.
-        """
-        return self._filepath_files
+            extra_files = {}
+            node_repository = self.base.repository
 
-    @filepath_files.setter
-    def filepath_files(self, value: t.Union[str, pathlib.Path]) -> None:
-        """Set the absolute path of the directory that contains the code files.
+            # Logic taken from `copy_tree` method of the `Repository` class and adapted to return
+            # the relative file paths and their utf-8 encoded content as `extra_files` dictionary
+            path = '.'
+            for root, dirnames, filenames in node_repository.walk():
+                for filename in filenames:
+                    rel_output_file_path = root.relative_to(path) / filename
+                    full_output_file_path = target / rel_output_file_path
+                    full_output_file_path.parent.mkdir(exist_ok=True, parents=True)
 
-        :param value: The absolute filepath of the directory of the uploaded code files.
-        """
-        type_check(value, (str, pathlib.Path))
+                    extra_files[str(full_output_file_path)] = node_repository.get_object_content(
+                        str(rel_output_file_path), mode='rb'
+                    )
+            _LOGGER.warning(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
 
-        if not pathlib.PurePosixPath(value).is_absolute():
-            raise ValueError('`filepath_files` must be an absolute path.')
+        finally:
+            with contextlib.suppress(AttributeError):
+                delattr(self, 'filepath_files')
 
-        if not pathlib.Path(value).is_dir():
-            raise ValueError('`filepath_files` must be an existing directory.')
-
-        self.base.repository.erase()
-        self.base.repository.put_object_from_tree(str(value))
-        self._filepath_files = value
+        return result, extra_files

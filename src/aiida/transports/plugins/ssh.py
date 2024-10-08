@@ -8,6 +8,10 @@
 ###########################################################################
 """Plugin for transport over SSH (and SFTP for file transfer)."""
 
+from __future__ import annotations
+
+import enum
+import getpass
 import glob
 import io
 import os
@@ -15,14 +19,22 @@ import re
 from stat import S_ISDIR, S_ISREG
 
 import click
+from pydantic import ConfigDict
 
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
+from aiida.common.pydantic import MetadataField
 
 from ..transport import Transport, TransportInternalError
 
 __all__ = ('parse_sshconfig', 'convert_to_bool', 'SshTransport')
+
+
+class KeyPolicy(str, enum.Enum):
+    REJECT = 'RejectPolicy'
+    WARNING = 'WarningPolicy'
+    AUTOADD = 'AutoAddPolicy'
 
 
 def parse_sshconfig(computername):
@@ -63,6 +75,75 @@ def convert_to_bool(string):
 
 class SshTransport(Transport):
     """Support connection, command execution and data transfer to remote computers via SSH+SFTP."""
+
+    class Model(Transport.Model):
+        """Model describing required information to create an instance."""
+
+        model_config = ConfigDict(use_enum_values=True)
+
+        safe_interval: float = MetadataField(
+            30.0,
+            title='Connection cooldown time (s)',
+            description='Minimum time interval in seconds between opening new connections.',
+        )
+        username: str = MetadataField(
+            getpass.getuser(), title='User name', description='Login user name on the remote machine.'
+        )
+        port: int = MetadataField(22, title='Port number', description='Port number.', short_name='-P')
+        look_for_keys: bool = MetadataField(
+            True, title='Look for keys', description='Automatically look for private keys in the ~/.ssh folder.'
+        )
+        key_filename: str = MetadataField(
+            '',
+            title='SSH key file',
+            description='Absolute path to your private SSH key. Leave empty to use the path set in the SSH config.',
+        )
+        timeout: int = MetadataField(
+            60,
+            title='Connection timeout (s)',
+            description='Time in seconds to wait for connection before giving up. Leave empty to use default value.',
+        )
+        allow_agent: bool = MetadataField(
+            False, title='Allow ssh agent', description='Switch to allow or disallow using an SSH agent.'
+        )
+        proxy_jump: str = MetadataField(
+            '',
+            title='SSH proxy jump',
+            description='SSH proxy jump for tunneling through other SSH hosts. Use a comma-separated list of hosts of '
+            'the form [user@]host[:port]. If user or port are not specified for a host, the user & port values from '
+            'the target host are used. This option must be provided explicitly and is not parsed from the SSH config '
+            'file when left empty.',
+        )
+        proxy_command: str = MetadataField(
+            '',
+            title='SSH proxy command',
+            description='SSH proxy command for tunneling through a proxy server. For tunneling through another SSH '
+            'host, consider using the "SSH proxy jump" option instead! Leave empty to parse the proxy command from the '
+            'SSH config file.',
+        )
+        compress: bool = MetadataField(
+            True, title='Compress file transfers', description='Turn file transfer compression on or off.'
+        )
+        gss_auth: bool = MetadataField(
+            False, title='GSS auth', description='Enable when using GSS kerberos token to connect.'
+        )
+        gss_kex: bool = MetadataField(
+            False, title='GSS kex', description='GSS kex for kerberos, if not configured in SSH config file.'
+        )
+        gss_deleg_creds: bool = MetadataField(
+            False,
+            title='GSS deleg_creds',
+            description='GSS deleg_creds for kerberos, if not configured in SSH config file.',
+        )
+        gss_host: str = MetadataField(
+            '', title='GSS host', description='GSS host for kerberos, if not configured in SSH config file.'
+        )
+        load_system_host_keys: bool = MetadataField(
+            True, title='Load system host keys', description='Load system host keys from default SSH location.'
+        )
+        key_policy: KeyPolicy = MetadataField(
+            KeyPolicy.REJECT, title='Key policy', description='SSH key policy if host is not known.'
+        )
 
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
@@ -235,8 +316,8 @@ class SshTransport(Transport):
         """Return a suggestion for the specific field."""
         import getpass
 
-        config = parse_sshconfig(computer.hostname)
         # Either the configured user in the .ssh/config, or the current username
+        config = parse_sshconfig(computer.hostname)
         return str(config.get('user', getpass.getuser()))
 
     @classmethod

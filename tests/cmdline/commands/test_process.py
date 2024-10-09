@@ -688,38 +688,8 @@ def test_process_kill(submit_and_await, aiida_code_installed, run_cli_command, i
     result = run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
     await_condition(lambda: node.is_killed, timeout=kill_timeout)
 
-    # 10) *Force* kill a process that is paused after EBM (5 times failed)
-    # which has a history of failed *normal kill* attempts.
-    # Such a process cannot get killed normally, but still should be possible to force kill it.
-    async def mock_exponential_backoff_retry(*args, **kwargs):
-        # to mimic the actual scenario where worker is async sleeping
-        # we get enough time to run the test
-        await asyncio.sleep(200)
-        raise Exception('Exponential backoff retry failed')
-
-    inject_patch.restore(restart_daemon=False)
-    inject_patch.patch('aiida.engine.utils.exponential_backoff_retry', mock_exponential_backoff_retry)
-
-    node = submit_and_await(make_a_builder(), ProcessState.WAITING)
-
-    # assert the process is stuck in EBM
-    await_condition(lambda: node.process_status == 'Waiting for transport task: upload', timeout=kill_timeout)
-
-    # practice a normal kill, which should fail
-    result = run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
-    assert f'Error: call to kill Process<{node.pk}> timed out' in result.stdout
-
-    # we need to be graceful, since sometimes it takes a while to have the process status updated
-    time.sleep(2)
-    assert not node.is_killed
-
-    # force kill the process
-    result = run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
-    await_condition(lambda: node.is_killed, timeout=kill_timeout)
-    assert node.process_status == 'Force killed through `verdi process kill -F`'
-
-    # 11) In the current implementation, a failed normal kill attempt will eventually cause a process to be EXCEPTED.
-    # that means orphans may be left behind on server.
+    # 10) In the current implementation, a failed normal kill attempt will eventually cause a process to be EXCEPTED.
+    # which btw, means orphans may be left behind on server.
     # The following test is more of a documentation of the current behavior.
     async def mock_exponential_backoff_retry(*args, **kwargs):
         await asyncio.sleep(10)

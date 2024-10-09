@@ -14,12 +14,11 @@ include_inputs: true
 include_outputs: true
 include_attributes: true
 include_extras: false
-rich_options: 
+rich_spec: 
   core.array.bands:
     exporter:
     format: mpl_png
   core.structure:
-    exporter:
     format: xsf
 rich_dump_all: false
 dry_run: false

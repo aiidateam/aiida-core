@@ -107,7 +107,7 @@ __all__ = (
     'PROJECT',
     'RAW',
     'REPOSITORY_PATH',
-    'RICH_OPTIONS',
+    'RICH_SPEC',
     'DUMP_CONFIG_FILE',
     'RICH_DUMP_ALL',
     'SCHEDULER',
@@ -809,7 +809,7 @@ DUMP_PROCESSES = OverridableOption(
 DUMP_DATA = OverridableOption(
     '--dump-data/--no-dump-data',
     is_flag=True,
-    default=False,
+    default=True,
     type=bool,
     show_default=True,
     help='Dump data nodes in a dedicated directory.',
@@ -833,7 +833,7 @@ DATA_HIDDEN = OverridableOption(
 )
 
 ALSO_RAW = OverridableOption(
-    '--also-raw',
+    '--also-raw/--not-also-raw',
     is_flag=True,
     default=False,
     show_default=True,
@@ -841,25 +841,25 @@ ALSO_RAW = OverridableOption(
 )
 
 ALSO_RICH = OverridableOption(
-    '--also-rich',
+    '--also-rich/--not-also-rich',
     is_flag=True,
-    default=False,
+    default=True,
     show_default=True,
     help='Dump also nicely prepared outputs, e.g. CIF for structures or PDF image for bands.',
 )
 
-RICH_OPTIONS = OverridableOption(
-    '--rich-options',
+RICH_SPEC = OverridableOption(
+    '--rich-spec',
     default=None,
     type=str,
-    help='Options for rich data dumping.',
+    help='Specifications for rich data dumping.',
 )
 
 DUMP_CONFIG_FILE = OverridableOption(
     '--dump-config-file',
     default=None,
     type=types.FileOrUrl(),
-    help='Options for the dumping in YAML format.',
+    help='Provide dumping options via a config file in YAML format.',
 )
 
 RICH_DUMP_ALL = OverridableOption(

@@ -435,7 +435,7 @@ class ProcessDumper:
         # Set up the rich parsing functions
 
         # Extend (at least the keys) by the dynamic entry points
-        rich_options_dict = self.data_dumper.rich_options_dict
+        rich_spec_dict = self.data_dumper.rich_spec_dict
 
         for link_triple in link_triples:
             link_label = link_triple.link_label
@@ -451,8 +451,8 @@ class ProcessDumper:
                 # Obtain settings from the export dict
                 # TODO: -> This might break when plugin is missing
                 try:
-                    exporter = rich_options_dict[node_entry_point_name]['exporter']
-                    fileformat = rich_options_dict[node_entry_point_name]['export_format']
+                    exporter = rich_spec_dict[node_entry_point_name]['exporter']
+                    fileformat = rich_spec_dict[node_entry_point_name]['export_format']
                     output_fname = self.data_dumper.generate_output_fname_rich(
                         prefix=link_label, data_node=data_node, fileformat=fileformat
                     )

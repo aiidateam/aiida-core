@@ -273,7 +273,7 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
-@options.RICH_OPTIONS()
+@options.RICH_SPEC()
 @options.RICH_DUMP_ALL()
 @options.DUMP_CONFIG_FILE()
 # @options.ALL()
@@ -301,7 +301,7 @@ def storage_dump(
     include_outputs,
     include_attributes,
     include_extras,
-    rich_options,
+    rich_spec,
     rich_dump_all,
     dump_config_file,
     # all_entries,
@@ -355,10 +355,12 @@ def storage_dump(
             "rich_dump_all": rich_dump_all,
         }
 
-        if rich_options is not None:
-            rich_options_dict = rich_from_cli(
-                rich_options=rich_options, **rich_kwargs
+        if rich_spec is not None:
+            rich_spec_dict = rich_from_cli(
+                rich_spec=rich_spec, **rich_kwargs
             )
+        else:
+            rich_spec_dict = {}
 
     # TODO: Also allow for mixing. Currently one can _only_ specify either the config file, or the arguments on the
     # TODO: command line
@@ -370,9 +372,9 @@ def storage_dump(
         datadumper_kwargs = kwarg_dicts_from_config["datadumper_kwargs"]
         collection_kwargs = kwarg_dicts_from_config["collection_kwargs"]
         rich_kwargs = kwarg_dicts_from_config["rich_kwargs"]
-        rich_options = kwarg_dicts_from_config['rich_options']
+        rich_spec = kwarg_dicts_from_config['rich_spec']
 
-        rich_options_dict = rich_from_config(rich_options, **rich_kwargs)
+        rich_spec_dict = rich_from_config(rich_spec, **rich_kwargs)
 
     # Obtain these specifically for easy access and modifications
     path = general_kwargs['path']
@@ -411,18 +413,10 @@ def storage_dump(
 
     (path / SAFEGUARD_FILE).touch()
 
-    # rich_options_dict = dumpconfigparser.rich_from_config(rich_options=config_file)
-
-    # print(f"rich_options: {rich_options}")
-    # print("rich_options_dict")
-    # pprint(rich_options_dict)
-
-    # # raise SystemExit
-
     data_dumper = DataDumper(
         dump_parent_path=path,
         overwrite=overwrite,
-        rich_options_dict=rich_options_dict,
+        rich_spec_dict=rich_spec_dict,
         **datadumper_kwargs,
     )
 

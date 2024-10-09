@@ -558,9 +558,10 @@ def process_repair(manager, broker, dry_run):
 @options.INCLUDE_EXTRAS()
 @options.ALSO_RAW()
 @options.ALSO_RICH()
-@options.RICH_OPTIONS()
+@options.RICH_SPEC()
 @options.RICH_DUMP_ALL()
 # TODO: Also add CONFIG_FILE option here
+# TODO: Currently, setting rich options is not supported here directly
 def process_dump(
     process,
     path,
@@ -572,8 +573,7 @@ def process_dump(
     include_extras,
     also_raw,
     also_rich,
-    rich_options,
-    rich_config_file,
+    rich_spec,
     rich_dump_all,
 ) -> None:
     """Dump process input and output files to disk.
@@ -594,7 +594,8 @@ def process_dump(
 
     from aiida.tools.dumping.processes import ProcessDumper
     from aiida.tools.dumping.data import DataDumper
-    from aiida.tools.dumping.utils import validate_rich_options
+    # from aiida.tools.dumping.utils import validate_rich_options
+    from aiida.tools.dumping.rich import rich_from_cli
 
     processdumper_kwargs = {
         "include_inputs": include_inputs,
@@ -605,8 +606,6 @@ def process_dump(
     }
 
     rich_kwargs = {
-        "rich_options": rich_options,
-        "rich_config_file": rich_config_file,
         "rich_dump_all": rich_dump_all,
     }
 
@@ -615,16 +614,22 @@ def process_dump(
         "also_rich": also_rich,
     }
 
-    if also_rich:
-        try:
-            validate_rich_options(
-                rich_options=rich_options, rich_config_file=rich_config_file
-            )
-        except ValueError as exc:
-            echo.echo_critical(f"{exc!s}")
+    # if also_rich:
+    #     try:
+    #         validate_rich_options(
+    #             rich_options=rich_options, rich_config_file=rich_config_file
+    #         )
+    #     except ValueError as exc:
+    #         echo.echo_critical(f"{exc!s}")
+
+    if rich_spec is not None:
+        rich_spec_dict = rich_from_cli(rich_spec=rich_spec, **rich_kwargs)
+    else:
+        rich_spec_dict = {}
 
     data_dumper = DataDumper(
         overwrite=overwrite,
+        rich_spec_dict = rich_spec_dict
         **datadumper_kwargs,
         **rich_kwargs,
     )

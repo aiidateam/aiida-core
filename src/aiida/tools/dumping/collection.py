@@ -222,6 +222,7 @@ class CollectionDumper:
                 )
                 self.process_dumper.dump(process_node=workflow, output_path=workflow_path)
 
+    # TODO: Add `dump_data_raw` here, as well
     def dump_data_rich(self):
         nodes = self.get_collection_nodes()
         nodes = [node for node in nodes if isinstance(node, (orm.Data, orm.Computer))]
@@ -239,18 +240,15 @@ class CollectionDumper:
 
             # Get the fileformat and exporter for the data node
             try:
-                fileformat = data_dumper.rich_options_dict[node_entry_point_name]['export_format']
-                exporter = data_dumper.rich_options_dict[node_entry_point_name]['exporter']
+                fileformat = data_dumper.rich_spec_dict[node_entry_point_name]['export_format']
+                exporter = data_dumper.rich_spec_dict[node_entry_point_name]['exporter']
 
             # If options for the rich dumping are specified and not all the other defaults are being used
-            # Some entry_points might not be inside the `rich_options_dict`
+            # Some entry_points might not be inside the `rich_spec_dict`
             except KeyError:
                 continue
 
-            # print(f'data_node: {data_node}, fileformat: {fileformat}, exporter: {exporter}')
             # Don't go further if no importer implemented for a data type anyway
-            # print(f'NODE_ENTRY_POINT_NAME: {node_entry_point_name}')
-            # print(f'EXPORTER: {exporter}')
             if exporter is None:
                 continue
 
@@ -276,12 +274,10 @@ class CollectionDumper:
 
                 else:
                     # Dump the data in the non-hidden directory
-                    print(f'nice: {nice_output_path} | {nice_fname}')
                     data_dumper.dump_core_data_node_rich(data_node, nice_output_path, nice_fname)
 
             except TypeError:
                 # Handle case when no exporter is implemented for a given data_node type
-                pass
                 raise
             except Exception:
                 raise

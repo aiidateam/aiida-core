@@ -41,15 +41,15 @@ DEFAULT_CORE_EXPORT_MAPPING = {
 }
 
 
-def rich_from_cli(rich_options, rich_dump_all):
+def rich_from_cli(rich_spec, rich_dump_all):
     # If all, also non-specified data types should be exported, then set the default exporter dict here
     if rich_dump_all:
         options_dict = DEFAULT_CORE_EXPORT_MAPPING
     else:
         options_dict = {}
 
-    if rich_options:
-        entries = rich_options.split(',')
+    if rich_spec:
+        entries = rich_spec.split(',')
         # print(f'ENTRIES: {entries}')
         for entry in entries:
             entry_list = entry.split(':')
@@ -72,14 +72,14 @@ def rich_from_cli(rich_options, rich_dump_all):
     return options_dict
 
 
-def rich_from_config(rich_options, rich_dump_all):
+def rich_from_config(rich_spec, rich_dump_all):
 
     if rich_dump_all:
         options_dict = DEFAULT_CORE_EXPORT_MAPPING
     else:
         options_dict = {}
 
-    for entry_point, spec in rich_options.items():
+    for entry_point, spec in rich_spec.items():
         export_format = spec.get('format') or DEFAULT_CORE_EXPORT_MAPPING[entry_point]['export_format']
         exporter = spec.get('exporter') or DEFAULT_CORE_EXPORT_MAPPING[entry_point]['exporter']
 

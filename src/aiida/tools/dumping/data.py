@@ -31,7 +31,7 @@ class DataDumper:
         data_hidden: bool = False,
         also_raw: bool = False,
         also_rich: bool = False,
-        rich_options_dict: dict | None = None,
+        rich_spec_dict: dict | None = None,
         **kwargs,
     ) -> None:
         self.args = args
@@ -42,7 +42,7 @@ class DataDumper:
         self.also_rich = also_rich
         self.kwargs = kwargs
 
-        self.rich_options_dict = rich_options_dict
+        self.rich_spec_dict = rich_spec_dict
 
         self.hidden_aiida_path = dump_parent_path / '.aiida-raw-data'
 
@@ -53,7 +53,7 @@ class DataDumper:
         # output_path /= 'general'
         # This is effectively the `rich` dumping
         data_node_entry_point_name = data_node.entry_point.name
-        export_settings = self.rich_options_dict[data_node_entry_point_name]
+        export_settings = self.rich_spec_dict[data_node_entry_point_name]
         exporter = export_settings['exporter']
         fileformat = export_settings['export_format']
         if exporter is not None:
@@ -132,8 +132,8 @@ class DataDumper:
         from aiida.common.exceptions import UnsupportedSpeciesError
 
         node_entry_point_name = data_node.entry_point.name
-        exporter = self.rich_options_dict[node_entry_point_name]['exporter']
-        fileformat = self.rich_options_dict[node_entry_point_name]['export_format']
+        exporter = self.rich_spec_dict[node_entry_point_name]['exporter']
+        fileformat = self.rich_spec_dict[node_entry_point_name]['export_format']
 
         if output_fname is None:
             output_fname = DataDumper.generate_output_fname_rich(
@@ -165,8 +165,8 @@ class DataDumper:
         # output_path /= 'codes'
 
         node_entry_point_name = data_node.entry_point.name
-        exporter = self.rich_options_dict[node_entry_point_name]['exporter']
-        fileformat = self.rich_options_dict[node_entry_point_name]['export_format']
+        exporter = self.rich_spec_dict[node_entry_point_name]['exporter']
+        fileformat = self.rich_spec_dict[node_entry_point_name]['export_format']
 
         if fileformat != 'yaml':
             raise NotImplementedError('No other fileformats supported so far apart from YAML.')
@@ -189,7 +189,7 @@ class DataDumper:
     ):
         node_entry_point_name = data_node.entry_point.name
         # TODO: Don't use the `exporter` here, as `Computer` doesn't derive from Data, so custom implementation
-        fileformat = self.rich_options_dict[node_entry_point_name]['export_format']
+        fileformat = self.rich_spec_dict[node_entry_point_name]['export_format']
 
         if fileformat != 'yaml':
             raise NotImplementedError('No other fileformats supported so far apart from YAML.')
@@ -231,7 +231,7 @@ class DataDumper:
 
         node_entry_point_name = data_node.entry_point.name
         # TODO: Don't use the `exporter` here, as `Computer` doesn't derive from Data, so custom implementation
-        fileformat = self.rich_options_dict[node_entry_point_name]['export_format']
+        fileformat = self.rich_spec_dict[node_entry_point_name]['export_format']
 
         # output_path /= 'computers'
         if fileformat != 'yaml':
@@ -256,8 +256,8 @@ class DataDumper:
         output_fname: str | None = None,
     ):
         node_entry_point_name = data_node.entry_point.name
-        exporter = self.rich_options_dict[node_entry_point_name]['exporter']
-        fileformat = self.rich_options_dict[node_entry_point_name]['export_format']
+        exporter = self.rich_spec_dict[node_entry_point_name]['exporter']
+        fileformat = self.rich_spec_dict[node_entry_point_name]['export_format']
 
         from aiida.tools.dumping.utils import sanitize_file_extension
 

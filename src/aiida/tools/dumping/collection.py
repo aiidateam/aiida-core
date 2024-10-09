@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Functionality for dumping of a Collections of AiiDA ORMs."""
+"""Functionality for dumping of a Collection of AiiDA ORM entities."""
 
 from __future__ import annotations
 
@@ -20,7 +20,6 @@ from typing import List
 from aiida import orm
 from aiida.tools.dumping.data import DataDumper
 from aiida.tools.dumping.processes import ProcessDumper
-from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING
 from aiida.tools.dumping.utils import sanitize_file_extension
 
 logger = logging.getLogger(__name__)
@@ -42,8 +41,6 @@ class CollectionDumper:
         should_dump_processes: bool = False,
         should_dump_data: bool = False,
         only_top_level_workflows: bool = True,
-        calculations_hidden: bool = False,
-        data_hidden: bool = False,
         entities_to_dump: set = {},
         group: orm.Group | None = None,
         process_dumper: ProcessDumper | None = None,
@@ -57,8 +54,6 @@ class CollectionDumper:
         self.should_dump_processes = should_dump_processes
         self.should_dump_data = should_dump_data
         self.only_top_level_workflows = only_top_level_workflows
-        self.calculations_hidden = calculations_hidden
-        self.data_hidden = data_hidden
         self.entities_to_dump = entities_to_dump
         self.process_dumper = process_dumper
         self.data_dumper = data_dumper
@@ -214,7 +209,7 @@ class CollectionDumper:
 
         self.output_path.mkdir(exist_ok=True, parents=True)
 
-        if self.calculations_hidden:
+        if self.process_dumper.calculations_hidden:
             self._dump_calculations_hidden(calculations=calculations)
             self._dump_link_workflows(workflows=workflows)
             self._link_calculations_hidden(calculations=calculations)

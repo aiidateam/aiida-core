@@ -259,12 +259,8 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @verdi_storage.command('dump')
 @options.PATH()
 @options.OVERWRITE()
-# @options.ALL()
-# @options.NODES()
-# @options.CODES()
-# @options.COMPUTERS()
-# @options.GROUPS()
 @options.ORGANIZE_BY_GROUPS()
+@options.DRY_RUN()
 @options.DUMP_PROCESSES()
 @options.ONLY_TOP_LEVEL_WORKFLOWS()
 @options.FLAT()
@@ -278,18 +274,21 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
 @options.RICH_OPTIONS()
-@options.RICH_CONFIG_FILE()
 @options.RICH_DUMP_ALL()
-@options.DRY_RUN()
+@options.DUMP_CONFIG_FILE()
+# @options.ALL()
+# @options.NODES()
+# @options.CODES()
+# @options.COMPUTERS()
+# @options.GROUPS()
+@click.pass_context
+# @with_dbenv()
 def storage_dump(
+    ctx,
     path,
     overwrite,
-    # all_entries,
-    # nodes,
-    # codes,
-    # computers,
-    # groups,
     organize_by_groups,
+    dry_run,
     dump_processes,
     only_top_level_workflows,
     flat,
@@ -303,20 +302,82 @@ def storage_dump(
     include_attributes,
     include_extras,
     rich_options,
-    rich_config_file,
     rich_dump_all,
-    dry_run,
+    dump_config_file,
+    # all_entries,
+    # nodes,
+    # codes,
+    # computers,
+    # groups,
 ):
     """Dump all data in an AiiDA profile's storage to disk."""
+    from rich.pretty import pprint
     from aiida import orm
     from aiida.manage import get_manager
     from aiida.tools.dumping.collection import DEFAULT_ENTITIES_TO_DUMP
-    from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING
+    from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING, rich_from_cli, rich_from_config
     from aiida.tools.dumping.utils import validate_make_dump_path
-    from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING, RichParser
+    from aiida.tools.dumping.parser import DumpConfigParser
 
-    profile = get_manager().get_profile()
+    profile = ctx.obj["profile"]
     SAFEGUARD_FILE = ".verdi_storage_dump"  # noqa: N806
+
+    if dump_config_file is None:
+
+        general_kwargs = {
+            "path": path,
+            "overwrite": overwrite,
+            "dry_run": dry_run,
+        }
+
+        processdumper_kwargs = {
+            "include_inputs": include_inputs,
+            "include_outputs": include_outputs,
+            "include_attributes": include_attributes,
+            "include_extras": include_extras,
+            "flat": flat,
+            "calculations_hidden": calculations_hidden,
+        }
+
+        datadumper_kwargs = {
+            "also_raw": also_raw,
+            "also_rich": also_rich,
+            "data_hidden": data_hidden,
+        }
+
+        collection_kwargs = {
+            "should_dump_processes": dump_processes,
+            "should_dump_data": dump_data,
+            "only_top_level_workflows": only_top_level_workflows,
+        }
+
+        rich_kwargs = {
+            "rich_dump_all": rich_dump_all,
+        }
+
+        if rich_options is not None:
+            rich_options_dict = rich_from_cli(
+                rich_options=rich_options, **rich_kwargs
+            )
+
+    # TODO: Also allow for mixing. Currently one can _only_ specify either the config file, or the arguments on the
+    # TODO: command line
+    else:
+        kwarg_dicts_from_config = DumpConfigParser.parse_config_file(dump_config_file)
+
+        general_kwargs = kwarg_dicts_from_config["general_kwargs"]
+        processdumper_kwargs = kwarg_dicts_from_config["processdumper_kwargs"]
+        datadumper_kwargs = kwarg_dicts_from_config["datadumper_kwargs"]
+        collection_kwargs = kwarg_dicts_from_config["collection_kwargs"]
+        rich_kwargs = kwarg_dicts_from_config["rich_kwargs"]
+        rich_options = kwarg_dicts_from_config['rich_options']
+
+        rich_options_dict = rich_from_config(rich_options, **rich_kwargs)
+
+    # Obtain these specifically for easy access and modifications
+    path = general_kwargs['path']
+    overwrite = general_kwargs['overwrite']
+    dry_run = general_kwargs['dry_run']
 
     if not str(path).endswith(profile.name):
         path /= profile.name
@@ -327,83 +388,36 @@ def storage_dump(
     )
     dry_run_message += "Only directories will be created."
 
-    if dry_run:
-        dump_processes = False
-        dump_data = False
+    if dry_run or (
+        not collection_kwargs["should_dump_processes"]
+        and not collection_kwargs["should_dump_data"]
+    ):
         echo.echo_report(dry_run_message)
+        return
 
-    elif not dump_processes and not dump_data:
-        echo.echo_report(dry_run_message)
+    echo.echo_report(
+        f"Dumping of profile `{profile.name}`'s data at path: `{path}`."
+    )
 
-    else:
-        echo.echo_report(
-            f"Dumping of profile `{profile.name}`'s data at path: `{path}`."
+    try:
+        validate_make_dump_path(
+            overwrite=overwrite,
+            path_to_validate=path,
+            enforce_safeguard=True,
+            safeguard_file=SAFEGUARD_FILE,
         )
+    except FileExistsError as exc:
+        echo.echo_critical(str(exc))
 
-        try:
-            validate_make_dump_path(
-                overwrite=overwrite,
-                path_to_validate=path,
-                enforce_safeguard=True,
-                safeguard_file=SAFEGUARD_FILE,
-            )
-        except FileExistsError as exc:
-            echo.echo_critical(str(exc))
+    (path / SAFEGUARD_FILE).touch()
 
-        (path / SAFEGUARD_FILE).touch()
+    # rich_options_dict = dumpconfigparser.rich_from_config(rich_options=config_file)
 
-    processdumper_kwargs = {
-        "include_inputs": include_inputs,
-        "include_outputs": include_outputs,
-        "include_attributes": include_attributes,
-        "include_extras": include_extras,
-        "flat": flat,
-        "calculations_hidden": calculations_hidden,
-    }
+    # print(f"rich_options: {rich_options}")
+    # print("rich_options_dict")
+    # pprint(rich_options_dict)
 
-    datadumper_kwargs = {
-        "also_raw": also_raw,
-        "also_rich": also_rich,
-        "data_hidden": data_hidden,
-    }
-    # print(f'datadumper_kwargs: {datadumper_kwargs}')
-
-    collection_kwargs = {
-        "should_dump_processes": dump_processes,
-        "should_dump_data": dump_data,
-        # "organize_by_groups": organize_by_groups,
-        "only_top_level_workflows": only_top_level_workflows
-    }
-
-    richparser_kwargs = {
-        # "rich_options": rich_options,
-        # "rich_config_file": rich_config_file,
-        "rich_dump_all": rich_dump_all,
-    }
-
-    hiding_kwargs = {
-        "calculations_hidden": calculations_hidden,
-        "data_hidden": data_hidden,
-    }
-
-    rich_parser = RichParser(**richparser_kwargs)
-
-
-    if rich_options is not None:
-        rich_options_dict = rich_parser.from_cli(rich_options=rich_options)
-
-    elif rich_config_file is not None:
-        rich_options_dict = rich_parser.from_config(rich_options=rich_config_file)
-
-    else:
-        rich_options_dict = DEFAULT_CORE_EXPORT_MAPPING
-
-    from rich.pretty import pprint
-    print(f'rich_options: {rich_options}')
-    print('rich_options_dict')
-    pprint(rich_options_dict)
-
-    # raise SystemExit
+    # # raise SystemExit
 
     data_dumper = DataDumper(
         dump_parent_path=path,
@@ -443,22 +457,18 @@ def storage_dump(
 
     # collection_kwargs["entities_to_dump"] = entites_to_dump
 
+    # TODO: Add customization options here...
     collection_kwargs["entities_to_dump"] = DEFAULT_ENTITIES_TO_DUMP
 
     # === Dump the data that is not associated with any group ===
-    # if organize_by_groups:
-    #     no_group_path = path / "no_groups"
-    # else:
-    #     no_group_path = path
 
     collection_dumper = CollectionDumper(
+        # **general_kwargs,
         dump_parent_path=path,
         output_path=path,
         overwrite=overwrite,
-        # TODO: Still keep here or use the ones from the ProcessDumper?
         **collection_kwargs,
-        **richparser_kwargs,
-        **hiding_kwargs,
+        **rich_kwargs,
         data_dumper=data_dumper,
         process_dumper=process_dumper,
     )
@@ -501,8 +511,7 @@ def storage_dump(
                 overwrite=overwrite,
                 group=group,
                 **collection_kwargs,
-                **richparser_kwargs,
-                **hiding_kwargs,
+                **rich_kwargs,
                 process_dumper=process_dumper,
                 data_dumper=data_dumper,
             )

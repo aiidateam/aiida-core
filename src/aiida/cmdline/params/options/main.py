@@ -108,7 +108,7 @@ __all__ = (
     'RAW',
     'REPOSITORY_PATH',
     'RICH_OPTIONS',
-    'RICH_CONFIG_FILE',
+    'DUMP_CONFIG_FILE',
     'RICH_DUMP_ALL',
     'SCHEDULER',
     'SILENT',
@@ -855,11 +855,11 @@ RICH_OPTIONS = OverridableOption(
     help='Options for rich data dumping.',
 )
 
-RICH_CONFIG_FILE = OverridableOption(
-    '--rich-config-file',
+DUMP_CONFIG_FILE = OverridableOption(
+    '--dump-config-file',
     default=None,
     type=types.FileOrUrl(),
-    help='Options for rich data dumping.',
+    help='Options for the dumping in YAML format.',
 )
 
 RICH_DUMP_ALL = OverridableOption(

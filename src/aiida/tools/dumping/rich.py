@@ -1,6 +1,7 @@
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
+from rich.pretty import pprint
 
-__all__ = ('RichParser', 'DEFAULT_CORE_EXPORT_MAPPING')
+__all__ = ('rich_from_cli', 'rich_from_config', 'DEFAULT_CORE_EXPORT_MAPPING')
 
 DEFAULT_CORE_EXPORT_MAPPING = {
     'core.array': {'exporter': data_export, 'export_format': 'json'},
@@ -40,51 +41,48 @@ DEFAULT_CORE_EXPORT_MAPPING = {
 }
 
 
-class RichParser:
-    # ? If someone provides options, should the rest be dumped as rich, or not
+def rich_from_cli(rich_options, rich_dump_all):
+    # If all, also non-specified data types should be exported, then set the default exporter dict here
+    if rich_dump_all:
+        options_dict = DEFAULT_CORE_EXPORT_MAPPING
+    else:
+        options_dict = {}
 
-    def __init__(self, rich_dump_all):
-        self.rich_dump_all = rich_dump_all
+    if rich_options:
+        entries = rich_options.split(',')
+        # print(f'ENTRIES: {entries}')
+        for entry in entries:
+            entry_list = entry.split(':')
+            entry_point = entry_list[0]
 
-    def from_cli(self, rich_options):
-        # If all, also non-specified data types should be exported, then set the default exporter dict here
-        if self.rich_dump_all:
-            options_dict = DEFAULT_CORE_EXPORT_MAPPING
-        else:
-            options_dict = {}
+            # This is the case if no exporter explicitly provided, then we set it to the default exporter
+            exporter = entry_list[1] or DEFAULT_CORE_EXPORT_MAPPING[entry_point]['exporter']
 
-        if rich_options:
-            entries = rich_options.split(',')
-            # print(f'ENTRIES: {entries}')
-            for entry in entries:
-                entry_list = entry.split(':')
-                # options_dict
-                # This is the case if no exporter explicitly provided, then we set it to the default exporter
-                if len(entry_list[1]) == 0:
-                    entry_list[1] = DEFAULT_CORE_EXPORT_MAPPING[entry_list[0]]['exporter']
-                # This is the case if no fileformat explicitly provided, then we set it to the default fileformat
-                if len(entry_list[2]) == 0:
-                    entry_list[1] = DEFAULT_CORE_EXPORT_MAPPING[entry_list[0]]['export_format']
+            # This is the case if no fileformat explicitly provided, then we set it to the default fileformat
+            export_format = entry_list[2] or DEFAULT_CORE_EXPORT_MAPPING[entry_point]['export_format']
 
-                if '=' in entry_list[2]:
-                    entry_list[2] = entry_list[2].split('=')[1]
+            # If it is provided, then the assignment is done with an equal sign and we resolve it
+            if '=' in export_format:
+                export_format = export_format.split('=')[1]
 
-                # print(f'ENTRY_LIST: {entry_list}')
+            # print(f'ENTRY_LIST: {entry_list}')
 
-                options_dict[entry_list[0]] = {'exporter': entry_list[1], 'export_format': entry_list[2]}
+            options_dict[entry_point] = {'exporter': exporter, 'export_format': export_format}
 
-        return options_dict
+    return options_dict
 
-    @classmethod
-    def from_config(cls): ...
 
-    def extend_by_entry_points(self): ...
+def rich_from_config(rich_options, rich_dump_all):
 
-    # def __init__(self, data_types, export_functions, export_formats):
-    #     # TODO: Rather than having three lists, could have a list of tuples of something
-    #     # TODO: Or a dictionary with the keys being the entry points, the values tuples of (class, function, format)
-    #     self.data_types = data_types
-    #     self.export_functions = export_functions
-    #     self.export_formats = export_formats
+    if rich_dump_all:
+        options_dict = DEFAULT_CORE_EXPORT_MAPPING
+    else:
+        options_dict = {}
 
-    # returns the different mappings?
+    for entry_point, spec in rich_options.items():
+        export_format = spec.get('format') or DEFAULT_CORE_EXPORT_MAPPING[entry_point]['export_format']
+        exporter = spec.get('exporter') or DEFAULT_CORE_EXPORT_MAPPING[entry_point]['exporter']
+
+        options_dict[entry_point] = {'exporter': exporter, 'export_format': export_format}
+
+    return options_dict

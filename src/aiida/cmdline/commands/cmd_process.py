@@ -559,8 +559,8 @@ def process_repair(manager, broker, dry_run):
 @options.ALSO_RAW()
 @options.ALSO_RICH()
 @options.RICH_OPTIONS()
-@options.RICH_CONFIG_FILE()
 @options.RICH_DUMP_ALL()
+# TODO: Also add CONFIG_FILE option here
 def process_dump(
     process,
     path,

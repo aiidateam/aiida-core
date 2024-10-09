@@ -348,6 +348,16 @@ class ProcessDumper:
                     self._dump_calculation_io_files_rich(
                         output_path=rich_data_output_path, link_triples=input_links
                     )
+                # TODO: Currently, when dumping only one selected workflow, if rich dumping is activated, but
+                # TODO: `data-hidden` is set, no data nodes were actually being dumped
+                # TODO: With the current implementation below, they are dumped, but not in the same structure as for the
+                # TODO: `dump_rich_core` function. Quick fix for now
+                else:
+                    rich_data_output_path = self.dump_parent_path / 'data'
+                    # Only dump the rich data output files in the process directories if data_hidden is False
+                    self._dump_calculation_io_files_rich(
+                        output_path=rich_data_output_path, link_triples=input_links
+                    )
 
         # Dump the node_outputs apart from `retrieved`
         if self.include_outputs:

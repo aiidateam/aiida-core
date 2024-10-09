@@ -42,8 +42,8 @@ class CollectionDumper:
         should_dump_processes: bool = False,
         should_dump_data: bool = False,
         only_top_level_workflows: bool = True,
-        entities_to_dump: set = {},
         group: orm.Group | None = None,
+        nodes: set = {},
         process_dumper: ProcessDumper | None = None,
         data_dumper: DataDumper | None = None,
         **kwargs,
@@ -56,7 +56,7 @@ class CollectionDumper:
         self.should_dump_processes = should_dump_processes
         self.should_dump_data = should_dump_data
         self.only_top_level_workflows = only_top_level_workflows
-        self.entities_to_dump = entities_to_dump
+        self.nodes = nodes
         self.process_dumper = process_dumper
         self.data_dumper = data_dumper
         self.kwargs = kwargs
@@ -74,11 +74,13 @@ class CollectionDumper:
             self.create_entity_counter()
 
     def create_entity_counter(self) -> Counter:
-        # If the group only has one WorkChain assigned to it, this will only return a count of 1 for the
-        # WorkChainNode, nothing more, that is, not recursively.
         entity_counter = Counter()
         if self.group is not None:
+            # If the group only has one WorkChain assigned to it, this will only return a count of 1 for the
+            # WorkChainNode, nothing more, that is, it doesn't work recursively.
             nodes = self.group.nodes
+        elif self.nodes is not None:
+            nodes = self.nodes
         else:
             nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
 
@@ -93,12 +95,16 @@ class CollectionDumper:
         return entity_counter
 
     def get_collection_nodes(self):
+        if self.nodes:
+            self.collection_nodes = self.nodes
+            return self.collection_nodes
+
         if hasattr(self, 'collection_nodes'):
             return self.collection_nodes
 
         # Get all nodes that are in the group
         if self.group is not None:
-            nodes = self.group.nodes
+            nodes = list(self.group.nodes)
 
         # Get all nodes that are _not_ in any group
         else:
@@ -113,19 +119,22 @@ class CollectionDumper:
         return nodes
 
     def _should_dump_processes(self) -> bool:
-        return (
-            sum(
-                self.entity_counter.get(orm_process_class, 0)
-                for orm_process_class in [
-                    orm.CalcJobNode,
-                    orm.CalcFunctionNode,
-                    orm.WorkChainNode,
-                    orm.WorkFunctionNode,
-                    orm.ProcessNode,
-                ]
+        if not self.nodes:
+            return (
+                sum(
+                    self.entity_counter.get(orm_process_class, 0)
+                    for orm_process_class in [
+                        orm.CalcJobNode,
+                        orm.CalcFunctionNode,
+                        orm.WorkChainNode,
+                        orm.WorkFunctionNode,
+                        orm.ProcessNode,
+                    ]
+                )
+                > 0
             )
-            > 0
-        )
+        else:
+            return len([node for node in self.nodes if isinstance(node, orm.ProcessNode)]) > 0
 
     def _dump_calculations_hidden(self, calculations):
         # ? Dump only top-level workchains, as that includes sub-workchains already
@@ -173,7 +182,6 @@ class CollectionDumper:
             calculation_dumper = self.process_dumper
 
             link_calculations_dir = self.hidden_aiida_path / 'calculations'
-            # link_calculations_dir.mkdir(parents=True, exist_ok=True)
 
             calculation_dump_path = self.output_path / 'calculations'
             calculation_dump_path.mkdir(parents=True, exist_ok=True)
@@ -247,8 +255,12 @@ class CollectionDumper:
 
             # If options for the rich dumping are specified and not all the other defaults are being used
             # Some entry_points might not be inside the `rich_spec_dict`
-            except KeyError:
-                continue
+            except:
+                # Raise all exceptions here during development
+                raise 
+
+            # except KeyError:
+            #     continue
 
             # Don't go further if no importer implemented for a data type anyway
             if exporter is None:
@@ -281,26 +293,29 @@ class CollectionDumper:
             except TypeError:
                 # Handle case when no exporter is implemented for a given data_node type
                 raise
+            except OSError:
+                # A Data node, e.g. a Code might already be existent, so don't worry about this exception
+                continue
             except Exception:
                 raise
 
     def dump_plugin_data(self):
         return
-        from importlib.metadata import entry_points
+        # from importlib.metadata import entry_points
 
-        plugin_data_entry_points = [entry_point.name for entry_point in entry_points(group='aiida.data')]
-        # print(plugin_data_entry_points)
-        # print(self.entity_counter)
-        from aiida.manage.manager import get_manager
+        # plugin_data_entry_points = [entry_point.name for entry_point in entry_points(group='aiida.data')]
+        # # print(plugin_data_entry_points)
+        # # print(self.entity_counter)
+        # from aiida.manage.manager import get_manager
 
-        manager = get_manager()
-        storage = manager.get_profile_storage()
-        orm_entities = storage.get_orm_entities(detailed=True)['Nodes']['node_types']
-        non_core_data_entities = [
-            orm_entity
-            for orm_entity in orm_entities
-            if orm_entity.startswith('data') and not orm_entity.startswith('data.core')
-        ]
-        # TODO: Implement dumping here. Stashed for now, as both `HubbardStructureData` and `UpfData` I wanted to use
-        # TODO: for testing don't implement `export` either way
-        # print(non_core_data_entities)
+        # manager = get_manager()
+        # storage = manager.get_profile_storage()
+        # orm_entities = storage.get_orm_entities(detailed=True)['Nodes']['node_types']
+        # non_core_data_entities = [
+        #     orm_entity
+        #     for orm_entity in orm_entities
+        #     if orm_entity.startswith('data') and not orm_entity.startswith('data.core')
+        # ]
+        # # TODO: Implement dumping here. Stashed for now, as both `HubbardStructureData` and `UpfData` I wanted to use
+        # # TODO: for testing don't implement `export` either way
+        # # print(non_core_data_entities)

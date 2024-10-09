@@ -260,6 +260,7 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @options.PATH()
 @options.OVERWRITE()
 @options.INCREMENTAL()
+@options.ALL()
 @options.ORGANIZE_BY_GROUPS()
 @options.DRY_RUN()
 @options.DUMP_PROCESSES()
@@ -277,18 +278,15 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @options.RICH_SPEC()
 @options.RICH_DUMP_ALL()
 @options.DUMP_CONFIG_FILE()
-# @options.ALL()
-# @options.NODES()
-# @options.CODES()
-# @options.COMPUTERS()
-# @options.GROUPS()
+@options.NODES()
+@options.GROUPS()
 @click.pass_context
-# @with_dbenv()
 def storage_dump(
     ctx,
     path,
     overwrite,
     incremental,
+    all_entries,
     organize_by_groups,
     dry_run,
     dump_processes,
@@ -306,23 +304,35 @@ def storage_dump(
     rich_spec,
     rich_dump_all,
     dump_config_file,
-    # all_entries,
-    # nodes,
-    # codes,
-    # computers,
-    # groups,
+    nodes,
+    groups,
 ):
     """Dump all data in an AiiDA profile's storage to disk."""
     from rich.pretty import pprint
+
     from aiida import orm
     from aiida.manage import get_manager
     from aiida.tools.dumping.collection import DEFAULT_ENTITIES_TO_DUMP
-    from aiida.tools.dumping.rich import DEFAULT_CORE_EXPORT_MAPPING, rich_from_cli, rich_from_config
-    from aiida.tools.dumping.utils import validate_make_dump_path
     from aiida.tools.dumping.parser import DumpConfigParser
+    from aiida.tools.dumping.rich import (
+        DEFAULT_CORE_EXPORT_MAPPING,
+        rich_from_cli,
+        rich_from_config,
+    )
+    from aiida.tools.dumping.utils import validate_make_dump_path
 
     profile = ctx.obj["profile"]
-    SAFEGUARD_FILE = ".verdi_storage_dump"  # noqa: N806
+
+    if nodes and groups:
+        echo.echo_critical('`nodes` and `groups` specified. Set only one.')
+    if all_entries and groups:
+        echo.echo_critical('`all_entries` and `groups` specified. Set only one.')
+
+    if not overwrite and incremental:
+        echo.echo_report(
+            "Overwrite set to false, but incremental dumping selected. Will keep existing directories."
+        )
+
 
     if dump_config_file is None:
 
@@ -359,11 +369,9 @@ def storage_dump(
         }
 
         if rich_spec is not None:
-            rich_spec_dict = rich_from_cli(
-                rich_spec=rich_spec, **rich_kwargs
-            )
+            rich_spec_dict = rich_from_cli(rich_spec=rich_spec, **rich_kwargs)
         else:
-            rich_spec_dict = {}
+            rich_spec_dict = DEFAULT_CORE_EXPORT_MAPPING
 
     # TODO: Also allow for mixing. Currently one can _only_ specify either the config file, or the arguments on the
     # TODO: command line
@@ -375,14 +383,16 @@ def storage_dump(
         datadumper_kwargs = kwarg_dicts_from_config["datadumper_kwargs"]
         collection_kwargs = kwarg_dicts_from_config["collection_kwargs"]
         rich_kwargs = kwarg_dicts_from_config["rich_kwargs"]
-        rich_spec = kwarg_dicts_from_config['rich_spec']
 
-        rich_spec_dict = rich_from_config(rich_spec, **rich_kwargs)
+        rich_spec_dict = rich_from_config(
+            kwarg_dicts_from_config["rich_spec"], **rich_kwargs
+        )
 
     # Obtain these specifically for easy access and modifications
-    path = general_kwargs['path']
-    overwrite = general_kwargs['overwrite']
-    dry_run = general_kwargs['dry_run']
+    path = general_kwargs["path"]
+    overwrite = general_kwargs["overwrite"]
+    dry_run = general_kwargs["dry_run"]
+    incremental = general_kwargs["incremental"]
 
     if not str(path).endswith(profile.name):
         path /= profile.name
@@ -399,13 +409,11 @@ def storage_dump(
     ):
         echo.echo_report(dry_run_message)
         return
+    
+    else:
+        echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
 
-    if not overwrite and incremental:
-       echo.echo_report('Overwrite set to false, but incremental dumping selected. Will keep existing directories.')
-
-    echo.echo_report(
-        f"Dumping of profile `{profile.name}`'s data at path: `{path}`."
-    )
+    SAFEGUARD_FILE = ".verdi_storage_dump"  # noqa: N806
 
     try:
         validate_make_dump_path(
@@ -436,72 +444,52 @@ def storage_dump(
         **processdumper_kwargs,
     )
 
-    # if all_entries:
-    #     entries_to_dump = None
-    #     entities_to_dump = DEFAULT_ENTITIES_TO_DUMP
-
-    # else:
-    #     entities_to_dump = set()
-    #     if nodes:
-    #         entries_to_dump["nodes"] = nodes
-    #         entities_to_dump.extend({type(node) for node in nodes})
-
-    #     if codes:
-    #         entries_to_dump["codes"] = codes
-    #         entities_to_dump.add(orm.Code)
-
-    #     if computers:
-    #         entries_to_dump["computers"] = computers
-    #         entities_to_dump.add(orm.Computer)
-
-    #     if groups:
-    #         entries_to_dump["groups"] = groups
-    #         entities_to_dump.add(orm.Group)
-
-    # collection_kwargs["entities_to_dump"] = entites_to_dump
-
-    # TODO: Add customization options here...
-    collection_kwargs["entities_to_dump"] = DEFAULT_ENTITIES_TO_DUMP
+    # TODO: Possibly implement specifying specific computers
+    # TODO: Although, users could just specify the relevant nodes
+    # TODO: Also add option to specify node types via entry points
 
     # === Dump the data that is not associated with any group ===
+    if not groups:
+        collection_dumper = CollectionDumper(
+            dump_parent_path=path,
+            output_path=path,
+            overwrite=overwrite,
+            incremental=incremental,
+            nodes=nodes,
+            **collection_kwargs,
+            **rich_kwargs,
+            data_dumper=data_dumper,
+            process_dumper=process_dumper,
+        )
+        collection_dumper.create_entity_counter()
+        # dumper_pretty_print(collection_dumper, include_private_and_dunder=False)
 
-    collection_dumper = CollectionDumper(
-        # **general_kwargs,
-        dump_parent_path=path,
-        output_path=path,
-        overwrite=overwrite,
-        **collection_kwargs,
-        **rich_kwargs,
-        data_dumper=data_dumper,
-        process_dumper=process_dumper,
-    )
-    collection_dumper.create_entity_counter()
-    # dumper_pretty_print(collection_dumper, include_private_and_dunder=False)
+        if dump_processes:
+            print(f'collection_dumper._should_dump_processes(): {collection_dumper._should_dump_processes()}')
+            if collection_dumper._should_dump_processes():
+                echo.echo_report(
+                    f"Dumping processes not in any group for profile `{profile.name}`..."
+                )
+                collection_dumper.dump_processes()
+        if dump_data:
+            if not also_rich and not also_raw:
+                echo.echo_critical(
+                    "`--dump-data was given, but neither --also-raw or --also-rich specified."
+                )
+            echo.echo_report(f"Dumping data not in any group for profile {profile.name}...")
 
-    if dump_processes:
-        if collection_dumper._should_dump_processes():
-            echo.echo_report(
-                f"Dumping processes not in any group for profile `{profile.name}`..."
-            )
-            collection_dumper.dump_processes()
-    if dump_data:
-        if not also_rich and not also_raw:
-            echo.echo_critical(
-                "`--dump-data was given, but neither --also-raw or --also-rich specified."
-            )
-        echo.echo_report(f"Dumping data not in any group for profile {profile.name}...")
-
-        collection_dumper.dump_data_rich()
+            collection_dumper.dump_data_rich()
         # collection_dumper.dump_plugin_data()
 
     # === Dump data per-group if Groups exist in profile or are selected ===
+    # TODO: Invert default behavior here, as I typically want to dump all entries
+    # TODO: Possibly define a new click option instead
+    all_entries = not all_entries
+    if not groups and all_entries:
+        groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
 
-    # if groups is None:
-    groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
-
-    if len(groups) > 0:
+    if groups is not None:
         for group in groups:
-
             if organize_by_groups:
                 group_subdir = Path(*group.type_string.split("."))
                 group_path = path / "groups" / group_subdir / group.label
@@ -512,6 +500,7 @@ def storage_dump(
                 dump_parent_path=path,
                 output_path=group_path,
                 overwrite=overwrite,
+                incremental=incremental,
                 group=group,
                 **collection_kwargs,
                 **rich_kwargs,
@@ -519,8 +508,6 @@ def storage_dump(
                 data_dumper=data_dumper,
             )
             collection_dumper.create_entity_counter()
-            # group_dumper.pretty_print()
-
             if dump_processes:
                 # The additional `_should_dump_processes` check here ensures that no reporting like
                 # "Dumping processes for group `SSSP/1.3/PBE/efficiency`" is printed for groups that

@@ -869,10 +869,7 @@ RICH_DUMP_ALL = OverridableOption(
     is_flag=True,
     type=bool,
     show_default=True,
-    # help=(
-    #     'By default, only nodes for which dumping options are given are dumped for rich dump. '
-    #     'Enable this to dump _all_ nodes, using the default export mappings and file types.'
-    # ),
+    help='If a rich specification is provided, this triggers if all other Data nodes should also be dumped or not.'
 )
 
 ORGANIZE_BY_GROUPS = OverridableOption(
@@ -930,8 +927,7 @@ ONLY_TOP_LEVEL_WORKFLOWS = OverridableOption(
 )
 
 INCREMENTAL = OverridableOption(
-    '--incremental',
-    '-i',
+    '--incremental/--non-incremental',
     is_flag=True,
     default=True,
     show_default=True,

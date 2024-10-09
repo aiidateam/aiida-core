@@ -3,7 +3,7 @@ import yaml
 
 
 class DumpConfigParser:
-    # ? If someone provides options, should the rest be dumped as rich, or not
+
     @staticmethod
     def parse_config_file(config_file: str | Path | None) -> dict:
 
@@ -12,9 +12,6 @@ class DumpConfigParser:
                 config = yaml.safe_load(file)
         else:
             config = yaml.safe_load(config_file)
-
-        #     config = yaml.safe_load(file)
-        # print(f'Parsed config: {config}')
 
         general_kwargs = {
             'path': Path(config.get('path', Path.cwd())),
@@ -57,14 +54,3 @@ class DumpConfigParser:
             'rich_kwargs': rich_kwargs,
             'rich_options': rich_options,
         }
-
-    # def extend_by_entry_points(self): ...
-
-    # def __init__(self, data_types, export_functions, export_formats):
-    #     # TODO: Rather than having three lists, could have a list of tuples of something
-    #     # TODO: Or a dictionary with the keys being the entry points, the values tuples of (class, function, format)
-    #     self.data_types = data_types
-    #     self.export_functions = export_functions
-    #     self.export_formats = export_formats
-
-    # returns the different mappings?

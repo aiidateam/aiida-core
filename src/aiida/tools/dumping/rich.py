@@ -1,5 +1,6 @@
-from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from rich.pretty import pprint
+
+from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 
 __all__ = ('rich_from_cli', 'rich_from_config', 'DEFAULT_CORE_EXPORT_MAPPING')
 
@@ -73,7 +74,6 @@ def rich_from_cli(rich_spec, rich_dump_all):
 
 
 def rich_from_config(rich_spec, rich_dump_all):
-
     if rich_dump_all:
         options_dict = DEFAULT_CORE_EXPORT_MAPPING
     else:

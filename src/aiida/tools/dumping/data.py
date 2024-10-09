@@ -28,6 +28,7 @@ class DataDumper:
         *args,
         dump_parent_path: Path = Path.cwd(),
         overwrite: bool = False,
+        incremental: bool = True,
         data_hidden: bool = False,
         also_raw: bool = False,
         also_rich: bool = False,
@@ -37,6 +38,7 @@ class DataDumper:
         self.args = args
         self.dump_parent_path = dump_parent_path
         self.overwrite = overwrite
+        self.incremental = incremental
         self.data_hidden = data_hidden
         self.also_raw = also_raw
         self.also_rich = also_rich

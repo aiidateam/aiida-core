@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 
 
 def validate_make_dump_path(
-    overwrite: bool,
     path_to_validate: Path,
-    logger: Logger | None = None,
+    overwrite: bool = False,
+    incremental: bool = True,
     safeguard_file: str | None = '.aiida_node_metadata.yaml',
     enforce_safeguard: bool = True,
 ) -> Path:
@@ -38,6 +38,11 @@ def validate_make_dump_path(
     :return: The absolute created dump path.
     """
     import shutil
+    # print(f'overwrite: {overwrite}, incremental: {incremental}, path_to_validate: {path_to_validate}')
+    # raise SystemExit
+
+    if enforce_safeguard and safeguard_file is None:
+        raise Exception('Safeguard enforced but no safeguard_file provided. Must provide safeguard file.')
 
     if path_to_validate.is_dir():
         # Existing, empty directory -> OK
@@ -46,25 +51,30 @@ def validate_make_dump_path(
 
         # Existing, non-empty directory and overwrite False -> FileExistsError
         elif not overwrite:
-            raise FileExistsError(f'Path `{path_to_validate}` already exists and overwrite set to False.')
+            # Incremental dumping enabled, continue
+            if incremental:
+                logger.info('Overwrite set to false, but incremental dumping selected. Will keep directory.')
+                pass
+            else:
+                raise FileExistsError(f'Path `{path_to_validate}` already exists and overwrite set to False.')
 
         # Existing, non-empty directory and overwrite True
         # Check for safeguard file ('.aiida_node_metadata.yaml') for safety
         # If present -> Remove directory
         elif enforce_safeguard and safeguard_file is not None:
             if (path_to_validate / safeguard_file).is_file():
-                if logger is not None:
+                if incremental:
+                    logger.info('Overwrite set to true, but incremental dumping selected. Will pass.')
+                    pass
+                else:
                     logger.info(f'Overwrite set to true, will overwrite directory `{path_to_validate}`.')
-                shutil.rmtree(path_to_validate)
+                    shutil.rmtree(path_to_validate)
 
             else:
                 raise Exception(
                     f"Path `{path_to_validate}` already exists and doesn't contain safeguard file {safeguard_file}."
                     f' Not removing for safety reasons. Delete manually.'
                 )
-
-        elif enforce_safeguard and safeguard_file is None:
-            raise Exception('Safeguard enforced  but no safeguard_file provided. Must provide safeguard file.')
 
         # Existing and non-empty directory and overwrite True
         # Check for safeguard file ('.aiida_node_metadata.yaml') for safety
@@ -106,7 +116,6 @@ def get_nodes_from_db(qb_instance, qb_filters: t.List | None = None, flat=False)
 
 @staticmethod
 def dumper_pretty_print(dumper_instance, include_private_and_dunder: bool = False):
-
     console = Console()
     table = Table(title=f'Attributes and Methods of {dumper_instance.__class__.__name__}')
 
@@ -161,6 +170,7 @@ def dumper_pretty_print(dumper_instance, include_private_and_dunder: bool = Fals
 
 #         if user_input != 'y':
 #             sys.exit()
+
 
 def sanitize_file_extension(filename: str | Path):
     if isinstance(filename, Path):

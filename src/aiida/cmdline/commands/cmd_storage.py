@@ -259,6 +259,7 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @verdi_storage.command('dump')
 @options.PATH()
 @options.OVERWRITE()
+@options.INCREMENTAL()
 @options.ORGANIZE_BY_GROUPS()
 @options.DRY_RUN()
 @options.DUMP_PROCESSES()
@@ -287,6 +288,7 @@ def storage_dump(
     ctx,
     path,
     overwrite,
+    incremental,
     organize_by_groups,
     dry_run,
     dump_processes,
@@ -327,6 +329,7 @@ def storage_dump(
         general_kwargs = {
             "path": path,
             "overwrite": overwrite,
+            "incremental": incremental,
             "dry_run": dry_run,
         }
 
@@ -397,6 +400,9 @@ def storage_dump(
         echo.echo_report(dry_run_message)
         return
 
+    if not overwrite and incremental:
+       echo.echo_report('Overwrite set to false, but incremental dumping selected. Will keep existing directories.')
+
     echo.echo_report(
         f"Dumping of profile `{profile.name}`'s data at path: `{path}`."
     )
@@ -404,6 +410,7 @@ def storage_dump(
     try:
         validate_make_dump_path(
             overwrite=overwrite,
+            incremental=incremental,
             path_to_validate=path,
             enforce_safeguard=True,
             safeguard_file=SAFEGUARD_FILE,
@@ -416,6 +423,7 @@ def storage_dump(
     data_dumper = DataDumper(
         dump_parent_path=path,
         overwrite=overwrite,
+        incremental=incremental,
         rich_spec_dict=rich_spec_dict,
         **datadumper_kwargs,
     )
@@ -423,6 +431,7 @@ def storage_dump(
     process_dumper = ProcessDumper(
         dump_parent_path=path,
         overwrite=overwrite,
+        incremental=incremental,
         data_dumper=data_dumper,
         **processdumper_kwargs,
     )

@@ -38,6 +38,7 @@ class CollectionDumper:
         dump_parent_path: Path = Path().cwd(),
         output_path: Path = Path().cwd(),
         overwrite: bool = False,
+        incremental: bool = True,
         should_dump_processes: bool = False,
         should_dump_data: bool = False,
         only_top_level_workflows: bool = True,
@@ -51,6 +52,7 @@ class CollectionDumper:
         self.dump_parent_path = dump_parent_path
         self.output_path = output_path
         self.overwrite = overwrite
+        self.incremental = incremental
         self.should_dump_processes = should_dump_processes
         self.should_dump_data = should_dump_data
         self.only_top_level_workflows = only_top_level_workflows

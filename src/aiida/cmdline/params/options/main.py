@@ -79,6 +79,7 @@ __all__ = (
     'INCLUDE_OUTPUTS',
     'INCLUDE_ATTRIBUTES',
     'INCLUDE_EXTRAS',
+    'INCREMENTAL',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
@@ -926,4 +927,13 @@ ONLY_TOP_LEVEL_WORKFLOWS = OverridableOption(
     type=bool,
     show_default=True,
     help='Dump only the top-level workflows in their own dedicated directories.',
+)
+
+INCREMENTAL = OverridableOption(
+    '--incremental',
+    '-i',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Dump files incrementally when dumping collections of data to disk.',
 )

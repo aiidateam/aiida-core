@@ -37,6 +37,7 @@ class ProcessDumper:
         *args,
         dump_parent_path: Path = Path.cwd(),
         overwrite: bool = False,
+        incremental: bool = True,
         flat: bool = False,
         calculations_hidden: bool = True,
         include_inputs: bool = True,
@@ -52,6 +53,7 @@ class ProcessDumper:
         self.args = args
         self.dump_parent_path = dump_parent_path
         self.overwrite = overwrite
+        self.incremental = incremental
         self.flat = flat
         self.calculations_hidden = calculations_hidden,
         self.include_inputs = include_inputs
@@ -213,7 +215,7 @@ class ProcessDumper:
             output_path = self._generate_default_dump_path(process_node=process_node)
 
         validate_make_dump_path(
-            overwrite=self.overwrite, path_to_validate=output_path, logger=logger, safeguard_file=SAFEGUARD_FILE
+            overwrite=self.overwrite, path_to_validate=output_path, safeguard_file=SAFEGUARD_FILE
         )
 
         if isinstance(process_node, orm.CalculationNode):
@@ -250,7 +252,7 @@ class ProcessDumper:
         """
 
         validate_make_dump_path(
-            path_to_validate=output_path, overwrite=self.overwrite, logger=logger, safeguard_file=SAFEGUARD_FILE
+            path_to_validate=output_path, overwrite=self.overwrite, safeguard_file=SAFEGUARD_FILE
         )
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
@@ -283,7 +285,10 @@ class ProcessDumper:
                         io_dump_paths=io_dump_paths,
                     )
                 else:
-                    os.symlink(link_calculations_dir / child_node.uuid, child_output_path)
+                    try:
+                        os.symlink(link_calculations_dir / child_node.uuid, child_output_path)
+                    except FileExistsError:
+                        pass
 
     def _dump_calculation(
         self,
@@ -300,7 +305,7 @@ class ProcessDumper:
         """
 
         validate_make_dump_path(
-            overwrite=self.overwrite, path_to_validate=output_path, logger=logger, safeguard_file=SAFEGUARD_FILE
+            overwrite=self.overwrite, path_to_validate=output_path, safeguard_file=SAFEGUARD_FILE
         )
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 

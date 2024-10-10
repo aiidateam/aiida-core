@@ -1,7 +1,6 @@
 """Tests for :mod:`aiida.storage.sqlite_zip.backend`."""
 
 import pathlib
-from unittest.mock import MagicMock
 
 import pytest
 from aiida.common.exceptions import IncompatibleExternalDependencies
@@ -81,17 +80,3 @@ def test_validate_sqlite_version(monkeypatch):
     monkeypatch.setattr('sqlite3.sqlite_version', '100.0.0')
     monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '0.0.0')
     validate_sqlite_version()
-
-
-def test_initialise_version_check(tmp_path, monkeypatch):
-    """Test :meth:`aiida.storage.sqlite_zip.backend.SqliteZipBackend.create_profile`
-    only if calls on validate_sqlite_version."""
-
-    filepath_archive = tmp_path / 'archive.zip'
-
-    mock_ = MagicMock()
-    monkeypatch.setattr('aiida.storage.sqlite_zip.backend.validate_sqlite_version', mock_)
-    profile = SqliteZipBackend.create_profile(filepath_archive)
-    assert mock_.call_count == 1
-    SqliteZipBackend.initialise(profile)
-    assert mock_.call_count == 2

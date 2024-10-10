@@ -244,6 +244,10 @@ class SqliteDosStorage(PsqlDosBackend):
 
         return super().initialise(profile, reset)
 
+    def __init__(self, profile: Profile) -> None:
+        validate_sqlite_version()
+        super().__init__(profile)
+
     def __str__(self) -> str:
         state = 'closed' if self.is_closed else 'open'
         return f'SqliteDosStorage[{self.filepath_root}]: {state},'

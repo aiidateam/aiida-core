@@ -104,7 +104,6 @@ class SqliteZipBackend(StorageBackend):
     def create_profile(filepath: str | Path, options: dict | None = None) -> Profile:
         """Create a new profile instance for this backend, from the path to the zip file."""
         profile_name = Path(filepath).name
-        validate_sqlite_version()
         return Profile(
             profile_name,
             {
@@ -185,6 +184,7 @@ class SqliteZipBackend(StorageBackend):
     def __init__(self, profile: Profile):
         from .migrator import validate_storage
 
+        validate_sqlite_version()
         super().__init__(profile)
         self._path = Path(profile.storage_config['filepath'])
         validate_storage(self._path)

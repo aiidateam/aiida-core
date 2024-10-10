@@ -167,7 +167,7 @@ def test_setup_with_validating_sqlite_version(
     config_psql_dos, run_cli_command, isolated_config, tmp_path, entry_point, monkeypatch
 ):
     """Test the ``verdi profile setup`` command.
-    Same as `test_setup`, here we check the fucntionality to check sqlite versions, before setting up profiles.
+    Same as `test_setup`, here we check the functionality to check sqlite versions, before setting up profiles.
     Note that this test should be run before the `test_delete_storage` test.
     """
 

@@ -96,11 +96,12 @@ class CollectionDumper:
 
     def get_collection_nodes(self):
         if self.nodes:
+            print(f'SELF.NODES: {self.nodes}')
             self.collection_nodes = self.nodes
             return self.collection_nodes
 
-        if hasattr(self, 'collection_nodes'):
-            return self.collection_nodes
+        # if hasattr(self, 'collection_nodes'):
+        #     return self.collection_nodes
 
         # Get all nodes that are in the group
         if self.group is not None:
@@ -257,7 +258,7 @@ class CollectionDumper:
             # Some entry_points might not be inside the `rich_spec_dict`
             except:
                 # Raise all exceptions here during development
-                raise 
+                raise
 
             # except KeyError:
             #     continue
@@ -275,6 +276,7 @@ class CollectionDumper:
                 nice_fname = sanitize_file_extension(nice_fname)
 
                 if data_dumper.data_hidden:
+                    print("HELLO")
                     # Define paths for hidden dump and linking
                     hidden_output_path = self.hidden_aiida_path / 'data' / data_node.__class__.__name__.lower()
                     uuid_fname = sanitize_file_extension(f'{data_node.uuid}.{fileformat}')

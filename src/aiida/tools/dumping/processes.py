@@ -55,7 +55,7 @@ class ProcessDumper:
         self.overwrite = overwrite
         self.incremental = incremental
         self.flat = flat
-        self.calculations_hidden = calculations_hidden,
+        self.calculations_hidden = calculations_hidden
         self.include_inputs = include_inputs
         self.include_outputs = include_outputs
         self.include_attributes = include_attributes
@@ -323,7 +323,7 @@ class ProcessDumper:
 
         if self.data_dumper.also_raw:
             # TODO: Replace with attached self.data_dumper attribute
-            self.data_dumper.dump_raw(data_node=calculation_node, output_path=output_path)
+            self.data_dumper.dump_core_data_node_raw(data_node=calculation_node, output_path=output_path)
 
         # Dump the node_inputs
         if self.include_inputs:
@@ -344,21 +344,17 @@ class ProcessDumper:
             if self.data_dumper.also_rich:
                 if not self.data_dumper.data_hidden:
                     rich_data_output_path = output_path / io_dump_mapping.inputs
-                    # Only dump the rich data output files in the process directories if data_hidden is False
-                    self._dump_calculation_io_files_rich(
-                        output_path=rich_data_output_path, link_triples=input_links
-                    )
-                # TODO: Currently, when dumping only one selected workflow, if rich dumping is activated, but
-                # TODO: `data-hidden` is set, no data nodes were actually being dumped
-                # TODO: With the current implementation below, they are dumped, but not in the same structure as for the
-                # TODO: `dump_rich_core` function. Quick fix for now
                 else:
-                    rich_data_output_path = self.dump_parent_path / 'data'
-                    # Only dump the rich data output files in the process directories if data_hidden is False
-                    self._dump_calculation_io_files_rich(
-                        output_path=rich_data_output_path, link_triples=input_links
-                    )
+                    # TODO: Currently, when dumping only one selected workflow, if rich dumping is activated, but
+                    # TODO: `data-hidden` is set, no data nodes were actually being dumped
+                    # TODO: With the current implementation below, they are dumped, but not in the same structure as for the
+                    # TODO: `dump_rich_core` function. Quick fix for now
+                    rich_data_output_path = self.hidden_aiida_path / 'data'
 
+                # Only dump the rich data output files in the process directories if data_hidden is False
+                self._dump_calculation_io_files_rich(
+                    output_path=rich_data_output_path, link_triples=input_links
+                )
         # Dump the node_outputs apart from `retrieved`
         if self.include_outputs:
             output_links = list(calculation_node.base.links.get_outgoing(link_type=LinkType.CREATE))
@@ -431,8 +427,8 @@ class ProcessDumper:
             output_fname = output_fname.replace('__', '_')
 
             if self.data_dumper.data_hidden:
-                self.data_dumper.dump_raw(data_node=data_node, output_path=output_path, output_fname=output_fname)
-            self.data_dumper.dump_raw(data_node=data_node, output_path=output_path, output_fname=output_fname)
+                self.data_dumper.dump_core_data_node_raw(data_node=data_node, output_path=output_path, output_fname=output_fname)
+            self.data_dumper.dump_core_data_node_raw(data_node=data_node, output_path=output_path, output_fname=output_fname)
 
     def _dump_calculation_io_files_rich(
         self,
@@ -444,8 +440,6 @@ class ProcessDumper:
         :param parent_path: Parent directory for dumping the linked node contents.
         :param link_triples: List of link triples.
         """
-
-        output_path /= 'rich'
 
         # Set up the rich parsing functions
 
@@ -480,12 +474,13 @@ class ProcessDumper:
                     continue
 
                 # Only create subdirectory if `Data` node has an exporter
-                output_path.mkdir(parents=True, exist_ok=True)
+                rich_output_path = output_path / 'rich' / node.__class__.__name__.lower()
+                rich_output_path.mkdir(parents=True, exist_ok=True)
 
                 # TODO: Here, if data_hidden is True, dump in hidden directory, else in output_path
                 self.data_dumper.dump_core_data_node_rich(
                     node,
-                    output_path=output_path,
+                    output_path=rich_output_path,
                     output_fname=output_fname,
                 )
 

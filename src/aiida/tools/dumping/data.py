@@ -279,7 +279,7 @@ class DataDumper:
 
     def _dump_user_info(self): ...
 
-    def dump_raw(self, data_node: orm.Data, output_path: Path, output_fname: str | None = None):
+    def dump_core_data_node_raw(self, data_node: orm.Data, output_path: Path, output_fname: str | None = None):
         output_path.mkdir(exist_ok=True, parents=True)
 
         if output_fname is None:

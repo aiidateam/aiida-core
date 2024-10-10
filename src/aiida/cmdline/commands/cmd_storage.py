@@ -260,12 +260,11 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @options.PATH()
 @options.OVERWRITE()
 @options.INCREMENTAL()
-@options.ALL()
+# @options.ALL()
 @options.ORGANIZE_BY_GROUPS()
 @options.DRY_RUN()
 @options.DUMP_PROCESSES()
 @options.ONLY_TOP_LEVEL_WORKFLOWS()
-@options.FLAT()
 @options.DUMP_DATA()
 @options.CALCULATIONS_HIDDEN()
 @options.DATA_HIDDEN()
@@ -275,6 +274,7 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
+@options.FLAT()
 @options.RICH_SPEC()
 @options.RICH_DUMP_ALL()
 @options.DUMP_CONFIG_FILE()
@@ -286,12 +286,11 @@ def storage_dump(
     path,
     overwrite,
     incremental,
-    all_entries,
+    # all_entries,
     organize_by_groups,
     dry_run,
     dump_processes,
     only_top_level_workflows,
-    flat,
     dump_data,
     calculations_hidden,
     data_hidden,
@@ -301,6 +300,7 @@ def storage_dump(
     include_outputs,
     include_attributes,
     include_extras,
+    flat,
     rich_spec,
     rich_dump_all,
     dump_config_file,
@@ -325,8 +325,8 @@ def storage_dump(
 
     if nodes and groups:
         echo.echo_critical('`nodes` and `groups` specified. Set only one.')
-    if all_entries and groups:
-        echo.echo_critical('`all_entries` and `groups` specified. Set only one.')
+    # if all_entries and groups:
+    #     echo.echo_critical('`all_entries` and `groups` specified. Set only one.')
 
     if not overwrite and incremental:
         echo.echo_report(
@@ -349,7 +349,7 @@ def storage_dump(
             "include_attributes": include_attributes,
             "include_extras": include_extras,
             "flat": flat,
-            "calculations_hidden": calculations_hidden,
+            "calculations_hidden": calculations_hidden
         }
 
         datadumper_kwargs = {
@@ -409,7 +409,7 @@ def storage_dump(
     ):
         echo.echo_report(dry_run_message)
         return
-    
+
     else:
         echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
 
@@ -435,6 +435,7 @@ def storage_dump(
         rich_spec_dict=rich_spec_dict,
         **datadumper_kwargs,
     )
+    dumper_pretty_print(data_dumper)
 
     process_dumper = ProcessDumper(
         dump_parent_path=path,
@@ -443,6 +444,7 @@ def storage_dump(
         data_dumper=data_dumper,
         **processdumper_kwargs,
     )
+    dumper_pretty_print(process_dumper)
 
     # TODO: Possibly implement specifying specific computers
     # TODO: Although, users could just specify the relevant nodes
@@ -484,11 +486,11 @@ def storage_dump(
     # === Dump data per-group if Groups exist in profile or are selected ===
     # TODO: Invert default behavior here, as I typically want to dump all entries
     # TODO: Possibly define a new click option instead
-    all_entries = not all_entries
-    if not groups and all_entries:
+    # all_entries = not all_entries
+    if not groups: # and all_entries:
         groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
 
-    if groups is not None:
+    if groups is not None and not nodes:
         for group in groups:
             if organize_by_groups:
                 group_subdir = Path(*group.type_string.split("."))

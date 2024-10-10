@@ -11,13 +11,11 @@
 from __future__ import annotations
 
 import contextlib
-from rich.pretty import pprint
 import itertools as it
 import logging
 import os
 from collections import Counter
 from pathlib import Path
-from typing import List
 
 from aiida import orm
 from aiida.tools.dumping.data import DataDumper
@@ -113,13 +111,15 @@ class CollectionDumper:
             nodes_in_groups = [node.pk for group in groups for node in group.nodes]
             # Need to expand here also with the called_descendants of `WorkflowNodes`, otherwise the called
             # `CalculationNode`s for `WorkflowNode`s that are part of a group are dumped twice
-            sub_nodes_in_groups = list(it.chain(
-                *[
-                    orm.load_node(node).called_descendants
-                    for node in nodes_in_groups
-                    if isinstance(orm.load_node(node), orm.WorkflowNode)
-                ]
-            ))
+            sub_nodes_in_groups = list(
+                it.chain(
+                    *[
+                        orm.load_node(node).called_descendants
+                        for node in nodes_in_groups
+                        if isinstance(orm.load_node(node), orm.WorkflowNode)
+                    ]
+                )
+            )
             sub_nodes_in_groups = [node.pk for node in sub_nodes_in_groups]
             nodes_in_groups = nodes_in_groups + sub_nodes_in_groups
 

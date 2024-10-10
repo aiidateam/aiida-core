@@ -214,9 +214,7 @@ class ProcessDumper:
         if output_path is None:
             output_path = self._generate_default_dump_path(process_node=process_node)
 
-        validate_make_dump_path(
-            overwrite=self.overwrite, path_to_validate=output_path, safeguard_file=SAFEGUARD_FILE
-        )
+        validate_make_dump_path(overwrite=self.overwrite, path_to_validate=output_path, safeguard_file=SAFEGUARD_FILE)
 
         if isinstance(process_node, orm.CalculationNode):
             self._dump_calculation(
@@ -251,9 +249,7 @@ class ProcessDumper:
         :param io_dump_paths: Custom subdirectories for `orm.CalculationNode` s, defaults to None
         """
 
-        validate_make_dump_path(
-            path_to_validate=output_path, overwrite=self.overwrite, safeguard_file=SAFEGUARD_FILE
-        )
+        validate_make_dump_path(path_to_validate=output_path, overwrite=self.overwrite, safeguard_file=SAFEGUARD_FILE)
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
         called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
@@ -304,9 +300,7 @@ class ProcessDumper:
             Default: ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         """
 
-        validate_make_dump_path(
-            overwrite=self.overwrite, path_to_validate=output_path, safeguard_file=SAFEGUARD_FILE
-        )
+        validate_make_dump_path(overwrite=self.overwrite, path_to_validate=output_path, safeguard_file=SAFEGUARD_FILE)
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 
         io_dump_mapping = self._generate_calculation_io_mapping(io_dump_paths=io_dump_paths)
@@ -352,9 +346,7 @@ class ProcessDumper:
                     rich_data_output_path = self.hidden_aiida_path / 'data'
 
                 # Only dump the rich data output files in the process directories if data_hidden is False
-                self._dump_calculation_io_files_rich(
-                    output_path=rich_data_output_path, link_triples=input_links
-                )
+                self._dump_calculation_io_files_rich(output_path=rich_data_output_path, link_triples=input_links)
         # Dump the node_outputs apart from `retrieved`
         if self.include_outputs:
             output_links = list(calculation_node.base.links.get_outgoing(link_type=LinkType.CREATE))
@@ -427,8 +419,12 @@ class ProcessDumper:
             output_fname = output_fname.replace('__', '_')
 
             if self.data_dumper.data_hidden:
-                self.data_dumper.dump_core_data_node_raw(data_node=data_node, output_path=output_path, output_fname=output_fname)
-            self.data_dumper.dump_core_data_node_raw(data_node=data_node, output_path=output_path, output_fname=output_fname)
+                self.data_dumper.dump_core_data_node_raw(
+                    data_node=data_node, output_path=output_path, output_fname=output_fname
+                )
+            self.data_dumper.dump_core_data_node_raw(
+                data_node=data_node, output_path=output_path, output_fname=output_fname
+            )
 
     def _dump_calculation_io_files_rich(
         self,

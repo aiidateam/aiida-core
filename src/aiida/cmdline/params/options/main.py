@@ -869,7 +869,7 @@ RICH_DUMP_ALL = OverridableOption(
     is_flag=True,
     type=bool,
     show_default=True,
-    help='If a rich specification is provided, this triggers if all other Data nodes should also be dumped or not.'
+    help='If a rich specification is provided, this triggers if all other Data nodes should also be dumped or not.',
 )
 
 ORGANIZE_BY_GROUPS = OverridableOption(

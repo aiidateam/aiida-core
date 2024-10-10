@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import contextlib
+from rich.pretty import pprint
+import itertools as it
 import logging
 import os
 from collections import Counter
@@ -96,9 +98,7 @@ class CollectionDumper:
 
     def get_collection_nodes(self):
         if self.nodes:
-            print(f'SELF.NODES: {self.nodes}')
             self.collection_nodes = self.nodes
-            return self.collection_nodes
 
         # if hasattr(self, 'collection_nodes'):
         #     return self.collection_nodes
@@ -111,6 +111,18 @@ class CollectionDumper:
         else:
             groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
             nodes_in_groups = [node.pk for group in groups for node in group.nodes]
+            # Need to expand here also with the called_descendants of `WorkflowNodes`, otherwise the called
+            # `CalculationNode`s for `WorkflowNode`s that are part of a group are dumped twice
+            sub_nodes_in_groups = list(it.chain(
+                *[
+                    orm.load_node(node).called_descendants
+                    for node in nodes_in_groups
+                    if isinstance(orm.load_node(node), orm.WorkflowNode)
+                ]
+            ))
+            sub_nodes_in_groups = [node.pk for node in sub_nodes_in_groups]
+            nodes_in_groups = nodes_in_groups + sub_nodes_in_groups
+
             profile_nodes = orm.QueryBuilder().append(orm.Node, project=['pk']).all(flat=True)
             nodes = [profile_node for profile_node in profile_nodes if profile_node not in nodes_in_groups]
             nodes = [orm.load_node(node) for node in nodes]
@@ -276,7 +288,6 @@ class CollectionDumper:
                 nice_fname = sanitize_file_extension(nice_fname)
 
                 if data_dumper.data_hidden:
-                    print("HELLO")
                     # Define paths for hidden dump and linking
                     hidden_output_path = self.hidden_aiida_path / 'data' / data_node.__class__.__name__.lower()
                     uuid_fname = sanitize_file_extension(f'{data_node.uuid}.{fileformat}')

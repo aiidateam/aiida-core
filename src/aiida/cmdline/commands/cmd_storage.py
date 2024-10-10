@@ -452,6 +452,7 @@ def storage_dump(
 
     # === Dump the data that is not associated with any group ===
     if not groups:
+        print('Dumping nodes not in any groups')
         collection_dumper = CollectionDumper(
             dump_parent_path=path,
             output_path=path,

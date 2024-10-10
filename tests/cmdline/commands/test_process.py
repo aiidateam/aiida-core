@@ -546,9 +546,17 @@ def test_process_kill(submit_and_await, aiida_code_installed, run_cli_command, i
     The test is divided into multiple parts. For parts that is tied to daemon functionality,
     we use the `inject_patch` to "hardpatch" certain functions in the source code.
     """
-    import asyncio
 
     from aiida.cmdline.utils.common import get_process_function_report
+
+    def make_a_builder(sleep_seconds=0):
+        builder = code.get_builder()
+        builder.x = Int(1)
+        builder.y = Int(1)
+        builder.metadata.options.sleep = sleep_seconds
+        return builder
+
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
 
     kill_timeout = 5
 
@@ -580,14 +588,6 @@ def test_process_kill(submit_and_await, aiida_code_installed, run_cli_command, i
     assert node.process_status == 'Force killed through `verdi process kill -F`'
 
     # 3) Kill a running process
-    def make_a_builder(sleep_seconds=0):
-        builder = code.get_builder()
-        builder.x = Int(1)
-        builder.y = Int(1)
-        builder.metadata.options.sleep = sleep_seconds
-        return builder
-
-    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     node = submit_and_await(make_a_builder(sleep_seconds=100), ProcessState.RUNNING)
     run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
 
@@ -692,7 +692,7 @@ def test_process_kill(submit_and_await, aiida_code_installed, run_cli_command, i
     # which btw, means orphans may be left behind on server.
     # The following test is more of a documentation of the current behavior.
     async def mock_exponential_backoff_retry(*args, **kwargs):
-        await asyncio.sleep(10)
+        await asyncio.sleep(10)  # noqa: F821
         raise Exception('Exponential backoff retry failed')
 
     inject_patch.restore(restart_daemon=False)
@@ -709,6 +709,22 @@ def test_process_kill(submit_and_await, aiida_code_installed, run_cli_command, i
 
     # by now, EBM should have failed, and a failed normal kill attempt should have caused the process to be EXCEPTED
     # EXCEPTIONS particularly reflects slowly in the process state, so please be graceful, we got all night.
+    await_condition(lambda: node.process_state == ProcessState.EXCEPTED, timeout=kill_timeout * 2)
+
+    # 11) The same as number #10, only this time tasks is has passed EBM successfully and is running.
+    # but the kill command will fail, because it cannot open a transport.
+    async def mock_kill(*args, **kwargs):
+        raise TransportTaskException('Mock kill exception')  # noqa: F821
+
+    inject_patch.restore(restart_daemon=False)
+    inject_patch.patch('aiida.engine.processes.calcjobs.tasks.task_kill_job', mock_kill)
+
+    node = submit_and_await(make_a_builder(100), ProcessState.WAITING)
+    await_condition(lambda: node.process_status == 'Monitoring scheduler: job state RUNNING', timeout=kill_timeout)
+
+    result = run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+    assert f'Report: request to kill Process<{node.pk}> sent' in result.stdout
+
     await_condition(lambda: node.process_state == ProcessState.EXCEPTED, timeout=kill_timeout * 2)
 
 

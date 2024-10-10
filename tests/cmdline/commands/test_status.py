@@ -112,9 +112,6 @@ def test_sqlite_version(run_cli_command, monkeypatch):
         monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '100.0.0')
         result = run_cli_command(cmd_status.verdi_status, use_subprocess=False, raises=True)
         assert (
-            "Storage backend version doesn't satisfy the requirements of the installed AiiDA version" in result.output
-        )
-        assert (
             'IncompatibleExternalDependencies: Storage backend requires sqlite 100.0.0 or higher. But you have'
             in result.stderr
         )

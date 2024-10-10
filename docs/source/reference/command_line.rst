@@ -220,7 +220,7 @@ Below is a list with all available subcommands.
       add-nodes     Add nodes to a group.
       copy          Duplicate a group.
       create        Create an empty group with a given label.
-      delete        Delete a group and (optionally) the nodes it contains.
+      delete        Delete groups and (optionally) the nodes they contain.
       description   Change the description of a group.
       list          Show a list of existing groups.
       move-nodes    Move the specified NODES from one group to another.

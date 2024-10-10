@@ -8,6 +8,7 @@
 ###########################################################################
 """`verdi storage` commands."""
 
+import logging
 import sys
 
 import click
@@ -153,7 +154,9 @@ def storage_info(detailed):
 def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
     """Performs maintenance tasks on the repository."""
     from aiida.common.exceptions import LockingProfileError
+    from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.manage.manager import get_manager
+    from aiida.storage.log import STORAGE_LOGGER
 
     manager = get_manager()
     profile = ctx.obj.profile
@@ -183,6 +186,12 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
 
     if not dry_run and not force and not click.confirm('Are you sure you want continue in this mode?'):
         return
+
+    if STORAGE_LOGGER.level <= logging.REPORT:
+        # Only keep the first tqdm bar if it is info. To keep the nested bar information one needs report level
+        set_progress_bar_tqdm(leave=STORAGE_LOGGER.level <= logging.INFO)
+    else:
+        set_progress_reporter(None)
 
     try:
         if full and no_repack:

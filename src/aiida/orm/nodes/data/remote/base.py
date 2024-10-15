@@ -185,3 +185,45 @@ class RemoteData(Data):
 
     def get_authinfo(self):
         return AuthInfo.get_collection(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)
+
+    def get_total_size_on_disk(self, relpath='.'):
+        """Connects to the remote folder and returns the total size of all files in the directory recursively in bytes.
+
+        :param relpath: If 'relpath' is specified, it is used as the root folder of which the size is returned.
+        :return: Total size of files in bytes.
+        """
+
+        def get_remote_recursive_size(path, transport):
+            """
+            Helper function for recursive directory traversal to obtain the `listdir_withattributes` result for all
+            subdirectories.
+            """
+
+            total_size = 0
+            contents = self.listdir_withattributes(path)
+            for item in contents:
+                item_path = os.path.join(path, item['name'])
+                if item['isdir']:
+                    total_size += get_remote_recursive_size(item_path, transport)
+                else:
+                    total_size += item['attributes']['st_size']
+            return total_size
+
+        authinfo = self.get_authinfo()
+
+        with authinfo.get_transport() as transport:
+            try:
+                full_path = os.path.join(self.get_remote_path(), relpath)
+                total_size = get_remote_recursive_size(full_path, transport)
+                return total_size
+            except OSError as exception:
+                # directory not existing or not a directory
+                if exception.errno in (2, 20):
+                    exc = OSError(
+                        f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
+                        'directory or has been deleted.'
+                    )
+                    exc.errno = exception.errno
+                    raise exc from exception
+                else:
+                    raise

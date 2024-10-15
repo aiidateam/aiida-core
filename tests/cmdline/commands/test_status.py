@@ -101,12 +101,12 @@ def test_storage_corrupted(run_cli_command, monkeypatch):
 
 
 def test_sqlite_version(run_cli_command, monkeypatch):
-    """Test `verdi status` when the storage is found to be corrupt (e.g. non-matching repository UUIDs)."""
+    """Test `verdi status` when the sqlite version is incompatible with the required version.
+    the main functionality of this test is triggered only by the pytest marker 'presto',
+    through `pytest -m 'presto'`"""
 
     profile = get_profile()
     storage_backend = profile._attributes['storage']['backend']
-    # This should be True, only if `pytest -m 'presto'` is used.
-    # and that is essential to guarantee the funtionality of the code!
     if storage_backend in ['core.sqlite_dos', 'core.sqlite_zip']:
         # Should raise if installed version is lower than the supported one.
         monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '100.0.0')

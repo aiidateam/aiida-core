@@ -167,6 +167,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         """
         from disk_objectstore import CompressMode
 
+        from aiida.common.progress_reporter import create_callback, get_progress_reporter
+
         if live and (do_repack or clean_storage or do_vacuum):
             overrides = {'do_repack': do_repack, 'clean_storage': clean_storage, 'do_vacuum': do_vacuum}
             keys = ', '.join([key for key, override in overrides.items() if override is True])  # type: ignore
@@ -192,14 +194,18 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 files_size = container.get_total_size().total_size_loose * BYTES_TO_MB
                 logger.report(f'Packing all loose files ({files_numb} files occupying {files_size} MB) ...')
                 if not dry_run:
-                    container.pack_all_loose(compress=compress)
+                    with get_progress_reporter()(total=1) as progress:
+                        callback = create_callback(progress)
+                        container.pack_all_loose(compress=compress, callback=callback)
 
             if do_repack:
                 files_numb = container.count_objects().packed
                 files_size = container.get_total_size().total_size_packfiles_on_disk * BYTES_TO_MB
                 logger.report(f'Re-packing all pack files ({files_numb} files in packs, occupying {files_size} MB) ...')
                 if not dry_run:
-                    container.repack()
+                    with get_progress_reporter()(total=1) as progress:
+                        callback = create_callback(progress)
+                        container.repack(callback=callback)
 
             if clean_storage:
                 logger.report(f'Cleaning the repository database (with `vacuum={do_vacuum}`) ...')

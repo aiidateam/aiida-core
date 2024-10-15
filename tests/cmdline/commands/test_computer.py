@@ -525,7 +525,7 @@ class TestVerdiComputerConfigure:
         comp = self.comp_builder.new()
         comp.store()
 
-        exported_setup_filename = tmp_path / 'computer-setup.yml'
+        exported_setup_filename = tmp_path / 'computer-setup.yaml'
 
         # Successfull write behavior
         result = self.cli_runner(computer_export_setup, [comp.label, exported_setup_filename, sort_option])
@@ -534,9 +534,9 @@ class TestVerdiComputerConfigure:
 
         # file regresssion check
         content = exported_setup_filename.read_text()
-        file_regression.check(content, extension='.yml')
+        file_regression.check(content, extension='.yaml')
 
-        # verifying correctness by comparing internal and loaded yml object
+        # verifying correctness by comparing internal and loaded yaml object
         configure_setup_data = yaml.safe_load(exported_setup_filename.read_text())
         assert configure_setup_data == self.comp_builder.get_computer_spec(
             comp
@@ -550,7 +550,7 @@ class TestVerdiComputerConfigure:
         comp = self.comp_builder.new()
         comp.store()
 
-        exported_setup_filename = tmp_path / 'computer-setup.yml'
+        exported_setup_filename = tmp_path / 'computer-setup.yaml'
         # Check that export fails if the file already exists
         exported_setup_filename.touch()
         result = self.cli_runner(computer_export_setup, [comp.label, exported_setup_filename], raises=True)
@@ -581,7 +581,7 @@ class TestVerdiComputerConfigure:
         comp = self.comp_builder.new()
         comp.store()
 
-        exported_setup_filename = f'{comp_label}-setup.yml'
+        exported_setup_filename = f'{comp_label}-setup.yaml'
 
         self.cli_runner(computer_export_setup, [comp.label])
         assert pathlib.Path(exported_setup_filename).is_file()
@@ -593,7 +593,7 @@ class TestVerdiComputerConfigure:
         comp = self.comp_builder.new()
         comp.store()
 
-        exported_config_filename = tmp_path / 'computer-configure.yml'
+        exported_config_filename = tmp_path / 'computer-configure.yaml'
 
         # We have not configured the computer yet so it should exit with an critical error
         result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
@@ -613,7 +613,7 @@ class TestVerdiComputerConfigure:
         content = exported_config_filename.read_text()
         assert content.startswith('safe_interval: 0.0')
 
-        # verifying correctness by comparing internal and loaded yml object
+        # verifying correctness by comparing internal and loaded yaml object
         configure_config_data = yaml.safe_load(exported_config_filename.read_text())
         assert (
             configure_config_data == comp.get_configuration()
@@ -641,7 +641,7 @@ class TestVerdiComputerConfigure:
         comp.store()
         comp.configure(safe_interval=0.0)
 
-        exported_config_filename = tmp_path / 'computer-configure.yml'
+        exported_config_filename = tmp_path / 'computer-configure.yaml'
 
         # Create directory with the same name and check that command fails
         exported_config_filename.mkdir()
@@ -673,7 +673,7 @@ class TestVerdiComputerConfigure:
         comp.store()
         comp.configure(safe_interval=0.0)
 
-        exported_config_filename = f'{comp_label}-config.yml'
+        exported_config_filename = f'{comp_label}-config.yaml'
 
         self.cli_runner(computer_export_config, [comp.label])
         assert pathlib.Path(exported_config_filename).is_file()

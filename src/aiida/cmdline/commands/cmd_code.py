@@ -14,12 +14,13 @@ from functools import partial
 
 import click
 
+from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo, echo_tabulate
-from aiida.cmdline.utils.common import generate_validate_output_file
+from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 
@@ -241,28 +242,37 @@ def show(code):
 @options.SORT()
 @with_dbenv()
 def export(code, output_file, overwrite, sort):
-    """Export code to a yaml file."""
+    """Export code to a yaml file. If no output file is given, default name is created based on the code label."""
 
-    import yaml
+    other_args = {'sort': sort}
 
-    code_data = {}
+    fileformat = 'yaml'
 
-    for key in code.Model.model_fields.keys():
-        value = getattr(code, key).label if key == 'computer' else getattr(code, key)
-
-        # If the attribute is not set, for example ``with_mpi`` do not export it, because the YAML won't be valid for
-        # use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
-        if value is not None:
-            code_data[key] = str(value)
+    if output_file is None:
+        output_file = pathlib.Path(f'{code.full_label}.{fileformat}')
 
     try:
-        output_file = generate_validate_output_file(
-            output_file=output_file, entity_label=code.label, overwrite=overwrite, appendix=f'@{code_data["computer"]}'
+        # In principle, output file validation is also done in the `data_export` function. However, the
+        # `validate_output_filename` function is applied here, as well, as it is also used in the `Computer` export, and
+        # as `Computer` is not derived from `Data`, it cannot be exported by `data_export`, so
+        # `validate_output_filename` cannot be removed in favor of the validation done in `data_export`.
+        validate_output_filename(
+            output_file=output_file,
+            overwrite=overwrite,
         )
     except (FileExistsError, IsADirectoryError) as exception:
         raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
 
-    output_file.write_text(yaml.dump(code_data, sort_keys=sort))
+    try:
+        data_export(
+            node=code,
+            output_fname=output_file,
+            fileformat=fileformat,
+            other_args=other_args,
+            overwrite=overwrite,
+        )
+    except Exception as exception:
+        echo.echo_critical(f'Error in the `data_export` function: {exception}')
 
     echo.echo_success(f'Code<{code.pk}> {code.label} exported to file `{output_file}`.')
 

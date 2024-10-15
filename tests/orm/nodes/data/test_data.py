@@ -18,7 +18,7 @@ from tests.static import STATIC_DIR
 
 
 @pytest.fixture
-def generate_class_instance():
+def generate_class_instance(tmp_path, aiida_localhost):
     """Generate a dummy `Data` instance for the given sub class."""
 
     def _generate_class_instance(data_class):
@@ -108,6 +108,41 @@ def generate_class_instance():
                 orbital, list_of_pdos=numpy.asarray([1.0]), list_of_energy=numpy.asarray([1.0]), bands_check=False
             )
             return instance
+
+        if data_class is orm.AbstractCode:
+            instance = data_class(label='test_abstract_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
+            return instance
+
+        if data_class is orm.Code:
+            instance = data_class(label='test_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
+            return instance
+
+        if data_class is orm.InstalledCode:
+            instance = data_class(
+                label='test_installed_code',
+                computer=aiida_localhost,
+                filepath_executable='/bin/cat',
+            )
+            return instance
+
+        if data_class is orm.PortableCode:
+            (tmp_path / 'bash').touch()
+            filepath_executable = 'bash'
+            instance = data_class(
+                label='test_portable_code',
+                filepath_executable=filepath_executable,
+                filepath_files=tmp_path,
+            )
+            return instance
+
+        if data_class is orm.ContainerizedCode:
+            return orm.ContainerizedCode(
+                label='test_containerized_code',
+                computer=aiida_localhost,
+                image_name='image',
+                filepath_executable='bash',
+                engine_command='docker {image_name}',
+            )
 
         raise RuntimeError(
             'no instance generator implemented for class `{}`. If you have added a `_prepare_*` method '

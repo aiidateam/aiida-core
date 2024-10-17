@@ -27,6 +27,8 @@ __all__ = (
     'ALL',
     'ALL_STATES',
     'ALL_USERS',
+    'ALSO_RAW',
+    'ALSO_RICH',
     'APPEND_TEXT',
     'ARCHIVE_FORMAT',
     'BROKER_HOST',
@@ -37,6 +39,7 @@ __all__ = (
     'BROKER_VIRTUAL_HOST',
     'CALCULATION',
     'CALCULATIONS',
+    'CALCULATIONS_HIDDEN',
     'CALC_JOB_STATE',
     'CODE',
     'CODES',
@@ -44,6 +47,7 @@ __all__ = (
     'COMPUTERS',
     'CONFIG_FILE',
     'DATA',
+    'DATA_HIDDEN',
     'DATUM',
     'DB_BACKEND',
     'DB_ENGINE',
@@ -57,9 +61,12 @@ __all__ = (
     'DICT_FORMAT',
     'DICT_KEYS',
     'DRY_RUN',
+    'DUMP_PROCESSES',
+    'DUMP_DATA',
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
+    'FLAT',
     'FORCE',
     'FORMULA_MODE',
     'FREQUENCY',
@@ -68,6 +75,11 @@ __all__ = (
     'GROUP_CLEAR',
     'HOSTNAME',
     'IDENTIFIER',
+    'INCLUDE_INPUTS',
+    'INCLUDE_OUTPUTS',
+    'INCLUDE_ATTRIBUTES',
+    'INCLUDE_EXTRAS',
+    'INCREMENTAL',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
@@ -76,9 +88,11 @@ __all__ = (
     'NODE',
     'NODES',
     'NON_INTERACTIVE',
+    'ONLY_TOP_LEVEL_WORKFLOWS',
     'OLDER_THAN',
     'ORDER_BY',
     'ORDER_DIRECTION',
+    'ORGANIZE_BY_GROUPS',
     'OVERWRITE',
     'PATH',
     'PAST_DAYS',
@@ -94,6 +108,9 @@ __all__ = (
     'PROJECT',
     'RAW',
     'REPOSITORY_PATH',
+    'RICH_SPEC',
+    'DUMP_CONFIG_FILE',
+    'RICH_DUMP_ALL',
     'SCHEDULER',
     'SILENT',
     'SORT',
@@ -780,4 +797,139 @@ SORT = OverridableOption(
     default=True,
     help='Sort the keys of the output YAML.',
     show_default=True,
+)
+
+DUMP_PROCESSES = OverridableOption(
+    '--dump-processes/--no-dump-processes',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Dump process data.',
+)
+
+DUMP_DATA = OverridableOption(
+    '--dump-data/--no-dump-data',
+    is_flag=True,
+    default=True,
+    type=bool,
+    show_default=True,
+    help='Dump data nodes in a dedicated directory.',
+)
+
+CALCULATIONS_HIDDEN = OverridableOption(
+    '--calculations-hidden/--calculations-non-hidden',
+    is_flag=True,
+    default=True,
+    type=bool,
+    show_default=True,
+    help='Dump all `orm.CalculationNode`s in the hidden directory and link to there.',
+)
+
+DATA_HIDDEN = OverridableOption(
+    '--data-hidden/--data-non-hidden',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Dump all `orm.Data` in the hidden directory and link to there.',
+)
+
+ALSO_RAW = OverridableOption(
+    '--also-raw/--not-also-raw',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Dump the `attributes` of all nodes related to the Process.',
+)
+
+ALSO_RICH = OverridableOption(
+    '--also-rich/--not-also-rich',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Dump also nicely prepared outputs, e.g. CIF for structures or PDF image for bands.',
+)
+
+RICH_SPEC = OverridableOption(
+    '--rich-spec',
+    default=None,
+    type=str,
+    help='Specifications for rich data dumping.',
+)
+
+DUMP_CONFIG_FILE = OverridableOption(
+    '--dump-config-file',
+    default=None,
+    type=types.FileOrUrl(),
+    help='Provide dumping options via a config file in YAML format.',
+)
+
+RICH_DUMP_ALL = OverridableOption(
+    '--rich-dump-all/--no-rich-dump-all',
+    default=True,
+    is_flag=True,
+    type=bool,
+    show_default=True,
+    help='If a rich specification is provided, this triggers if all other Data nodes should also be dumped or not.',
+)
+
+ORGANIZE_BY_GROUPS = OverridableOption(
+    '--organize-by-groups/--no-organize-by-groups',
+    default=True,
+    is_flag=True,
+    type=bool,
+    show_default=True,
+    help='If the collection of nodes to be dumped is organized in groups, reproduce its hierarchy.',
+)
+
+INCLUDE_INPUTS = OverridableOption(
+    '--include-inputs/--exclude-inputs',
+    default=True,
+    show_default=True,
+    help='Include the linked input nodes of the `CalculationNode`(s).',
+)
+
+INCLUDE_OUTPUTS = OverridableOption(
+    '--include-outputs/--exclude-outputs',
+    default=False,
+    show_default=True,
+    help='Include the linked output nodes of the `CalculationNode`(s).',
+)
+
+INCLUDE_ATTRIBUTES = OverridableOption(
+    '--include-attributes/--exclude-attributes',
+    default=True,
+    show_default=True,
+    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+
+INCLUDE_EXTRAS = OverridableOption(
+    '--include-extras/--exclude-extras',
+    default=True,
+    show_default=True,
+    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+
+FLAT = OverridableOption(
+    '-f',
+    '--flat',
+    is_flag=True,
+    default=False,
+    help='Dump files in a flat directory for every step of a workflow.',
+)
+
+ONLY_TOP_LEVEL_WORKFLOWS = OverridableOption(
+    '--only-top-level-workflows/--not-only-top-level-workflows',
+    is_flag=True,
+    default=True,
+    type=bool,
+    show_default=True,
+    help='Dump only the top-level workflows in their own dedicated directories.',
+)
+
+INCREMENTAL = OverridableOption(
+    '--incremental/--non-incremental',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Dump files incrementally when dumping collections of data to disk.',
 )

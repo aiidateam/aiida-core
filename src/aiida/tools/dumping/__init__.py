@@ -8,4 +8,8 @@
 ###########################################################################
 """Modules related to the dumping of AiiDA data."""
 
-__all__ = ('processes',)
+from .collection import CollectionDumper
+from .data import DataDumper
+from .processes import ProcessDumper
+
+__all__ = ('ProcessDumper', 'DataDumper', 'CollectionDumper')

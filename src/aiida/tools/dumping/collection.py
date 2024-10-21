@@ -232,11 +232,15 @@ class CollectionDumper:
 
         self.output_path.mkdir(exist_ok=True, parents=True)
 
+        print(f'self.process_dumper.calculations_hidden: {self.process_dumper.calculations_hidden}')
+        print(f'self.output_path: {self.output_path}')
         if self.process_dumper.calculations_hidden:
+            print('dump hidden')
             self._dump_calculations_hidden(calculations=calculations)
             self._dump_link_workflows(workflows=workflows)
             self._link_calculations_hidden(calculations=calculations)
         else:
+            print('dump non-hidden')
             for workflow in workflows:
                 workflow_path = (
                     self.output_path
@@ -268,12 +272,12 @@ class CollectionDumper:
 
             # If options for the rich dumping are specified and not all the other defaults are being used
             # Some entry_points might not be inside the `rich_spec_dict`
+            except KeyError:
+                continue
+
             except:
                 # Raise all exceptions here during development
                 raise
-
-            # except KeyError:
-            #     continue
 
             # Don't go further if no importer implemented for a data type anyway
             if exporter is None:

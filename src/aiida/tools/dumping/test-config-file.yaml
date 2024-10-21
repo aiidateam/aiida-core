@@ -1,8 +1,7 @@
-
 path: "/home/geiger_j/aiida_projects/verdi-profile-dump/dev-dumps/storage-mirror"
 overwrite: true
 incremental: true
-dry_run: true
+dry_run: false
 organize_by_groups: true
 dump_processes: true
 only_top_level_workflows: true
@@ -18,7 +17,6 @@ include_extras: false
 flat: false
 rich_spec:
   core.array.bands:
-    exporter:
     format: mpl_png
   core.structure:
     format: xsf

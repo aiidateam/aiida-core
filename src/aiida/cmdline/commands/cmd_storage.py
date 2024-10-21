@@ -260,7 +260,6 @@ def storage_backup(ctx, manager, dest: str, keep: int):
 @options.PATH()
 @options.OVERWRITE()
 @options.INCREMENTAL()
-# @options.ALL()
 @options.ORGANIZE_BY_GROUPS()
 @options.DRY_RUN()
 @options.DUMP_PROCESSES()
@@ -286,7 +285,6 @@ def storage_dump(
     path,
     overwrite,
     incremental,
-    # all_entries,
     organize_by_groups,
     dry_run,
     dump_processes,
@@ -311,7 +309,6 @@ def storage_dump(
     from rich.pretty import pprint
 
     from aiida import orm
-    from aiida.manage import get_manager
     from aiida.tools.dumping.collection import DEFAULT_ENTITIES_TO_DUMP
     from aiida.tools.dumping.parser import DumpConfigParser
     from aiida.tools.dumping.rich import (
@@ -327,12 +324,6 @@ def storage_dump(
         echo.echo_critical('`nodes` and `groups` specified. Set only one.')
     # if all_entries and groups:
     #     echo.echo_critical('`all_entries` and `groups` specified. Set only one.')
-
-    if not overwrite and incremental:
-        echo.echo_report(
-            "Overwrite set to false, but incremental dumping selected. Will keep existing directories."
-        )
-
 
     if dump_config_file is None:
 
@@ -394,6 +385,11 @@ def storage_dump(
     dry_run = general_kwargs["dry_run"]
     incremental = general_kwargs["incremental"]
 
+    if not overwrite and incremental:
+        echo.echo_report(
+            "Overwrite set to false, but incremental dumping selected. Will keep existing directories."
+        )
+
     if not str(path).endswith(profile.name):
         path /= profile.name
 
@@ -435,7 +431,7 @@ def storage_dump(
         rich_spec_dict=rich_spec_dict,
         **datadumper_kwargs,
     )
-    dumper_pretty_print(data_dumper)
+    # dumper_pretty_print(data_dumper)
 
     process_dumper = ProcessDumper(
         dump_parent_path=path,
@@ -452,7 +448,6 @@ def storage_dump(
 
     # === Dump the data that is not associated with any group ===
     if not groups:
-        print('Dumping nodes not in any groups')
         collection_dumper = CollectionDumper(
             dump_parent_path=path,
             output_path=path,
@@ -467,13 +462,11 @@ def storage_dump(
         collection_dumper.create_entity_counter()
         # dumper_pretty_print(collection_dumper, include_private_and_dunder=False)
 
-        if dump_processes:
-            print(f'collection_dumper._should_dump_processes(): {collection_dumper._should_dump_processes()}')
-            if collection_dumper._should_dump_processes():
-                echo.echo_report(
-                    f"Dumping processes not in any group for profile `{profile.name}`..."
-                )
-                collection_dumper.dump_processes()
+        if dump_processes and collection_dumper._should_dump_processes():
+            echo.echo_report(
+                f"Dumping processes not in any group for profile `{profile.name}`..."
+            )
+            collection_dumper.dump_processes()
         if dump_data:
             if not also_rich and not also_raw:
                 echo.echo_critical(

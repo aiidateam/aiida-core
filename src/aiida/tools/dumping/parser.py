@@ -16,6 +16,7 @@ class DumpConfigParser:
         general_kwargs = {
             'path': Path(config.get('path', Path.cwd())),
             'overwrite': config.get('overwrite', False),
+            'incremental': config.get('incremental', True),
             'dry_run': config.get('dry_run', False),
         }
 
@@ -44,7 +45,7 @@ class DumpConfigParser:
             "rich_dump_all": config.get('rich_dump_all', True),
         }
 
-        rich_options = config.get('rich_options', None)
+        rich_spec = config.get('rich_spec', None)
 
         return {
             'general_kwargs': general_kwargs,
@@ -52,5 +53,5 @@ class DumpConfigParser:
             'datadumper_kwargs': datadumper_kwargs,
             'collection_kwargs': collection_kwargs,
             'rich_kwargs': rich_kwargs,
-            'rich_options': rich_options,
+            'rich_spec': rich_spec,
         }

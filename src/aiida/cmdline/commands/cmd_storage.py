@@ -306,10 +306,8 @@ def storage_dump(
     groups,
 ):
     """Dump all data in an AiiDA profile's storage to disk."""
-    from rich.pretty import pprint
 
     from aiida import orm
-    from aiida.tools.dumping.collection import DEFAULT_ENTITIES_TO_DUMP
     from aiida.tools.dumping.parser import DumpConfigParser
     from aiida.tools.dumping.rich import (
         DEFAULT_CORE_EXPORT_MAPPING,
@@ -318,7 +316,7 @@ def storage_dump(
     )
     from aiida.tools.dumping.utils import validate_make_dump_path
 
-    profile = ctx.obj["profile"]
+    profile = ctx.obj['profile']
 
     if nodes and groups:
         echo.echo_critical('`nodes` and `groups` specified. Set only one.')
@@ -326,37 +324,36 @@ def storage_dump(
     #     echo.echo_critical('`all_entries` and `groups` specified. Set only one.')
 
     if dump_config_file is None:
-
         general_kwargs = {
-            "path": path,
-            "overwrite": overwrite,
-            "incremental": incremental,
-            "dry_run": dry_run,
+            'path': path,
+            'overwrite': overwrite,
+            'incremental': incremental,
+            'dry_run': dry_run,
         }
 
         processdumper_kwargs = {
-            "include_inputs": include_inputs,
-            "include_outputs": include_outputs,
-            "include_attributes": include_attributes,
-            "include_extras": include_extras,
-            "flat": flat,
-            "calculations_hidden": calculations_hidden
+            'include_inputs': include_inputs,
+            'include_outputs': include_outputs,
+            'include_attributes': include_attributes,
+            'include_extras': include_extras,
+            'flat': flat,
+            'calculations_hidden': calculations_hidden,
         }
 
         datadumper_kwargs = {
-            "also_raw": also_raw,
-            "also_rich": also_rich,
-            "data_hidden": data_hidden,
+            'also_raw': also_raw,
+            'also_rich': also_rich,
+            'data_hidden': data_hidden,
         }
 
         collection_kwargs = {
-            "should_dump_processes": dump_processes,
-            "should_dump_data": dump_data,
-            "only_top_level_workflows": only_top_level_workflows,
+            'should_dump_processes': dump_processes,
+            'should_dump_data': dump_data,
+            'only_top_level_workflows': only_top_level_workflows,
         }
 
         rich_kwargs = {
-            "rich_dump_all": rich_dump_all,
+            'rich_dump_all': rich_dump_all,
         }
 
         if rich_spec is not None:
@@ -369,47 +366,38 @@ def storage_dump(
     else:
         kwarg_dicts_from_config = DumpConfigParser.parse_config_file(dump_config_file)
 
-        general_kwargs = kwarg_dicts_from_config["general_kwargs"]
-        processdumper_kwargs = kwarg_dicts_from_config["processdumper_kwargs"]
-        datadumper_kwargs = kwarg_dicts_from_config["datadumper_kwargs"]
-        collection_kwargs = kwarg_dicts_from_config["collection_kwargs"]
-        rich_kwargs = kwarg_dicts_from_config["rich_kwargs"]
+        general_kwargs = kwarg_dicts_from_config['general_kwargs']
+        processdumper_kwargs = kwarg_dicts_from_config['processdumper_kwargs']
+        datadumper_kwargs = kwarg_dicts_from_config['datadumper_kwargs']
+        collection_kwargs = kwarg_dicts_from_config['collection_kwargs']
+        rich_kwargs = kwarg_dicts_from_config['rich_kwargs']
 
-        rich_spec_dict = rich_from_config(
-            kwarg_dicts_from_config["rich_spec"], **rich_kwargs
-        )
+        rich_spec_dict = rich_from_config(kwarg_dicts_from_config['rich_spec'], **rich_kwargs)
 
     # Obtain these specifically for easy access and modifications
-    path = general_kwargs["path"]
-    overwrite = general_kwargs["overwrite"]
-    dry_run = general_kwargs["dry_run"]
-    incremental = general_kwargs["incremental"]
+    path = general_kwargs['path']
+    overwrite = general_kwargs['overwrite']
+    dry_run = general_kwargs['dry_run']
+    incremental = general_kwargs['incremental']
 
     if not overwrite and incremental:
-        echo.echo_report(
-            "Overwrite set to false, but incremental dumping selected. Will keep existing directories."
-        )
+        echo.echo_report('Overwrite set to false, but incremental dumping selected. Will keep existing directories.')
 
     if not str(path).endswith(profile.name):
         path /= profile.name
 
     # TODO: Implement proper dry-run feature
-    dry_run_message = (
-        f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\n"
-    )
-    dry_run_message += "Only directories will be created."
+    dry_run_message = f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\n"
+    dry_run_message += 'Only directories will be created.'
 
-    if dry_run or (
-        not collection_kwargs["should_dump_processes"]
-        and not collection_kwargs["should_dump_data"]
-    ):
+    if dry_run or (not collection_kwargs['should_dump_processes'] and not collection_kwargs['should_dump_data']):
         echo.echo_report(dry_run_message)
         return
 
     else:
         echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
 
-    SAFEGUARD_FILE = ".verdi_storage_dump"  # noqa: N806
+    SAFEGUARD_FILE = '.verdi_storage_dump'  # noqa: N806
 
     try:
         validate_make_dump_path(
@@ -463,16 +451,12 @@ def storage_dump(
         # dumper_pretty_print(collection_dumper, include_private_and_dunder=False)
 
         if dump_processes and collection_dumper._should_dump_processes():
-            echo.echo_report(
-                f"Dumping processes not in any group for profile `{profile.name}`..."
-            )
+            echo.echo_report(f'Dumping processes not in any group for profile `{profile.name}`...')
             collection_dumper.dump_processes()
         if dump_data:
             if not also_rich and not also_raw:
-                echo.echo_critical(
-                    "`--dump-data was given, but neither --also-raw or --also-rich specified."
-                )
-            echo.echo_report(f"Dumping data not in any group for profile {profile.name}...")
+                echo.echo_critical('`--dump-data was given, but neither --also-raw or --also-rich specified.')
+            echo.echo_report(f'Dumping data not in any group for profile {profile.name}...')
 
             collection_dumper.dump_data_rich()
         # collection_dumper.dump_plugin_data()
@@ -481,14 +465,14 @@ def storage_dump(
     # TODO: Invert default behavior here, as I typically want to dump all entries
     # TODO: Possibly define a new click option instead
     # all_entries = not all_entries
-    if not groups: # and all_entries:
+    if not groups:  # and all_entries:
         groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
 
     if groups is not None and not nodes:
         for group in groups:
             if organize_by_groups:
-                group_subdir = Path(*group.type_string.split("."))
-                group_path = path / "groups" / group_subdir / group.label
+                group_subdir = Path(*group.type_string.split('.'))
+                group_path = path / 'groups' / group_subdir / group.label
             else:
                 group_path = path
 
@@ -509,9 +493,9 @@ def storage_dump(
                 # "Dumping processes for group `SSSP/1.3/PBE/efficiency`" is printed for groups that
                 # don't contain processes
                 if collection_dumper._should_dump_processes():
-                    echo.echo_report(f"Dumping processes for group `{group.label}`...")
+                    echo.echo_report(f'Dumping processes for group `{group.label}`...')
                     collection_dumper.dump_processes()
             if dump_data:
-                echo.echo_report(f"Dumping data for group `{group.label}`...")
+                echo.echo_report(f'Dumping data for group `{group.label}`...')
                 collection_dumper.dump_data_rich()
                 # collection_dumper.dump_plugin_data()

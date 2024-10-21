@@ -1,4 +1,3 @@
-from rich.pretty import pprint
 
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 

@@ -1,4 +1,4 @@
-path: "/home/geiger_j/aiida_projects/verdi-profile-dump/dev-dumps/storage-mirror"
+path: /home/geiger_j/aiida_projects/verdi-profile-dump/dev-dumps/storage-mirror
 overwrite: true
 incremental: true
 dry_run: false

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 import typing as t
-from logging import Logger
 from pathlib import Path
 
 from rich.console import Console

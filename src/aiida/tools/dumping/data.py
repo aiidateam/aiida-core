@@ -17,7 +17,6 @@ from pathlib import Path
 import yaml
 
 from aiida import orm
-from aiida.cmdline.params.types import FileOrUrl
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +81,7 @@ class DataDumper:
         output_fname: str | None = None,
     ):
         if type(data_node) is orm.StructureData:
-            self._dump_structuredata(
-                data_node, output_path=output_path, output_fname=output_fname
-            )
+            self._dump_structuredata(data_node, output_path=output_path, output_fname=output_fname)
         else:
             # Handle the case where data_node is a subclass of orm.StructureData
             # Just use the default dispatch function implementation
@@ -97,8 +94,7 @@ class DataDumper:
         output_path: str | Path | None = None,
         output_fname: str | None = None,
     ):
-        self._dump_code(
-            data_node=data_node, output_path=output_path, output_fname=output_fname)
+        self._dump_code(data_node=data_node, output_path=output_path, output_fname=output_fname)
 
     @dump_core_data_node_rich.register
     def _(
@@ -107,11 +103,8 @@ class DataDumper:
         output_path: str | Path | None = None,
         output_fname: str | None = None,
     ):
-        self._dump_computer_setup(
-            data_node=data_node, output_path=output_path, output_fname=output_fname)
-        self._dump_computer_config(
-            data_node=data_node, output_path=output_path, output_fname=output_fname
-        )
+        self._dump_computer_setup(data_node=data_node, output_path=output_path, output_fname=output_fname)
+        self._dump_computer_config(data_node=data_node, output_path=output_path, output_fname=output_fname)
 
     @dump_core_data_node_rich.register
     def _(
@@ -120,9 +113,7 @@ class DataDumper:
         output_path: str | Path | None = None,
         output_fname: str | None = None,
     ):
-        self._dump_bandsdata(
-            data_node=data_node, output_path=output_path, output_fname=output_fname
-        )
+        self._dump_bandsdata(data_node=data_node, output_path=output_path, output_fname=output_fname)
 
     # These are the rich dumping implementations that actually differ from the default dispatch
     def _dump_structuredata(
@@ -138,9 +129,7 @@ class DataDumper:
         fileformat = self.rich_spec_dict[node_entry_point_name]['export_format']
 
         if output_fname is None:
-            output_fname = DataDumper.generate_output_fname_rich(
-                data_node=data_node, fileformat=fileformat
-            )
+            output_fname = DataDumper.generate_output_fname_rich(data_node=data_node, fileformat=fileformat)
 
         # ? There also exists a CifData file type
         # output_path /= 'structures'

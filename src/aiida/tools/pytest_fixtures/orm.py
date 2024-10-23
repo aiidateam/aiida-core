@@ -13,48 +13,57 @@ if t.TYPE_CHECKING:
 
 @pytest.fixture(scope='session')
 def ssh_key(tmp_path_factory) -> t.Generator[pathlib.Path, None, None]:
-    """Generate a temporary SSH key pair for the test session and return the filepath of the private key.
+    """Returns a SSH key for the test session.
+
+    If the environment variable ``AIIDA_PYTEST_SSH_KEY`` is set we take the key
+    from this path otherwise we generate a temporary SSH key pair for the test
+    session and return the filepath of the private key.
 
     The filepath of the public key is the same as the private key, but it adds the ``.pub`` file extension.
 
     :returns: The filepath of the generated private key.
     """
-    from uuid import uuid4
+    import os
 
-    from cryptography.hazmat.backends import default_backend as crypto_default_backend
-    from cryptography.hazmat.primitives import serialization as crypto_serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
+    if (ssh_key_path := os.environ.get('AIIDA_PYTEST_SSH_KEY')) is not None:
+        yield pathlib.Path(ssh_key_path)
+    else:
+        from uuid import uuid4
 
-    key = rsa.generate_private_key(
-        backend=crypto_default_backend(),
-        public_exponent=65537,
-        key_size=2048,
-    )
+        from cryptography.hazmat.backends import default_backend as crypto_default_backend
+        from cryptography.hazmat.primitives import serialization as crypto_serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
 
-    private_key = key.private_bytes(
-        crypto_serialization.Encoding.PEM,
-        crypto_serialization.PrivateFormat.PKCS8,
-        crypto_serialization.NoEncryption(),
-    )
+        key = rsa.generate_private_key(
+            backend=crypto_default_backend(),
+            public_exponent=65537,
+            key_size=2048,
+        )
 
-    public_key = key.public_key().public_bytes(
-        crypto_serialization.Encoding.OpenSSH,
-        crypto_serialization.PublicFormat.OpenSSH,
-    )
+        private_key = key.private_bytes(
+            crypto_serialization.Encoding.PEM,
+            crypto_serialization.PrivateFormat.PKCS8,
+            crypto_serialization.NoEncryption(),
+        )
 
-    dirpath = tmp_path_factory.mktemp('keys')
-    filename = uuid4().hex
-    filepath_private_key = dirpath / filename
-    filepath_public_key = dirpath / f'{filename}.pub'
+        public_key = key.public_key().public_bytes(
+            crypto_serialization.Encoding.OpenSSH,
+            crypto_serialization.PublicFormat.OpenSSH,
+        )
 
-    filepath_private_key.write_bytes(private_key)
-    filepath_public_key.write_bytes(public_key)
+        dirpath = tmp_path_factory.mktemp('keys')
+        filename = uuid4().hex
+        filepath_private_key = dirpath / filename
+        filepath_public_key = dirpath / f'{filename}.pub'
 
-    try:
-        yield filepath_private_key
-    finally:
-        filepath_private_key.unlink(missing_ok=True)
-        filepath_public_key.unlink(missing_ok=True)
+        filepath_private_key.write_bytes(private_key)
+        filepath_public_key.write_bytes(public_key)
+
+        try:
+            yield filepath_private_key
+        finally:
+            filepath_private_key.unlink(missing_ok=True)
+            filepath_public_key.unlink(missing_ok=True)
 
 
 @pytest.fixture

@@ -30,16 +30,27 @@ def test_closed_connection_sftp():
         transport.listdir()
 
 
-def test_auto_add_policy():
+def test_auto_add_policy(ssh_key):
     """Test the auto add policy."""
-    with SshTransport(machine='localhost', timeout=30, load_system_host_keys=True, key_policy='AutoAddPolicy'):
+    with SshTransport(
+        machine='localhost',
+        timeout=30,
+        load_system_host_keys=True,
+        key_policy='AutoAddPolicy',
+        key_filename=str(ssh_key),
+    ):
         pass
 
 
-def test_proxy_jump():
+def test_proxy_jump(ssh_key):
     """Test the connection with a proxy jump or several"""
     with SshTransport(
-        machine='localhost', proxy_jump='localhost', timeout=30, load_system_host_keys=True, key_policy='AutoAddPolicy'
+        machine='localhost',
+        proxy_jump='localhost',
+        timeout=30,
+        load_system_host_keys=True,
+        key_policy='AutoAddPolicy',
+        key_filename=str(ssh_key),
     ):
         pass
 
@@ -50,6 +61,7 @@ def test_proxy_jump():
         timeout=30,
         load_system_host_keys=True,
         key_policy='AutoAddPolicy',
+        key_filename=str(ssh_key),
     ):
         pass
 
@@ -69,7 +81,7 @@ def test_proxy_jump_invalid():
             pass
 
 
-def test_proxy_command():
+def test_proxy_command(ssh_key):
     """Test the connection with a proxy command"""
     with SshTransport(
         machine='localhost',
@@ -77,6 +89,7 @@ def test_proxy_command():
         timeout=30,
         load_system_host_keys=True,
         key_policy='AutoAddPolicy',
+        key_filename=str(ssh_key),
     ):
         pass
 
@@ -94,7 +107,7 @@ def test_no_host_key():
     logging.disable(logging.NOTSET)
 
 
-def test_gotocomputer():
+def test_gotocomputer(ssh_key):
     """Test gotocomputer"""
     with SshTransport(
         machine='localhost',
@@ -102,18 +115,21 @@ def test_gotocomputer():
         use_login_shell=False,
         key_policy='AutoAddPolicy',
         proxy_command='ssh -W localhost:22 localhost',
+        key_filename=str(ssh_key),
     ) as transport:
         cmd_str = transport.gotocomputer_command('/remote_dir/')
 
-        expected_str = (
-            """ssh -t localhost -o ProxyCommand='ssh -W localhost:22 localhost'  "if [ -d '/remote_dir/' ] ;"""
+        expected_startwith = 'ssh -t localhost -i '
+        expected_endwith = (
+            """ -o ProxyCommand='ssh -W localhost:22 localhost'  "if [ -d '/remote_dir/' ] ;"""
             """ then cd '/remote_dir/' ; bash  ; else echo '  ** The directory' ; """
             """echo '  ** /remote_dir/' ; echo '  ** seems to have been deleted, I logout...' ; fi" """
         )
-        assert cmd_str == expected_str
+        assert cmd_str.startswith(expected_startwith)
+        assert cmd_str.endswith(expected_endwith)
 
 
-def test_gotocomputer_proxyjump():
+def test_gotocomputer_proxyjump(ssh_key):
     """Test gotocomputer"""
     with SshTransport(
         machine='localhost',
@@ -121,12 +137,15 @@ def test_gotocomputer_proxyjump():
         use_login_shell=False,
         key_policy='AutoAddPolicy',
         proxy_jump='localhost',
+        key_filename=str(ssh_key),
     ) as transport:
         cmd_str = transport.gotocomputer_command('/remote_dir/')
 
-        expected_str = (
-            """ssh -t localhost -o ProxyJump='localhost'  "if [ -d '/remote_dir/' ] ;"""
+        expected_startwith = 'ssh -t localhost -i '
+        expected_endwith = (
+            """-o ProxyJump='localhost'  "if [ -d '/remote_dir/' ] ;"""
             """ then cd '/remote_dir/' ; bash  ; else echo '  ** The directory' ; """
             """echo '  ** /remote_dir/' ; echo '  ** seems to have been deleted, I logout...' ; fi" """
         )
-        assert cmd_str == expected_str
+        assert cmd_str.startswith(expected_startwith)
+        assert cmd_str.endswith(expected_endwith)

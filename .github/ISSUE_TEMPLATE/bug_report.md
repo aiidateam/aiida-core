@@ -9,7 +9,7 @@ assignees: ''
 
 <!-- Before raising an issue, it is suggested that you first check out the: -->
 
-- [ ] [AiiDA Troubleshooting Documentation](https://aiida.readthedocs.io/projects/aiida-core/en/latest/intro/troubleshooting.html)
+- [ ] [AiiDA Troubleshooting Documentation](https://aiida.readthedocs.io/projects/aiida-core/en/stable/installation/troubleshooting.html)
 - [ ] [AiiDA Discourse Forum](https://aiida.discourse.group/)
 
 ### Describe the bug

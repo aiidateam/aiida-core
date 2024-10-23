@@ -8,6 +8,8 @@
 ###########################################################################
 """Plugin for direct execution."""
 
+from typing import Union
+
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError
@@ -354,22 +356,28 @@ class DirectScheduler(BashCliScheduler):
 
         return stdout.strip()
 
-    def _get_kill_command(self, process_id):
-        """Return the command to kill the process with specified id and all its descendants."""
+    def _get_kill_command(self, jobid: Union[int, str]) -> str:
+        """Return the command to kill the process with specified id and all its descendants.
+
+        :param jobid: The job id is in the case of the
+                :py:class:`~aiida.schedulers.plugins.direct.DirectScheduler` the process id.
+
+        :return: A string containing the kill command.
+        """
         from psutil import Process
 
         # get a list of the process id of all descendants
-        process = Process(int(process_id))
+        process = Process(int(jobid))
         children = process.children(recursive=True)
-        process_ids = [process_id]
-        process_ids.extend([str(child.pid) for child in children])
-        process_ids_str = ' '.join(process_ids)
+        jobids = [str(jobid)]
+        jobids.extend([str(child.pid) for child in children])
+        jobids_str = ' '.join(jobids)
 
-        submit_command = f'kill {process_ids_str}'
+        kill_command = f'kill {jobids_str}'
 
         self.logger.info(f'killing job {jobid}')
 
-        return submit_command
+        return kill_command
 
     def _parse_kill_output(self, retval, stdout, stderr):
         """Parse the output of the kill command.

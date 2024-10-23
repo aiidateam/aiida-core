@@ -70,3 +70,41 @@ def test_submit_script_with_num_cores_per_mpiproc(scheduler, template):
     )
     result = scheduler.get_submit_script(template)
     assert f'export OMP_NUM_THREADS={num_cores_per_mpiproc}' in result
+
+
+def run_sleep_100():
+    """Util function for `test_kill_job`. Has to be outside of test to be pickable."""
+    import subprocess
+
+    subprocess.Popen(['sleep', '100'])
+
+
+@pytest.mark.timeout(timeout=10)
+def test_kill_job(scheduler):
+    """Test if kill_job kill all descendant children from the process.
+    For that we spawn a new process that runs a sleep command, then we
+    kill it and check if the sleep process is still alive.
+
+    current instance         spawned instance        run command
+         python───────────────────python───────────────sleep
+                           we kill this process    we check if still running
+    """
+    import multiprocessing
+
+    from psutil import Process
+
+    multiprocessing.set_start_method('spawn')
+    from aiida.transports.plugins.local import LocalTransport
+
+    spawened_process = multiprocessing.Process(target=run_sleep_100)
+    spawened_process.start()
+    while len(spawened_process_children := Process(spawened_process.pid).children()) != 1:
+        pass
+    assert len(spawened_process_children) == 1
+    sleep_process = spawened_process_children[0]
+    with LocalTransport() as transport:
+        scheduler.set_transport(transport)
+        scheduler.kill_job(spawened_process.pid)
+    while sleep_process.is_running():
+        pass
+    spawened_process.join()

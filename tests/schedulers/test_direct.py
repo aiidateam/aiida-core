@@ -76,7 +76,7 @@ def run_sleep_100():
     """Util function for `test_kill_job`. Has to be outside of test to be pickable."""
     import subprocess
 
-    subprocess.Popen(['sleep', '100'])
+    subprocess.run(['sleep', '100'], check=False)
 
 
 @pytest.mark.timeout(timeout=10)
@@ -85,26 +85,24 @@ def test_kill_job(scheduler):
     For that we spawn a new process that runs a sleep command, then we
     kill it and check if the sleep process is still alive.
 
-    current instance         spawned instance        run command
-         python───────────────────python───────────────sleep
+    current process           forked process            run command
+         python───────────────────python───────────────────sleep
                            we kill this process    we check if still running
     """
     import multiprocessing
 
+    from aiida.transports.plugins.local import LocalTransport
     from psutil import Process
 
-    multiprocessing.set_start_method('spawn')
-    from aiida.transports.plugins.local import LocalTransport
-
-    spawened_process = multiprocessing.Process(target=run_sleep_100)
-    spawened_process.start()
-    while len(spawened_process_children := Process(spawened_process.pid).children()) != 1:
+    forked_process = multiprocessing.Process(target=run_sleep_100)
+    forked_process.start()
+    while len(forked_process_children := Process(forked_process.pid).children()) != 1:
         pass
-    assert len(spawened_process_children) == 1
-    sleep_process = spawened_process_children[0]
+    assert len(forked_process_children) == 1
+    sleep_process = forked_process_children[0]
     with LocalTransport() as transport:
         scheduler.set_transport(transport)
-        scheduler.kill_job(spawened_process.pid)
+        scheduler.kill_job(forked_process.pid)
     while sleep_process.is_running():
         pass
-    spawened_process.join()
+    forked_process.join()

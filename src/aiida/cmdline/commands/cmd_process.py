@@ -552,46 +552,29 @@ def process_repair(manager, broker, dry_run):
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
-@click.option(
-    '--include-inputs/--exclude-inputs',
-    default=True,
-    show_default=True,
-    help='Include the linked input nodes of the `CalculationNode`(s).',
-)
-@click.option(
-    '--include-outputs/--exclude-outputs',
-    default=False,
-    show_default=True,
-    help='Include the linked output nodes of the `CalculationNode`(s).',
-)
-@click.option(
-    '--include-attributes/--exclude-attributes',
-    default=True,
-    show_default=True,
-    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-@click.option(
-    '--include-extras/--exclude-extras',
-    default=True,
-    show_default=True,
-    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-@click.option(
-    '-f',
-    '--flat',
-    is_flag=True,
-    default=False,
-    help='Dump files in a flat directory for every step of the workflow.',
-)
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.ALSO_RAW()
+@options.ALSO_RICH()
+@options.RICH_SPEC()
+@options.RICH_DUMP_ALL()
+# TODO: Also add CONFIG_FILE option here
+# TODO: Currently, setting rich options is not supported here directly
 def process_dump(
     process,
     path,
     overwrite,
+    flat,
     include_inputs,
     include_outputs,
     include_attributes,
     include_extras,
-    flat,
+    also_raw,
+    also_rich,
+    rich_spec,
+    rich_dump_all,
 ) -> None:
     """Dump process input and output files to disk.
 
@@ -609,24 +592,65 @@ def process_dump(
     node data for further inspection.
     """
 
+    from aiida.tools.dumping.data import DataDumper
     from aiida.tools.dumping.processes import ProcessDumper
 
-    process_dumper = ProcessDumper(
-        include_inputs=include_inputs,
-        include_outputs=include_outputs,
-        include_attributes=include_attributes,
-        include_extras=include_extras,
+    # from aiida.tools.dumping.utils import validate_rich_options
+    from aiida.tools.dumping.rich import rich_from_cli
+
+    processdumper_kwargs = {
+        'include_inputs': include_inputs,
+        'include_outputs': include_outputs,
+        'include_attributes': include_attributes,
+        'include_extras': include_extras,
+        'flat': flat,
+    }
+
+    rich_kwargs = {
+        'rich_dump_all': rich_dump_all,
+    }
+
+    datadumper_kwargs = {
+        'also_raw': also_raw,
+        'also_rich': also_rich,
+    }
+
+    # if also_rich:
+    #     try:
+    #         validate_rich_options(
+    #             rich_options=rich_options, rich_config_file=rich_config_file
+    #         )
+    #     except ValueError as exc:
+    #         echo.echo_critical(f"{exc!s}")
+
+    if rich_spec is not None:
+        rich_spec_dict = rich_from_cli(rich_spec=rich_spec, **rich_kwargs)
+    else:
+        rich_spec_dict = {}
+
+    data_dumper = DataDumper(
         overwrite=overwrite,
-        flat=flat,
+        rich_spec_dict=rich_spec_dict**datadumper_kwargs,
+        **rich_kwargs,
+    )
+
+    process_dumper = ProcessDumper(
+        overwrite=overwrite,
+        **processdumper_kwargs,
+        **rich_kwargs,
+        data_dumper=data_dumper,
     )
 
     try:
-        dump_path = process_dumper.dump(process_node=process, output_path=path)
+        dump_path = process_dumper.dump(
+            process_node=process,
+            output_path=path,
+        )
     except FileExistsError:
         echo.echo_critical(
             'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
         )
-    except Exception as e:
-        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')
+    except Exception as exc:
+        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({exc!s}).')
 
     echo.echo_success(f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.')

@@ -118,6 +118,8 @@ requires-python = '>=3.9'
 'core.structure' = 'aiida.orm.nodes.data.structure:StructureData'
 'core.upf' = 'aiida.orm.nodes.data.upf:UpfData'
 
+[project.entry-points.'aiida.exporters']
+
 [project.entry-points.'aiida.groups']
 'core' = 'aiida.orm.groups:Group'
 'core.auto' = 'aiida.orm.groups:AutoGroup'

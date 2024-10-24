@@ -72,13 +72,6 @@ def test_submit_script_with_num_cores_per_mpiproc(scheduler, template):
     assert f'export OMP_NUM_THREADS={num_cores_per_mpiproc}' in result
 
 
-def run_sleep_100():
-    """Util function for `test_kill_job`. Has to be outside of test to be pickable."""
-    import subprocess
-
-    subprocess.run(['sleep', '100'], check=False)
-
-
 @pytest.mark.timeout(timeout=10)
 def test_kill_job(scheduler):
     """Test if kill_job kill all descendant children from the process.
@@ -93,6 +86,11 @@ def test_kill_job(scheduler):
 
     from aiida.transports.plugins.local import LocalTransport
     from psutil import Process
+
+    def run_sleep_100():
+        import subprocess
+
+        subprocess.run(['sleep', '100'], check=False)
 
     forked_process = multiprocessing.Process(target=run_sleep_100)
     forked_process.start()

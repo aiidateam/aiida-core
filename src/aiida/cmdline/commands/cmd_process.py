@@ -589,7 +589,7 @@ def process_repair(manager, broker, dry_run):
     is_flag=True,
     default=False,
     show_default=True,
-    help='Allow ',
+    help='Also allow the dumping of unsealed process nodes.',
 )
 @options.INCREMENTAL()
 def process_dump(

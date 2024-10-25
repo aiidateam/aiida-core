@@ -175,6 +175,36 @@ class TestProcess:
         run(process)
         assert process.node.is_finished_ok
 
+    def test_on_finish_node_updated_before_broadcast(self, monkeypatch):
+        """Tests if the process state and output has been updated in the database before a broadcast is invoked.
+
+        In plumpy.Process.on_entered the state update is broadcasted. When a process is finished this results in the
+        next process being run. If the next process will access the process that just finished, it can result in not
+        being able to retrieve the outputs or correct process state because this information has yet not been updated
+        them in the database.
+        """
+        import copy
+
+        # By monkeypatching the parent class we can check the state when the
+        # parents class method is invoked and check if the state has be
+        # correctly updated.
+        original_on_entered = copy.deepcopy(plumpy.Process.on_entered)
+
+        def on_entered(self, from_state):
+            if self._state.LABEL.value == 'finished':
+                assert (
+                    self.node.is_finished_ok
+                ), 'Node state should have been updated before plumpy.Process.on_entered is invoked.'
+                assert (
+                    self.node.outputs.result.value == 2
+                ), 'Outputs should have been attached before plumpy.Process.on_entered is invoked.'
+            original_on_entered(self, from_state)
+
+        monkeypatch.setattr(plumpy.Process, 'on_entered', on_entered)
+        # Ensure that process has run correctly otherwise the asserts in the
+        # monkeypatched member function have been skipped
+        assert run_get_node(test_processes.AddProcess, a=1, b=1).node.is_finished_ok, 'Process should not fail.'
+
     @staticmethod
     def test_save_instance_state():
         """Test save instance's state."""

@@ -426,9 +426,7 @@ class Process(PlumpyProcess):
             self.node.set_process_state(self._state.LABEL)
             return
 
-        # For reasons unknown, it is important to update the outputs first, before doing anything else, otherwise there
-        # is the risk that certain outputs do not get attached before the process reaches a terminal state. Nevertheless
-        # we need to guarantee that the process state gets updated even if the ``update_outputs`` call excepts, for
+        # We need to guarantee that the process state gets updated even if the ``update_outputs`` call excepts, for
         # example if the process implementation attaches an invalid output through ``Process.out``, and so we call the
         # ``ProcessNode.set_process_state`` in the finally-clause. This way the state gets properly set on the node even
         # if the process is transitioning to the terminal excepted state.
@@ -442,6 +440,10 @@ class Process(PlumpyProcess):
         self._save_checkpoint()
         set_process_state_change_timestamp(self.node)
 
+        # The updating of outputs and state has to be performed before the super is called because the super will
+        # broadcast state changes and parent processes may start running again before the state change is completed. It
+        # is possible that they will read the old process state and outputs that they check may not yet have been
+        # attached.
         super().on_entered(from_state)
 
     @override

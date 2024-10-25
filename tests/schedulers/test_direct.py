@@ -83,6 +83,7 @@ def test_kill_job(scheduler, tmpdir):
                      we kill this process       we check if still running
     """
     import multiprocessing
+    import time
 
     from aiida.transports.plugins.local import LocalTransport
     from psutil import Process
@@ -98,12 +99,12 @@ def test_kill_job(scheduler, tmpdir):
     forked_process = multiprocessing.Process(target=run_sleep_100)
     forked_process.start()
     while len(forked_process_children := Process(forked_process.pid).children(recursive=True)) != 2:
-        pass
+        time.sleep(0.1)
     bash_process = forked_process_children[0]
     sleep_process = forked_process_children[1]
     with LocalTransport() as transport:
         scheduler.set_transport(transport)
         scheduler.kill_job(forked_process.pid)
     while bash_process.is_running() or sleep_process.is_running():
-        pass
+        time.sleep(0.1)
     forked_process.join()

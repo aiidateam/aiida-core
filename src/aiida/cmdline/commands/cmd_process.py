@@ -577,6 +577,13 @@ def process_repair(manager, broker, dry_run):
     help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
 )
 @click.option(
+    '--also-remote',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='If true, try to obtain also intermediate files on the remote computer that were not initially retrieved.',
+)
+@click.option(
     '-f',
     '--flat',
     is_flag=True,
@@ -591,19 +598,21 @@ def process_dump(
     include_outputs,
     include_attributes,
     include_extras,
+    also_remote,
     flat,
 ) -> None:
     """Dump process input and output files to disk.
 
     Child calculations/workflows (also called `CalcJob`s/`CalcFunction`s and `WorkChain`s/`WorkFunction`s in AiiDA
     jargon) run by the parent workflow are contained in the directory tree as sub-folders and are sorted by their
-    creation time.  The directory tree thus mirrors the logical execution of the workflow, which can also be queried by
+    creation time. The directory tree thus mirrors the logical execution of the workflow, which can also be queried by
     running `verdi process status <pk>` on the command line.
 
     By default, input and output files of each calculation can be found in the corresponding "inputs" and
     "outputs" directories (the former also contains the hidden ".aiida" folder with machine-readable job execution
     settings). Additional input and output files (depending on the type of calculation) are placed in the "node_inputs"
-    and "node_outputs", respectively.
+    and "node_outputs", respectively. Using the `--also-remote` flag, additional files of the `remote_workdir` on the
+    Computer where the CalcJobs were run can be retrieved (if they still exist on the remote).
 
     Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
     node data for further inspection.
@@ -618,7 +627,16 @@ def process_dump(
         include_extras=include_extras,
         overwrite=overwrite,
         flat=flat,
+        also_remote=also_remote,
     )
+
+    if also_remote:
+        echo.echo_report(
+            '`--also-remote` set to True. Will try to retrieve additional files from the `workdir` of the remote Computer.'  # noqa: E501
+        )
+        echo.echo_report(
+            'If files are non-existent, they will be skipped silently. Check if the output files are what you expect.'
+        )
 
     try:
         dump_path = process_dumper.dump(process_node=process, output_path=path)

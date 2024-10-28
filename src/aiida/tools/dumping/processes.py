@@ -31,7 +31,7 @@ from aiida.orm import (
 )
 from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
-from aiida.tools.dumping.utils import _prepare_dump_path
+from aiida.tools.dumping.utils import prepare_dump_path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -195,7 +195,7 @@ class ProcessDumper:
         if output_path is None:
             output_path = self._generate_default_dump_path(process_node=process_node)
 
-        _prepare_dump_path(path_to_validate=output_path, overwrite=self.overwrite, incremental=self.incremental)
+        prepare_dump_path(path_to_validate=output_path, overwrite=self.overwrite, incremental=self.incremental)
 
         if isinstance(process_node, CalculationNode):
             self._dump_calculation(
@@ -225,7 +225,7 @@ class ProcessDumper:
         :param io_dump_paths: Custom subdirectories for `CalculationNode` s, defaults to None
         """
 
-        _prepare_dump_path(path_to_validate=output_path, overwrite=self.overwrite, incremental=self.incremental)
+        prepare_dump_path(path_to_validate=output_path, overwrite=self.overwrite, incremental=self.incremental)
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
         called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
@@ -266,7 +266,7 @@ class ProcessDumper:
             Default: ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         """
 
-        _prepare_dump_path(path_to_validate=output_path, overwrite=self.overwrite, incremental=self.incremental)
+        prepare_dump_path(path_to_validate=output_path, overwrite=self.overwrite, incremental=self.incremental)
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 
         io_dump_mapping = self._generate_calculation_io_mapping(io_dump_paths=io_dump_paths)

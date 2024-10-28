@@ -330,7 +330,7 @@ def test_dump_calculation_add(tmp_path, generate_calculation_node_add):
 # Tests for helper methods
 @pytest.mark.usefixtures('chdir_tmp_path')
 def test_prepare_dump_path(tmp_path):
-    from aiida.tools.dumping.utils import _prepare_dump_path
+    from aiida.tools.dumping.utils import prepare_dump_path
 
     test_dir = tmp_path / Path('test-dir')
     test_file = test_dir / filename
@@ -339,22 +339,22 @@ def test_prepare_dump_path(tmp_path):
 
     # Cannot set both overwrite and incremental to True
     with pytest.raises(ValueError):
-        _prepare_dump_path(path_to_validate=test_dir, overwrite=True, incremental=True)
+        prepare_dump_path(path_to_validate=test_dir, overwrite=True, incremental=True)
 
     # Check that fails if file with same name as output dir
     test_dir.touch()
     with pytest.raises(FileExistsError):
-        _prepare_dump_path(path_to_validate=test_dir)
+        prepare_dump_path(path_to_validate=test_dir)
     test_dir.unlink()
 
     # Check if path created if non-existent
-    _prepare_dump_path(path_to_validate=test_dir)
+    prepare_dump_path(path_to_validate=test_dir)
     assert test_dir.exists()
     assert safeguard_file_path.is_file()
 
     # Directory exists, but empty -> is fine
     safeguard_file_path.unlink()
-    _prepare_dump_path(path_to_validate=test_dir)
+    prepare_dump_path(path_to_validate=test_dir)
     assert test_dir.exists()
     assert safeguard_file_path.is_file()
 
@@ -362,18 +362,18 @@ def test_prepare_dump_path(tmp_path):
     test_file.touch()
     safeguard_file_path.touch()
     with pytest.raises(FileExistsError):
-        _prepare_dump_path(path_to_validate=test_dir, overwrite=False, incremental=False)
+        prepare_dump_path(path_to_validate=test_dir, overwrite=False, incremental=False)
 
     # Fails if directory not empty, overwrite set to True, but safeguard_file not found (for safety reasons)
     safeguard_file_path.unlink()
     test_file.touch()
     with pytest.raises(FileNotFoundError):
-        _prepare_dump_path(path_to_validate=test_dir, overwrite=True, incremental=False)
+        prepare_dump_path(path_to_validate=test_dir, overwrite=True, incremental=False)
 
     # Works if directory not empty, overwrite set to True and safeguard_file contained
     # -> After function call, test_file is deleted, and safeguard_file again created
     safeguard_file_path.touch()
-    _prepare_dump_path(
+    prepare_dump_path(
         path_to_validate=test_dir,
         safeguard_file=safeguard_file,
         overwrite=True,
@@ -385,7 +385,7 @@ def test_prepare_dump_path(tmp_path):
     # Works if directory not empty, but incremental=True and safeguard_file (e.g. `.aiida_node_metadata.yaml`) contained
     # -> After function call, test file and safeguard_file still there
     test_file.touch()
-    _prepare_dump_path(path_to_validate=test_dir, safeguard_file=safeguard_file, incremental=True)
+    prepare_dump_path(path_to_validate=test_dir, safeguard_file=safeguard_file, incremental=True)
     assert safeguard_file_path.is_file()
     assert test_file.is_file()
 

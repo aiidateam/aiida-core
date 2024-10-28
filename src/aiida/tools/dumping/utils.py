@@ -14,12 +14,12 @@ import logging
 import shutil
 from pathlib import Path
 
-__all__ = ['_prepare_dump_path']
+__all__ = ['prepare_dump_path']
 
 logger = logging.getLogger(__name__)
 
 
-def _prepare_dump_path(
+def prepare_dump_path(
     path_to_validate: Path,
     overwrite: bool = False,
     incremental: bool = True,

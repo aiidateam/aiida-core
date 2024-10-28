@@ -26,11 +26,12 @@ class BashCliScheduler(Scheduler, metaclass=abc.ABCMeta):
     def submit_job(self, working_directory: str, filename: str) -> str | ExitCode:
         """Submit a job.
 
-        :param working_directory: The absolute filepath to the working directory where the job is to be exectued.
+        :param working_directory: The absolute filepath to the working directory where the job is to be executed.
         :param filename: The filename of the submission script relative to the working directory.
         """
-        self.transport.chdir(working_directory)
-        result = self.transport.exec_command_wait(self._get_submit_command(escape_for_bash(filename)))
+        result = self.transport.exec_command_wait(
+            self._get_submit_command(escape_for_bash(filename)), workdir=working_directory
+        )
         return self._parse_submit_output(*result)
 
     def get_jobs(

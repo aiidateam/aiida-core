@@ -33,11 +33,12 @@ from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteD
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
+from aiida.transports.util import StrPath
 
 if TYPE_CHECKING:
     from aiida.transports import Transport
 
-REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
+REMOTE_workdirECTORY_LOST_FOUND = 'lost+found'
 
 EXEC_LOGGER = AIIDA_LOGGER.getChild('execmanager')
 
@@ -103,7 +104,7 @@ def upload_calculation(
 
     # If we are performing a dry-run, the working directory should actually be a local folder that should already exist
     if dry_run:
-        workdir = transport.getcwd()
+        workdir = StrPath(folder.abspath)
     else:
         remote_user = transport.whoami()
         remote_working_directory = computer.get_workdir().format(username=remote_user)
@@ -114,16 +115,13 @@ def upload_calculation(
             )
 
         # If it already exists, no exception is raised
-        try:
-            transport.chdir(remote_working_directory)
-        except OSError:
+        if not transport.path_exists(remote_working_directory):
             logger.debug(
-                f'[submission of calculation {node.pk}] Unable to '
-                f'chdir in {remote_working_directory}, trying to create it'
+                f'[submission of calculation {node.pk}] Path '
+                f'{remote_working_directory} does not exist, trying to create it'
             )
             try:
                 transport.makedirs(remote_working_directory)
-                transport.chdir(remote_working_directory)
             except EnvironmentError as exc:
                 raise exceptions.ConfigurationError(
                     f'[submission of calculation {node.pk}] '
@@ -135,21 +133,20 @@ def upload_calculation(
         # in the calculation properties using _set_remote_dir
         # and I do not have to know the logic, but I just need to
         # read the absolute path from the calculation properties.
-        transport.mkdir(calc_info.uuid[:2], ignore_existing=True)
-        transport.chdir(calc_info.uuid[:2])
-        transport.mkdir(calc_info.uuid[2:4], ignore_existing=True)
-        transport.chdir(calc_info.uuid[2:4])
+        workdir = StrPath(remote_working_directory)
+        workdir = workdir.join(calc_info.uuid[:2], calc_info.uuid[2:4], return_str=False)
+        transport.makedirs(workdir.str, ignore_existing=True)
 
         try:
             # The final directory may already exist, most likely because this function was already executed once, but
-            # failed and as a result was rescheduled by the eninge. In this case it would be fine to delete the folder
+            # failed and as a result was rescheduled by the engine. In this case it would be fine to delete the folder
             # and create it from scratch, except that we cannot be sure that this the actual case. Therefore, to err on
             # the safe side, we move the folder to the lost+found directory before recreating the folder from scratch
-            transport.mkdir(calc_info.uuid[4:])
+            transport.mkdir(workdir.join(calc_info.uuid[4:]))
         except OSError:
             # Move the existing directory to lost+found, log a warning and create a clean directory anyway
-            path_existing = os.path.join(transport.getcwd(), calc_info.uuid[4:])
-            path_lost_found = os.path.join(remote_working_directory, REMOTE_WORK_DIRECTORY_LOST_FOUND)
+            path_existing = os.path.join(workdir.str, calc_info.uuid[4:])
+            path_lost_found = os.path.join(remote_working_directory, REMOTE_workdirECTORY_LOST_FOUND)
             path_target = os.path.join(path_lost_found, calc_info.uuid)
             logger.warning(
                 f'tried to create path {path_existing} but it already exists, moving the entire folder to {path_target}'
@@ -161,13 +158,11 @@ def upload_calculation(
             transport.rmtree(path_existing)
 
             # Now we can create a clean folder for this calculation
-            transport.mkdir(calc_info.uuid[4:])
+            transport.mkdir(workdir.join(calc_info.uuid[4:]))
         finally:
-            transport.chdir(calc_info.uuid[4:])
+            workdir = workdir.join(calc_info.uuid[4:], return_str=False)
 
-        # I store the workdir of the calculation for later file retrieval
-        workdir = transport.getcwd()
-        node.set_remote_workdir(workdir)
+        node.set_remote_workdir(workdir.str)
 
     # I first create the code files, so that the code can put
     # default files to be overwritten by the plugin itself.
@@ -178,11 +173,11 @@ def upload_calculation(
             # Note: this will possibly overwrite files
             for root, dirnames, filenames in code.base.repository.walk():
                 # mkdir of root
-                transport.makedirs(str(root), ignore_existing=True)
+                transport.makedirs(workdir.join(root), ignore_existing=True)
 
                 # remotely mkdir first
                 for dirname in dirnames:
-                    transport.makedirs(str(root / dirname), ignore_existing=True)
+                    transport.makedirs(workdir.join(root, dirname), ignore_existing=True)
 
                 # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
                 # combination with the new `Transport.put_object_from_filelike`
@@ -192,8 +187,11 @@ def upload_calculation(
                         content = code.base.repository.get_object_content((pathlib.Path(root) / filename), mode='rb')
                         handle.write(content)
                         handle.flush()
-                        transport.put(handle.name, str(root / filename))
-            transport.chmod(str(code.filepath_executable), 0o755)  # rwxr-xr-x
+                        transport.put(handle.name, workdir.join(root, filename))
+            if code.filepath_executable.is_absolute():
+                transport.chmod(str(code.filepath_executable), 0o755)  # rwxr-xr-x
+            else:
+                transport.chmod(workdir.join(code.filepath_executable), 0o755)  # rwxr-xr-x
 
     # local_copy_list is a list of tuples, each with (uuid, dest_path, rel_path)
     # NOTE: validation of these lists are done inside calculation.presubmit()
@@ -210,20 +208,22 @@ def upload_calculation(
 
     for file_copy_operation in file_copy_operation_order:
         if file_copy_operation is FileCopyOperation.LOCAL:
-            _copy_local_files(logger, node, transport, inputs, local_copy_list)
+            _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir=workdir)
         elif file_copy_operation is FileCopyOperation.REMOTE:
             if not dry_run:
-                _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list)
+                _copy_remote_files(
+                    logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir=workdir
+                )
         elif file_copy_operation is FileCopyOperation.SANDBOX:
             if not dry_run:
-                _copy_sandbox_files(logger, node, transport, folder)
+                _copy_sandbox_files(logger, node, transport, folder, workdir=workdir)
         else:
             raise RuntimeError(f'file copy operation {file_copy_operation} is not yet implemented.')
 
     # In a dry_run, the working directory is the raw input folder, which will already contain these resources
     if dry_run:
         if remote_copy_list:
-            filepath = os.path.join(workdir, '_aiida_remote_copy_list.txt')
+            filepath = os.path.join(workdir.str, '_aiida_remote_copy_list.txt')
             with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
                 for _, remote_abs_path, dest_rel_path in remote_copy_list:
                     handle.write(
@@ -232,7 +232,7 @@ def upload_calculation(
                     )
 
         if remote_symlink_list:
-            filepath = os.path.join(workdir, '_aiida_remote_symlink_list.txt')
+            filepath = os.path.join(workdir.str, '_aiida_remote_symlink_list.txt')
             with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
                 for _, remote_abs_path, dest_rel_path in remote_symlink_list:
                     handle.write(
@@ -276,12 +276,12 @@ def upload_calculation(
     node.base.repository._update_repository_metadata()
 
     if not dry_run:
-        return RemoteData(computer=computer, remote_path=workdir)
+        return RemoteData(computer=computer, remote_path=workdir.str)
 
     return None
 
 
-def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list):
+def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir: StrPath):
     """Perform the copy instructions of the ``remote_copy_list`` and ``remote_symlink_list``."""
     for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
         if remote_computer_uuid == computer.uuid:
@@ -290,7 +290,7 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
                 f'remotely, directly on the machine {computer.label}'
             )
             try:
-                transport.copy(remote_abs_path, dest_rel_path)
+                transport.copy(remote_abs_path, workdir.join(dest_rel_path))
             except FileNotFoundError:
                 logger.warning(
                     f'[submission of calculation {node.pk}] Unable to copy remote '
@@ -316,8 +316,8 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
             )
             remote_dirname = pathlib.Path(dest_rel_path).parent
             try:
-                transport.makedirs(remote_dirname, ignore_existing=True)
-                transport.symlink(remote_abs_path, dest_rel_path)
+                transport.makedirs(workdir.join(remote_dirname), ignore_existing=True)
+                transport.symlink(remote_abs_path, workdir.join(dest_rel_path))
             except OSError:
                 logger.warning(
                     f'[submission of calculation {node.pk}] Unable to create remote symlink '
@@ -330,9 +330,8 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
             )
 
 
-def _copy_local_files(logger, node, transport, inputs, local_copy_list):
+def _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir: StrPath):
     """Perform the copy instructions of the ``local_copy_list``."""
-
     for uuid, filename, target in local_copy_list:
         logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
 
@@ -359,14 +358,14 @@ def _copy_local_files(logger, node, transport, inputs, local_copy_list):
             # The logic below takes care of an edge case where the source is a file but the target is a directory. In
             # this case, the v2.5.1 implementation would raise an `IsADirectoryError` exception, because it would try
             # to open the directory in the sandbox folder as a file when writing the contents.
-            if file_type_source == FileType.FILE and target and transport.isdir(target):
+            if file_type_source == FileType.FILE and target and transport.isdir(workdir.join(target)):
                 raise IsADirectoryError
 
             # In case the source filename is specified and it is a directory that already exists in the remote, we
             # want to avoid nested directories in the target path to replicate the behavior of v2.5.1. This is done by
             # setting the target filename to '.', which means the contents of the node will be copied in the top level
             # of the temporary directory, whose contents are then copied into the target directory.
-            if filename and transport.isdir(filename):
+            if filename and transport.isdir(workdir.join(filename)):
                 filename_target = '.'
 
             filepath_target = (dirpath / filename_target).resolve().absolute()
@@ -375,21 +374,21 @@ def _copy_local_files(logger, node, transport, inputs, local_copy_list):
             if file_type_source == FileType.DIRECTORY:
                 # If the source object is a directory, we copy its entire contents
                 data_node.base.repository.copy_tree(filepath_target, filename_source)
-                transport.put(f'{dirpath}/*', target or '.', overwrite=True)
+                transport.put(f'{dirpath}/*', workdir.join(target) if target else workdir.join('.'), overwrite=True)
             else:
                 # Otherwise, simply copy the file
                 with filepath_target.open('wb') as handle:
                     with data_node.base.repository.open(filename_source, 'rb') as source:
                         shutil.copyfileobj(source, handle)
-                transport.makedirs(str(pathlib.Path(target).parent), ignore_existing=True)
-                transport.put(str(filepath_target), target)
+                transport.makedirs(workdir.join(pathlib.Path(target).parent), ignore_existing=True)
+                transport.put(str(filepath_target), workdir.join(target))
 
 
-def _copy_sandbox_files(logger, node, transport, folder):
+def _copy_sandbox_files(logger, node, transport, folder, workdir: StrPath):
     """Copy the contents of the sandbox folder to the working directory."""
     for filename in folder.get_content_list():
         logger.debug(f'[submission of calculation {node.pk}] copying file/folder {filename}...')
-        transport.put(folder.get_abs_path(filename), filename)
+        transport.put(folder.get_abs_path(filename), workdir.join(filename))
 
 
 def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
@@ -523,8 +522,6 @@ def retrieve_calculation(
     retrieved_files = FolderData()
 
     with transport:
-        transport.chdir(workdir)
-
         # First, retrieve the files of folderdata
         retrieve_list = calculation.get_retrieve_list()
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
@@ -601,10 +598,10 @@ def retrieve_files_from_list(
         * a string
         * a list
 
-    If it is a string, it represents the remote absolute filepath of the file.
+    If it is a string, it represents the remote absolute or relative filepath of the file.
     If the item is a list, the elements will correspond to the following:
 
-        * remotepath
+        * remotepath (relative path)
         * localpath
         * depth
 
@@ -616,18 +613,21 @@ def retrieve_files_from_list(
     :param folder: an absolute path to a folder that contains the files to copy.
     :param retrieve_list: the list of files to retrieve.
     """
+    workdir = StrPath(calculation.get_remote_workdir())
     for item in retrieve_list:
         if isinstance(item, (list, tuple)):
             tmp_rname, tmp_lname, depth = item
             # if there are more than one file I do something differently
             if transport.has_magic(tmp_rname):
-                remote_names = transport.glob(tmp_rname)
+                remote_names = transport.glob(workdir.join(tmp_rname))
                 local_names = []
                 for rem in remote_names:
+                    # get the relative path so to make local_names relative
+                    rel_rem = os.path.relpath(rem, workdir.str)
                     if depth is None:
-                        local_names.append(os.path.join(tmp_lname, rem))
+                        local_names.append(os.path.join(tmp_lname, rel_rem))
                     else:
-                        to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
+                        to_append = rel_rem.split(os.path.sep)[-depth:] if depth > 0 else []
                         local_names.append(os.path.sep.join([tmp_lname] + to_append))
             else:
                 remote_names = [tmp_rname]
@@ -638,13 +638,22 @@ def retrieve_files_from_list(
                     new_folder = os.path.join(folder, os.path.split(this_local_file)[0])
                     if not os.path.exists(new_folder):
                         os.makedirs(new_folder)
-        elif transport.has_magic(item):  # it is a string
-            remote_names = transport.glob(item)
-            local_names = [os.path.split(rem)[1] for rem in remote_names]
         else:
-            remote_names = [item]
-            local_names = [os.path.split(item)[1]]
+            abs_item = item if item.startswith('/') else workdir.join(item)
+
+            if transport.has_magic(abs_item):
+                remote_names = transport.glob(abs_item)
+                local_names = [os.path.split(rem)[1] for rem in remote_names]
+            else:
+                remote_names = [abs_item]
+                local_names = [os.path.split(abs_item)[1]]
 
         for rem, loc in zip(remote_names, local_names):
             transport.logger.debug(f"[retrieval of calc {calculation.pk}] Trying to retrieve remote item '{rem}'")
-            transport.get(rem, os.path.join(folder, loc), ignore_nonexisting=True)
+
+            if rem.startswith('/'):
+                to_get = rem
+            else:
+                to_get = workdir.join(rem)
+
+            transport.get(to_get, os.path.join(folder, loc), ignore_nonexisting=True)

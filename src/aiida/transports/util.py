@@ -9,10 +9,56 @@
 """General utilities for Transport classes."""
 
 import time
+from pathlib import Path, PurePosixPath
+from typing import Union
 
 from paramiko import ProxyCommand
 
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
+
+
+class StrPath:
+    """A class to chain paths together.
+    This is useful to avoid the need to use os.path.join to chain paths.
+
+    Note:
+    Eventually transport plugins may further develope so that functions with pathlib.Path
+    So far they are expected to work only with POSIX paths.
+    This class is a solution to avoid the need to use Path.join to chain paths and convert back again to str.
+    """
+
+    def __init__(self, path: Union[str, PurePosixPath]):
+        """Chain a path with multiple paths.
+
+        :param path: the initial path (absolute)
+        """
+        if isinstance(path, PurePosixPath):
+            path = str(path)
+        self.str = path.rstrip('/')
+
+    def join(self, *paths: Union[str, PurePosixPath, Path], return_str=True) -> Union[str, 'StrPath']:
+        """Join the initial path with multiple paths.
+
+        :param paths: the paths to chain (relative to the previous path)
+        :type paths: str or PurePosixPath or Path
+        :param return_str: if True, return a string, otherwise return a new StrPath object
+
+        :return: a new StrPath object
+        """
+        path = self.str
+        for p in paths:
+            p_ = str(p) if isinstance(p, (PurePosixPath, Path)) else p
+            if self.str in p_:
+                raise ValueError(
+                    'The path to join is already included in the initial path, '
+                    'probably you are trying to join an absolute path'
+                )
+            path = f"{path}/{p_.strip('/')}"
+
+        if return_str:
+            return path
+
+        return StrPath(path)
 
 
 class FileAttribute(FixedFieldsAttributeDict):

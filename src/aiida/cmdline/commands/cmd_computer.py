@@ -134,11 +134,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo, computer):
     file_content = f"Test from 'verdi computer test' on {datetime.datetime.now().isoformat()}"
     workdir = authinfo.get_workdir().format(username=transport.whoami())
 
-    try:
-        transport.chdir(workdir)
-    except OSError:
-        transport.makedirs(workdir)
-        transport.chdir(workdir)
+    transport.makedirs(workdir, ignore_existing=True)
 
     with tempfile.NamedTemporaryFile(mode='w+') as tempf:
         fname = os.path.split(tempf.name)[1]

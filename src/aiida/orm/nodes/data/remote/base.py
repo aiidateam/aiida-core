@@ -58,13 +58,10 @@ class RemoteData(Data):
         transport = authinfo.get_transport()
 
         with transport:
-            try:
-                transport.chdir(self.get_remote_path())
-            except OSError:
-                # If the transport OSError the directory no longer exists and was deleted
+            if not transport.isdir(self.get_remote_path()):
                 return True
 
-            return not transport.listdir()
+            return not transport.listdir(self.get_remote_path())
 
     def getfile(self, relpath, destpath):
         """Connects to the remote folder and retrieves the content of a file.
@@ -96,22 +93,15 @@ class RemoteData(Data):
         authinfo = self.get_authinfo()
 
         with authinfo.get_transport() as transport:
-            try:
-                full_path = os.path.join(self.get_remote_path(), relpath)
-                transport.chdir(full_path)
-            except OSError as exception:
-                if exception.errno in (2, 20):  # directory not existing or not a directory
-                    exc = OSError(
-                        f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
-                        'directory or has been deleted.'
-                    )
-                    exc.errno = exception.errno
-                    raise exc from exception
-                else:
-                    raise
+            full_path = os.path.join(self.get_remote_path(), relpath)
+            if not transport.isdir(full_path):
+                raise OSError(
+                    f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
+                    'directory or has been deleted.'
+                )
 
             try:
-                return transport.listdir()
+                return transport.listdir(full_path)
             except OSError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = OSError(
@@ -132,22 +122,15 @@ class RemoteData(Data):
         authinfo = self.get_authinfo()
 
         with authinfo.get_transport() as transport:
-            try:
-                full_path = os.path.join(self.get_remote_path(), path)
-                transport.chdir(full_path)
-            except OSError as exception:
-                if exception.errno in (2, 20):  # directory not existing or not a directory
-                    exc = OSError(
-                        f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
-                        'directory or has been deleted.'
-                    )
-                    exc.errno = exception.errno
-                    raise exc from exception
-                else:
-                    raise
+            full_path = os.path.join(self.get_remote_path(), path)
+            if not transport.isdir(full_path):
+                raise OSError(
+                    f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
+                    'directory or has been deleted.'
+                )
 
             try:
-                return transport.listdir_withattributes()
+                return transport.listdir_withattributes(full_path)
             except OSError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = OSError(

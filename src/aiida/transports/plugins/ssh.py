@@ -19,6 +19,7 @@ import click
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
+from aiida.common.warnings import warn_deprecation
 
 from ..transport import Transport, TransportInternalError
 
@@ -586,6 +587,10 @@ class SshTransport(Transport):
         Differently from paramiko, if you pass None to chdir, nothing
         happens and the cwd is unchanged.
         """
+        warn_deprecation(
+            '`chdir()` is deprecated and will be removed in the next major version.',
+            version=3,
+        )
         from paramiko.sftp import SFTPError
 
         old_path = self.sftp.getcwd()
@@ -651,6 +656,10 @@ class SshTransport(Transport):
         this method will return None. But in __enter__ this is set explicitly,
         so this should never happen within this class.
         """
+        warn_deprecation(
+            '`chdir()` is deprecated and will be removed in the next major version.',
+            version=3,
+        )
         return self.sftp.getcwd()
 
     def makedirs(self, path, ignore_existing=False):
@@ -1276,11 +1285,9 @@ class SshTransport(Transport):
                 return False
             raise  # Typically if I don't have permissions (errno=13)
 
-    def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1):
+    def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1, workdir=None):
         """Executes the specified command in bash login shell.
 
-        Before the command is executed, changes directory to the current
-        working directory as returned by self.getcwd().
 
         For executing commands and waiting for them to finish, use
         exec_command_wait.
@@ -1291,6 +1298,10 @@ class SshTransport(Transport):
                 stderr on the same buffer (i.e., stdout).
                 Note: If combine_stderr is True, stderr will always be empty.
         :param bufsize: same meaning of the one used by paramiko.
+        :param workdir: (optional, default=None) if set, the command will be executed
+                in the specified working directory.
+                if None, the command will be executed in the current working directory,
+                from DEPRECATED `self.getcwd()`, if that has a value.
 
         :return: a tuple with (stdin, stdout, stderr, channel),
             where stdin, stdout and stderr behave as file-like objects,
@@ -1300,7 +1311,13 @@ class SshTransport(Transport):
         channel = self.sshclient.get_transport().open_session()
         channel.set_combine_stderr(combine_stderr)
 
-        if self.getcwd() is not None:
+        if workdir is not None:
+            command_to_execute = f'cd {workdir} &&  ( {command} )'
+        elif self.getcwd() is not None:
+            warn_deprecation(
+                '`getcwd()` is deprecated and will be removed in the next major version.',
+                version=3,
+            )
             escaped_folder = escape_for_bash(self.getcwd())
             command_to_execute = f'cd {escaped_folder} && ( {command} )'
         else:
@@ -1320,7 +1337,9 @@ class SshTransport(Transport):
 
         return stdin, stdout, stderr, channel
 
-    def exec_command_wait_bytes(self, command, stdin=None, combine_stderr=False, bufsize=-1, timeout=0.01):
+    def exec_command_wait_bytes(
+        self, command, stdin=None, combine_stderr=False, bufsize=-1, timeout=0.01, workdir=None
+    ):
         """Executes the specified command and waits for it to finish.
 
         :param command: the command to execute
@@ -1330,6 +1349,8 @@ class SshTransport(Transport):
                    self._exec_command_internal()
         :param bufsize: same meaning of paramiko.
         :param timeout: ssh channel timeout for stdout, stderr.
+        :param workdir: (optional, default=None) if set, the command will be executed
+                in the specified working directory.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are both bytes and the return_value is an int.
@@ -1337,7 +1358,9 @@ class SshTransport(Transport):
         import socket
         import time
 
-        ssh_stdin, stdout, stderr, channel = self._exec_command_internal(command, combine_stderr, bufsize=bufsize)
+        ssh_stdin, stdout, stderr, channel = self._exec_command_internal(
+            command, combine_stderr, bufsize=bufsize, workdir=workdir
+        )
 
         if stdin is not None:
             if isinstance(stdin, str):

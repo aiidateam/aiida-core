@@ -643,7 +643,6 @@ class CalcJob(Process):
         with LocalTransport() as transport:
             with SubmitTestFolder() as folder:
                 calc_info = self.presubmit(folder)
-                transport.chdir(folder.abspath)
                 upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
                 self.node.dry_run_info = {  # type: ignore[attr-defined]
                     'folder': folder.abspath,

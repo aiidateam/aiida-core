@@ -8,14 +8,6 @@
 ###########################################################################
 """Local transport"""
 
-###
-### GP: a note on the local transport:
-### I believe that we must not use os.chdir to keep track of the folder
-### in which we are, since this may have very nasty side effects in other
-### parts of code, and make things not thread-safe.
-### we should instead keep track internally of the 'current working directory'
-### in the exact same way as paramiko does already.
-
 import contextlib
 import errno
 import glob
@@ -24,6 +16,7 @@ import os
 import shutil
 import subprocess
 
+from aiida.common.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
 from aiida.transports.transport import Transport, TransportInternalError
 
@@ -105,6 +98,10 @@ class LocalTransport(Transport):
         :param path: path to cd into
         :raise OSError: if the directory does not have read attributes.
         """
+        warn_deprecation(
+            '`chdir()` is deprecated and will be removed in the next major version.',
+            version=3,
+        )
         new_path = os.path.join(self.curdir, path)
         if not os.path.isdir(new_path):
             raise OSError(f"'{new_path}' is not a valid directory")
@@ -124,6 +121,10 @@ class LocalTransport(Transport):
 
     def getcwd(self):
         """Returns the current working directory, emulated by the transport"""
+        warn_deprecation(
+            '`getcwd()` is deprecated and will be removed in the next major version.',
+            version=3,
+        )
         return self.curdir
 
     @staticmethod
@@ -695,11 +696,9 @@ class LocalTransport(Transport):
         return os.path.isfile(os.path.join(self.curdir, path))
 
     @contextlib.contextmanager
-    def _exec_command_internal(self, command, **kwargs):
+    def _exec_command_internal(self, command, workdir=None, **kwargs):
         """Executes the specified command in bash login shell.
 
-        Before the command is executed, changes directory to the current
-        working directory as returned by self.getcwd().
 
         For executing commands and waiting for them to finish, use
         exec_command_wait.
@@ -710,6 +709,10 @@ class LocalTransport(Transport):
 
         :param  command: the command to execute. The command is assumed to be
             already escaped using :py:func:`aiida.common.escaping.escape_for_bash`.
+        :param workdir: (optional, default=None) if set, the command will be executed
+                in the specified working directory.
+                if None, the command will be executed in the current working directory,
+                from DEPRECATED `self.getcwd()`.
 
         :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
@@ -724,26 +727,40 @@ class LocalTransport(Transport):
 
         command = bash_commmand + escape_for_bash(command)
 
+        if workdir:
+            cwd = workdir
+        else:
+            warn_deprecation(
+                '`getcwd()` is deprecated and will be removed in the next major version.'
+                'You should always pass `workdir` as an argument, instead.',
+                version=3,
+            )
+            cwd = self.getcwd()
+
         with subprocess.Popen(
             command,
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=self.getcwd(),
+            cwd=cwd,
             start_new_session=True,
         ) as process:
             yield process
 
-    def exec_command_wait_bytes(self, command, stdin=None, **kwargs):
+    def exec_command_wait_bytes(self, command, stdin=None, workdir=None, **kwargs):
         """Executes the specified command and waits for it to finish.
 
         :param command: the command to execute
+        :param workdir: (optional, default=None) if set, the command will be executed
+                in the specified working directory.
+                if None, the command will be executed in the current working directory,
+                from DEPRECATED `self.getcwd()`.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are both bytes and the return_value is an int.
         """
-        with self._exec_command_internal(command) as process:
+        with self._exec_command_internal(command, workdir) as process:
             if stdin is not None:
                 # Implicitly assume that the desired encoding is 'utf-8' if I receive a string.
                 # Also, if I get a StringIO, I just read it all in memory and put it into a BytesIO.

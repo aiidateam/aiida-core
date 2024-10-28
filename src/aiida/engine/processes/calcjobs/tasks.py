@@ -51,12 +51,6 @@ MAX_ATTEMPTS_OPTION = 'transport.task_maximum_attempts'
 logger = logging.getLogger(__name__)
 
 
-## def log_to_file(message):
-# current_time = datetime.now().strftime("%H:%M:%S")
-# with open("/home/geiger_j/aiida_projects/aiida-dev/ssh-alive-testing/transport-log.txt", "a") as f:
-#     f.write(f"{current_time}: {message}(tasks.py)\n")
-
-
 class PreSubmitException(Exception):  # noqa: N818
     """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
 
@@ -502,8 +496,6 @@ class Waiting(plumpy.process_states.Waiting):
         result: plumpy.process_states.State = self
 
         process_status = f'Waiting for transport task: {self._command}'
-
-        # ## log_to_file(f'TRANSPORT_QUEUE: {transport_queue}')
 
         node.set_process_status(process_status)
 

@@ -40,7 +40,7 @@ class StrPath:
         """Join the initial path with multiple paths.
 
         :param paths: the paths to chain (relative to the previous path)
-        :type paths: str or PurePosixPath or Path
+        :param paths: It should be of type str or Path or PurePosixPath
         :param return_str: if True, return a string, otherwise return a new StrPath object
 
         :return: a new StrPath object

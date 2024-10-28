@@ -51,6 +51,12 @@ MAX_ATTEMPTS_OPTION = 'transport.task_maximum_attempts'
 logger = logging.getLogger(__name__)
 
 
+## def log_to_file(message):
+# current_time = datetime.now().strftime("%H:%M:%S")
+# with open("/home/geiger_j/aiida_projects/aiida-dev/ssh-alive-testing/transport-log.txt", "a") as f:
+#     f.write(f"{current_time}: {message}(tasks.py)\n")
+
+
 class PreSubmitException(Exception):  # noqa: N818
     """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
 
@@ -72,7 +78,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
     node = process.node
 
     if node.get_state() == CalcJobState.SUBMITTING:
-        logger.warning(f'CalcJob<{node.pk}> already marked as SUBMITTING, skipping task_update_job')
+        logger.warning(f'CalcJob<{node.pk}> already marked as SUBMITTING, skipping task_upload_job')
         return
 
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
@@ -496,9 +502,13 @@ class Waiting(plumpy.process_states.Waiting):
         result: plumpy.process_states.State = self
 
         process_status = f'Waiting for transport task: {self._command}'
+
+        # ## log_to_file(f'TRANSPORT_QUEUE: {transport_queue}')
+
         node.set_process_status(process_status)
 
         try:
+            # ? Possibly implement here to keep connection open
             if self._command == UPLOAD_COMMAND:
                 skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)
                 if skip_submit:

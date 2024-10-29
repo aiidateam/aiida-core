@@ -54,6 +54,23 @@ logger = logging.getLogger(__name__)
 class PreSubmitException(Exception):  # noqa: N818
     """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
 
+async def get_transport(authinfo, transport_queue, cancellable):
+    transport_requests = transport_queue._transport_requests
+    last_transport_request = transport_requests.get(authinfo.pk, None)
+
+    # ? Refactor this into `obtain_transport` function
+    # ? Returns last transport if open, and awaits close callback handle, otherwise request new transport
+    if last_transport_request is None or transport_queue._last_request_special:
+        # This is the previous behavior
+        with transport_queue.request_transport(authinfo) as request:
+            transport = await cancellable.with_interrupt(request)
+    else:
+        transport = authinfo.get_transport()
+        if not transport.is_open:
+            with transport_queue.request_transport(authinfo) as request:
+                transport = await cancellable.with_interrupt(request)
+        else:
+            transport_queue._last_request_special = True
 
 async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, cancellable: InterruptableFuture):
     """Transport task that will attempt to upload the files of a job calculation to the remote.
@@ -143,9 +160,11 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
     authinfo = node.get_authinfo()
 
     async def do_submit():
-        with transport_queue.request_transport(authinfo) as request:
-            transport = await cancellable.with_interrupt(request)
-            return execmanager.submit_calculation(node, transport)
+
+        transport = get_transport(authinfo=authinfo, transport_queue=transport_queue, cancellable=cancellable)
+        print('a')
+
+        return execmanager.submit_calculation(node, transport)
 
     try:
         logger.info(f'scheduled request to submit CalcJob<{node.pk}>')

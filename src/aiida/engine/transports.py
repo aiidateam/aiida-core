@@ -58,6 +58,7 @@ class TransportQueue:
         self._last_close_time = None
         self._last_request_special: bool = False
         self._close_callback_handle = None
+        self._open_transports: Dict[Hashable, Transport] = {}
         # self._last_transport_request: Dict[Hashable, str] = {}
 
     @property
@@ -102,6 +103,7 @@ class TransportQueue:
                     try:
                         transport.open()
                         self._last_open_time = timezone.localtime(timezone.now())
+                        self._open_transports[authinfo.pk] = transport
                     except Exception as exception:
                         _LOGGER.error('exception occurred while trying to open transport:\n %s', exception)
                         transport_request.future.set_exception(exception)
@@ -167,22 +169,28 @@ class TransportQueue:
             if transport_request.count == 0:
                 if transport_request.future.done():
 
-                    def do_close():
-                        """Close the transport if conditions are met."""
-                        transport_request.future.result().close()
-                        self._last_close_time = timezone.localtime(timezone.now())
+                    # ? Why is all this logic in the `request_transport` method?
+                    # ? Shouldn't the logic to close a transport be outside, such that the transport is being closed
+                    # ? once it was actually used???
+                    pass
+                    # def do_close():
+                    #     """Close the transport if conditions are met."""
+                    #     transport_request.future.result().close()
+                    #     self._last_close_time = timezone.localtime(timezone.now())
 
-                    close_timedelta = (timezone.localtime(timezone.now()) - self._last_open_time).total_seconds() 
+                    # close_timedelta = (timezone.localtime(timezone.now()) - self._last_open_time).total_seconds() 
 
-                    if close_timedelta > safe_open_interval:
+                    # if close_timedelta < safe_open_interval:
 
                         # Also here logic when transport should be closed immediately, or when via call_later?
-                        close_callback_handle = self._loop.call_soon(do_close, context=contextvars.Context())
-                        self._last_close_time = timezone.localtime(timezone.now())
-                        self._transport_requests.pop(authinfo.pk, None)
-                    else:
-                        close_callback_handle = self._loop.call_later(safe_open_interval, do_close, context=contextvars.Context())
-                        self._transport_requests.pop(authinfo.pk, None)
+                        # self._last_close_time = timezone.localtime(timezone.now())
+                        # self._transport_requests.pop(authinfo.pk, None)
+                        # close_callback_handle = self._loop.call_later(safe_open_interval, do_close, context=contextvars.Context())
+                    # if close_timedelta > safe_open_interval:
+                    #     close_callback_handle = self._loop.call_soon(do_close, context=contextvars.Context())
+                    #     self._last_close_time = timezone.localtime(timezone.now())
+                    #     self._transport_requests.pop(authinfo.pk, None)
+                        # self._transport_requests.pop(authinfo.pk, None)
                         
                         # transport_request.transport_closer = close_callback_handle
 

@@ -198,7 +198,6 @@ async def exponential_backoff_retry(
 
     result: Any = None
     coro = ensure_coroutine(fct)
-    print('a')
     interval = initial_interval
 
     for iteration in range(max_attempts):

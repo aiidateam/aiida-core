@@ -204,7 +204,7 @@ def generate_work_chain():
 
 @pytest.fixture
 def generate_calcjob_node():
-    """Generate an instance of a `CalculationNode`."""
+    """Generate an instance of a `CalcJobNode`."""
     from aiida.engine import ProcessState
 
     def _generate_calcjob_node(

@@ -16,7 +16,6 @@ import os
 import shutil
 import subprocess
 
-from aiida.common.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
 from aiida.transports.transport import Transport, TransportInternalError
 
@@ -94,14 +93,14 @@ class LocalTransport(Transport):
         raise TransportInternalError('Error, local method called for LocalTransport without opening the channel first')
 
     def chdir(self, path):
-        """Changes directory to path, emulated internally.
+        """
+        PLEASE DON'T USE `chdir()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
+        `chdir()` is DEPRECATED and will be removed in the next major version.
+
+        Changes directory to path, emulated internally.
         :param path: path to cd into
         :raise OSError: if the directory does not have read attributes.
         """
-        warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version.',
-            version=3,
-        )
         new_path = os.path.join(self.curdir, path)
         if not os.path.isdir(new_path):
             raise OSError(f"'{new_path}' is not a valid directory")
@@ -120,11 +119,11 @@ class LocalTransport(Transport):
         return os.path.realpath(os.path.join(self.curdir, path))
 
     def getcwd(self):
-        """Returns the current working directory, emulated by the transport"""
-        warn_deprecation(
-            '`getcwd()` is deprecated and will be removed in the next major version.',
-            version=3,
-        )
+        """
+        PLEASE DON'T USE `getcwd()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
+        `getcwd()` is DEPRECATED and will be removed in the next major version.
+
+        Returns the current working directory, emulated by the transport"""
         return self.curdir
 
     @staticmethod
@@ -730,11 +729,6 @@ class LocalTransport(Transport):
         if workdir:
             cwd = workdir
         else:
-            warn_deprecation(
-                '`getcwd()` is deprecated and will be removed in the next major version.'
-                'You should always pass `workdir` as an argument, instead.',
-                version=3,
-            )
             cwd = self.getcwd()
 
         with subprocess.Popen(

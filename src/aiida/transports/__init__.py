@@ -14,14 +14,12 @@
 
 from .plugins import *
 from .transport import *
-from .util import StrPath
 
 __all__ = (
     'SshTransport',
     'Transport',
     'convert_to_bool',
     'parse_sshconfig',
-    'StrPath',
 )
 
 # fmt: on

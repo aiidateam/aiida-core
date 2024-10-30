@@ -19,7 +19,6 @@ import click
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
-from aiida.common.warnings import warn_deprecation
 
 from ..transport import Transport, TransportInternalError
 
@@ -582,15 +581,15 @@ class SshTransport(Transport):
         return f"{'OPEN' if self._is_open else 'CLOSED'} [{conn_info}]"
 
     def chdir(self, path):
-        """Change directory of the SFTP session. Emulated internally by paramiko.
+        """
+        PLEASE DON'T USE `chdir()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
+        `chdir()` is DEPRECATED and will be removed in the next major version.
+
+        Change directory of the SFTP session. Emulated internally by paramiko.
 
         Differently from paramiko, if you pass None to chdir, nothing
         happens and the cwd is unchanged.
         """
-        warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version.',
-            version=3,
-        )
         from paramiko.sftp import SFTPError
 
         old_path = self.sftp.getcwd()
@@ -651,15 +650,15 @@ class SshTransport(Transport):
         return self.sftp.lstat(path)
 
     def getcwd(self):
-        """Return the current working directory for this SFTP session, as
+        """
+        PLEASE DON'T USE `getcwd()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
+        `getcwd()` is DEPRECATED and will be removed in the next major version.
+
+        Return the current working directory for this SFTP session, as
         emulated by paramiko. If no directory has been set with chdir,
         this method will return None. But in __enter__ this is set explicitly,
         so this should never happen within this class.
         """
-        warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version.',
-            version=3,
-        )
         return self.sftp.getcwd()
 
     def makedirs(self, path, ignore_existing=False):
@@ -1313,12 +1312,8 @@ class SshTransport(Transport):
 
         if workdir is not None:
             command_to_execute = f'cd {workdir} &&  ( {command} )'
-        elif self.getcwd() is not None:
-            warn_deprecation(
-                '`getcwd()` is deprecated and will be removed in the next major version.',
-                version=3,
-            )
-            escaped_folder = escape_for_bash(self.getcwd())
+        elif (cwd := self.getcwd()) is not None:
+            escaped_folder = escape_for_bash(cwd)
             command_to_execute = f'cd {escaped_folder} && ( {command} )'
         else:
             command_to_execute = command

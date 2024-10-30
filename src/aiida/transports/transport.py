@@ -562,7 +562,7 @@ class Transport(abc.ABC):
             cwd = Path(path).resolve().as_posix()
         else:
             warn_deprecation(
-                'Using relative paths in `listdir_withattributes` is deprecated '
+                'Using relative paths in `listdir_withattributes` is no longer supported '
                 'and will be removed in the next major version.',
                 version=3,
             )

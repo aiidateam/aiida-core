@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import tempfile
+from pathlib import Path
 
 from aiida.orm import CalcJobNode
 from aiida.transports import Transport
-from aiida.transports.util import StrPath
 
 
 def always_kill(node: CalcJobNode, transport: Transport) -> str | None:
@@ -24,7 +24,7 @@ def always_kill(node: CalcJobNode, transport: Transport) -> str | None:
         if cwd is None:
             raise ValueError('The remote work directory cannot be None')
 
-        transport.getfile(StrPath(cwd).join('_aiidasubmit.sh'), handle.name)
+        transport.getfile(str(Path(cwd).joinpath('_aiidasubmit.sh')), handle.name)
         handle.seek(0)
         output = handle.read()
 

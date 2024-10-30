@@ -156,7 +156,6 @@ class InstalledCode(Code):
                 f'The executable at the remote absolute path `{self.filepath_executable}` is not executable.'
             )
 
-
     def can_run_on_computer(self, computer: Computer) -> bool:
         """Return whether the code can run on a given computer.
 

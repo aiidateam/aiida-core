@@ -261,7 +261,7 @@ class Runner:
 
                 # TODO: only do this if the node is CalcJob?
                 # or you think it is fine for every process we open one anyway?
-                # The downside will be the long opening SSH connection might be killed from 
+                # The downside will be the long opening SSH connection might be killed from
                 # server side then it will trigger the expo mechanism. (TBD)
                 authinfo = process_inited.node.get_authinfo()
                 with self.transport.request_transport(authinfo):

@@ -258,7 +258,15 @@ class Runner:
             try:
                 signal.signal(signal.SIGINT, kill_process)
                 signal.signal(signal.SIGTERM, kill_process)
-                process_inited.execute()
+
+                # TODO: only do this if the node is CalcJob?
+                # or you think it is fine for every process we open one anyway?
+                # The downside will be the long opening SSH connection might be killed from 
+                # server side then it will trigger the expo mechanism. (TBD)
+                authinfo = process_inited.node.get_authinfo()
+                with self.transport.request_transport(authinfo):
+                    process_inited.execute()
+
             finally:
                 signal.signal(signal.SIGINT, original_handler_int)
                 signal.signal(signal.SIGTERM, original_handler_term)

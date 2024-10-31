@@ -155,9 +155,11 @@ class InstalledCode(Code):
             )
 
         if not user_has_execute:
-            raise exceptions.ValidationError(
-                f'The executable at the remote absolute path `{self.filepath_executable}` exists, but might not actually be executable.'
+            execute_msg = (
+                f'The executable at the remote absolute path `{self.filepath_executable}` exists, '
+                'but might not actually be executable.'
             )
+            raise exceptions.ValidationError(execute_msg)
 
     def can_run_on_computer(self, computer: Computer) -> bool:
         """Return whether the code can run on a given computer.

@@ -13,7 +13,7 @@ import pathlib
 import pytest
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.orm import Computer, User
+from aiida.orm import Computer
 from aiida.orm.nodes.data.code.installed import InstalledCode
 
 
@@ -103,7 +103,7 @@ def computer(request, aiida_computer_local, aiida_computer_ssh):
 @pytest.mark.parametrize('computer', ('core.local', 'core.ssh'), indirect=True)
 def test_validate_filepath_executable(ssh_key, computer, bash_path, tmp_path):
     """Test the :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.validate_filepath_executable` method."""
-    import os
+
     filepath_executable = '/usr/bin/not-existing'
     dummy_executable = tmp_path / 'dummy.sh'
     # Default Linux permissions are 664, so file is not executable
@@ -122,7 +122,10 @@ def test_validate_filepath_executable(ssh_key, computer, bash_path, tmp_path):
     with pytest.raises(ValidationError, match=r'The provided remote absolute path .* does not exist on the computer\.'):
         code.validate_filepath_executable()
 
-    with pytest.raises(ValidationError, match=r'The executable at the remote absolute path .* exists, but might not actually be executable\.'):
+    with pytest.raises(
+        ValidationError,
+        match=r'The executable at the remote absolute path .* exists, but might not actually be executable\.',
+    ):
         # Didn't put this in the if-else and use transport.put, as we anyway only connect to localhost via SSH in this test
         dummy_code.validate_filepath_executable()
 

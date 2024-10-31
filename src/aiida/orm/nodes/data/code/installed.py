@@ -146,17 +146,17 @@ class InstalledCode(Code):
 
         except Exception as exception:
             raise exceptions.ValidationError(
-                "Could not connect to the configured computer to determine whether the specified executable exists."
+                'Could not connect to the configured computer to determine whether the specified executable exists.'
             ) from exception
 
         if not file_exists:
             raise exceptions.ValidationError(
-                f"The provided remote absolute path `{self.filepath_executable}` does not exist on the computer."
+                f'The provided remote absolute path `{self.filepath_executable}` does not exist on the computer.'
             )
 
         if not user_has_execute:
             raise exceptions.ValidationError(
-                f"The executable at the remote absolute path `{self.filepath_executable}` exists, but might not actually be executable."
+                f'The executable at the remote absolute path `{self.filepath_executable}` exists, but might not actually be executable.'
             )
 
     def can_run_on_computer(self, computer: Computer) -> bool:

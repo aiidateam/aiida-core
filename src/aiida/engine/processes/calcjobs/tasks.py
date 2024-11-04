@@ -54,6 +54,7 @@ logger = logging.getLogger(__name__)
 class PreSubmitException(Exception):  # noqa: N818
     """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
 
+
 async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, cancellable: InterruptableFuture):
     """Transport task that will attempt to upload the files of a job calculation to the remote.
 
@@ -140,36 +141,11 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
 
     authinfo = node.get_authinfo()
-    # authinfo_pk = authinfo.pk
 
-    # transport_request = transport_queue._transport_requests.get(authinfo.pk, None)
-    # open_transport = transport_queue._open_transports.get(authinfo.pk, None)
-
-    # if open_transport is not None: # and not transport_queue._last_request_special:
-    #     transport = open_transport
-    #     transport_queue._last_request_special = True
-    # elif transport_request is None:  # or transport_queue._last_request_special:
-    #     # This is the previous behavior
-    #     with transport_queue.request_transport(authinfo) as request:
-    #         transport = await cancellable.with_interrupt(request)
-    # else:
-    #     pass
- 
     async def do_submit():
-        transport_request = transport_queue._transport_requests.get(authinfo.pk, None)
-        open_transport = transport_queue._open_transports.get(authinfo.pk, None)
-
-        if open_transport is not None: # and not transport_queue._last_request_special:
-            transport = open_transport
-            # transport_queue._last_request_special = True
-        elif transport_request is None:  # or transport_queue._last_request_special:
-            # This is the previous behavior
-            with transport_queue.request_transport(authinfo) as request:
-                transport = await cancellable.with_interrupt(request)
-        else:
-            pass
-
-        return execmanager.submit_calculation(node, transport)
+        with transport_queue.request_transport(authinfo) as request:
+            transport = await cancellable.with_interrupt(request)
+            return execmanager.submit_calculation(node, transport)
 
     try:
         logger.info(f'scheduled request to submit CalcJob<{node.pk}>')
@@ -520,11 +496,9 @@ class Waiting(plumpy.process_states.Waiting):
         result: plumpy.process_states.State = self
 
         process_status = f'Waiting for transport task: {self._command}'
-
         node.set_process_status(process_status)
 
         try:
-            # ? Possibly implement here to keep connection open
             if self._command == UPLOAD_COMMAND:
                 skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)
                 if skip_submit:

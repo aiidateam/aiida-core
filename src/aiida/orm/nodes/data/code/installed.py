@@ -140,7 +140,7 @@ class InstalledCode(Code):
                     if file_exists:
                         mode = transport.get_mode(str(self.filepath_executable))
                         # check if execute but is set
-                        user_has_execute = format(mode, "b")[6] == '1'
+                        user_has_execute = format(mode, 'b')[6] == '1'
 
         except Exception as exception:
             raise exceptions.ValidationError(

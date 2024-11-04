@@ -54,7 +54,7 @@ keywords = ['aiida', 'workflows']
 license = {file = 'LICENSE.txt'}
 name = 'aiida-core'
 readme = 'README.md'
-requires-python = '>=3.9'
+requires-python = '>=3.9,<3.13'
 
 [project.entry-points.'aiida.brokers']
 'core.rabbitmq' = 'aiida.brokers.rabbitmq.broker:RabbitmqBroker'

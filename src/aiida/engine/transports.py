@@ -54,11 +54,11 @@ class TransportQueue:
         """:param loop: An asyncio event, will use `asyncio.get_event_loop()` if not supplied"""
         self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._transport_requests: Dict[Hashable, TransportRequest] = {}
+        self._open_transports: Dict[Hashable, Transport] = {}
         self._last_open_time = None
         self._last_close_time = None
         self._last_request_special: bool = False
         self._close_callback_handle = None
-        self._open_transports: Dict[Hashable, Transport] = {}
         # self._last_transport_request: Dict[Hashable, str] = {}
 
     @property

@@ -140,20 +140,20 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
 
     authinfo = node.get_authinfo()
-    authinfo_pk = authinfo.pk
+    # authinfo_pk = authinfo.pk
 
-    transport_request = transport_queue._transport_requests.get(authinfo.pk, None)
-    open_transport = transport_queue._open_transports.get(authinfo.pk, None)
+    # transport_request = transport_queue._transport_requests.get(authinfo.pk, None)
+    # open_transport = transport_queue._open_transports.get(authinfo.pk, None)
 
-    if open_transport is not None: # and not transport_queue._last_request_special:
-        transport = open_transport
-        transport_queue._last_request_special = True
-    elif transport_request is None:  # or transport_queue._last_request_special:
-        # This is the previous behavior
-        with transport_queue.request_transport(authinfo) as request:
-            transport = await cancellable.with_interrupt(request)
-    else:
-        pass
+    # if open_transport is not None: # and not transport_queue._last_request_special:
+    #     transport = open_transport
+    #     transport_queue._last_request_special = True
+    # elif transport_request is None:  # or transport_queue._last_request_special:
+    #     # This is the previous behavior
+    #     with transport_queue.request_transport(authinfo) as request:
+    #         transport = await cancellable.with_interrupt(request)
+    # else:
+    #     pass
  
     async def do_submit():
         transport_request = transport_queue._transport_requests.get(authinfo.pk, None)
@@ -161,7 +161,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
 
         if open_transport is not None: # and not transport_queue._last_request_special:
             transport = open_transport
-            transport_queue._last_request_special = True
+            # transport_queue._last_request_special = True
         elif transport_request is None:  # or transport_queue._last_request_special:
             # This is the previous behavior
             with transport_queue.request_transport(authinfo) as request:

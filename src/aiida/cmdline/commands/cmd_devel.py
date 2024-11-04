@@ -180,6 +180,57 @@ def devel_launch_arithmetic_add(code, daemon, sleep):
             echo.echo_warning(f'ArithmeticAddCalculation<{node.pk}> did not finish successfully.')
 
 
+@verdi_devel.command('launch-multiply-add')
+@options.CODE(type=types.CodeParamType(entry_point='core.arithmetic.add'))
+@click.option('-d', '--daemon', is_flag=True, help='Submit to the daemon instead of running blockingly.')
+def devel_launch_multiply_add(code, daemon):
+    """Launch a ``MultipylAddWorkChain``.
+
+    Unless specified with the option ``--code``, a suitable ``Code`` is automatically setup. By default the command
+    configures ``bash`` on the ``localhost``. If the localhost is not yet configured as a ``Computer``, that is also
+    done automatically.
+    """
+    from shutil import which
+
+    from aiida.engine import run_get_node, submit
+    from aiida.orm import InstalledCode, Int, load_code
+    from aiida.plugins.factories import WorkflowFactory
+
+    default_calc_job_plugin = 'core.arithmetic.add'
+
+    if not code:
+        try:
+            code = load_code('bash@localhost')
+        except exceptions.NotExistent:
+            localhost = prepare_localhost()
+            code = InstalledCode(
+                label='bash',
+                computer=localhost,
+                filepath_executable=which('bash'),
+                default_calc_job_plugin=default_calc_job_plugin,
+            ).store()
+        else:
+            assert code.default_calc_job_plugin == default_calc_job_plugin
+
+    multiply_add = WorkflowFactory('core.arithmetic.multiply_add')
+    inputs = {
+        'x': Int(1),
+        'y': Int(1),
+        'z': Int(1),
+        'code': code,
+    }
+
+    if daemon:
+        node = submit(multiply_add, inputs=inputs)
+        echo.echo_success(f'Submitted workflow `{node}`')
+    else:
+        _, node = run_get_node(multiply_add, inputs)
+        if node.is_finished_ok:
+            echo.echo_success(f'MultiplyAddWorkChain<{node.pk}> finished successfully.')
+        else:
+            echo.echo_warning(f'MultiplyAddWorkChain<{node.pk}> did not finish successfully.')
+
+
 def prepare_localhost():
     """Prepare and return the localhost as ``Computer``.
 

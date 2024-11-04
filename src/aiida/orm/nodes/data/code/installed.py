@@ -139,10 +139,8 @@ class InstalledCode(Code):
                     file_exists = transport.isfile(str(self.filepath_executable))
                     if file_exists:
                         mode = transport.get_mode(str(self.filepath_executable))
-                        # Shift right to get the user permission bits
-                        user_permissions = mode >> 6
-                        # Check if the execute bit is set
-                        user_has_execute = (user_permissions & 1) != 0
+                        # check if execute but is set
+                        user_has_execute = format(mode, "b")[6] == '1'
 
         except Exception as exception:
             raise exceptions.ValidationError(

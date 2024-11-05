@@ -23,6 +23,7 @@ def test_run_sql(run_cli_command):
     assert str(Node.collection.count()) in result.output, result.output
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_launch_add(run_cli_command):
     """Test ``verdi devel launch-add``.
 
@@ -58,6 +59,7 @@ def test_launch_add_code(run_cli_command, aiida_code_installed):
     assert node.is_finished_ok
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_launch_multiply_add(run_cli_command):
     """Test ``verdi devel launch-multiply-add``.
 

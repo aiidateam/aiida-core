@@ -124,7 +124,7 @@ def test_validate_filepath_executable(ssh_key, computer, bash_path, tmp_path):
 
     with pytest.raises(
         ValidationError,
-        match=r'The executable at the remote absolute path .* exists, but might not actually be executable\.',
+        match=r'The file at the remote absolute path .* exists, but might not actually be executable\.',
     ):
         # Didn't put this in the if, using transport.put, as we anyway only connect to localhost via SSH in this test
         dummy_code.validate_filepath_executable()

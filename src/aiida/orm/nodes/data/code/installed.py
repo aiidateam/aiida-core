@@ -139,8 +139,10 @@ class InstalledCode(Code):
                     file_exists = transport.isfile(str(self.filepath_executable))
                     if file_exists:
                         mode = transport.get_mode(str(self.filepath_executable))
-                        # check if execute but is set
-                        user_has_execute = format(mode, 'b')[6] == '1'
+                        # `format(mode, 'b')` with default permissions
+                        # gives 110110100, representing rw-rw-r--
+                        # Check on index 2 if user has execute
+                        user_has_execute = format(mode, 'b')[2] == '1'
 
         except Exception as exception:
             raise exceptions.ValidationError(

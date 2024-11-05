@@ -156,7 +156,7 @@ class InstalledCode(Code):
 
         if not user_has_execute:
             execute_msg = (
-                f'The executable at the remote absolute path `{self.filepath_executable}` exists, '
+                f'File `{self.filepath_executable}` exists, '
                 'but might not actually be executable.'
             )
             raise exceptions.ValidationError(execute_msg)

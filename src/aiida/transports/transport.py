@@ -393,7 +393,7 @@ class Transport(abc.ABC):
         """Execute the command on the shell, waits for it to finish,
         and return the retcode, the stdout and the stderr as bytes.
 
-        Enforce the execution to be run from the pwd (as given by self.getcwd), if this is not None.
+        Enforce the execution to be run from workdir, if this is not None.
 
         The command implementation can have some additional plugin-specific kwargs.
 

@@ -211,9 +211,6 @@ def generate_calcjob_node():
         process_state: ProcessState = ProcessState.FINISHED,
         exit_status: int | None = None,
         entry_point: str | None = None,
-        inputs: dict | None = None,
-        outputs: dict | None = None,
-        repository: pathlib.Path | None = None,
         workdir: pathlib.Path | None = None,
     ):
         """Generate an instance of a `CalcJobNode`..
@@ -228,36 +225,8 @@ def generate_calcjob_node():
             exit_status = 0
 
         calcjob_node = CalcJobNode(process_type=entry_point)
-        calcjob_node.set_process_state(process_state)
-
-        if exit_status is not None:
-            calcjob_node.set_exit_status(exit_status)
-
-        if repository is not None:
-            calcjob_node.base.repository.put_object_from_tree(repository)
-
         calcjob_node.set_remote_workdir(workdir)
 
-        # For storing, need to first store the input nodes, then the CalcJobNode, then the output nodes
-        if inputs is not None:
-            for input_label, input_node in inputs.items():
-                calcjob_node.base.links.add_incoming(
-                    input_node,
-                    link_type=LinkType.INPUT_CALC,
-                    link_label=input_label,
-                )
-
-                input_node.store()
-
-        if outputs is not None:
-            # Need to first store CalcJobNode before I can attach `created` outputs
-            calcjob_node.store()
-            for output_label, output_node in outputs.items():
-                output_node.base.links.add_incoming(calcjob_node, link_type=LinkType.CREATE, link_label=output_label)
-
-                output_node.store()
-
-        # Return unstored by default
         return calcjob_node
 
     return _generate_calcjob_node

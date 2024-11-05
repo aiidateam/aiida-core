@@ -1226,17 +1226,18 @@ class SshTransport(Transport):
         :param pattern: returns the list of files matching pattern.
                              Unix only. (Use to emulate ``ls *`` for example)
         """
-        if not pattern:
-            return self.sftp.listdir(path)
         if path.startswith('/'):
-            base_dir = path
+            abs_dir = path
         else:
-            base_dir = os.path.join(self.getcwd(), path)
+            abs_dir = os.path.join(self.getcwd(), path)
 
-        filtered_list = self.glob(os.path.join(base_dir, pattern))
-        if not base_dir.endswith('/'):
-            base_dir += '/'
-        return [re.sub(base_dir, '', i) for i in filtered_list]
+        if not pattern:
+            return self.sftp.listdir(abs_dir)
+
+        filtered_list = self.glob(os.path.join(abs_dir, pattern))
+        if not abs_dir.endswith('/'):
+            abs_dir += '/'
+        return [re.sub(abs_dir, '', i) for i in filtered_list]
 
     def remove(self, path):
         """Remove a single file at 'path'"""

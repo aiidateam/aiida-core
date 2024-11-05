@@ -182,7 +182,7 @@ def upload_calculation(
                 # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
                 for filename in filenames:
                     with NamedTemporaryFile(mode='wb+') as handle:
-                        content = code.base.repository.get_object_content((Path(root) / filename), mode='rb')
+                        content = code.base.repository.get_object_content(Path(root) / filename, mode='rb')
                         handle.write(content)
                         handle.flush()
                         transport.put(handle.name, str(workdir.joinpath(root, filename)))

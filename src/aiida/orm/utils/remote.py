@@ -39,11 +39,8 @@ def clean_remote(transport: Transport, path: str) -> None:
     if not transport.is_open:
         raise ValueError('the transport should already be open')
 
-    basedir, relative_path = os.path.split(path)
-
     try:
-        transport.chdir(basedir)
-        transport.rmtree(relative_path)
+        transport.rmtree(path)
     except OSError:
         pass
 

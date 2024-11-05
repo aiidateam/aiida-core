@@ -203,6 +203,36 @@ def generate_work_chain():
 
 
 @pytest.fixture
+def generate_calcjob_node():
+    """Generate an instance of a `CalcJobNode`."""
+    from aiida.engine import ProcessState
+
+    def _generate_calcjob_node(
+        process_state: ProcessState = ProcessState.FINISHED,
+        exit_status: int | None = None,
+        entry_point: str | None = None,
+        workdir: pathlib.Path | None = None,
+    ):
+        """Generate an instance of a `CalcJobNode`..
+
+        :param process_state: state to set
+        :param exit_status: optional exit status, will be set to `0` if `process_state` is `ProcessState.FINISHED`
+        :return: a `CalcJobNode` instance.
+        """
+        from aiida.orm import CalcJobNode
+
+        if process_state is ProcessState.FINISHED and exit_status is None:
+            exit_status = 0
+
+        calcjob_node = CalcJobNode(process_type=entry_point)
+        calcjob_node.set_remote_workdir(workdir)
+
+        return calcjob_node
+
+    return _generate_calcjob_node
+
+
+@pytest.fixture
 def generate_calculation_node():
     """Generate an instance of a `CalculationNode`."""
     from aiida.engine import ProcessState

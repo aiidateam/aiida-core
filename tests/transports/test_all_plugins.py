@@ -1305,8 +1305,7 @@ def test_asynchronous_execution(custom_transport):
                 tmpf.write(b'#!/bin/bash\nsleep 10\n')
                 tmpf.flush()
 
-                transport.chdir('/tmp')
-                transport.putfile(tmpf.name, script_fname)
+                transport.putfile(tmpf.name, os.path.join('/tmp', script_fname))
 
             timestamp_before = time.time()
             job_id_string = scheduler.submit_job('/tmp', script_fname)

@@ -45,7 +45,7 @@ class Transport(abc.ABC):
 
     # This is used as a global default in case subclasses don't redefine this,
     # but this should  be redefined in plugins where appropriate
-    _DEFAULT_SAFE_OPEN_INTERVAL = 5.0
+    _DEFAULT_SAFE_OPEN_INTERVAL = 30.0
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format

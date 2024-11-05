@@ -64,6 +64,10 @@ def convert_to_bool(string):
 class SshTransport(Transport):
     """Support connection, command execution and data transfer to remote computers via SSH+SFTP."""
 
+
+    # Reduced from the 30s set in the Transport abstract base class
+    _DEFAULT_SAFE_OPEN_INTERVAL = 5.0
+
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
     # aiida log file.

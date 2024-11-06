@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.6.3 - 2024-11-TODO
+
+### Fixes
+- CLI: Fix exception for `verdi plugin list` (#6560) [[c3b10b7]](https://github.com/aiidateam/aiida-core/commit/c3b10b759a9cd062800ef120591d5c7fd0ae4ee7)
+- `DirectScheduler`: Ensure killing child processes (#6572) [[fddffca]](https://github.com/aiidateam/aiida-core/commit/fddffca67b4f7e3b76b19df7db8e1511c449d2d9)   
+- Engine: Fix state change broadcast before process node is updated  (#6580) [[867353c]](https://github.com/aiidateam/aiida-core/commit/867353c415c61d94a2427d5225dd5224a1b95fb9)
+
+### Devops
+- Docker: Replace sleep with `s6-notifyoncheck` (#6475) [[9579378b]](https://github.com/aiidateam/aiida-core/commit/9579378ba063237baa5b73380eb8e9f0a28529ee)
+- Fix failed docker CI using more reasoning grep regex to parse python version (#6581) [[332a4a91]](https://github.com/aiidateam/aiida-core/commit/332a4a915771afedcb144463b012558e4669e529)
+- DevOps: Fix json query in reading the docker names to filter out fields not starting with aiida (#6573) [[e1467edc]](https://github.com/aiidateam/aiida-core/commit/e1467edca902867e53605e0e60b67f8767bf8d3e)
+
+
 ## v2.6.2 - 2024-08-07
 
 ### Fixes

@@ -14,6 +14,7 @@ import warnings
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from itertools import chain
+import json
 
 import pytest
 from aiida import orm, plugins
@@ -1702,3 +1703,114 @@ class TestDoubleStar:
         # data are correct
         res = next(iter(qb.dict()[0].values()))
         assert res == expected_dict
+
+
+class TestJsonFilters:
+    @pytest.mark.parametrize(
+        'data,filters,is_match',
+        (
+            # contains different types of element
+            ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [1]}}, True),
+            ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': ['2']}}, True),
+            ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [None]}}, True),
+
+            # contains multiple elements of various types
+            ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [1, None]}}, True),
+
+            # contains non-exist elements
+            ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [114514]}}, False),
+
+            # contains empty set
+            ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': []}}, True),
+            ({'arr': []}, {'attributes.arr': {'contains': []}}, True),
+
+            # negations
+            ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [1]}}, False),
+            ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': []}}, False),
+            ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [114514]}}, True),
+            ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [1, 114514]}}, True),
+
+            # TODO: these pass, but why? are these behaviors expected?
+            # non-exist `attr_key`s
+            ({'foo': []}, {'attributes.arr': {'contains': []}}, False),
+            ({'foo': []}, {'attributes.arr': {'!contains': []}}, False),
+        ),
+        ids=json.dumps,
+    )
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    @pytest.mark.requires_psql
+    def test_json_filters_contains_arrays(self, data, filters, is_match):
+        """Test QueryBuilder filter `contains` for JSON array fields"""
+        orm.Dict(data).store()
+        qb = orm.QueryBuilder().append(orm.Dict, filters=filters)
+        assert qb.count() in {0, 1}
+        found = (qb.count() == 1)
+        assert found == is_match
+
+    @pytest.mark.parametrize(
+        'data,filters,is_match',
+        (
+            # contains different types of values
+            ({'dict': {
+                'k1': 1,
+                'k2': '2',
+                'k3': None,
+            }}, {'attributes.dict': {'contains': {'k1': 1}}}, True),
+            ({'dict': {
+                'k1': 1,
+                'k2': '2',
+                'k3': None,
+            }}, {'attributes.dict': {'contains': {'k1': 1, 'k2': '2'}}}, True),
+            ({'dict': {
+                'k1': 1,
+                'k2': '2',
+                'k3': None,
+            }}, {'attributes.dict': {'contains': {'k3': None}}}, True),
+
+            # contains empty set
+            ({'dict': {
+                'k1': 1,
+                'k2': '2',
+                'k3': None,
+            }}, {'attributes.dict': {'contains': {}}}, True),
+
+            # doesn't contain non-exist entries
+            ({'dict': {
+                'k1': 1,
+                'k2': '2',
+                'k3': None,
+            }}, {'attributes.dict': {'contains': {'k1': 1, 'k': 'v'}}}, False),
+
+            # negations
+            ({'dict': {
+                'k1': 1,
+                'k2': '2',
+                'k3': None,
+            }}, {'attributes.dict': {'!contains': {'k1': 1}}}, False),
+            ({'dict': {
+                'k1': 1,
+                'k2': '2',
+                'k3': None,
+            }}, {'attributes.dict': {'!contains': {'k1': 1, 'k': 'v'}}}, True),
+            ({'dict': {
+                'k1': 1,
+                'k2': '2',
+                'k3': None,
+            }}, {'attributes.dict': {'!contains': {}}}, False),
+
+            # TODO: these pass, but why? are these behaviors expected?
+            # non-exist `attr_key`s
+            ({'map': {}}, {'attributes.dict': {'contains': {}}}, False),
+            ({'map': {}}, {'attributes.dict': {'!contains': {}}}, False),
+        ),
+        ids=json.dumps,
+    )
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    @pytest.mark.requires_psql
+    def test_json_filters_contains_object(self, data, filters, is_match):
+        """Test QueryBuilder filter `contains` for JSON object fields"""
+        orm.Dict(data).store()
+        qb = orm.QueryBuilder().append(orm.Dict, filters=filters)
+        assert qb.count() in {0, 1}
+        found = (qb.count() == 1)
+        assert found == is_match

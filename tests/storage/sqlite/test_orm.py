@@ -24,7 +24,7 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
         ({'attributes.float': {'of_type': 'number'}}, 1),
         ({'attributes.true': {'of_type': 'boolean'}}, 1),
         ({'attributes.false': {'of_type': 'boolean'}}, 1),
-        ({'attributes.null': {'of_type': 'null'}}, 2),
+        ({'attributes.null': {'of_type': 'null'}}, 3),
         ({'attributes.list': {'of_type': 'array'}}, 1),
         ({'attributes.dict': {'of_type': 'object'}}, 1),
         # equality match
@@ -35,7 +35,7 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
         ({'attributes.false': {'==': False}}, 1),
         ({'attributes.list': {'==': [1, 2]}}, 1),
         ({'attributes.list2': {'==': ['a', 'b']}}, 1),
-        ({'attributes.dict': {'==': {'key1': 1, 'key2': None}}}, 1),
+        ({'attributes.dict': {'==': {'key-1': 1, 'key-none': None}}}, 1),
         # equality non-match
         ({'attributes.text': {'==': 'lmn'}}, 0),
         ({'attributes.integer': {'==': 2}}, 0),
@@ -89,9 +89,11 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
         ({'attributes.integer': {'in': [5, 6, 7]}}, 0),
         ({'attributes.integer': {'in': [1, 2, 3]}}, 1),
         # object operators
-        # Reenable when ``has_key`` operator is implemented, see https://github.com/aiidateam/aiida-core/issues/6498
-        # ({'attributes.dict': {'has_key': 'k'}}, 0),
-        # ({'attributes.dict': {'has_key': 'key1'}}, 1),
+        ({'attributes.dict': {'has_key': 'non-exist'}}, 0),
+        ({'attributes.dict': {'!has_key': 'non-exist'}}, 3),
+        ({'attributes.dict': {'has_key': 'key-1'}}, 1),
+        ({'attributes.dict': {'has_key': 'key-none'}}, 1),
+        ({'attributes.dict': {'!has_key': 'key-none'}}, 2),
     ),
     ids=json.dumps,
 )
@@ -111,13 +113,17 @@ def test_qb_json_filters(filters, matches):
             'list': [1, 2],
             'list2': ['a', 'b'],
             'dict': {
-                'key1': 1,
-                'key2': None,
+                'key-1': 1,
+                'key-none': None,
             },
         },
         backend=backend,
     ).store()
     Dict({'text2': 'abcxXYZ'}, backend=backend).store()
+
+    # a false dict, added to test `has_key`'s behavior when key is not of json type
+    Dict({'dict': 0xFA15ED1C7}, backend=backend).store()
+
     qbuilder = QueryBuilder(backend=backend)
     qbuilder.append(Dict, filters=filters)
     assert qbuilder.count() == matches

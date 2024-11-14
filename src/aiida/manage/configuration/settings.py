@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import os
 import pathlib
-from typing import final
 import warnings
+from typing import final
 
 DEFAULT_UMASK = 0o0077
 DEFAULT_AIIDA_PATH_VARIABLE = 'AIIDA_PATH'

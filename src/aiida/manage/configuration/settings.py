@@ -32,7 +32,6 @@ AIIDA_CONFIG_FOLDER: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser(
 # DAEMON_DIR: pathlib.Path = AIIDA_CONFIG_FOLDER / DEFAULT_DAEMON_DIR_NAME
 # DAEMON_LOG_DIR: pathlib.Path = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME
 # ACCESS_CONTROL_DIR: pathlib.Path = AIIDA_CONFIG_FOLDER / DEFAULT_ACCESS_CONTROL_DIR_NAME
-#
 
 @final
 class AiiDAConfigPathResolver:
@@ -154,7 +153,10 @@ def set_configuration_directory(aiida_config_folder: pathlib.Path | None = None)
     is returned by ``get_configuration_directory``. If the directory does not exist yet, it is created, together with
     all its subdirectories.
     """
-    create_instance_directories(aiida_config_folder or get_configuration_directory())
+    global AIIDA_CONFIG_FOLDER
+    AIIDA_CONFIG_FOLDER = aiida_config_folder or get_configuration_directory()
+
+    create_instance_directories(AIIDA_CONFIG_FOLDER)
 
 
 # Initialize the configuration directory settings

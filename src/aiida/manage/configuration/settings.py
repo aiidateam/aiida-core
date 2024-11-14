@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+from typing import final
 import warnings
 
 DEFAULT_UMASK = 0o0077
@@ -27,12 +28,43 @@ DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 
 # Assign defaults which may be overriden in set_configuration_directory() below
 AIIDA_CONFIG_FOLDER: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
+
 DAEMON_DIR: pathlib.Path = AIIDA_CONFIG_FOLDER / DEFAULT_DAEMON_DIR_NAME
 DAEMON_LOG_DIR: pathlib.Path = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME
 ACCESS_CONTROL_DIR: pathlib.Path = AIIDA_CONFIG_FOLDER / DEFAULT_ACCESS_CONTROL_DIR_NAME
 
 
-def create_instance_directories() -> None:
+@final
+class AiiDAConfigPathResolver:
+    """Path resolver for getting daemon dir, daemon log dir ad access control dir location.
+
+    If `config_folder` is `None`, `~/.aiida` will be the default root config folder.
+    """
+
+    def __init__(self, config_folder: pathlib.Path | None = None) -> None:
+        if config_folder is None:
+            self._aiida_path = AIIDA_CONFIG_FOLDER
+        else:
+            self._aiida_path = config_folder
+
+    @property
+    def aiida_path(self) -> pathlib.Path:
+        return self._aiida_path
+
+    @property
+    def daemon_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_DAEMON_DIR_NAME
+
+    @property
+    def daemon_log_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_DAEMON_DIR_NAME / DEFAULT_DAEMON_LOG_DIR_NAME
+
+    @property
+    def access_control_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_ACCESS_CONTROL_DIR_NAME
+
+
+def create_instance_directories(aiida_config_folder: pathlib.Path | None) -> None:
     """Create the base directories required for a new AiiDA instance.
 
     This will create the base AiiDA directory defined by the AIIDA_CONFIG_FOLDER variable, unless it already exists.
@@ -40,23 +72,20 @@ def create_instance_directories() -> None:
     """
     from aiida.common import ConfigurationError
 
-    directory_base = AIIDA_CONFIG_FOLDER.expanduser()
-    directory_daemon = directory_base / DAEMON_DIR
-    directory_daemon_log = directory_base / DAEMON_LOG_DIR
-    directory_access = directory_base / ACCESS_CONTROL_DIR
+    path_resolver = AiiDAConfigPathResolver(aiida_config_folder)
 
     list_of_paths = [
-        directory_base,
-        directory_daemon,
-        directory_daemon_log,
-        directory_access,
+        path_resolver.aiida_path,
+        path_resolver.daemon_dir,
+        path_resolver.daemon_log_dir,
+        path_resolver.access_control_dir,
     ]
 
     umask = os.umask(DEFAULT_UMASK)
 
     try:
         for path in list_of_paths:
-            if path is directory_base and not path.exists():
+            if path is path_resolver.aiida_path and not path.exists():
                 warnings.warn(f'Creating AiiDA configuration folder `{path}`.')
 
             try:
@@ -64,7 +93,7 @@ def create_instance_directories() -> None:
             except OSError as exc:
                 raise ConfigurationError(f'could not create the `{path}` configuration directory: {exc}') from exc
     finally:
-        os.umask(umask)
+        _ = os.umask(umask)
 
 
 def get_configuration_directory():
@@ -125,17 +154,7 @@ def set_configuration_directory(aiida_config_folder: pathlib.Path | None = None)
     is returned by ``get_configuration_directory``. If the directory does not exist yet, it is created, together with
     all its subdirectories.
     """
-    global AIIDA_CONFIG_FOLDER  # noqa: PLW0603
-    global DAEMON_DIR  # noqa: PLW0603
-    global DAEMON_LOG_DIR  # noqa: PLW0603
-    global ACCESS_CONTROL_DIR  # noqa: PLW0603
-
-    AIIDA_CONFIG_FOLDER = aiida_config_folder or get_configuration_directory()
-    DAEMON_DIR = AIIDA_CONFIG_FOLDER / DEFAULT_DAEMON_DIR_NAME
-    DAEMON_LOG_DIR = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME
-    ACCESS_CONTROL_DIR = AIIDA_CONFIG_FOLDER / DEFAULT_ACCESS_CONTROL_DIR_NAME
-
-    create_instance_directories()
+    create_instance_directories(aiida_config_folder or get_configuration_directory())
 
 
 # Initialize the configuration directory settings

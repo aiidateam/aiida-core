@@ -10,13 +10,14 @@
 
 from __future__ import annotations
 
-import collections
+from collections import abc
 import os
 import pathlib
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Literal, Mapping, Optional, Type
 
 from aiida.common import exceptions
+from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
 from .options import parse_option
 
@@ -29,26 +30,28 @@ __all__ = ('Profile',)
 class Profile:
     """Class that models a profile as it is stored in the configuration file of an AiiDA instance."""
 
-    KEY_UUID = 'PROFILE_UUID'
-    KEY_DEFAULT_USER_EMAIL = 'default_user_email'
-    KEY_STORAGE = 'storage'
-    KEY_PROCESS = 'process_control'
-    KEY_STORAGE_BACKEND = 'backend'
-    KEY_STORAGE_CONFIG = 'config'
-    KEY_PROCESS_BACKEND = 'backend'
-    KEY_PROCESS_CONFIG = 'config'
-    KEY_OPTIONS = 'options'
-    KEY_TEST_PROFILE = 'test_profile'
+    KEY_UUID: str = 'PROFILE_UUID'
+    KEY_DEFAULT_USER_EMAIL: str = 'default_user_email'
+    KEY_STORAGE: str = 'storage'
+    KEY_PROCESS: str = 'process_control'
+    KEY_STORAGE_BACKEND: str = 'backend'
+    KEY_STORAGE_CONFIG: str = 'config'
+    KEY_PROCESS_BACKEND: str = 'backend'
+    KEY_PROCESS_CONFIG: str = 'config'
+    KEY_OPTIONS: str = 'options'
+    KEY_TEST_PROFILE: str = 'test_profile'
 
     # keys that are expected to be in the parsed configuration
-    REQUIRED_KEYS = (
+    REQUIRED_KEYS: tuple[Literal['storage'], Literal['process_control']] = (
         KEY_STORAGE,
         KEY_PROCESS,
     )
 
-    def __init__(self, name: str, config: Mapping[str, Any], validate=True):
+    def __init__(
+        self, name: str, config: Mapping[str, Any], config_folder: pathlib.Path | None = None, validate: bool = True
+    ):
         """Load a profile with the profile configuration."""
-        if not isinstance(config, collections.abc.Mapping):
+        if not isinstance(config, abc.Mapping):
             raise TypeError(f'config should be a mapping but is {type(config)}')
         if validate and not set(config.keys()).issuperset(self.REQUIRED_KEYS):
             raise exceptions.ConfigurationError(
@@ -63,6 +66,8 @@ class Profile:
             from uuid import uuid4
 
             self._attributes[self.KEY_UUID] = uuid4().hex
+
+        self._config_path_resolver: AiiDAConfigPathResolver = AiiDAConfigPathResolver(config_folder)
 
     def __repr__(self) -> str:
         return f'Profile<uuid={self.uuid!r} name={self.name!r}>'

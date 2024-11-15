@@ -29,9 +29,6 @@ DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 # Assign defaults which may be overriden in set_configuration_directory() below
 glb_aiida_config_folder: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
 
-DAEMON_DIR: pathlib.Path = glb_aiida_config_folder / DEFAULT_DAEMON_DIR_NAME
-DAEMON_LOG_DIR: pathlib.Path = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME
-
 
 @final
 class AiiDAConfigPathResolver:

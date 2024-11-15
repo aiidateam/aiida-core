@@ -249,22 +249,23 @@ class Profile:
 
         :return: a dictionary of filepaths
         """
-        from .settings import DAEMON_DIR, DAEMON_LOG_DIR
+        daemon_dir = self._config_path_resolver.daemon_dir
+        daemon_log_dir = self._config_path_resolver.daemon_log_dir
 
         return {
             'circus': {
-                'log': str(DAEMON_LOG_DIR / f'circus-{self.name}.log'),
-                'pid': str(DAEMON_DIR / f'circus-{self.name}.pid'),
-                'port': str(DAEMON_DIR / f'circus-{self.name}.port'),
+                'log': str(daemon_log_dir / f'circus-{self.name}.log'),
+                'pid': str(daemon_dir / f'circus-{self.name}.pid'),
+                'port': str(daemon_dir / f'circus-{self.name}.port'),
                 'socket': {
-                    'file': str(DAEMON_DIR / f'circus-{self.name}.sockets'),
+                    'file': str(daemon_dir / f'circus-{self.name}.sockets'),
                     'controller': 'circus.c.sock',
                     'pubsub': 'circus.p.sock',
                     'stats': 'circus.s.sock',
                 },
             },
             'daemon': {
-                'log': str(DAEMON_LOG_DIR / f'aiida-{self.name}.log'),
-                'pid': str(DAEMON_DIR / f'aiida-{self.name}.pid'),
+                'log': str(daemon_log_dir / f'aiida-{self.name}.log'),
+                'pid': str(daemon_dir / f'aiida-{self.name}.pid'),
             },
         }

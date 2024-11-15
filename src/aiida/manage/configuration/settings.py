@@ -34,7 +34,7 @@ glb_aiida_config_folder: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expandu
 class AiiDAConfigPathResolver:
     """Path resolver for getting daemon dir, daemon log dir and access control dir location.
 
-    If `config_folder` is `None`, `~/.aiida` will be the default root config folder.
+    If ``config_folder`` is ``None``, ``~/.aiida`` will be the default root config folder.
     """
 
     def __init__(self, config_folder: pathlib.Path | None = None) -> None:

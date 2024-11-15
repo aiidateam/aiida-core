@@ -23,7 +23,9 @@ def isidentifier(identifier):
     return identifier.isidentifier() and not keyword.iskeyword(identifier)
 
 
-def type_check(what, of_type, msg=None, allow_none=False):
+def type_check(
+    what: object, of_type, msg: str | None = None, allow_none: bool = False
+) -> object | None:
     """Verify that object 'what' is of type 'of_type' and if not the case, raise a TypeError.
 
     :param what: the object to check

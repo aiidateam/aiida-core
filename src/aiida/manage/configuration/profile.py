@@ -14,7 +14,7 @@ import os
 import pathlib
 from collections import abc
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Dict, Literal, Mapping, Optional, Type
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -43,13 +43,13 @@ class Profile:
     KEY_TEST_PROFILE: str = 'test_profile'
 
     # keys that are expected to be in the parsed configuration
-    REQUIRED_KEYS: tuple[Literal['storage'], Literal['process_control']] = (
+    REQUIRED_KEYS: tuple[str, str] = (
         KEY_STORAGE,
         KEY_PROCESS,
     )
 
     def __init__(
-        self, name: str, config: Mapping[str, Any], config_folder: pathlib.Path | None = None, validate: bool = True
+        self, name: str, config: abc.Mapping[str, Any], config_folder: pathlib.Path | None = None, validate: bool = True
     ):
         """Load a profile with the profile configuration."""
         _ = type_check(config, abc.Mapping)
@@ -59,7 +59,7 @@ class Profile:
             )
 
         self._name: str = name
-        self._attributes: Dict[str, Any] = deepcopy(config)
+        self._attributes: dict[str, Any] = cast(dict[str, Any], deepcopy(config))
 
         # Create a default UUID if not specified
         if self._attributes.get(self.KEY_UUID, None) is None:
@@ -93,17 +93,13 @@ class Profile:
         """The config_path_resolver property."""
         return self._config_path_resolver
 
-    @config_path_resolver.setter
-    def config_path_resolver(self, value):
-        self._config_path_resolver = value
-
     @property
-    def default_user_email(self) -> Optional[str]:
+    def default_user_email(self) -> str | None:
         """Return the default user email."""
         return self._attributes.get(self.KEY_DEFAULT_USER_EMAIL, None)
 
     @default_user_email.setter
-    def default_user_email(self, value: Optional[str]) -> None:
+    def default_user_email(self, value: str | None) -> None:
         """Set the default user email."""
         self._attributes[self.KEY_DEFAULT_USER_EMAIL] = value
 
@@ -113,11 +109,11 @@ class Profile:
         return self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_BACKEND]
 
     @property
-    def storage_config(self) -> Dict[str, Any]:
+    def storage_config(self) -> dict[str, Any]:
         """Return the configuration required by the storage backend."""
         return self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG]
 
-    def set_storage(self, name: str, config: Dict[str, Any]) -> None:
+    def set_storage(self, name: str, config: dict[str, Any]) -> None:
         """Set the storage backend and its configuration.
 
         :param name: the name of the storage backend
@@ -128,7 +124,7 @@ class Profile:
         self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG] = config
 
     @property
-    def storage_cls(self) -> Type['StorageBackend']:
+    def storage_cls(self) -> type['StorageBackend']:
         """Return the storage backend class for this profile."""
         from aiida.plugins import StorageFactory
 
@@ -140,11 +136,11 @@ class Profile:
         return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_BACKEND]
 
     @property
-    def process_control_config(self) -> Dict[str, Any]:
+    def process_control_config(self) -> dict[str, Any]:
         """Return the configuration required by the process control backend."""
         return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG] or {}
 
-    def set_process_controller(self, name: str, config: Dict[str, Any]) -> None:
+    def set_process_controller(self, name: str, config: dict[str, Any]) -> None:
         """Set the process control backend and its configuration.
 
         :param name: the name of the process backend
@@ -189,7 +185,7 @@ class Profile:
         return self._name
 
     @property
-    def dictionary(self) -> Dict[str, Any]:
+    def dictionary(self) -> dict[str, Any]:
         """Return the profile attributes as a dictionary with keys as it is stored in the config
 
         :return: the profile configuration dictionary

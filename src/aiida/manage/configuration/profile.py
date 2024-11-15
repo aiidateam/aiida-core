@@ -10,9 +10,9 @@
 
 from __future__ import annotations
 
-from collections import abc
 import os
 import pathlib
+from collections import abc
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Dict, Literal, Mapping, Optional, Type
 

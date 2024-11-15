@@ -19,6 +19,7 @@ from aiida.common.exceptions import LockedProfileError, LockingProfileError
 from aiida.common.lang import type_check
 from aiida.manage.configuration import Profile
 
+
 @typing.final
 class ProfileAccessManager:
     """Class to manage access to a profile.

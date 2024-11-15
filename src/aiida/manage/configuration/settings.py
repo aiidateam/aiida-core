@@ -127,6 +127,8 @@ def get_configuration_directory_from_envvar() -> pathlib.Path | None:
     if environment_variable is None:
         return None
 
+    dirpath_config = None
+
     # Loop over all the paths in the ``AIIDA_PATH`` variable to see if any of them contain a configuration folder
     for base_dir_path in [path for path in environment_variable.split(':') if path]:
         dirpath_config = pathlib.Path(base_dir_path).expanduser()

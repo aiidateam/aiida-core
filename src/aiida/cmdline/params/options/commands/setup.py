@@ -66,11 +66,11 @@ def get_repository_uri_default(ctx):
     """
     import os
 
-    from aiida.manage.configuration.settings import glb_aiida_config_folder
+    from aiida.manage.configuration.settings import get_configuration_directory
 
     validate_profile_parameter(ctx)
 
-    return os.path.join(glb_aiida_config_folder, 'repository', ctx.params['profile'].name)
+    return os.path.join(get_configuration_directory(), 'repository', ctx.params['profile'].name)
 
 
 def get_quicksetup_repository_uri(ctx, param, value):

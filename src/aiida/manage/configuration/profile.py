@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
-from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+from aiida.manage.configuration.settings import AiiDAConfigPathResolver, get_configuration_directory
 
 from .options import parse_option
 
@@ -67,7 +67,9 @@ class Profile:
 
             self._attributes[self.KEY_UUID] = uuid4().hex
 
-        self._config_path_resolver: AiiDAConfigPathResolver = AiiDAConfigPathResolver(config_folder)
+        self._config_path_resolver: AiiDAConfigPathResolver = AiiDAConfigPathResolver(
+            config_folder or get_configuration_directory()
+        )
 
     def __repr__(self) -> str:
         return f'Profile<uuid={self.uuid!r} name={self.name!r}>'

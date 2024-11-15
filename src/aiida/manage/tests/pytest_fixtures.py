@@ -178,8 +178,7 @@ def aiida_instance(
 
         dirpath_config = tmp_path_factory.mktemp('config')
         os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_config)
-        settings.glb_aiida_config_folder = dirpath_config
-        settings.set_configuration_directory()
+        settings.set_configuration_directory(dirpath_config)
         configuration.CONFIG = configuration.load_config(create=True)
 
         try:
@@ -191,7 +190,7 @@ def aiida_instance(
                 else:
                     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = current_path_variable
 
-                settings.glb_aiida_config_folder = current_config_path
+                settings.set_configuration_directory(current_config_path)
                 configuration.CONFIG = current_config
                 if current_profile:
                     aiida_manager.load_profile(current_profile.name, allow_switch=True)

@@ -49,7 +49,7 @@ def test_merge_deprecated_yaml(tmp_path):
 
     # Store the current configuration instance and config directory path
     current_config = configuration.CONFIG
-    current_config_path = current_config.dirpath
+    current_config_path = pathlib.Path(current_config.dirpath)
     current_profile_name = configuration.get_profile().name
 
     try:
@@ -57,7 +57,7 @@ def test_merge_deprecated_yaml(tmp_path):
         configuration.CONFIG = None
 
         # Create a temporary folder, set it as the current config directory path
-        settings.glb_aiida_config_folder = str(tmp_path)
+        settings.set_configuration_directory(pathlib.Path(tmp_path))
         config_dictionary = json.loads(
             pathlib.Path(__file__)
             .parent.joinpath('configuration/migrations/test_samples/reference/6.json')
@@ -86,7 +86,7 @@ def test_merge_deprecated_yaml(tmp_path):
         # Reset the config folder path and the config instance. Note this will always be executed after the yield no
         # matter what happened in the test that used this fixture.
         get_manager().unload_profile()
-        settings.glb_aiida_config_folder = current_config_path
+        settings.set_configuration_directory(current_config_path)
         configuration.CONFIG = current_config
         load_profile(current_profile_name)
 

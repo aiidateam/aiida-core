@@ -57,7 +57,7 @@ def test_merge_deprecated_yaml(tmp_path):
         configuration.CONFIG = None
 
         # Create a temporary folder, set it as the current config directory path
-        settings.AIIDA_CONFIG_FOLDER = str(tmp_path)
+        settings.glb_aiida_config_folder = str(tmp_path)
         config_dictionary = json.loads(
             pathlib.Path(__file__)
             .parent.joinpath('configuration/migrations/test_samples/reference/6.json')
@@ -86,7 +86,7 @@ def test_merge_deprecated_yaml(tmp_path):
         # Reset the config folder path and the config instance. Note this will always be executed after the yield no
         # matter what happened in the test that used this fixture.
         get_manager().unload_profile()
-        settings.AIIDA_CONFIG_FOLDER = current_config_path
+        settings.glb_aiida_config_folder = current_config_path
         configuration.CONFIG = current_config
         load_profile(current_profile_name)
 

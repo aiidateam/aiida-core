@@ -69,7 +69,7 @@ def test_environment_variable_not_set(chdir_tmp_path, monkeypatch):
 
     config_folder = chdir_tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert os.path.isdir(config_folder)
-    assert settings.AIIDA_CONFIG_FOLDER == pathlib.Path(config_folder)
+    assert settings.glb_aiida_config_folder == pathlib.Path(config_folder)
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
@@ -83,7 +83,7 @@ def test_environment_variable_set_single_path_without_config_folder(tmp_path):
     # This should have created the configuration directory in the path
     config_folder = tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert config_folder.is_dir()
-    assert settings.AIIDA_CONFIG_FOLDER == config_folder
+    assert settings.glb_aiida_config_folder == config_folder
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
@@ -99,7 +99,7 @@ def test_environment_variable_set_single_path_with_config_folder(tmp_path):
     # This should have created the configuration directory in the path
     config_folder = tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert config_folder.is_dir()
-    assert settings.AIIDA_CONFIG_FOLDER == config_folder
+    assert settings.glb_aiida_config_folder == config_folder
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
@@ -119,7 +119,7 @@ def test_environment_variable_path_including_config_folder(tmp_path):
     # This should have created the configuration directory in the pathpath
     config_folder = tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert config_folder.is_dir()
-    assert settings.AIIDA_CONFIG_FOLDER == config_folder
+    assert settings.glb_aiida_config_folder == config_folder
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
@@ -142,7 +142,7 @@ def test_environment_variable_set_multiple_path(tmp_path):
     # This should have created the configuration directory in the last path
     config_folder = directory_c / settings.DEFAULT_CONFIG_DIR_NAME
     assert os.path.isdir(config_folder)
-    assert settings.AIIDA_CONFIG_FOLDER == config_folder
+    assert settings.glb_aiida_config_folder == config_folder
 
 
 def compare_config_in_memory_and_on_disk(config, filepath):

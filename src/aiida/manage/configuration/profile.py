@@ -14,7 +14,7 @@ import os
 import pathlib
 from collections import abc
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check

@@ -29,9 +29,9 @@ DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 # Assign defaults which may be overriden in set_configuration_directory() below
 glb_aiida_config_folder: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
 
-# DAEMON_DIR: pathlib.Path = glb_aiida_config_folder / DEFAULT_DAEMON_DIR_NAME
-# DAEMON_LOG_DIR: pathlib.Path = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME
-# ACCESS_CONTROL_DIR: pathlib.Path = glb_aiida_config_folder / DEFAULT_ACCESS_CONTROL_DIR_NAME
+DAEMON_DIR: pathlib.Path = glb_aiida_config_folder / DEFAULT_DAEMON_DIR_NAME
+DAEMON_LOG_DIR: pathlib.Path = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME
+
 
 @final
 class AiiDAConfigPathResolver:
@@ -101,8 +101,8 @@ def get_configuration_directory():
     The location of the configuration directory is defined following these heuristics in order:
 
         * If the ``AIIDA_PATH`` variable is set, all the paths will be checked to see if they contain a
-          configuration folder. The first one to be encountered will be set as ``glb_aiida_config_folder``. If none of them
-          contain one, the last path defined in the environment variable considered is used.
+          configuration folder. The first one to be encountered will be set as ``glb_aiida_config_folder``.
+          If none of them contain one, the last path defined in the environment variable considered is used.
         * If an existing directory is still not found, the ``DEFAULT_AIIDA_PATH`` is used.
 
     :returns: The path of the configuration directory.
@@ -153,7 +153,7 @@ def set_configuration_directory(aiida_config_folder: pathlib.Path | None = None)
     is returned by ``get_configuration_directory``. If the directory does not exist yet, it is created, together with
     all its subdirectories.
     """
-    global glb_aiida_config_folder
+    global glb_aiida_config_folder  # noqa: PLW0603
     glb_aiida_config_folder = aiida_config_folder or get_configuration_directory()
 
     create_instance_directories(glb_aiida_config_folder)

@@ -17,6 +17,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Dict, Literal, Mapping, Optional, Type
 
 from aiida.common import exceptions
+from aiida.common.lang import type_check
 from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
 from .options import parse_option
@@ -51,14 +52,13 @@ class Profile:
         self, name: str, config: Mapping[str, Any], config_folder: pathlib.Path | None = None, validate: bool = True
     ):
         """Load a profile with the profile configuration."""
-        if not isinstance(config, abc.Mapping):
-            raise TypeError(f'config should be a mapping but is {type(config)}')
+        _ = type_check(config, abc.Mapping)
         if validate and not set(config.keys()).issuperset(self.REQUIRED_KEYS):
             raise exceptions.ConfigurationError(
                 f'profile {name!r} configuration does not contain all required keys: {self.REQUIRED_KEYS}'
             )
 
-        self._name = name
+        self._name: str = name
         self._attributes: Dict[str, Any] = deepcopy(config)
 
         # Create a default UUID if not specified
@@ -87,6 +87,15 @@ class Profile:
     @uuid.setter
     def uuid(self, value: str) -> None:
         self._attributes[self.KEY_UUID] = value
+
+    @property
+    def config_path_resolver(self) -> AiiDAConfigPathResolver:
+        """The config_path_resolver property."""
+        return self._config_path_resolver
+
+    @config_path_resolver.setter
+    def config_path_resolver(self, value):
+        self._config_path_resolver = value
 
     @property
     def default_user_email(self) -> Optional[str]:

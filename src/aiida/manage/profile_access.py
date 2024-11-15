@@ -19,7 +19,7 @@ from aiida.common.exceptions import LockedProfileError, LockingProfileError
 from aiida.common.lang import type_check
 from aiida.manage.configuration import Profile
 
-
+@typing.final
 class ProfileAccessManager:
     """Class to manage access to a profile.
 
@@ -45,12 +45,10 @@ class ProfileAccessManager:
 
         :param profile: the profile whose access to manage.
         """
-        from aiida.manage.configuration.settings import ACCESS_CONTROL_DIR
-
-        type_check(profile, Profile)
+        _ = type_check(profile, Profile)
         self.profile = profile
         self.process = psutil.Process(os.getpid())
-        self._dirpath_records = ACCESS_CONTROL_DIR / profile.name
+        self._dirpath_records = profile.config_path_resolver.access_control_dir / profile.name
         self._dirpath_records.mkdir(exist_ok=True)
 
     def request_access(self) -> None:

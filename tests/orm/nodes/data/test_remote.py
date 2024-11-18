@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,10 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :mod:`aiida.orm.nodes.data.remote.base.RemoteData` module."""
-import pytest
 
+import pytest
 from aiida.orm import RemoteData
 
 
@@ -27,7 +25,8 @@ def remote_data(tmp_path, aiida_localhost):
 def test_clean(remote_data):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
     assert not remote_data.is_empty
+    assert not remote_data.is_cleaned
 
-    remote_data._clean()  #  pylint: disable=protected-access
+    remote_data._clean()
     assert remote_data.is_empty
-    assert remote_data.base.attributes.get(RemoteData.KEY_EXTRA_CLEANED, True)
+    assert remote_data.is_cleaned

@@ -1,0 +1,93 @@
+name: Publish images to Docker container registries
+
+env:
+    # https://github.com/docker/metadata-action?tab=readme-ov-file#environment-variables
+  DOCKER_METADATA_PR_HEAD_SHA: true
+
+on:
+  workflow_call:
+    inputs:
+      runsOn:
+        description: GitHub Actions Runner image
+        required: true
+        type: string
+      images:
+        description: Images built in build step
+        required: true
+        type: string
+      registry:
+        description: Docker container registry
+        required: true
+        type: string
+
+jobs:
+
+  release:
+    runs-on: ${{ inputs.runsOn }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: true
+      matrix:
+        target: [aiida-core-base, aiida-core-with-services, aiida-core-dev]
+    defaults:
+      run:
+        # Make sure we fail if any command in a piped command sequence fails
+        shell: bash -e -o pipefail {0}
+        working-directory: .docker
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Login to GitHub Container Registry 🔑
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Login to DockerHub 🔑
+      uses: docker/login-action@v3
+      if: inputs.registry == 'docker.io'
+      with:
+        registry: docker.io
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+
+    - name: Read build variables
+      id: build_vars
+      run: |
+        vars=$(cat build.json | jq -c '[.variable | to_entries[] | {"key": .key, "value": .value.default}] | from_entries')
+        echo "vars=$vars" | tee -a "${GITHUB_OUTPUT}"
+
+    - id: get-version
+      if: ${{ github.ref_type == 'tag'  && startsWith(github.ref_name, 'v') }}
+      run: |
+        tag="${{ github.ref_name }}"
+        echo "AIIDA_VERSION=${tag#v}" >> $GITHUB_OUTPUT
+
+    - name: Docker meta
+      id: meta
+      uses: docker/metadata-action@v5
+      env: ${{ fromJSON(steps.build_vars.outputs.vars) }}
+      with:
+        images: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ matrix.target }}
+        tags: |
+          type=ref,event=pr
+          type=ref,event=branch,enable=${{ github.ref_name != 'main' }}
+          type=edge,enable={{is_default_branch}}
+          type=raw,value=aiida-${{ steps.get-version.outputs.AIIDA_VERSION }},enable=${{ github.ref_type == 'tag'  && startsWith(github.ref_name, 'v') }}
+          type=raw,value=python-${{ env.PYTHON_VERSION }},enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+          type=raw,value=postgresql-${{ env.PGSQL_VERSION }},enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+          type=match,pattern=v(\d{4}\.\d{4}(-.+)?),group=1
+
+    - name: Determine source image
+      id: images
+      run: |
+        src=$(echo '${{ inputs.images }}'| jq -cr '.[("${{ matrix.target }}"|ascii_upcase|sub("-"; "_"; "g")) + "_IMAGE"]')
+        echo "src=$src" | tee -a "${GITHUB_OUTPUT}"
+
+    - name: Push image
+      uses: akhilerm/tag-push-action@v2.2.0
+      with:
+        src: ${{ steps.images.outputs.src }}
+        dst: ${{ steps.meta.outputs.tags }}

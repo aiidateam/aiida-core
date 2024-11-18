@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -13,9 +12,7 @@ from aiida.engine import WorkChain
 
 
 class BrokenDemoWorkChain(WorkChain):
-    """
-    A demo workchain that raises when its spec is built.
-    """
+    """A demo workchain that raises when its spec is built."""
 
     @classmethod
     def define(cls, spec):

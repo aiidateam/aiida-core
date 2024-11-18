@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,13 +7,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.common.folders` module."""
+
 import io
 import pathlib
 import sys
 import tempfile
 
 import pytest
-
 from aiida.common.folders import Folder, SandboxFolder
 
 

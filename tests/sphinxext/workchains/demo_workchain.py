@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -16,10 +15,8 @@ from aiida.engine import WorkChain, if_, while_
 from aiida.orm import Bool, Float, Int
 
 
-class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method
-    """
-    A demo workchain to show how the workchain auto-documentation works.
-    """
+class DemoWorkChain(WorkChain):
+    """A demo workchain to show how the workchain auto-documentation works."""
 
     @classmethod
     def define(cls, spec):
@@ -30,17 +27,15 @@ class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method
         spec.input_namespace('y.nested', help='A nested namespace.')
         spec.input('y.nested.a', valid_type=Int, help='An input in the nested namespace.')
         spec.input_namespace('nsp', help='A separate namespace, ``nsp``.')
-        spec.input_namespace('nsp2',)
+        spec.input_namespace(
+            'nsp2',
+        )
         spec.output('z', valid_type=Bool, help='Output of the demoworkchain.')
 
-        spec.outline(  # yapf: disable
+        spec.outline(
             cls.start,
-            while_(cls.some_check)(
-                cls.do_something,
-                if_(cls.another_check)(
-                    cls.do_something_else
-                )),
-            cls.finalize
+            while_(cls.some_check)(cls.do_something, if_(cls.another_check)(cls.do_something_else)),
+            cls.finalize,
         )
 
     def start(self):
@@ -62,10 +57,8 @@ class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method
         pass
 
 
-class EmptyOutlineWorkChain(WorkChain):  # pylint: disable=abstract-method
-    """
-    Here we check that the directive works even if the outline is empty.
-    """
+class EmptyOutlineWorkChain(WorkChain):
+    """Here we check that the directive works even if the outline is empty."""
 
     @classmethod
     def define(cls, spec):

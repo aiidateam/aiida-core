@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Tests for legacy process migrations: 07fac78e6209 -> 118349c10896"""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
@@ -23,8 +24,8 @@ def test_legacy_jobcalcstate_data(perform_migrations: PsqlDosMigrator):
 
     # setup the database
     nodes = {}
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net')
         session.add(user)
@@ -43,7 +44,7 @@ def test_legacy_jobcalcstate_data(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@26d561acd560')
 
     # perform some checks
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         for state, pk in nodes.items():
             node = session.query(DbNode).filter(DbNode.id == pk).one()
@@ -68,8 +69,8 @@ def test_reset_hash(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@26d561acd560')
 
     # setup the database
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net')
         session.add(user)
@@ -78,10 +79,7 @@ def test_reset_hash(perform_migrations: PsqlDosMigrator):
         node = DbNode(
             node_type='process.calculation.calcjob.CalcJobNode.',
             user_id=user.id,
-            extras={
-                'something': 123,
-                '_aiida_hash': 'abcd'
-            }
+            extras={'something': 123, '_aiida_hash': 'abcd'},
         )
         session.add(node)
         session.commit()
@@ -92,7 +90,7 @@ def test_reset_hash(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@e797afa09270')
 
     # perform some checks
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         node = session.query(DbNode).filter(DbNode.id == node_id).one()
         extras = node.extras
@@ -109,8 +107,8 @@ def test_legacy_process_attribute(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@e797afa09270')
 
     # setup the database
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net')
         session.add(user)
@@ -125,7 +123,7 @@ def test_legacy_process_attribute(perform_migrations: PsqlDosMigrator):
                 '_failed': False,
                 '_aborted': False,
                 '_do_abort': False,
-            }
+            },
         )
 
         # This is an "active" modern process, due to its `process_state` and should *not* receive the
@@ -139,7 +137,7 @@ def test_legacy_process_attribute(perform_migrations: PsqlDosMigrator):
                 '_failed': False,
                 '_aborted': False,
                 '_do_abort': False,
-            }
+            },
         )
 
         # Note that `Data` nodes should not have these attributes in real databases but the migration explicitly
@@ -153,7 +151,7 @@ def test_legacy_process_attribute(perform_migrations: PsqlDosMigrator):
                 '_failed': False,
                 '_aborted': False,
                 '_do_abort': False,
-            }
+            },
         )
 
         session.add(node_process)
@@ -169,7 +167,7 @@ def test_legacy_process_attribute(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@e734dd5e50d7')
 
     # perform some checks
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         deleted_keys = ['_sealed', '_finished', '_failed', '_aborted', '_do_abort']
 
@@ -198,8 +196,8 @@ def test_seal_unsealed_processes(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@e734dd5e50d7')
 
     # setup the database
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net')
         session.add(user)
@@ -211,7 +209,7 @@ def test_seal_unsealed_processes(perform_migrations: PsqlDosMigrator):
             attributes={
                 'process_state': 'finished',
                 'sealed': True,
-            }
+            },
         )
 
         # This is an "active" modern process, due to its `process_state` and should *not* receive the
@@ -221,7 +219,7 @@ def test_seal_unsealed_processes(perform_migrations: PsqlDosMigrator):
             user_id=user.id,
             attributes={
                 'process_state': 'created',
-            }
+            },
         )
 
         # This is a legacy process that does not even have a `process_state`
@@ -248,7 +246,7 @@ def test_seal_unsealed_processes(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@7b38a9e783e7')
 
     # perform some checks
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         node_process = session.query(DbNode).filter(DbNode.id == node_process_id).one()
         assert node_process.attributes['sealed'] is True
@@ -272,9 +270,9 @@ def test_default_link_label(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@91b573400be5')
 
     # setup the database
-    DbLink = perform_migrations.get_current_table('db_dblink')  # pylint: disable=invalid-name
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbLink = perform_migrations.get_current_table('db_dblink')
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net')
         session.add(user)
@@ -295,7 +293,7 @@ def test_default_link_label(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@118349c10896')
 
     # perform some checks
-    DbLink = perform_migrations.get_current_table('db_dblink')  # pylint: disable=invalid-name
+    DbLink = perform_migrations.get_current_table('db_dblink')
     with perform_migrations.session() as session:
         link = session.query(DbLink).filter(DbLink.id == link_id).one()
         assert link.label == 'result'

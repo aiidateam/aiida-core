@@ -1,5 +1,6 @@
 ### python builtins
 py:class _io.BufferedReader
+py:class _io.StringIO
 py:class AliasedClass
 py:class asyncio.events.AbstractEventLoop
 py:class AbstractContextManager
@@ -8,18 +9,25 @@ py:class callable
 py:class function
 py:class traceback
 py:class NoneType
+py:class MappingType
 py:class AbstractContextManager
 py:class BinaryIO
+py:class EntryPoint
+py:class EntryPoints
 py:class IO
+py:class FilePath
 py:class Path
 py:class str | list[str]
 py:class str | Path
 py:class typing.AbstractContextManager
+py:class typing_extensions.Literal
 py:class TypeDecorator
 py:class json.encoder.JSONEncoder
 py:class EXPOSED_TYPE
 py:class EVENT_CALLBACK_TYPE
 py:class datetime
+py:class types.LambdaType
+py:meth tempfile.TemporaryDirectory
 
 ### AiiDA
 py:class ReturnType
@@ -95,12 +103,24 @@ py:obj aiida.storage.psql_dos.orm.ModelType
 py:obj aiida.storage.psql_dos.orm.SelfType
 py:obj aiida.storage.psql_dos.orm.entities.ModelType
 py:obj aiida.storage.psql_dos.orm.entities.SelfType
+py:class aiida.storage.psql_dos.backend.Configuration
+py:class aiida.storage.sqlite_temp.backend.Configuration
+py:class aiida.storage.sqlite_zip.backend.Configuration
 py:obj aiida.tools.archive.SelfType
 py:obj aiida.tools.archive.EntityType
 py:func QueryBuilder._get_ormclass
 py:class aiida.storage.sqlite_zip.models.DbGroupNode
 py:class aiida.engine.processes.workchains.context.ToContext
 py:func aiida.orm.implementation.BackendQueryBuilder
+
+### Typing aliases
+py:obj aiida.engine.processes.functions.P
+py:obj aiida.engine.processes.functions.N
+py:obj aiida.engine.processes.functions.R_co
+py:class P
+py:class N
+py:class aiida.engine.processes.functions.N
+py:class aiida.engine.processes.functions.R_co
 
 ### third-party packages
 # Note: These exceptions are needed if
@@ -116,8 +136,13 @@ py:class click.types.Path
 py:class click.types.File
 py:class click.types.StringParamType
 py:func click.shell_completion._start_of_option
-py:meth  click.Option.get_default
+py:meth click.Option.get_default
 py:meth fail
+
+py:class ComputedFieldInfo
+py:class pydantic.fields.Field
+py:class pydantic.main.BaseModel
+py:class PluggableSchemaValidator
 
 py:class requests.models.Response
 py:class requests.Response
@@ -126,12 +151,26 @@ py:class concurrent.futures._base.TimeoutError
 py:class concurrent.futures._base.Future
 
 py:class disk_objectstore.utils.LazyOpener
+py:class disk_objectstore.backup_utils.BackupManager
 
 py:class frozenset
 
 py:class numpy.bool_
+py:class numpy.ndarray
+py:class ndarray
 
 py:class paramiko.proxy.ProxyCommand
+
+py:class pydantic.main.BaseModel
+py:class ModelPrivateAttr
+py:class CoreSchema
+py:class _decorators.DecoratorInfos
+py:class _generics.PydanticGenericMetadata
+py:class SchemaSerializer
+py:class SchemaValidator
+py:class Signature
+py:class ConfigDict
+py:class FieldInfo
 
 # These can be removed once they are properly included in the `__all__` in `plumpy`
 py:class plumpy.ports.PortNamespace
@@ -154,6 +193,12 @@ py:class _asyncio.Future
 
 py:class tqdm.std.tqdm
 
+py:class _pytest.tmpdir.TempPathFactory
+py:class pytest.tmpdir.TempPathFactory
+py:class pytest.TempPathFactory
+py:class PGTest
+py:class pgtest.pgtest.PGTest
+
 py:class IPython.core.magic.Magics
 
 py:class HTMLParser.HTMLParser
@@ -166,17 +211,19 @@ py:class flask_restful.Resource
 py:class flask.app.Flask
 py:class Flask
 
-py:class pytest.tmpdir.TempPathFactory
-
+py:class scoped_session
 py:class sqlalchemy.orm.decl_api.SqliteModel
 py:class sqlalchemy.orm.decl_api.Base
 py:class sqlalchemy.sql.compiler.TypeCompiler
 py:class sqlalchemy.sql.elements.BooleanClauseList
+py:meth sqlalchemy.orm.unitofwork.UOWTransaction.register_object
 
 py:class sphinx.ext.autodoc.ClassDocumenter
 py:class sphinx.util.docutils.SphinxDirective
 py:class ModuleAnalyzer
 py:class BuildEnvironment
+
+py:meth tabulate.tabulate
 
 py:class yaml.Dumper
 py:class yaml.Loader
@@ -189,8 +236,6 @@ py:class yaml.nodes.MappingNode
 py:class yaml.nodes.ScalarNode
 py:class uuid.UUID
 
-py:class psycopg2.extensions.cursor
-
 py:class alembic.config.Config
 py:class alembic.op
 py:class alembic.runtime.migration.MigrationContext
@@ -200,8 +245,6 @@ py:class CircusClient
 
 py:class pgsu.PGSU
 py:meth  pgsu.PGSU.__init__
-
-py:class jsonschema.exceptions._Error
 
 py:class Session
 py:class Query

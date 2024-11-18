@@ -1,0 +1,8 @@
+description: QbStrField('description', dtype=str, is_attribute=False)
+extras: QbDictField('extras', dtype=Dict[str, Any], is_attribute=False, is_subscriptable=True)
+label: QbStrField('label', dtype=str, is_attribute=False)
+pk: QbNumericField('pk', dtype=int, is_attribute=False)
+time: QbStrField('time', dtype=str, is_attribute=False)
+type_string: QbStrField('type_string', dtype=str, is_attribute=False)
+user_pk: QbNumericField('user_pk', dtype=int, is_attribute=False)
+uuid: QbStrField('uuid', dtype=str, is_attribute=False)

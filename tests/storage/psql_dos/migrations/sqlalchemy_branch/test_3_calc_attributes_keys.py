@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Tests migration of the keys of certain attribute for ProcessNodes and CalcJobNodes: e72ad251bcdb -> 7ca08c391c49"""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 KEY_RESOURCES_OLD = 'jobresource_params'
@@ -28,8 +29,8 @@ def test_calc_attributes_keys(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@e72ad251bcdb')  # e72ad251bcdb_dbgroup_class_change_type_string_values
 
     # setup the database
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
 
     resources = {'number_machines': 1}
     environment_variables: dict = {}
@@ -66,7 +67,7 @@ def test_calc_attributes_keys(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@7ca08c391c49')  # 7ca08c391c49_calc_job_option_attribute_keys
 
     # perform some checks
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     not_found = tuple([0])
     with perform_migrations.session() as session:
         node_work = session.query(DbNode).filter(DbNode.id == node_work_id).one()

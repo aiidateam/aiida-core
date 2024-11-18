@@ -1,4 +1,3 @@
----
 label: doubler
 description: doubler
 default_calc_job_plugin: core.templatereplacer

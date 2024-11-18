@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,9 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm.CalcNode tests for the export and import routines"""
-# pylint: disable=invalid-name
-import pytest
 
+import pytest
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.common.links import LinkType
@@ -21,7 +19,7 @@ from aiida.tools.archive import create_archive, import_archive
 @pytest.mark.requires_rmq
 def test_calcfunction(tmp_path, aiida_profile):
     """Test @calcfunction"""
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     @calcfunction
     def add(a, b):
@@ -29,7 +27,7 @@ def test_calcfunction(tmp_path, aiida_profile):
         return {'res': orm.Float(a + b)}
 
     def max_(**kwargs):
-        """select the max value"""
+        """Select the max value"""
         max_val = max((v.value, v) for v in kwargs.values())
         return {'res': max_val[1]}
 
@@ -44,7 +42,7 @@ def test_calcfunction(tmp_path, aiida_profile):
     # At this point we export the generated data
     filename1 = tmp_path / 'export1.aiida'
     create_archive([res], filename=filename1, return_backward=True)
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(filename1)
     # Check that the imported nodes are correctly imported and that the value is preserved
     for uuid, value in uuids_values:
@@ -56,7 +54,7 @@ def test_calcfunction(tmp_path, aiida_profile):
 
 def test_workcalculation(tmp_path, aiida_profile):
     """Test simple master/slave WorkChainNodes"""
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     master = orm.WorkChainNode()
     slave = orm.WorkChainNode()
 
@@ -79,7 +77,7 @@ def test_workcalculation(tmp_path, aiida_profile):
     uuids_values = [(v.uuid, v.value) for v in (output_1,)]
     filename1 = tmp_path / 'export1.aiida'
     create_archive([output_1], filename=filename1)
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(filename1)
 
     for uuid, value in uuids_values:

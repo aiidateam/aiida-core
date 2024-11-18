@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-from aiida import orm
+from aiida import orm, plugins
 from aiida.engine import submit
 
-ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
+ArithmeticAddCalculation = plugins.CalculationFactory('core.arithmetic.add')
 
 builder = ArithmeticAddCalculation.get_builder()
 builder.x = orm.Int(1)

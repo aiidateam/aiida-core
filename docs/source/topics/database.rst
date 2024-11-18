@@ -178,12 +178,25 @@ List of all operators:
 | ``contains`` |    lists    | ``'attributes.some_key': {'contains': ['a', 'b']}``   | Filter for lists that should contain certain values.                         |
 +--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
 
-As mentioned in the :ref:`section about operatior negations<how-to:query:filters:operator-negations>` all operators can be turned into their associated negation (``NOT`` operator) by adding a ``!`` in front of the operator.
+.. versionadded:: 2.6
+    Logical expression syntax
+
+    In the new logical expression syntax for :ref:`filters<how-to:query:filters:programmatic>` and :ref:`projections<how-to:query:projections:programmatic>`, the above operations are distributed by type.
+    When using the autocompletion feature in constructing query expressions, only operations associated with the type of the queried field will be presented.
+
+    For example, ``Node.fields.uuid`` is a string type, and as such, ``Node.fields.uuid.`` will, in addition to ``==`` and ``in_``, only suggest ``like`` and ``ilike``.
+
+
+As mentioned in the :ref:`section about operator negations<how-to:query:filters:operator-negations>` all operators can be turned into their associated negation (``NOT`` operator) by adding a ``!`` in front of the operator.
+
+.. versionadded:: 2.6
+    Programmatic filter negation
+
+    In the new logical expression syntax, negation is defined with ``~``, such that ``~(Node.fields.some_field < 1)`` is equivalent to ``Node.fields.some_field >= 1``.
 
 .. note::
     The form of (negation) operators in the rendered SQL may differ from the ones specified in the ``QueryBuilder`` instance.
     For example, the ``!==`` operator of the ``QueryBuilder`` will be rendered to ``!=`` in SQL.
-
 
 .. _topics:database:advancedquery:tables:relationships:
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,13 +7,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Extras tests for the export and import routines"""
+
 from aiida import orm
 from aiida.tools.archive import create_archive, get_format, import_archive
 
 
 def test_import_of_attributes(tmp_path, aiida_profile):
     """Check if attributes are properly imported"""
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     # Create Data with attributes
     data = orm.Data()
     data.label = 'my_test_data_node'
@@ -26,7 +26,7 @@ def test_import_of_attributes(tmp_path, aiida_profile):
     create_archive([data], filename=export_file)
 
     # Clean db
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     import_archive(export_file)
     builder = orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'})

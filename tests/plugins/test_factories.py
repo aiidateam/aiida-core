@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,8 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :py:mod:`~aiida.plugins.factories` module."""
-import pytest
 
+import pytest
 from aiida.common.exceptions import InvalidEntryPointTypeError
 from aiida.engine import CalcJob, CalcJobImporter, WorkChain, calcfunction, workfunction
 from aiida.orm import CalcFunctionNode, Data, Node, WorkFunctionNode
@@ -38,7 +37,7 @@ def custom_load_entry_point(group, name):
             'calc_job': CalcJob,
             'calc_function': calc_function,
             'work_function': work_function,
-            'work_chain': WorkChain
+            'work_chain': WorkChain,
         },
         'aiida.calculations.importers': {
             'importer': CalcJobImporter,
@@ -76,8 +75,8 @@ def custom_load_entry_point(group, name):
             'calc_job': CalcJob,
             'calc_function': calc_function,
             'work_function': work_function,
-            'work_chain': WorkChain
-        }
+            'work_chain': WorkChain,
+        },
     }
     return entry_points[group][name]
 

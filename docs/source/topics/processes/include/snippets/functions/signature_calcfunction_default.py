@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from aiida.engine import calcfunction
 from aiida.orm import Int
 
@@ -9,6 +8,7 @@ def add_multiply(x, y, z=None):
         z = Int(3)
 
     return (x + y) * z
+
 
 result = add_multiply(Int(1), Int(2))
 result = add_multiply(Int(1), Int(2), Int(3))

@@ -158,45 +158,34 @@ AiiDA's fixtures
 
 Many tests require a full AiiDA environment to be set up before the test starts, e.g. some AiiDA data nodes.
 The pytest library has the concept of `fixtures`_ for encapsulating code you would like to run before a test starts.
-AiiDA ships with a number of fixtures in :py:mod:`aiida.manage.tests.pytest_fixtures` that take care of setting up the test environment for you (for more details, see :ref:`topics:plugins:testfixtures`).
+AiiDA ships with a number of fixtures in :py:mod:`aiida.tools.pytest_fixtures` that take care of setting up the test environment for you (for more details, see :ref:`topics:plugins:testfixtures`).
 
 In order to make these fixtures available to your tests, create a ``conftest.py`` (see also `pytest docs <conftest_>`_) at the root level of your plugin package as follows::
 
-   import pytest
-   pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # make AiiDA's fixtures available
-   # tip: look inside aiida.manage.tests.pytest_fixtures to see which fixtures are provided
+    import pytest
+    pytest_plugins = 'aiida.tools.pytest_fixtures'  # make AiiDA's fixtures available
+    # tip: look inside aiida.tools.pytest_fixtures to see which fixtures are provided
 
-   @pytest.fixture(scope='function')  # a fixture that will run once per test function that requests it
-   def integer_input():
-       """Integer input for test run."""
-       from aiida.orm import Int
-       input_value = Int(5)
-       return input_value
+By importing AiiDA's fixtures, the ``aiida_profile`` fixture gets used automatically, which takes care that a test profile is created and loaded.
+The profile (and configuration directory in which it is hosted) is only temporary and is automatically removed after the test session finished.
+This ensures that any production profiles on the system are not affected by the tests.
 
-   @pytest.fixture(scope='function', autouse=True)  # a fixture that automatically runs once per test function
-   def clear_database_auto(clear_database):  # request AiiDA's "clear_database" fixture
-       """Automatically clear database in between tests."""
-       pass
+Other fixtures have to be explicitly used in a test to be of use.
+They usually allow creating some resources that are required by the test, such as a ``Code`` node:
 
-You can now start writing tests e.g. in a ``tests/test_calculations.py`` file::
+    def test_calculation(aiida_code_installed):
+        """Test running a calculation using a ``CalcJob`` plugin."""
+        from aiida.engine import run
 
-      # No need to import fixtures here - they are added by pytest "automagically"
+        code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+        builder = code.get_builder()
+        builder.x = orm.Int(1)
+        builder.y = orm.Int(2)
 
-      def test_qe_calculation(aiida_local_code_factory, integer_input):  # requesting "aiida_local_code_factory" and "integer_input" fixtures
-          """Test running a calculation using a CalcJob plugin."""
-          from aiida.engine import run
-          from aiida.plugins import CalculationFactory
+        results, node = run.get_node(builder)
 
-          # search for 'pw.x' executable in PATH, set up an AiiDA code for it and return it
-          code = aiida_local_code_factory(entry_point='quantumespresso.pw', executable='pw.x')
-          # ...
-          inputs = { 'code': code, 'int_input': integer_input, ... }  # use "integer_input" fixture
-
-          # run a calculation using this code ...
-          result = run(CalculationFactory('quantumespresso.pw'), **inputs)
-
-          # check outputs of calculation
-          assert result['...'] == ...
+        assert node.is_finished_ok
+        assert results['sum'] == 3
 
 In order to run your tests, simply type ``pytest`` at the root level or your package.
 pytest automatically discovers and executes files, classes and function names starting with the word ``test``.

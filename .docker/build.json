@@ -1,0 +1,13 @@
+{
+    "variable": {
+      "PYTHON_VERSION": {
+        "default": "3.10.13"
+      },
+      "PGSQL_VERSION": {
+        "default": "15"
+      },
+      "RMQ_VERSION": {
+        "default": "3.10.18"
+      }
+    }
+  }

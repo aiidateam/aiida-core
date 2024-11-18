@@ -1,4 +1,3 @@
----
 # Metadata parsed by the workflow community initiative, https://workflows.community/systems
 # Registered at https://github.com/workflowscommunity/workflowscommunity.github.io/blob/main/_data/workflow_systems.yml
 name: AiiDA
@@ -20,13 +19,13 @@ social:
 
 execution_environment:
   interfaces:
-    - Python
-    - Command Line
-    - REST
+  - Python
+  - Command Line
+  - REST
   resource_managers:
-    - Slurm
-    - LSF
-    - PBS
-    - SGE
+  - Slurm
+  - LSF
+  - PBS
+  - SGE
   transfer_protocols:
-    - SCP
+  - SCP

@@ -78,6 +78,75 @@ Ways to find and retrieve data that have previously been imported are described 
 If none of the currently available data types, as listed by ``verdi plugin list``, seem to fit your needs, you can also create your own custom type.
 For details refer to the next section :ref:`"How to add support for custom data types"<topics:data_types:plugin>`.
 
+.. _how-to:data:dump:
+
+Dumping data to disk
+--------------------
+
+.. versionadded:: 2.6
+
+It is now possible to dump your executed workflows to disk in a hierarchical directory tree structure. This can be
+particularly useful if one is not yet familiar with the ``QueryBuilder`` or wants to quickly explore input/output files
+using existing shell scripts or common terminal utilities, such as ``grep``. The dumping can be achieved with the command:
+
+.. code-block:: shell
+
+    verdi process dump <pk>
+
+For our beloved ``MultiplyAddWorkChain``, we obtain the following:
+
+.. code-block:: shell
+
+    $ verdi process dump <pk> -p dump-multiply_add
+    Success: Raw files for WorkChainNode <pk> dumped into folder `dump-multiply_add`.
+
+.. code-block:: shell
+
+    $ tree -a dump-multiply_add
+    dump-multiply_add
+    ├── README.md
+    ├── .aiida_node_metadata.yaml
+    ├── 01-multiply
+    │  ├── .aiida_node_metadata.yaml
+    │  └── inputs
+    │     └── source_file
+    └── 02-ArithmeticAddCalculation
+        ├── .aiida_node_metadata.yaml
+        ├── inputs
+        │  ├── .aiida
+        │  │  ├── calcinfo.json
+        │  │  └── job_tmpl.json
+        │  ├── _aiidasubmit.sh
+        │  └── aiida.in
+        └── outputs
+            ├── _scheduler-stderr.txt
+            ├── _scheduler-stdout.txt
+            └── aiida.out
+
+The ``README.md`` file provides a description of the directory structure, as well as useful information about the
+top-level process. Further, numbered subdirectories are created for each step of the workflow, resulting in the
+``01-multiply`` and ``02-ArithmeticAddCalculation`` folders. The raw calculation input and output files ``aiida.in`` and
+``aiida.out`` of the ``ArithmeticAddCalculation`` are placed in ``inputs`` and ``outputs``. In addition, these also
+contain the submission script ``_aiidasubmit.sh``, as well as the scheduler stdout and stderr, ``_scheduler-stdout.txt``
+and ``_scheduler-stderr.txt``, respectively. Lastly, the source code of the ``multiply`` ``calcfunction`` presenting the
+first step of the workflow is contained in the ``source_file``. Since child processes are explored recursively,
+arbitrarily complex, nested workflows can be dumped. Upon having a closer look at the directory, we also find the hidden
+``.aiida_node_metadata.yaml`` files, which are created for every ``ProcessNode`` and contain additional information
+about the ``Node``, the ``User``, and the ``Computer``, as well as the ``.aiida`` subdirectory with machine-readable
+AiiDA-internal data in JSON format.
+
+As already seen above, the ``-p`` flag allows to specify a custom dumping path. If none is provided, it is automatically
+generated from the ``process_label`` (or ``process_type``) and the ``pk``. In addition, the command provides the
+``-o/--overwrite`` flag to fully overwrite an existing dumping directory, as well as the ``--incremental`` flag, with
+which files are gradually added to an existing directory (this is the default behavior). By default, only sealed process
+nodes can be dumped, however, the behavior can be changed with the ``--dump-unsealed`` flag, which can be useful in
+conjunction with ``--incremental`` to gradually obtain data while a process is running. Furthermore, the ``-f/--flat``
+flag can be used to dump all files for each ``CalculationNode`` of the workflow in a flat directory structure, and the
+``--include-inputs/--exclude-inputs`` (``--include-outputs/--exclude-outputs``) flags are used to also dump additional
+node inputs (outputs) of each ``CalculationNode`` of the workflow into ``node_inputs`` (``node_outputs``)
+subdirectories.
+
+For a full list of available options, call :code:`verdi process dump --help`.
 
 .. _how-to:data:import:provenance:
 
@@ -592,8 +661,6 @@ This command will delete both the file repository and the database.
 
 Transferring data
 =================
-
-.. versionadded:: 1.6.0
 
 .. danger::
 

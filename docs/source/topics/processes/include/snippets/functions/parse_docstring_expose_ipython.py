@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 In [1]: builder = Wrapper.get_builder()
 
 In [2]: builder.x?

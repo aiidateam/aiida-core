@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,9 +7,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi`."""
+
 import click
 import pytest
-
 from aiida import get_version
 from aiida.cmdline.commands import cmd_verdi
 

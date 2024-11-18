@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from aiida.engine import calcfunction
@@ -11,6 +10,7 @@ def add_multiply(x: int, y: int, z: int | None = None):
         z = Int(3)
 
     return (x + y) * z
+
 
 result = add_multiply(1, 2)
 result = add_multiply(1, 2, 3)

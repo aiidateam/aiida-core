@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Tests 041a79fc615f -> 6a5c2ea1439d"""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
@@ -20,8 +21,8 @@ def test_data_move_with_node(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@041a79fc615f')  # 041a79fc615f_dblog_update
 
     # setup the database
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net', is_superuser=True)
         session.add(user)
@@ -41,7 +42,7 @@ def test_data_move_with_node(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@6a5c2ea1439d')  # 6a5c2ea1439d_move_data_within_node_module
 
     # perform some checks
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         # The data node should have been touched and migrated
         node_data = session.query(DbNode).filter(DbNode.id == node_data_id).one()

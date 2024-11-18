@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -16,6 +15,7 @@ Validates consistency of
  * environment.yml
 
 """
+
 import os
 
 import click
@@ -98,13 +98,8 @@ def cli():
 @cli.command('verdi-autodocs')
 def validate_verdi_documentation():
     """Auto-generate the documentation for `verdi` through `click`."""
-    from click import Context
-
-    from aiida.manage.configuration import load_documentation_profile
-
-    load_documentation_profile()
-
     from aiida.cmdline.commands.cmd_verdi import verdi
+    from click import Context
 
     width = 90  # The maximum width of the formatted help strings in characters
 
@@ -124,6 +119,14 @@ def validate_verdi_documentation():
     block = [f"{header}\n{'=' * len(header)}\n{message}\n\n"]
 
     for name, command in sorted(verdi.commands.items()):
+        if name == 'tui':
+            # This command is only generated when the optional dependency ``trogon`` is installed. It provides a TUI
+            # version of ``verdi``. However, since it is optional, if a development environment does not have it
+            # installed, this check will always fail as the generated docs are different. Since ``trogon`` significantly
+            # slows down tab-completion of ``verdi``, many dev environments do not want to have it installed. As a
+            # workaround, we are excluding this command from the automatically generated reference documentation.
+            continue
+
         ctx = click.Context(command, terminal_width=width)
 
         header_label = f'.. _reference:command-line:verdi-{name}:'
@@ -149,4 +152,4 @@ def validate_verdi_documentation():
 
 
 if __name__ == '__main__':
-    cli()  # pylint: disable=no-value-for-parameter
+    cli()

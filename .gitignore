@@ -19,6 +19,8 @@
 .tox
 Pipfile
 
+.aiida
+
 # files created by coverage
 .cache
 .pytest_cache
@@ -38,3 +40,6 @@ docs/source/reference/apidoc
 _sandbox
 
 pplot_out/
+
+# docker
+docker-bake.override.json

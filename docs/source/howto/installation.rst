@@ -14,7 +14,7 @@ Creating profiles
 -----------------
 Each AiiDA installation can have multiple profiles, each of which can have its own individual database and file repository to store the contents of the :ref:`provenance graph<topics:provenance:concepts>`.
 Profiles allow you to run multiple projects completely independently from one another with just a single AiiDA installation and at least one profile is required to run AiiDA.
-A new profile can be created using :ref:`verdi quicksetup<reference:command-line:verdi-quicksetup>` or :ref:`verdi setup<reference:command-line:verdi-setup>`, which works similar to the former but gives more control to the user.
+A new profile can be created using :ref:`verdi presto<reference:command-line:verdi-presto>` or :ref:`verdi profile setup<reference:command-line:verdi-profile>`, which works similar to the former but gives more control to the user.
 
 Listing profiles
 ----------------
@@ -55,7 +55,7 @@ To display these parameters, use ``verdi profile show``:
     storage:
         backend: core.psql_dos
         config:
-            database_engine: postgresql_psycopg2
+            database_engine: postgresql_psycopg
             database_hostname: localhost
             database_name: name
             database_password: abc
@@ -256,6 +256,39 @@ Similarly to unset a value:
 .. seealso:: :ref:`How-to configure caching <how-to:run-codes:caching>`
 
 
+.. _how-to:installation:configure:warnings:
+
+Controlling warnings
+--------------------
+
+AiiDA may emit warnings for a variety of reasons, for example, warnings when a deprecated part of the code is used.
+These warnings are on by default as they provide the user with important information.
+The warnings can be turned off using the ``warnings.showdeprecations`` config option, for example:
+
+.. code-block:: console
+
+    verdi config set warnings.showdeprecations false
+
+.. tip::
+
+    The command above changes the option for the current profile.
+    However, certain warnings are emitted before a profile can be loaded, for example, when certain modules are imported.
+    To also silence these warnings, apply the option globally:
+
+        .. code-block:: console
+
+            verdi config set warnings.showdeprecations false --global
+
+In addition to the config option, AiiDA also provides the dedicated environment variable ``AIIDA_WARN_v{version}`` for deprecation warnings.
+Here ``{version}`` is the version number in which the deprecated code will be removed, e.g., ``AIIDA_WARN_v3``.
+This environment variable can be used to enable deprecation warnings even if ``warnings.showdeprecations`` is turned off.
+This can be useful to temporarily enable deprecation warnings for a single command, e.g.:
+
+.. code-block:: console
+
+    AIIDA_WARN_v3=1 verdi run script.py
+
+
 .. _how-to:installation:configure:instance-isolation:
 
 Isolating multiple instances
@@ -263,7 +296,7 @@ Isolating multiple instances
 An AiiDA instance is defined as the installed source code plus the configuration folder that stores the configuration files with all the configured profiles.
 It is possible to run multiple AiiDA instances on a single machine, simply by isolating the code and configuration in a virtual environment.
 
-To isolate the code, make sure to install AiiDA into a virtual environment, e.g., with conda or venv, as described :ref:`here <intro:get_started:setup>`.
+To isolate the code, make sure to install AiiDA into a virtual environment, e.g., with conda or venv.
 Whenever you activate this particular environment, you will be running the particular version of AiiDA (and all the plugins) that you installed specifically for it.
 
 This is separate from the configuration of AiiDA, which is stored in the configuration directory which is always named ``.aiida`` and by default is stored in the home directory.
@@ -514,20 +547,33 @@ See the :doc:`../reference/_changelog` for a list of breaking changes.
 
 .. _how-to:installation:backup:
 
-Backing up your installation
+Backing up your data
 ============================
 
-A full backup of an AiiDA instance and AiiDA managed data requires a backup of:
+General information
+-----------------------------------------
 
-* the AiiDA configuration folder, which is named ``.aiida``.
-  The location of the folder is shown in the output of ``verdi status``.
-  This folder contains, among other things, the ``config.json`` configuration file and log files.
+The most convenient way to back up the data of a single AiiDA profile is to use
 
-* the data stored for each profile.
-  Where the data is stored, depends on the storage backend used by each profile.
+.. code:: bash
 
-The panels below provide instructions for storage backends provided by ``aiida-core``.
-To determine what storage backend a profile uses, call ``verdi profile show``.
+    $ verdi --profile <profile_name> storage backup /path/to/destination
+
+This command automatically manages a subfolder structure of previous backups, and new backups are done in an efficient way (using ``rsync`` hard-link functionality to the previous backup).
+The command backs up everything that's needed to restore the profile later:
+
+* the AiiDA configuration file ``.aiida/config.json``, from which other profiles are removed (see ``verdi status`` for exact location);
+* all the data of the backed up profile (which depends on the storage backend).
+
+The specific procedure of the command and whether it even is implemented depends on the storage backend.
+
+.. note::
+    The ``verdi storage backup`` command is implemented in a way to be as safe as possible to use when AiiDA is running, meaning that it will most likely produce an uncorrupted backup even when data is being modified. However, the exact conditions depend on the specific storage backend and to err on the safe side, only perform a backup when the profile is not in use.
+
+Storage backend specific information
+-----------------------------------------
+
+Alternatively to the CLI command, one can also manually create a backup. This requires a backup of the configuration file  ``.aiida/config.json`` and the storage backend. The panels below provide instructions for storage backends provided by ``aiida-core``. To determine what storage backend a profile uses, call ``verdi profile show``.
 
 .. tip:: Before creating a backup, it is recommended to run ``verdi storage maintain``.
     This will optimize the storage which can significantly reduce the time required to create the backup.
@@ -572,44 +618,47 @@ To determine what storage backend a profile uses, call ``verdi profile show``.
 
 .. _how-to:installation:backup:restore:
 
-Restoring your installation
-===========================
+Restoring data from a backup
+============================
 
-Restoring a backed up AiiDA installation requires:
+Restoring a backed up AiiDA profile requires:
 
-* restoring the backed up ``.aiida`` folder, with at the very least the ``config.json`` file it contains.
-  It should be placed in the path defined by the ``AIIDA_PATH`` environment variable.
-  To test the restoration worked, run ``verdi profile list`` to verify that all profiles are displayed.
+* restoring the profile information in the AiiDA ``config.json`` file. Simply copy the`profiles` entry from
+  the backed up ``config.json`` to the one of the running AiiDA instance (see ``verdi status`` for exact location).
+  Some information (e.g. the database parameters) might need to be updated.
 
-* restoring the data of each backed up profile.
+* restoring the data of of the backed up profile according to the ``config.json`` entry.
   Like the backup procedure, this is dependent on the storage backend used by the profile.
 
 The panels below provide instructions for storage backends provided by ``aiida-core``.
 To determine what storage backend a profile uses, call ``verdi profile show``.
+To test if the restoration worked, run ``verdi -p <profile-name> status`` to verify that AiiDA can successfully connect to the data storage.
 
 .. tab-set::
 
     .. tab-item:: psql_dos
 
-        To fully backup the data stored for a profile using the ``core.psql_dos`` backend, you should restore the associated database and file repository.
+        To restore the backed up data for a profile using the ``core.psql_dos`` backend, you should restore the associated database and file repository.
 
         **PostgreSQL database**
 
-        To restore the PostgreSQL database from the ``.psql`` file that was backed up, first you should create an empty database following the instructions described in :ref:`database <intro:install:database>` skipping the ``verdi setup`` phase.
+        To restore the PostgreSQL database from the ``db.psql`` file that was backed up, first you should create an empty database following the instructions described in :ref:`the installation guide <installation:guide-complete:create-profile:core-psql-dos>`.
         The backed up data can then be imported by calling:
 
         .. code-block:: console
 
-            psql -h <database_hostname> -p <database_port> -d <database_name> -W < aiida_backup.psql
+            psql -h <db_hostname> -p <db_port> - U <db_user> -d <db_name> -W < db.psql
+
+        where the parameters need to match with the corresponding AiiDA `config.json` profile entry.
 
         **File repository**
 
-        To restore the file repository, simply copy the directory that was backed up to the location indicated by the ``storage.config.repository_uri`` key returned by the ``verdi profile show`` command.
+        To restore the file repository, simply copy the directory that was backed up to the location indicated in AiiDA `config.json` (or the ``storage.config.repository_uri`` key returned by the ``verdi profile show`` command).
         Like the backing up process, we recommend using ``rsync`` for this:
 
         .. code-block:: console
 
-            rsync -arvz /some/path/aiida_backup <storage.config.repository_uri>
+            rsync -arvz /path/to/backup/container <storage.config.repository_uri>
 
 
 .. _how-to:installation:multi-user:

@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.engine import CalcJob
+from aiida.orm import Int
 
 
 class ArithmeticAddCalculation(CalcJob):
@@ -9,9 +9,9 @@ class ArithmeticAddCalculation(CalcJob):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('x', valid_type=orm.Int, help='The left operand.')
-        spec.input('y', valid_type=orm.Int, help='The right operand.')
-        spec.output('sum', valid_type=orm.Int, help='The sum of the left and right operand.')
+        spec.input('x', valid_type=Int, help='The left operand.')
+        spec.input('y', valid_type=Int, help='The right operand.')
+        spec.output('sum', valid_type=Int, help='The sum of the left and right operand.')
 
     def prepare_for_submission(self, folder):
         """Write the input files that are required for the code to run.

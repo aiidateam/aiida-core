@@ -3,28 +3,28 @@
 
 scenario:
   create_sequence:
-    - create
-    - prepare
+  - create
+  - prepare
   converge_sequence:
-    - create
-    - prepare
-    - converge
+  - create
+  - prepare
+  - converge
   destroy_sequence:
-    - destroy
+  - destroy
   test_sequence:
-    - destroy
-    - create
-    - prepare
-    - converge
-    - verify
-    - destroy
+  - destroy
+  - create
+  - prepare
+  - converge
+  - verify
+  - destroy
 # configuration for building the isolated container
 driver:
   name: docker
 platforms:
 - name: molecule-aiida-${AIIDA_TEST_BACKEND:-psql_dos}
   image: molecule_tests
-  context: "../.."
+  context: ../..
   command: /sbin/my_init
   healthcheck:
     test: wait-for-services
@@ -52,7 +52,7 @@ provisioner:
       internal_poll_interval: 0.002
     ssh_connection:
       # reduce network operations
-      pipelining: True
+      pipelining: true
   inventory:
     hosts:
       all:
@@ -62,7 +62,7 @@ provisioner:
           aiida_core_dir: /aiida-core
           aiida_pip_cache: /home/.cache/pip
           venv_bin: /opt/conda/bin
-          ansible_python_interpreter: "{{ venv_bin }}/python"
+          ansible_python_interpreter: '{{ venv_bin }}/python'
           aiida_backend: ${AIIDA_TEST_BACKEND:-core.psql_dos}
           aiida_workers: ${AIIDA_TEST_WORKERS:-2}
           aiida_path: /tmp/.aiida_${AIIDA_TEST_BACKEND:-psql_dos}

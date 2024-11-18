@@ -3,20 +3,20 @@ name: test-install
 on:
   pull_request:
     paths:
-      - 'environment.yml'
-      - '**/requirements*.txt'
-      - 'pyproject.toml'
-      - 'util/dependency_management.py'
-      - '.github/workflows/test-install.yml'
+    - environment.yml
+    - '**/requirements*.txt'
+    - pyproject.toml
+    - util/dependency_management.py
+    - .github/workflows/test-install.yml
     branches-ignore: [gh-pages]
   schedule:
-    - cron: '30 02 * * *'  # nightly build
+  - cron: 30 02 * * *      # nightly build
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
     # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
 
@@ -28,10 +28,10 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
 
@@ -46,9 +46,6 @@ jobs:
   resolve-pip-dependencies:
     # Check whether the environments defined in the requirements/* files are
     # resolvable.
-    #
-    # This job should use the planned `pip resolve` command once released:
-    # https://github.com/pypa/pip/issues/7819
 
     needs: [validate-dependency-specification]
     if: github.repository == 'aiidateam/aiida-core'
@@ -58,27 +55,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10', '3.11']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Upgrade pip and setuptools
-      # Install specific version of setuptools, because 65.6.0 breaks a number of packages, such as numpy
+    - name: Resolve dependencies from requirements file.
       run: |
-        pip install --upgrade pip
-        pip install setuptools==65.5.0
-        pip --version
-
-    - name: Create environment from requirements file.
-      run: |
-        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
-        pip freeze
+        pip install --dry-run --ignore-installed -r requirements/requirements-py-${{ matrix.python-version }}.txt
 
   create-conda-environment:
     # Verify that we can create a valid conda environment from the environment.yml file.
@@ -89,10 +78,10 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@v3
       with:
         channels: conda-forge
 
@@ -111,13 +100,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        extras: [ '', '[atomic_tools,docs,notebook,rest,tests]' ]
+        extras: ['', '[atomic_tools,docs,notebook,rest,tests,tui]']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
 
@@ -130,8 +119,7 @@ jobs:
 
     - name: Test importing aiida
       if: steps.pip_install.outcome == 'success'
-      run:
-        python -c "import aiida"
+      run: python -c "import aiida"
 
   install-with-conda:
     # Verify that we can install AiiDA with conda.
@@ -144,7 +132,7 @@ jobs:
       fail-fast: false
       matrix:
 
-        python-version: ['3.9', '3.10', '3.11']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
 
         # Not being able to install with conda on a specific Python version is
         # not sufficient to fail the run, but something we want to be aware of.
@@ -153,14 +141,14 @@ jobs:
         include:
           # Installing with conda without specyfing the Python version should
           # not fail since this is advocated as part of the user documentation.
-          - python-version: ''
-            optional: false
+        - python-version: ''
+          optional: false
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@v3
       with:
         channels: conda-forge
 
@@ -190,12 +178,12 @@ jobs:
 
     needs: [install-with-pip]
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10', '3.11']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
 
     services:
       postgres:
@@ -210,52 +198,38 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5432:5432
+        - 5432:5432
       rabbitmq:
         image: rabbitmq:3.8.14-management
         ports:
-          - 5672:5672
-          - 15672:15672
+        - 5672:5672
+        - 15672:15672
       slurm:
         image: xenonmiddleware/slurm:17
         ports:
-          - 5001:22
+        - 5001:22
 
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
+    - uses: actions/checkout@v4
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz
 
-    - name: Upgrade pip and setuptools
-      # It is crucial to update `setuptools` or the installation of `pymatgen` can break
-      # Install specific version of setuptools, because 65.6.0 breaks a number of packages, such as numpy
-      run: |
-        pip install --upgrade pip
-        pip install setuptools==65.5.0
-        pip --version
-
     - name: Install aiida-core
-      run: |
-        pip install -e .[atomic_tools,docs,notebook,rest,tests]
-
-    - run: pip freeze
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: ${{ matrix.python-version }}
+        extras: '[atomic_tools,docs,notebook,rest,tests,tui]'
+        from-requirements: 'false'
 
     - name: Setup AiiDA environment
-      run:
-        .github/workflows/setup.sh
+      run: .github/workflows/setup.sh
 
     - name: Run test suite
       env:
+        AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-        SQLALCHEMY_WARN_20: 1
-      run:
-        .github/workflows/tests.sh
+      run: pytest --verbose tests -m 'not nightly'
 
     - name: Freeze test environment
       run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt
@@ -263,9 +237,9 @@ jobs:
     # Add python-version specific requirements/ file to the requirements.txt artifact.
     # This artifact can be used in the next step to automatically create a pull request
     # updating the requirements (in case they are  inconsistent with the pyproject.toml file).
-    - uses: actions/upload-artifact@v1
+    - uses: actions/upload-artifact@v4
       with:
-        name: requirements.txt
+        name: requirements-py-${{ matrix.python-version }}.txt
         path: requirements-py-${{ matrix.python-version }}.txt
 
 # Check whether the requirements/ files are consistent with the dependency specification in the pyproject.toml file.
@@ -280,10 +254,10 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: 3.9
 
@@ -300,7 +274,7 @@ jobs:
 #
     - name: Create commit comment
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: peter-evans/commit-comment@v1
+      uses: peter-evans/commit-comment@v3
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         path: pyproject.toml
@@ -310,16 +284,17 @@ jobs:
     # Check out the base branch so that we can prepare the pull request.
     - name: Checkout base branch
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         ref: ${{ github.head_ref }}
         clean: true
 
     - name: Download requirements.txt files
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v4
       with:
-        name: requirements.txt
+        pattern: requirements-py-*
+        merge-multiple: true
         path: requirements
 
     - name: Commit requirements files
@@ -331,11 +306,11 @@ jobs:
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
       id: create_update_requirements_pr
       continue-on-error: true
-      uses: peter-evans/create-pull-request@v3
+      uses: peter-evans/create-pull-request@v7
       with:
         branch: update-requirements
-        commit-message: "Automated update of requirements/ files."
-        title: "Update requirements/ files."
+        commit-message: Automated update of requirements/ files.
+        title: Update requirements/ files.
         body: |
           Update requirements files to ensure that they are consistent
           with the dependencies specified in the 'pyproject.toml' file.
@@ -349,7 +324,7 @@ jobs:
 
     - name: Create PR comment on success
       if: steps.create_update_requirements_pr.outcome == 'Success'
-      uses: peter-evans/create-or-update-comment@v1
+      uses: peter-evans/create-or-update-comment@v4
       with:
         issue-number: ${{ github.event.number }}
         body: |
@@ -358,7 +333,7 @@ jobs:
 
     - name: Create PR comment on failure
       if: steps.create_update_requirements_pr.outcome == 'Failure'
-      uses: peter-evans/create-or-update-comment@v1
+      uses: peter-evans/create-or-update-comment@v4
       with:
         issue-number: ${{ github.event.number }}
         body: |

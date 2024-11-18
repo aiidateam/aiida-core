@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Tests for migrations forming the move from aiida-core v1 to v2."""
+
 import hashlib
 import os
 
@@ -26,8 +27,8 @@ def test_node_repository_metadata(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@0edcdd5a30f0')  # 0edcdd5a30f0_dbgroup_extras.py
 
     # setup the database
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         default_user = DbUser(email='user@aiida.net')
         session.add(default_user)
@@ -42,7 +43,7 @@ def test_node_repository_metadata(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@7536a82b2cc4')  # 7536a82b2cc4_add_node_repository_metadata.py
 
     # perform some checks
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         node = session.query(DbNode).filter(DbNode.id == node_id).one()
         assert hasattr(node, 'repository_metadata')
@@ -58,9 +59,9 @@ def test_entry_point_core_prefix(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@535039300e4a')  # 535039300e4a_computer_name_to_label.py
 
     # setup the database
-    DbComputer = perform_migrations.get_current_table('db_dbcomputer')  # pylint: disable=invalid-name
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbComputer = perform_migrations.get_current_table('db_dbcomputer')
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net')
         session.add(user)
@@ -94,8 +95,8 @@ def test_entry_point_core_prefix(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@34a831f4286d')  # 34a831f4286d_entry_point_core_prefix
 
     # perform some checks
-    DbComputer = perform_migrations.get_current_table('db_dbcomputer')  # pylint: disable=invalid-name
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbComputer = perform_migrations.get_current_table('db_dbcomputer')
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         computer = session.query(DbComputer).filter(DbComputer.id == computer_id).one()
         assert computer.scheduler_type == 'core.direct'
@@ -109,7 +110,7 @@ def test_entry_point_core_prefix(perform_migrations: PsqlDosMigrator):
         assert workflow.process_type == 'aiida.workflows:core.arithmetic.add_multiply'
 
 
-def test_repository_migration(perform_migrations: PsqlDosMigrator):  # pylint: disable=too-many-statements,too-many-locals
+def test_repository_migration(perform_migrations: PsqlDosMigrator):
     """Test migration of the old file repository to the disk object store.
 
     Verify that the files are correctly migrated.
@@ -118,8 +119,8 @@ def test_repository_migration(perform_migrations: PsqlDosMigrator):  # pylint: d
     perform_migrations.migrate_up('sqlalchemy@7536a82b2cc4')
 
     # setup the database
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         default_user = DbUser(email='user@aiida.net')
         session.add(default_user)
@@ -176,8 +177,8 @@ def test_repository_migration(perform_migrations: PsqlDosMigrator):  # pylint: d
 
     # perform some checks
     repository_uuid_key = 'repository|uuid'
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbSetting = perform_migrations.get_current_table('db_dbsetting')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbSetting = perform_migrations.get_current_table('db_dbsetting')
     with perform_migrations.session() as session:
         node_01 = session.query(DbNode).filter(DbNode.id == node_01_pk).one()
         node_02 = session.query(DbNode).filter(DbNode.id == node_02_pk).one()
@@ -188,34 +189,18 @@ def test_repository_migration(perform_migrations: PsqlDosMigrator):  # pylint: d
             'o': {
                 'sub': {
                     'o': {
-                        'path': {
-                            'o': {
-                                'file_b.txt': {
-                                    'k': hashlib.sha256('b'.encode('utf-8')).hexdigest()
-                                }
-                            }
-                        },
-                        'file_a.txt': {
-                            'k': hashlib.sha256('a'.encode('utf-8')).hexdigest()
-                        }
+                        'path': {'o': {'file_b.txt': {'k': hashlib.sha256('b'.encode('utf-8')).hexdigest()}}},
+                        'file_a.txt': {'k': hashlib.sha256('a'.encode('utf-8')).hexdigest()},
                     }
                 }
             }
         }
         assert node_02.repository_metadata == {
-            'o': {
-                'output.txt': {
-                    'k': hashlib.sha256('output'.encode('utf-8')).hexdigest()
-                }
-            }
+            'o': {'output.txt': {'k': hashlib.sha256('output'.encode('utf-8')).hexdigest()}}
         }
         assert node_03.repository_metadata == {}
         assert node_05.repository_metadata == {
-            'o': {
-                'input.txt': {
-                    'k': hashlib.sha256('input'.encode('utf-8')).hexdigest()
-                }
-            }
+            'o': {'input.txt': {'k': hashlib.sha256('input'.encode('utf-8')).hexdigest()}}
         }
 
         for hashkey, content in (
@@ -240,7 +225,7 @@ def test_computer_name_to_label(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@1feaea71bd5a')  # 1feaea71bd5a_migrate_repository
 
     # setup the database
-    DbComputer = perform_migrations.get_current_table('db_dbcomputer')  # pylint: disable=invalid-name
+    DbComputer = perform_migrations.get_current_table('db_dbcomputer')
     with perform_migrations.session() as session:
         computer = DbComputer(name='testing')
         session.add(computer)
@@ -251,7 +236,7 @@ def test_computer_name_to_label(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@535039300e4a')  # 5ddd24e52864_dbnode_type_to_dbnode_node_type
 
     # perform some checks
-    DbComputer = perform_migrations.get_current_table('db_dbcomputer')  # pylint: disable=invalid-name
+    DbComputer = perform_migrations.get_current_table('db_dbcomputer')
     with perform_migrations.session() as session:
         computer = session.query(DbComputer).filter(DbComputer.id == computer_id).one()
         assert computer.label == 'testing'

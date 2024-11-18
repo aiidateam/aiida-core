@@ -1,0 +1,6 @@
+#!/command/execlineb -P
+
+with-contenv
+
+foreground { s6-echo "Calling /etc/init/run-before-daemon-start" }
+run-parts --regex=".*" /etc/init/run-before-daemon-start/

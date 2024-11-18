@@ -51,7 +51,7 @@ New archive versions are introduced for several different reasons; this may gene
 .. important::
     For archives of version 0.3 and older it is advisable that you manually try to convince yourself that the migration was completely successful.
     While all migrations are tested, trying to include reasonable edge-cases, the migrations involved from version 0.3 to 0.4 are intricate and the possibility of a missing edge-case test is quite real.
-    It is worth noting that if you ever have an issue, please report it on `GitHub <https://www.github.com/aiidateam/aiida_core/issues/new>`_, join the `AiiDA mailing list <http://www.aiida.net/mailing-list/>`_, or use the `contact form <http://www.aiida.net/contact-new/>`_.
+    It is worth noting that if you ever have an issue, please report it on `GitHub <https://www.github.com/aiidateam/aiida_core/issues/new>`.
 
 .. note::
     If you have migrated an archive file to the newest version, there may be an extra entry in ``metadata.json``.
@@ -83,23 +83,15 @@ The only differences are in the handling of certain data types by SQLite versus 
 
 Also, `varchar_pattern_ops` indexes are not possible in SQLite.
 
+
 Tables
 ......
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbUser
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbNode
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbLink
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbGroup
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbGroupNodes
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbComputer
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbAuthInfo
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbComment
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbLog
+sqla-model:: ~aiida.storage.sqlite_zip.models.DbUser
+sqla-model:: ~aiida.storage.sqlite_zip.models.DbNode
+sqla-model:: ~aiida.storage.sqlite_zip.models.DbLink
+sqla-model:: ~aiida.storage.sqlite_zip.models.DbGroup
+sqla-model:: ~aiida.storage.sqlite_zip.models.DbGroupNodes
+sqla-model:: ~aiida.storage.sqlite_zip.models.DbComputer
+sqla-model:: ~aiida.storage.sqlite_zip.models.DbAuthInfo
+sqla-model:: ~aiida.storage.sqlite_zip.models.DbComment
+sqla-model:: ~aiida.storage.sqlite_zip.models.DbLog

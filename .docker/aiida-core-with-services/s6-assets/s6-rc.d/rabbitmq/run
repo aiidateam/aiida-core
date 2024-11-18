@@ -1,0 +1,15 @@
+#!/command/execlineb -P
+
+with-contenv
+
+foreground { s6-echo "Starting RMQ server and notifying back when the service is ready" }
+
+
+# For the container that includes the services, aiida-prepare.sh script is called as soon as the RabbitMQ startup script has
+# been launched, but it can take a while for the RMQ service to come up. If ``verdi presto`` is called straight away
+# it is possible it tries to connect to the service before that and it will configure the profile without a broker.
+# Here we use s6-notifyoncheck to do the polling healthy check of the readyness of RMQ service.
+#
+# -w 500: 500 ms between two invocations of ./data/check
+
+s6-notifyoncheck -w 500 rabbitmq-server

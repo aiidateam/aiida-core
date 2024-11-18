@@ -74,12 +74,15 @@ There are several ways to obtain data from a query:
 
     all_results_l = qb.all()            # Returns a list of lists
 
-In case you are working with a large dataset, you can also return your query as a generator:
+.. tip::
+
+    If your query only has a single projection, use ``flat=True`` in the ``first`` and ``all`` methods to return a single value or a flat list, respectively.
+
+You can also return your query as a generator:
 
 .. code-block:: python
 
     all_res_d_gen = qb.iterdict()       # Return a generator of dictionaries
-                                        # of all results
     all_res_l_gen = qb.iterall()        # Returns a generator of lists
 
 This will retrieve the data in batches, and you can start working with the data before the query has completely finished.
@@ -89,6 +92,12 @@ For example, you can iterate over the results of your query in a for loop:
 
     for entry in qb.iterall():
         # do something with a single entry in the query result
+
+.. important::
+
+    When looping over the result of a query, use the ``iterall`` (or ``iterdict``) generator instead of ``all`` (or ``dict``).
+    This avoids loading the entire query result into memory, and it also delays committing changes made to AiiDA objects inside the loop until the end of the loop is reached.
+    If an exception is raised before the loop ends, all changes are reverted.
 
 .. _how-to:query:filters:
 
@@ -150,6 +159,59 @@ In case you want all calculation jobs with state ``finished`` or ``excepted``, y
         },
     )
 
+.. _how-to:query:filters:programmatic:
+
+Programmatic syntax for filters
+-------------------------------
+
+.. versionadded:: 2.6
+
+Filter keys may be defined programmatically, providing in modern IDEs (including AiiDA's ``verdi shell``) autocompletion of fields and operators.
+For example, the above query may be given as
+
+.. code-block:: python
+
+    qb = QueryBuilder()
+    qb.append(
+        CalcJobNode,
+        filters={
+            CalcJobNode.fields.process_state: {'in': ['finished', 'excepted']},
+        },
+    )
+
+In this approach, ``CalcJobNode.fields.`` will suggest (autocomplete) the queryable fields of ``CalcJobNode`` allowing the user to explore the node's attributes directly while constructing the query.
+
+Alternatively, the entire filtering expression may be provided programmatically as logical expressions:
+
+.. code-block:: python
+
+    qb = QueryBuilder()
+    qb.append(
+        CalcJobNode,
+        filters=CalcJobNode.fields.process_state.in_(['finished', 'excepted']),
+    )
+
+.. note::
+
+    Logical operations are distributed by type. As such, ``Node.fields.<some_field>.`` will `only` provide the :ref:`supported operations<topics:database:advancedquery>` for the type of ``some_field``, in this case ``==``, ``in_``, ``like``, and ``ilike``, for type ``str``.
+
+Logical expressions may be strung together with ``&`` and ``|`` to construct complex queries.
+
+.. code-block:: python
+
+    filters=(
+        (Node.fields.ctime < datetime(2030, 1, 1))
+        & (
+            (Node.fields.pk.in_([4, 8, 15, 16, 23, 42]))
+            | (Node.fields.label.like("%some_label%"))
+        )
+        & (Node.fields.extras.has_key("some_key"))
+    )
+
+.. tip::
+
+    ``()`` may be used to override the natural precedence of ``|``.
+
 .. _how-to:query:filters:operator-negations:
 
 Operator negations
@@ -174,6 +236,14 @@ So, to query for all calculation jobs that are not a ``finished`` or ``excepted`
     For example, you can check non-equality with ``!==``, since this is the equality operator (``==``) with a negation prepended.
 
 A complete list of all available operators can be found in the :ref:`advanced querying section<topics:database:advancedquery:tables:operators>`.
+
+.. _how-to:query:filters:operator-negations:new:
+
+.. versionadded:: 2.6
+    Programamtic filter negation
+
+    In the new :ref:`logical expression syntax<how-to:query:filters:programmatic>`, negation can be achieved by prepending ``~`` to any expression.
+    For example ``~(Int.fields.value < 5)`` is equivalent to ``Int.fields.value >= 5``.
 
 .. _how-to:query:relationships:
 
@@ -263,10 +333,28 @@ This can be used to project the values of nested dictionaries as well.
     Be aware that for consistency, ``QueryBuilder.all()`` / ``iterall()`` always returns a list of lists, even if you only project one property of a single entity.
     Use ``QueryBuilder.all(flat=True)`` to return the query result as a flat list in this case.
 
+.. _how-to:query:projections:programmatic:
+
+.. versionadded:: 2.6
+    Programmatic syntax for projections
+
+    Similar to :ref:`filters<how-to:query:filters:programmatic>`, projections may also be provided programmatically, leveraging the autocompletion feature of modern IDEs.
+
+    .. code-block:: python
+
+        qb = QueryBuilder()
+        qb.append(
+            Int,
+            project=[
+                Int.fields.pk,
+                Int.fields.value,
+            ],
+        )
+
+----
+
 As mentioned in the beginning, this section provides only a brief introduction to the :class:`~aiida.orm.querybuilder.QueryBuilder`'s basic functionality.
 To learn about more advanced queries, please see :ref:`the corresponding topics section<topics:database:advancedquery>`.
-
-
 
 .. _how-to:query:shortcuts:
 

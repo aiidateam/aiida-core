@@ -30,7 +30,7 @@ A *work function* is a process function that calls one or more calculation funct
 Moreover, work functions can also call other work functions, allowing you to write nested workflows.
 Writing a work function, whose provenance is automatically stored, is as simple as writing a Python function and decorating it with the :class:`~aiida.engine.processes.functions.workfunction` decorator:
 
-.. literalinclude:: ../../../aiida/workflows/arithmetic/add_multiply.py
+.. literalinclude:: ../../../src/aiida/workflows/arithmetic/add_multiply.py
     :language: python
     :start-after: start-marker
 
@@ -45,14 +45,14 @@ When the workflow you want to run is more complex and takes longer to finish, it
 Writing a work chain in AiiDA requires creating a class that inherits from the :class:`~aiida.engine.processes.workchains.workchain.WorkChain` class.
 Below is an example of a work chain that takes three integers as inputs, multiplies the first two and then adds the third to obtain the final result:
 
-.. literalinclude:: ../../../aiida/workflows/arithmetic/multiply_add.py
+.. literalinclude:: ../../../src/aiida/workflows/arithmetic/multiply_add.py
     :language: python
     :start-after: start-marker
 
 You can give the work chain any valid Python class name, but the convention is to have it end in :class:`~aiida.engine.processes.workchains.workchain.WorkChain` so that it is always immediately clear what it references.
 Let's go over the methods of the ``MultiplyAddWorkChain`` one by one:
 
-.. literalinclude:: ../../../aiida/workflows/arithmetic/multiply_add.py
+.. literalinclude:: ../../../src/aiida/workflows/arithmetic/multiply_add.py
     :language: python
     :pyobject: MultiplyAddWorkChain.define
     :dedent: 4
@@ -84,7 +84,7 @@ Next, the ``define()`` method should be used to define the specifications of the
 The ``multiply`` method is the first step in the outline of the ``MultiplyAddWorkChain`` work chain.
 
 
-.. literalinclude:: ../../../aiida/workflows/arithmetic/multiply_add.py
+.. literalinclude:: ../../../src/aiida/workflows/arithmetic/multiply_add.py
     :language: python
     :pyobject: MultiplyAddWorkChain.multiply
     :dedent: 4
@@ -93,7 +93,7 @@ This step simply involves running the calculation function ``multiply()``, on th
 To store the result of this function and use it in the next step of the outline, it is added to the *context* of the work chain using ``self.ctx``.
 
 
-.. literalinclude:: ../../../aiida/workflows/arithmetic/multiply_add.py
+.. literalinclude:: ../../../src/aiida/workflows/arithmetic/multiply_add.py
     :language: python
     :pyobject: MultiplyAddWorkChain.add
     :dedent: 4
@@ -115,7 +115,7 @@ To tell the work chain to wait for this process to finish before continuing the 
     More information on the ``ToContext`` class can be found in :ref:`the topics section on submitting sub processes<topics:workflows:usage:workchains:submitting_sub_processes>`.
 
 
-.. literalinclude:: ../../../aiida/workflows/arithmetic/multiply_add.py
+.. literalinclude:: ../../../src/aiida/workflows/arithmetic/multiply_add.py
     :language: python
     :pyobject: MultiplyAddWorkChain.validate_result
     :dedent: 4
@@ -126,7 +126,7 @@ In case the value of this ``Int`` node is negative, the ``ERROR_NEGATIVE_NUMBER`
 Note that once an exit code is returned during any step in the outline, the work chain will be terminated and no further steps will be executed.
 
 
-.. literalinclude:: ../../../aiida/workflows/arithmetic/multiply_add.py
+.. literalinclude:: ../../../src/aiida/workflows/arithmetic/multiply_add.py
     :language: python
     :pyobject: MultiplyAddWorkChain.result
     :dedent: 4

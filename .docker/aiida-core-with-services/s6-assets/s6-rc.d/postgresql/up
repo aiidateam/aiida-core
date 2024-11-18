@@ -1,0 +1,5 @@
+#!/command/execlineb -P
+
+with-contenv
+
+pg_ctl -D /home/aiida/.postgresql -l /home/${SYSTEM_USER}/.postgresql/logfile start

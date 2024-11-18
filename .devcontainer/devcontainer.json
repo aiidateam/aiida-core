@@ -1,9 +1,16 @@
 {
     "dockerComposeFile": "docker-compose.yml",
-    "service": "aiida",
-    "workspaceFolder": "/home/aiida/aiida-core",
-    "postCreateCommand": "bash ./.devcontainer/post_create.sh",
-    "waitFor": "postCreateCommand",
+    "service": "daemon",
+    "workspaceFolder": "/workspaces/aiida-core",
+    "postCreateCommand": "/etc/init/aiida-prepare.sh",
+    "postStartCommand": "pip install -e /workspaces/aiida-core[tests,docs,rest,atomic_tools,pre-commit]",
+    "postAttachCommand": "verdi daemon start",
+    "waitFor": "postStartCommand",
+    "containerUser": "aiida",
+    "remoteUser": "aiida",
+    "remoteEnv": {
+        "HOME": "/home/aiida"
+    },
 	"customizations": {
         "vscode": {
             "extensions": ["ms-python.python", "eamodio.gitlens"]

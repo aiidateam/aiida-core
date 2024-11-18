@@ -166,8 +166,6 @@ For all of the base data types, their value is stored in the database in the att
 EnumData
 --------
 
-.. versionadded:: 2.0
-
 An `Enum` member is represented by three attributes in the :py:class:`~aiida.orm.EnumData` class:
 
 - ``name``: the member's name
@@ -197,8 +195,6 @@ An `Enum` member is represented by three attributes in the :py:class:`~aiida.orm
 
 JsonableData
 ------------
-
-.. versionadded:: 2.0
 
 :py:class:`~aiida.orm.JsonableData` is a data plugin that allows one to easily wrap existing objects that are JSON-able.
 
@@ -305,6 +301,7 @@ This class can be initialized via the **absolute** path to the file you want to 
 
   In [2]: single_file = SinglefileData('/absolute/path/to/file')
 
+When storing the node, the filename is stored in the database and the file itself is copied to the repository.
 The contents of the file in string format can be obtained using the :py:meth:`~aiida.orm.nodes.data.singlefile.SinglefileData.get_content()` method:
 
 .. code-block:: ipython
@@ -312,7 +309,43 @@ The contents of the file in string format can be obtained using the :py:meth:`~a
   In [3]: single_file.get_content()
   Out[3]: 'The file content'
 
-When storing the node, the filename is stored in the database and the file itself is copied to the repository.
+For large files, reading the entire content into memory using :py:meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content()` may not be desirable.
+Instead, a file-like handle can be opened to a file in the repository which can be used to read the content as a stream.
+This can be useful, for example, to copy a large file from the repository to a file on disk, without loading it entirely into memory:
+
+.. code-block:: ipython
+
+    In [4]: import shutil
+            with single_file.open(mode='rb') as source:
+                with open('copy.txt', mode='wb') as target:
+                    shutil.copyfileobj(source, target)
+
+.. note:: To guarantee the file is copied over identically (and there are no encoding issues), the files are opened in "binary" mode by including the ``b`` character in the ``mode`` argument.
+
+For efficiency reasons, the repository interface only provides access to object content through file-like objects or strings.
+However, for certain use-cases, the object content _needs_ to be made available as a file on the local file system.
+For example, the ``numpy.loadtxt`` method only accepts a filepath, and no file-like objects.
+In this case, the content of the file can be made available on the local file system using the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.as_path()` context manager:
+
+.. code-block:: ipython
+
+    In [5]: with single_file.as_path() as filepath:
+                numpy.loadtxt(filepath)
+
+The yielded value ``filepath`` is an instance of ``pathlib.Path`` that points to a location on the local file system containing the content of the file.
+The temporary copy on the local file system is automatically cleaned up once the context manager is exited.
+
+.. note::
+
+    The temporary directory to which the content is copied is created using the :meth:`tempfile.TemporaryDirectory` function of the standard library.
+    Its location is chosen from a platform-dependent list or can be controlled through the ``TMPDIR`` environment variable (see `the official documentation <https://docs.python.org/3/library/tempfile.html#tempfile.mkstemp>`_ for details).
+
+.. warning::
+
+    The :py:meth:`~aiida.orm.nodes.repository.NodeRepository.as_path()` context manager will copy the file content to a temporary folder on the local file system.
+    For large files this can be an expensive operation and it is inefficient since it requires an additional read and write operation.
+    Therefore, if it is possible to use file-like objects or read the content into memory, the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content()` and :py:meth:`~aiida.orm.nodes.repository.NodeRepository.open()` methods should be preferred.
+
 
 .. _topics:data_types:core:folder:
 
@@ -324,56 +357,105 @@ To store a complete directory, simply use the ``tree`` keyword:
 
 .. code-block:: ipython
 
-  In [1]: FolderData = DataFactory('core.folder')
+    In [1]: FolderData = DataFactory('core.folder')
 
-  In [2]: folder = FolderData(tree='/absolute/path/to/directory')
+    In [2]: folder = FolderData(tree='/absolute/path/to/directory')
 
 Alternatively, you can construct the node first and then use the various repository methods to add objects from directory and file paths:
 
 .. code-block:: ipython
 
-  In [1]: folder = FolderData()
+    In [1]: folder = FolderData()
 
-  In [2]: folder.put_object_from_tree('/absolute/path/to/directory')
+    In [2]: folder.put_object_from_tree('/absolute/path/to/directory')
 
-  In [3]: folder.put_object_from_file('/absolute/path/to/file1.txt', path='file1.txt')
+    In [3]: folder.put_object_from_file('/absolute/path/to/file1.txt', path='file1.txt')
 
 or from `file-like objects <https://docs.python.org/3/glossary.html#term-file-like-object>`_:
 
 .. code-block:: ipython
 
-  In [4]: folder.put_object_from_filelike(filelike_object, path='file2.txt')
+    In [4]: folder.put_object_from_filelike(filelike_object, path='file2.txt')
 
 Inversely, the content of the files stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node can be accessed using the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content()` method:
 
 .. code-block:: ipython
 
-  In [5]: folder.get_object_content('file1.txt')
-  Out[5]: 'File 1 content\n'
+    In [5]: folder.get_object_content('file1.txt')
+    Out[5]: 'File 1 content\n'
 
 To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData`, you can use the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.list_object_names()` method:
 
 .. code-block:: ipython
 
-  In [6]: folder.list_object_names()
-  Out[6]: ['subdir', 'file1.txt', 'file2.txt']
+    In [6]: folder.list_object_names()
+    Out[6]: ['subdir', 'file1.txt', 'file2.txt']
 
 In this example, ``subdir`` was a sub directory of ``/absolute/path/to/directory``, whose contents where added above.
 to list the contents of the ``subdir`` directory, you can pass its path to the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.list_object_names()` method:
 
 .. code-block:: ipython
 
-  In [7]: folder.list_object_names('subdir')
-  Out[7]: ['file3.txt', 'module.py']
+    In [7]: folder.list_object_names('subdir')
+    Out[7]: ['file3.txt', 'module.py']
 
 The content can once again be shown using the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content()` method by passing the correct path:
 
 .. code-block:: ipython
 
- In [8]: folder.get_object_content('subdir/file3.txt')
- Out[8]: 'File 3 content\n'
+    In [8]: folder.get_object_content('subdir/file3.txt')
+    Out[8]: 'File 3 content\n'
 
 Since the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node is simply a collection of files, it simply stores these files in the repository.
+
+For large files, reading the entire content into memory using :py:meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content()` may not be desirable.
+Instead, a file-like handle can be opened to a file in the repository which can be used to read the content as a stream.
+This can be useful, for example, to copy a large file from the repository to a file on disk, without loading it entirely into memory:
+
+.. code-block:: ipython
+
+    In [9]: import shutil
+            with folder.open('subdir/file3.txt', mode='rb') as source:
+                with open('copy.txt', mode='wb') as target:
+                    shutil.copyfileobj(source, target)
+
+.. note:: To guarantee the file is copied over identically (and there are no encoding issues), the files are opened in "binary" mode by including the ``b`` character in the ``mode`` argument.
+
+For efficiency reasons, the repository interface only provides access to object content through file-like objects or strings.
+However, for certain use-cases, the object content _needs_ to be made available as a file on the local file system.
+For example, the ``numpy.loadtxt`` method only accepts a filepath, and no file-like objects.
+In this case, the content of the node's repository can be made available on the local file system using the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.as_path()` context manager:
+
+.. code-block:: ipython
+
+    In [10]: with folder.as_path() as filepath:
+                 print(list(filepath.iterdir()))
+    Out[10]: ['subdir', 'file1.txt', 'file2.txt']
+
+The yielded value ``dirpath`` is an instance of ``pathlib.Path`` that points to a location on the local file system containing the complete content of the repository.
+The temporary copy on the local file system is automatically cleaned up once the context manager is exited.
+
+.. note::
+
+    The temporary directory to which the content is copied is created using the :meth:`tempfile.TemporaryDirectory` function of the standard library.
+    Its location is chosen from a platform-dependent list or can be controlled through the ``TMPDIR`` environment variable (see `the official documentation <https://docs.python.org/3/library/tempfile.html#tempfile.mkstemp>`_ for details).
+
+Optionally, an explicit object can be specified:
+
+.. code-block:: ipython
+
+    In [11]: with folder.as_path('some_data_file.dat') as filepath:
+                 numpy.loadtxt(filepath)
+
+If the object at ``path`` is a directory, the returned value points to a directory that contains its contents.
+If it is a file, the returned value points to a file with the content of the object.
+
+.. warning::
+
+    The :py:meth:`~aiida.orm.nodes.repository.NodeRepository.as_path()` context manager will copy the content to a temporary folder on the local file system.
+    For large repositories this can be an expensive operation and it is inefficient since it requires an additional read and write operation.
+    Therefore, if it is possible to use file-like objects or read the content into memory, the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content()` and :py:meth:`~aiida.orm.nodes.repository.NodeRepository.open()` methods should be preferred.
+
 
 .. _topics:data_types:core:remote:
 
@@ -786,7 +868,7 @@ Note that contrary with the :py:class:`~aiida.orm.nodes.data.structure.Structure
 Exporting
 ^^^^^^^^^
 
-You can export the py:class:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData` node with ``verdi data core.trajectory export``, which accepts a number of formats including ``xsf`` and  ``cif``, and additional parameters like ``--step NUM`` (to choose to export only a given trajectory step).
+You can export the :py:class:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData` node with ``verdi data core.trajectory export``, which accepts a number of formats including ``xsf`` and  ``cif``, and additional parameters like ``--step NUM`` (to choose to export only a given trajectory step).
 
 The following export formats are available:
 
@@ -1293,3 +1375,34 @@ Therefore, big data (think large files), whose content does not necessarily need
 A data type may safely use both the database and file repository in parallel for individual properties.
 Properties stored in the database are stored as *attributes* of the node.
 The node class has various methods to set these attributes, such as :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.set` and :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.set_many`.
+
+Fields
+------
+
+.. versionadded:: 2.6
+
+The attributes of new data types may be exposed to end users by explicitly defining each attribute field under the ``__qb_fields__`` class attribute of the new data class.
+
+.. code-block:: python
+
+    from aiida.orm.fields import add_field
+
+    class NewData(Data):
+        """A new data type."""
+
+        __qb_fields__ = [
+            add_field(
+              key='frontend_key',
+              alias='backend_key',  # optional mapping to a backend key, if different (only allowed for attribute fields)
+              dtype=str,
+              is_attribute=True,  # signalling if field is an attribute field (default is `True`)
+              is_subscriptable=False,  # signalling subscriptability for dictionary fields
+              doc='An example field',
+            )
+        ]
+
+The internal mechanics of ``aiida.orm.fields`` will dynamically add ``frontend_key`` to the ``fields`` attribute of the new data type. The construction of ``fields`` follows the rules of inheritance, such that other than its own fields, ``NewData.fields`` will also inherit the fields of its parents, following the inheritance tree up to the root ``Entity`` ancestor. This enhances the usability of the new data type, for example, allowing the end user to programmatically define  :ref:`filters<how-to:query:filters:programmatic>` and :ref:`projections<how-to:query:projections:programmatic>` when using AiiDA's :py:class:`~aiida.orm.querybuilder.QueryBuilder`.
+
+.. note::
+
+  :py:meth:`~aiida.orm.fields.add_field` will return the flavor of :py:class:`~aiida.orm.fields.QbField` associated with the type of the field defined by the ``dtype`` argument, which can be given as a primitive type or a ``typing``-module type hint, e.g. ``Dict[str, Any]``. When using the data class in queries, the logical operators available to the user will depend on the flavor of :py:class:`~aiida.orm.fields.QbField` assigned to the field.

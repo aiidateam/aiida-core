@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from aiida.engine import calcfunction
 from aiida.orm import Int
 
@@ -6,6 +5,7 @@ from aiida.orm import Int
 @calcfunction
 def add(x, y):
     return x + y
+
 
 x = Int(1)
 y = Int(2)

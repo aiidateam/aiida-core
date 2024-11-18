@@ -100,7 +100,7 @@ In a clear separation of responsibilities, the backend is solely tasked with sto
 For simplicity, the repository backend only deals with raw byte streams and does not maintain any sort of file hierarchy.
 The interface that any backend file repository should implement is defined by the :class:`~aiida.repository.backend.abstract.AbstractRepositoryBackend` abstract class.
 
-.. literalinclude:: ../../../../aiida/repository/backend/abstract.py
+.. literalinclude:: ../../../../src/aiida/repository/backend/abstract.py
     :language: python
     :pyobject: AbstractRepositoryBackend
 

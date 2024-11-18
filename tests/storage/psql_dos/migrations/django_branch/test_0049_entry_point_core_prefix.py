@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test migration that updates node types after `core.` prefix was added to entry point names."""
+
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
@@ -82,7 +82,6 @@ def test_entry_point_core_prefix(perform_migrations: PsqlDosMigrator):
     comp_model = perform_migrations.get_current_table('db_dbcomputer')
     node_model = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
-
         computer = session.query(comp_model).filter(comp_model.id == computer_id).one()
         assert computer.scheduler_type == 'core.direct'
         assert computer.transport_type == 'core.local'

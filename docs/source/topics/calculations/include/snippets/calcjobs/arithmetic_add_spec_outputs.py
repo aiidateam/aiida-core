@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-from aiida.engine import CalcJob
+from aiida import engine, orm
 
 
-class ArithmeticAddCalculation(CalcJob):
+class ArithmeticAddCalculation(engine.CalcJob):
     """Implementation of CalcJob to add two numbers for testing and demonstration purposes."""
 
     @classmethod

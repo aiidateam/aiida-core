@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -13,7 +12,7 @@ from aiida.orm import Node, QueryBuilder
 
 
 def get_all_node_links():
-    """ Get all Node links currently in the DB """
+    """Get all Node links currently in the DB"""
     builder = QueryBuilder()
     builder.append(Node, project='uuid', tag='input')
     builder.append(Node, project='uuid', tag='output', edge_project=['label', 'type'], with_incoming='input')

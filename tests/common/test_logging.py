@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,7 +7,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.common.log` module."""
+
 import logging
+
+from aiida.common.log import capture_logging
 
 
 def test_logging_before_dbhandler_loaded(caplog):
@@ -32,7 +34,16 @@ def test_log_report(caplog):
     msg = 'Testing a report message'
     logger = logging.getLogger()
 
-    with caplog.at_level(logging.REPORT):  # pylint: disable=no-member
+    with caplog.at_level(logging.REPORT):
         logger.report(msg)
 
-    assert caplog.record_tuples == [(logger.name, logging.REPORT, msg)]  # pylint: disable=no-member
+    assert caplog.record_tuples == [(logger.name, logging.REPORT, msg)]
+
+
+def test_capture_logging():
+    """Test the :func:`aiida.common.log.capture_logging` function."""
+    logger = logging.getLogger()
+    message = 'Some message'
+    with capture_logging(logger) as stream:
+        logging.getLogger().error(message)
+        assert stream.getvalue().strip() == message

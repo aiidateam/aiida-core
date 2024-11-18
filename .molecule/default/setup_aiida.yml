@@ -4,17 +4,17 @@
 
   # run as aiida user
   become: true
-  become_method: "{{ become_method }}"
+  become_method: '{{ become_method }}'
   become_user: "{{ aiida_user | default('aiida') }}"
 
   environment:
-    AIIDA_PATH: "{{ aiida_path }}"
+    AIIDA_PATH: '{{ aiida_path }}'
 
   tasks:
 
   - name: Create a new database with name "{{ aiida_backend }}"
     postgresql_db:
-      name: "{{ aiida_backend }}"
+      name: '{{ aiida_backend }}'
       login_host: localhost
       login_user: aiida
       login_password: ''
@@ -30,7 +30,7 @@
       login_host: localhost
       login_user: aiida
       login_password: ''
-      db: "{{ aiida_backend }}"
+      db: '{{ aiida_backend }}'
 
   - name: verdi setup for "{{ aiida_backend }}"
     command: >
@@ -47,10 +47,10 @@
       --db-username=aiida
       --db-password=''
     args:
-      creates: "{{ aiida_path }}/.aiida/config.json"
+      creates: '{{ aiida_path }}/.aiida/config.json'
 
-  - name: "Check if computer is already present"
-    command: "{{ venv_bin }}/verdi -p {{ aiida_backend }} computer show localhost"
+  - name: Check if computer is already present
+    command: '{{ venv_bin }}/verdi -p {{ aiida_backend }} computer show localhost'
     ignore_errors: true
     changed_when: false
     no_log: true
@@ -82,7 +82,7 @@
   #   command: "{{ venv_bin }}/verdi -p {{ aiida_backend }} daemon start {{ aiida_workers }}"
 
   - name: get verdi status
-    command: "{{ venv_bin }}/verdi -p {{ aiida_backend }} status"
+    command: '{{ venv_bin }}/verdi -p {{ aiida_backend }} status'
     register: verdi_status
     changed_when: false
 

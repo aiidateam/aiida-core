@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,15 +7,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Simple tests for the export and import routines"""
+
+import functools
 import json
 
-from archive_path import ZipPath
 import pytest
-
 from aiida import orm
 from aiida.common.exceptions import IncompatibleStorageSchema, LicensingException
 from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
+from archive_path import ZipPath
 
 
 @pytest.mark.parametrize('entities', ['all', 'specific'])
@@ -26,17 +26,26 @@ def test_base_data_nodes(aiida_profile, tmp_path, entities):
     values = ('Hello', 6, -1.2399834e12, False)
     filename = str(tmp_path / 'export.aiida')
 
+    # Regression test for https://github.com/aiidateam/aiida-core/issues/6325
+    # Test run should not fail for empty DB
+    create_archive(None, filename=filename, test_run=True)
+
     # producing nodes:
     nodes = [cls(val).store() for val, cls in zip(values, (orm.Str, orm.Int, orm.Float, orm.Bool))]
     # my uuid - list to reload the node:
     uuids = [n.uuid for n in nodes]
-    # exporting the nodes:
+
     if entities == 'all':
-        create_archive(None, filename=filename)
+        create = functools.partial(create_archive, None)
     else:
-        create_archive(nodes, filename=filename)
+        create = functools.partial(create_archive, nodes)
+
+    # check that test run succeeds
+    create(filename=filename, test_run=True)
+    # actually export now
+    create(filename=filename)
     # cleaning:
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     # Importing back the data:
     import_archive(filename)
     # Checking whether values are preserved:
@@ -70,7 +79,7 @@ def test_calc_of_structuredata(aiida_profile, tmp_path, aiida_localhost):
 
     create_archive([calc], filename=filename)
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     import_archive(filename)
     for uuid, value in attrs.items():
@@ -102,7 +111,7 @@ def test_check_for_export_format_version(aiida_profile, tmp_path):
                     (outpath / subpath.at).write_bytes(subpath.read_bytes())
 
     # then try to import it
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     with pytest.raises(IncompatibleStorageSchema):
         import_archive(filename2)
 

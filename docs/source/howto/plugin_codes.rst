@@ -85,7 +85,7 @@ The |define| method tells AiiDA which inputs the |CalcJob| expects and which out
 This is done through an instance of the :py:class:`~aiida.engine.processes.process_spec.CalcJobProcessSpec` class, which is passed as the |spec| argument to the |define| method.
 For example:
 
-.. literalinclude:: ../../../aiida/calculations/diff_tutorial/calculations.py
+.. literalinclude:: ../../../src/aiida/calculations/diff_tutorial/calculations.py
     :language: python
     :pyobject: DiffCalculation.define
 
@@ -139,7 +139,7 @@ The :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submi
 Creating the input files in the format the external code expects and returning a :py:class:`~aiida.common.datastructures.CalcInfo` object that contains instructions for the AiiDA engine on how the code should be run.
 For example:
 
-.. literalinclude:: ../../../aiida/calculations/diff_tutorial/calculations.py
+.. literalinclude:: ../../../src/aiida/calculations/diff_tutorial/calculations.py
     :language: python
     :pyobject: DiffCalculation.prepare_for_submission
 
@@ -203,7 +203,7 @@ Parsing the output files produced by a code into AiiDA nodes is optional, but it
 
 To create a parser plugin, subclass the |Parser| class in a file called ``parsers.py``.
 
-.. literalinclude::  ../../../aiida/parsers/plugins/diff_tutorial/parsers.py
+.. literalinclude::  ../../../src/aiida/parsers/plugins/diff_tutorial/parsers.py
     :language: python
     :start-after: # START PARSER HEAD
     :end-before: # END PARSER HEAD
@@ -216,7 +216,7 @@ Before the ``parse()`` method is called, two important attributes are set on the
 
 Now implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method as
 
-.. literalinclude:: ../../../aiida/parsers/plugins/diff_tutorial/parsers.py
+.. literalinclude:: ../../../src/aiida/parsers/plugins/diff_tutorial/parsers.py
     :language: python
     :pyobject: DiffParserSimple.parse
 
@@ -283,7 +283,7 @@ An ``exit_code`` defines:
 In order to inform AiiDA about a failed calculation, simply return from the ``parse`` method the exit code that corresponds to the detected issue.
 Here is a more complete version of the example |Parser| presented in the previous section:
 
-.. literalinclude:: ../../../aiida/parsers/plugins/diff_tutorial/parsers.py
+.. literalinclude:: ../../../src/aiida/parsers/plugins/diff_tutorial/parsers.py
     :language: python
     :pyobject: DiffParser.parse
 
@@ -453,7 +453,7 @@ Finally instead of running your calculation in the current shell, you can submit
 
 .. code-block:: console
 
-    $ verdi daemon restart --reset
+    $ verdi daemon restart
 
 * Update your launch script to use:
 
@@ -494,8 +494,6 @@ If you still have time left, consider going through the optional exercise below.
 
 Writing importers for existing computations
 ===========================================
-
-.. versionadded:: 2.0
 
 New users to your plugin may often have completed many previous computations without the use of AiiDA, which they wish to import into AiiDA.
 In these cases, it is possible to write an importer for their inputs/outputs, which generates the provenance nodes for the corresponding |CalcJob|.

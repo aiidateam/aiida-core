@@ -6,6 +6,7 @@ How-To Guides
    :maxdepth: 1
 
    interact
+   daemon
    plugins_install
    run_codes
    run_workflows

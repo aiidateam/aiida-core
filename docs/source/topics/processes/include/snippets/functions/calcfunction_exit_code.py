@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from aiida.engine import ExitCode, calcfunction
 from aiida.orm import Int
 
@@ -9,5 +8,6 @@ def divide(x, y):
         return ExitCode(300, 'cannot divide by 0')
 
     return x / y
+
 
 result = divide(Int(1), Int(0))

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,13 +7,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm.User tests for the export and import routines"""
+
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 
 
 def test_nodes_belonging_to_different_users(aiida_profile, tmp_path, aiida_localhost):
-    """
-    This test checks that nodes belonging to different users are correctly
+    """This test checks that nodes belonging to different users are correctly
     exported & imported.
     """
     from aiida.common.links import LinkType
@@ -67,7 +66,7 @@ def test_nodes_belonging_to_different_users(aiida_profile, tmp_path, aiida_local
     filename = tmp_path.joinpath('export.aiida')
 
     create_archive([sd3], filename=filename)
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(filename)
 
     # Check that the imported nodes are correctly imported and that
@@ -79,9 +78,8 @@ def test_nodes_belonging_to_different_users(aiida_profile, tmp_path, aiida_local
         assert orm.load_node(uuid).user.email == manager.get_profile().default_user_email
 
 
-def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_factory):  # pylint: disable=too-many-statements
-    """
-    This test checks that nodes belonging to user A (which is not the
+def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_factory):
+    """This test checks that nodes belonging to user A (which is not the
     default user) can be correctly exported, imported, enriched with nodes
     from the default user, re-exported & re-imported and that in the end
     all the nodes that have been finally imported belonging to the right
@@ -123,7 +121,7 @@ def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_f
     filename1 = tmp_path.joinpath('export1.aiidaz')
     create_archive([sd2], filename=filename1)
     uuids1 = [sd1.uuid, jc1.uuid, sd2.uuid]
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(filename1)
 
     # Check that the imported nodes are correctly imported and that
@@ -154,7 +152,7 @@ def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_f
 
     filename2 = tmp_path.joinpath('export2.aiida')
     create_archive([sd3], filename=filename2)
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(filename2)
 
     # Check that the imported nodes are correctly imported and that

@@ -72,41 +72,51 @@ def test_hierarchy_utility(file_hierarchy, tmp_path, create_file_hierarchy, seri
     assert serialize_file_hierarchy(tmp_path, read_bytes=False) == file_hierarchy
 
 
-@pytest.mark.parametrize('retrieve_list, expected_hierarchy', (
-    # Single file or folder, either toplevel or nested
-    (['file_a.txt'], {'file_a.txt': 'file_a'}),
-    (['path/sub/file_c.txt'], {'file_c.txt': 'file_c'}),
-    (['path'], {'path': {'file_b.txt': 'file_b', 'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
-    (['path/sub'], {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}),
-    (['*.txt'], {'file_a.txt': 'file_a'}),
-    (['*/*.txt'], {'file_b.txt': 'file_b'}),
-    # Single nested file that is retrieved keeping a varying level of depth of original hierarchy
-    ([('path/sub/file_c.txt', '.', 3)], {'path': {'sub': {'file_c.txt': 'file_c'}}}),
-    ([('path/sub/file_c.txt', '.', 2)], {'sub': {'file_c.txt': 'file_c'}}),
-    ([('path/sub/file_c.txt', '.', 1)], {'file_c.txt': 'file_c'}),
-    ([('path/sub/file_c.txt', '.', 0)], {'file_c.txt': 'file_c'}),
-    # Single nested folder that is retrieved keeping a varying level of depth of original hierarchy
-    ([('path/sub', '.', 2)], {'path': {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
-    ([('path/sub', '.', 1)], {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}),
-    # Using globbing patterns
-    ([('path/*', '.', 0)], {'file_b.txt': 'file_b', 'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}),
-    ([('path/sub/*', '.', 0)], {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}),  # This is identical to ['path/sub']
-    ([('path/sub/*c.txt', '.', 2)], {'sub': {'file_c.txt': 'file_c'}}),
-    ([('path/sub/*c.txt', '.', 0)], {'file_c.txt': 'file_c'}),
-    # Using globbing with depth `None` should maintain exact folder hierarchy
-    ([('path/*.txt', '.', None)], {'path': {'file_b.txt': 'file_b'}}),
-    ([('path/sub/*.txt', '.', None)], {'path': {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
-    # Different target directory
-    ([('path/sub/file_c.txt', 'target', 3)], {'target': {'path': {'sub': {'file_c.txt': 'file_c'}}}}),
-    ([('path/sub', 'target', 1)], {'target': {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
-    ([('path/sub/*c.txt', 'target', 2)], {'target': {'sub': {'file_c.txt': 'file_c'}}}),
-    # Missing files should be ignored and not cause the retrieval to except
-    (['file_a.txt', 'file_u.txt', 'path/file_u.txt', ('path/sub/file_u.txt', '.', 3)], {'file_a.txt': 'file_a'}),
-))
-# yapf: enable
-@pytest.mark.asyncio
-async def test_retrieve_files_from_list(
-    tmp_path_factory, generate_calculation_node, file_hierarchy, retrieve_list, expected_hierarchy
+@pytest.mark.parametrize(
+    'retrieve_list, expected_hierarchy',
+    (
+        # Single file or folder, either toplevel or nested
+        (['file_a.txt'], {'file_a.txt': 'file_a'}),
+        (['path/sub/file_c.txt'], {'file_c.txt': 'file_c'}),
+        (['path'], {'path': {'file_b.txt': 'file_b', 'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
+        (['path/sub'], {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}),
+        (['*.txt'], {'file_a.txt': 'file_a'}),
+        (['*/*.txt'], {'file_b.txt': 'file_b'}),
+        # Single nested file that is retrieved keeping a varying level of depth of original hierarchy
+        ([('path/sub/file_c.txt', '.', 3)], {'path': {'sub': {'file_c.txt': 'file_c'}}}),
+        ([('path/sub/file_c.txt', '.', 2)], {'sub': {'file_c.txt': 'file_c'}}),
+        ([('path/sub/file_c.txt', '.', 1)], {'file_c.txt': 'file_c'}),
+        ([('path/sub/file_c.txt', '.', 0)], {'file_c.txt': 'file_c'}),
+        # Single nested folder that is retrieved keeping a varying level of depth of original hierarchy
+        ([('path/sub', '.', 2)], {'path': {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
+        ([('path/sub', '.', 1)], {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}),
+        # Using globbing patterns
+        ([('path/*', '.', 0)], {'file_b.txt': 'file_b', 'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}),
+        (
+            [('path/sub/*', '.', 0)],
+            {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'},
+        ),  # This is identical to ['path/sub']
+        ([('path/sub/*c.txt', '.', 2)], {'sub': {'file_c.txt': 'file_c'}}),
+        ([('path/sub/*c.txt', '.', 0)], {'file_c.txt': 'file_c'}),
+        # Using globbing with depth `None` should maintain exact folder hierarchy
+        ([('path/*.txt', '.', None)], {'path': {'file_b.txt': 'file_b'}}),
+        ([('path/sub/*.txt', '.', None)], {'path': {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
+        # Different target directory
+        ([('path/sub/file_c.txt', 'target', 3)], {'target': {'path': {'sub': {'file_c.txt': 'file_c'}}}}),
+        ([('path/sub', 'target', 1)], {'target': {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
+        ([('path/sub/*c.txt', 'target', 2)], {'target': {'sub': {'file_c.txt': 'file_c'}}}),
+        # Missing files should be ignored and not cause the retrieval to except
+        (['file_a.txt', 'file_u.txt', 'path/file_u.txt', ('path/sub/file_u.txt', '.', 3)], {'file_a.txt': 'file_a'}),
+    ),
+)
+def test_retrieve_files_from_list(
+    tmp_path_factory,
+    generate_calcjob_node,
+    file_hierarchy,
+    retrieve_list,
+    expected_hierarchy,
+    create_file_hierarchy,
+    serialize_file_hierarchy,
 ):
     """Test the `retrieve_files_from_list` function."""
     source = tmp_path_factory.mktemp('source')
@@ -115,27 +125,34 @@ async def test_retrieve_files_from_list(
     create_file_hierarchy(file_hierarchy, source)
 
     with LocalTransport() as transport:
-        node = generate_calculation_node()
-        transport.chdir(source)
-        await execmanager.retrieve_files_from_list(node, transport, target, retrieve_list)
+        node = generate_calcjob_node(workdir=source)
+        execmanager.retrieve_files_from_list(node, transport, target, retrieve_list)
 
     assert serialize_file_hierarchy(target, read_bytes=False) == expected_hierarchy
 
 
-@pytest.mark.parametrize(('local_copy_list', 'expected_hierarchy'), (
-    ([None, None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
-    (['.', None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
-    ([None, '.'], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
-    (['.', '.'], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
-    ([None, ''], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
-    (['sub', None], {'b': 'file_b'}),
-    ([None, 'target'], {'target': {'sub': {'b': 'file_b'}, 'a': 'file_a'}}),
-    (['sub', 'target'], {'target': {'b': 'file_b'}}),
-))
-# yapf: enable
-@pytest.mark.asyncio
-async def test_upload_local_copy_list(
-    fixture_sandbox, node_and_calc_info, file_hierarchy_simple, tmp_path, local_copy_list, expected_hierarchy
+@pytest.mark.parametrize(
+    ('local_copy_list', 'expected_hierarchy'),
+    (
+        ([None, None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
+        (['.', None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
+        ([None, '.'], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
+        (['.', '.'], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
+        ([None, ''], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
+        (['sub', None], {'b': 'file_b'}),
+        ([None, 'target'], {'target': {'sub': {'b': 'file_b'}, 'a': 'file_a'}}),
+        (['sub', 'target'], {'target': {'b': 'file_b'}}),
+    ),
+)
+def test_upload_local_copy_list(
+    fixture_sandbox,
+    node_and_calc_info,
+    file_hierarchy_simple,
+    tmp_path,
+    local_copy_list,
+    expected_hierarchy,
+    create_file_hierarchy,
+    serialize_file_hierarchy,
 ):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``."""
     create_file_hierarchy(file_hierarchy_simple, tmp_path)
@@ -146,8 +163,8 @@ async def test_upload_local_copy_list(
     node, calc_info = node_and_calc_info
     calc_info.local_copy_list = [[folder.uuid] + local_copy_list]
 
-    with LocalTransport() as transport:
-        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+    with node.computer.get_transport() as transport:
+        execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
     # through the ``local_copy_list``.
@@ -158,8 +175,9 @@ async def test_upload_local_copy_list(
     assert written_hierarchy == expected_hierarchy
 
 
-@pytest.mark.asyncio
-async def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path):
+def test_upload_local_copy_list_files_folders(
+    fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path, create_file_hierarchy, serialize_file_hierarchy
+):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``.
 
     Specifically, verify that files in the ``local_copy_list`` do not end up in the repository of the node.
@@ -182,8 +200,8 @@ async def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_ca
         (inputs['folder'].uuid, None, '.'),
     ]
 
-    with LocalTransport() as transport:
-        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+    with node.computer.get_transport() as transport:
+        execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
     # through the ``local_copy_list``.

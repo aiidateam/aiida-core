@@ -37,7 +37,7 @@ class Proc(Process):
         super().define(spec)
         spec.input('a')
 
-    async def run(self):
+    def run(self):
         pass
 
 

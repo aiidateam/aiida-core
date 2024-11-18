@@ -1658,5 +1658,5 @@ def test_illegal_override_run():
                 super().define(spec)
                 spec.outline(cls.run)
 
-            async def run(self):
+            def run(self):
                 pass

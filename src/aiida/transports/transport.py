@@ -15,12 +15,15 @@ import re
 import sys
 from collections import OrderedDict
 from pathlib import Path
+from typing import Union
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
 
 __all__ = ('Transport',)
+
+_TransportPath = Union[str, Path]
 
 
 def validate_positive_number(ctx, param, value):
@@ -39,6 +42,11 @@ def validate_positive_number(ctx, param, value):
     return value
 
 
+def fix_path(path: _TransportPath) -> str:
+    """Convert a Path object to a string."""
+    return str(path)
+
+
 class Transport(abc.ABC):
     """Abstract class for a generic transport (ssh, local, ...) contains the set of minimal methods."""
 
@@ -47,7 +55,7 @@ class Transport(abc.ABC):
 
     # This is used as a global default in case subclasses don't redefine this,
     # but this should  be redefined in plugins where appropriate
-    _DEFAULT_SAFE_OPEN_INTERVAL = 30.0
+    _DEFAULT_SAFE_OPEN_INTERVAL = 3.0
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
@@ -372,6 +380,57 @@ class Transport(abc.ABC):
             for filename in sandbox.get_content_list():
                 transportdestination.put(os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put)
 
+    async def copy_from_remote_to_remote_async(self, transportdestination, remotesource, remotedestination, **kwargs):
+        """Copy files or folders from a remote computer to another remote computer, asynchronously.
+
+        :param transportdestination: transport to be used for the destination computer
+        :param str remotesource: path to the remote source directory / file
+        :param str remotedestination: path to the remote destination directory / file
+        :param kwargs: keyword parameters passed to the call to transportdestination.put,
+            except for 'dereference' that is passed to self.get
+
+        .. note:: the keyword 'dereference' SHOULD be set to False for the
+         final put (onto the destination), while it can be set to the
+         value given in kwargs for the get from the source. In that
+         way, a symbolic link would never be followed in the final
+         copy to the remote destination. That way we could avoid getting
+         unknown (potentially malicious) files into the destination computer.
+         HOWEVER, since dereference=False is currently NOT
+         supported by all plugins, we still force it to True for the final put.
+
+        .. note:: the supported keys in kwargs are callback, dereference,
+           overwrite and ignore_nonexisting.
+        """
+        from aiida.common.folders import SandboxFolder
+
+        kwargs_get = {
+            'callback': None,
+            'dereference': kwargs.pop('dereference', True),
+            'overwrite': True,
+            'ignore_nonexisting': False,
+        }
+        kwargs_put = {
+            'callback': kwargs.pop('callback', None),
+            'dereference': True,
+            'overwrite': kwargs.pop('overwrite', True),
+            'ignore_nonexisting': kwargs.pop('ignore_nonexisting', False),
+        }
+
+        if kwargs:
+            self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
+
+        with SandboxFolder() as sandbox:
+            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)
+            # Then we scan the full sandbox directory with get_content_list,
+            # because copying directly from sandbox.abspath would not work
+            # to copy a single file into another single file, and copying
+            # from sandbox.get_abs_path('*') would not work for files
+            # beginning with a dot ('.').
+            for filename in sandbox.get_content_list():
+                await transportdestination.put_async(
+                    os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put
+                )
+
     @abc.abstractmethod
     def _exec_command_internal(self, command, workdir=None, **kwargs):
         """Execute the command on the shell, similarly to os.system.
@@ -398,7 +457,7 @@ class Transport(abc.ABC):
         The command implementation can have some additional plugin-specific kwargs.
 
         :param str command: execute the command given as a string
-        :param stdin: (optional,default=None) can be a string or a file-like object.
+        :param stdin: (optional,default=None) can be bytes or a file-like object.
         :param workdir: (optional, default=None) if set, the command will be executed
                 in the specified working directory.
         :return: a tuple: the retcode (int), stdout (bytes) and stderr (bytes).
@@ -436,6 +495,9 @@ class Transport(abc.ABC):
         """Retrieve a file or folder from remote source to local destination
         dst must be an absolute path (src not necessarily)
 
+        This method should be able to handle remothpath containing glob patterns,
+            in that case should only downloading matching patterns.
+
         :param remotepath: (str) remote_folder_path
         :param localpath: (str) local_folder_path
         """
@@ -444,7 +506,6 @@ class Transport(abc.ABC):
         """
         Retrieve a file or folder from remote source to local destination
         dst must be an absolute path (src not necessarily)
-
         :param remotepath: (str) remote_folder_path
         :param localpath: (str) local_folder_path
         """
@@ -518,6 +579,7 @@ class Transport(abc.ABC):
     @abc.abstractmethod
     def isdir(self, path):
         """True if path is an existing directory.
+        Return False also if the path does not exist.
 
         :param str path: path to directory
         :return: boolean
@@ -526,6 +588,7 @@ class Transport(abc.ABC):
     @abc.abstractmethod
     def isfile(self, path):
         """Return True if path is an existing file.
+        Return False also if the path does not exist.
 
         :param str path: path to file
         :return: boolean
@@ -543,7 +606,7 @@ class Transport(abc.ABC):
         :return: a list of strings
         """
 
-    def listdir_withattributes(self, path='.', pattern=None):
+    def listdir_withattributes(self, path: _TransportPath = '.', pattern=None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -567,6 +630,7 @@ class Transport(abc.ABC):
             (if the file is a folder, a directory, ...). 'attributes' behaves as the output of
             transport.get_attribute(); isdir is a boolean indicating if the object is a directory or not.
         """
+        path = fix_path(path)
         retlist = []
         if path.startswith('/'):
             cwd = Path(path).resolve().as_posix()
@@ -624,6 +688,9 @@ class Transport(abc.ABC):
         src must be an absolute path (dst not necessarily))
         Redirects to putfile and puttree.
 
+        This method should be able to handle localpath containing glob patterns,
+            in that case should only uploading matching patterns.
+
         :param str localpath: absolute path to local source
         :param str remotepath: path to remote destination
         """
@@ -633,7 +700,6 @@ class Transport(abc.ABC):
         Put a file or a directory from local src to remote dst.
         src must be an absolute path (dst not necessarily))
         Redirects to putfile and puttree.
-
         :param str localpath: absolute path to local source
         :param str remotepath: path to remote destination
         """
@@ -691,6 +757,8 @@ class Transport(abc.ABC):
         """Remove recursively the content at path
 
         :param str path: absolute path to remove
+
+        :raise OSError: if the rm execution failed.
         """
 
     @abc.abstractmethod
@@ -796,13 +864,10 @@ class Transport(abc.ABC):
     def glob1(self, dirname, pattern):
         """Match subpaths of dirname against pattern."""
         if not dirname:
-            # dirname = os.curdir # ORIGINAL
             dirname = self.getcwd()
         if isinstance(pattern, str) and not isinstance(dirname, str):
             dirname = dirname.decode(sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
-            # names = os.listdir(dirname)
-            # print dirname
             names = self.listdir(dirname)
         except EnvironmentError:
             return []

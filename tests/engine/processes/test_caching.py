@@ -16,7 +16,7 @@ class NestedOutputsProcess(Process):
         spec.input('a')
         spec.output_namespace('nested', dynamic=True)
 
-    async def run(self):
+    def run(self):
         self.out('nested', {'a': self.inputs.a + 2})
 
 

@@ -16,6 +16,7 @@ import os
 import shutil
 import subprocess
 
+from aiida.common.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
 from aiida.transports.transport import Transport, TransportInternalError
 
@@ -101,6 +102,10 @@ class LocalTransport(Transport):
         :param path: path to cd into
         :raise OSError: if the directory does not have read attributes.
         """
+        warn_deprecation(
+            '`chdir()` is deprecated and will be removed in the next major version.',
+            version=3,
+        )
         new_path = os.path.join(self.curdir, path)
         if not os.path.isdir(new_path):
             raise OSError(f"'{new_path}' is not a valid directory")

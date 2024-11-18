@@ -376,7 +376,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
             transport = await cancellable.with_interrupt(request)
 
             logger.info(f'stashing calculation<{node.pk}>')
-            return execmanager.stash_calculation(node, transport)
+            return await execmanager.stash_calculation(node, transport)
 
     try:
         await exponential_backoff_retry(

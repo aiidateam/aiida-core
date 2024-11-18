@@ -380,57 +380,6 @@ class Transport(abc.ABC):
             for filename in sandbox.get_content_list():
                 transportdestination.put(os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put)
 
-    async def copy_from_remote_to_remote_async(self, transportdestination, remotesource, remotedestination, **kwargs):
-        """Copy files or folders from a remote computer to another remote computer, asynchronously.
-
-        :param transportdestination: transport to be used for the destination computer
-        :param str remotesource: path to the remote source directory / file
-        :param str remotedestination: path to the remote destination directory / file
-        :param kwargs: keyword parameters passed to the call to transportdestination.put,
-            except for 'dereference' that is passed to self.get
-
-        .. note:: the keyword 'dereference' SHOULD be set to False for the
-         final put (onto the destination), while it can be set to the
-         value given in kwargs for the get from the source. In that
-         way, a symbolic link would never be followed in the final
-         copy to the remote destination. That way we could avoid getting
-         unknown (potentially malicious) files into the destination computer.
-         HOWEVER, since dereference=False is currently NOT
-         supported by all plugins, we still force it to True for the final put.
-
-        .. note:: the supported keys in kwargs are callback, dereference,
-           overwrite and ignore_nonexisting.
-        """
-        from aiida.common.folders import SandboxFolder
-
-        kwargs_get = {
-            'callback': None,
-            'dereference': kwargs.pop('dereference', True),
-            'overwrite': True,
-            'ignore_nonexisting': False,
-        }
-        kwargs_put = {
-            'callback': kwargs.pop('callback', None),
-            'dereference': True,
-            'overwrite': kwargs.pop('overwrite', True),
-            'ignore_nonexisting': kwargs.pop('ignore_nonexisting', False),
-        }
-
-        if kwargs:
-            self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
-
-        with SandboxFolder() as sandbox:
-            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)
-            # Then we scan the full sandbox directory with get_content_list,
-            # because copying directly from sandbox.abspath would not work
-            # to copy a single file into another single file, and copying
-            # from sandbox.get_abs_path('*') would not work for files
-            # beginning with a dot ('.').
-            for filename in sandbox.get_content_list():
-                await transportdestination.put_async(
-                    os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put
-                )
-
     @abc.abstractmethod
     def _exec_command_internal(self, command, workdir=None, **kwargs):
         """Execute the command on the shell, similarly to os.system.
@@ -501,15 +450,6 @@ class Transport(abc.ABC):
         :param remotepath: (str) remote_folder_path
         :param localpath: (str) local_folder_path
         """
-
-    async def get_async(self, remotepath, localpath, *args, **kwargs):
-        """
-        Retrieve a file or folder from remote source to local destination
-        dst must be an absolute path (src not necessarily)
-        :param remotepath: (str) remote_folder_path
-        :param localpath: (str) local_folder_path
-        """
-        return self.get(remotepath, localpath, *args, **kwargs)
 
     @abc.abstractmethod
     def getfile(self, remotepath, localpath, *args, **kwargs):
@@ -694,16 +634,6 @@ class Transport(abc.ABC):
         :param str localpath: absolute path to local source
         :param str remotepath: path to remote destination
         """
-
-    async def put_async(self, localpath, remotepath, *args, **kwargs):
-        """
-        Put a file or a directory from local src to remote dst.
-        src must be an absolute path (dst not necessarily))
-        Redirects to putfile and puttree.
-        :param str localpath: absolute path to local source
-        :param str remotepath: path to remote destination
-        """
-        return self.put(localpath, remotepath, *args, **kwargs)
 
     @abc.abstractmethod
     def putfile(self, localpath, remotepath, *args, **kwargs):
@@ -903,6 +833,202 @@ class Transport(abc.ABC):
         )
 
         return connect_string
+
+    ## Here we bring the async counterparts of the methods
+    ## that some of them are not async yet. This is done by defining
+    ## a new method that calls the sync method and awaits.
+    ## It's up to the plugin to implement the async methods.
+
+    async def open_async(self):
+        """Counterpart to open() that is async."""
+        return self.open()
+
+    async def close_async(self):
+        """Counterpart to close() that is async."""
+        return self.close()
+
+    async def chdir_async(self, path):
+        """Counterpart to chdir() that is async."""
+        return self.chdir(path)
+
+    async def chmod_async(self, path, mode):
+        """Counterpart to chmod() that is async."""
+        return self.chmod(path, mode)
+
+    async def chown_async(self, path, uid, gid):
+        """Counterpart to chown() that is async."""
+        return self.chown(path, uid, gid)
+
+    async def copy_async(self, remotesource, remotedestination, dereference=False, recursive=True):
+        """Counterpart to copy() that is async."""
+        return self.copy(remotesource, remotedestination, dereference, recursive)
+
+    async def copyfile_async(self, remotesource, remotedestination, dereference=False):
+        """Counterpart to copyfile() that is async."""
+        return self.copyfile(remotesource, remotedestination, dereference)
+
+    async def copytree_async(self, remotesource, remotedestination, dereference=False):
+        """Counterpart to copytree() that is async."""
+        return self.copytree(remotesource, remotedestination, dereference)
+
+    async def copy_from_remote_to_remote_async(self, transportdestination, remotesource, remotedestination, **kwargs):
+        """Copy files or folders from a remote computer to another remote computer, asynchronously.
+
+        :param transportdestination: transport to be used for the destination computer
+        :param str remotesource: path to the remote source directory / file
+        :param str remotedestination: path to the remote destination directory / file
+        :param kwargs: keyword parameters passed to the call to transportdestination.put,
+            except for 'dereference' that is passed to self.get
+
+        .. note:: the keyword 'dereference' SHOULD be set to False for the
+         final put (onto the destination), while it can be set to the
+         value given in kwargs for the get from the source. In that
+         way, a symbolic link would never be followed in the final
+         copy to the remote destination. That way we could avoid getting
+         unknown (potentially malicious) files into the destination computer.
+         HOWEVER, since dereference=False is currently NOT
+         supported by all plugins, we still force it to True for the final put.
+
+        .. note:: the supported keys in kwargs are callback, dereference,
+           overwrite and ignore_nonexisting.
+        """
+        from aiida.common.folders import SandboxFolder
+
+        kwargs_get = {
+            'callback': None,
+            'dereference': kwargs.pop('dereference', True),
+            'overwrite': True,
+            'ignore_nonexisting': False,
+        }
+        kwargs_put = {
+            'callback': kwargs.pop('callback', None),
+            'dereference': True,
+            'overwrite': kwargs.pop('overwrite', True),
+            'ignore_nonexisting': kwargs.pop('ignore_nonexisting', False),
+        }
+
+        if kwargs:
+            self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
+
+        with SandboxFolder() as sandbox:
+            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)
+            # Then we scan the full sandbox directory with get_content_list,
+            # because copying directly from sandbox.abspath would not work
+            # to copy a single file into another single file, and copying
+            # from sandbox.get_abs_path('*') would not work for files
+            # beginning with a dot ('.').
+            for filename in sandbox.get_content_list():
+                await transportdestination.put_async(
+                    os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put
+                )
+
+    async def exec_command_internal_async(self, command, workdir=None, **kwargs):
+        """Counterpart to _exec_command_internal() that is async."""
+        return self._exec_command_internal(command, workdir, **kwargs)
+
+    async def exec_command_wait_bytes_async(self, command, stdin=None, workdir=None, **kwargs):
+        """Counterpart to exec_command_wait_bytes() that is async."""
+        return self.exec_command_wait_bytes(command, stdin, workdir, **kwargs)
+
+    async def exec_command_wait_async(self, command, stdin=None, encoding='utf-8', workdir=None, **kwargs):
+        """Counterpart to exec_command_wait() that is async."""
+        return self.exec_command_wait(command, stdin, encoding, workdir, **kwargs)
+
+    async def get_async(self, remotepath, localpath, *args, **kwargs):
+        """Counterpart to get() that is async."""
+        return self.get(remotepath, localpath, *args, **kwargs)
+
+    async def getfile_async(self, remotepath, localpath, *args, **kwargs):
+        """Counterpart to getfile() that is async."""
+        return self.getfile(remotepath, localpath, *args, **kwargs)
+
+    async def gettree_async(self, remotepath, localpath, *args, **kwargs):
+        """Counterpart to gettree() that is async."""
+        return self.gettree(remotepath, localpath, *args, **kwargs)
+
+    async def getcwd_async(self):
+        """Counterpart to getcwd() that is async."""
+        return self.getcwd()
+
+    async def get_attribute_async(self, path):
+        """Counterpart to get_attribute() that is async."""
+        return self.get_attribute(path)
+
+    async def get_mode_async(self, path):
+        """Counterpart to get_mode() that is async."""
+        return self.get_mode(path)
+
+    async def isdir_async(self, path):
+        """Counterpart to isdir() that is async."""
+        return self.isdir(path)
+
+    async def isfile_async(self, path):
+        """Counterpart to isfile() that is async."""
+        return self.isfile(path)
+
+    async def listdir_async(self, path='.', pattern=None):
+        """Counterpart to listdir() that is async."""
+        return self.listdir(path, pattern)
+
+    async def listdir_withattributes_async(self, path: _TransportPath = '.', pattern=None):
+        """Counterpart to listdir_withattributes() that is async."""
+        return self.listdir_withattributes(path, pattern)
+
+    async def makedirs_async(self, path, ignore_existing=False):
+        """Counterpart to makedirs() that is async."""
+        return self.makedirs(path, ignore_existing)
+
+    async def mkdir_async(self, path, ignore_existing=False):
+        """Counterpart to mkdir() that is async."""
+        return self.mkdir(path, ignore_existing)
+
+    async def normalize_async(self, path='.'):
+        """Counterpart to normalize() that is async."""
+        return self.normalize(path)
+
+    async def put_async(self, localpath, remotepath, *args, **kwargs):
+        """Counterpart to put() that is async."""
+        return self.put(localpath, remotepath, *args, **kwargs)
+
+    async def putfile_async(self, localpath, remotepath, *args, **kwargs):
+        """Counterpart to putfile() that is async."""
+        return self.putfile(localpath, remotepath, *args, **kwargs)
+
+    async def puttree_async(self, localpath, remotepath, *args, **kwargs):
+        """Counterpart to puttree() that is async."""
+        return self.puttree(localpath, remotepath, *args, **kwargs)
+
+    async def remove_async(self, path):
+        """Counterpart to remove() that is async."""
+        return self.remove(path)
+
+    async def rename_async(self, oldpath, newpath):
+        """Counterpart to rename() that is async."""
+        return self.rename(oldpath, newpath)
+
+    async def rmdir_async(self, path):
+        """Counterpart to rmdir() that is async."""
+        return self.rmdir(path)
+
+    async def rmtree_async(self, path):
+        """Counterpart to rmtree() that is async."""
+        return self.rmtree(path)
+
+    async def symlink_async(self, remotesource, remotedestination):
+        """Counterpart to symlink() that is async."""
+        return self.symlink(remotesource, remotedestination)
+
+    async def whoami_async(self):
+        """Counterpart to whoami() that is async."""
+        return self.whoami()
+
+    async def path_exists_async(self, path):
+        """Counterpart to path_exists() that is async."""
+        return self.path_exists(path)
+
+    async def glob_async(self, pathname):
+        """Counterpart to glob() that is async."""
+        return self.glob(pathname)
 
 
 class TransportInternalError(InternalError):

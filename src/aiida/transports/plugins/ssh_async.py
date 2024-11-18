@@ -561,7 +561,7 @@ class AsyncSshTransport(Transport):
 
         return await self._sftp.isfile(path)
 
-    async def listdir_async(self, path, pattern=None):
+    async def listdir_async(self, path, pattern=None):  # type: ignore[override]
         """
 
         :param path: the absolute path to list
@@ -579,7 +579,7 @@ class AsyncSshTransport(Transport):
 
         return list_
 
-    async def listdir_withattributes_async(self, path: _TransportPath, pattern: Optional[str] = None):
+    async def listdir_withattributes_async(self, path: _TransportPath, pattern: Optional[str] = None):  # type: ignore[override]
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -791,13 +791,11 @@ class AsyncSshTransport(Transport):
         except asyncssh.sftp.SFTPNoSuchFile as exc:
             raise OSError(f'Error {exc}, directory does not exists')
 
-    # ## Blocking methods. We need these for backwards compatibility
-    #     def run_command_blocking(self, func, *args, **kwargs):
-    #         """Call an async method blocking.
-    #         This is useful, only because in some part of engine and
-    #         many external plugins are synchronous function calls make more sense.
-    #         However, be aware these synchronous calls probably won't be performant."""
-    #         return asyncio.run(func(*args, **kwargs))
+    ## Blocking methods. We need these for backwards compatibility
+    # This is useful, only because some part of engine and
+    # many external plugins are synchronous, in those cases blocking calls make more sense.
+    # However, be aware you cannot use these methods in an async functions,
+    # because they will block the event loop.
 
     def run_command_blocking(self, func, *args, **kwargs):
         loop = asyncio.get_event_loop()

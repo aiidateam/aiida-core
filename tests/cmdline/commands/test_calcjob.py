@@ -11,6 +11,8 @@
 import io
 
 import pytest
+from click.testing import CliRunner
+
 from aiida import orm
 from aiida.cmdline.commands import cmd_calcjob as command
 from aiida.common.datastructures import CalcJobState
@@ -19,8 +21,6 @@ from aiida.engine import ProcessState
 from aiida.orm.nodes.data.remote.base import RemoteData
 from aiida.plugins import CalculationFactory
 from aiida.plugins.entry_point import get_entry_point_string_from_class
-from click.testing import CliRunner
-
 from tests.utils.archives import import_test_archive
 
 

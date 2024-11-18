@@ -9,6 +9,7 @@
 """Tests for the `ArithmeticAddCalculation` plugin."""
 
 import pytest
+
 from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.common import datastructures

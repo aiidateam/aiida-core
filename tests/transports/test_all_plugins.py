@@ -24,6 +24,7 @@ import uuid
 
 import psutil
 import pytest
+
 from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
 from aiida.transports import Transport
 

@@ -10,6 +10,7 @@
 
 import numpy as np
 import pytest
+
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.tools.graph.age_entities import AiidaEntitySet, Basket, DirectedEdgeSet, GroupNodeEdge

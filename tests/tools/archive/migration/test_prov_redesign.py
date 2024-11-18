@@ -17,6 +17,7 @@ is tested in `TestLinks`, since the greatest change concerns links.
 """
 
 import pytest
+
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 
@@ -85,7 +86,6 @@ def test_base_data_type_change(tmp_path, aiida_profile):
 def test_node_process_type(aiida_profile, tmp_path):
     """Column `process_type` added to `Node` entity DB table"""
     from aiida.engine import run_get_node
-
     from tests.utils.processes import AddProcess
 
     aiida_profile.reset_storage()

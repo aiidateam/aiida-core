@@ -14,12 +14,13 @@ from datetime import date
 
 import numpy as np
 import pytest
+from flask_cors.core import ACL_ORIGIN
+
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
 from aiida.orm.nodes.data.array.array import clean_array
 from aiida.restapi.run_api import configure_api
-from flask_cors.core import ACL_ORIGIN
 
 
 class TestRestApi:

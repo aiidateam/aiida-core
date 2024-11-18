@@ -24,6 +24,7 @@ import sys
 import typing as t
 
 import pytest
+
 from aiida import orm
 from aiida.engine import ExitCode, calcfunction, run, run_get_node, submit, workfunction
 from aiida.orm.nodes.data.bool import get_true_node

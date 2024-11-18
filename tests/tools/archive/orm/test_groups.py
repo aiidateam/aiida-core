@@ -11,6 +11,7 @@
 import uuid
 
 import pytest
+
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm import load_group

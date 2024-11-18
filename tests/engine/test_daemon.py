@@ -11,9 +11,9 @@
 import asyncio
 
 import pytest
-from aiida.manage import get_manager
 from plumpy.process_states import ProcessState
 
+from aiida.manage import get_manager
 from tests.utils import processes as test_processes
 
 

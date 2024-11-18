@@ -9,6 +9,7 @@
 """Tests for the Autogroup functionality."""
 
 import pytest
+
 from aiida.orm import AutoGroup, QueryBuilder
 from aiida.orm.autogroup import AutogroupManager
 

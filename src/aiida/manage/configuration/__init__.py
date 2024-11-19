@@ -11,6 +11,8 @@
 
 from __future__ import annotations
 
+from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+
 # AUTO-GENERATED
 # fmt: off
 from .migrations import *
@@ -66,9 +68,9 @@ CONFIG: Optional['Config'] = None
 
 def get_config_path():
     """Returns path to .aiida configuration directory."""
-    from .settings import DEFAULT_CONFIG_FILE_NAME, get_configuration_directory
+    from .settings import DEFAULT_CONFIG_FILE_NAME
 
-    return os.path.join(get_configuration_directory(), DEFAULT_CONFIG_FILE_NAME)
+    return os.path.join(AiiDAConfigPathResolver.get_configuration_directory(), DEFAULT_CONFIG_FILE_NAME)
 
 
 def load_config(create=False) -> 'Config':

@@ -30,6 +30,7 @@ from aiida import get_profile
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage.configuration import Profile, get_config, load_profile
+from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
@@ -329,7 +330,6 @@ def empty_config(tmp_path) -> Config:
     """
     from aiida.common.utils import Capturing
     from aiida.manage import configuration, get_manager
-    from aiida.manage.configuration import settings
 
     manager = get_manager()
 
@@ -343,7 +343,7 @@ def empty_config(tmp_path) -> Config:
 
     # Set the configuration directory to a temporary directory. This will create the necessary folders for an empty
     # AiiDA configuration and set relevant global variables in :mod:`aiida.manage.configuration.settings`.
-    settings.set_configuration_directory(tmp_path)
+    AiiDAConfigPathResolver.set_configuration_directory(tmp_path)
 
     # The constructor of `Config` called by `load_config` will print warning messages about migrating it
     with Capturing():
@@ -361,7 +361,7 @@ def empty_config(tmp_path) -> Config:
         # like the :class:`aiida.engine.daemon.client.DaemonClient` will not function properly after a test that uses
         # this fixture because the paths of the daemon files would still point to the path of the temporary config
         # folder created by this fixture.
-        settings.set_configuration_directory(pathlib.Path(current_config_path))
+        AiiDAConfigPathResolver.set_configuration_directory(pathlib.Path(current_config_path))
 
         # Reload the original profile
         manager.load_profile(current_profile_name)

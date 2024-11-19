@@ -9,12 +9,12 @@
 """Tests for the QueryBuilder."""
 
 import copy
+import json
 import uuid
 import warnings
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from itertools import chain
-import json
 
 import pytest
 from aiida import orm, plugins
@@ -1713,23 +1713,18 @@ class TestJsonFilters:
             ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [1]}}, True),
             ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': ['2']}}, True),
             ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [None]}}, True),
-
             # contains multiple elements of various types
             ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [1, None]}}, True),
-
             # contains non-exist elements
             ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [114514]}}, False),
-
             # contains empty set
             ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': []}}, True),
             ({'arr': []}, {'attributes.arr': {'contains': []}}, True),
-
             # negations
             ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [1]}}, False),
             ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': []}}, False),
             ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [114514]}}, True),
             ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [1, 114514]}}, True),
-
             # TODO: these pass, but why? are these behaviors expected?
             # non-exist `attr_key`s
             ({'foo': []}, {'attributes.arr': {'contains': []}}, False),
@@ -1744,60 +1739,104 @@ class TestJsonFilters:
         orm.Dict(data).store()
         qb = orm.QueryBuilder().append(orm.Dict, filters=filters)
         assert qb.count() in {0, 1}
-        found = (qb.count() == 1)
+        found = qb.count() == 1
         assert found == is_match
 
     @pytest.mark.parametrize(
         'data,filters,is_match',
         (
             # contains different types of values
-            ({'dict': {
-                'k1': 1,
-                'k2': '2',
-                'k3': None,
-            }}, {'attributes.dict': {'contains': {'k1': 1}}}, True),
-            ({'dict': {
-                'k1': 1,
-                'k2': '2',
-                'k3': None,
-            }}, {'attributes.dict': {'contains': {'k1': 1, 'k2': '2'}}}, True),
-            ({'dict': {
-                'k1': 1,
-                'k2': '2',
-                'k3': None,
-            }}, {'attributes.dict': {'contains': {'k3': None}}}, True),
-
+            (
+                {
+                    'dict': {
+                        'k1': 1,
+                        'k2': '2',
+                        'k3': None,
+                    }
+                },
+                {'attributes.dict': {'contains': {'k1': 1}}},
+                True,
+            ),
+            (
+                {
+                    'dict': {
+                        'k1': 1,
+                        'k2': '2',
+                        'k3': None,
+                    }
+                },
+                {'attributes.dict': {'contains': {'k1': 1, 'k2': '2'}}},
+                True,
+            ),
+            (
+                {
+                    'dict': {
+                        'k1': 1,
+                        'k2': '2',
+                        'k3': None,
+                    }
+                },
+                {'attributes.dict': {'contains': {'k3': None}}},
+                True,
+            ),
             # contains empty set
-            ({'dict': {
-                'k1': 1,
-                'k2': '2',
-                'k3': None,
-            }}, {'attributes.dict': {'contains': {}}}, True),
-
+            (
+                {
+                    'dict': {
+                        'k1': 1,
+                        'k2': '2',
+                        'k3': None,
+                    }
+                },
+                {'attributes.dict': {'contains': {}}},
+                True,
+            ),
             # doesn't contain non-exist entries
-            ({'dict': {
-                'k1': 1,
-                'k2': '2',
-                'k3': None,
-            }}, {'attributes.dict': {'contains': {'k1': 1, 'k': 'v'}}}, False),
-
+            (
+                {
+                    'dict': {
+                        'k1': 1,
+                        'k2': '2',
+                        'k3': None,
+                    }
+                },
+                {'attributes.dict': {'contains': {'k1': 1, 'k': 'v'}}},
+                False,
+            ),
             # negations
-            ({'dict': {
-                'k1': 1,
-                'k2': '2',
-                'k3': None,
-            }}, {'attributes.dict': {'!contains': {'k1': 1}}}, False),
-            ({'dict': {
-                'k1': 1,
-                'k2': '2',
-                'k3': None,
-            }}, {'attributes.dict': {'!contains': {'k1': 1, 'k': 'v'}}}, True),
-            ({'dict': {
-                'k1': 1,
-                'k2': '2',
-                'k3': None,
-            }}, {'attributes.dict': {'!contains': {}}}, False),
-
+            (
+                {
+                    'dict': {
+                        'k1': 1,
+                        'k2': '2',
+                        'k3': None,
+                    }
+                },
+                {'attributes.dict': {'!contains': {'k1': 1}}},
+                False,
+            ),
+            (
+                {
+                    'dict': {
+                        'k1': 1,
+                        'k2': '2',
+                        'k3': None,
+                    }
+                },
+                {'attributes.dict': {'!contains': {'k1': 1, 'k': 'v'}}},
+                True,
+            ),
+            (
+                {
+                    'dict': {
+                        'k1': 1,
+                        'k2': '2',
+                        'k3': None,
+                    }
+                },
+                {'attributes.dict': {'!contains': {}}},
+                False,
+            ),
             # TODO: these pass, but why? are these behaviors expected?
             # non-exist `attr_key`s
             ({'map': {}}, {'attributes.dict': {'contains': {}}}, False),
@@ -1812,5 +1851,5 @@ class TestJsonFilters:
         orm.Dict(data).store()
         qb = orm.QueryBuilder().append(orm.Dict, filters=filters)
         assert qb.count() in {0, 1}
-        found = (qb.count() == 1)
+        found = qb.count() == 1
         assert found == is_match

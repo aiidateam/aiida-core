@@ -209,7 +209,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
     @staticmethod
     def get_filter_expr_from_jsonb(
-        operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None, negation=None
+        operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
     ):
         """Return a filter expression.
 

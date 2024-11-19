@@ -162,7 +162,6 @@ class TestQueryWithAiidaObjects:
         """Initialize the profile."""
         self.computer = aiida_localhost
 
-    @pytest.mark.requires_psql
     def test_with_subclasses(self):
         from aiida.plugins import DataFactory
 

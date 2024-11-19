@@ -139,7 +139,7 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0
-      run: pytest -m 'presto'
+      run: pytest -n auto -m 'presto'
 
 
   verdi:

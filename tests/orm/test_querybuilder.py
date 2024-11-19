@@ -1720,6 +1720,15 @@ class TestJsonFilters:
             # contains empty set
             ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': []}}, True),
             ({'arr': []}, {'attributes.arr': {'contains': []}}, True),
+            
+            # nested arrays
+            ({'arr': [[1, 0], [0, 2]]}, {'attributes.arr': {'contains': [[1, 0]]}}, True),
+            ({'arr': [[2, 3], [0, 1], []]}, {'attributes.arr': {'contains': [[1, 0]]}}, True), # order doesn't matter
+            ({'arr': [[2, 3], [1]]}, {'attributes.arr': {'contains': [[4]]}}, False),
+
+            # TODO: the test below is supposed to pass but currently doesn't
+            # ({'arr': [[2, 3], [1]]}, {'attributes.arr': {'contains': [[2]]}}, False),
+
             # negations
             ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [1]}}, False),
             ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': []}}, False),

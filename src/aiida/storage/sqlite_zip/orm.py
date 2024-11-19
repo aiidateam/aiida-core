@@ -17,7 +17,7 @@ import json
 from functools import singledispatch
 from typing import Any, List, Optional, Tuple, Union
 
-from sqlalchemy import JSON, case, func, select, true, not_
+from sqlalchemy import JSON, case, func, select
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import ColumnElement
 

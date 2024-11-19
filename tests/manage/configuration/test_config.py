@@ -16,10 +16,10 @@ import uuid
 import pytest
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, settings
-from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 from aiida.manage.configuration.config import Config
 from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 from aiida.manage.configuration.options import get_option
+from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 from aiida.storage.sqlite_temp import SqliteTempBackend
 
 

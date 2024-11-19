@@ -11,7 +11,7 @@
 import json
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, AnyStr
+from typing import Any, AnyStr, Dict, Optional, Union
 
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
@@ -47,6 +47,7 @@ def sqlite_case_sensitive_like(dbapi_connection, _):
     cursor.execute('PRAGMA case_sensitive_like=ON;')
     cursor.close()
 
+
 def _contains(lhs: dict | list, rhs: dict | list):
     if isinstance(lhs, dict) and isinstance(rhs, dict):
         for key in rhs:
@@ -61,6 +62,7 @@ def _contains(lhs: dict | list, rhs: dict | list):
     else:
         return lhs == rhs
 
+
 def _json_contains(json1_str: AnyStr, json2_str: AnyStr):
     try:
         json1 = json.loads(json1_str)
@@ -68,6 +70,7 @@ def _json_contains(json1_str: AnyStr, json2_str: AnyStr):
     except json.JSONDecodeError:
         return 0
     return int(_contains(json1, json2))
+
 
 def register_json_contains(dbapi_connection, _):
     dbapi_connection.create_function('json_contains', 2, _json_contains)

@@ -11,7 +11,7 @@
 import json
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, AnyStr
 
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
@@ -47,6 +47,31 @@ def sqlite_case_sensitive_like(dbapi_connection, _):
     cursor.execute('PRAGMA case_sensitive_like=ON;')
     cursor.close()
 
+def _contains(lhs: dict | list, rhs: dict | list):
+    if isinstance(lhs, dict) and isinstance(rhs, dict):
+        for key in rhs:
+            if key not in lhs or not _contains(lhs[key], rhs[key]):
+                return False
+        return True
+    elif isinstance(lhs, list) and isinstance(rhs, list):
+        for item in rhs:
+            if not any(_contains(element, item) for element in lhs):
+                return False
+        return True
+    else:
+        return lhs == rhs
+
+def _json_contains(json1_str: AnyStr, json2_str: AnyStr):
+    try:
+        json1 = json.loads(json1_str)
+        json2 = json.loads(json2_str)
+    except json.JSONDecodeError:
+        return 0
+    return int(_contains(json1, json2))
+
+def register_json_contains(dbapi_connection, _):
+    dbapi_connection.create_function('json_contains', 2, _json_contains)
+
 
 def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = True, **kwargs) -> Engine:
     """Create a new engine instance."""
@@ -54,6 +79,7 @@ def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = T
     event.listen(engine, 'connect', sqlite_case_sensitive_like)
     if enforce_foreign_keys:
         event.listen(engine, 'connect', sqlite_enforce_foreign_keys)
+    event.listen(engine, 'connect', register_json_contains)
     return engine
 
 

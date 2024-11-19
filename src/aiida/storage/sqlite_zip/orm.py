@@ -285,28 +285,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             return case((type_filter, casted_entity.ilike(value, escape='\\')), else_=False)
 
         if operator == 'contains':
-            if isinstance(value, list):
-                if not value or len(value) == 0:
-                    if len(attr_key) == 0:
-                        filter = true()
-                    else: 
-                        filter = SqliteQueryBuilder.get_filter_expr_from_jsonb(
-                                    'has_key', attr_key[-1], attr_key[:-1], column)
-                    if negation: filter = not_(filter) # negation should not work for this operation
-                    return filter
-
-                subq = select(database_entity) \
-                        .where(func.json_each(database_entity) \
-                                .table_valued('value', joins_implicitly=True) \
-                                .c.value.in_(value)) \
-                        .correlate_except()
-                subsubq = select(func.count()).select_from(subq).scalar_subquery()
-                return subsubq == len(value)
-
-            elif isinstance(value, dict):
-                raise NotImplementedError
-            else:
-                raise TypeError("contains filters can only have as a parameter a list (when matching against lists) or dictionaries (when matching against dictionaries)")
+            return func.json_contains(database_entity, json.dumps(value))
 
         if operator == 'has_key':
             return (

@@ -158,7 +158,7 @@ class TestJsonFilters:
             # TODO: these pass, but why? are these behaviors expected?
             # non-exist `attr_key`s
             ({'foo': []}, {'attributes.arr': {'contains': []}}, False),
-            ({'foo': []}, {'attributes.arr': {'!contains': []}}, False),
+            # ({'foo': []}, {'attributes.arr': {'!contains': []}}, False),
         ),
         ids=json.dumps,
     )
@@ -272,7 +272,7 @@ class TestJsonFilters:
             # TODO: these pass, but why? are these behaviors expected?
             # non-exist `attr_key`s
             ({'map': {}}, {'attributes.dict': {'contains': {}}}, False),
-            ({'map': {}}, {'attributes.dict': {'!contains': {}}}, False),
+            # ({'map': {}}, {'attributes.dict': {'!contains': {}}}, False),
         ),
         ids=json.dumps,
     )

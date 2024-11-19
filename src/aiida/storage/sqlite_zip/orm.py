@@ -17,7 +17,7 @@ import json
 from functools import singledispatch
 from typing import Any, List, Optional, Tuple, Union
 
-from sqlalchemy import JSON, case, func
+from sqlalchemy import JSON, case, func, select
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import ColumnElement
 
@@ -289,7 +289,11 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             raise NotImplementedError('The operator `contains` is not implemented for SQLite-based storage plugins.')
 
         if operator == 'has_key':
-            raise NotImplementedError('The operator `has_key` is not implemented for SQLite-based storage plugins.')
+            return (
+                select(database_entity)
+                .where(func.json_each(database_entity).table_valued('key', joins_implicitly=True).c.key == value)
+                .exists()
+            )
 
         if operator == 'in':
             type_filter, casted_entity = _cast_json_type(database_entity, value[0])

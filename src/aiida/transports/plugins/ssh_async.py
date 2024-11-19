@@ -28,7 +28,7 @@ from asyncssh import SFTPFileAlreadyExists
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import InvalidOperation
 
-from ..transport import Transport, TransportInternalError, _TransportPath, fix_path
+from ..transport import AsyncTransport, TransportInternalError, _TransportPath, fix_path
 
 __all__ = ('AsyncSshTransport',)
 
@@ -61,7 +61,7 @@ def _validate_machine(ctx, param, value: str):
     return value
 
 
-class AsyncSshTransport(Transport):
+class AsyncSshTransport(AsyncTransport):
     """Transport plugin via SSH, asynchronously."""
 
     # note, I intentionally wanted to keep connection parameters as simple as possible.
@@ -110,9 +110,6 @@ class AsyncSshTransport(Transport):
         self.script_before = kwargs.pop('script_before', 'None')
         self.script_during = kwargs.pop('script_during', 'None')
 
-    def __str__(self):
-        return f"{'OPEN' if self._is_open else 'CLOSED'} [AsyncSshTransport]"
-
     async def open_async(self):
         if self._is_open:
             raise InvalidOperation('Cannot open the transport twice')
@@ -138,6 +135,9 @@ class AsyncSshTransport(Transport):
         self._conn.close()
         await self._conn.wait_closed()
         self._is_open = False
+
+    def __str__(self):
+        return f"{'OPEN' if self._is_open else 'CLOSED'} [AsyncSshTransport]"
 
     async def get_async(self, remotepath, localpath, dereference=True, overwrite=True, ignore_nonexisting=False):
         """Get a file or folder from remote to local.
@@ -791,6 +791,57 @@ class AsyncSshTransport(Transport):
         except asyncssh.sftp.SFTPNoSuchFile as exc:
             raise OSError(f'Error {exc}, directory does not exists')
 
+    async def copy_from_remote_to_remote_async(self, transportdestination, remotesource, remotedestination, **kwargs):
+        """Copy files or folders from a remote computer to another remote computer, asynchronously.
+
+        :param transportdestination: transport to be used for the destination computer
+        :param str remotesource: path to the remote source directory / file
+        :param str remotedestination: path to the remote destination directory / file
+        :param kwargs: keyword parameters passed to the call to transportdestination.put,
+            except for 'dereference' that is passed to self.get
+
+        .. note:: the keyword 'dereference' SHOULD be set to False for the
+         final put (onto the destination), while it can be set to the
+         value given in kwargs for the get from the source. In that
+         way, a symbolic link would never be followed in the final
+         copy to the remote destination. That way we could avoid getting
+         unknown (potentially malicious) files into the destination computer.
+         HOWEVER, since dereference=False is currently NOT
+         supported by all plugins, we still force it to True for the final put.
+
+        .. note:: the supported keys in kwargs are callback, dereference,
+           overwrite and ignore_nonexisting.
+        """
+        from aiida.common.folders import SandboxFolder
+
+        kwargs_get = {
+            'callback': None,
+            'dereference': kwargs.pop('dereference', True),
+            'overwrite': True,
+            'ignore_nonexisting': False,
+        }
+        kwargs_put = {
+            'callback': kwargs.pop('callback', None),
+            'dereference': True,
+            'overwrite': kwargs.pop('overwrite', True),
+            'ignore_nonexisting': kwargs.pop('ignore_nonexisting', False),
+        }
+
+        if kwargs:
+            self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
+
+        with SandboxFolder() as sandbox:
+            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)
+            # Then we scan the full sandbox directory with get_content_list,
+            # because copying directly from sandbox.abspath would not work
+            # to copy a single file into another single file, and copying
+            # from sandbox.get_abs_path('*') would not work for files
+            # beginning with a dot ('.').
+            for filename in sandbox.get_content_list():
+                await transportdestination.put_async(
+                    os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put
+                )
+
     ## Blocking methods. We need these for backwards compatibility
     # This is useful, only because some part of engine and
     # many external plugins are synchronous, in those cases blocking calls make more sense.
@@ -905,9 +956,3 @@ class AsyncSshTransport(Transport):
 
     def normalize(self, *args, **kwargs):
         raise NotImplementedError('Not implemented, waiting for a use case')
-
-    def chdir(self, *args, **kwargs):
-        raise NotImplementedError("It's not safe to chdir() for async transport")
-
-    def getcwd(self, *args, **kwargs):
-        raise NotImplementedError("It's not safe to getcwd() for async transport")

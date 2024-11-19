@@ -18,11 +18,11 @@ import subprocess
 
 from aiida.common.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
-from aiida.transports.transport import Transport, TransportInternalError
+from aiida.transports.transport import BlockingTransport, TransportInternalError
 
 
 # refactor or raise the limit: issue #1784
-class LocalTransport(Transport):
+class LocalTransport(BlockingTransport):
     """Support copy and command execution on the same host on which AiiDA is running via direct file copy and
     execution commands.
 

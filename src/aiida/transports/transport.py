@@ -9,6 +9,7 @@
 """Transport interface."""
 
 import abc
+import asyncio
 import fnmatch
 import os
 import re
@@ -47,8 +48,9 @@ def fix_path(path: _TransportPath) -> str:
     return str(path)
 
 
-class Transport(abc.ABC):
-    """Abstract class for a generic transport (ssh, local, ...) contains the set of minimal methods."""
+class _BaseTransport:
+    """Abstract class for a generic blocking transport.
+    A plugin inhereting from this class should implement the blocking methods, only."""
 
     # This will be used for ``Computer.get_minimum_job_poll_interval``
     DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10
@@ -111,6 +113,14 @@ class Transport(abc.ABC):
         # for accessing the identity of the underlying machine
         self.hostname = kwargs.get('machine')
 
+    @abc.abstractmethod
+    def open(self):
+        """Opens a local transport channel"""
+
+    @abc.abstractmethod
+    def close(self):
+        """Closes the local transport channel"""
+
     def __enter__(self):
         """For transports that require opening a connection, opens
         all required channels (used in 'with' statements).
@@ -149,21 +159,6 @@ class Transport(abc.ABC):
     @property
     def is_open(self):
         return self._is_open
-
-    @abc.abstractmethod
-    def open(self):
-        """Opens a local transport channel"""
-
-    @abc.abstractmethod
-    def close(self):
-        """Closes the local transport channel"""
-
-    def __repr__(self):
-        return f'<{self.__class__.__name__}: {self!s}>'
-
-    # redefine this in each subclass
-    def __str__(self):
-        return '[Transport class or subclass]'
 
     def set_logger_extra(self, logger_extra):
         """Pass the data that should be passed automatically to self.logger
@@ -253,22 +248,41 @@ class Transport(abc.ABC):
         """
         return self._safe_open_interval
 
-    @abc.abstractmethod
-    def chdir(self, path):
-        """
-        DEPRECATED: This method is deprecated and should be removed in the next major version.
-            PLEASE DON'T USE IT IN THE INTERFACE!!
+    def has_magic(self, string):
+        """Return True if the given string contains any special shell characters."""
+        return self._MAGIC_CHECK.search(string) is not None
 
-        Change directory to 'path'.
-        :param str path: path to change working directory into.
-        :raises: OSError, if the requested path does not exist
-        :rtype: str
-        """
-
-        warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version.',
-            version=3,
+    def _gotocomputer_string(self, remotedir):
+        """Command executed when goto computer."""
+        connect_string = (
+            """ "if [ -d {escaped_remotedir} ] ;"""
+            """ then cd {escaped_remotedir} ; {bash_command} ; else echo '  ** The directory' ; """
+            """echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+                bash_command=self._bash_command_str, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir
+            )
         )
+
+        return connect_string
+
+
+class BlockingTransport(abc.ABC, _BaseTransport):
+    """Abstract class for a generic blocking transport.
+    A plugin inhereting from this class should implement the blocking methods, only."""
+
+    # This will be used for connection authentication
+    # To be defined in the subclass, the format is a list of tuples
+    # where the first element is the name of the parameter and the second
+    # is a dictionary with the following
+    # keys: 'default', 'prompt', 'help', 'non_interactive_default'
+    _valid_auth_options = []
+
+    @abc.abstractmethod
+    def __repr__(self):
+        return f'<{self.__class__.__name__}: {self!s}>'
+
+    @abc.abstractmethod
+    def __str__(self):
+        return '[Transport class or subclass]'
 
     @abc.abstractmethod
     def chmod(self, path, mode):
@@ -331,6 +345,7 @@ class Transport(abc.ABC):
         :raise OSError: if one of src or dst does not exist
         """
 
+    ## non-abtract methods. Plugin developers can safely ingore developing these methods
     def copy_from_remote_to_remote(self, transportdestination, remotesource, remotedestination, **kwargs):
         """Copy files or folders from a remote computer to another remote computer.
 
@@ -818,26 +833,10 @@ class Transport(abc.ABC):
             return [basename]
         return []
 
-    def has_magic(self, string):
-        """Return True if the given string contains any special shell characters."""
-        return self._MAGIC_CHECK.search(string) is not None
-
-    def _gotocomputer_string(self, remotedir):
-        """Command executed when goto computer."""
-        connect_string = (
-            """ "if [ -d {escaped_remotedir} ] ;"""
-            """ then cd {escaped_remotedir} ; {bash_command} ; else echo '  ** The directory' ; """
-            """echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
-                bash_command=self._bash_command_str, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir
-            )
-        )
-
-        return connect_string
-
-    ## Here we bring the async counterparts of the methods
-    ## that some of them are not async yet. This is done by defining
-    ## a new method that calls the sync method and awaits.
-    ## It's up to the plugin to implement the async methods.
+    ## Here we bring the async counterparts of the methods.
+    ## This is done by defining new methods that calls the sync method and awaits.
+    ## aiida-core engine is ultimately moving towards async, so this is a step in that direction.
+    ## To keep backward compatibility, the sync methods are kept as they are.
 
     async def open_async(self):
         """Counterpart to open() that is async."""
@@ -846,10 +845,6 @@ class Transport(abc.ABC):
     async def close_async(self):
         """Counterpart to close() that is async."""
         return self.close()
-
-    async def chdir_async(self, path):
-        """Counterpart to chdir() that is async."""
-        return self.chdir(path)
 
     async def chmod_async(self, path, mode):
         """Counterpart to chmod() that is async."""
@@ -872,55 +867,8 @@ class Transport(abc.ABC):
         return self.copytree(remotesource, remotedestination, dereference)
 
     async def copy_from_remote_to_remote_async(self, transportdestination, remotesource, remotedestination, **kwargs):
-        """Copy files or folders from a remote computer to another remote computer, asynchronously.
-
-        :param transportdestination: transport to be used for the destination computer
-        :param str remotesource: path to the remote source directory / file
-        :param str remotedestination: path to the remote destination directory / file
-        :param kwargs: keyword parameters passed to the call to transportdestination.put,
-            except for 'dereference' that is passed to self.get
-
-        .. note:: the keyword 'dereference' SHOULD be set to False for the
-         final put (onto the destination), while it can be set to the
-         value given in kwargs for the get from the source. In that
-         way, a symbolic link would never be followed in the final
-         copy to the remote destination. That way we could avoid getting
-         unknown (potentially malicious) files into the destination computer.
-         HOWEVER, since dereference=False is currently NOT
-         supported by all plugins, we still force it to True for the final put.
-
-        .. note:: the supported keys in kwargs are callback, dereference,
-           overwrite and ignore_nonexisting.
-        """
-        from aiida.common.folders import SandboxFolder
-
-        kwargs_get = {
-            'callback': None,
-            'dereference': kwargs.pop('dereference', True),
-            'overwrite': True,
-            'ignore_nonexisting': False,
-        }
-        kwargs_put = {
-            'callback': kwargs.pop('callback', None),
-            'dereference': True,
-            'overwrite': kwargs.pop('overwrite', True),
-            'ignore_nonexisting': kwargs.pop('ignore_nonexisting', False),
-        }
-
-        if kwargs:
-            self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
-
-        with SandboxFolder() as sandbox:
-            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)
-            # Then we scan the full sandbox directory with get_content_list,
-            # because copying directly from sandbox.abspath would not work
-            # to copy a single file into another single file, and copying
-            # from sandbox.get_abs_path('*') would not work for files
-            # beginning with a dot ('.').
-            for filename in sandbox.get_content_list():
-                await transportdestination.put_async(
-                    os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put
-                )
+        """Counterpart to copy_from_remote_to_remote()."""
+        return self.copy_from_remote_to_remote(transportdestination, remotesource, remotedestination, **kwargs)
 
     async def exec_command_internal_async(self, command, workdir=None, **kwargs):
         """Counterpart to _exec_command_internal() that is async."""
@@ -945,10 +893,6 @@ class Transport(abc.ABC):
     async def gettree_async(self, remotepath, localpath, *args, **kwargs):
         """Counterpart to gettree() that is async."""
         return self.gettree(remotepath, localpath, *args, **kwargs)
-
-    async def getcwd_async(self):
-        """Counterpart to getcwd() that is async."""
-        return self.getcwd()
 
     async def get_attribute_async(self, path):
         """Counterpart to get_attribute() that is async."""
@@ -1029,6 +973,251 @@ class Transport(abc.ABC):
     async def glob_async(self, pathname):
         """Counterpart to glob() that is async."""
         return self.glob(pathname)
+
+
+class AsyncTransport(abc.ABC, _BaseTransport):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @abc.abstractmethod
+    async def open_async(self):
+        """Open the transport."""
+
+    @abc.abstractmethod
+    async def close_async(self):
+        """Close the transport."""
+
+    @abc.abstractmethod
+    async def chmod_async(self, path, mode):
+        """Change permissions of a path."""
+
+    @abc.abstractmethod
+    async def chown_async(self, path, uid, gid):
+        """Change the owner (uid) and group (gid) of a file."""
+
+    @abc.abstractmethod
+    async def copy_async(self, remotesource, remotedestination, dereference=False, recursive=True):
+        """Copy a file or a directory from remote source to remote destination
+        (On the same remote machine)"""
+
+    @abc.abstractmethod
+    async def copyfile_async(self, remotesource, remotedestination, dereference=False):
+        """Copy a file from remote source to remote destination
+        (On the same remote machine)"""
+
+    @abc.abstractmethod
+    async def copytree_async(self, remotesource, remotedestination, dereference=False):
+        """Copy a folder from remote source to remote destination
+        (On the same remote machine)"""
+
+    @abc.abstractmethod
+    async def copy_from_remote_to_remote_async(self, transportdestination, remotesource, remotedestination, **kwargs):
+        """Copy files or folders from a remote computer to another remote computer."""
+
+    @abc.abstractmethod
+    async def exec_command_wait_async(self, command, stdin=None, encoding='utf-8', workdir=None, **kwargs):
+        """Executes the specified command and waits for it to finish."""
+
+    @abc.abstractmethod
+    async def get_async(self, remotepath, localpath, *args, **kwargs):
+        """Retrieve a file or folder from remote source to local destination"""
+
+    @abc.abstractmethod
+    async def getfile_async(self, remotepath, localpath, *args, **kwargs):
+        """Retrieve a file from remote source to local destination"""
+
+    @abc.abstractmethod
+    async def gettree_async(self, remotepath, localpath, *args, **kwargs):
+        """Retrieve a folder recursively from remote source to local destination"""
+
+    @abc.abstractmethod
+    async def get_attribute_async(self, path):
+        """Return an object FixedFieldsAttributeDict for file in a given path"""
+
+    @abc.abstractmethod
+    async def get_mode_async(self, path):
+        """Return the portion of the file's mode that can be set by chmod()."""
+
+    @abc.abstractmethod
+    async def isdir_async(self, path):
+        """True if path is an existing directory."""
+
+    @abc.abstractmethod
+    async def isfile_async(self, path):
+        """Return True if path is an existing file."""
+
+    @abc.abstractmethod
+    async def listdir_async(self, path='.', pattern=None):
+        """Return a list of the names of the entries in the given path."""
+
+    @abc.abstractmethod
+    async def listdir_withattributes_async(self, path: _TransportPath = '.', pattern=None):
+        """Return a list of the names of the entries in the given path."""
+
+    @abc.abstractmethod
+    async def makedirs_async(self, path, ignore_existing=False):
+        """Super-mkdir; create a leaf directory and all intermediate ones."""
+
+    @abc.abstractmethod
+    async def mkdir_async(self, path, ignore_existing=False):
+        """Create a folder (directory) named path."""
+
+    @abc.abstractmethod
+    async def normalize_async(self, path='.'):
+        """Return the normalized path (on the server) of a given path."""
+
+    @abc.abstractmethod
+    async def put_async(self, localpath, remotepath, *args, **kwargs):
+        """Put a file or a directory from local src to remote dst."""
+
+    @abc.abstractmethod
+    async def putfile_async(self, localpath, remotepath, *args, **kwargs):
+        """Put a file from local src to remote dst."""
+
+    @abc.abstractmethod
+    async def puttree_async(self, localpath, remotepath, *args, **kwargs):
+        """Put a folder recursively from local src to remote dst."""
+
+    @abc.abstractmethod
+    async def remove_async(self, path):
+        """Remove the file at the given path."""
+
+    @abc.abstractmethod
+    async def rename_async(self, oldpath, newpath):
+        """Rename a file or folder from oldpath to newpath."""
+
+    @abc.abstractmethod
+    async def rmdir_async(self, path):
+        """Remove the folder named path."""
+
+    @abc.abstractmethod
+    async def rmtree_async(self, path):
+        """Remove recursively the content at path"""
+
+    @abc.abstractmethod
+    async def symlink_async(self, remotesource, remotedestination):
+        """Create a symbolic link between the remote source and the remote destination."""
+
+    @abc.abstractmethod
+    async def whoami_async(self):
+        """Get the remote username"""
+
+    @abc.abstractmethod
+    async def path_exists_async(self, path):
+        """Returns True if path exists, False otherwise."""
+
+    @abc.abstractmethod
+    async def glob_async(self, pathname):
+        """Return a list of paths matching a pathname pattern."""
+
+    @abc.abstractmethod
+    def gotocomputer_command(self, remotedir):
+        """Return a string to be run using os.system in order to connect
+        via the transport to the remote directory."""
+
+    ## Blocking counterpart methods. We need these for backwards compatibility
+    # This is useful, only because some part of engine and
+    # many external plugins are synchronous, in those cases blocking calls make more sense.
+    # However, be aware you cannot use these methods in an async functions,
+    # because they will block the event loop.
+
+    def run_command_blocking(self, func, *args, **kwargs):
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(func(*args, **kwargs))
+
+    def open(self):
+        return self.run_command_blocking(self.open_async)
+
+    def close(self):
+        return self.run_command_blocking(self.close_async)
+
+    def chown(self, *args, **kwargs):
+        raise NotImplementedError('Not implemented, for now')
+
+    def get(self, *args, **kwargs):
+        return self.run_command_blocking(self.get_async, *args, **kwargs)
+
+    def getfile(self, *args, **kwargs):
+        return self.run_command_blocking(self.getfile_async, *args, **kwargs)
+
+    def gettree(self, *args, **kwargs):
+        return self.run_command_blocking(self.gettree_async, *args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        return self.run_command_blocking(self.put_async, *args, **kwargs)
+
+    def putfile(self, *args, **kwargs):
+        return self.run_command_blocking(self.putfile_async, *args, **kwargs)
+
+    def puttree(self, *args, **kwargs):
+        return self.run_command_blocking(self.puttree_async, *args, **kwargs)
+
+    def chmod(self, *args, **kwargs):
+        return self.run_command_blocking(self.chmod_async, *args, **kwargs)
+
+    def copy(self, *args, **kwargs):
+        return self.run_command_blocking(self.copy_async, *args, **kwargs)
+
+    def copyfile(self, *args, **kwargs):
+        return self.copy(*args, **kwargs)
+
+    def copytree(self, *args, **kwargs):
+        return self.copy(*args, **kwargs)
+
+    def exec_command_wait(self, *args, **kwargs):
+        return self.run_command_blocking(self.exec_command_wait_async, *args, **kwargs)
+
+    def get_attribute(self, *args, **kwargs):
+        return self.run_command_blocking(self.get_attribute_async, *args, **kwargs)
+
+    def isdir(self, *args, **kwargs):
+        return self.run_command_blocking(self.isdir_async, *args, **kwargs)
+
+    def isfile(self, *args, **kwargs):
+        return self.run_command_blocking(self.isfile_async, *args, **kwargs)
+
+    def listdir(self, *args, **kwargs):
+        return self.run_command_blocking(self.listdir_async, *args, **kwargs)
+
+    def listdir_withattributes(self, *args, **kwargs):
+        return self.run_command_blocking(self.listdir_withattributes_async, *args, **kwargs)
+
+    def makedirs(self, *args, **kwargs):
+        return self.run_command_blocking(self.makedirs_async, *args, **kwargs)
+
+    def mkdir(self, *args, **kwargs):
+        return self.run_command_blocking(self.mkdir_async, *args, **kwargs)
+
+    def remove(self, *args, **kwargs):
+        return self.run_command_blocking(self.remove_async, *args, **kwargs)
+
+    def rename(self, *args, **kwargs):
+        return self.run_command_blocking(self.rename_async, *args, **kwargs)
+
+    def rmdir(self, *args, **kwargs):
+        return self.run_command_blocking(self.rmdir_async, *args, **kwargs)
+
+    def rmtree(self, *args, **kwargs):
+        return self.run_command_blocking(self.rmtree_async, *args, **kwargs)
+
+    def path_exists(self, *args, **kwargs):
+        return self.run_command_blocking(self.path_exists_async, *args, **kwargs)
+
+    def whoami(self, *args, **kwargs):
+        return self.run_command_blocking(self.whoami_async, *args, **kwargs)
+
+    def symlink(self, *args, **kwargs):
+        return self.run_command_blocking(self.symlink_async, *args, **kwargs)
+
+    def glob(self, *args, **kwargs):
+        return self.run_command_blocking(self.glob_async, *args, **kwargs)
+
+    def normalize(self, *args, **kwargs):
+        return self.run_command_blocking(self.normalize_async, *args, **kwargs)
+
+
+# This is here for backwards compatibility
+Transport = BlockingTransport
 
 
 class TransportInternalError(InternalError):

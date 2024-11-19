@@ -35,7 +35,7 @@ from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
 
 if TYPE_CHECKING:
-    from aiida.transports import Transport
+    from aiida.transports import AsyncTransport, BlockingTransport
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
@@ -64,7 +64,7 @@ def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
 
 async def upload_calculation(
     node: CalcJobNode,
-    transport: Transport,
+    transport: Union['BlockingTransport', 'AsyncTransport'],
     calc_info: CalcInfo,
     folder: Folder,
     inputs: Optional[MappingType[str, Any]] = None,
@@ -133,14 +133,14 @@ async def upload_calculation(
         # and I do not have to know the logic, but I just need to
         # read the absolute path from the calculation properties.
         workdir = Path(remote_working_directory).joinpath(calc_info.uuid[:2], calc_info.uuid[2:4])
-        await transport.makedirs_async(str(workdir), ignore_existing=True)
+        await transport.makedirs_async(workdir, ignore_existing=True)
 
         try:
             # The final directory may already exist, most likely because this function was already executed once, but
             # failed and as a result was rescheduled by the engine. In this case it would be fine to delete the folder
             # and create it from scratch, except that we cannot be sure that this the actual case. Therefore, to err on
             # the safe side, we move the folder to the lost+found directory before recreating the folder from scratch
-            await transport.mkdir_async(str(workdir.joinpath(calc_info.uuid[4:])))
+            await transport.mkdir_async(workdir.joinpath(calc_info.uuid[4:]))
         except OSError:
             # Move the existing directory to lost+found, log a warning and create a clean directory anyway
             path_existing = os.path.join(str(workdir), calc_info.uuid[4:])
@@ -156,7 +156,7 @@ async def upload_calculation(
             await transport.rmtree_async(path_existing)
 
             # Now we can create a clean folder for this calculation
-            await transport.mkdir_async(str(workdir.joinpath(calc_info.uuid[4:])))
+            await transport.mkdir_async(workdir.joinpath(calc_info.uuid[4:]))
         finally:
             workdir = workdir.joinpath(calc_info.uuid[4:])
 
@@ -171,11 +171,11 @@ async def upload_calculation(
             # Note: this will possibly overwrite files
             for root, dirnames, filenames in code.base.repository.walk():
                 # mkdir of root
-                await transport.makedirs_async(str(workdir.joinpath(root)), ignore_existing=True)
+                await transport.makedirs_async(workdir.joinpath(root), ignore_existing=True)
 
                 # remotely mkdir first
                 for dirname in dirnames:
-                    await transport.makedirs_async(str(workdir.joinpath(root, dirname)), ignore_existing=True)
+                    await transport.makedirs_async(workdir.joinpath(root, dirname), ignore_existing=True)
 
                 # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
                 # combination with the new `Transport.put_object_from_filelike`
@@ -185,11 +185,11 @@ async def upload_calculation(
                         content = code.base.repository.get_object_content(Path(root) / filename, mode='rb')
                         handle.write(content)
                         handle.flush()
-                        await transport.put_async(handle.name, str(workdir.joinpath(root, filename)))
+                        await transport.put_async(handle.name, workdir.joinpath(root, filename))
             if code.filepath_executable.is_absolute():
-                await transport.chmod_async(str(code.filepath_executable), 0o755)  # rwxr-xr-x
+                await transport.chmod_async(code.filepath_executable, 0o755)  # rwxr-xr-x
             else:
-                await transport.chmod_async(str(workdir.joinpath(code.filepath_executable)), 0o755)  # rwxr-xr-x
+                await transport.chmod_async(workdir.joinpath(code.filepath_executable), 0o755)  # rwxr-xr-x
 
     # local_copy_list is a list of tuples, each with (uuid, dest_path, rel_path)
     # NOTE: validation of these lists are done inside calculation.presubmit()
@@ -288,7 +288,7 @@ async def _copy_remote_files(logger, node, computer, transport, remote_copy_list
                 f'remotely, directly on the machine {computer.label}'
             )
             try:
-                await transport.copy_async(remote_abs_path, str(workdir.joinpath(dest_rel_path)))
+                await transport.copy_async(remote_abs_path, workdir.joinpath(dest_rel_path))
             except FileNotFoundError:
                 logger.warning(
                     f'[submission of calculation {node.pk}] Unable to copy remote '
@@ -314,8 +314,8 @@ async def _copy_remote_files(logger, node, computer, transport, remote_copy_list
             )
             remote_dirname = Path(dest_rel_path).parent
             try:
-                await transport.makedirs_async(str(workdir.joinpath(remote_dirname)), ignore_existing=True)
-                await transport.symlink_async(remote_abs_path, str(workdir.joinpath(dest_rel_path)))
+                await transport.makedirs_async(workdir.joinpath(remote_dirname), ignore_existing=True)
+                await transport.symlink_async(remote_abs_path, workdir.joinpath(dest_rel_path))
             except OSError:
                 logger.warning(
                     f'[submission of calculation {node.pk}] Unable to create remote symlink '
@@ -356,18 +356,14 @@ async def _copy_local_files(logger, node, transport, inputs, local_copy_list, wo
             # The logic below takes care of an edge case where the source is a file but the target is a directory. In
             # this case, the v2.5.1 implementation would raise an `IsADirectoryError` exception, because it would try
             # to open the directory in the sandbox folder as a file when writing the contents.
-            if (
-                file_type_source == FileType.FILE
-                and target
-                and await transport.isdir_async(str(workdir.joinpath(target)))
-            ):
+            if file_type_source == FileType.FILE and target and await transport.isdir_async(workdir.joinpath(target)):
                 raise IsADirectoryError
 
             # In case the source filename is specified and it is a directory that already exists in the remote, we
             # want to avoid nested directories in the target path to replicate the behavior of v2.5.1. This is done by
             # setting the target filename to '.', which means the contents of the node will be copied in the top level
             # of the temporary directory, whose contents are then copied into the target directory.
-            if filename and await transport.isdir_async(str(workdir.joinpath(filename))):
+            if filename and await transport.isdir_async(workdir.joinpath(filename)):
                 filename_target = '.'
 
             filepath_target = (dirpath / filename_target).resolve().absolute()
@@ -378,7 +374,7 @@ async def _copy_local_files(logger, node, transport, inputs, local_copy_list, wo
                 data_node.base.repository.copy_tree(filepath_target, filename_source)
                 await transport.put_async(
                     f'{dirpath}/*',
-                    str(workdir.joinpath(target)) if target else str(workdir.joinpath('.')),
+                    workdir.joinpath(target) if target else workdir.joinpath('.'),
                     overwrite=True,
                 )
             else:
@@ -386,18 +382,20 @@ async def _copy_local_files(logger, node, transport, inputs, local_copy_list, wo
                 with filepath_target.open('wb') as handle:
                     with data_node.base.repository.open(filename_source, 'rb') as source:
                         shutil.copyfileobj(source, handle)
-                await transport.makedirs_async(str(workdir.joinpath(Path(target).parent)), ignore_existing=True)
-                await transport.put_async(str(filepath_target), str(workdir.joinpath(target)))
+                await transport.makedirs_async(workdir.joinpath(Path(target).parent), ignore_existing=True)
+                await transport.put_async(filepath_target, workdir.joinpath(target))
 
 
 async def _copy_sandbox_files(logger, node, transport, folder, workdir: Path):
     """Copy the contents of the sandbox folder to the working directory."""
     for filename in folder.get_content_list():
         logger.debug(f'[submission of calculation {node.pk}] copying file/folder {filename}...')
-        await transport.put_async(folder.get_abs_path(filename), str(workdir.joinpath(filename)))
+        await transport.put_async(folder.get_abs_path(filename), workdir.joinpath(filename))
 
 
-def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
+def submit_calculation(
+    calculation: CalcJobNode, transport: Union['BlockingTransport', 'AsyncTransport']
+) -> str | ExitCode:
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
@@ -427,7 +425,7 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | 
     return result
 
 
-async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+async def stash_calculation(calculation: CalcJobNode, transport: Union['BlockingTransport', 'AsyncTransport']) -> None:
     """Stash files from the working directory of a completed calculation to a permanent remote folder.
 
     After a calculation has been completed, optionally stash files from the work directory to a storage location on the
@@ -465,7 +463,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     for source_filename in source_list:
         if transport.has_magic(source_filename):
             copy_instructions = []
-            for globbed_filename in await transport.glob_async(str(source_basepath / source_filename)):
+            for globbed_filename in await transport.glob_async(source_basepath / source_filename):
                 target_filepath = target_basepath / Path(globbed_filename).relative_to(source_basepath)
                 copy_instructions.append((globbed_filename, target_filepath))
         else:
@@ -474,10 +472,10 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
         for source_filepath, target_filepath in copy_instructions:
             # If the source file is in a (nested) directory, create those directories first in the target directory
             target_dirname = target_filepath.parent
-            await transport.makedirs_async(str(target_dirname), ignore_existing=True)
+            await transport.makedirs_async(target_dirname, ignore_existing=True)
 
             try:
-                await transport.copy_async(str(source_filepath), str(target_filepath))
+                await transport.copy_async(source_filepath, target_filepath)
             except (OSError, ValueError) as exception:
                 EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
             else:
@@ -493,7 +491,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
 
 
 async def retrieve_calculation(
-    calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str
+    calculation: CalcJobNode, transport: Union['BlockingTransport', 'AsyncTransport'], retrieved_temporary_folder: str
 ) -> FolderData | None:
     """Retrieve all the files of a completed job calculation using the given transport.
 
@@ -558,7 +556,7 @@ async def retrieve_calculation(
     return retrieved_files
 
 
-def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+def kill_calculation(calculation: CalcJobNode, transport: Union['BlockingTransport', 'AsyncTransport']) -> None:
     """Kill the calculation through the scheduler
 
     :param calculation: the instance of CalcJobNode to kill.
@@ -593,7 +591,7 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
 
 async def retrieve_files_from_list(
     calculation: CalcJobNode,
-    transport: Transport,
+    transport: Union['BlockingTransport', 'AsyncTransport'],
     folder: str,
     retrieve_list: List[Union[str, Tuple[str, str, int], list]],
 ) -> None:
@@ -616,7 +614,7 @@ async def retrieve_files_from_list(
     upto what level of the original remotepath nesting the files will be copied.
 
     :param transport: the Transport instance.
-    :param folder: an absolute path to a folder that contains the files to copy.
+    :param folder: an absolute path to a folder that contains the files to retrieve.
     :param retrieve_list: the list of files to retrieve.
     """
     workdir = Path(calculation.get_remote_workdir())
@@ -625,7 +623,7 @@ async def retrieve_files_from_list(
             tmp_rname, tmp_lname, depth = item
             # if there are more than one file I do something differently
             if transport.has_magic(tmp_rname):
-                remote_names = await transport.glob_async(str(workdir.joinpath(tmp_rname)))
+                remote_names = await transport.glob_async(workdir.joinpath(tmp_rname))
                 local_names = []
                 for rem in remote_names:
                     # get the relative path so to make local_names relative
@@ -660,6 +658,6 @@ async def retrieve_files_from_list(
             if rem.startswith('/'):
                 to_get = rem
             else:
-                to_get = str(workdir.joinpath(rem))
+                to_get = workdir.joinpath(rem)
 
             await transport.get_async(to_get, os.path.join(folder, loc), ignore_nonexisting=True)

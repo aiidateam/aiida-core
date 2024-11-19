@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from typing import Union
 
 from aiida.orm import CalcJobNode
-from aiida.transports import Transport
+from aiida.transports import AsyncTransport, BlockingTransport
 
 
-def always_kill(node: CalcJobNode, transport: Transport) -> str | None:
+def always_kill(node: CalcJobNode, transport: Union['BlockingTransport', 'AsyncTransport']) -> str | None:
     """Retrieve and inspect files in working directory of job to determine whether the job should be killed.
 
     This particular implementation is just for demonstration purposes and will kill the job as long as there is a

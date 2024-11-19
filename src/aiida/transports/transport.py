@@ -15,16 +15,16 @@ import os
 import re
 import sys
 from collections import OrderedDict
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Union
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
 
-__all__ = ('Transport',)
+__all__ = ('Transport', 'AsyncTransport', 'BlockingTransport')
 
-_TransportPath = Union[str, Path]
+_TransportPath = Union[str, Path, PurePosixPath]
 
 
 def validate_positive_number(ctx, param, value):
@@ -44,7 +44,8 @@ def validate_positive_number(ctx, param, value):
 
 
 def fix_path(path: _TransportPath) -> str:
-    """Convert a Path object to a string."""
+    """Convert an instance of _TransportPath = Union[str, Path, PurePosixPath] instance to a string."""
+    # We could check if the path is a Path or PurePosixPath instance, but it's too much overhead.
     return str(path)
 
 
@@ -249,6 +250,7 @@ class _BaseTransport:
         return self._safe_open_interval
 
     def has_magic(self, string):
+        string = fix_path(string)
         """Return True if the given string contains any special shell characters."""
         return self._MAGIC_CHECK.search(string) is not None
 
@@ -276,13 +278,12 @@ class BlockingTransport(abc.ABC, _BaseTransport):
     # keys: 'default', 'prompt', 'help', 'non_interactive_default'
     _valid_auth_options = []
 
-    @abc.abstractmethod
     def __repr__(self):
         return f'<{self.__class__.__name__}: {self!s}>'
 
     @abc.abstractmethod
     def __str__(self):
-        return '[Transport class or subclass]'
+        """return [Transport class or subclass]"""
 
     @abc.abstractmethod
     def chmod(self, path, mode):
@@ -754,16 +755,17 @@ class BlockingTransport(abc.ABC, _BaseTransport):
 
     # The following definitions are almost copied and pasted
     # from the python module glob.
-    def glob(self, pathname):
+    def glob(self, pathname: _TransportPath):
         """Return a list of paths matching a pathname pattern.
 
         The pattern may contain simple shell-style wildcards a la fnmatch.
 
-        :param str pathname: the pathname pattern to match.
-            It should only be absolute path.
+        :param pathname: the pathname pattern to match.
+            It should only be absolute path of type _TransportPath.
             DEPRECATED: using relative path is deprecated.
         :return: a list of paths matching the pattern.
         """
+        pathname = fix_path(pathname)
         if not pathname.startswith('/'):
             warn_deprecation(
                 'Using relative paths across transport in `glob` is deprecated '
@@ -910,11 +912,11 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         """Counterpart to isfile() that is async."""
         return self.isfile(path)
 
-    async def listdir_async(self, path='.', pattern=None):
+    async def listdir_async(self, path, pattern=None):
         """Counterpart to listdir() that is async."""
         return self.listdir(path, pattern)
 
-    async def listdir_withattributes_async(self, path: _TransportPath = '.', pattern=None):
+    async def listdir_withattributes_async(self, path: _TransportPath, pattern=None):
         """Counterpart to listdir_withattributes() that is async."""
         return self.listdir_withattributes(path, pattern)
 
@@ -926,7 +928,7 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         """Counterpart to mkdir() that is async."""
         return self.mkdir(path, ignore_existing)
 
-    async def normalize_async(self, path='.'):
+    async def normalize_async(self, path):
         """Counterpart to normalize() that is async."""
         return self.normalize(path)
 
@@ -1034,9 +1036,16 @@ class AsyncTransport(abc.ABC, _BaseTransport):
     async def get_attribute_async(self, path):
         """Return an object FixedFieldsAttributeDict for file in a given path"""
 
-    @abc.abstractmethod
     async def get_mode_async(self, path):
-        """Return the portion of the file's mode that can be set by chmod()."""
+        """Return the portion of the file's mode that can be set by chmod().
+
+        :param str path: path to file
+        :return: the portion of the file's mode that can be set by chmod()
+        """
+        import stat
+
+        attr = await self.get_attribute_async(path)
+        return stat.S_IMODE(attr.st_mode)
 
     @abc.abstractmethod
     async def isdir_async(self, path):
@@ -1047,11 +1056,11 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         """Return True if path is an existing file."""
 
     @abc.abstractmethod
-    async def listdir_async(self, path='.', pattern=None):
+    async def listdir_async(self, path: _TransportPath, pattern=None):
         """Return a list of the names of the entries in the given path."""
 
     @abc.abstractmethod
-    async def listdir_withattributes_async(self, path: _TransportPath = '.', pattern=None):
+    async def listdir_withattributes_async(self, path: _TransportPath, pattern=None):
         """Return a list of the names of the entries in the given path."""
 
     @abc.abstractmethod
@@ -1063,7 +1072,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         """Create a folder (directory) named path."""
 
     @abc.abstractmethod
-    async def normalize_async(self, path='.'):
+    async def normalize_async(self, path: _TransportPath):
         """Return the normalized path (on the server) of a given path."""
 
     @abc.abstractmethod
@@ -1143,6 +1152,9 @@ class AsyncTransport(abc.ABC, _BaseTransport):
     def gettree(self, *args, **kwargs):
         return self.run_command_blocking(self.gettree_async, *args, **kwargs)
 
+    def get_mode(self, *args, **kwargs):
+        return self.run_command_blocking(self.get_mode_async, *args, **kwargs)
+
     def put(self, *args, **kwargs):
         return self.run_command_blocking(self.put_async, *args, **kwargs)
 
@@ -1159,10 +1171,10 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         return self.run_command_blocking(self.copy_async, *args, **kwargs)
 
     def copyfile(self, *args, **kwargs):
-        return self.copy(*args, **kwargs)
+        return self.run_command_blocking(self.copyfile_async, *args, **kwargs)
 
     def copytree(self, *args, **kwargs):
-        return self.copy(*args, **kwargs)
+        return self.run_command_blocking(self.copytree_async, *args, **kwargs)
 
     def exec_command_wait(self, *args, **kwargs):
         return self.run_command_blocking(self.exec_command_wait_async, *args, **kwargs)

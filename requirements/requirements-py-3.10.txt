@@ -20,6 +20,7 @@ ase==3.22.1
 asn1crypto==1.5.1
 asttokens==2.2.1
 async-generator==1.10
+asyncssh~=2.18.0
 attrs==23.1.0
 babel==2.12.1
 backcall==0.2.0
@@ -120,7 +121,7 @@ pillow==9.5.0
 platformdirs==3.6.0
 plotly==5.15.0
 pluggy==1.0.0
-plumpy==0.22.3
+plumpy@git+https://github.com/khsrali/plumpy.git@allow-async-upload-download#egg=plumpy
 prometheus-client==0.17.0
 prompt-toolkit==3.0.38
 psutil==5.9.5

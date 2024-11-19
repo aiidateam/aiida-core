@@ -67,7 +67,7 @@ class TestComputer:
         # No transport class defined: fall back on class default.
         assert computer.get_minimum_job_poll_interval() == Computer.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
 
-        # Transport class defined: use default of the transport class.
+        # BlockingTransport class defined: use default of the transport class.
         transport = TransportFactory('core.local')
         computer.transport_type = 'core.local'
         assert computer.get_minimum_job_poll_interval() == transport.DEFAULT_MINIMUM_JOB_POLL_INTERVAL

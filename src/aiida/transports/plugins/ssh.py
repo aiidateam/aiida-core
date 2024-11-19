@@ -1137,7 +1137,7 @@ class SshTransport(BlockingTransport):
         localpath: _TransportPath,
         callback=None,
         dereference: Optional[bool] = True,
-        overwrite: Optional[bool] = None,
+        overwrite: Optional[bool] = True,
     ):
         """Get a folder recursively from remote to local.
 
@@ -1147,7 +1147,7 @@ class SshTransport(BlockingTransport):
             Default = True (default behaviour in paramiko).
             False is not implemented.
         :param  overwrite: if True overwrites files and folders.
-            Default = False
+            Default = True
 
         :raise ValueError: if local path is invalid
         :raise OSError: if the remotepath is not found

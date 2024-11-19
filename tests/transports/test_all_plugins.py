@@ -21,11 +21,12 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
+from typing import Union
 
 import psutil
 import pytest
-from aiida.plugins import SchedulerFactory, TransportFactory
-from aiida.transports import Transport
+from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
+from aiida.transports import AsyncTransport, BlockingTransport
 
 # TODO : test for copy with pattern
 # TODO : test for copy with/without patterns, overwriting folder
@@ -33,9 +34,8 @@ from aiida.transports import Transport
 # TODO : silly cases of copy/put/get from self to self
 
 
-# @pytest.fixture(scope='function', params=entry_point.get_entry_point_names('aiida.transports'))
-@pytest.fixture(scope='function', params=['core.ssh', 'core.ssh_async'])
-def custom_transport(request, tmp_path, monkeypatch) -> Transport:
+@pytest.fixture(scope='function', params=entry_point.get_entry_point_names('aiida.transports'))
+def custom_transport(request, tmp_path, monkeypatch) -> Union['BlockingTransport', 'AsyncTransport']:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
     plugin = TransportFactory(request.param)
 
@@ -130,23 +130,26 @@ def test_rmtree(custom_transport, tmpdir):
 
 def test_listdir(custom_transport, tmpdir):
     """Create directories, verify listdir"""
+    # we need another directory as tmpdir is polluted by custom_transport for the case of core.ssh_auto
+    tmpdir_ = tmpdir / 'remote'
+    tmpdir_.mkdir()
     with custom_transport as transport:
         list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
         for this_dir in list_of_dir:
-            transport.mkdir(tmpdir / this_dir)
+            transport.mkdir(tmpdir_ / this_dir)
         for fname in list_of_files:
             with tempfile.NamedTemporaryFile() as tmpf:
                 # Just put an empty file there at the right file name
-                transport.putfile(tmpf.name, tmpdir / fname)
+                transport.putfile(tmpf.name, tmpdir_ / fname)
 
-        list_found = transport.listdir(tmpdir)
+        list_found = transport.listdir(tmpdir_)
 
         assert sorted(list_found) == sorted(list_of_dir + list_of_files)
 
-        assert sorted(transport.listdir(tmpdir, 'a*')), sorted(['as', 'a2', 'a4f'])
-        assert sorted(transport.listdir(tmpdir, 'a?')), sorted(['as', 'a2'])
-        assert sorted(transport.listdir(tmpdir, 'a[2-4]*')), sorted(['a2', 'a4f'])
+        assert sorted(transport.listdir(tmpdir_, 'a*')), sorted(['as', 'a2', 'a4f'])
+        assert sorted(transport.listdir(tmpdir_, 'a?')), sorted(['as', 'a2'])
+        assert sorted(transport.listdir(tmpdir_, 'a[2-4]*')), sorted(['a2', 'a4f'])
 
 
 def test_listdir_withattributes(custom_transport, tmpdir):

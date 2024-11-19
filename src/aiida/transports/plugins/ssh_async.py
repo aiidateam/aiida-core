@@ -454,6 +454,7 @@ class AsyncSshTransport(AsyncTransport):
             raise ValueError('remotedestination must be a non empty string')
         if not remotesource:
             raise ValueError('remotesource must be a non empty string')
+
         try:
             if self.has_magic(remotesource):
                 await self._sftp.mcopy(
@@ -464,6 +465,8 @@ class AsyncSshTransport(AsyncTransport):
                     follow_symlinks=dereference,
                 )
             else:
+                if not await self.path_exists_async(remotesource):
+                    raise OSError(f'The remote path {remotesource} does not exist')
                 await self._sftp.copy(
                     remotesource,
                     remotedestination,
@@ -473,6 +476,24 @@ class AsyncSshTransport(AsyncTransport):
                 )
         except asyncssh.sftp.SFTPFailure as exc:
             raise OSError(f'Error while copying {remotesource} to {remotedestination}: {exc}')
+
+    async def copyfile_async(
+        self,
+        remotesource: _TransportPath,
+        remotedestination: _TransportPath,
+        dereference: bool = False,
+        preserve: bool = False,
+    ):
+        return await self.copy_async(remotesource, remotedestination, dereference, recursive=False, preserve=preserve)
+
+    async def copytree_async(
+        self,
+        remotesource: _TransportPath,
+        remotedestination: _TransportPath,
+        dereference: bool = False,
+        preserve: bool = False,
+    ):
+        return await self.copy_async(remotesource, remotedestination, dereference, recursive=True, preserve=preserve)
 
     async def exec_command_wait_async(
         self,
@@ -487,7 +508,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :param command: the command to execute
         :param stdin: the standard input to pass to the command
-        :param encoding: (IGNORED) this is here just to keep the same signature as the one in `Transport` class
+        :param encoding: (IGNORED) this is here just to keep the same signature as the one in `BlockingTransport` class
         :param workdir: the working directory where to execute the command
         :param timeout: the timeout in seconds
 
@@ -509,8 +530,8 @@ class AsyncSshTransport(AsyncTransport):
         result = await self._conn.run(
             bash_commmand + escape_for_bash(command), input=stdin, check=False, timeout=timeout
         )
-        # both stdout and stderr are strings
-        return (result.returncode, ''.join(result.stdout), ''.join(result.stderr))  # type: ignore [arg-type]
+        # Since the command is str, both stdout and stderr are strings
+        return (result.returncode, ''.join(str(result.stdout)), ''.join(str(result.stderr)))
 
     async def get_attribute_async(self, path):
         """ """
@@ -561,17 +582,19 @@ class AsyncSshTransport(AsyncTransport):
 
         return await self._sftp.isfile(path)
 
-    async def listdir_async(self, path, pattern=None):  # type: ignore[override]
+    async def listdir_async(self, path: _TransportPath, pattern=None):
         """
 
         :param path: the absolute path to list
         """
         path = fix_path(path)
         if not pattern:
-            list_ = await self._sftp.listdir(path)
+            list_ = list(await self._sftp.listdir(path))
         else:
             patterned_path = pattern if pattern.startswith('/') else Path(path).joinpath(pattern)
-            list_ = await self._sftp.glob(patterned_path)
+            # I put the type ignore here because the asyncssh.sftp.glob()
+            # method alwyas returns a sequence of str, if input is str
+            list_ = list(await self._sftp.glob(patterned_path))  # type: ignore[arg-type]
 
         for item in ['..', '.']:
             if item in list_:
@@ -579,7 +602,7 @@ class AsyncSshTransport(AsyncTransport):
 
         return list_
 
-    async def listdir_withattributes_async(self, path: _TransportPath, pattern: Optional[str] = None):  # type: ignore[override]
+    async def listdir_withattributes_async(self, path: _TransportPath, pattern: Optional[str] = None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -791,6 +814,21 @@ class AsyncSshTransport(AsyncTransport):
         except asyncssh.sftp.SFTPNoSuchFile as exc:
             raise OSError(f'Error {exc}, directory does not exists')
 
+    async def chown_async(self, path, uid, gid):
+        """Change the owner and group id of a file.
+
+        :param str path: path to the file
+        :param int uid: the new owner id
+        :param int gid: the new group id
+        """
+        path = fix_path(path)
+        if not path:
+            raise OSError('Input path is an empty argument.')
+        try:
+            await self._sftp.chown(path, uid, gid, follow_symlinks=True)
+        except asyncssh.sftp.SFTPNoSuchFile as exc:
+            raise OSError(f'Error {exc}, directory does not exists')
+
     async def copy_from_remote_to_remote_async(self, transportdestination, remotesource, remotedestination, **kwargs):
         """Copy files or folders from a remote computer to another remote computer, asynchronously.
 
@@ -842,117 +880,10 @@ class AsyncSshTransport(AsyncTransport):
                     os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put
                 )
 
-    ## Blocking methods. We need these for backwards compatibility
-    # This is useful, only because some part of engine and
-    # many external plugins are synchronous, in those cases blocking calls make more sense.
-    # However, be aware you cannot use these methods in an async functions,
-    # because they will block the event loop.
-
-    def run_command_blocking(self, func, *args, **kwargs):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(func(*args, **kwargs))
-
-    def open(self):
-        return self.run_command_blocking(self.open_async)
-
-    def close(self):
-        return self.run_command_blocking(self.close_async)
-
-    def chown(self, *args, **kwargs):
-        raise NotImplementedError('Not implemented, for now')
-
-    def get(self, *args, **kwargs):
-        return self.run_command_blocking(self.get_async, *args, **kwargs)
-
-    def getfile(self, *args, **kwargs):
-        return self.run_command_blocking(self.getfile_async, *args, **kwargs)
-
-    def gettree(self, *args, **kwargs):
-        return self.run_command_blocking(self.gettree_async, *args, **kwargs)
-
-    def put(self, *args, **kwargs):
-        return self.run_command_blocking(self.put_async, *args, **kwargs)
-
-    def putfile(self, *args, **kwargs):
-        return self.run_command_blocking(self.putfile_async, *args, **kwargs)
-
-    def puttree(self, *args, **kwargs):
-        return self.run_command_blocking(self.puttree_async, *args, **kwargs)
-
-    def chmod(self, *args, **kwargs):
-        return self.run_command_blocking(self.chmod_async, *args, **kwargs)
-
-    def copy(self, *args, **kwargs):
-        return self.run_command_blocking(self.copy_async, *args, **kwargs)
-
-    def copyfile(self, *args, **kwargs):
-        return self.copy(*args, **kwargs)
-
-    def copytree(self, *args, **kwargs):
-        return self.copy(*args, **kwargs)
-
-    def exec_command_wait(self, *args, **kwargs):
-        return self.run_command_blocking(self.exec_command_wait_async, *args, **kwargs)
-
-    def get_attribute(self, *args, **kwargs):
-        return self.run_command_blocking(self.get_attribute_async, *args, **kwargs)
-
-    def isdir(self, *args, **kwargs):
-        return self.run_command_blocking(self.isdir_async, *args, **kwargs)
-
-    def isfile(self, *args, **kwargs):
-        return self.run_command_blocking(self.isfile_async, *args, **kwargs)
-
-    def listdir(self, *args, **kwargs):
-        return self.run_command_blocking(self.listdir_async, *args, **kwargs)
-
-    def listdir_withattributes(self, *args, **kwargs):
-        return self.run_command_blocking(self.listdir_withattributes_async, *args, **kwargs)
-
-    def makedirs(self, *args, **kwargs):
-        return self.run_command_blocking(self.makedirs_async, *args, **kwargs)
-
-    def mkdir(self, *args, **kwargs):
-        return self.run_command_blocking(self.mkdir_async, *args, **kwargs)
-
-    def remove(self, *args, **kwargs):
-        return self.run_command_blocking(self.remove_async, *args, **kwargs)
-
-    def rename(self, *args, **kwargs):
-        return self.run_command_blocking(self.rename_async, *args, **kwargs)
-
-    def rmdir(self, *args, **kwargs):
-        return self.run_command_blocking(self.rmdir_async, *args, **kwargs)
-
-    def rmtree(self, *args, **kwargs):
-        return self.run_command_blocking(self.rmtree_async, *args, **kwargs)
-
-    def path_exists(self, *args, **kwargs):
-        return self.run_command_blocking(self.path_exists_async, *args, **kwargs)
-
-    def whoami(self, *args, **kwargs):
-        return self.run_command_blocking(self.whoami_async, *args, **kwargs)
-
-    def symlink(self, *args, **kwargs):
-        return self.run_command_blocking(self.symlink_async, *args, **kwargs)
-
-    def glob(self, *args, **kwargs):
-        return self.run_command_blocking(self.glob_async, *args, **kwargs)
-
     def gotocomputer_command(self, remotedir):
         connect_string = self._gotocomputer_string(remotedir)
         cmd = f'ssh -t {self.machine} {connect_string}'
         return cmd
 
-    ## These methods are not implemented for async transport,
-    ## mainly because they are not being used across the codebase.
-    ## If you need them, please open an issue on GitHub
-
-    def exec_command_wait_bytes(self, *args, **kwargs):
-        raise NotImplementedError('Not implemented, waiting for a use case')
-
-    def _exec_command_internal(self, *args, **kwargs):
-        raise NotImplementedError('Not implemented, waiting for a use case')
-
-    def normalize(self, *args, **kwargs):
+    async def normalize_async(self, path: _TransportPath):
         raise NotImplementedError('Not implemented, waiting for a use case')

@@ -294,10 +294,17 @@ def check_requirements(extras, github_annotate):
 
         for requirement_abstract in requirements_abstract:
             for requirement_concrete in requirements_concrete:
-                version = Specifier(str(requirement_concrete.specifier)).version
-                if canonicalize_name(requirement_abstract.name) == canonicalize_name(
-                    requirement_concrete.name
-                ) and requirement_abstract.specifier.contains(version):
+                if '@' in str(requirement_concrete):
+                    version = str(requirement_concrete).split('@')[1]
+                    abstract_contains = version in str(requirement_abstract)
+                else:
+                    version = Specifier(str(requirement_concrete.specifier)).version
+                    abstract_contains = requirement_abstract.specifier.contains(version)
+
+                if (
+                    canonicalize_name(requirement_abstract.name) == canonicalize_name(requirement_concrete.name)
+                    and abstract_contains
+                ):
                     installed.append(requirement_abstract)
                     break
 

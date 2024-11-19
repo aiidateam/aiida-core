@@ -130,6 +130,44 @@ def test_qb_json_filters(filters, matches):
 
 
 @pytest.mark.parametrize(
+    'data,filters,is_match',
+    (
+        # contains different types of element
+        ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [1]}}, True),
+        ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': ['2']}}, True),
+        ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [None]}}, True),
+
+        # contains multiple elements of various types
+        ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [1, None]}}, True),
+
+        # contains non-exist elements
+        ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': [114514]}}, False),
+
+        # contains empty set
+        ({'arr': [1, '2', None]}, {'attributes.arr': {'contains': []}}, True),
+        ({'arr': []}, {'attributes.arr': {'contains': []}}, True),
+        ({'foo': []}, {'attributes.arr': {'contains': []}}, False),
+
+        # negations
+        ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [1]}}, False),
+        ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': []}}, False),
+        ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [114514]}}, True),
+        ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [1, 114514]}}, True),
+        ({'foo': [114, 514]}, {'attributes.arr': {'!contains': []}}, False),
+    ),
+    ids=json.dumps,
+)
+def test_qb_json_filters_contains_arrays(data, filters, is_match):
+    """Test QueryBuilder filter `contains` for JSON array fields"""
+    profile = SqliteTempBackend.create_profile(debug=False)
+    backend = SqliteTempBackend(profile)
+    Dict(data, backend=backend).store()
+    qb = QueryBuilder(backend=backend).append(Dict, filters=filters)
+    assert qb.count() in {0, 1}
+    found = (qb.count() == 1)
+    assert found == is_match
+
+@pytest.mark.parametrize(
     'filters,matches',
     (
         ({'label': {'like': 'abc_XYZ'}}, 2),

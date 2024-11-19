@@ -17,7 +17,7 @@ import json
 from functools import singledispatch
 from typing import Any, List, Optional, Tuple, Union
 
-from sqlalchemy import JSON, case, func, select
+from sqlalchemy import JSON, case, func, select, true, not_
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import ColumnElement
 
@@ -209,7 +209,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
     @staticmethod
     def get_filter_expr_from_jsonb(
-        operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
+        operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None, negation=None
     ):
         """Return a filter expression.
 
@@ -285,8 +285,28 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             return case((type_filter, casted_entity.ilike(value, escape='\\')), else_=False)
 
         if operator == 'contains':
-            # to-do, see: https://github.com/sqlalchemy/sqlalchemy/discussions/7836
-            raise NotImplementedError('The operator `contains` is not implemented for SQLite-based storage plugins.')
+            if isinstance(value, list):
+                if not value or len(value) == 0:
+                    if len(attr_key) == 0:
+                        filter = true()
+                    else: 
+                        filter = SqliteQueryBuilder.get_filter_expr_from_jsonb(
+                                    'has_key', attr_key[-1], attr_key[:-1], column)
+                    if negation: filter = not_(filter) # negation should not work for this operation
+                    return filter
+
+                subq = select(database_entity) \
+                        .where(func.json_each(database_entity) \
+                                .table_valued('value', joins_implicitly=True) \
+                                .c.value.in_(value)) \
+                        .correlate_except()
+                subsubq = select(func.count()).select_from(subq).scalar_subquery()
+                return subsubq == len(value)
+
+            elif isinstance(value, dict):
+                raise NotImplementedError
+            else:
+                raise TypeError("contains filters can only have as a parameter a list (when matching against lists) or dictionaries (when matching against dictionaries)")
 
         if operator == 'has_key':
             return (

@@ -6,15 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Plugin for transport over SSH asynchronously.
+"""Plugin for transport over SSH asynchronously."""
 
-Since for many dependencies the blocking methods are required,
-this plugin develops both blocking methods, as well.
-"""
-
-## TODO:
-## and start writing tests!
-## put & get methods could be simplified with the asyncssh.sftp.mget() & put() method or sftp.glob()
+## TODO: put & get methods could be simplified with the asyncssh.sftp.mget() & put() method or sftp.glob()
 import asyncio
 import glob
 import os
@@ -28,7 +22,7 @@ from asyncssh import SFTPFileAlreadyExists
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import InvalidOperation
 
-from ..transport import AsyncTransport, TransportInternalError, _TransportPath, fix_path
+from ..transport import AsyncTransport, BlockingTransport, TransportInternalError, _TransportPath, path_2_str
 
 __all__ = ('AsyncSshTransport',)
 
@@ -111,6 +105,12 @@ class AsyncSshTransport(AsyncTransport):
         self.script_during = kwargs.pop('script_during', 'None')
 
     async def open_async(self):
+        """Open the transport.
+        This plugin supports running scripts before and during the connection.
+        The scripts are run locally, not on the remote machine.
+
+        :raises InvalidOperation: if the transport is already open
+        """
         if self._is_open:
             raise InvalidOperation('Cannot open the transport twice')
 
@@ -129,6 +129,10 @@ class AsyncSshTransport(AsyncTransport):
         return self
 
     async def close_async(self):
+        """Close the transport.
+
+        :raises InvalidOperation: if the transport is already closed
+        """
         if not self._is_open:
             raise InvalidOperation('Cannot close the transport: it is already closed')
 
@@ -139,23 +143,35 @@ class AsyncSshTransport(AsyncTransport):
     def __str__(self):
         return f"{'OPEN' if self._is_open else 'CLOSED'} [AsyncSshTransport]"
 
-    async def get_async(self, remotepath, localpath, dereference=True, overwrite=True, ignore_nonexisting=False):
+    async def get_async(
+        self,
+        remotepath: _TransportPath,
+        localpath: _TransportPath,
+        dereference=True,
+        overwrite=True,
+        ignore_nonexisting=False,
+    ):
         """Get a file or folder from remote to local.
         Redirects to getfile or gettree.
 
-        :param remotepath: a remote path
-        :param localpath: an (absolute) local path
+        :param remotepath: an absolute remote path
+        :param localpath: an absolute local path
         :param dereference: follow symbolic links.
-            Default = True (default behaviour in paramiko).
-            False is not implemented.
+            Default = True
         :param overwrite: if True overwrites files and folders.
             Default = False
+
+        :type remotepath: _TransportPath
+        :type localpath: _TransportPath
+        :type dereference: bool
+        :type overwrite: bool
+        :type ignore_nonexisting: bool
 
         :raise ValueError: if local path is invalid
         :raise OSError: if the remotepath is not found
         """
-        remotepath = fix_path(remotepath)
-        localpath = fix_path(localpath)
+        remotepath = path_2_str(remotepath)
+        localpath = path_2_str(localpath)
 
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
@@ -203,19 +219,28 @@ class AsyncSshTransport(AsyncTransport):
         else:
             raise OSError(f'The remote path {remotepath} does not exist')
 
-    async def getfile_async(self, remotepath, localpath, dereference=True, overwrite=True):
+    async def getfile_async(
+        self, remotepath: _TransportPath, localpath: _TransportPath, dereference=True, overwrite=True
+    ):
         """Get a file from remote to local.
 
-        :param remotepath: a remote path
-        :param  localpath: an (absolute) local path
+        :param remotepath: an absolute remote path
+        :param localpath: an absolute local path
         :param  overwrite: if True overwrites files and folders.
                 Default = False
+        :param  dereference: follow symbolic links.
+                Default = True
+
+        :type remotepath: _TransportPath
+        :type localpath: _TransportPath
+        :type dereference: bool
+        :type overwrite: bool
 
         :raise ValueError: if local path is invalid
         :raise OSError: if unintentionally overwriting
         """
-        remotepath = fix_path(remotepath)
-        localpath = fix_path(localpath)
+        remotepath = path_2_str(remotepath)
+        localpath = path_2_str(localpath)
 
         if not os.path.isabs(localpath):
             raise ValueError('localpath must be an absolute path')
@@ -230,23 +255,29 @@ class AsyncSshTransport(AsyncTransport):
         except (OSError, asyncssh.Error) as exc:
             raise OSError(f'Error while uploading file {localpath}: {exc}')
 
-    async def gettree_async(self, remotepath, localpath, dereference=True, overwrite=True):
+    async def gettree_async(
+        self, remotepath: _TransportPath, localpath: _TransportPath, dereference=True, overwrite=True
+    ):
         """Get a folder recursively from remote to local.
 
-        :param remotepath: a remote path
-        :param localpath: an (absolute) local path
+        :param remotepath: an absolute remote path
+        :param localpath: an absolute local path
         :param dereference: follow symbolic links.
-            Default = True (default behaviour in paramiko).
-            False is not implemented.
+            Default = True
         :param  overwrite: if True overwrites files and folders.
-            Default = False
+            Default = True
+
+        :type remotepath: _TransportPath
+        :type localpath: _TransportPath
+        :type dereference: bool
+        :type overwrite: bool
 
         :raise ValueError: if local path is invalid
         :raise OSError: if the remotepath is not found
         :raise OSError: if unintentionally overwriting
         """
-        remotepath = fix_path(remotepath)
-        localpath = fix_path(localpath)
+        remotepath = path_2_str(remotepath)
+        localpath = path_2_str(localpath)
 
         if not remotepath:
             raise OSError('Remotepath must be a non empty string')
@@ -283,22 +314,35 @@ class AsyncSshTransport(AsyncTransport):
             except (OSError, asyncssh.Error) as exc:
                 raise OSError(f'Error while uploading file {localpath}: {exc}')
 
-    async def put_async(self, localpath, remotepath, dereference=True, overwrite=True, ignore_nonexisting=False):
+    async def put_async(
+        self,
+        localpath: _TransportPath,
+        remotepath: _TransportPath,
+        dereference=True,
+        overwrite=True,
+        ignore_nonexisting=False,
+    ):
         """Put a file or a folder from local to remote.
         Redirects to putfile or puttree.
 
-        :param localpath: an (absolute) local path
-        :param remotepath: a remote path
-        :param dereference: follow symbolic links (boolean).
-            Default = True (default behaviour in paramiko). False is not implemented.
-        :param  overwrite: if True overwrites files and folders (boolean).
-            Default = False.
+        :param remotepath: an absolute remote path
+        :param localpath: an absolute local path
+        :param dereference: follow symbolic links
+            Default = True
+        :param  overwrite: if True overwrites files and folders
+            Default = False
+
+        :type remotepath: _TransportPath
+        :type localpath: _TransportPath
+        :type dereference: bool
+        :type overwrite: bool
+        :type ignore_nonexisting: bool
 
         :raise ValueError: if local path is invalid
         :raise OSError: if the localpath does not exist
         """
-        localpath = fix_path(localpath)
-        remotepath = fix_path(remotepath)
+        localpath = path_2_str(localpath)
+        remotepath = path_2_str(remotepath)
 
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
@@ -348,20 +392,27 @@ class AsyncSshTransport(AsyncTransport):
         elif not ignore_nonexisting:
             raise OSError(f'The local path {localpath} does not exist')
 
-    async def putfile_async(self, localpath, remotepath, dereference=True, overwrite=True):
+    async def putfile_async(
+        self, localpath: _TransportPath, remotepath: _TransportPath, dereference=True, overwrite=True
+    ):
         """Put a file from local to remote.
 
-        :param localpath: an (absolute) local path
-        :param remotepath: a remote path
-        :param overwrite: if True overwrites files and folders (boolean).
-            Default = True.
+        :param remotepath: an absolute remote path
+        :param localpath: an absolute local path
+        :param overwrite: if True overwrites files and folders
+            Default = True
+
+        :type remotepath: _TransportPath
+        :type localpath: _TransportPath
+        :type dereference: bool
+        :type overwrite: bool
 
         :raise ValueError: if local path is invalid
         :raise OSError: if the localpath does not exist,
                     or unintentionally overwriting
         """
-        localpath = fix_path(localpath)
-        remotepath = fix_path(remotepath)
+        localpath = path_2_str(localpath)
+        remotepath = path_2_str(remotepath)
 
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
@@ -376,27 +427,29 @@ class AsyncSshTransport(AsyncTransport):
         except (OSError, asyncssh.Error) as exc:
             raise OSError(f'Error while uploading file {localpath}: {exc}')
 
-    async def puttree_async(self, localpath, remotepath, dereference=True, overwrite=True):
+    async def puttree_async(
+        self, localpath: _TransportPath, remotepath: _TransportPath, dereference=True, overwrite=True
+    ):
         """Put a folder recursively from local to remote.
 
-        By default, overwrite.
-
-        :param localpath: an (absolute) local path
-        :param remotepath: a remote path
-        :param dereference: follow symbolic links (boolean)
-            Default = True (default behaviour in paramiko). False is not implemented.
+        :param localpath: an absolute local path
+        :param remotepath: an absolute remote path
+        :param dereference: follow symbolic links
+            Default = True
         :param overwrite: if True overwrites files and folders (boolean).
             Default = True
+
+        :type localpath: _TransportPath
+        :type remotepath: _TransportPath
+        :type dereference: bool
+        :type overwrite: bool
 
         :raise ValueError: if local path is invalid
         :raise OSError: if the localpath does not exist, or trying to overwrite
         :raise OSError: if remotepath is invalid
-
-        .. note:: setting dereference equal to True could cause infinite loops.
-              see os.walk() documentation
         """
-        localpath = fix_path(localpath)
-        remotepath = fix_path(remotepath)
+        localpath = path_2_str(localpath)
+        remotepath = path_2_str(remotepath)
 
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
@@ -444,9 +497,25 @@ class AsyncSshTransport(AsyncTransport):
         recursive: bool = True,
         preserve: bool = False,
     ):
-        """ """
-        remotesource = fix_path(remotesource)
-        remotedestination = fix_path(remotedestination)
+        """Copy a file or a folder from remote to remote.
+
+        :param remotesource: path to the remote source directory / file
+        :param remotedestination: path to the remote destination directory / file
+        :param dereference: follow symbolic links
+        :param recursive: copy recursively
+        :param preserve: preserve file attributes
+
+        :type remotesource: _TransportPath
+        :type remotedestination: _TransportPath
+        :type dereference: bool
+        :type recursive: bool
+        :type preserve: bool
+
+        :raises: OSError, src does not exist or if the copy execution failed.
+        """
+
+        remotesource = path_2_str(remotesource)
+        remotedestination = path_2_str(remotedestination)
         if self.has_magic(remotedestination):
             raise ValueError('Pathname patterns are not allowed in the destination')
 
@@ -484,6 +553,20 @@ class AsyncSshTransport(AsyncTransport):
         dereference: bool = False,
         preserve: bool = False,
     ):
+        """Copy a file from remote to remote.
+
+        :param remotesource: path to the remote source file
+        :param remotedestination: path to the remote destination file
+        :param dereference: follow symbolic links
+        :param preserve: preserve file attributes
+
+        :type remotesource: _TransportPath
+        :type remotedestination: _TransportPath
+        :type dereference: bool
+        :type preserve: bool
+
+        :raises: OSError, src does not exist or if the copy execution failed.
+        """
         return await self.copy_async(remotesource, remotedestination, dereference, recursive=False, preserve=preserve)
 
     async def copytree_async(
@@ -493,6 +576,20 @@ class AsyncSshTransport(AsyncTransport):
         dereference: bool = False,
         preserve: bool = False,
     ):
+        """Copy a folder from remote to remote.
+
+        :param remotesource: path to the remote source directory
+        :param remotedestination: path to the remote destination directory
+        :param dereference: follow symbolic links
+        :param preserve: preserve file attributes
+
+        :type remotesource: _TransportPath
+        :type remotedestination: _TransportPath
+        :type dereference: bool
+        :type preserve: bool
+
+        :raises: OSError, src does not exist or if the copy execution failed.
+        """
         return await self.copy_async(remotesource, remotedestination, dereference, recursive=True, preserve=preserve)
 
     async def exec_command_wait_async(
@@ -500,14 +597,14 @@ class AsyncSshTransport(AsyncTransport):
         command: str,
         stdin: Optional[str] = None,
         encoding: str = 'utf-8',
-        workdir: Union[_TransportPath, None] = None,
+        workdir: Optional[_TransportPath] = None,
         timeout: Optional[float] = 2,
         **kwargs,
     ):
         """Execute a command on the remote machine and wait for it to finish.
 
         :param command: the command to execute
-        :param stdin: the standard input to pass to the command
+        :param stdin: the input to pass to the command
         :param encoding: (IGNORED) this is here just to keep the same signature as the one in `BlockingTransport` class
         :param workdir: the working directory where to execute the command
         :param timeout: the timeout in seconds
@@ -515,7 +612,7 @@ class AsyncSshTransport(AsyncTransport):
         :type command: str
         :type stdin: str
         :type encoding: str
-        :type workdir: str
+        :type workdir: Union[_TransportPath, None]
         :type timeout: float
 
         :return: a tuple with the return code, the stdout and the stderr of the command
@@ -533,9 +630,30 @@ class AsyncSshTransport(AsyncTransport):
         # Since the command is str, both stdout and stderr are strings
         return (result.returncode, ''.join(str(result.stdout)), ''.join(str(result.stderr)))
 
-    async def get_attribute_async(self, path):
-        """ """
-        path = fix_path(path)
+    async def get_attribute_async(self, path: _TransportPath):
+        """Return an object FixedFieldsAttributeDict for file in a given path,
+        as defined in aiida.common.extendeddicts
+        Each attribute object consists in a dictionary with the following keys:
+
+        * st_size: size of files, in bytes
+
+        * st_uid: user id of owner
+
+        * st_gid: group id of owner
+
+        * st_mode: protection bits
+
+        * st_atime: time of most recent access
+
+        * st_mtime: time of most recent modification
+
+        :param path: path to file
+
+        :type path: _TransportPath
+
+        :return: object FixedFieldsAttributeDict
+        """
+        path = path_2_str(path)
         from aiida.transports.util import FileAttribute
 
         asyncssh_attr = await self._sftp.lstat(path)
@@ -558,36 +676,56 @@ class AsyncSshTransport(AsyncTransport):
                 raise NotImplementedError(f'Mapping the {key} attribute is not implemented')
         return aiida_attr
 
-    async def isdir_async(self, path):
+    async def isdir_async(self, path: _TransportPath):
         """Return True if the given path is a directory, False otherwise.
         Return False also if the path does not exist.
+
+        :param path: the absolute path to check
+
+        :type path: _TransportPath
+
+        :return: True if the path is a directory, False otherwise
         """
         # Return False on empty string
         if not path:
             return False
 
-        path = fix_path(path)
+        path = path_2_str(path)
 
         return await self._sftp.isdir(path)
 
-    async def isfile_async(self, path):
+    async def isfile_async(self, path: _TransportPath):
         """Return True if the given path is a file, False otherwise.
         Return False also if the path does not exist.
+
+        :param path: the absolute path to check
+
+        :type path: _TransportPath
+
+        :return: True if the path is a file, False otherwise
         """
         # Return False on empty string
         if not path:
             return False
 
-        path = fix_path(path)
+        path = path_2_str(path)
 
         return await self._sftp.isfile(path)
 
     async def listdir_async(self, path: _TransportPath, pattern=None):
-        """
+        """Return a list of the names of the entries in the given path.
+        The list is in arbitrary order. It does not include the special
+        entries '.' and '..' even if they are present in the directory.
 
-        :param path: the absolute path to list
+        :param path: an absolute path
+        :param pattern: if used, listdir returns a list of files matching
+                        filters in Unix style. Unix only.
+
+        :type path: _TransportPath
+
+        :return: a list of strings
         """
-        path = fix_path(path)
+        path = path_2_str(path)
         if not pattern:
             list_ = list(await self._sftp.listdir(path))
         else:
@@ -607,9 +745,12 @@ class AsyncSshTransport(AsyncTransport):
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
 
-        :param str path: absolute path to list
-        :param str pattern: if used, listdir returns a list of files matching
+        :param path: absolute path to list
+        :param pattern: if used, listdir returns a list of files matching
                             filters in Unix style. Unix only.
+
+        :type path: _TransportPath
+        :type pattern: str
         :return: a list of dictionaries, one per entry.
             The schema of the dictionary is
             the following::
@@ -624,7 +765,7 @@ class AsyncSshTransport(AsyncTransport):
             (if the file is a folder, a directory, ...). 'attributes' behaves as the output of
             transport.get_attribute(); isdir is a boolean indicating if the object is a directory or not.
         """
-        path = fix_path(path)
+        path = path_2_str(path)
         retlist = []
         listdir = await self.listdir_async(path, pattern)
         for file_name in listdir:
@@ -639,13 +780,15 @@ class AsyncSshTransport(AsyncTransport):
         Works like mkdir, except that any intermediate path segment (not
         just the rightmost) will be created if it does not exist.
 
-        :param str path: absolute path to directory to create
+        :param path: absolute path to directory to create
         :param bool ignore_existing: if set to true, it doesn't give any error
                 if the leaf directory does already exist
 
+        :type path: _TransportPath
+
         :raises: OSError, if directory at path already exists
         """
-        path = fix_path(path)
+        path = path_2_str(path)
 
         try:
             await self._sftp.makedirs(path, exist_ok=ignore_existing)
@@ -660,13 +803,15 @@ class AsyncSshTransport(AsyncTransport):
     async def mkdir_async(self, path: _TransportPath, ignore_existing=False):
         """Create a directory.
 
-        :param str path: absolute path to directory to create
+        :param path: absolute path to directory to create
         :param bool ignore_existing: if set to true, it doesn't give any error
                 if the leaf directory does already exist
 
+        :type path: _TransportPath
+
         :raises: OSError, if directory at path already exists
         """
-        path = fix_path(path)
+        path = path_2_str(path)
 
         try:
             await self._sftp.mkdir(path)
@@ -684,15 +829,20 @@ class AsyncSshTransport(AsyncTransport):
             else:
                 raise TransportInternalError(f'Error while creating directory {path}: {exc}')
 
-    async def remove_async(self, path):
+    async def normalize_async(self, path: _TransportPath):
+        raise NotImplementedError('Not implemented, waiting for a use case.')
+
+    async def remove_async(self, path: _TransportPath):
         """Remove the file at the given path. This only works on files;
         for removing folders (directories), use rmdir.
 
-        :param str path: path to file to remove
+        :param path: path to file to remove
+
+        :type path: _TransportPath
 
         :raise OSError: if the path is a directory
         """
-        path = fix_path(path)
+        path = path_2_str(path)
         # TODO: check if asyncssh does return SFTPFileIsADirectory in this case
         # if that's the case, we can get rid of the isfile check
         if await self.isdir_async(path):
@@ -700,18 +850,21 @@ class AsyncSshTransport(AsyncTransport):
         else:
             await self._sftp.remove(path)
 
-    async def rename_async(self, oldpath, newpath):
+    async def rename_async(self, oldpath: _TransportPath, newpath: _TransportPath):
         """
         Rename a file or folder from oldpath to newpath.
 
-        :param str oldpath: existing name of the file or folder
-        :param str newpath: new name for the file or folder
+        :param oldpath: existing name of the file or folder
+        :param newpath: new name for the file or folder
+
+        :type oldpath: _TransportPath
+        :type newpath: _TransportPath
 
         :raises OSError: if oldpath/newpath is not found
         :raises ValueError: if oldpath/newpath is not a valid string
         """
-        oldpath = fix_path(oldpath)
-        newpath = fix_path(newpath)
+        oldpath = path_2_str(oldpath)
+        newpath = path_2_str(newpath)
         if not oldpath or not newpath:
             raise ValueError('oldpath and newpath must be non-empty strings')
 
@@ -720,40 +873,51 @@ class AsyncSshTransport(AsyncTransport):
 
         await self._sftp.rename(oldpath, newpath)
 
-    async def rmdir_async(self, path):
+    async def rmdir_async(self, path: _TransportPath):
         """Remove the folder named path.
         This works only for empty folders. For recursive remove, use rmtree.
 
         :param str path: absolute path to the folder to remove
+
+        :type path: _TransportPath
         """
-        path = fix_path(path)
+        path = path_2_str(path)
         try:
             await self._sftp.rmdir(path)
         except asyncssh.sftp.SFTPFailure:
             raise OSError(f'Error while removing directory {path}: probably directory is not empty')
 
-    async def rmtree_async(self, path):
+    async def rmtree_async(self, path: _TransportPath):
         """Remove the folder named path, and all its contents.
 
         :param str path: absolute path to the folder to remove
+
+        :type path: _TransportPath
+
+        :raises OSError: if the operation fails
         """
-        path = fix_path(path)
+        path = path_2_str(path)
         try:
             await self._sftp.rmtree(path, ignore_errors=False)
         except asyncssh.Error as exc:
             raise OSError(f'Error while removing directory tree {path}: {exc}')
 
-    async def path_exists_async(self, path):
-        """Returns True if path exists, False otherwise."""
-        path = fix_path(path)
+    async def path_exists_async(self, path: _TransportPath):
+        """Returns True if path exists, False otherwise.
+
+        :param path: path to check
+
+        :type path: _TransportPath
+        """
+        path = path_2_str(path)
         return await self._sftp.exists(path)
 
     async def whoami_async(self):
         """Get the remote username
 
-        :return: list of username (str),
-                 retval (int),
-                 stderr (str)
+        :return: username (str),
+
+        :raises OSError: if the command fails
         """
         command = 'whoami'
         # Assuming here that the username is either ASCII or UTF-8 encoded
@@ -767,15 +931,20 @@ class AsyncSshTransport(AsyncTransport):
         self.logger.error(f"Problem executing whoami. Exit code: {retval}, stdout: '{username}', stderr: '{stderr}'")
         raise OSError(f'Error while executing whoami. Exit code: {retval}')
 
-    async def symlink_async(self, remotesource, remotedestination):
+    async def symlink_async(self, remotesource: _TransportPath, remotedestination: _TransportPath):
         """Create a symbolic link between the remote source and the remote
         destination.
 
         :param remotesource: absolute path to remote source
         :param remotedestination: absolute path to remote destination
+
+        :type remotesource: _TransportPath
+        :type remotedestination: _TransportPath
+
+        :raises ValueError: if remotedestination has patterns
         """
-        remotesource = fix_path(remotesource)
-        remotedestination = fix_path(remotedestination)
+        remotesource = path_2_str(remotesource)
+        remotedestination = path_2_str(remotedestination)
 
         if self.has_magic(remotesource):
             if self.has_magic(remotedestination):
@@ -784,29 +953,42 @@ class AsyncSshTransport(AsyncTransport):
             # find all files matching pattern
             for this_source in await self._sftp.glob(remotesource):
                 # create the name of the link: take the last part of the path
-                this_dest = os.path.join(remotedestination, os.path.split(this_source)[-1])
+                this_dest = os.path.join(remotedestination, os.path.split(this_source)[-1])  # type: ignore [arg-type]
+                # in the line above I am sure that this_source is a string,
+                # since asyncssh.sftp.glob() returns only str if argument remotesource is a str
                 await self._sftp.symlink(this_source, this_dest)
         else:
             await self._sftp.symlink(remotesource, remotedestination)
 
-    async def glob_async(self, pathname):
+    async def glob_async(self, pathname: _TransportPath):
         """Return a list of paths matching a pathname pattern.
 
         The pattern may contain simple shell-style wildcards a la fnmatch.
 
-        :param str pathname: the pathname pattern to match.
-            It should only be an absolute path.
+        :param pathname: the pathname pattern to match.
+            It should only be absolute path.
+
+        :type pathname: _TransportPath
+
         :return: a list of paths matching the pattern.
         """
+        pathname = path_2_str(pathname)
         return await self._sftp.glob(pathname)
 
-    async def chmod_async(self, path, mode, follow_symlinks=True):
+    async def chmod_async(self, path: _TransportPath, mode: int, follow_symlinks: bool = True):
         """Change the permissions of a file.
 
-        :param str path: path to the file
-        :param int mode: the new permissions
+        :param path: path to the file
+        :param mode: the new permissions
+        :param bool follow_symlinks: if True, follow symbolic links
+
+        :type path: _TransportPath
+        :type mode: int
+        :type follow_symlinks: bool
+
+        :raises OSError: if the path is empty
         """
-        path = fix_path(path)
+        path = path_2_str(path)
         if not path:
             raise OSError('Input path is an empty argument.')
         try:
@@ -814,14 +996,20 @@ class AsyncSshTransport(AsyncTransport):
         except asyncssh.sftp.SFTPNoSuchFile as exc:
             raise OSError(f'Error {exc}, directory does not exists')
 
-    async def chown_async(self, path, uid, gid):
+    async def chown_async(self, path: _TransportPath, uid: int, gid: int):
         """Change the owner and group id of a file.
 
-        :param str path: path to the file
-        :param int uid: the new owner id
-        :param int gid: the new group id
+        :param path: path to the file
+        :param uid: the new owner id
+        :param gid: the new group id
+
+        :type path: _TransportPath
+        :type uid: int
+        :type gid: int
+
+        :raises OSError: if the path is empty
         """
-        path = fix_path(path)
+        path = path_2_str(path)
         if not path:
             raise OSError('Input path is an empty argument.')
         try:
@@ -829,14 +1017,24 @@ class AsyncSshTransport(AsyncTransport):
         except asyncssh.sftp.SFTPNoSuchFile as exc:
             raise OSError(f'Error {exc}, directory does not exists')
 
-    async def copy_from_remote_to_remote_async(self, transportdestination, remotesource, remotedestination, **kwargs):
+    async def copy_from_remote_to_remote_async(
+        self,
+        transportdestination: Union['BlockingTransport', 'AsyncTransport'],
+        remotesource: _TransportPath,
+        remotedestination: _TransportPath,
+        **kwargs,
+    ):
         """Copy files or folders from a remote computer to another remote computer, asynchronously.
 
         :param transportdestination: transport to be used for the destination computer
-        :param str remotesource: path to the remote source directory / file
-        :param str remotedestination: path to the remote destination directory / file
+        :param remotesource: path to the remote source directory / file
+        :param remotedestination: path to the remote destination directory / file
         :param kwargs: keyword parameters passed to the call to transportdestination.put,
             except for 'dereference' that is passed to self.get
+
+        :type transportdestination: Union['BlockingTransport', 'AsyncTransport']
+        :type remotesource: _TransportPath
+        :type remotedestination: _TransportPath
 
         .. note:: the keyword 'dereference' SHOULD be set to False for the
          final put (onto the destination), while it can be set to the
@@ -880,10 +1078,13 @@ class AsyncSshTransport(AsyncTransport):
                     os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put
                 )
 
-    def gotocomputer_command(self, remotedir):
+    def gotocomputer_command(self, remotedir: _TransportPath):
+        """Return a string to be used to connect to the remote computer.
+
+        :param remotedir: the remote directory to connect to
+
+        :type remotedir: _TransportPath
+        """
         connect_string = self._gotocomputer_string(remotedir)
         cmd = f'ssh -t {self.machine} {connect_string}'
         return cmd
-
-    async def normalize_async(self, path: _TransportPath):
-        raise NotImplementedError('Not implemented, waiting for a use case')

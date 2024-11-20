@@ -21,6 +21,7 @@ More information at http://www.aiida.net
 
 from aiida.common.log import configure_logging  # noqa: F401
 from aiida.manage.configuration import get_config_option, get_profile, load_profile, profile_context  # noqa: F401
+from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
 __copyright__ = (
     'Copyright (c), This file is part of the AiiDA platform. '
@@ -34,6 +35,9 @@ __paper__ = (
     'data provenance", Scientific Data 7, 300 (2020); https://doi.org/10.1038/s41597-020-00638-4'
 )
 __paper_short__ = 'S. P. Huber et al., Scientific Data 7, 300 (2020).'
+
+# Initialize the configuration directory settings
+AiiDAConfigPathResolver.set_configuration_directory()
 
 
 def get_strict_version():

@@ -136,8 +136,3 @@ def _get_configuration_directory_from_envvar() -> pathlib.Path:
             break
 
     return dirpath_config or default_dirpath_config
-
-
-# XXX: Can I move this to aiida.__init__???
-# Initialize the configuration directory settings
-AiiDAConfigPathResolver.set_configuration_directory()

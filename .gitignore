@@ -43,3 +43,6 @@ pplot_out/
 
 # docker
 docker-bake.override.json
+
+# benchmark
+.benchmarks/

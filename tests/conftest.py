@@ -37,7 +37,7 @@ if t.TYPE_CHECKING:
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
 
-def pytest_collection_modifyitems(items):
+def pytest_collection_modifyitems(items, config):
     """Automatically generate markers for certain tests.
 
     Most notably, we add the 'presto' marker for all tests that
@@ -46,6 +46,13 @@ def pytest_collection_modifyitems(items):
     filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
     filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
     filepath_sqla = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'sqlalchemy_branch'
+
+    if config.option.db_backend == 'sqlite':
+        # TODO: Validate that user did not do '--db-backend sqlite -m requires_psql'
+        if config.option.markexpr == '':
+            config.option.markexpr = 'not requires_psql'
+        else:
+            config.option.markexpr += ' and not requires_psql'
 
     for item in items:
         filepath_item = Path(item.fspath)
@@ -66,6 +73,27 @@ def pytest_collection_modifyitems(items):
         markers = [marker.name for marker in item.iter_markers()]
         if 'requires_rmq' not in markers and 'requires_psql' not in markers and 'nightly' not in markers:
             item.add_marker('presto')
+
+
+def db_backend_checker(value):
+    """Validation function for the custom '--db-backend' pytest CLI option"""
+    # TODO: Use enum
+    db_backends = ('sqlite', 'psql')
+    if value not in db_backends:
+        msg = f"Invalid database backend option '{value}', must be one of: {db_backends}"
+        raise pytest.UsageError(msg)
+    return value
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        '--db-backend',
+        action='store',
+        default='sqlite',
+        required=False,
+        help="Database backend to be used for tests ('sqlite' or 'psql')",
+        type=db_backend_checker,
+    )
 
 
 @pytest.fixture(scope='session')

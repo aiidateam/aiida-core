@@ -48,7 +48,7 @@ def sqlite_case_sensitive_like(dbapi_connection, _):
     cursor.close()
 
 
-def _contains(lhs: dict | list, rhs: dict | list):
+def _contains(lhs: Union[dict, list], rhs: Union[dict, list]):
     if isinstance(lhs, dict) and isinstance(rhs, dict):
         for key in rhs:
             if key not in lhs or not _contains(lhs[key], rhs[key]):
@@ -63,13 +63,15 @@ def _contains(lhs: dict | list, rhs: dict | list):
         return lhs == rhs
 
 
-def _json_contains(json1_str: AnyStr, json2_str: AnyStr):
+def _json_contains(lhs: Union[str, bytes, bytearray, dict, list], rhs: Union[str, bytes, bytearray, dict, list]):
     try:
-        json1 = json.loads(json1_str)
-        json2 = json.loads(json2_str)
+        if isinstance(lhs, (str, bytes, bytearray)):
+            lhs = json.loads(lhs)
+        if isinstance(rhs, (str, bytes, bytearray)):
+            rhs = json.loads(rhs)
     except json.JSONDecodeError:
         return 0
-    return int(_contains(json1, json2))
+    return int(_contains(lhs, rhs))
 
 
 def register_json_contains(dbapi_connection, _):

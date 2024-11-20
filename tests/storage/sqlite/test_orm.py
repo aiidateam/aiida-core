@@ -163,7 +163,6 @@ class TestJsonFilters:
         ids=json.dumps,
     )
     @pytest.mark.usefixtures('aiida_profile_clean')
-    @pytest.mark.requires_psql
     def test_json_filters_contains_arrays(self, data, filters, is_match):
         """Test QueryBuilder filter `contains` for JSON array fields"""
         profile = SqliteTempBackend.create_profile(debug=False)
@@ -277,7 +276,6 @@ class TestJsonFilters:
         ids=json.dumps,
     )
     @pytest.mark.usefixtures('aiida_profile_clean')
-    @pytest.mark.requires_psql
     def test_json_filters_contains_object(self, data, filters, is_match):
         """Test QueryBuilder filter `contains` for JSON object fields"""
         profile = SqliteTempBackend.create_profile(debug=False)

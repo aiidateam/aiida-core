@@ -55,7 +55,7 @@ def pytest_collection_modifyitems(items, config):
     filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
     filepath_sqla = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'sqlalchemy_branch'
 
-    # If the user requested the SQlite backend, automatically skip incompatible tests
+    # If the user requested the SQLite backend, automatically skip incompatible tests
     if config.option.db_backend is DbBackend.SQLITE:
         if config.option.markexpr != '':
             # Don't overwrite markers that the user already provided via '-m ' cmdline argument

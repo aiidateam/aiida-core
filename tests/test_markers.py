@@ -1,4 +1,4 @@
-"""Tests markers that have custom logic applied to them"""
+"""Tests markers that have custom in conftest.py"""
 
 import pytest
 
@@ -45,3 +45,20 @@ def test_no_presto_mark_if_nightly(request):
 
     assert len(own_markers) == 1
     assert own_markers[0] == 'nightly'
+
+
+@pytest.mark.requires_psql
+def test_requires_psql_with_sqlite_impossible(pytestconfig):
+    db_backend = pytestconfig.getoption('--db-backend')
+    if db_backend.value == 'sqlite':
+        pytest.fail('This test should not have been executed with SQLite backend!')
+
+
+def test_daemon_client_fixture_automarked(request, daemon_client):
+    """Test that any test using ``daemon_client`` fixture is
+    automatically tagged with 'requires_rmq' mark
+    """
+    own_markers = [marker.name for marker in request.node.own_markers]
+
+    assert len(own_markers) == 1
+    assert own_markers[0] == 'requires_rmq'

@@ -104,9 +104,11 @@ def test_full_type_unregistered(process_class, restapi_server, server_url):
     server = restapi_server()
     server_thread = Thread(target=server.serve_forever)
 
+    _server_url = server_url(port=server.server_port)
+
     try:
         server_thread.start()
-        type_count_response = requests.get(f'{server_url}/nodes/full_types', timeout=10)
+        type_count_response = requests.get(f'{_server_url}/nodes/full_types', timeout=10)
     finally:
         server.shutdown()
 
@@ -188,9 +190,11 @@ def test_full_type_backwards_compatibility(node_class, restapi_server, server_ur
     server = restapi_server()
     server_thread = Thread(target=server.serve_forever)
 
+    _server_url = server_url(port=server.server_port)
+
     try:
         server_thread.start()
-        type_count_response = requests.get(f'{server_url}/nodes/full_types', timeout=10)
+        type_count_response = requests.get(f'{_server_url}/nodes/full_types', timeout=10)
     finally:
         server.shutdown()
 

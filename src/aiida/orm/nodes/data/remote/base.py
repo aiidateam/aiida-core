@@ -8,12 +8,18 @@
 ###########################################################################
 """Data plugin that models a folder on a remote computer."""
 
+from __future__ import annotations
+
 import os
+import logging
+from pathlib import Path
 
 from aiida.orm import AuthInfo
 from aiida.orm.fields import add_field
 
 from ..data import Data
+
+_logger = logging.getLogger(__name__)
 
 __all__ = ('RemoteData',)
 
@@ -186,44 +192,117 @@ class RemoteData(Data):
     def get_authinfo(self):
         return AuthInfo.get_collection(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)
 
-    def get_total_size_on_disk(self, relpath='.'):
-        """Connects to the remote folder and returns the total size of all files in the directory recursively in bytes.
+    def get_size_on_disk(self, relpath: Path | None = None) -> str:
+        if relpath is None:
+            relpath = Path('.')
+        """
+        Connects to the remote folder and returns the total size of all files in the directory recursively in a
+        human-readable format.
 
-        :param relpath: If 'relpath' is specified, it is used as the root folder of which the size is returned.
-        :return: Total size of files in bytes.
+        :param relpath: File or directory path for which the total size should be returned, relative to ``self.get_remote_path``.
+        :return: Total size of file or directory in human-readable format.
+
+        :raises: FileNotFoundError, if file or directory does not exist.
         """
 
-        def get_remote_recursive_size(path, transport):
+        from aiida.common.utils import format_directory_size
+
+        authinfo = self.get_authinfo()
+        full_path = Path(self.get_remote_path()) / relpath
+        computer_label = self.computer.label if self.computer is not None else ''
+
+        with authinfo.get_transport() as transport:
+            if not transport.isdir(str(full_path)) and not transport.isfile(str(full_path)):
+                exc_message = f'The required remote folder {full_path} on Computer <{computer_label}> does not exist, is not a directory or has been deleted.'
+                raise FileNotFoundError(exc_message)
+
+            try:
+                total_size: int = self._get_size_on_disk_du(full_path, transport)
+
+            except RuntimeError:
+
+                lstat_warn = (
+                    "Problem executing `du` command. Will return total file size based on `lstat`. "
+                    "Take the result with a grain of salt, as `lstat` does not consider the file system block size, "
+                    "but instead returns the true size of the files in bytes, which differs from the actual space requirements on disk."
+                )
+                _logger.warning(lstat_warn)
+
+                total_size: int = self._get_size_on_disk_lstat(full_path, transport)
+
+            except OSError:
+                _logger.critical("Could not evaluate directory size using either `du` or `lstat`.")
+
+        return format_directory_size(size_in_bytes=total_size)
+
+    def _get_size_on_disk_du(self, full_path: Path, transport: 'Transport') -> int:
+        """Connects to the remote folder and returns the total size of all files in the directory recursively in bytes
+        using `du`.
+
+        :param full_path: Full path of which the size should be evaluated
+        :type full_path: Path
+        :param transport: Open transport instance
+        :type transport: Transport
+        :raises RuntimeError: When `du` command cannot be successfully executed
+        :return: Total size of directory recursively in bytes.
+        :rtype: int
+        """
+
+        retval, stdout, stderr = transport.exec_command_wait(f'du --bytes {full_path}')
+
+        if not stderr and retval == 0:
+            total_size: int = int(stdout.split('\t')[0])
+            return total_size
+        else:
+            raise RuntimeError(f"Error executing `du` command: {stderr}")
+
+    def _get_size_on_disk_lstat(self, full_path, transport) -> int:
+
+        """Connects to the remote folder and returns the total size of all files in the directory recursively in bytes
+        using ``lstat``. Note that even if a file is only 1 byte, on disk, it still occupies one full disk block size. As
+        such, getting accurate measures of the total expected size on disk when retrieving a ``RemoteData`` is not
+        straightforward with ``lstat``, as one would need to consider the occupied block sizes for each file, as well as
+        repository metadata. Thus, this function only serves as a fallback in the absence of the ``du`` command.
+
+        :param full_path: Full path of which the size should be evaluated.
+        :type full_path: Path
+        :param transport: Open transport instance.
+        :type transport: Transport
+        :raises RuntimeError: When `du` command cannot be successfully executed.
+        :return: Total size of directory recursively in bytes.
+        :rtype: int
+        """
+
+        def _get_remote_recursive_size(path: Path, transport: 'Transport') -> int:
             """
             Helper function for recursive directory traversal to obtain the `listdir_withattributes` result for all
             subdirectories.
+
+            :param path: Path to be traversed.
+            :type path: Path
+            :param transport: Open transport instance.
+            :type transport: Transport
+            :return: Total size of directory files in bytes as obtained via ``lstat``.
+            :rtype: int
             """
 
             total_size = 0
+
             contents = self.listdir_withattributes(path)
             for item in contents:
                 item_path = os.path.join(path, item['name'])
                 if item['isdir']:
-                    total_size += get_remote_recursive_size(item_path, transport)
+                    # Include size of direcotry
+                    total_size += item['attributes']['st_size']
+                    # Recursively traverse directory
+                    total_size += _get_remote_recursive_size(item_path, transport)
                 else:
                     total_size += item['attributes']['st_size']
+
             return total_size
 
-        authinfo = self.get_authinfo()
-
-        with authinfo.get_transport() as transport:
-            try:
-                full_path = os.path.join(self.get_remote_path(), relpath)
-                total_size = get_remote_recursive_size(full_path, transport)
-                return total_size
-            except OSError as exception:
-                # directory not existing or not a directory
-                if exception.errno in (2, 20):
-                    exc = OSError(
-                        f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
-                        'directory or has been deleted.'
-                    )
-                    exc.errno = exception.errno
-                    raise exc from exception
-                else:
-                    raise
+        try:
+            total_size: int = _get_remote_recursive_size(full_path, transport)
+            return total_size
+        except OSError:
+            raise

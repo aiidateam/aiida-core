@@ -33,8 +33,14 @@ from aiida.transports import Transport
 # TODO : silly cases of copy/put/get from self to self
 
 
+@pytest.fixture(scope='function')
+def remote_tmp_path(tmp_path_factory):
+    """Mock the remote tmp path using tmp_path_factory to create folder start with 'remote'"""
+    return tmp_path_factory.mktemp('remote')
+
+
 @pytest.fixture(scope='function', params=entry_point.get_entry_point_names('aiida.transports'))
-def custom_transport(request, tmp_path, monkeypatch) -> Transport:
+def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
     plugin = TransportFactory(request.param)
 
@@ -42,7 +48,7 @@ def custom_transport(request, tmp_path, monkeypatch) -> Transport:
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
     elif request.param == 'core.ssh_auto':
         kwargs = {'machine': 'localhost'}
-        filepath_config = tmp_path / 'config'
+        filepath_config = tmp_path_factory.mktemp('transport') / 'config'
         monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
         if not filepath_config.exists():
             filepath_config.write_text('Host localhost')
@@ -62,26 +68,24 @@ def test_is_open(custom_transport):
     assert not custom_transport.is_open
 
 
-def test_makedirs(custom_transport):
-    """Verify the functioning of makedirs command"""
+def test_deprecate_chdir_and_getcwd(custom_transport, remote_tmp_path):
+    """Test to be deprecated ``chdir``/``getcwd`` methods still work."""
     with custom_transport as transport:
-        location = transport.normalize(os.path.join('/', 'tmp'))
-        directory = 'temp_dir_test'
+        location = str(remote_tmp_path)
         transport.chdir(location)
 
         assert location == transport.getcwd()
-        while transport.isdir(directory):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
-        transport.mkdir(directory)
-        transport.chdir(directory)
 
+
+def test_makedirs(custom_transport, remote_tmp_path):
+    """Verify the functioning of makedirs command"""
+    with custom_transport as transport:
         # define folder structure
-        dir_tree = os.path.join('1', '2')
+        dir_tree = str(remote_tmp_path / '1' / '2')
         # I create the tree
         transport.makedirs(dir_tree)
         # verify the existence
-        assert transport.isdir('1')
+        assert transport.isdir(str(remote_tmp_path / '1'))
         assert dir_tree
 
         # try to recreate the same folder
@@ -92,92 +96,57 @@ def test_makedirs(custom_transport):
         transport.makedirs(dir_tree, True)
 
         transport.rmdir(dir_tree)
-        transport.rmdir('1')
-
-        transport.chdir('..')
-        transport.rmdir(directory)
+        transport.rmdir(str(remote_tmp_path / '1'))
 
 
-def test_rmtree(custom_transport):
+def test_rmtree(custom_transport, remote_tmp_path):
     """Verify the functioning of rmtree command"""
     with custom_transport as transport:
-        location = transport.normalize(os.path.join('/', 'tmp'))
-        directory = 'temp_dir_test'
-        transport.chdir(location)
-
-        assert location == transport.getcwd()
-        while transport.isdir(directory):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
-        transport.mkdir(directory)
-        transport.chdir(directory)
-
         # define folder structure
-        dir_tree = os.path.join('1', '2')
+        dir_tree = str(remote_tmp_path / '1' / '2')
         # I create the tree
         transport.makedirs(dir_tree)
         # remove it
-        transport.rmtree('1')
+        transport.rmtree(str(remote_tmp_path / '1'))
         # verify the removal
-        assert not transport.isdir('1')
+        assert not transport.isdir(str(remote_tmp_path / '1'))
 
         # also tests that it works with a single file
         # create file
         local_file_name = 'file.txt'
         text = 'Viva Verdi\n'
-        with open(os.path.join(transport.getcwd(), local_file_name), 'w', encoding='utf8') as fhandle:
+        single_file_path = str(remote_tmp_path / local_file_name)
+        with open(single_file_path, 'w', encoding='utf8') as fhandle:
             fhandle.write(text)
         # remove it
-        transport.rmtree(local_file_name)
+        transport.rmtree(single_file_path)
         # verify the removal
-        assert not transport.isfile(local_file_name)
-
-        transport.chdir('..')
-        transport.rmdir(directory)
+        assert not transport.isfile(single_file_path)
 
 
-def test_listdir(custom_transport):
+def test_listdir(custom_transport, remote_tmp_path):
     """Create directories, verify listdir, delete a folder with subfolders"""
-    with custom_transport as trans:
-        # We cannot use tempfile.mkdtemp because we're on a remote folder
-        location = trans.normalize(os.path.join('/', 'tmp'))
-        directory = 'temp_dir_test'
-        trans.chdir(location)
-
-        assert location == trans.getcwd()
-        while trans.isdir(directory):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
-        trans.mkdir(directory)
-        trans.chdir(directory)
+    with custom_transport as transport:
         list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
         for this_dir in list_of_dir:
-            trans.mkdir(this_dir)
+            transport.mkdir(str(remote_tmp_path / this_dir))
+
         for fname in list_of_files:
             with tempfile.NamedTemporaryFile() as tmpf:
                 # Just put an empty file there at the right file name
-                trans.putfile(tmpf.name, fname)
+                transport.putfile(tmpf.name, str(remote_tmp_path / fname))
 
-        list_found = trans.listdir('.')
+        list_found = transport.listdir(str(remote_tmp_path))
 
         assert sorted(list_found) == sorted(list_of_dir + list_of_files)
 
-        assert sorted(trans.listdir('.', 'a*')), sorted(['as', 'a2', 'a4f'])
-        assert sorted(trans.listdir('.', 'a?')), sorted(['as', 'a2'])
-        assert sorted(trans.listdir('.', 'a[2-4]*')), sorted(['a2', 'a4f'])
-
-        for this_dir in list_of_dir:
-            trans.rmdir(this_dir)
-
-        for this_file in list_of_files:
-            trans.remove(this_file)
-
-        trans.chdir('..')
-        trans.rmdir(directory)
+        assert sorted(transport.listdir(str(remote_tmp_path), 'a*')), sorted(['as', 'a2', 'a4f'])
+        assert sorted(transport.listdir(str(remote_tmp_path), 'a?')), sorted(['as', 'a2'])
+        assert sorted(transport.listdir(str(remote_tmp_path), 'a[2-4]*')), sorted(['a2', 'a4f'])
 
 
-def test_listdir_withattributes(custom_transport):
+def test_listdir_withattributes(custom_transport, remote_tmp_path):
     """Create directories, verify listdir_withattributes, delete a folder with subfolders"""
 
     def simplify_attributes(data):
@@ -189,49 +158,30 @@ def test_listdir_withattributes(custom_transport):
         """
         return {_['name']: _['isdir'] for _ in data}
 
-    with custom_transport as trans:
-        # We cannot use tempfile.mkdtemp because we're on a remote folder
-        location = trans.normalize(os.path.join('/', 'tmp'))
-        directory = 'temp_dir_test'
-        trans.chdir(location)
-
-        assert location == trans.getcwd()
-        while trans.isdir(directory):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
-        trans.mkdir(directory)
-        trans.chdir(directory)
+    with custom_transport as transport:
         list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
         for this_dir in list_of_dir:
-            trans.mkdir(this_dir)
+            transport.mkdir(str(remote_tmp_path / this_dir))
+
         for fname in list_of_files:
             with tempfile.NamedTemporaryFile() as tmpf:
                 # Just put an empty file there at the right file name
-                trans.putfile(tmpf.name, fname)
+                transport.putfile(tmpf.name, str(remote_tmp_path / fname))
 
         comparison_list = {k: True for k in list_of_dir}
         for k in list_of_files:
             comparison_list[k] = False
 
-        assert simplify_attributes(trans.listdir_withattributes('.')), comparison_list
-        assert simplify_attributes(trans.listdir_withattributes('.', 'a*')), {
+        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path))), comparison_list
+        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path), 'a*')), {
             'as': True,
             'a2': True,
             'a4f': True,
             'a': False,
         }
-        assert simplify_attributes(trans.listdir_withattributes('.', 'a?')), {'as': True, 'a2': True}
-        assert simplify_attributes(trans.listdir_withattributes('.', 'a[2-4]*')), {'a2': True, 'a4f': True}
-
-        for this_dir in list_of_dir:
-            trans.rmdir(this_dir)
-
-        for this_file in list_of_files:
-            trans.remove(this_file)
-
-        trans.chdir('..')
-        trans.rmdir(directory)
+        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path), 'a?')), {'as': True, 'a2': True}
+        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path), 'a[2-4]*')), {'a2': True, 'a4f': True}
 
 
 def test_dir_creation_deletion(custom_transport):

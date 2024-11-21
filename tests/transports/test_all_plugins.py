@@ -326,7 +326,7 @@ def test_isfile_isdir_to_non_existing_string(custom_transport, remote_tmp_path):
             transport.chdir(fake_folder)
 
 
-def test_put_and_get_file(custom_transport, tmp_path_factory):
+def test_put_and_get(custom_transport, tmp_path_factory):
     """Test putting and getting files."""
     local_dir = tmp_path_factory.mktemp('local')
     remote_dir = tmp_path_factory.mktemp('remote')
@@ -334,12 +334,6 @@ def test_put_and_get_file(custom_transport, tmp_path_factory):
     directory = 'tmp_try'
 
     with custom_transport as transport:
-        # transport.chdir(remote_dir)
-        # while transport.isdir(directory):
-        #     # I append a random letter/number until it is unique
-        #     directory += random.choice(string.ascii_uppercase + string.digits)
-        #
-        # transport.chdir(directory)
         (local_dir / directory).mkdir()
         transport.mkdir(str(remote_dir / directory))
 
@@ -359,8 +353,41 @@ def test_put_and_get_file(custom_transport, tmp_path_factory):
 
         transport.put(local_file_abs_path, remote_file_abs_path)
         transport.get(remote_file_abs_path, retrieved_file_abs_path)
-        # transport.putfile(local_file_abs_path, remote_file_abs_path)
-        # transport.getfile(remote_file_name, retrieved_file_name)
+
+        list_of_files = transport.listdir(str(remote_dir / directory))
+        # it is False because local_file_name has the full path,
+        # while list_of_files has not
+        assert local_file_name not in list_of_files
+        assert remote_file_name in list_of_files
+        assert retrieved_file_name not in list_of_files
+
+def test_putfile_and_getfile(custom_transport, tmp_path_factory):
+    """Test putting and getting files."""
+    local_dir = tmp_path_factory.mktemp('local')
+    remote_dir = tmp_path_factory.mktemp('remote')
+
+    directory = 'tmp_try'
+
+    with custom_transport as transport:
+        (local_dir / directory).mkdir()
+        transport.mkdir(str(remote_dir / directory))
+
+        local_file_name = 'file.txt'
+        retrieved_file_name = 'file_retrieved.txt'
+
+        remote_file_name = 'file_remote.txt'
+
+        # here use full path in src and dst
+        local_file_abs_path = str(local_dir / directory / local_file_name)
+        retrieved_file_abs_path = str(local_dir / directory / retrieved_file_name)
+        remote_file_abs_path = str(remote_dir / directory / remote_file_name)
+
+        text = 'Viva Verdi\n'
+        with open(local_file_abs_path, 'w', encoding='utf8') as fhandle:
+            fhandle.write(text)
+
+        transport.putfile(local_file_abs_path, remote_file_abs_path)
+        transport.getfile(remote_file_abs_path, retrieved_file_abs_path)
 
         list_of_files = transport.listdir(str(remote_dir / directory))
         # it is False because local_file_name has the full path,
@@ -370,7 +397,7 @@ def test_put_and_get_file(custom_transport, tmp_path_factory):
         assert retrieved_file_name not in list_of_files
 
 
-def test_put_get_abs_path_file(custom_transport):
+def test_put_get_abs_path_file(custom_transport, tmp_path_factory):
     """Test of exception for non existing files and abs path"""
     local_dir = os.path.join('/', 'tmp')
     remote_dir = local_dir

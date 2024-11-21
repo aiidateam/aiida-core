@@ -1471,7 +1471,8 @@ class SshTransport(BlockingTransport):
         import socket
         import time
 
-        workdir = path_2_str(workdir)
+        if workdir:
+            workdir = path_2_str(workdir)
 
         ssh_stdin, stdout, stderr, channel = self._exec_command_internal(
             command, combine_stderr, bufsize=bufsize, workdir=workdir

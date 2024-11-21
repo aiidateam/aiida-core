@@ -761,13 +761,13 @@ class LocalTransport(BlockingTransport):
         """
         from aiida.common.escaping import escape_for_bash
 
-        workdir = path_2_str(workdir)
+        if workdir:
+            workdir = path_2_str(workdir)
         # Note: The outer shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
         bash_commmand = f'{self._bash_command_str}-c '
 
         command = bash_commmand + escape_for_bash(command)
-
         if workdir:
             cwd = workdir
         else:
@@ -796,7 +796,8 @@ class LocalTransport(BlockingTransport):
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are both bytes and the return_value is an int.
         """
-        workdir = path_2_str(workdir)
+        if workdir:
+            workdir = path_2_str(workdir)
         with self._exec_command_internal(command, workdir) as process:
             if stdin is not None:
                 # Implicitly assume that the desired encoding is 'utf-8' if I receive a string.

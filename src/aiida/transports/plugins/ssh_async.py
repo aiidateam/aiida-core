@@ -620,6 +620,7 @@ class AsyncSshTransport(AsyncTransport):
         """
 
         if workdir:
+            workdir = path_2_str(workdir)
             command = f'cd {workdir} && {command}'
 
         bash_commmand = self._bash_command_str + '-c '

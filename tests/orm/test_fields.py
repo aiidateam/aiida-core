@@ -29,18 +29,18 @@ def test_all_entity_fields(entity_cls, data_regression):
 
 
 @pytest.fixture
-def available_entry_points():
+def node_and_data_entry_points() -> list[tuple[str, str]]:
     """Return a list of available entry points."""
-    _eps = []
+    _eps: list[tuple[str, str]] = []
     eps = entry_points()
     for group in ['aiida.node', 'aiida.data']:
         _eps.extend((group, ep.name) for ep in eps.select(group=group))
     return _eps
 
 
-def test_all_node_fields(available_entry_points, data_regression):
+def test_all_node_fields(node_and_data_entry_points: list[tuple[str, str]], data_regression):
     """Test that all the node fields are correctly registered."""
-    for group, name in available_entry_points:
+    for group, name in node_and_data_entry_points:
         node_cls = load_entry_point(group, name)
         data_regression.check(
             {key: repr(value) for key, value in node_cls.fields._dict.items()},

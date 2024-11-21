@@ -56,7 +56,7 @@ jobs:
         python-version: '3.10'
 
     - name: Run benchmarks
-      run: pytest --benchmark-only --benchmark-json benchmark.json
+      run: pytest --db-backend psql --benchmark-only --benchmark-json benchmark.json tests/
 
     - name: Store benchmark result
       uses: aiidateam/github-action-benchmark@v3
@@ -73,4 +73,4 @@ jobs:
         alert-threshold: 200%
         comment-on-alert: true
         fail-on-alert: false
-        alert-comment-cc-users: '@chrisjsewell,@giovannipizzi'
+        alert-comment-cc-users: '@giovannipizzi,@agoscinski,@GeigerJ2'

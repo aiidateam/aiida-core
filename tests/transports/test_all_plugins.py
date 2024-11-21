@@ -42,7 +42,7 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
     elif request.param == 'core.ssh_auto':
         kwargs = {'machine': 'localhost'}
-        filepath_config = tmp_path_factory.mktemp("transport") / 'config'
+        filepath_config = tmp_path_factory.mktemp('transport') / 'config'
         monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
         if not filepath_config.exists():
             filepath_config.write_text('Host localhost')
@@ -61,6 +61,7 @@ def test_is_open(custom_transport):
 
     assert not custom_transport.is_open
 
+
 def test_deprecated_chdir_getcwd(custom_transport):
     """Test to be deprecated ``chdir``/``getcwd`` methods still work."""
     with custom_transport as transport:
@@ -69,6 +70,7 @@ def test_deprecated_chdir_getcwd(custom_transport):
         transport.chdir(location)
 
         assert location == transport.getcwd()
+
 
 def test_makedirs(custom_transport, tmp_path):
     """Verify the functioning of makedirs command"""
@@ -90,6 +92,7 @@ def test_makedirs(custom_transport, tmp_path):
 
         transport.rmdir(dir_tree)
         transport.rmdir(str(tmp_path / '1'))
+
 
 def test_rmtree(custom_transport):
     """Verify the functioning of rmtree command"""

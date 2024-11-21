@@ -620,72 +620,73 @@ def test_put_and_get_overwrite(
             )
 
 
-def test_copy(custom_transport):
+def test_copy(custom_transport, tmp_path_factory):
     """Test copying."""
-    local_dir = os.path.join('/', 'tmp')
-    remote_dir = local_dir
+    # local_dir = os.path.join('/', 'tmp')
+    # remote_dir = local_dir
+    remote_dir = tmp_path_factory.mktemp('remote')
+
     directory = 'tmp_try'
 
     with custom_transport as transport:
-        transport.chdir(remote_dir)
+        workdir = remote_dir / directory
 
-        while os.path.exists(os.path.join(local_dir, directory)):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
+        transport.mkdir(str(workdir))
 
-        transport.mkdir(directory)
-        transport.chdir(directory)
-
-        local_base_dir = os.path.join(local_dir, directory, 'local')
-        os.mkdir(local_base_dir)
+        base_dir = workdir / 'origin'
+        base_dir.mkdir()
 
         # first test put: I create three files in local
-        file_1 = os.path.join(local_base_dir, 'a.txt')
-        file_2 = os.path.join(local_base_dir, 'b.tmp')
-        file_3 = os.path.join(local_base_dir, 'c.txt')
+        file_1 = base_dir / 'a.txt'
+        file_2 = base_dir / 'b.tmp'
+        file_3 = base_dir / 'c.txt'
         text = 'Viva Verdi\n'
         for filename in [file_1, file_2, file_3]:
             with open(filename, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
         # first test the copy. Copy of two files matching patterns, into a folder
-        transport.copy(os.path.join('local', '*.txt'), '.')
-        assert set(['a.txt', 'c.txt', 'local']) == set(transport.listdir('.'))
-        transport.remove('a.txt')
-        transport.remove('c.txt')
+        transport.copy(str(base_dir / '*.txt'), str(workdir))
+        assert set(['a.txt', 'c.txt', 'origin']) == set(transport.listdir(str(workdir)))
+        transport.remove(str(workdir / 'a.txt'))
+        transport.remove(str(workdir / 'c.txt'))
+
         # second test copy. Copy of two folders
-        transport.copy('local', 'prova')
-        assert set(['prova', 'local']) == set(transport.listdir('.'))
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir('prova'))
-        transport.rmtree('prova')
+        transport.copy(str(base_dir), str(workdir / 'prova'))
+        assert set(['prova', 'origin']) == set(transport.listdir(str(workdir)))
+        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir(str(workdir / 'prova')))
+        transport.rmtree(str(workdir / 'prova'))
+
         # third test copy. Can copy one file into a new file
-        transport.copy(os.path.join('local', '*.tmp'), 'prova')
-        assert set(['prova', 'local']) == set(transport.listdir('.'))
-        transport.remove('prova')
+        transport.copy(str(base_dir / '*.tmp'), str(workdir / 'prova'))
+        assert transport.isfile(str(workdir / 'prova'))
+        transport.remove(str(workdir / 'prova'))
+
         # fourth test copy: can't copy more than one file on the same file,
         # i.e., the destination should be a folder
         with pytest.raises(OSError):
-            transport.copy(os.path.join('local', '*.txt'), 'prova')
+            transport.copy(str(base_dir / '*.txt'), str(workdir / 'prova'))
+
         # fifth test, copying one file into a folder
-        transport.mkdir('prova')
-        transport.copy(os.path.join('local', 'a.txt'), 'prova')
-        assert set(transport.listdir('prova')) == set(['a.txt'])
-        transport.rmtree('prova')
+        transport.mkdir(str(workdir / 'prova'))
+        transport.copy(str(base_dir / 'a.txt'), str(workdir / 'prova'))
+        assert set(transport.listdir(str(workdir / 'prova'))) == set(['a.txt'])
+        transport.rmtree(str(workdir / 'prova'))
+
         # sixth test, copying one file into a file
-        transport.copy(os.path.join('local', 'a.txt'), 'prova')
-        assert transport.isfile('prova')
-        transport.remove('prova')
+        transport.copy(str(base_dir / 'a.txt'), str(workdir / 'prova'))
+        assert transport.isfile(str(workdir / 'prova'))
+        transport.remove(str(workdir / 'prova'))
         # copy of folder into an existing folder
         # NOTE: the command cp has a different behavior on Mac vs Ubuntu
         # tests performed locally on a Mac may result in a failure.
-        transport.mkdir('prova')
-        transport.copy('local', 'prova')
-        assert set(['local']) == set(transport.listdir('prova'))
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir(os.path.join('prova', 'local')))
-        transport.rmtree('prova')
+        transport.mkdir(str(workdir / 'prova'))
+        transport.copy(str(base_dir), str(workdir / 'prova'))
+        assert set(['origin']) == set(transport.listdir(str(workdir / 'prova')))
+        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir(str(workdir / 'prova' / 'origin')))
+        transport.rmtree(str(workdir / 'prova'))
         # exit
-        transport.chdir('..')
-        transport.rmtree(directory)
+        transport.rmtree(str(workdir))
 
 
 def test_put(custom_transport):

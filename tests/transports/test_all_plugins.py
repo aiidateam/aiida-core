@@ -1201,7 +1201,7 @@ for i in range({}):
         assert retcode == 0
 
 
-def test_asynchronous_execution(custom_transport):
+def test_asynchronous_execution(custom_transport, tmp_path):
     """Test that the execution of a long(ish) command via the direct scheduler does not block.
 
     This is a regression test for #3094, where running a long job on the direct scheduler
@@ -1220,10 +1220,10 @@ def test_asynchronous_execution(custom_transport):
                 tmpf.write(b'#!/bin/bash\nsleep 10\n')
                 tmpf.flush()
 
-                transport.putfile(tmpf.name, os.path.join('/tmp', script_fname))
+                transport.putfile(tmpf.name, str(tmp_path / script_fname))
 
             timestamp_before = time.time()
-            job_id_string = scheduler.submit_job('/tmp', script_fname)
+            job_id_string = scheduler.submit_job(str(tmp_path), script_fname)
 
             elapsed_time = time.time() - timestamp_before
             # We want to get back control. If it takes < 5 seconds, it means that it is not blocking
@@ -1259,9 +1259,3 @@ def test_asynchronous_execution(custom_transport):
                 # If the process is already dead (or has never run), I just ignore the error
                 pass
 
-            # Also remove the script
-            try:
-                transport.remove(f'/tmp/{script_fname}')
-            except FileNotFoundError:
-                # If the file wasn't even created, I just ignore this error
-                pass

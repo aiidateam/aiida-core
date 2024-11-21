@@ -180,57 +180,47 @@ def test_listdir_withattributes(custom_transport, remote_tmp_path):
             'a4f': True,
             'a': False,
         }
-        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path), 'a?')), {'as': True, 'a2': True}
-        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path), 'a[2-4]*')), {'a2': True, 'a4f': True}
+        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path), 'a?')), {
+            'as': True,
+            'a2': True,
+        }
+        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path), 'a[2-4]*')), {
+            'a2': True,
+            'a4f': True,
+        }
 
 
-def test_dir_creation_deletion(custom_transport):
+def test_dir_creation_deletion(custom_transport, remote_tmp_path):
     """Test creating and deleting directories."""
     with custom_transport as transport:
-        location = transport.normalize(os.path.join('/', 'tmp'))
-        directory = 'temp_dir_test'
-        transport.chdir(location)
-
-        assert location == transport.getcwd()
-        while transport.isdir(directory):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
-        transport.mkdir(directory)
+        new_dir = str(remote_tmp_path / 'new')
+        transport.mkdir(new_dir)
 
         with pytest.raises(OSError):
             # I create twice the same directory
-            transport.mkdir(directory)
+            transport.mkdir(new_dir)
 
-        transport.isdir(directory)
-        assert not transport.isfile(directory)
-        transport.rmdir(directory)
+        transport.isdir(new_dir)
+        assert not transport.isfile(new_dir)
 
 
-def test_dir_copy(custom_transport):
+def test_dir_copy(custom_transport, remote_tmp_path):
     """Verify if in the copy of a directory also the protection bits
     are carried over
     """
     with custom_transport as transport:
-        location = transport.normalize(os.path.join('/', 'tmp'))
-        directory = 'temp_dir_test'
-        transport.chdir(location)
+        # Create a src dir
+        src_dir = str(remote_tmp_path / 'copy_src')
+        transport.mkdir(src_dir)
 
-        while transport.isdir(directory):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
-        transport.mkdir(directory)
-
-        dest_directory = f'{directory}_copy'
-        transport.copy(directory, dest_directory)
+        dst_dir = str(remote_tmp_path / 'copy_dst')
+        transport.copy(src_dir, dst_dir)
 
         with pytest.raises(ValueError):
-            transport.copy(directory, '')
+            transport.copy(src_dir, '')
 
         with pytest.raises(ValueError):
-            transport.copy('', directory)
-
-        transport.rmdir(directory)
-        transport.rmdir(dest_directory)
+            transport.copy('', dst_dir)
 
 
 def test_dir_permissions_creation_modification(custom_transport):

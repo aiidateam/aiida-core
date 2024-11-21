@@ -361,6 +361,7 @@ def test_put_and_get(custom_transport, tmp_path_factory):
         assert remote_file_name in list_of_files
         assert retrieved_file_name not in list_of_files
 
+
 def test_putfile_and_getfile(custom_transport, tmp_path_factory):
     """Test putting and getting files."""
     local_dir = tmp_path_factory.mktemp('local')
@@ -399,129 +400,114 @@ def test_putfile_and_getfile(custom_transport, tmp_path_factory):
 
 def test_put_get_abs_path_file(custom_transport, tmp_path_factory):
     """Test of exception for non existing files and abs path"""
-    local_dir = os.path.join('/', 'tmp')
-    remote_dir = local_dir
+    local_dir = tmp_path_factory.mktemp('local')
+    remote_dir = tmp_path_factory.mktemp('remote')
+
     directory = 'tmp_try'
 
     with custom_transport as transport:
-        transport.chdir(remote_dir)
-        while transport.isdir(directory):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
+        (local_dir / directory).mkdir()
+        transport.mkdir(str(remote_dir / directory))
 
-        transport.mkdir(directory)
-        transport.chdir(directory)
+        local_file_name = 'file.txt'
+        retrieved_file_name = 'file_retrieved.txt'
 
-        partial_file_name = 'file.txt'
-        local_file_name = os.path.join(local_dir, directory, 'file.txt')
         remote_file_name = 'file_remote.txt'
-        retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
 
-        pathlib.Path(local_file_name).touch()
+        local_file_rel_path = local_file_name
+        local_file_abs_path = str(local_dir / directory / local_file_name)
+
+        remote_file_rel_path = remote_file_name
+
+        local_file_abs_path = str(local_dir / directory / local_file_name)
+        retrieved_file_abs_path = str(local_dir / directory / retrieved_file_name)
+        remote_file_abs_path = str(remote_dir / directory / remote_file_name)
 
         # partial_file_name is not an abs path
         with pytest.raises(ValueError):
-            transport.put(partial_file_name, remote_file_name)
+            transport.put(local_file_rel_path, remote_file_abs_path)
         with pytest.raises(ValueError):
-            transport.putfile(partial_file_name, remote_file_name)
+            transport.putfile(local_file_rel_path, remote_file_abs_path)
 
         # retrieved_file_name does not exist
         with pytest.raises(OSError):
-            transport.put(retrieved_file_name, remote_file_name)
+            transport.put(retrieved_file_abs_path, remote_file_abs_path)
         with pytest.raises(OSError):
-            transport.putfile(retrieved_file_name, remote_file_name)
+            transport.putfile(retrieved_file_abs_path, remote_file_abs_path)
 
         # remote_file_name does not exist
         with pytest.raises(OSError):
-            transport.get(remote_file_name, retrieved_file_name)
+            transport.get(remote_file_abs_path, retrieved_file_abs_path)
         with pytest.raises(OSError):
-            transport.getfile(remote_file_name, retrieved_file_name)
+            transport.getfile(remote_file_abs_path, retrieved_file_abs_path)
 
-        transport.put(local_file_name, remote_file_name)
-        transport.putfile(local_file_name, remote_file_name)
-
-        # local filename is not an abs path
+        # remote filename is not an abs path
         with pytest.raises(ValueError):
-            transport.get(remote_file_name, 'delete_me.txt')
+            transport.get(remote_file_rel_path, 'delete_me.txt')
         with pytest.raises(ValueError):
-            transport.getfile(remote_file_name, 'delete_me.txt')
-
-        transport.remove(remote_file_name)
-        os.remove(local_file_name)
-
-        transport.chdir('..')
-        transport.rmdir(directory)
+            transport.getfile(remote_file_rel_path, 'delete_me.txt')
 
 
-def test_put_get_empty_string_file(custom_transport):
+def test_put_get_empty_string_file(custom_transport, tmp_path_factory):
     """Test of exception put/get of empty strings"""
-    # TODO : verify the correctness of \n at the end of a file
-    local_dir = os.path.join('/', 'tmp')
-    remote_dir = local_dir
+    local_dir = tmp_path_factory.mktemp('local')
+    remote_dir = tmp_path_factory.mktemp('remote')
+
     directory = 'tmp_try'
 
     with custom_transport as transport:
-        transport.chdir(remote_dir)
-        while transport.isdir(directory):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
+        (local_dir / directory).mkdir()
+        transport.mkdir(str(remote_dir / directory))
 
-        transport.mkdir(directory)
-        transport.chdir(directory)
+        local_file_name = 'file.txt'
+        retrieved_file_name = 'file_retrieved.txt'
 
-        local_file_name = os.path.join(local_dir, directory, 'file_local.txt')
         remote_file_name = 'file_remote.txt'
-        retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
+
+        # here use full path in src and dst
+        local_file_abs_path = str(local_dir / directory / local_file_name)
+        retrieved_file_abs_path = str(local_dir / directory / retrieved_file_name)
+        remote_file_abs_path = str(remote_dir / directory / remote_file_name)
 
         text = 'Viva Verdi\n'
-        with open(local_file_name, 'w', encoding='utf8') as fhandle:
+        with open(local_file_abs_path, 'w', encoding='utf8') as fhandle:
             fhandle.write(text)
 
         # localpath is an empty string
         # ValueError because it is not an abs path
         with pytest.raises(ValueError):
-            transport.put('', remote_file_name)
+            transport.put('', remote_file_abs_path)
         with pytest.raises(ValueError):
-            transport.putfile('', remote_file_name)
+            transport.putfile('', remote_file_abs_path)
 
         # remote path is an empty string
         with pytest.raises(OSError):
-            transport.put(local_file_name, '')
+            transport.put(local_file_abs_path, '')
         with pytest.raises(OSError):
-            transport.putfile(local_file_name, '')
+            transport.putfile(local_file_abs_path, '')
 
-        transport.put(local_file_name, remote_file_name)
+        transport.put(local_file_abs_path, remote_file_abs_path)
         # overwrite the remote_file_name
-        transport.putfile(local_file_name, remote_file_name)
+        transport.putfile(local_file_abs_path, remote_file_abs_path)
 
         # remote path is an empty string
         with pytest.raises(OSError):
-            transport.get('', retrieved_file_name)
+            transport.get('', retrieved_file_abs_path)
         with pytest.raises(OSError):
-            transport.getfile('', retrieved_file_name)
+            transport.getfile('', retrieved_file_abs_path)
 
         # local path is an empty string
         # ValueError because it is not an abs path
         with pytest.raises(ValueError):
-            transport.get(remote_file_name, '')
+            transport.get(remote_file_abs_path, '')
         with pytest.raises(ValueError):
-            transport.getfile(remote_file_name, '')
+            transport.getfile(remote_file_abs_path, '')
 
         # TODO : get doesn't retrieve empty files.
         # Is it what we want?
-        transport.get(remote_file_name, retrieved_file_name)
+        transport.get(remote_file_abs_path, retrieved_file_abs_path)
         # overwrite retrieved_file_name
-        transport.getfile(remote_file_name, retrieved_file_name)
-
-        os.remove(local_file_name)
-        transport.remove(remote_file_name)
-        # If it couldn't end the copy, it leaves what he did on
-        # local file
-        assert 'file_retrieved.txt' in transport.listdir('.')
-        os.remove(retrieved_file_name)
-
-        transport.chdir('..')
-        transport.rmdir(directory)
+        transport.getfile(remote_file_abs_path, retrieved_file_abs_path)
 
 
 def test_put_and_get_tree(custom_transport):

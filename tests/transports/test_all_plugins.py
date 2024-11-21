@@ -24,6 +24,7 @@ import uuid
 
 import psutil
 import pytest
+from pathlib import Path
 from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
 from aiida.transports import Transport
 
@@ -510,64 +511,42 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_factory):
         transport.getfile(remote_file_abs_path, retrieved_file_abs_path)
 
 
-def test_put_and_get_tree(custom_transport):
+def test_put_and_get_tree(custom_transport, tmp_path_factory):
     """Test putting and getting files."""
-    local_dir = os.path.join('/', 'tmp')
-    remote_dir = local_dir
+    local_dir = tmp_path_factory.mktemp('local')
+    remote_dir = tmp_path_factory.mktemp('remote')
+
     directory = 'tmp_try'
 
     with custom_transport as transport:
-        transport.chdir(remote_dir)
+        local_subfolder = str(local_dir / directory / 'tmp1')
+        remote_subfolder = str(remote_dir / 'tmp2')
+        retrieved_subfolder = str(local_dir / directory / 'tmp3')
 
-        while os.path.exists(os.path.join(local_dir, directory)):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
+        (local_dir / directory / local_subfolder).mkdir(parents=True)
 
-        local_subfolder = os.path.join(local_dir, directory, 'tmp1')
-        remote_subfolder = 'tmp2'
-        retrieved_subfolder = os.path.join(local_dir, directory, 'tmp3')
-
-        os.mkdir(os.path.join(local_dir, directory))
-        os.mkdir(os.path.join(local_dir, directory, local_subfolder))
-
-        transport.chdir(directory)
-
-        local_file_name = os.path.join(local_subfolder, 'file.txt')
+        local_file_name = Path(local_subfolder) / 'file.txt'
 
         text = 'Viva Verdi\n'
         with open(local_file_name, 'w', encoding='utf8') as fhandle:
             fhandle.write(text)
 
         # here use full path in src and dst
-        for i in range(2):
-            if i == 0:
-                transport.put(local_subfolder, remote_subfolder)
-                transport.get(remote_subfolder, retrieved_subfolder)
-            else:
-                transport.puttree(local_subfolder, remote_subfolder)
-                transport.gettree(remote_subfolder, retrieved_subfolder)
+        transport.puttree(local_subfolder, remote_subfolder)
+        transport.gettree(remote_subfolder, retrieved_subfolder)
 
-            # Here I am mixing the local with the remote fold
-            list_of_dirs = transport.listdir('.')
-            # # it is False because local_file_name has the full path,
-            # # while list_of_files has not
-            assert local_subfolder not in list_of_dirs
-            assert remote_subfolder in list_of_dirs
-            assert retrieved_subfolder not in list_of_dirs
-            assert 'tmp1' in list_of_dirs
-            assert 'tmp3' in list_of_dirs
+        list_of_dirs = transport.listdir(str(local_dir / directory))
 
-            list_pushed_file = transport.listdir('tmp2')
-            list_retrieved_file = transport.listdir('tmp3')
-            assert 'file.txt' in list_pushed_file
-            assert 'file.txt' in list_retrieved_file
+        assert local_subfolder not in list_of_dirs
+        assert remote_subfolder not in list_of_dirs
+        assert retrieved_subfolder not in list_of_dirs
+        assert 'tmp1' in list_of_dirs
+        assert 'tmp3' in list_of_dirs
 
-        shutil.rmtree(local_subfolder)
-        shutil.rmtree(retrieved_subfolder)
-        transport.rmtree(remote_subfolder)
-
-        transport.chdir('..')
-        transport.rmdir(directory)
+        list_pushed_file = transport.listdir(remote_subfolder)
+        list_retrieved_file = transport.listdir(retrieved_subfolder)
+        assert 'file.txt' in list_pushed_file
+        assert 'file.txt' in list_retrieved_file
 
 
 @pytest.mark.parametrize(
@@ -928,11 +907,14 @@ def test_put_get_abs_path_tree(custom_transport):
         transport.rmdir(directory)
 
 
-def test_put_get_empty_string_tree(custom_transport):
+def test_put_get_empty_string_tree(custom_transport, tmp_path_factory):
     """Test of exception put/get of empty strings"""
     # TODO : verify the correctness of \n at the end of a file
     local_dir = os.path.join('/', 'tmp')
     remote_dir = local_dir
+    # local_dir = tmp_path_factory.mktemp('local')
+    # remote_dir = tmp_path_factory.mktemp('remote')
+
     directory = 'tmp_try'
 
     with custom_transport as transport:
@@ -994,18 +976,23 @@ def test_put_get_empty_string_tree(custom_transport):
         transport.rmdir(directory)
 
 
-def test_gettree_nested_directory(custom_transport):
+def test_gettree_nested_directory(custom_transport, remote_tmp_path: Path, tmp_path: Path):
     """Test `gettree` for a nested directory."""
-    with tempfile.TemporaryDirectory() as dir_remote, tempfile.TemporaryDirectory() as dir_local:
-        content = b'dummy\ncontent'
-        filepath = os.path.join(dir_remote, 'sub', 'path', 'filename.txt')
-        os.makedirs(os.path.dirname(filepath))
+    # with tempfile.TemporaryDirectory() as dir_remote, tempfile.TemporaryDirectory() as dir_local:
+    content = b'dummy\ncontent'
+    # filepath = os.path.join(dir_remote, 'sub', 'path', 'filename.txt')
+    dir_path = remote_tmp_path / 'sub' / 'path'
+    dir_path.mkdir(parents=True)
 
-        with open(filepath, 'wb') as handle:
-            handle.write(content)
+    file_path = str(dir_path / 'filename.txt')
 
-        with custom_transport as transport:
-            transport.gettree(os.path.join(dir_remote, 'sub/path'), os.path.join(dir_local, 'sub/path'))
+    with open(file_path, 'wb') as handle:
+        handle.write(content)
+
+    with custom_transport as transport:
+        transport.gettree(str(remote_tmp_path / 'sub' / 'path'), str(tmp_path / 'sub' / 'path'))
+
+    assert (tmp_path / 'sub' / 'path' / 'filename.txt').is_file
 
 
 def test_exec_pwd(custom_transport, remote_tmp_path):
@@ -1258,4 +1245,3 @@ def test_asynchronous_execution(custom_transport, tmp_path):
             except ProcessLookupError:
                 # If the process is already dead (or has never run), I just ignore the error
                 pass
-

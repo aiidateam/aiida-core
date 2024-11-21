@@ -21,10 +21,10 @@ import string
 import tempfile
 import time
 import uuid
+from pathlib import Path
 
 import psutil
 import pytest
-from pathlib import Path
 from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
 from aiida.transports import Transport
 
@@ -1020,7 +1020,7 @@ def test_exec_pwd(custom_transport, remote_tmp_path):
 
         assert transport.isdir(subfolder_fullpath)
 
-        retcode, stdout, stderr = transport.exec_command_wait(f'ls {str(remote_tmp_path)}')
+        retcode, stdout, stderr = transport.exec_command_wait(f'ls {remote_tmp_path!s}')
         assert retcode == 0
         assert stdout.strip() in subfolder_fullpath
         assert stderr == ''

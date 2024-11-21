@@ -99,4 +99,3 @@ def test_large_table(benchmark, num_entries):
     qb.all()
     result = benchmark(qb.all)
     assert len(result) == num_entries
-

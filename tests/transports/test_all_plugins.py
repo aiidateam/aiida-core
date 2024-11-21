@@ -1117,7 +1117,7 @@ def test_exec_with_wrong_stdin(custom_transport):
             transport.exec_command_wait('cat', stdin=1)
 
 
-def test_transfer_big_stdout(custom_transport):
+def test_transfer_big_stdout(custom_transport, tmp_path):
     """Test the transfer of a large amount of data on stdout."""
     # Create a "big" file of > 2MB (10MB here; in general, larger than the buffer size)
     min_file_size_bytes = 5 * 1024 * 1024
@@ -1132,25 +1132,19 @@ def test_transfer_big_stdout(custom_transport):
     line_repetitions = min_file_size_bytes // len(file_line_binary) + 1
     fcontent = (file_line_binary * line_repetitions).decode('utf8')
 
-    with custom_transport as trans:
+    with custom_transport as transport:
+        transport: Transport
         # We cannot use tempfile.mkdtemp because we're on a remote folder
-        location = trans.normalize(os.path.join('/', 'tmp'))
-        trans.chdir(location)
-        assert location == trans.getcwd()
-
-        directory = 'temp_dir_test_transfer_big_stdout'
-        while trans.isdir(directory):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
-        trans.mkdir(directory)
-        trans.chdir(directory)
+        directory_name = 'temp_dir_test_transfer_big_stdout'
+        directory_path = tmp_path / directory_name
+        transport.mkdir(str(directory_path))
 
         with tempfile.NamedTemporaryFile(mode='wb') as tmpf:
             tmpf.write(fcontent.encode('utf8'))
             tmpf.flush()
 
             # I put a file with specific content there at the right file name
-            trans.putfile(tmpf.name, fname)
+            transport.putfile(tmpf.name, str(directory_path / fname))
 
         python_code = r"""import sys
 
@@ -1174,16 +1168,20 @@ for i in range({}):
             tmpf.flush()
 
             # I put a file with specific content there at the right file name
-            trans.putfile(tmpf.name, script_fname)
+            transport.putfile(tmpf.name, str(directory_path / script_fname))
 
         # I get its content via the stdout; emulate also network slowness (note I cat twice)
-        retcode, stdout, stderr = trans.exec_command_wait(f'cat {fname} ; sleep 1 ; cat {fname}')
+        retcode, stdout, stderr = transport.exec_command_wait(
+            f'cat {fname} ; sleep 1 ; cat {fname}', workdir=str(directory_path)
+        )
         assert stderr == ''
         assert stdout == fcontent + fcontent
         assert retcode == 0
 
         # I get its content via the stderr; emulate also network slowness (note I cat twice)
-        retcode, stdout, stderr = trans.exec_command_wait(f'cat {fname} >&2 ; sleep 1 ; cat {fname} >&2')
+        retcode, stdout, stderr = transport.exec_command_wait(
+            f'cat {fname} >&2 ; sleep 1 ; cat {fname} >&2', workdir=str(directory_path)
+        )
         assert stderr == fcontent + fcontent
         assert stdout == ''
         assert retcode == 0
@@ -1196,17 +1194,11 @@ for i in range({}):
         #        line_repetitions, file_line, file_line))
         # However this is pretty slow (and using 'cat' of a file containing only one line is even slower)
 
-        retcode, stdout, stderr = trans.exec_command_wait(f'python3 {script_fname}')
+        retcode, stdout, stderr = transport.exec_command_wait(f'python3 {script_fname}', workdir=str(directory_path))
 
         assert stderr == fcontent
         assert stdout == fcontent
         assert retcode == 0
-
-        # Clean-up
-        trans.remove(fname)
-        trans.remove(script_fname)
-        trans.chdir('..')
-        trans.rmdir(directory)
 
 
 def test_asynchronous_execution(custom_transport):

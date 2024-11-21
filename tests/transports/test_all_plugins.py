@@ -34,7 +34,7 @@ from aiida.transports import Transport
 
 
 @pytest.fixture(scope='function', params=entry_point.get_entry_point_names('aiida.transports'))
-def custom_transport(request, tmp_path, monkeypatch) -> Transport:
+def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
     plugin = TransportFactory(request.param)
 
@@ -42,7 +42,7 @@ def custom_transport(request, tmp_path, monkeypatch) -> Transport:
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
     elif request.param == 'core.ssh_auto':
         kwargs = {'machine': 'localhost'}
-        filepath_config = tmp_path / 'config'
+        filepath_config = tmp_path_factory.mktemp("transport") / 'config'
         monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
         if not filepath_config.exists():
             filepath_config.write_text('Host localhost')
@@ -61,27 +61,24 @@ def test_is_open(custom_transport):
 
     assert not custom_transport.is_open
 
-
-def test_makedirs(custom_transport):
-    """Verify the functioning of makedirs command"""
+def test_deprecated_chdir_getcwd(custom_transport):
+    """Test to be deprecated ``chdir``/``getcwd`` methods still work."""
     with custom_transport as transport:
         location = transport.normalize(os.path.join('/', 'tmp'))
         directory = 'temp_dir_test'
         transport.chdir(location)
 
         assert location == transport.getcwd()
-        while transport.isdir(directory):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
-        transport.mkdir(directory)
-        transport.chdir(directory)
 
+def test_makedirs(custom_transport, tmp_path):
+    """Verify the functioning of makedirs command"""
+    with custom_transport as transport:
         # define folder structure
-        dir_tree = os.path.join('1', '2')
+        dir_tree = str(tmp_path / '1' / '2')
         # I create the tree
         transport.makedirs(dir_tree)
         # verify the existence
-        assert transport.isdir('1')
+        assert transport.isdir(str(tmp_path / '1'))
         assert dir_tree
 
         # try to recreate the same folder
@@ -92,11 +89,7 @@ def test_makedirs(custom_transport):
         transport.makedirs(dir_tree, True)
 
         transport.rmdir(dir_tree)
-        transport.rmdir('1')
-
-        transport.chdir('..')
-        transport.rmdir(directory)
-
+        transport.rmdir(str(tmp_path / '1'))
 
 def test_rmtree(custom_transport):
     """Verify the functioning of rmtree command"""

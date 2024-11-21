@@ -59,7 +59,7 @@ def pytest_collection_modifyitems(items, config):
     if config.option.db_backend is DbBackend.SQLITE:
         if config.option.markexpr != '':
             # Don't overwrite markers that the user already provided via '-m ' cmdline argument
-            config.option.markexpr += ' and not requires_psql'
+            config.option.markexpr += ' and (not requires_psql)'
         else:
             config.option.markexpr = 'not requires_psql'
 
@@ -119,7 +119,7 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
     marker_opts = pytestconfig.getoption('-m')
     db_backend = pytestconfig.getoption('--db-backend')
 
-    # By default we use RabbitMQ broker and psql_dos storage
+    # We use RabbitMQ broker by default unless 'presto' marker is specified
     broker = 'core.rabbitmq'
     if 'not requires_rmq' in marker_opts or 'presto' in marker_opts:
         broker = None

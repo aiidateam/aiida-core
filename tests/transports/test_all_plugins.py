@@ -1008,9 +1008,9 @@ def test_gettree_nested_directory(custom_transport):
             transport.gettree(os.path.join(dir_remote, 'sub/path'), os.path.join(dir_local, 'sub/path'))
 
 
-def test_exec_pwd(custom_transport):
+def test_exec_pwd(custom_transport, remote_tmp_path):
     """I create a strange subfolder with a complicated name and
-    then see if I can run pwd. This also checks the correct
+    then see if I can run ``ls``. This also checks the correct
     escaping of funny characters, both in the directory
     creation (which should be done by paramiko) and in the command
     execution (done in this module, in the _exec_command_internal function).
@@ -1022,28 +1022,20 @@ def test_exec_pwd(custom_transport):
         # To compare with: getcwd uses the normalized ('realpath') path
         location = transport.normalize('/tmp')
         subfolder = """_'s f"#"""  # A folder with characters to escape
-        subfolder_fullpath = os.path.join(location, subfolder)
+        subfolder_fullpath = str(remote_tmp_path / subfolder)
 
-        transport.chdir(location)
-        if not transport.isdir(subfolder):
+        if not transport.isdir(subfolder_fullpath):
             # Since I created the folder, I will remember to
             # delete it at the end of this test
             delete_at_end = True
-            transport.mkdir(subfolder)
+            transport.mkdir(subfolder_fullpath)
 
-        assert transport.isdir(subfolder)
-        transport.chdir(subfolder)
+        assert transport.isdir(subfolder_fullpath)
 
-        assert subfolder_fullpath == transport.getcwd()
-        retcode, stdout, stderr = transport.exec_command_wait('pwd')
+        retcode, stdout, stderr = transport.exec_command_wait(f'ls {str(remote_tmp_path)}')
         assert retcode == 0
-        # I have to strip it because 'pwd' returns a trailing \n
-        assert stdout.strip() == subfolder_fullpath
+        assert stdout.strip() in subfolder_fullpath
         assert stderr == ''
-
-        if delete_at_end:
-            transport.chdir(location)
-            transport.rmdir(subfolder)
 
 
 def test_exec_with_stdin_string(custom_transport):

@@ -24,6 +24,7 @@ def remote_data_local(tmp_path, aiida_localhost):
     (tmp_path / 'file.txt').write_bytes(b'some content')
     return node
 
+
 @pytest.fixture
 def remote_data_ssh(tmp_path, aiida_computer_ssh):
     """Return a non-empty ``RemoteData`` instance."""
@@ -36,7 +37,8 @@ def remote_data_ssh(tmp_path, aiida_computer_ssh):
     (tmp_path / 'file.txt').write_bytes(b'some content')
     return node
 
-@pytest.mark.parametrize('fixture', ["remote_data_local", "remote_data_ssh"])
+
+@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
 def test_clean(request, fixture):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
 
@@ -48,7 +50,8 @@ def test_clean(request, fixture):
     assert remote_data.is_empty
     assert remote_data.is_cleaned
 
-@pytest.mark.parametrize('fixture', ["remote_data_local", "remote_data_ssh"])
+
+@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
 def test_get_size_on_disk_du(request, fixture, monkeypatch):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
 
@@ -67,11 +70,11 @@ def test_get_size_on_disk_du(request, fixture, monkeypatch):
         return (1, '', 'Error executing `du` command')
 
     monkeypatch.setattr(transport, 'exec_command_wait', mock_exec_command_wait)
-    with pytest.raises(RuntimeError) as excinfo:
+    with pytest.raises(RuntimeError, match='Error executing `du`.*'):
         remote_data._get_size_on_disk_du(full_path, transport)
 
 
-@pytest.mark.parametrize('fixture', ["remote_data_local", "remote_data_ssh"])
+@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
 def test_get_size_on_disk_lstat(request, fixture):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
 
@@ -85,13 +88,14 @@ def test_get_size_on_disk_lstat(request, fixture):
     assert size_on_disk == 12
 
 
-@pytest.mark.parametrize('fixture', ["remote_data_local", "remote_data_ssh"])
+@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
 def test_get_size_on_disk(request, fixture):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
 
     remote_data = request.getfixturevalue(fixture)
 
-    # Check here for human-readable output string, as integer byte values are checked in `test_get_size_on_disk_[du|lstat]`
+    # Check here for human-readable output string, as integer byte values are checked in
+    # `test_get_size_on_disk_[du|lstat]`
     size_on_disk = remote_data.get_size_on_disk()
     assert size_on_disk == '4.01 KB'
 

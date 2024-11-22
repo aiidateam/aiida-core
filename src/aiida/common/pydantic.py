@@ -14,7 +14,7 @@ def MetadataField(  # noqa: N802
     short_name: str | None = None,
     option_cls: t.Any | None = None,
     **kwargs,
-):
+) -> t.Any | None:
     """Return a :class:`pydantic.fields.Field` instance with additional metadata.
 
     .. code-block:: python
@@ -41,7 +41,7 @@ def MetadataField(  # noqa: N802
     field_info = Field(default, **kwargs)
 
     for key, value in (('priority', priority), ('short_name', short_name), ('option_cls', option_cls)):
-        if value is not None:
+        if value is not None and field_info is not None:
             field_info.metadata.append({key: value})
 
     return field_info

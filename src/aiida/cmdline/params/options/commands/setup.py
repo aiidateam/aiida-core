@@ -66,10 +66,10 @@ def get_repository_uri_default(ctx):
     """
     import os
 
-    from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+    from aiida.manage.configuration.settings import AiiDAConfigDir
 
     validate_profile_parameter(ctx)
-    configure_directory = AiiDAConfigPathResolver.get_configuration_directory()
+    configure_directory = AiiDAConfigDir.get_configuration_directory()
 
     return os.path.join(configure_directory, 'repository', ctx.params['profile'].name)
 

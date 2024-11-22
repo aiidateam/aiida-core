@@ -61,11 +61,11 @@ def verdi_status(print_traceback, no_rmq):
     from aiida.common.docs import URL_NO_BROKER
     from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
-    from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+    from aiida.manage.configuration.settings import AiiDAConfigDir
     from aiida.manage.manager import get_manager
 
     exit_code = ExitCode.SUCCESS
-    configure_directory = AiiDAConfigPathResolver.get_configuration_directory()
+    configure_directory = AiiDAConfigDir.get_configuration_directory()
 
     print_status(ServiceStatus.UP, 'version', f'AiiDA v{__version__}')
     print_status(ServiceStatus.UP, 'config', configure_directory)

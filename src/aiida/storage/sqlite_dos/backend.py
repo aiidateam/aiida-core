@@ -26,7 +26,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration.profile import Profile
-from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.orm.implementation import BackendEntity
 from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.psql_dos.models.settings import DbSetting
@@ -204,7 +204,7 @@ class SqliteDosStorage(PsqlDosBackend):
             title='Directory of the backend',
             description='Filepath of the directory in which to store data for this backend.',
             default_factory=lambda: str(
-                AiiDAConfigPathResolver.get_configuration_directory() / 'repository' / f'sqlite_dos_{uuid4().hex}'
+                AiiDAConfigDir.get_configuration_directory() / 'repository' / f'sqlite_dos_{uuid4().hex}'
             ),
         )
 

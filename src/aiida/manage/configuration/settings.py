@@ -26,35 +26,14 @@ DEFAULT_DAEMON_DIR_NAME = 'daemon'
 DEFAULT_DAEMON_LOG_DIR_NAME = 'log'
 DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 
-__all__ = ('AiiDAConfigPathResolver',)
+__all__ = ('AiiDAConfigPathResolver', 'AiiDAConfigDir')
 
 
 @final
-class AiiDAConfigPathResolver:
-    """Path resolver for setting and getting the path to configuration directory, daemon dir,
-    daemon log dir and access control dir. The locations are all trivially derived from the config location,
-    The class provide dedicated setter/getter for configuration_directory."""
+class AiiDAConfigDir:
+    """Singleton for setting and getting the path to configuration directory."""
 
     _glb_aiida_config_folder: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
-
-    def __init__(self, config_folder: pathlib.Path | None) -> None:
-        self._aiida_path = config_folder or self._glb_aiida_config_folder
-
-    @property
-    def aiida_path(self) -> pathlib.Path:
-        return self._aiida_path
-
-    @property
-    def daemon_dir(self) -> pathlib.Path:
-        return self._aiida_path / DEFAULT_DAEMON_DIR_NAME
-
-    @property
-    def daemon_log_dir(self) -> pathlib.Path:
-        return self._aiida_path / DEFAULT_DAEMON_DIR_NAME / DEFAULT_DAEMON_LOG_DIR_NAME
-
-    @property
-    def access_control_dir(self) -> pathlib.Path:
-        return self._aiida_path / DEFAULT_ACCESS_CONTROL_DIR_NAME
 
     @classmethod
     def get_configuration_directory(cls):
@@ -72,6 +51,33 @@ class AiiDAConfigPathResolver:
         cls._glb_aiida_config_folder = aiida_config_folder or _get_configuration_directory_from_envvar()
 
         _create_instance_directories(cls._glb_aiida_config_folder)
+
+
+@final
+class AiiDAConfigPathResolver:
+    """For resolving configuration directory, daemon dir,
+    daemon log dir and access control dir.
+    The locations are all trivially derived from the config location,
+    """
+
+    def __init__(self, config_folder: pathlib.Path | None) -> None:
+        self._aiida_path = config_folder or AiiDAConfigDir.get_configuration_directory()
+
+    @property
+    def aiida_path(self) -> pathlib.Path:
+        return self._aiida_path
+
+    @property
+    def daemon_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_DAEMON_DIR_NAME
+
+    @property
+    def daemon_log_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_DAEMON_DIR_NAME / DEFAULT_DAEMON_LOG_DIR_NAME
+
+    @property
+    def access_control_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_ACCESS_CONTROL_DIR_NAME
 
 
 def _create_instance_directories(aiida_config_folder: pathlib.Path | None) -> None:

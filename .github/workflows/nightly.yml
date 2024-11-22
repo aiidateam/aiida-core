@@ -129,7 +129,7 @@ jobs:
       id: tests
       env:
         AIIDA_WARN_v3: 0
-      run: pytest -sv -db-backend sqlite -m 'requires_rmq' tests/
+      run: pytest -sv --db-backend sqlite -m 'requires_rmq' tests/
 
     - name: Slack notification
       # Always run this step (otherwise it would be skipped if any of the previous steps fail) but only if the

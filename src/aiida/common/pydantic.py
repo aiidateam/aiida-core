@@ -14,7 +14,7 @@ def MetadataField(  # noqa: N802
     short_name: str | None = None,
     option_cls: t.Any | None = None,
     **kwargs,
-) -> t.Any | None:
+):
     """Return a :class:`pydantic.fields.Field` instance with additional metadata.
 
     .. code-block:: python

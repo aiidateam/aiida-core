@@ -13,7 +13,7 @@ from __future__ import annotations
 import typing as t
 from importlib import import_module
 from logging import Logger
-from types import FunctionType, ModuleType
+from types import FunctionType
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common.exceptions import EntryPointError
@@ -38,7 +38,7 @@ class PluginVersionProvider:
     def logger(self) -> Logger:
         return self._logger
 
-    def get_version_info(self, plugin: str | ModuleType | FunctionType | t.Any) -> dict[t.Any, dict[t.Any, t.Any]]:
+    def get_version_info(self, plugin: str | t.Any) -> dict[t.Any, dict[t.Any, t.Any]]:
         """Get the version information for a given plugin.
 
         .. note::

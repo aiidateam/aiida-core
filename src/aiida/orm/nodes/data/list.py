@@ -82,7 +82,7 @@ class List(Data, MutableSequence):
             self.set_list(data)
         return item
 
-    def pop(self, index: int = 0) -> Any:
+    def pop(self, index: int = -1) -> Any:
         """Remove and return item at index (default last)."""
         data = self.get_list()
         item = data.pop(index)

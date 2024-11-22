@@ -21,7 +21,6 @@ More information at http://www.aiida.net
 
 from aiida.common.log import configure_logging  # noqa: F401
 from aiida.manage.configuration import get_config_option, get_profile, load_profile, profile_context  # noqa: F401
-from aiida.manage.configuration.settings import AiiDAConfigDir
 
 __copyright__ = (
     'Copyright (c), This file is part of the AiiDA platform. '

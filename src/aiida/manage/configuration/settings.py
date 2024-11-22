@@ -45,10 +45,14 @@ class AiiDAConfigDir:
         """Set the configuration directory, related global variables and create instance directories.
 
         The location of the configuration directory is defined by ``aiida_config_folder`` or if not defined,
-        the path that is returned by ``get_configuration_directory_from_envvar``. If the directory does not exist yet,
-        it is created, together with all its subdirectories.
+        the path that is returned by ``get_configuration_directory_from_envvar``.
+        Or if the environment_variable not set, use the default.
+        If the directory does not exist yet, it is created, together with all its subdirectories.
         """
-        cls._glb_aiida_config_folder = aiida_config_folder or _get_configuration_directory_from_envvar()
+        _default_dirpath_config = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
+
+        aiida_config_folder = aiida_config_folder or _get_configuration_directory_from_envvar()
+        cls._glb_aiida_config_folder = aiida_config_folder or _default_dirpath_config
 
         _create_instance_directories(cls._glb_aiida_config_folder)
 
@@ -113,7 +117,7 @@ def _create_instance_directories(aiida_config_folder: pathlib.Path | None) -> No
         _ = os.umask(umask)
 
 
-def _get_configuration_directory_from_envvar() -> pathlib.Path:
+def _get_configuration_directory_from_envvar() -> pathlib.Path | None:
     """Return the path of a config directory from the ``AIIDA_PATH`` environment variable.
 
     The environment variable should be a colon separated string of filepaths that either point directly to a config
@@ -127,7 +131,7 @@ def _get_configuration_directory_from_envvar() -> pathlib.Path:
     default_dirpath_config = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
 
     if environment_variable is None:
-        return default_dirpath_config
+        return None
 
     # Loop over all the paths in the ``AIIDA_PATH`` variable to see if any of them contain a configuration folder
     dirpath_config = None

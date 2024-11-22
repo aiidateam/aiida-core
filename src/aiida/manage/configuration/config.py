@@ -20,8 +20,8 @@ import contextlib
 import io
 import json
 import os
-from pathlib import Path
 import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import (
@@ -781,7 +781,6 @@ class Config:
 
             handle.flush()
             os.rename(handle.name, self.filepath)
-
 
     def filepaths(self, profile: Profile):
         """Return the filepaths used by this profile.

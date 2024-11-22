@@ -47,9 +47,7 @@ class Profile:
         KEY_PROCESS,
     )
 
-    def __init__(
-        self, name: str, config: abc.Mapping[str, Any], validate: bool = True
-    ):
+    def __init__(self, name: str, config: abc.Mapping[str, Any], validate: bool = True):
         """Load a profile with the profile configuration."""
         type_check(config, abc.Mapping)
         if validate and not set(config.keys()).issuperset(self.REQUIRED_KEYS):

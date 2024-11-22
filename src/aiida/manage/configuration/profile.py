@@ -14,7 +14,7 @@ import os
 import pathlib
 from collections import abc
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -59,7 +59,7 @@ class Profile:
             )
 
         self._name: str = name
-        self._attributes: dict[str, Any] = deepcopy(config) # type: ignore
+        self._attributes: dict[str, Any] = deepcopy(config)  # type: ignore
 
         # Create a default UUID if not specified
         if self._attributes.get(self.KEY_UUID, None) is None:

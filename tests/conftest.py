@@ -39,7 +39,7 @@ pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
 
 class TestDbBackend(Enum):
-    """Options for the '--db-backend' CLI argument"""
+    """Options for the '--db-backend' CLI argument when running pytest."""
 
     SQLITE = 'sqlite'
     PSQL = 'psql'

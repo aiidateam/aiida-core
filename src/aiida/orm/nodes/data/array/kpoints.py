@@ -190,16 +190,24 @@ class KpointsData(ArrayData):
 
         :param structuredata: an instance of StructureData
         """
-        from aiida.orm import StructureData
+        from aiida.orm.nodes.data.structure import StructureData, has_atomistic
 
         if not isinstance(structuredata, StructureData):
-            raise ValueError(
-                'An instance of StructureData should be passed to ' 'the KpointsData, found instead {}'.format(
-                    structuredata.__class__
-                )
-            )
-        cell = structuredata.cell
-        self.set_cell(cell, structuredata.pbc)
+            error_message  = 'An instance of StructureData or aiida-atomistic StructureData should be passed to ' 'the KpointsData, found instead {}'.format(
+                            structuredata.__class__
+                        )
+            if has_atomistic:
+                from aiida_atomistic import StructureData as AtomisticStructureData
+                if not isinstance(structuredata, AtomisticStructureData):
+                    raise ValueError(error_message)
+                else:
+                    cell = structuredata.cell
+                    self.set_cell(cell, structuredata.pbc)
+            else:
+                raise ValueError(error_message)
+        else:        
+            cell = structuredata.cell
+            self.set_cell(cell, structuredata.pbc)
 
     def set_cell(self, cell, pbc=None):
         """Set a cell to be used for symmetry analysis.

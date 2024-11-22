@@ -1889,7 +1889,7 @@ class StructureData(Data):
         """
         Returns the atomistic StructureData version of the orm.StructureData one.
         """
-        if not has_atomistic:
+        if not has_atomistic():
             raise ImportError(
                 'aiida-atomistic plugin is not installed, \
                 please install it to have full support for atomistic structures'

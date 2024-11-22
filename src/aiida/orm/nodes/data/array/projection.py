@@ -278,7 +278,7 @@ class ProjectionData(OrbitalData, ArrayData):
                 raise exceptions.ValidationError('Tags must set a list of strings')
             self.base.attributes.set('tags', tags)
 
-    def set_orbitals(self, **kwargs):
+    def set_orbitals(self, **kwargs):  # type: ignore[override]
         """This method is inherited from OrbitalData, but is blocked here.
         If used will raise a NotImplementedError
         """

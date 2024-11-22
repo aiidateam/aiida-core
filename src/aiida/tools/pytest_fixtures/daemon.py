@@ -116,7 +116,7 @@ def submit_and_await(started_daemon_client):
     from aiida.engine import ProcessState
 
     def factory(
-        submittable: 'Process' | 'ProcessBuilder' | 'ProcessNode',
+        submittable: type[Process] | 'ProcessBuilder' | 'ProcessNode' | t.Any,
         state: ProcessState = ProcessState.FINISHED,
         timeout: int = 20,
         **kwargs,

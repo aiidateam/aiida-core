@@ -26,9 +26,9 @@ from aiida.orm.nodes.data.structure import (
     ase_refine_cell,
     get_formula,
     has_ase,
+    has_atomistic,
     has_pymatgen,
     has_spglib,
-    has_atomistic,
 )
 
 
@@ -1849,6 +1849,7 @@ class TestStructureDataReload:
         for i in range(3):
             assert round(abs(c.sites[1].position[i] - 1.0), 7) == 0
 
+
 @skip_atomistic
 class TestAtomisticStructureData:
     """Tests the creation of StructureData objects (cell and pbc), and its conversion to the new atomistic StructureData."""
@@ -1870,6 +1871,7 @@ class TestAtomisticStructureData:
         assert structure.properties.sites[0].kinds == legacy.sites[0].kind_name
         assert structure.properties.sites[0].positions == list(legacy.sites[0].position)
         assert structure.properties.cell == legacy.cell
+
 
 class TestStructureDataFromAse:
     """Tests the creation of Sites from/to a ASE object."""

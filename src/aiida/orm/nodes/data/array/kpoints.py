@@ -193,11 +193,13 @@ class KpointsData(ArrayData):
         from aiida.orm.nodes.data.structure import StructureData, has_atomistic
 
         if not isinstance(structuredata, StructureData):
-            error_message  = 'An instance of StructureData or aiida-atomistic StructureData should be passed to ' 'the KpointsData, found instead {}'.format(
-                            structuredata.__class__
-                        )
+            error_message = (
+                'An instance of StructureData or aiida-atomistic StructureData should be passed to '
+                'the KpointsData, found instead {}'.format(structuredata.__class__)
+            )
             if has_atomistic:
                 from aiida_atomistic import StructureData as AtomisticStructureData
+
                 if not isinstance(structuredata, AtomisticStructureData):
                     raise ValueError(error_message)
                 else:
@@ -205,7 +207,7 @@ class KpointsData(ArrayData):
                     self.set_cell(cell, structuredata.pbc)
             else:
                 raise ValueError(error_message)
-        else:        
+        else:
             cell = structuredata.cell
             self.set_cell(cell, structuredata.pbc)
 

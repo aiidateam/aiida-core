@@ -16,6 +16,7 @@ from aiida.orm.nodes.data.structure import has_atomistic
 
 skip_atomistic = pytest.mark.skipif(not has_atomistic(), reason='Unable to import aiida-atomistic')
 
+
 class TestKpoints:
     """Test for the `Kpointsdata` class."""
 
@@ -85,6 +86,7 @@ class TestKpoints:
         assert np.abs(kpt2.get_kpoints() - np.array(kpoints)).sum() == 0.0
         assert np.abs(kpt2.get_kpoints(cartesian=True) - np.array(cartesian_kpoints)).sum() == 0.0
 
+
 @skip_atomistic
 class TestKpointsAtomisticStructureData:
     """Test for the `Kpointsdata` class using the new atomistic StructureData."""
@@ -92,10 +94,10 @@ class TestKpointsAtomisticStructureData:
     @pytest.fixture(autouse=True)
     def init_profile(self):
         """Initialize the profile."""
-        
-        from aiida_atomistic import StructureDataMutable
+
         from aiida_atomistic import StructureData as AtomisticStructureData
-        
+        from aiida_atomistic import StructureDataMutable
+
         alat = 5.430  # angstrom
         cell = [
             [

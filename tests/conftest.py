@@ -30,7 +30,6 @@ from aiida import get_profile
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage.configuration import Profile, get_config, load_profile
-from aiida.manage.configuration.settings import AiiDAConfigDir
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
@@ -330,6 +329,7 @@ def empty_config(tmp_path) -> Config:
     """
     from aiida.common.utils import Capturing
     from aiida.manage import configuration, get_manager
+    from aiida.manage.configuration.settings import AiiDAConfigDir
 
     manager = get_manager()
 

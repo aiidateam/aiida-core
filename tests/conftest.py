@@ -38,7 +38,7 @@ if t.TYPE_CHECKING:
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
 
-class DbBackend(Enum):
+class TestDbBackend(Enum):
     """Options for the '--db-backend' CLI argument"""
 
     SQLITE = 'sqlite'
@@ -56,7 +56,7 @@ def pytest_collection_modifyitems(items, config):
     filepath_sqla = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'sqlalchemy_branch'
 
     # If the user requested the SQLite backend, automatically skip incompatible tests
-    if config.option.db_backend is DbBackend.SQLITE:
+    if config.option.db_backend is TestDbBackend.SQLITE:
         if config.option.markexpr != '':
             # Don't overwrite markers that the user already provided via '-m ' cmdline argument
             config.option.markexpr += ' and (not requires_psql)'
@@ -91,9 +91,9 @@ def db_backend_type(string):
     :returns: DbBackend enum corresponding to user input string
     """
     try:
-        return DbBackend(string)
+        return TestDbBackend(string)
     except ValueError:
-        msg = f"Invalid --db-backend option '{string}'\nMust be one of: {tuple(db.value for db in DbBackend)}"
+        msg = f"Invalid --db-backend option '{string}'\nMust be one of: {tuple(db.value for db in TestDbBackend)}"
         raise pytest.UsageError(msg)
 
 
@@ -101,9 +101,9 @@ def pytest_addoption(parser):
     parser.addoption(
         '--db-backend',
         action='store',
-        default=DbBackend.SQLITE,
+        default=TestDbBackend.SQLITE,
         required=False,
-        help=f'Database backend to be used for tests {tuple(db.value for db in DbBackend)}',
+        help=f'Database backend to be used for tests {tuple(db.value for db in TestDbBackend)}',
         type=db_backend_type,
     )
 
@@ -124,10 +124,10 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
     if 'not requires_rmq' in marker_opts or 'presto' in marker_opts:
         broker = None
 
-    if db_backend is DbBackend.SQLITE:
+    if db_backend is TestDbBackend.SQLITE:
         storage = 'core.sqlite_dos'
         config = config_sqlite_dos()
-    elif db_backend is DbBackend.PSQL:
+    elif db_backend is TestDbBackend.PSQL:
         storage = 'core.psql_dos'
         config = config_psql_dos()
     else:

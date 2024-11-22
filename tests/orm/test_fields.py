@@ -11,6 +11,7 @@
 import pytest
 from aiida import orm
 from aiida.orm.fields import add_field
+from aiida.plugins import load_entry_point
 from importlib_metadata import entry_points
 
 EPS = entry_points()
@@ -27,24 +28,24 @@ def test_all_entity_fields(entity_cls, data_regression):
     )
 
 
-@pytest.mark.parametrize(
-    'group,name',
-    (
-        (group, name)
-        for group in (
-            'aiida.node',
-            'aiida.data',
-        )
-        for name in EPS.select(group=group).names
-    ),
-)
-def test_all_node_fields(group, name, data_regression):
+@pytest.fixture
+def node_and_data_entry_points() -> list[tuple[str, str]]:
+    """Return a list of available entry points."""
+    _eps: list[tuple[str, str]] = []
+    eps = entry_points()
+    for group in ['aiida.node', 'aiida.data']:
+        _eps.extend((group, ep.name) for ep in eps.select(group=group))
+    return _eps
+
+
+def test_all_node_fields(node_and_data_entry_points: list[tuple[str, str]], data_regression):
     """Test that all the node fields are correctly registered."""
-    node_cls = next(iter(tuple(EPS.select(group=group, name=name)))).load()
-    data_regression.check(
-        {key: repr(value) for key, value in node_cls.fields._dict.items()},
-        basename=f'fields_{group}.{name}.{node_cls.__name__}',
-    )
+    for group, name in node_and_data_entry_points:
+        node_cls = load_entry_point(group, name)
+        data_regression.check(
+            {key: repr(value) for key, value in node_cls.fields._dict.items()},
+            basename=f'fields_{group}.{name}.{node_cls.__name__}',
+        )
 
 
 def test_add_field():

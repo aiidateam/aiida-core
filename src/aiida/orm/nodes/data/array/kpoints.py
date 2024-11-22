@@ -197,7 +197,7 @@ class KpointsData(ArrayData):
                 'An instance of StructureData or aiida-atomistic StructureData should be passed to '
                 'the KpointsData, found instead {}'.format(structuredata.__class__)
             )
-            if has_atomistic:
+            if has_atomistic():
                 from aiida_atomistic import StructureData as AtomisticStructureData
 
                 if not isinstance(structuredata, AtomisticStructureData):

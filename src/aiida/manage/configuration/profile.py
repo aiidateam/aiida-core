@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING, Any
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
-from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
 from .options import parse_option
 
@@ -49,7 +48,7 @@ class Profile:
     )
 
     def __init__(
-        self, name: str, config: abc.Mapping[str, Any], config_folder: pathlib.Path | None = None, validate: bool = True
+        self, name: str, config: abc.Mapping[str, Any], validate: bool = True
     ):
         """Load a profile with the profile configuration."""
         type_check(config, abc.Mapping)
@@ -66,8 +65,6 @@ class Profile:
             from uuid import uuid4
 
             self._attributes[self.KEY_UUID] = uuid4().hex
-
-        self._config_path_resolver: AiiDAConfigPathResolver = AiiDAConfigPathResolver(config_folder)
 
     def __repr__(self) -> str:
         return f'Profile<uuid={self.uuid!r} name={self.name!r}>'
@@ -87,11 +84,6 @@ class Profile:
     @uuid.setter
     def uuid(self, value: str) -> None:
         self._attributes[self.KEY_UUID] = value
-
-    @property
-    def config_path_resolver(self) -> AiiDAConfigPathResolver:
-        """The config_path_resolver property."""
-        return self._config_path_resolver
 
     @property
     def default_user_email(self) -> str | None:
@@ -245,8 +237,13 @@ class Profile:
 
         :return: a dictionary of filepaths
         """
-        daemon_dir = self._config_path_resolver.daemon_dir
-        daemon_log_dir = self._config_path_resolver.daemon_log_dir
+        from aiida.common.warnings import warn_deprecation
+        from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+
+        warn_deprecation('This method has been deprecated', version=3)
+
+        daemon_dir = AiiDAConfigPathResolver().daemon_dir
+        daemon_log_dir = AiiDAConfigPathResolver().daemon_log_dir
 
         return {
             'circus': {

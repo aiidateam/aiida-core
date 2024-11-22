@@ -18,6 +18,7 @@ import psutil
 from aiida.common.exceptions import LockedProfileError, LockingProfileError
 from aiida.common.lang import type_check
 from aiida.manage.configuration import Profile
+from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
 
 @typing.final
@@ -49,7 +50,7 @@ class ProfileAccessManager:
         _ = type_check(profile, Profile)
         self.profile = profile
         self.process = psutil.Process(os.getpid())
-        self._dirpath_records = profile.config_path_resolver.access_control_dir / profile.name
+        self._dirpath_records = AiiDAConfigPathResolver().access_control_dir / profile.name
         self._dirpath_records.mkdir(exist_ok=True)
 
     def request_access(self) -> None:

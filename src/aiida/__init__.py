@@ -36,9 +36,6 @@ __paper__ = (
 )
 __paper_short__ = 'S. P. Huber et al., Scientific Data 7, 300 (2020).'
 
-# Initialize the configuration directory settings
-AiiDAConfigDir.set_configuration_directory()
-
 
 def get_strict_version():
     """Return a distutils StrictVersion instance with the current distribution version

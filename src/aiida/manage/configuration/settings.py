@@ -64,7 +64,7 @@ class AiiDAConfigPathResolver:
     The locations are all trivially derived from the config location,
     """
 
-    def __init__(self, config_folder: pathlib.Path | None) -> None:
+    def __init__(self, config_folder: pathlib.Path | None = None) -> None:
         self._aiida_path = config_folder or AiiDAConfigDir.get_configuration_directory()
 
     @property
@@ -148,3 +148,7 @@ def _get_configuration_directory_from_envvar() -> pathlib.Path | None:
             break
 
     return dirpath_config or default_dirpath_config
+
+
+# Initialize the configuration directory settings
+AiiDAConfigDir.set_configuration_directory()

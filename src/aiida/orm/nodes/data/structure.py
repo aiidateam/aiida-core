@@ -101,6 +101,14 @@ def has_pymatgen():
         return False
     return True
 
+def has_atomistic():
+    """:return: True if the StructureData and StructureDataMutable from aiida-atomistic module can be imported, False otherwise."""
+    try:
+        import aiida_atomistic  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
 
 def get_pymatgen_version():
     """:return: string with pymatgen version, None if can not import."""
@@ -1876,6 +1884,32 @@ class StructureData(Data):
         positions = [list(site.position) for site in self.sites]
         return Molecule(species, positions)
 
+    def to_atomistic(self):
+        """
+        Returns the atomistic StructureData version of the orm.StructureData one.
+        """
+        if not has_atomistic:
+            raise ImportError('aiida-atomistic plugin is not installed, \
+                please install it to have full support for atomistic structures')
+        else:
+            from aiida_atomistic import StructureData as AtomisticStructureData
+            from aiida_atomistic import StructureDataMutable as AtomisticStructureDataMutable
+            
+        atomistic = AtomisticStructureDataMutable()
+        atomistic.set_pbc(self.pbc)
+        atomistic.set_cell(self.cell)
+        
+        for site in self.sites:
+            atomistic.add_atom(
+                **{
+                    'symbols': self.get_kind(site.kind_name).symbol,
+                    'masses': self.get_kind(site.kind_name).mass,
+                    'positions': site.position,
+                    'kinds': site.kind_name,
+                    }
+            )
+            
+        return AtomisticStructureData.from_mutable(atomistic)
 
 class Kind:
     """This class contains the information about the species (kinds) of the system.

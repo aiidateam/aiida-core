@@ -31,7 +31,9 @@ __all__ = ('AiiDAConfigPathResolver',)
 
 @final
 class AiiDAConfigPathResolver:
-    """Path resolver for getting daemon dir, daemon log dir and access control dir location."""
+    """Path resolver for setting and getting the path to configuration directory, daemon dir,
+    daemon log dir and access control dir. The locations are all trivially derived from the config location,
+    The class provide dedicated setter/getter for configuration_directory."""
 
     _glb_aiida_config_folder: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
 

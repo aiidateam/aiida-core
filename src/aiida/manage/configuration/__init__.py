@@ -67,7 +67,7 @@ CONFIG: Optional['Config'] = None
 
 
 def get_config_path():
-    """Returns path to .aiida configuration directory."""
+    """Returns path to aiida configuration file."""
     from .settings import DEFAULT_CONFIG_FILE_NAME
 
     return os.path.join(AiiDAConfigPathResolver.get_configuration_directory(), DEFAULT_CONFIG_FILE_NAME)

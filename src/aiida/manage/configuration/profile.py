@@ -52,14 +52,14 @@ class Profile:
         self, name: str, config: abc.Mapping[str, Any], config_folder: pathlib.Path | None = None, validate: bool = True
     ):
         """Load a profile with the profile configuration."""
-        _ = type_check(config, abc.Mapping)
+        type_check(config, abc.Mapping)
         if validate and not set(config.keys()).issuperset(self.REQUIRED_KEYS):
             raise exceptions.ConfigurationError(
                 f'profile {name!r} configuration does not contain all required keys: {self.REQUIRED_KEYS}'
             )
 
         self._name: str = name
-        self._attributes: dict[str, Any] = cast(dict[str, Any], deepcopy(config))
+        self._attributes: dict[str, Any] = deepcopy(config) # type: ignore
 
         # Create a default UUID if not specified
         if self._attributes.get(self.KEY_UUID, None) is None:

@@ -12,7 +12,6 @@ import json
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
-from collections import deque
 
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine

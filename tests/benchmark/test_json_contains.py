@@ -1,5 +1,3 @@
-import functools
-
 import pytest
 import random
 import string
@@ -56,10 +54,33 @@ def extract_component(data, p: float = -1):
 
 
 @pytest.mark.benchmark(group=GROUP_NAME)
-@pytest.mark.parametrize('depth', COMPLEX_JSON_DEPTH_RANGE)
-@pytest.mark.parametrize('breadth', COMPLEX_JSON_BREADTH_RANGE)
+@pytest.mark.parametrize('depth', [1, 2, 4, 8])
+@pytest.mark.parametrize('breadth', [1, 2, 4])
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_complex_json(benchmark, depth, breadth):
+def test_deep_json(benchmark, depth, breadth):
+    lhs = gen_json(depth, breadth)
+    rhs = extract_component(lhs, p=1./depth)
+    assert 0 == len(QueryBuilder().append(orm.Dict).all())
+
+    orm.Dict({
+        'id': f'{depth}-{breadth}',
+        'data': lhs,
+    }).store()
+    qb = QueryBuilder().append(orm.Dict, filters={
+        'attributes.data': {'contains': rhs},
+    }, project=[
+        'attributes.id'
+    ])
+    qb.all()
+    result = benchmark(qb.all)
+    assert len(result) == 1
+
+
+@pytest.mark.benchmark(group=GROUP_NAME)
+@pytest.mark.parametrize('depth', [2])
+@pytest.mark.parametrize('breadth', [1, 10, 100])
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_wide_json(benchmark, depth, breadth):
     lhs = gen_json(depth, breadth)
     rhs = extract_component(lhs, p=1./depth)
     assert 0 == len(QueryBuilder().append(orm.Dict).all())

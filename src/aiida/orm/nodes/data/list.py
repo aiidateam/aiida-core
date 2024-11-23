@@ -9,7 +9,6 @@
 """`Data` sub class to represent a list."""
 
 from collections.abc import MutableSequence
-from typing import Any
 
 from .base import to_aiida_type
 from .data import Data
@@ -82,15 +81,15 @@ class List(Data, MutableSequence):
             self.set_list(data)
         return item
 
-    def pop(self, index: int = -1) -> Any:
+    def pop(self, **kwargs):  # type: ignore[override]
         """Remove and return item at index (default last)."""
         data = self.get_list()
-        item = data.pop(index)
+        item = data.pop(**kwargs)
         if not self._using_list_reference():
             self.set_list(data)
         return item
 
-    def index(self, value: Any, start: int = 0, stop: int = 0) -> int:
+    def index(self, value):  # type: ignore[override]
         """Return first index of value.."""
         return self.get_list().index(value)
 

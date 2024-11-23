@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterable, List, 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
 
-__all__ = ('BackendEntity', 'BackendCollection', 'EntityType', 'BackendEntityExtrasMixin')
+__all__ = ('BackendCollection', 'BackendEntity', 'BackendEntityExtrasMixin', 'EntityType')
 
 EntityType = TypeVar('EntityType', bound='BackendEntity')
 

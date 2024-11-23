@@ -21,6 +21,7 @@ from .runners import *
 from .utils import *
 
 __all__ = (
+    'PORT_NAMESPACE_SEPARATOR',
     'AiiDAPersister',
     'Awaitable',
     'AwaitableAction',
@@ -40,7 +41,6 @@ __all__ = (
     'JobsList',
     'ObjectLoader',
     'OutputPort',
-    'PORT_NAMESPACE_SEPARATOR',
     'PastException',
     'PortNamespace',
     'Process',

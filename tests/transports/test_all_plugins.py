@@ -759,81 +759,77 @@ def test_put(custom_transport, tmp_path_factory):
         transport.rmtree(str(remote_workdir))
 
 
-def test_get(custom_transport):
+def test_get(custom_transport, tmp_path_factory):
     """Test getting files."""
-    # exactly the same tests of copy, just with the put function
-    # and therefore the local path must be absolute
-    local_dir = os.path.join('/', 'tmp')
-    remote_dir = local_dir
+    local_dir = tmp_path_factory.mktemp('local')
+    remote_dir = tmp_path_factory.mktemp('remote')
     directory = 'tmp_try'
 
     with custom_transport as transport:
-        transport.chdir(remote_dir)
+        local_workdir: Path = local_dir / directory
+        remote_workdir: Path = remote_dir / directory
 
-        while os.path.exists(os.path.join(local_dir, directory)):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
+        local_workdir.mkdir()
 
-        transport.mkdir(directory)
-        transport.chdir(directory)
+        remote_base_dir: Path = remote_workdir / 'origin'
+        remote_base_dir.mkdir(parents=True)
 
-        local_base_dir = os.path.join(local_dir, directory, 'local')
-        local_destination = os.path.join(local_dir, directory)
-        os.mkdir(local_base_dir)
-
-        # first test put: I create three files in local
-        file_1 = os.path.join(local_base_dir, 'a.txt')
-        file_2 = os.path.join(local_base_dir, 'b.tmp')
-        file_3 = os.path.join(local_base_dir, 'c.txt')
+        # first test put: I create three files in remote
+        file_1 = remote_base_dir / 'a.txt'
+        file_2 = remote_base_dir / 'b.tmp'
+        file_3 = remote_base_dir / 'c.txt'
         text = 'Viva Verdi\n'
         for filename in [file_1, file_2, file_3]:
             with open(filename, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
-        # first test put. Copy of two files matching patterns, into a folder
-        transport.get(os.path.join('local', '*.txt'), local_destination)
-        assert set(['a.txt', 'c.txt', 'local']) == set(os.listdir(local_destination))
-        os.remove(os.path.join(local_destination, 'a.txt'))
-        os.remove(os.path.join(local_destination, 'c.txt'))
+        # first test get. Get two files matching patterns, from mocked remote folder into a local folder
+        transport.get(str(remote_base_dir / '*.txt'), str(local_workdir))
+        assert set(['a.txt', 'c.txt']) == set(os.listdir(local_workdir))
+        (local_workdir / 'a.txt').unlink()
+        (local_workdir / 'c.txt').unlink()
+
         # second. Copy of folder into a non existing folder
-        transport.get('local', os.path.join(local_destination, 'prova'))
-        assert set(['prova', 'local']) == set(os.listdir(local_destination))
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(os.listdir(os.path.join(local_destination, 'prova')))
-        shutil.rmtree(os.path.join(local_destination, 'prova'))
+        transport.get(str(remote_base_dir), str(local_workdir / 'prova'))
+        assert set(['prova']) == set([p.name for p in local_workdir.iterdir()])
+        assert set(['a.txt', 'b.tmp', 'c.txt']) == set([p.name for p in (local_workdir / 'prova').iterdir()])
+        shutil.rmtree(local_workdir / 'prova')
+
         # third. copy of folder into an existing folder
-        os.mkdir(os.path.join(local_destination, 'prova'))
-        transport.get('local', os.path.join(local_destination, 'prova'))
-        assert set(['prova', 'local']) == set(os.listdir(local_destination))
-        assert set(['local']) == set(os.listdir(os.path.join(local_destination, 'prova')))
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(os.listdir(os.path.join(local_destination, 'prova', 'local')))
-        shutil.rmtree(os.path.join(local_destination, 'prova'))
-        # third test copy. Can copy one file into a new file
-        transport.get(os.path.join('local', '*.tmp'), os.path.join(local_destination, 'prova'))
-        assert set(['prova', 'local']) == set(os.listdir(local_destination))
-        os.remove(os.path.join(local_destination, 'prova'))
+        (local_workdir / 'prova').mkdir()
+        transport.get(str(remote_base_dir), str(local_workdir / 'prova'))
+        assert set(['prova']) == set([p.name for p in local_workdir.iterdir()])
+        assert set(['origin']) == set([p.name for p in (local_workdir / 'prova').iterdir()])
+        assert set(['a.txt', 'b.tmp', 'c.txt']) == set([p.name for p in (local_workdir / 'prova' / 'origin').iterdir()])
+        shutil.rmtree(local_workdir / 'prova')
+
+        # test get one file into a new file prova
+        transport.get(str(remote_base_dir / '*.tmp'), str(local_workdir / 'prova'))
+        assert set(['prova']) == set([p.name for p in local_workdir.iterdir()])
+        assert (local_workdir / 'prova').is_file()
+        (local_workdir / 'prova').unlink()
+
         # fourth test copy: can't copy more than one file on the same file,
         # i.e., the destination should be a folder
         with pytest.raises(OSError):
-            transport.get(os.path.join('local', '*.txt'), os.path.join(local_destination, 'prova'))
+            transport.get(str(remote_base_dir / '*.txt'), str(local_workdir / 'prova'))
         # copy of folder into file
-        with open(os.path.join(local_destination, 'existing.txt'), 'w', encoding='utf8') as fhandle:
+        with open(local_workdir / 'existing.txt', 'w', encoding='utf8') as fhandle:
             fhandle.write(text)
         with pytest.raises(OSError):
-            transport.get('local', os.path.join(local_destination, 'existing.txt'))
-        os.remove(os.path.join(local_destination, 'existing.txt'))
-        # fifth test, copying one file into a folder
-        os.mkdir(os.path.join(local_destination, 'prova'))
-        transport.get(os.path.join('local', 'a.txt'), os.path.join(local_destination, 'prova'))
-        assert set(os.listdir(os.path.join(local_destination, 'prova'))) == set(['a.txt'])
-        shutil.rmtree(os.path.join(local_destination, 'prova'))
-        # sixth test, copying one file into a file
-        transport.get(os.path.join('local', 'a.txt'), os.path.join(local_destination, 'prova'))
-        assert os.path.isfile(os.path.join(local_destination, 'prova'))
-        os.remove(os.path.join(local_destination, 'prova'))
+            transport.get(str(remote_base_dir), str(local_workdir / 'existing.txt'))
+        (local_workdir / 'existing.txt').unlink()
 
-        # exit
-        transport.chdir('..')
-        transport.rmtree(directory)
+        # fifth test, copying one file into a folder
+        (local_workdir / 'prova').mkdir()
+        transport.get(str(remote_base_dir / 'a.txt'), str(local_workdir / 'prova'))
+        assert set(['a.txt']) == set([p.name for p in (local_workdir / 'prova').iterdir()])
+        shutil.rmtree(local_workdir / 'prova')
+
+        # sixth test, copying one file into a file
+        transport.get(str(remote_base_dir / 'a.txt'), str(local_workdir / 'prova'))
+        assert (local_workdir / 'prova').is_file()
+        (local_workdir / 'prova').unlink()
 
 
 def test_put_get_abs_path_tree(custom_transport):

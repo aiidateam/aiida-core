@@ -12,12 +12,8 @@ Plugin specific tests will be written in the corresponding test file.
 """
 
 import io
-import os
-import pathlib
-import random
 import shutil
 import signal
-import string
 import tempfile
 import time
 import uuid
@@ -410,13 +406,9 @@ def test_put_get_abs_path_file(custom_transport, tmp_path_factory):
         retrieved_file_name = 'file_retrieved.txt'
 
         remote_file_name = 'file_remote.txt'
-
         local_file_rel_path = local_file_name
-        local_file_abs_path = str(local_dir / directory / local_file_name)
-
         remote_file_rel_path = remote_file_name
 
-        local_file_abs_path = str(local_dir / directory / local_file_name)
         retrieved_file_abs_path = str(local_dir / directory / retrieved_file_name)
         remote_file_abs_path = str(remote_dir / directory / remote_file_name)
 
@@ -509,29 +501,29 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_factory):
 
 def test_put_and_get_tree(custom_transport, tmp_path_factory):
     """Test putting and getting files."""
-    local_dir = tmp_path_factory.mktemp('local')
-    remote_dir = tmp_path_factory.mktemp('remote')
+    local_dir: Path = tmp_path_factory.mktemp('local')
+    remote_dir: Path = tmp_path_factory.mktemp('remote')
 
     directory = 'tmp_try'
 
     with custom_transport as transport:
-        local_subfolder = str(local_dir / directory / 'tmp1')
-        remote_subfolder = str(remote_dir / 'tmp2')
-        retrieved_subfolder = str(local_dir / directory / 'tmp3')
+        local_subfolder: Path = local_dir / directory / 'tmp1'
+        remote_subfolder: Path = remote_dir / 'tmp2'
+        retrieved_subfolder: Path = local_dir / directory / 'tmp3'
 
-        (local_dir / directory / local_subfolder).mkdir(parents=True)
+        local_subfolder.mkdir(parents=True)
 
-        local_file_name = Path(local_subfolder) / 'file.txt'
+        local_file = local_subfolder / 'file.txt'
 
         text = 'Viva Verdi\n'
-        with open(local_file_name, 'w', encoding='utf8') as fhandle:
+        with open(local_file, 'w', encoding='utf8') as fhandle:
             fhandle.write(text)
 
         # here use full path in src and dst
-        transport.puttree(local_subfolder, remote_subfolder)
-        transport.gettree(remote_subfolder, retrieved_subfolder)
+        transport.puttree(str(local_subfolder), str(remote_subfolder))
+        transport.gettree(str(remote_subfolder), str(retrieved_subfolder))
 
-        list_of_dirs = transport.listdir(str(local_dir / directory))
+        list_of_dirs = [p.name for p in (local_dir / directory).iterdir()]
 
         assert local_subfolder not in list_of_dirs
         assert remote_subfolder not in list_of_dirs
@@ -539,8 +531,8 @@ def test_put_and_get_tree(custom_transport, tmp_path_factory):
         assert 'tmp1' in list_of_dirs
         assert 'tmp3' in list_of_dirs
 
-        list_pushed_file = transport.listdir(remote_subfolder)
-        list_retrieved_file = transport.listdir(retrieved_subfolder)
+        list_pushed_file = transport.listdir(str(remote_subfolder))
+        list_retrieved_file = [p.name for p in retrieved_subfolder.iterdir()]
         assert 'file.txt' in list_pushed_file
         assert 'file.txt' in list_retrieved_file
 
@@ -781,7 +773,7 @@ def test_get(custom_transport, tmp_path_factory):
 
         # first test get. Get two files matching patterns, from mocked remote folder into a local folder
         transport.get(str(remote_base_dir / '*.txt'), str(local_workdir))
-        assert set(['a.txt', 'c.txt']) == set(os.listdir(local_workdir))
+        assert set(['a.txt', 'c.txt']) == set([p.name for p in (local_workdir).iterdir()])
         (local_workdir / 'a.txt').unlink()
         (local_workdir / 'c.txt').unlink()
 
@@ -882,35 +874,24 @@ def test_put_get_abs_path_tree(custom_transport, tmp_path_factory):
         with pytest.raises(ValueError):
             transport.gettree(remote_subfolder, 'delete_me_tree')
 
+
 def test_put_get_empty_string_tree(custom_transport, tmp_path_factory):
     """Test of exception put/get of empty strings"""
-    # TODO : verify the correctness of \n at the end of a file
-    local_dir = os.path.join('/', 'tmp')
-    remote_dir = local_dir
-    # local_dir = tmp_path_factory.mktemp('local')
-    # remote_dir = tmp_path_factory.mktemp('remote')
-
+    local_dir = tmp_path_factory.mktemp('local')
+    remote_dir = tmp_path_factory.mktemp('remote')
     directory = 'tmp_try'
 
     with custom_transport as transport:
-        transport.chdir(remote_dir)
+        local_subfolder: Path = local_dir / directory / 'tmp1'
+        remote_subfolder: Path = remote_dir / 'tmp2'
+        retrieved_subfolder: Path = local_dir / directory / 'tmp3'
 
-        while os.path.exists(os.path.join(local_dir, directory)):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
+        local_subfolder.mkdir(parents=True)
 
-        local_subfolder = os.path.join(local_dir, directory, 'tmp1')
-        remote_subfolder = 'tmp2'
-        retrieved_subfolder = os.path.join(local_dir, directory, 'tmp3')
-
-        os.mkdir(os.path.join(local_dir, directory))
-        os.mkdir(os.path.join(local_dir, directory, local_subfolder))
-
-        transport.chdir(directory)
-        local_file_name = os.path.join(local_subfolder, 'file.txt')
+        local_file = local_subfolder / 'file.txt'
 
         text = 'Viva Verdi\n'
-        with open(local_file_name, 'w', encoding='utf8') as fhandle:
+        with open(local_file, 'w', encoding='utf8') as fhandle:
             fhandle.write(text)
 
         # localpath is an empty string
@@ -922,7 +903,7 @@ def test_put_get_empty_string_tree(custom_transport, tmp_path_factory):
         with pytest.raises(OSError):
             transport.puttree(local_subfolder, '')
 
-        transport.puttree(local_subfolder, remote_subfolder)
+        transport.puttree(str(local_subfolder), str(remote_subfolder))
 
         # remote path is an empty string
         with pytest.raises(OSError):
@@ -935,27 +916,14 @@ def test_put_get_empty_string_tree(custom_transport, tmp_path_factory):
 
         # TODO : get doesn't retrieve empty files.
         # Is it what we want?
-        transport.gettree(remote_subfolder, retrieved_subfolder)
+        transport.gettree(str(remote_subfolder), str(retrieved_subfolder))
 
-        os.remove(os.path.join(local_subfolder, 'file.txt'))
-        os.rmdir(local_subfolder)
-        transport.remove(os.path.join(remote_subfolder, 'file.txt'))
-        transport.rmdir(remote_subfolder)
-        # If it couldn't end the copy, it leaves what he did on local file
-        # here I am mixing local with remote
-        assert 'file.txt' in transport.listdir('tmp3')
-        os.remove(os.path.join(retrieved_subfolder, 'file.txt'))
-        os.rmdir(retrieved_subfolder)
-
-        transport.chdir('..')
-        transport.rmdir(directory)
+        assert 'file.txt' in [p.name for p in retrieved_subfolder.iterdir()]
 
 
 def test_gettree_nested_directory(custom_transport, remote_tmp_path: Path, tmp_path: Path):
     """Test `gettree` for a nested directory."""
-    # with tempfile.TemporaryDirectory() as dir_remote, tempfile.TemporaryDirectory() as dir_local:
     content = b'dummy\ncontent'
-    # filepath = os.path.join(dir_remote, 'sub', 'path', 'filename.txt')
     dir_path = remote_tmp_path / 'sub' / 'path'
     dir_path.mkdir(parents=True)
 
@@ -978,19 +946,12 @@ def test_exec_pwd(custom_transport, remote_tmp_path):
     execution (done in this module, in the _exec_command_internal function).
     """
     # Start value
-    delete_at_end = False
-
     with custom_transport as transport:
         # To compare with: getcwd uses the normalized ('realpath') path
-        location = transport.normalize('/tmp')
         subfolder = """_'s f"#"""  # A folder with characters to escape
         subfolder_fullpath = str(remote_tmp_path / subfolder)
 
-        if not transport.isdir(subfolder_fullpath):
-            # Since I created the folder, I will remember to
-            # delete it at the end of this test
-            delete_at_end = True
-            transport.mkdir(subfolder_fullpath)
+        transport.mkdir(subfolder_fullpath)
 
         assert transport.isdir(subfolder_fullpath)
 
@@ -1171,6 +1132,8 @@ def test_asynchronous_execution(custom_transport, tmp_path):
     """
     # Use a unique name, using a UUID, to avoid concurrent tests (or very rapid
     # tests that follow each other) to overwrite the same destination
+    import os
+
     script_fname = f'sleep-submit-{uuid.uuid4().hex}-{custom_transport.__class__.__name__}.sh'
 
     scheduler = SchedulerFactory('core.direct')()

@@ -264,7 +264,6 @@ def test_dir_permissions_creation_modification(custom_transport, remote_tmp_path
         # the new directory modes. To see if we want a higher
         # level function to ask for the mode, or we just
         # use get_attribute
-        transport.chdir(directory)
 
         # change permissions of an empty string, non existing folder.
         fake_dir = ''
@@ -274,10 +273,7 @@ def test_dir_permissions_creation_modification(custom_transport, remote_tmp_path
         fake_dir = 'pippo'
         with pytest.raises(OSError):
             # chmod to a non existing folder
-            transport.chmod(fake_dir, 0o777)
-
-        transport.chdir('..')
-        transport.rmdir(directory)
+            transport.chmod(str(remote_tmp_path / fake_dir), 0o777)
 
 
 def test_dir_reading_permissions(custom_transport, remote_tmp_path):
@@ -832,30 +828,26 @@ def test_get(custom_transport, tmp_path_factory):
         (local_workdir / 'prova').unlink()
 
 
-def test_put_get_abs_path_tree(custom_transport):
+def test_put_get_abs_path_tree(custom_transport, tmp_path_factory):
     """Test of exception for non existing files and abs path"""
-    local_dir = os.path.join('/', 'tmp')
-    remote_dir = local_dir
+    local_dir = tmp_path_factory.mktemp('local')
+    remote_dir = tmp_path_factory.mktemp('remote')
     directory = 'tmp_try'
 
     with custom_transport as transport:
-        transport.chdir(remote_dir)
+        local_subfolder = str(local_dir / directory / 'tmp1')
+        remote_subfolder = str(remote_dir / 'tmp2')
+        retrieved_subfolder = str(local_dir / directory / 'tmp3')
 
-        while os.path.exists(os.path.join(local_dir, directory)):
-            # I append a random letter/number until it is unique
-            directory += random.choice(string.ascii_uppercase + string.digits)
+        (local_dir / directory / local_subfolder).mkdir(parents=True)
 
-        local_subfolder = os.path.join(local_dir, directory, 'tmp1')
-        remote_subfolder = 'tmp2'
-        retrieved_subfolder = os.path.join(local_dir, directory, 'tmp3')
+        local_file_name = Path(local_subfolder) / 'file.txt'
 
-        os.mkdir(os.path.join(local_dir, directory))
-        os.mkdir(os.path.join(local_dir, directory, local_subfolder))
+        text = 'Viva Verdi\n'
+        with open(local_file_name, 'w', encoding='utf8') as fhandle:
+            fhandle.write(text)
 
-        transport.chdir(directory)
-        local_file_name = os.path.join(local_subfolder, 'file.txt')
-        pathlib.Path(local_file_name).touch()
-
+        # here use full path in src and dst
         # 'tmp1' is not an abs path
         with pytest.raises(ValueError):
             transport.put('tmp1', remote_subfolder)
@@ -889,14 +881,6 @@ def test_put_get_abs_path_tree(custom_transport):
             transport.getfile(remote_subfolder, 'delete_me_tree')
         with pytest.raises(ValueError):
             transport.gettree(remote_subfolder, 'delete_me_tree')
-
-        os.remove(os.path.join(local_subfolder, 'file.txt'))
-        os.rmdir(local_subfolder)
-        transport.rmtree(remote_subfolder)
-
-        transport.chdir('..')
-        transport.rmdir(directory)
-
 
 def test_put_get_empty_string_tree(custom_transport, tmp_path_factory):
     """Test of exception put/get of empty strings"""

@@ -12,8 +12,8 @@
 
 # fmt: off
 
-from .plugins import *
-from .transport import *
+from ._plugins import *
+from ._transport import *
 
 __all__ = (
     'SshTransport',

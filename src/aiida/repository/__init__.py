@@ -12,9 +12,9 @@
 
 # fmt: off
 
-from .backend import *
-from .common import *
-from .repository import *
+from ._backend import *
+from ._common import *
+from ._repository import *
 
 __all__ = (
     'AbstractRepositoryBackend',

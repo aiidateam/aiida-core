@@ -12,9 +12,9 @@
 
 # fmt: off
 
-from .entry_point import *
-from .factories import *
-from .utils import *
+from ._entry_point import *
+from ._factories import *
+from ._utils import *
 
 __all__ = (
     'BaseFactory',

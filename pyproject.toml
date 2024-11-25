@@ -255,6 +255,7 @@ runaiida = 'aiida.cmdline.commands.cmd_run:run'
 verdi = 'aiida.cmdline.commands.cmd_verdi:verdi'
 
 [project.urls]
+Changelog = 'https://github.com/aiidateam/aiida-core/blob/main/CHANGELOG.md'
 Documentation = 'https://aiida.readthedocs.io'
 Home = 'http://www.aiida.net/'
 Source = 'https://github.com/aiidateam/aiida-core'

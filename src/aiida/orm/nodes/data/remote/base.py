@@ -228,7 +228,6 @@ class RemoteData(Data):
                 )
                 raise FileNotFoundError(exc_message)
 
-
             try:
                 total_size: int = self._get_size_on_disk_du(full_path, transport)
 

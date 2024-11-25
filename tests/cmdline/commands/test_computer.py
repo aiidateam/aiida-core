@@ -796,7 +796,7 @@ class TestVerdiComputerCommands:
             filepath_executable='/remote/abs/path',
         ).store()
 
-        false_user_input = 'y'  # most common mistake
+        false_user_input = ''  # most common mistake
         user_input = 'yes'
 
         # Abort in case of wrong input

@@ -200,8 +200,6 @@ class RemoteData(Data):
         return AuthInfo.get_collection(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)
 
     def get_size_on_disk(self, relpath: Path | None = None) -> str:
-        if relpath is None:
-            relpath = Path('.')
         """
         Connects to the remote folder and returns the total size of all files in the directory recursively in a
         human-readable format.
@@ -215,17 +213,21 @@ class RemoteData(Data):
 
         from aiida.common.utils import format_directory_size
 
+        if relpath is None:
+            relpath = Path('.')
+
         authinfo = self.get_authinfo()
         full_path = Path(self.get_remote_path()) / relpath
         computer_label = self.computer.label if self.computer is not None else ''
 
         with authinfo.get_transport() as transport:
-            if not transport.isdir(str(full_path)) and not transport.isfile(str(full_path)):
+            if not transport.path_exists(str(full_path)):
                 exc_message = (
                     f'The required remote folder {full_path} on Computer <{computer_label}>'
                     'does not exist, is not a directory or has been deleted.'
                 )
                 raise FileNotFoundError(exc_message)
+
 
             try:
                 total_size: int = self._get_size_on_disk_du(full_path, transport)
@@ -267,7 +269,7 @@ class RemoteData(Data):
         else:
             raise RuntimeError(f'Error executing `du` command: {stderr}')
 
-    def _get_size_on_disk_lstat(self, full_path, transport) -> int:
+    def _get_size_on_disk_lstat(self, full_path: Path, transport: 'Transport') -> int:
         """
         Connects to the remote folder and returns the total size of all files in the directory recursively in bytes
         using ``lstat``. Note that even if a file is only 1 byte, on disk, it still occupies one full disk block size.
@@ -283,37 +285,19 @@ class RemoteData(Data):
         :return: Total size of directory recursively in bytes.
         :rtype: int
         """
-
-        def _get_remote_recursive_size(path: Path, transport: 'Transport') -> int:
-            """
-            Helper function for recursive directory traversal to obtain the `listdir_withattributes` result for all
-            subdirectories.
-
-            :param path: Path to be traversed.
-            :type path: Path
-            :param transport: Open transport instance.
-            :type transport: Transport
-            :return: Total size of directory files in bytes as obtained via ``lstat``.
-            :rtype: int
-            """
-
-            total_size = 0
-
-            contents = self.listdir_withattributes(path)
-            for item in contents:
-                item_path = os.path.join(path, item['name'])
-                if item['isdir']:
-                    # Include size of direcotry
-                    total_size += item['attributes']['st_size']
-                    # Recursively traverse directory
-                    total_size += _get_remote_recursive_size(item_path, transport)
-                else:
-                    total_size += item['attributes']['st_size']
-
-            return total_size
-
         try:
-            total_size: int = _get_remote_recursive_size(full_path, transport)
+            total_size = 0
+            contents = self.listdir_withattributes(full_path)
+
+            for item in contents:
+                item_path = full_path / item['name']
+                # Add size of current item (file or directory metadata)
+                total_size += item['attributes']['st_size']
+
+                # If it's a directory, recursively get size of contents
+                if item['isdir']:
+                    total_size += self._get_size_on_disk_lstat(item_path, transport)
+
             return total_size
         except OSError:
             raise

@@ -51,6 +51,7 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
     elif request.param == 'core.ssh_auto':
         kwargs = {'machine': 'localhost'}
+        # The transport config is store in a indepenednt tmp path to not mix up with the files under operating.
         filepath_config = tmp_path_factory.mktemp('transport') / 'config'
         monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
         if not filepath_config.exists():
@@ -497,6 +498,7 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
         transport.get(remote_file_abs_path, retrieved_file_abs_path)
         # overwrite retrieved_file_name
         transport.getfile(remote_file_abs_path, retrieved_file_abs_path)
+        assert 'file_retrieved.txt' in [p.name for p in (local_dir / directory).iterdir()]
 
 
 def test_put_and_get_tree(custom_transport, tmp_path_remote, tmp_path_local):
@@ -719,10 +721,17 @@ def test_put(custom_transport, tmp_path_remote, tmp_path_local):
         assert transport.isfile(str(remote_workdir / 'prova'))
         transport.remove(str(remote_workdir / 'prova'))
 
-        # fourth test put: can't copy more than one file on the same file,
+        # fourth test put: can't copy more than one file to the same file,
         # i.e., the destination should be a folder
         with pytest.raises(OSError):
             transport.put(str(local_base_dir / '*.txt'), str(remote_workdir / 'prova'))
+
+        # can't copy folder to an exist file
+        with open(remote_workdir / 'existing.txt', 'w', encoding='utf8') as fhandle:
+            fhandle.write(text)
+        with pytest.raises(OSError):
+            transport.put(str(local_base_dir), str(remote_workdir / 'existing.txt'))
+        transport.remove(str(remote_workdir / 'existing.txt'))
 
         # fifth test, copying one file into a folder
         transport.mkdir(str(remote_workdir / 'prova'))
@@ -933,7 +942,7 @@ def test_gettree_nested_directory(custom_transport, tmp_path_remote, tmp_path_lo
         handle.write(content)
 
     with custom_transport as transport:
-        transport.gettree(str(tmp_path_remote / 'sub' / 'path'), str(tmp_path_local / 'sub' / 'path'))
+        transport.gettree(str(tmp_path_remote), str(tmp_path_local))
 
     assert (tmp_path_local / 'sub' / 'path' / 'filename.txt').is_file
 
@@ -1056,7 +1065,6 @@ def test_transfer_big_stdout(custom_transport, tmp_path_remote):
     fcontent = (file_line_binary * line_repetitions).decode('utf8')
 
     with custom_transport as transport:
-        transport: Transport
         # We cannot use tempfile.mkdtemp because we're on a remote folder
         directory_name = 'temp_dir_test_transfer_big_stdout'
         directory_path = tmp_path_remote / directory_name

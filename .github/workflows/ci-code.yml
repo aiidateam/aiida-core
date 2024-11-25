@@ -34,6 +34,7 @@ jobs:
     - name: Install utils/ dependencies
       run: pip install -r utils/requirements.txt
 
+    # TODO: Change this to make sure that the lock is up-to-date
     - name: Check requirements files
       id: check_reqs
       run: python ./utils/dependency_management.py check-requirements DEFAULT
@@ -104,7 +105,7 @@ jobs:
         AIIDA_WARN_v3: 1
       # Python 3.12 has a performance regression when running with code coverage
       # so run code coverage only for python 3.9.
-      run: pytest --db-backend psql -m 'not nightly' tests/ ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
+      run: uv run pytest --db-backend psql -m 'not nightly' tests/ ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
 
     - name: Upload coverage report
       if: matrix.python-version == 3.9 && github.repository == 'aiidateam/aiida-core'
@@ -139,7 +140,7 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0
-      run: pytest -m 'presto' tests/
+      run: uv run pytest -m 'presto' tests/
 
 
   verdi:

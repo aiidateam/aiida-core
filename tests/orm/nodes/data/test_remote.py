@@ -16,12 +16,17 @@ from aiida.orm import RemoteData
 
 
 @pytest.fixture
-def remote_data_local(tmp_path, aiida_localhost):
+def remote_data_local(tmp_path, aiida_localhost, num_char: int | None = None):
     """Return a non-empty ``RemoteData`` instance."""
     node = RemoteData(computer=aiida_localhost)
     node.set_remote_path(str(tmp_path))
     node.store()
-    (tmp_path / 'file.txt').write_bytes(b'some content')
+
+    if num_char is None:
+        content = b'some content'
+    else:
+        content = b'a' * num_char
+    (tmp_path / 'file.txt').write_bytes(content)
     return node
 
 
@@ -49,6 +54,54 @@ def test_clean(request, fixture):
     remote_data._clean()
     assert remote_data.is_empty
     assert remote_data.is_cleaned
+
+
+@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
+def test_get_size_on_disk(request, fixture):
+    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
+
+    remote_data = request.getfixturevalue(fixture)
+
+    # Check here for human-readable output string, as integer byte values are checked in
+    # `test_get_size_on_disk_[du|lstat]`
+    size_on_disk = remote_data.get_size_on_disk()
+    assert size_on_disk == '4.01 KB'
+
+    # Path/file non-existent
+    with pytest.raises(FileNotFoundError, match='.*does not exist, is not a directory.*'):
+        remote_data.get_size_on_disk(relpath=Path('non-existent'))
+
+
+@pytest.mark.parametrize(
+    'num_char, sizes',
+    (
+        (1, {'du': 4097, 'lstat': 1, 'human': '4.00 KB'}),
+        (10, {'du': 4106, 'lstat': 10, 'human': '4.01 KB'}),
+        (100, {'du': 4196, 'lstat': 100, 'human': '4.10 KB'}),
+        (1000, {'du': 5096, 'lstat': 1000, 'human': '4.98 KB'}),
+        (int(1e6), {'du': 1004096, 'lstat': int(1e6), 'human': '980.56 KB'}),
+    ),
+)
+def test_get_size_on_disk_sizes(aiida_localhost, tmp_path, remote_data_local, num_char, sizes):
+    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
+
+    remote_data = RemoteData(computer=aiida_localhost)
+    remote_data.set_remote_path(str(tmp_path))
+    remote_data.store()
+
+    (tmp_path / 'file.txt').write_bytes(b'a' * num_char)
+
+    authinfo = remote_data.get_authinfo()
+    full_path = Path(remote_data.get_remote_path())
+
+    with authinfo.get_transport() as transport:
+        size_on_disk_du = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
+        size_on_disk_lstat = remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path)
+        size_on_disk_human = remote_data.get_size_on_disk()
+
+    assert size_on_disk_du == sizes['du']
+    assert size_on_disk_lstat == sizes['lstat']
+    assert size_on_disk_human == sizes['human']
 
 
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
@@ -86,19 +139,3 @@ def test_get_size_on_disk_lstat(request, fixture):
     with authinfo.get_transport() as transport:
         size_on_disk = remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path)
     assert size_on_disk == 12
-
-
-@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
-def test_get_size_on_disk(request, fixture):
-    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
-
-    remote_data = request.getfixturevalue(fixture)
-
-    # Check here for human-readable output string, as integer byte values are checked in
-    # `test_get_size_on_disk_[du|lstat]`
-    size_on_disk = remote_data.get_size_on_disk()
-    assert size_on_disk == '4.01 KB'
-
-    # Path/file non-existent
-    with pytest.raises(FileNotFoundError, match='.*does not exist, is not a directory.*'):
-        remote_data.get_size_on_disk(relpath=Path('non-existent'))

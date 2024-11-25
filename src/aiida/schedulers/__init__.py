@@ -12,9 +12,9 @@
 
 # fmt: off
 
-from .datastructures import *
-from .plugins import *
-from .scheduler import *
+from ._datastructures import *
+from ._plugins import *
+from ._scheduler import *
 
 __all__ = (
     'BashCliScheduler',

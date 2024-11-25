@@ -22,10 +22,10 @@
 
 # fmt: off
 
-from .caching import *
-from .configuration import *
-from .external import *
-from .manager import *
+from ._caching import *
+from ._configuration import *
+from ._external import *
+from ._manager import *
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',

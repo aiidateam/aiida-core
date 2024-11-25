@@ -22,12 +22,12 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 
 # fmt: off
 
-from .calculations import *
-from .data import *
-from .dumping import *
-from .graph import *
-from .groups import *
-from .visualization import *
+from ._calculations import *
+from ._data import *
+from ._dumping import *
+from ._graph import *
+from ._groups import *
+from ._visualization import *
 
 __all__ = (
     'CalculationTools',

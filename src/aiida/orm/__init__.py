@@ -12,18 +12,18 @@
 
 # fmt: off
 
-from .authinfos import *
-from .comments import *
-from .computers import *
-from .entities import *
-from .extras import *
-from .fields import *
-from .groups import *
-from .logs import *
-from .nodes import *
-from .querybuilder import *
-from .users import *
-from .utils import *
+from ._authinfos import *
+from ._comments import *
+from ._computers import *
+from ._entities import *
+from ._extras import *
+from ._fields import *
+from ._groups import *
+from ._logs import *
+from ._nodes import *
+from ._querybuilder import *
+from ._users import *
+from ._utils import *
 
 __all__ = (
     'ASCENDING',

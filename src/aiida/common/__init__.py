@@ -16,12 +16,12 @@
 
 # fmt: off
 
-from .datastructures import *
-from .exceptions import *
-from .extendeddicts import *
-from .links import *
-from .log import *
-from .progress_reporter import *
+from ._datastructures import *
+from ._exceptions import *
+from ._extendeddicts import *
+from ._links import *
+from ._log import *
+from ._progress_reporter import *
 
 __all__ = (
     'AIIDA_LOGGER',

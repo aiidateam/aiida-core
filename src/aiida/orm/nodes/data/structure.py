@@ -1892,10 +1892,10 @@ class StructureData(Data):
 
         for site in self.sites:
             atomistic.add_atom(
-                    symbols= self.get_kind(site.kind_name).symbol,
-                    masses= self.get_kind(site.kind_name).mass,
-                    positions= site.position,
-                    kinds= site.kind_name,
+                symbols=self.get_kind(site.kind_name).symbol,
+                masses=self.get_kind(site.kind_name).mass,
+                positions=site.position,
+                kinds=site.kind_name,
             )
 
         return StructureData.from_mutable(atomistic)

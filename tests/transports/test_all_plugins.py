@@ -31,9 +31,15 @@ from aiida.transports import Transport
 
 
 @pytest.fixture(scope='function')
-def remote_tmp_path(tmp_path_factory):
-    """Mock the remote tmp path using tmp_path_factory to create folder start with 'remote'"""
+def tmp_path_remote(tmp_path_factory):
+    """Mock the remote tmp path using tmp_path_factory to create folder start with prefix 'remote'"""
     return tmp_path_factory.mktemp('remote')
+
+
+@pytest.fixture(scope='function')
+def tmp_path_local(tmp_path_factory):
+    """Mock the local tmp path using tmp_path_factory to create folder start with prefix 'local'"""
+    return tmp_path_factory.mktemp('local')
 
 
 @pytest.fixture(scope='function', params=entry_point.get_entry_point_names('aiida.transports'))
@@ -65,36 +71,36 @@ def test_is_open(custom_transport):
     assert not custom_transport.is_open
 
 
-def test_deprecate_chdir_and_getcwd(custom_transport, remote_tmp_path):
+def test_chdir_and_getcwd_deprecated(custom_transport, tmp_path_remote):
     """Test to be deprecated ``chdir``/``getcwd`` methods still work."""
     with custom_transport as transport:
-        location = str(remote_tmp_path)
+        location = str(tmp_path_remote)
         transport.chdir(location)
 
         assert location == transport.getcwd()
 
 
-def test_chdir_to_empty_string(custom_transport, remote_tmp_path):
+def test_chdir_to_empty_string_deprecated(custom_transport, tmp_path_remote):
     """I check that if I pass an empty string to chdir, the cwd does
     not change (this is a paramiko default behavior), but getcwd()
     is still correctly defined.
     """
     with custom_transport as transport:
-        new_dir = str(remote_tmp_path)
+        new_dir = str(tmp_path_remote)
         transport.chdir(new_dir)
         transport.chdir('')
         assert new_dir == transport.getcwd()
 
 
-def test_makedirs(custom_transport, remote_tmp_path):
+def test_makedirs(custom_transport, tmp_path_remote):
     """Verify the functioning of makedirs command"""
     with custom_transport as transport:
         # define folder structure
-        dir_tree = str(remote_tmp_path / '1' / '2')
+        dir_tree = str(tmp_path_remote / '1' / '2')
         # I create the tree
         transport.makedirs(dir_tree)
         # verify the existence
-        assert transport.isdir(str(remote_tmp_path / '1'))
+        assert transport.isdir(str(tmp_path_remote / '1'))
         assert dir_tree
 
         # try to recreate the same folder
@@ -104,27 +110,24 @@ def test_makedirs(custom_transport, remote_tmp_path):
         # recreate but with ignore flag
         transport.makedirs(dir_tree, True)
 
-        transport.rmdir(dir_tree)
-        transport.rmdir(str(remote_tmp_path / '1'))
 
-
-def test_rmtree(custom_transport, remote_tmp_path):
+def test_rmtree(custom_transport, tmp_path_remote):
     """Verify the functioning of rmtree command"""
     with custom_transport as transport:
         # define folder structure
-        dir_tree = str(remote_tmp_path / '1' / '2')
+        dir_tree = str(tmp_path_remote / '1' / '2')
         # I create the tree
         transport.makedirs(dir_tree)
         # remove it
-        transport.rmtree(str(remote_tmp_path / '1'))
+        transport.rmtree(str(tmp_path_remote / '1'))
         # verify the removal
-        assert not transport.isdir(str(remote_tmp_path / '1'))
+        assert not transport.isdir(str(tmp_path_remote / '1'))
 
         # also tests that it works with a single file
         # create file
         local_file_name = 'file.txt'
         text = 'Viva Verdi\n'
-        single_file_path = str(remote_tmp_path / local_file_name)
+        single_file_path = str(tmp_path_remote / local_file_name)
         with open(single_file_path, 'w', encoding='utf8') as fhandle:
             fhandle.write(text)
         # remove it
@@ -133,29 +136,29 @@ def test_rmtree(custom_transport, remote_tmp_path):
         assert not transport.isfile(single_file_path)
 
 
-def test_listdir(custom_transport, remote_tmp_path):
+def test_listdir(custom_transport, tmp_path_remote):
     """Create directories, verify listdir, delete a folder with subfolders"""
     with custom_transport as transport:
         list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
         for this_dir in list_of_dir:
-            transport.mkdir(str(remote_tmp_path / this_dir))
+            transport.mkdir(str(tmp_path_remote / this_dir))
 
         for fname in list_of_files:
             with tempfile.NamedTemporaryFile() as tmpf:
                 # Just put an empty file there at the right file name
-                transport.putfile(tmpf.name, str(remote_tmp_path / fname))
+                transport.putfile(tmpf.name, str(tmp_path_remote / fname))
 
-        list_found = transport.listdir(str(remote_tmp_path))
+        list_found = transport.listdir(str(tmp_path_remote))
 
         assert sorted(list_found) == sorted(list_of_dir + list_of_files)
 
-        assert sorted(transport.listdir(str(remote_tmp_path), 'a*')), sorted(['as', 'a2', 'a4f'])
-        assert sorted(transport.listdir(str(remote_tmp_path), 'a?')), sorted(['as', 'a2'])
-        assert sorted(transport.listdir(str(remote_tmp_path), 'a[2-4]*')), sorted(['a2', 'a4f'])
+        assert sorted(transport.listdir(str(tmp_path_remote), 'a*')), sorted(['as', 'a2', 'a4f'])
+        assert sorted(transport.listdir(str(tmp_path_remote), 'a?')), sorted(['as', 'a2'])
+        assert sorted(transport.listdir(str(tmp_path_remote), 'a[2-4]*')), sorted(['a2', 'a4f'])
 
 
-def test_listdir_withattributes(custom_transport, remote_tmp_path):
+def test_listdir_withattributes(custom_transport, tmp_path_remote):
     """Create directories, verify listdir_withattributes, delete a folder with subfolders"""
 
     def simplify_attributes(data):
@@ -171,38 +174,38 @@ def test_listdir_withattributes(custom_transport, remote_tmp_path):
         list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
         for this_dir in list_of_dir:
-            transport.mkdir(str(remote_tmp_path / this_dir))
+            transport.mkdir(str(tmp_path_remote / this_dir))
 
         for fname in list_of_files:
             with tempfile.NamedTemporaryFile() as tmpf:
                 # Just put an empty file there at the right file name
-                transport.putfile(tmpf.name, str(remote_tmp_path / fname))
+                transport.putfile(tmpf.name, str(tmp_path_remote / fname))
 
         comparison_list = {k: True for k in list_of_dir}
         for k in list_of_files:
             comparison_list[k] = False
 
-        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path))), comparison_list
-        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path), 'a*')), {
+        assert simplify_attributes(transport.listdir_withattributes(str(tmp_path_remote))), comparison_list
+        assert simplify_attributes(transport.listdir_withattributes(str(tmp_path_remote), 'a*')), {
             'as': True,
             'a2': True,
             'a4f': True,
             'a': False,
         }
-        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path), 'a?')), {
+        assert simplify_attributes(transport.listdir_withattributes(str(tmp_path_remote), 'a?')), {
             'as': True,
             'a2': True,
         }
-        assert simplify_attributes(transport.listdir_withattributes(str(remote_tmp_path), 'a[2-4]*')), {
+        assert simplify_attributes(transport.listdir_withattributes(str(tmp_path_remote), 'a[2-4]*')), {
             'a2': True,
             'a4f': True,
         }
 
 
-def test_dir_creation_deletion(custom_transport, remote_tmp_path):
+def test_dir_creation_deletion(custom_transport, tmp_path_remote):
     """Test creating and deleting directories."""
     with custom_transport as transport:
-        new_dir = str(remote_tmp_path / 'new')
+        new_dir = str(tmp_path_remote / 'new')
         transport.mkdir(new_dir)
 
         with pytest.raises(OSError):
@@ -213,16 +216,16 @@ def test_dir_creation_deletion(custom_transport, remote_tmp_path):
         assert not transport.isfile(new_dir)
 
 
-def test_dir_copy(custom_transport, remote_tmp_path):
+def test_dir_copy(custom_transport, tmp_path_remote):
     """Verify if in the copy of a directory also the protection bits
     are carried over
     """
     with custom_transport as transport:
         # Create a src dir
-        src_dir = str(remote_tmp_path / 'copy_src')
+        src_dir = str(tmp_path_remote / 'copy_src')
         transport.mkdir(src_dir)
 
-        dst_dir = str(remote_tmp_path / 'copy_dst')
+        dst_dir = str(tmp_path_remote / 'copy_dst')
         transport.copy(src_dir, dst_dir)
 
         with pytest.raises(ValueError):
@@ -232,12 +235,12 @@ def test_dir_copy(custom_transport, remote_tmp_path):
             transport.copy('', dst_dir)
 
 
-def test_dir_permissions_creation_modification(custom_transport, remote_tmp_path):
+def test_dir_permissions_creation_modification(custom_transport, tmp_path_remote):
     """Verify if chmod raises OSError when trying to change bits on a
     non-existing folder
     """
     with custom_transport as transport:
-        directory = str(remote_tmp_path / 'test')
+        directory = str(tmp_path_remote / 'test')
 
         transport.makedirs(directory)
 
@@ -269,15 +272,15 @@ def test_dir_permissions_creation_modification(custom_transport, remote_tmp_path
         fake_dir = 'pippo'
         with pytest.raises(OSError):
             # chmod to a non existing folder
-            transport.chmod(str(remote_tmp_path / fake_dir), 0o777)
+            transport.chmod(str(tmp_path_remote / fake_dir), 0o777)
 
 
-def test_dir_reading_permissions(custom_transport, remote_tmp_path):
+def test_dir_reading_permissions(custom_transport, tmp_path_remote):
     """Try to enter a directory with no read permissions.
     Verify that the cwd has not changed after failed try.
     """
     with custom_transport as transport:
-        directory = str(remote_tmp_path / 'test')
+        directory = str(tmp_path_remote / 'test')
 
         # create directory with non default permissions
         transport.mkdir(directory)
@@ -307,28 +310,25 @@ def test_isfile_isdir_to_empty_string(custom_transport):
         assert not transport.isfile('')
 
 
-def test_isfile_isdir_to_non_existing_string(custom_transport, remote_tmp_path):
+def test_isfile_isdir_to_non_existing_string(custom_transport, tmp_path_remote):
     """I check that isdir or isfile return False when executed on an
     empty string
     """
     with custom_transport as transport:
-        fake_folder = str(remote_tmp_path / 'pippo')
+        fake_folder = str(tmp_path_remote / 'pippo')
         assert not transport.isfile(fake_folder)
         assert not transport.isdir(fake_folder)
         with pytest.raises(OSError):
             transport.chdir(fake_folder)
 
 
-def test_put_and_get(custom_transport, tmp_path_factory):
+def test_put_and_get(custom_transport, tmp_path_remote, tmp_path_local):
     """Test putting and getting files."""
-    local_dir = tmp_path_factory.mktemp('local')
-    remote_dir = tmp_path_factory.mktemp('remote')
-
     directory = 'tmp_try'
 
     with custom_transport as transport:
-        (local_dir / directory).mkdir()
-        transport.mkdir(str(remote_dir / directory))
+        (tmp_path_local / directory).mkdir()
+        transport.mkdir(str(tmp_path_remote / directory))
 
         local_file_name = 'file.txt'
         retrieved_file_name = 'file_retrieved.txt'
@@ -336,9 +336,9 @@ def test_put_and_get(custom_transport, tmp_path_factory):
         remote_file_name = 'file_remote.txt'
 
         # here use full path in src and dst
-        local_file_abs_path = str(local_dir / directory / local_file_name)
-        retrieved_file_abs_path = str(local_dir / directory / retrieved_file_name)
-        remote_file_abs_path = str(remote_dir / directory / remote_file_name)
+        local_file_abs_path = str(tmp_path_local / directory / local_file_name)
+        retrieved_file_abs_path = str(tmp_path_local / directory / retrieved_file_name)
+        remote_file_abs_path = str(tmp_path_remote / directory / remote_file_name)
 
         text = 'Viva Verdi\n'
         with open(local_file_abs_path, 'w', encoding='utf8') as fhandle:
@@ -347,7 +347,7 @@ def test_put_and_get(custom_transport, tmp_path_factory):
         transport.put(local_file_abs_path, remote_file_abs_path)
         transport.get(remote_file_abs_path, retrieved_file_abs_path)
 
-        list_of_files = transport.listdir(str(remote_dir / directory))
+        list_of_files = transport.listdir(str(tmp_path_remote / directory))
         # it is False because local_file_name has the full path,
         # while list_of_files has not
         assert local_file_name not in list_of_files
@@ -355,10 +355,10 @@ def test_put_and_get(custom_transport, tmp_path_factory):
         assert retrieved_file_name not in list_of_files
 
 
-def test_putfile_and_getfile(custom_transport, tmp_path_factory):
+def test_putfile_and_getfile(custom_transport, tmp_path_remote, tmp_path_local):
     """Test putting and getting files."""
-    local_dir = tmp_path_factory.mktemp('local')
-    remote_dir = tmp_path_factory.mktemp('remote')
+    local_dir = tmp_path_local
+    remote_dir = tmp_path_remote
 
     directory = 'tmp_try'
 
@@ -391,10 +391,10 @@ def test_putfile_and_getfile(custom_transport, tmp_path_factory):
         assert retrieved_file_name not in list_of_files
 
 
-def test_put_get_abs_path_file(custom_transport, tmp_path_factory):
+def test_put_get_abs_path_file(custom_transport, tmp_path_remote, tmp_path_local):
     """Test of exception for non existing files and abs path"""
-    local_dir = tmp_path_factory.mktemp('local')
-    remote_dir = tmp_path_factory.mktemp('remote')
+    local_dir = tmp_path_local
+    remote_dir = tmp_path_remote
 
     directory = 'tmp_try'
 
@@ -437,10 +437,10 @@ def test_put_get_abs_path_file(custom_transport, tmp_path_factory):
             transport.getfile(remote_file_rel_path, 'delete_me.txt')
 
 
-def test_put_get_empty_string_file(custom_transport, tmp_path_factory):
+def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_local):
     """Test of exception put/get of empty strings"""
-    local_dir = tmp_path_factory.mktemp('local')
-    remote_dir = tmp_path_factory.mktemp('remote')
+    local_dir = tmp_path_local
+    remote_dir = tmp_path_remote
 
     directory = 'tmp_try'
 
@@ -499,10 +499,10 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_factory):
         transport.getfile(remote_file_abs_path, retrieved_file_abs_path)
 
 
-def test_put_and_get_tree(custom_transport, tmp_path_factory):
+def test_put_and_get_tree(custom_transport, tmp_path_remote, tmp_path_local):
     """Test putting and getting files."""
-    local_dir: Path = tmp_path_factory.mktemp('local')
-    remote_dir: Path = tmp_path_factory.mktemp('remote')
+    local_dir = tmp_path_local
+    remote_dir = tmp_path_remote
 
     directory = 'tmp_try'
 
@@ -608,9 +608,9 @@ def test_put_and_get_overwrite(
             )
 
 
-def test_copy(custom_transport, tmp_path_factory):
+def test_copy(custom_transport, tmp_path_remote):
     """Test copying from a remote src to remote dst"""
-    remote_dir = tmp_path_factory.mktemp('remote')
+    remote_dir = tmp_path_remote
 
     directory = 'tmp_try'
 
@@ -675,13 +675,13 @@ def test_copy(custom_transport, tmp_path_factory):
         transport.rmtree(str(workdir))
 
 
-def test_put(custom_transport, tmp_path_factory):
+def test_put(custom_transport, tmp_path_remote, tmp_path_local):
     """Test putting files.
     Those are similar tests of copy, just with the put function which copy from mocked local to mocked remote
     and therefore the local path must be absolute
     """
-    local_dir = tmp_path_factory.mktemp('local')
-    remote_dir = tmp_path_factory.mktemp('remote')
+    local_dir = tmp_path_local
+    remote_dir = tmp_path_remote
     directory = 'tmp_try'
 
     with custom_transport as transport:
@@ -747,10 +747,10 @@ def test_put(custom_transport, tmp_path_factory):
         transport.rmtree(str(remote_workdir))
 
 
-def test_get(custom_transport, tmp_path_factory):
+def test_get(custom_transport, tmp_path_remote, tmp_path_local):
     """Test getting files."""
-    local_dir = tmp_path_factory.mktemp('local')
-    remote_dir = tmp_path_factory.mktemp('remote')
+    local_dir = tmp_path_local
+    remote_dir = tmp_path_remote
     directory = 'tmp_try'
 
     with custom_transport as transport:
@@ -820,10 +820,10 @@ def test_get(custom_transport, tmp_path_factory):
         (local_workdir / 'prova').unlink()
 
 
-def test_put_get_abs_path_tree(custom_transport, tmp_path_factory):
+def test_put_get_abs_path_tree(custom_transport, tmp_path_remote, tmp_path_local):
     """Test of exception for non existing files and abs path"""
-    local_dir = tmp_path_factory.mktemp('local')
-    remote_dir = tmp_path_factory.mktemp('remote')
+    local_dir = tmp_path_local
+    remote_dir = tmp_path_remote
     directory = 'tmp_try'
 
     with custom_transport as transport:
@@ -875,10 +875,10 @@ def test_put_get_abs_path_tree(custom_transport, tmp_path_factory):
             transport.gettree(remote_subfolder, 'delete_me_tree')
 
 
-def test_put_get_empty_string_tree(custom_transport, tmp_path_factory):
+def test_put_get_empty_string_tree(custom_transport, tmp_path_remote, tmp_path_local):
     """Test of exception put/get of empty strings"""
-    local_dir = tmp_path_factory.mktemp('local')
-    remote_dir = tmp_path_factory.mktemp('remote')
+    local_dir = tmp_path_local
+    remote_dir = tmp_path_remote
     directory = 'tmp_try'
 
     with custom_transport as transport:
@@ -921,10 +921,10 @@ def test_put_get_empty_string_tree(custom_transport, tmp_path_factory):
         assert 'file.txt' in [p.name for p in retrieved_subfolder.iterdir()]
 
 
-def test_gettree_nested_directory(custom_transport, remote_tmp_path: Path, tmp_path: Path):
+def test_gettree_nested_directory(custom_transport, tmp_path_remote, tmp_path_local):
     """Test `gettree` for a nested directory."""
     content = b'dummy\ncontent'
-    dir_path = remote_tmp_path / 'sub' / 'path'
+    dir_path = tmp_path_remote / 'sub' / 'path'
     dir_path.mkdir(parents=True)
 
     file_path = str(dir_path / 'filename.txt')
@@ -933,12 +933,12 @@ def test_gettree_nested_directory(custom_transport, remote_tmp_path: Path, tmp_p
         handle.write(content)
 
     with custom_transport as transport:
-        transport.gettree(str(remote_tmp_path / 'sub' / 'path'), str(tmp_path / 'sub' / 'path'))
+        transport.gettree(str(tmp_path_remote / 'sub' / 'path'), str(tmp_path_local / 'sub' / 'path'))
 
-    assert (tmp_path / 'sub' / 'path' / 'filename.txt').is_file
+    assert (tmp_path_local / 'sub' / 'path' / 'filename.txt').is_file
 
 
-def test_exec_pwd(custom_transport, remote_tmp_path):
+def test_exec_pwd(custom_transport, tmp_path_remote):
     """I create a strange subfolder with a complicated name and
     then see if I can run ``ls``. This also checks the correct
     escaping of funny characters, both in the directory
@@ -949,13 +949,13 @@ def test_exec_pwd(custom_transport, remote_tmp_path):
     with custom_transport as transport:
         # To compare with: getcwd uses the normalized ('realpath') path
         subfolder = """_'s f"#"""  # A folder with characters to escape
-        subfolder_fullpath = str(remote_tmp_path / subfolder)
+        subfolder_fullpath = str(tmp_path_remote / subfolder)
 
         transport.mkdir(subfolder_fullpath)
 
         assert transport.isdir(subfolder_fullpath)
 
-        retcode, stdout, stderr = transport.exec_command_wait(f'ls {remote_tmp_path!s}')
+        retcode, stdout, stderr = transport.exec_command_wait(f'ls {tmp_path_remote!s}')
         assert retcode == 0
         assert stdout.strip() in subfolder_fullpath
         assert stderr == ''
@@ -1040,7 +1040,7 @@ def test_exec_with_wrong_stdin(custom_transport):
             transport.exec_command_wait('cat', stdin=1)
 
 
-def test_transfer_big_stdout(custom_transport, tmp_path):
+def test_transfer_big_stdout(custom_transport, tmp_path_remote):
     """Test the transfer of a large amount of data on stdout."""
     # Create a "big" file of > 2MB (10MB here; in general, larger than the buffer size)
     min_file_size_bytes = 5 * 1024 * 1024
@@ -1059,7 +1059,7 @@ def test_transfer_big_stdout(custom_transport, tmp_path):
         transport: Transport
         # We cannot use tempfile.mkdtemp because we're on a remote folder
         directory_name = 'temp_dir_test_transfer_big_stdout'
-        directory_path = tmp_path / directory_name
+        directory_path = tmp_path_remote / directory_name
         transport.mkdir(str(directory_path))
 
         with tempfile.NamedTemporaryFile(mode='wb') as tmpf:

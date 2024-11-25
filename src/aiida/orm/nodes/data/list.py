@@ -81,7 +81,7 @@ class List(Data, MutableSequence):
             self.set_list(data)
         return item
 
-    def pop(self, **kwargs):
+    def pop(self, **kwargs):  # type: ignore[override]
         """Remove and return item at index (default last)."""
         data = self.get_list()
         item = data.pop(**kwargs)
@@ -89,7 +89,7 @@ class List(Data, MutableSequence):
             self.set_list(data)
         return item
 
-    def index(self, value):
+    def index(self, value):  # type: ignore[override]
         """Return first index of value.."""
         return self.get_list().index(value)
 

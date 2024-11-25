@@ -22,9 +22,9 @@ from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
 
-__all__ = ('Transport', 'AsyncTransport', 'BlockingTransport')
+__all__ = ('AsyncTransport', 'Transport')
 
-_TransportPath = Union[str, Path, PurePosixPath]
+TransportPath = Union[str, Path, PurePosixPath]
 
 
 def validate_positive_number(ctx, param, value):
@@ -43,8 +43,8 @@ def validate_positive_number(ctx, param, value):
     return value
 
 
-def path_2_str(path: _TransportPath) -> str:
-    """Convert an instance of _TransportPath = Union[str, Path, PurePosixPath] instance to a string."""
+def path_to_str(path: TransportPath) -> str:
+    """Convert an instance of TransportPath = Union[str, Path, PurePosixPath] instance to a string."""
     # We could check if the path is a Path or PurePosixPath instance, but it's too much overhead.
     return str(path)
 
@@ -255,8 +255,8 @@ class _BaseTransport:
         """
         return self._safe_open_interval
 
-    def has_magic(self, string: _TransportPath):
-        string = path_2_str(string)
+    def has_magic(self, string: TransportPath):
+        string = path_to_str(string)
         """Return True if the given string contains any special shell characters."""
         return self._MAGIC_CHECK.search(string) is not None
 
@@ -273,7 +273,7 @@ class _BaseTransport:
         return connect_string
 
 
-class BlockingTransport(abc.ABC, _BaseTransport):
+class Transport(abc.ABC, _BaseTransport):
     """Abstract class for a generic blocking transport.
     A plugin inhereting from this class should implement the blocking methods, only."""
 
@@ -296,18 +296,18 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         """return [Transport class or subclass]"""
 
     @abc.abstractmethod
-    def chmod(self, path: _TransportPath, mode):
+    def chmod(self, path: TransportPath, mode):
         """Change permissions of a path.
 
         :param path: path to file
         :param mode: new permissions
 
-        :type path: _TransportPath
+        :type path: TransportPath
         :type mode: int
         """
 
     @abc.abstractmethod
-    def chown(self, path: _TransportPath, uid: int, gid: int):
+    def chown(self, path: TransportPath, uid: int, gid: int):
         """Change the owner (uid) and group (gid) of a file.
         As with python's os.chown function, you must pass both arguments,
         so if you only want to change one, use stat first to retrieve the
@@ -317,13 +317,13 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         :param uid: new owner's uid
         :param gid: new group id
 
-        :type path: _TransportPath
+        :type path: TransportPath
         :type uid: int
         :type gid: int
         """
 
     @abc.abstractmethod
-    def copy(self, remotesource: _TransportPath, remotedestination: _TransportPath, dereference=False, recursive=True):
+    def copy(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False, recursive=True):
         """Copy a file or a directory from remote source to remote destination
         (On the same remote machine)
 
@@ -332,8 +332,8 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         :param dereference: if True copy the contents of any symlinks found, otherwise copy the symlinks themselves
         :param recursive: if True copy directories recursively, otherwise only copy the specified file(s)
 
-        :type remotesource: _TransportPath
-        :type remotedestination: _TransportPath
+        :type remotesource: TransportPath
+        :type remotedestination: TransportPath
         :type dereference: bool
         :type recursive: bool
 
@@ -341,7 +341,7 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         """
 
     @abc.abstractmethod
-    def copyfile(self, remotesource: _TransportPath, remotedestination: _TransportPath, dereference=False):
+    def copyfile(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False):
         """Copy a file from remote source to remote destination
         (On the same remote machine)
 
@@ -349,15 +349,15 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         :param remotedestination: path of the remote destination directory / file
         :param dereference: if True copy the contents of any symlinks found, otherwise copy the symlinks themselves
 
-        :type remotesource: _TransportPath
-        :type remotedestination: _TransportPath
+        :type remotesource: TransportPath
+        :type remotedestination: TransportPath
         :type dereference: bool
 
         :raises OSError: if one of src or dst does not exist
         """
 
     @abc.abstractmethod
-    def copytree(self, remotesource: _TransportPath, remotedestination: _TransportPath, dereference=False):
+    def copytree(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False):
         """Copy a folder from remote source to remote destination
         (On the same remote machine)
 
@@ -365,8 +365,8 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         :param remotedestination: path of the remote destination directory / file
         :param dereference: if True copy the contents of any symlinks found, otherwise copy the symlinks themselves
 
-        :type remotesource: _TransportPath
-        :type remotedestination: _TransportPath
+        :type remotesource: TransportPath
+        :type remotedestination: TransportPath
         :type dereference: bool
 
         :raise OSError: if one of src or dst does not exist
@@ -375,9 +375,9 @@ class BlockingTransport(abc.ABC, _BaseTransport):
     ## non-abtract methods. Plugin developers can safely ingore developing these methods
     def copy_from_remote_to_remote(
         self,
-        transportdestination: Union['BlockingTransport', 'AsyncTransport'],
-        remotesource: _TransportPath,
-        remotedestination: _TransportPath,
+        transportdestination: Union['Transport', 'AsyncTransport'],
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
         **kwargs,
     ):
         """Copy files or folders from a remote computer to another remote computer.
@@ -388,9 +388,9 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         :param kwargs: keyword parameters passed to the call to transportdestination.put,
             except for 'dereference' that is passed to self.get
 
-        :type transportdestination: Union['BlockingTransport', 'AsyncTransport']
-        :type remotesource: _TransportPath
-        :type remotedestination: _TransportPath
+        :type transportdestination: Union['Transport', 'AsyncTransport']
+        :type remotesource: TransportPath
+        :type remotedestination: TransportPath
 
         .. note:: the keyword 'dereference' SHOULD be set to False for the
          final put (onto the destination), while it can be set to the
@@ -430,12 +430,12 @@ class BlockingTransport(abc.ABC, _BaseTransport):
             # from sandbox.get_abs_path('*') would not work for files
             # beginning with a dot ('.').
             for filename in sandbox.get_content_list():
-                # no matter is transpordestination is BlockingTransport or AsyncTransport
+                # no matter is transpordestination is Transport or AsyncTransport
                 # the following method will work, as both classes support put(), blocking method
                 transportdestination.put(os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put)
 
     @abc.abstractmethod
-    def _exec_command_internal(self, command: str, workdir: Optional[_TransportPath] = None, **kwargs):
+    def _exec_command_internal(self, command: str, workdir: Optional[TransportPath] = None, **kwargs):
         """Execute the command on the shell, similarly to os.system.
 
         Enforce the execution to be run from `workdir`.
@@ -448,14 +448,14 @@ class BlockingTransport(abc.ABC, _BaseTransport):
                 in the specified working directory.
 
         :type command: str
-        :type workdir: _TransportPath
+        :type workdir: TransportPath
 
         :return: stdin, stdout, stderr and the session, when this exists \
                  (can be None).
         """
 
     @abc.abstractmethod
-    def exec_command_wait_bytes(self, command: str, stdin=None, workdir: Optional[_TransportPath] = None, **kwargs):
+    def exec_command_wait_bytes(self, command: str, stdin=None, workdir: Optional[TransportPath] = None, **kwargs):
         """Execute the command on the shell, waits for it to finish,
         and return the retcode, the stdout and the stderr as bytes.
 
@@ -469,13 +469,13 @@ class BlockingTransport(abc.ABC, _BaseTransport):
                 in the specified working directory.
 
         :type command: str
-        :type workdir: _TransportPath
+        :type workdir: TransportPath
 
         :return: a tuple: the retcode (int), stdout (bytes) and stderr (bytes).
         """
 
     def exec_command_wait(
-        self, command, stdin=None, encoding='utf-8', workdir: Optional[_TransportPath] = None, **kwargs
+        self, command, stdin=None, encoding='utf-8', workdir: Optional[TransportPath] = None, **kwargs
     ):
         """Executes the specified command and waits for it to finish.
 
@@ -496,7 +496,7 @@ class BlockingTransport(abc.ABC, _BaseTransport):
 
         :type command: str
         :type encoding: str
-        :type workdir: _TransportPath
+        :type workdir: TransportPath
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr are both strings, decoded
             with the specified encoding.
@@ -508,7 +508,7 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         return (retval, stdout_bytes.decode(encoding), stderr_bytes.decode(encoding))
 
     @abc.abstractmethod
-    def get(self, remotepath: _TransportPath, localpath: _TransportPath, *args, **kwargs):
+    def get(self, remotepath: TransportPath, localpath: TransportPath, *args, **kwargs):
         """Retrieve a file or folder from remote source to local destination
         both localpath and remotepath must be an absolute path.
 
@@ -518,32 +518,32 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         :param remotepath: remote_folder_path
         :param localpath: (local_folder_path
 
-        :type remotepath: _TransportPath
-        :type localpath: _TransportPath
+        :type remotepath: TransportPath
+        :type localpath: TransportPath
         """
 
     @abc.abstractmethod
-    def getfile(self, remotepath: _TransportPath, localpath: _TransportPath, *args, **kwargs):
+    def getfile(self, remotepath: TransportPath, localpath: TransportPath, *args, **kwargs):
         """Retrieve a file from remote source to local destination
         both localpath and remotepath must be an absolute path.
 
         :param remotepath: remote_folder_path
         :param localpath: local_folder_path
 
-        :type remotepath: _TransportPath
-        :type localpath: _TransportPath
+        :type remotepath: TransportPath
+        :type localpath: TransportPath
         """
 
     @abc.abstractmethod
-    def gettree(self, remotepath: _TransportPath, localpath: _TransportPath, *args, **kwargs):
+    def gettree(self, remotepath: TransportPath, localpath: TransportPath, *args, **kwargs):
         """Retrieve a folder recursively from remote source to local destination
         both localpath and remotepath must be an absolute path.
 
         :param remotepath: remote_folder_path
         :param localpath: local_folder_path
 
-        :type remotepath: _TransportPath
-        :type localpath: _TransportPath
+        :type remotepath: TransportPath
+        :type localpath: TransportPath
         """
 
     @abc.abstractmethod
@@ -562,7 +562,7 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         )
 
     @abc.abstractmethod
-    def get_attribute(self, path: _TransportPath):
+    def get_attribute(self, path: TransportPath):
         """Return an object FixedFieldsAttributeDict for file in a given path,
         as defined in aiida.common.extendeddicts
         Each attribute object consists in a dictionary with the following keys:
@@ -581,17 +581,17 @@ class BlockingTransport(abc.ABC, _BaseTransport):
 
         :param path: path to file
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :return: object FixedFieldsAttributeDict
         """
 
-    def get_mode(self, path: _TransportPath):
+    def get_mode(self, path: TransportPath):
         """Return the portion of the file's mode that can be set by chmod().
 
         :param path: path to file
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :return: the portion of the file's mode that can be set by chmod()
         """
@@ -600,31 +600,31 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         return stat.S_IMODE(self.get_attribute(path).st_mode)
 
     @abc.abstractmethod
-    def isdir(self, path: _TransportPath):
+    def isdir(self, path: TransportPath):
         """True if path is an existing directory.
         Return False also if the path does not exist.
 
         :param path: path to directory
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :return: boolean
         """
 
     @abc.abstractmethod
-    def isfile(self, path: _TransportPath):
+    def isfile(self, path: TransportPath):
         """Return True if path is an existing file.
         Return False also if the path does not exist.
 
         :param path: path to file
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :return: boolean
         """
 
     @abc.abstractmethod
-    def listdir(self, path: _TransportPath = '.', pattern=None):
+    def listdir(self, path: TransportPath = '.', pattern=None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -634,12 +634,12 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         :param pattern: if used, listdir returns a list of files matching
                             filters in Unix style. Unix only.
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :return: a list of strings
         """
 
-    def listdir_withattributes(self, path: _TransportPath = '.', pattern: Optional[str] = None):
+    def listdir_withattributes(self, path: TransportPath = '.', pattern: Optional[str] = None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -649,7 +649,7 @@ class BlockingTransport(abc.ABC, _BaseTransport):
             taken from DEPRECATED `self.getcwd()`.
         :param pattern: if used, listdir returns a list of files matching
                             filters in Unix style. Unix only.
-        :type path: _TransportPath
+        :type path: TransportPath
         :type pattern: str
         :return: a list of dictionaries, one per entry.
             The schema of the dictionary is
@@ -665,7 +665,7 @@ class BlockingTransport(abc.ABC, _BaseTransport):
             (if the file is a folder, a directory, ...). 'attributes' behaves as the output of
             transport.get_attribute(); isdir is a boolean indicating if the object is a directory or not.
         """
-        path = path_2_str(path)
+        path = path_to_str(path)
         retlist = []
         if path.startswith('/'):
             cwd = Path(path).resolve().as_posix()
@@ -683,7 +683,7 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         return retlist
 
     @abc.abstractmethod
-    def makedirs(self, path: _TransportPath, ignore_existing=False):
+    def makedirs(self, path: TransportPath, ignore_existing=False):
         """Super-mkdir; create a leaf directory and all intermediate ones.
         Works like mkdir, except that any intermediate path segment (not
         just the rightmost) will be created if it does not exist.
@@ -691,38 +691,38 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         :param path: directory to create
         :param bool ignore_existing: if set to true, it doesn't give any error
                                      if the leaf directory does already exist
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :raises: OSError, if directory at path already exists
         """
 
     @abc.abstractmethod
-    def mkdir(self, path: _TransportPath, ignore_existing=False):
+    def mkdir(self, path: TransportPath, ignore_existing=False):
         """Create a folder (directory) named path.
 
         :param path: name of the folder to create
         :param bool ignore_existing: if True, does not give any error if the
                                      directory already exists
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :raises: OSError, if directory at path already exists
         """
 
     @abc.abstractmethod
-    def normalize(self, path: _TransportPath = '.'):
+    def normalize(self, path: TransportPath = '.'):
         """Return the normalized path (on the server) of a given path.
         This can be used to quickly resolve symbolic links or determine
         what the server is considering to be the "current folder".
 
         :param path: path to be normalized
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :raise OSError: if the path can't be resolved on the server
         """
 
     @abc.abstractmethod
-    def put(self, localpath: _TransportPath, remotepath: _TransportPath, *args, **kwargs):
+    def put(self, localpath: TransportPath, remotepath: TransportPath, *args, **kwargs):
         """Put a file or a directory from local src to remote dst.
         both localpath and remotepath must be an absolute path.
         Redirects to putfile and puttree.
@@ -733,83 +733,83 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         :param localpath: absolute path to local source
         :param remotepath: path to remote destination
 
-        :type localpath: _TransportPath
-        :type remotepath: _TransportPath
+        :type localpath: TransportPath
+        :type remotepath: TransportPath
         """
 
     @abc.abstractmethod
-    def putfile(self, localpath: _TransportPath, remotepath: _TransportPath, *args, **kwargs):
+    def putfile(self, localpath: TransportPath, remotepath: TransportPath, *args, **kwargs):
         """Put a file from local src to remote dst.
         both localpath and remotepath must be an absolute path.
 
         :param localpath: absolute path to local file
         :param remotepath: path to remote file
 
-        :type localpath: _TransportPath
-        :type remotepath: _TransportPath
+        :type localpath: TransportPath
+        :type remotepath: TransportPath
         """
 
     @abc.abstractmethod
-    def puttree(self, localpath: _TransportPath, remotepath: _TransportPath, *args, **kwargs):
+    def puttree(self, localpath: TransportPath, remotepath: TransportPath, *args, **kwargs):
         """Put a folder recursively from local src to remote dst.
         both localpath and remotepath must be an absolute path.
 
         :param localpath: absolute path to local folder
         :param remotepath: path to remote folder
 
-        :type localpath: _TransportPath
-        :type remotepath: _TransportPath
+        :type localpath: TransportPath
+        :type remotepath: TransportPath
         """
 
     @abc.abstractmethod
-    def remove(self, path: _TransportPath):
+    def remove(self, path: TransportPath):
         """Remove the file at the given path. This only works on files;
         for removing folders (directories), use rmdir.
 
         :param path: path to file to remove
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :raise OSError: if the path is a directory
         """
 
     @abc.abstractmethod
-    def rename(self, oldpath: _TransportPath, newpath: _TransportPath):
+    def rename(self, oldpath: TransportPath, newpath: TransportPath):
         """Rename a file or folder from oldpath to newpath.
 
         :param oldpath: existing name of the file or folder
         :param newpath: new name for the file or folder
 
-        :type oldpath: _TransportPath
-        :type newpath: _TransportPath
+        :type oldpath: TransportPath
+        :type newpath: TransportPath
 
         :raises OSError: if oldpath/newpath is not found
         :raises ValueError: if oldpath/newpath is not a valid string
         """
 
     @abc.abstractmethod
-    def rmdir(self, path: _TransportPath):
+    def rmdir(self, path: TransportPath):
         """Remove the folder named path.
         This works only for empty folders. For recursive remove, use rmtree.
 
         :param path: absolute path to the folder to remove
 
-        :type path: _TransportPath
+        :type path: TransportPath
         """
 
     @abc.abstractmethod
-    def rmtree(self, path: _TransportPath):
+    def rmtree(self, path: TransportPath):
         """Remove recursively the content at path
 
         :param  path: absolute path to remove
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :raise OSError: if the rm execution failed.
         """
 
     @abc.abstractmethod
-    def gotocomputer_command(self, remotedir: _TransportPath):
+    def gotocomputer_command(self, remotedir: TransportPath):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
@@ -821,19 +821,19 @@ class BlockingTransport(abc.ABC, _BaseTransport):
 
         :param remotedir: the full path of the remote directory
 
-        :type remotedir: _TransportPath
+        :type remotedir: TransportPath
         """
 
     @abc.abstractmethod
-    def symlink(self, remotesource: _TransportPath, remotedestination: _TransportPath):
+    def symlink(self, remotesource: TransportPath, remotedestination: TransportPath):
         """Create a symbolic link between the remote source and the remote
         destination.
 
         :param remotesource: remote source
         :param remotedestination: remote destination
 
-        :type remotesource: _TransportPath
-        :type remotedestination: _TransportPath
+        :type remotesource: TransportPath
+        :type remotedestination: TransportPath
         """
 
     def whoami(self):
@@ -856,16 +856,16 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         raise OSError(f'Error while executing whoami. Exit code: {retval}')
 
     @abc.abstractmethod
-    def path_exists(self, path: _TransportPath):
+    def path_exists(self, path: TransportPath):
         """Returns True if path exists, False otherwise.
 
         :param path: path to check for existence
 
-        :type path: _TransportPath"""
+        :type path: TransportPath"""
 
     # The following definitions are almost copied and pasted
     # from the python module glob.
-    def glob(self, pathname: _TransportPath):
+    def glob(self, pathname: TransportPath):
         """Return a list of paths matching a pathname pattern.
 
         The pattern may contain simple shell-style wildcards a la fnmatch.
@@ -874,11 +874,11 @@ class BlockingTransport(abc.ABC, _BaseTransport):
             It should only be an absolute path.
             DEPRECATED: using relative path is deprecated.
 
-        :type pathname: _TransportPath
+        :type pathname: TransportPath
 
         :return: a list of paths matching the pattern.
         """
-        pathname = path_2_str(pathname)
+        pathname = path_to_str(pathname)
         if not pathname.startswith('/'):
             warn_deprecation(
                 'Using relative paths across transport in `glob` is deprecated '
@@ -1038,7 +1038,7 @@ class BlockingTransport(abc.ABC, _BaseTransport):
         """Counterpart to listdir() that is async."""
         return self.listdir(path, pattern)
 
-    async def listdir_withattributes_async(self, path: _TransportPath, pattern=None):
+    async def listdir_withattributes_async(self, path: TransportPath, pattern=None):
         """Counterpart to listdir_withattributes() that is async."""
         return self.listdir_withattributes(path, pattern)
 
@@ -1129,25 +1129,25 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         """
 
     @abc.abstractmethod
-    async def chmod_async(self, path: _TransportPath, mode: int):
+    async def chmod_async(self, path: TransportPath, mode: int):
         """Change permissions of a path.
 
         :param path: path to file or directory
         :param mode: new permissions
 
-        :type path: _TransportPath
+        :type path: TransportPath
         :type mode: int
         """
 
     @abc.abstractmethod
-    async def chown_async(self, path: _TransportPath, uid: int, gid: int):
+    async def chown_async(self, path: TransportPath, uid: int, gid: int):
         """Change the owner (uid) and group (gid) of a file.
 
         :param path: path to file
         :param uid: user id of the new owner
         :param gid: group id of the new owner
 
-        :type path: _TransportPath
+        :type path: TransportPath
         :type uid: int
         :type gid: int
         """
@@ -1162,8 +1162,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param dereference: follow symbolic links
         :param recursive: copy recursively
 
-        :type remotesource: _TransportPath
-        :type remotedestination: _TransportPath
+        :type remotesource: TransportPath
+        :type remotedestination: TransportPath
         :type dereference: bool
         :type recursive: bool
 
@@ -1171,7 +1171,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         """
 
     @abc.abstractmethod
-    async def copyfile_async(self, remotesource: _TransportPath, remotedestination: _TransportPath, dereference=False):
+    async def copyfile_async(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False):
         """Copy a file from remote source to remote destination
         (On the same remote machine)
 
@@ -1179,14 +1179,14 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param remotedestination: path to the remote destination file
         :param dereference: follow symbolic links
 
-        :type remotesource: _TransportPath
-        :type remotedestination: _TransportPath
+        :type remotesource: TransportPath
+        :type remotedestination: TransportPath
         :type dereference: bool
 
         :raises: OSError, src does not exist or if the copy execution failed."""
 
     @abc.abstractmethod
-    async def copytree_async(self, remotesource: _TransportPath, remotedestination: _TransportPath, dereference=False):
+    async def copytree_async(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False):
         """Copy a folder from remote source to remote destination
         (On the same remote machine)
 
@@ -1194,8 +1194,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param remotedestination: path to the remote destination folder
         :param dereference: follow symbolic links
 
-        :type remotesource: _TransportPath
-        :type remotedestination: _TransportPath
+        :type remotesource: TransportPath
+        :type remotedestination: TransportPath
         :type dereference: bool
 
         :raises: OSError, src does not exist or if the copy execution failed."""
@@ -1203,9 +1203,9 @@ class AsyncTransport(abc.ABC, _BaseTransport):
     @abc.abstractmethod
     async def copy_from_remote_to_remote_async(
         self,
-        transportdestination: Union['BlockingTransport', 'AsyncTransport'],
-        remotesource: _TransportPath,
-        remotedestination: _TransportPath,
+        transportdestination: Union['Transport', 'AsyncTransport'],
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
         **kwargs,
     ):
         """Copy files or folders from a remote computer to another remote computer.
@@ -1216,9 +1216,9 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param kwargs: keyword parameters passed to the call to transportdestination.put,
             except for 'dereference' that is passed to self.get
 
-        :type transportdestination: Union['BlockingTransport', 'AsyncTransport']
-        :type remotesource: _TransportPath
-        :type remotedestination: _TransportPath
+        :type transportdestination: Union['Transport', 'AsyncTransport']
+        :type remotesource: TransportPath
+        :type remotedestination: TransportPath
         """
 
     @abc.abstractmethod
@@ -1227,27 +1227,27 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         command: str,
         stdin: Optional[str] = None,
         encoding: str = 'utf-8',
-        workdir: Optional[_TransportPath] = None,
+        workdir: Optional[TransportPath] = None,
         **kwargs,
     ):
         """Executes the specified command and waits for it to finish.
 
         :param command: the command to execute
         :param stdin: input to the command
-        :param encoding: (IGNORED) this is here just to keep the same signature as the one in `BlockingTransport` class
+        :param encoding: (IGNORED) this is here just to keep the same signature as the one in `Transport` class
         :param workdir: working directory where the command will be executed
 
         :type command: str
         :type stdin: str
         :type encoding: str
-        :type workdir: Union[_TransportPath, None]
+        :type workdir: Union[TransportPath, None]
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr are both strings.
         :rtype: Tuple[int, str, str]
         """
 
     @abc.abstractmethod
-    async def get_async(self, remotepath: _TransportPath, localpath: _TransportPath, *args, **kwargs):
+    async def get_async(self, remotepath: TransportPath, localpath: TransportPath, *args, **kwargs):
         """Retrieve a file or folder from remote source to local destination
         both remotepath and localpath must be absolute paths
 
@@ -1257,36 +1257,36 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param remotepath: remote_folder_path
         :param localpath: local_folder_path
 
-        :type remotepath: _TransportPath
-        :type localpath: _TransportPath
+        :type remotepath: TransportPath
+        :type localpath: TransportPath
         """
 
     @abc.abstractmethod
-    async def getfile_async(self, remotepath: _TransportPath, localpath: _TransportPath, *args, **kwargs):
+    async def getfile_async(self, remotepath: TransportPath, localpath: TransportPath, *args, **kwargs):
         """Retrieve a file from remote source to local destination
         both remotepath and localpath must be absolute paths
 
         :param remotepath: remote_folder_path
         :param localpath: local_folder_path
 
-        :type remotepath: _TransportPath
-        :type localpath: _TransportPath
+        :type remotepath: TransportPath
+        :type localpath: TransportPath
         """
 
     @abc.abstractmethod
-    async def gettree_async(self, remotepath: _TransportPath, localpath: _TransportPath, *args, **kwargs):
+    async def gettree_async(self, remotepath: TransportPath, localpath: TransportPath, *args, **kwargs):
         """Retrieve a folder recursively from remote source to local destination
         both remotepath and localpath must be absolute paths
 
         :param remotepath: remote_folder_path
         :param localpath: local_folder_path
 
-        :type remotepath: _TransportPath
-        :type localpath: _TransportPath
+        :type remotepath: TransportPath
+        :type localpath: TransportPath
         """
 
     @abc.abstractmethod
-    async def get_attribute_async(self, path: _TransportPath):
+    async def get_attribute_async(self, path: TransportPath):
         """Return an object FixedFieldsAttributeDict for file in a given path,
         as defined in aiida.common.extendeddicts
         Each attribute object consists in a dictionary with the following keys:
@@ -1305,17 +1305,17 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param path: path to file
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :return: object FixedFieldsAttributeDict
         """
 
-    async def get_mode_async(self, path: _TransportPath):
+    async def get_mode_async(self, path: TransportPath):
         """Return the portion of the file's mode that can be set by chmod().
 
         :param str path: path to file
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :return: the portion of the file's mode that can be set by chmod()
         """
@@ -1325,31 +1325,31 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         return stat.S_IMODE(attr.st_mode)
 
     @abc.abstractmethod
-    async def isdir_async(self, path: _TransportPath):
+    async def isdir_async(self, path: TransportPath):
         """True if path is an existing directory.
         Return False also if the path does not exist.
 
         :param path: path to directory
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :return: boolean
         """
 
     @abc.abstractmethod
-    async def isfile_async(self, path: _TransportPath):
+    async def isfile_async(self, path: TransportPath):
         """Return True if path is an existing file.
         Return False also if the path does not exist.
 
         :param path: path to file
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :return: boolean
         """
 
     @abc.abstractmethod
-    async def listdir_async(self, path: _TransportPath, pattern: Optional[str] = None):
+    async def listdir_async(self, path: TransportPath, pattern: Optional[str] = None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -1358,7 +1358,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param pattern: if used, listdir returns a list of files matching
                         filters in Unix style. Unix only.
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :return: a list of strings
         """
@@ -1366,7 +1366,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
     @abc.abstractmethod
     async def listdir_withattributes_async(
         self,
-        path: _TransportPath,
+        path: TransportPath,
         pattern: Optional[str] = None,
     ):
         """Return a list of the names of the entries in the given path.
@@ -1377,7 +1377,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param pattern: if used, listdir returns a list of files matching
                         filters in Unix style. Unix only.
 
-        :type path: _TransportPath
+        :type path: TransportPath
         :type pattern: str
         :return: a list of dictionaries, one per entry.
             The schema of the dictionary is
@@ -1395,7 +1395,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         """
 
     @abc.abstractmethod
-    async def makedirs_async(self, path: _TransportPath, ignore_existing=False):
+    async def makedirs_async(self, path: TransportPath, ignore_existing=False):
         """Super-mkdir; create a leaf directory and all intermediate ones.
         Works like mkdir, except that any intermediate path segment (not
         just the rightmost) will be created if it does not exist.
@@ -1403,38 +1403,38 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param path: directory to create
         :param bool ignore_existing: if set to true, it doesn't give any error
                                      if the leaf directory does already exist
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :raises: OSError, if directory at path already exists
         """
 
     @abc.abstractmethod
-    async def mkdir_async(self, path: _TransportPath, ignore_existing=False):
+    async def mkdir_async(self, path: TransportPath, ignore_existing=False):
         """Create a folder (directory) named path.
 
         :param path: name of the folder to create
         :param bool ignore_existing: if True, does not give any error if the
                                      directory already exists.
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :raises: OSError, if directory at path already exists
         """
 
     @abc.abstractmethod
-    async def normalize_async(self, path: _TransportPath):
+    async def normalize_async(self, path: TransportPath):
         """Return the normalized path (on the server) of a given path.
         This can be used to quickly resolve symbolic links or determine
         what the server is considering to be the "current folder".
 
         :param path: path to be normalized
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :raise OSError: if the path can't be resolved on the server
         """
 
     @abc.abstractmethod
-    async def put_async(self, localpath: _TransportPath, remotepath: _TransportPath, *args, **kwargs):
+    async def put_async(self, localpath: TransportPath, remotepath: TransportPath, *args, **kwargs):
         """Put a file or a directory from local src to remote dst.
         both localpath and remotepath must be absolute paths.
         Redirects to putfile and puttree.
@@ -1445,83 +1445,83 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param localpath: absolute path to local source
         :param remotepath: path to remote destination
 
-        :type localpath: _TransportPath
-        :type remotepath: _TransportPath
+        :type localpath: TransportPath
+        :type remotepath: TransportPath
         """
 
     @abc.abstractmethod
-    async def putfile_async(self, localpath: _TransportPath, remotepath: _TransportPath, *args, **kwargs):
+    async def putfile_async(self, localpath: TransportPath, remotepath: TransportPath, *args, **kwargs):
         """Put a file from local src to remote dst.
         both localpath and remotepath must be absolute paths.
 
         :param localpath: absolute path to local file
         :param remotepath: path to remote file
 
-        :type localpath: _TransportPath
-        :type remotepath: _TransportPath
+        :type localpath: TransportPath
+        :type remotepath: TransportPath
         """
 
     @abc.abstractmethod
-    async def puttree_async(self, localpath: _TransportPath, remotepath: _TransportPath, *args, **kwargs):
+    async def puttree_async(self, localpath: TransportPath, remotepath: TransportPath, *args, **kwargs):
         """Put a folder recursively from local src to remote dst.
         both localpath and remotepath must be absolute paths.
 
         :param localpath: absolute path to local folder
         :param remotepath: path to remote folder
 
-        :type localpath: _TransportPath
-        :type remotepath: _TransportPath
+        :type localpath: TransportPath
+        :type remotepath: TransportPath
         """
 
     @abc.abstractmethod
-    async def remove_async(self, path: _TransportPath):
+    async def remove_async(self, path: TransportPath):
         """Remove the file at the given path. This only works on files;
         for removing folders (directories), use rmdir.
 
         :param path: path to file to remove
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :raise OSError: if the path is a directory
         """
 
     @abc.abstractmethod
-    async def rename_async(self, oldpath: _TransportPath, newpath: _TransportPath):
+    async def rename_async(self, oldpath: TransportPath, newpath: TransportPath):
         """Rename a file or folder from oldpath to newpath.
 
         :param oldpath: existing name of the file or folder
         :param newpath: new name for the file or folder
 
-        :type oldpath: _TransportPath
-        :type newpath: _TransportPath
+        :type oldpath: TransportPath
+        :type newpath: TransportPath
 
         :raises OSError: if oldpath/newpath is not found
         :raises ValueError: if oldpath/newpath is not a valid string
         """
 
     @abc.abstractmethod
-    async def rmdir_async(self, path: _TransportPath):
+    async def rmdir_async(self, path: TransportPath):
         """Remove the folder named path.
         This works only for empty folders. For recursive remove, use rmtree.
 
         :param path: absolute path to the folder to remove
 
-        :type path: _TransportPath
+        :type path: TransportPath
         """
 
     @abc.abstractmethod
-    async def rmtree_async(self, path: _TransportPath):
+    async def rmtree_async(self, path: TransportPath):
         """Remove recursively the content at path
 
         :param  path: absolute path to remove
 
-        :type path: _TransportPath
+        :type path: TransportPath
 
         :raise OSError: if the rm execution failed.
         """
 
     @abc.abstractmethod
-    def gotocomputer_command(self, remotedir: _TransportPath):
+    def gotocomputer_command(self, remotedir: TransportPath):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
@@ -1536,11 +1536,11 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param remotedir: the full path of the remote directory
 
-        :type remotedir: _TransportPath
+        :type remotedir: TransportPath
         """
 
     @abc.abstractmethod
-    async def symlink_async(self, remotesource: _TransportPath, remotedestination: _TransportPath):
+    async def symlink_async(self, remotesource: TransportPath, remotedestination: TransportPath):
         """Create a symbolic link between the remote source and the remote destination.
 
         :param remotesource: remote source
@@ -1560,16 +1560,16 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         """
 
     @abc.abstractmethod
-    async def path_exists_async(self, path: _TransportPath):
+    async def path_exists_async(self, path: TransportPath):
         """Returns True if path exists, False otherwise.
 
         :param path: path to check for existence
 
-        :type path: _TransportPath
+        :type path: TransportPath
         """
 
     @abc.abstractmethod
-    async def glob_async(self, pathname: _TransportPath):
+    async def glob_async(self, pathname: TransportPath):
         """Return a list of paths matching a pathname pattern.
 
         The pattern may contain simple shell-style wildcards a la fnmatch.
@@ -1577,7 +1577,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param pathname: the pathname pattern to match.
             It should only be absolute path.
 
-        :type pathname: _TransportPath
+        :type pathname: TransportPath
 
         :return: a list of paths matching the pattern.
         """
@@ -1681,10 +1681,6 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
     def normalize(self, *args, **kwargs):
         return self.run_command_blocking(self.normalize_async, *args, **kwargs)
-
-
-# This is here for backwards compatibility
-Transport = BlockingTransport
 
 
 class TransportInternalError(InternalError):

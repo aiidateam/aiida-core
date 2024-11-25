@@ -16,7 +16,7 @@ from aiida.orm import CalcJobNode, Dict
 from aiida.plugins import BaseFactory
 
 if t.TYPE_CHECKING:
-    from aiida.transports import AsyncTransport, BlockingTransport
+    from aiida.transports import AsyncTransport, Transport
 
 LOGGER = AIIDA_LOGGER.getChild(__name__)
 
@@ -124,7 +124,7 @@ class CalcJobMonitor:
 
         if any(required_parameter not in parameters for required_parameter in ('node', 'transport')):
             correct_signature = (
-                "(node: CalcJobNode, transport: Union['BlockingTransport', 'AsyncTransport'], **kwargs) str | None:"
+                "(node: CalcJobNode, transport: Union['Transport', 'AsyncTransport'], **kwargs) str | None:"
             )
             raise ValueError(
                 f'The monitor `{self.entry_point}` has an invalid function signature, it should be: {correct_signature}'
@@ -179,7 +179,7 @@ class CalcJobMonitors:
     def process(
         self,
         node: CalcJobNode,
-        transport: Union['BlockingTransport', 'AsyncTransport'],
+        transport: Union['Transport', 'AsyncTransport'],
     ) -> CalcJobMonitorResult | None:
         """Call all monitors in order and return the result as one returns anything other than ``None``.
 

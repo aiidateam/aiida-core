@@ -129,7 +129,6 @@ def test_retrieve_files_from_list(
     with LocalTransport() as transport:
         node = generate_calcjob_node(workdir=source)
         runner.loop.run_until_complete(execmanager.retrieve_files_from_list(node, transport, target, retrieve_list))
-        # await execmanager.retrieve_files_from_list(node, transport, target, retrieve_list)
 
     assert serialize_file_hierarchy(target, read_bytes=False) == expected_hierarchy
 

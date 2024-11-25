@@ -118,7 +118,7 @@ class RemoteData(Data):
 
         :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
         :return: a list of dictionaries, where the documentation
-            is in :py:class:BlockingTransport.listdir_withattributes.
+            is in :py:class:Transport.listdir_withattributes.
         """
         authinfo = self.get_authinfo()
 

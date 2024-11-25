@@ -295,8 +295,11 @@ def check_requirements(extras, github_annotate):
         for requirement_abstract in requirements_abstract:
             for requirement_concrete in requirements_concrete:
                 if '@' in str(requirement_concrete):
+                    # `@` is not listed as a valid `specifier` in `class Specifier`.
                     version = str(requirement_concrete).split('@')[1]
                     abstract_contains = version in str(requirement_abstract)
+                    # `abstract_contains` is a boolean indicating whether the requirement abstract
+                    #  contains the same version as in the concrete requirement.
                 else:
                     version = Specifier(str(requirement_concrete.specifier)).version
                     abstract_contains = requirement_abstract.specifier.contains(version)

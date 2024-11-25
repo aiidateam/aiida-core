@@ -17,7 +17,6 @@ from .transport import *
 
 __all__ = (
     'Transport',
-    'BlockingTransport',
     'SshTransport',
     'AsyncTransport',
     'convert_to_bool',

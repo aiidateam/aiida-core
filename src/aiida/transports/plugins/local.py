@@ -19,11 +19,11 @@ from typing import Optional
 
 from aiida.common.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
-from aiida.transports.transport import BlockingTransport, TransportInternalError, _TransportPath, path_2_str
+from aiida.transports.transport import Transport, TransportInternalError, TransportPath, path_to_str
 
 
 # refactor or raise the limit: issue #1784
-class LocalTransport(BlockingTransport):
+class LocalTransport(Transport):
     """Support copy and command execution on the same host on which AiiDA is running via direct file copy and
     execution commands.
 
@@ -94,7 +94,7 @@ class LocalTransport(BlockingTransport):
 
         raise TransportInternalError('Error, local method called for LocalTransport without opening the channel first')
 
-    def chdir(self, path: _TransportPath):
+    def chdir(self, path: TransportPath):
         """
         PLEASE DON'T USE `chdir()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
         `chdir()` is DEPRECATED and will be removed in the next major version.
@@ -107,7 +107,7 @@ class LocalTransport(BlockingTransport):
             '`chdir()` is deprecated and will be removed in the next major version.',
             version=3,
         )
-        path = path_2_str(path)
+        path = path_to_str(path)
         new_path = os.path.join(self.curdir, path)
         if not os.path.isdir(new_path):
             raise OSError(f"'{new_path}' is not a valid directory")
@@ -116,15 +116,15 @@ class LocalTransport(BlockingTransport):
 
         self._internal_dir = os.path.normpath(new_path)
 
-    def chown(self, path: _TransportPath, uid, gid):
-        path = path_2_str(path)
+    def chown(self, path: TransportPath, uid, gid):
+        path = path_to_str(path)
         os.chown(path, uid, gid)
 
-    def normalize(self, path: _TransportPath = '.'):
+    def normalize(self, path: TransportPath = '.'):
         """Normalizes path, eliminating double slashes, etc..
         :param path: path to normalize
         """
-        path = path_2_str(path)
+        path = path_to_str(path)
         return os.path.realpath(os.path.join(self.curdir, path))
 
     def getcwd(self):
@@ -136,9 +136,9 @@ class LocalTransport(BlockingTransport):
         return self.curdir
 
     @staticmethod
-    def _os_path_split_asunder(path: _TransportPath):
+    def _os_path_split_asunder(path: TransportPath):
         """Used by makedirs, Takes path (a str) and returns a list deconcatenating the path."""
-        path = path_2_str(path)
+        path = path_to_str(path)
         parts = []
         while True:
             newpath, tail = os.path.split(path)
@@ -152,7 +152,7 @@ class LocalTransport(BlockingTransport):
         parts.reverse()
         return parts
 
-    def makedirs(self, path: _TransportPath, ignore_existing=False):
+    def makedirs(self, path: TransportPath, ignore_existing=False):
         """Super-mkdir; create a leaf directory and all intermediate ones.
         Works like mkdir, except that any intermediate path segment (not
         just the rightmost) will be created if it does not exist.
@@ -163,7 +163,7 @@ class LocalTransport(BlockingTransport):
 
         :raise OSError: If the directory already exists and is not ignore_existing
         """
-        path = path_2_str(path)
+        path = path_to_str(path)
         # check to avoid creation of empty dirs
         path = os.path.normpath(path)
 
@@ -179,7 +179,7 @@ class LocalTransport(BlockingTransport):
             if not os.path.exists(this_dir):
                 os.mkdir(this_dir)
 
-    def mkdir(self, path: _TransportPath, ignore_existing=False):
+    def mkdir(self, path: TransportPath, ignore_existing=False):
         """Create a folder (directory) named path.
 
         :param path: name of the folder to create
@@ -188,37 +188,37 @@ class LocalTransport(BlockingTransport):
 
         :raise OSError: If the directory already exists.
         """
-        path = path_2_str(path)
+        path = path_to_str(path)
         if ignore_existing and self.isdir(path):
             return
 
         os.mkdir(os.path.join(self.curdir, path))
 
-    def rmdir(self, path: _TransportPath):
+    def rmdir(self, path: TransportPath):
         """Removes a folder at location path.
         :param path: path to remove
         """
-        path = path_2_str(path)
+        path = path_to_str(path)
         os.rmdir(os.path.join(self.curdir, path))
 
-    def isdir(self, path: _TransportPath):
+    def isdir(self, path: TransportPath):
         """Checks if 'path' is a directory.
         :return: a boolean
         """
-        path = path_2_str(path)
+        path = path_to_str(path)
         if not path:
             return False
 
         return os.path.isdir(os.path.join(self.curdir, path))
 
-    def chmod(self, path: _TransportPath, mode):
+    def chmod(self, path: TransportPath, mode):
         """Changes permission bits of object at path
         :param path: path to modify
         :param mode: permission bits
 
         :raise OSError: if path does not exist.
         """
-        path = path_2_str(path)
+        path = path_to_str(path)
         if not path:
             raise OSError('Directory not given in input')
         real_path = os.path.join(self.curdir, path)
@@ -229,7 +229,7 @@ class LocalTransport(BlockingTransport):
 
     # please refactor: issue #1782
 
-    def put(self, localpath: _TransportPath, remotepath: _TransportPath, *args, **kwargs):
+    def put(self, localpath: TransportPath, remotepath: TransportPath, *args, **kwargs):
         """Copies a file or a folder from localpath to remotepath.
         Automatically redirects to putfile or puttree.
 
@@ -243,8 +243,8 @@ class LocalTransport(BlockingTransport):
         :raise OSError: if remotepath is not valid
         :raise ValueError: if localpath is not valid
         """
-        localpath = path_2_str(localpath)
-        remotepath = path_2_str(remotepath)
+        localpath = path_to_str(localpath)
+        remotepath = path_to_str(remotepath)
         from aiida.common.warnings import warn_deprecation
 
         if 'ignore_noexisting' in kwargs:
@@ -311,7 +311,7 @@ class LocalTransport(BlockingTransport):
         else:
             raise OSError(f'The local path {localpath} does not exist')
 
-    def putfile(self, localpath: _TransportPath, remotepath: _TransportPath, *args, **kwargs):
+    def putfile(self, localpath: TransportPath, remotepath: TransportPath, *args, **kwargs):
         """Copies a file from localpath to remotepath.
         Automatically redirects to putfile or puttree.
 
@@ -324,8 +324,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if localpath is not valid
         :raise OSError: if localpath does not exist
         """
-        localpath = path_2_str(localpath)
-        remotepath = path_2_str(remotepath)
+        localpath = path_to_str(localpath)
+        remotepath = path_to_str(remotepath)
 
         overwrite = kwargs.get('overwrite', args[0] if args else True)
         if not remotepath:
@@ -345,7 +345,7 @@ class LocalTransport(BlockingTransport):
 
         shutil.copyfile(localpath, the_destination)
 
-    def puttree(self, localpath: _TransportPath, remotepath: _TransportPath, *args, **kwargs):
+    def puttree(self, localpath: TransportPath, remotepath: TransportPath, *args, **kwargs):
         """Copies a folder recursively from localpath to remotepath.
         Automatically redirects to putfile or puttree.
 
@@ -360,8 +360,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if localpath is not valid
         :raise OSError: if localpath does not exist
         """
-        localpath = path_2_str(localpath)
-        remotepath = path_2_str(remotepath)
+        localpath = path_to_str(localpath)
+        remotepath = path_to_str(remotepath)
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         if not remotepath:
@@ -387,12 +387,12 @@ class LocalTransport(BlockingTransport):
 
         shutil.copytree(localpath, the_destination, symlinks=not dereference, dirs_exist_ok=overwrite)
 
-    def rmtree(self, path: _TransportPath):
+    def rmtree(self, path: TransportPath):
         """Remove tree as rm -r would do
 
         :param path: a string to path
         """
-        path = path_2_str(path)
+        path = path_to_str(path)
         the_path = os.path.join(self.curdir, path)
         try:
             shutil.rmtree(the_path)
@@ -406,7 +406,7 @@ class LocalTransport(BlockingTransport):
 
     # please refactor: issue #1781
 
-    def get(self, remotepath: _TransportPath, localpath: _TransportPath, *args, **kwargs):
+    def get(self, remotepath: TransportPath, localpath: TransportPath, *args, **kwargs):
         """Copies a folder or a file recursively from 'remote' remotepath to
         'local' localpath.
         Automatically redirects to getfile or gettree.
@@ -421,8 +421,8 @@ class LocalTransport(BlockingTransport):
         :raise OSError: if 'remote' remotepath is not valid
         :raise ValueError: if 'local' localpath is not valid
         """
-        remotepath = path_2_str(remotepath)
-        localpath = path_2_str(localpath)
+        remotepath = path_to_str(remotepath)
+        localpath = path_to_str(localpath)
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         ignore_nonexisting = kwargs.get('ignore_nonexisting', args[2] if len(args) > 2 else False)
@@ -474,7 +474,7 @@ class LocalTransport(BlockingTransport):
         else:
             raise OSError(f'The remote path {remotepath} does not exist')
 
-    def getfile(self, remotepath: _TransportPath, localpath: _TransportPath, *args, **kwargs):
+    def getfile(self, remotepath: TransportPath, localpath: TransportPath, *args, **kwargs):
         """Copies a file recursively from 'remote' remotepath to
         'local' localpath.
 
@@ -487,8 +487,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if 'local' localpath is not valid
         :raise OSError: if unintentionally overwriting
         """
-        remotepath = path_2_str(remotepath)
-        localpath = path_2_str(localpath)
+        remotepath = path_to_str(remotepath)
+        localpath = path_to_str(localpath)
         overwrite = kwargs.get('overwrite', args[0] if args else True)
         if not localpath:
             raise ValueError('Input localpath to get function must be a non empty string')
@@ -504,7 +504,7 @@ class LocalTransport(BlockingTransport):
 
         shutil.copyfile(the_source, localpath)
 
-    def gettree(self, remotepath: _TransportPath, localpath: _TransportPath, *args, **kwargs):
+    def gettree(self, remotepath: TransportPath, localpath: TransportPath, *args, **kwargs):
         """Copies a folder recursively from 'remote' remotepath to
         'local' localpath.
 
@@ -517,8 +517,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if 'local' localpath is not valid
         :raise OSError: if unintentionally overwriting
         """
-        remotepath = path_2_str(remotepath)
-        localpath = path_2_str(localpath)
+        remotepath = path_to_str(remotepath)
+        localpath = path_to_str(localpath)
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         if not remotepath:
@@ -545,7 +545,7 @@ class LocalTransport(BlockingTransport):
 
     # please refactor: issue #1780 on github
 
-    def copy(self, remotesource: _TransportPath, remotedestination: _TransportPath, dereference=False, recursive=True):
+    def copy(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False, recursive=True):
         """Copies a file or a folder from 'remote' remotesource to 'remote' remotedestination.
         Automatically redirects to copyfile or copytree.
 
@@ -558,8 +558,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if 'remote' remotesource or remotedestinationis not valid
         :raise OSError: if remotesource does not exist
         """
-        remotesource = path_2_str(remotesource)
-        remotedestination = path_2_str(remotedestination)
+        remotesource = path_to_str(remotesource)
+        remotedestination = path_to_str(remotedestination)
         if not remotesource:
             raise ValueError('Input remotesource to copy must be a non empty object')
         if not remotedestination:
@@ -607,7 +607,7 @@ class LocalTransport(BlockingTransport):
                 # With self.copytree, the (possible) relative path is OK
                 self.copytree(remotesource, remotedestination, dereference)
 
-    def copyfile(self, remotesource: _TransportPath, remotedestination: _TransportPath, dereference=False):
+    def copyfile(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False):
         """Copies a file from 'remote' remotesource to
         'remote' remotedestination.
 
@@ -618,8 +618,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if 'remote' remotesource or remotedestination is not valid
         :raise OSError: if remotesource does not exist
         """
-        remotesource = path_2_str(remotesource)
-        remotedestination = path_2_str(remotedestination)
+        remotesource = path_to_str(remotesource)
+        remotedestination = path_to_str(remotedestination)
         if not remotesource:
             raise ValueError('Input remotesource to copyfile must be a non empty object')
         if not remotedestination:
@@ -635,7 +635,7 @@ class LocalTransport(BlockingTransport):
         else:
             shutil.copyfile(the_source, the_destination)
 
-    def copytree(self, remotesource: _TransportPath, remotedestination: _TransportPath, dereference=False):
+    def copytree(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False):
         """Copies a folder from 'remote' remotesource to
         'remote' remotedestination.
 
@@ -646,8 +646,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if 'remote' remotesource or remotedestination is not valid
         :raise OSError: if remotesource does not exist
         """
-        remotesource = path_2_str(remotesource)
-        remotedestination = path_2_str(remotedestination)
+        remotesource = path_to_str(remotesource)
+        remotedestination = path_to_str(remotedestination)
         if not remotesource:
             raise ValueError('Input remotesource to copytree must be a non empty object')
         if not remotedestination:
@@ -663,12 +663,12 @@ class LocalTransport(BlockingTransport):
 
         shutil.copytree(the_source, the_destination, symlinks=not dereference)
 
-    def get_attribute(self, path: _TransportPath):
+    def get_attribute(self, path: TransportPath):
         """Returns an object FileAttribute,
         as specified in aiida.transports.
         :param path: the path of the given file.
         """
-        path = path_2_str(path)
+        path = path_to_str(path)
         from aiida.transports.util import FileAttribute
 
         os_attr = os.lstat(os.path.join(self.curdir, path))
@@ -679,11 +679,11 @@ class LocalTransport(BlockingTransport):
             aiida_attr[key] = getattr(os_attr, key)
         return aiida_attr
 
-    def _local_listdir(self, path: _TransportPath, pattern=None):
+    def _local_listdir(self, path: TransportPath, pattern=None):
         """Act on the local folder, for the rest, same as listdir."""
         import re
 
-        path = path_2_str(path)
+        path = path_to_str(path)
 
         if not pattern:
             return os.listdir(path)
@@ -698,13 +698,13 @@ class LocalTransport(BlockingTransport):
             base_dir += os.sep
         return [re.sub(base_dir, '', i) for i in filtered_list]
 
-    def listdir(self, path: _TransportPath = '.', pattern=None):
+    def listdir(self, path: TransportPath = '.', pattern=None):
         """:return: a list containing the names of the entries in the directory.
         :param path: default ='.'
         :param pattern: if set, returns the list of files matching pattern.
                      Unix only. (Use to emulate ls * for example)
         """
-        path = path_2_str(path)
+        path = path_to_str(path)
         the_path = os.path.join(self.curdir, path).strip()
         if not pattern:
             try:
@@ -721,22 +721,22 @@ class LocalTransport(BlockingTransport):
                 the_path += '/'
             return [re.sub(the_path, '', i) for i in filtered_list]
 
-    def remove(self, path: _TransportPath):
+    def remove(self, path: TransportPath):
         """Removes a file at position path."""
-        path = path_2_str(path)
+        path = path_to_str(path)
         os.remove(os.path.join(self.curdir, path))
 
-    def isfile(self, path: _TransportPath):
+    def isfile(self, path: TransportPath):
         """Checks if object at path is a file.
         Returns a boolean.
         """
-        path = path_2_str(path)
+        path = path_to_str(path)
         if not path:
             return False
         return os.path.isfile(os.path.join(self.curdir, path))
 
     @contextlib.contextmanager
-    def _exec_command_internal(self, command, workdir: Optional[_TransportPath] = None, **kwargs):
+    def _exec_command_internal(self, command, workdir: Optional[TransportPath] = None, **kwargs):
         """Executes the specified command in bash login shell.
 
 
@@ -762,7 +762,7 @@ class LocalTransport(BlockingTransport):
         from aiida.common.escaping import escape_for_bash
 
         if workdir:
-            workdir = path_2_str(workdir)
+            workdir = path_to_str(workdir)
         # Note: The outer shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
         bash_commmand = f'{self._bash_command_str}-c '
@@ -784,7 +784,7 @@ class LocalTransport(BlockingTransport):
         ) as process:
             yield process
 
-    def exec_command_wait_bytes(self, command, stdin=None, workdir: Optional[_TransportPath] = None, **kwargs):
+    def exec_command_wait_bytes(self, command, stdin=None, workdir: Optional[TransportPath] = None, **kwargs):
         """Executes the specified command and waits for it to finish.
 
         :param command: the command to execute
@@ -797,7 +797,7 @@ class LocalTransport(BlockingTransport):
             are both bytes and the return_value is an int.
         """
         if workdir:
-            workdir = path_2_str(workdir)
+            workdir = path_to_str(workdir)
         with self._exec_command_internal(command, workdir) as process:
             if stdin is not None:
                 # Implicitly assume that the desired encoding is 'utf-8' if I receive a string.
@@ -840,7 +840,7 @@ class LocalTransport(BlockingTransport):
 
         return retval, output_text, stderr_text
 
-    def gotocomputer_command(self, remotedir: _TransportPath):
+    def gotocomputer_command(self, remotedir: TransportPath):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
@@ -851,12 +851,12 @@ class LocalTransport(BlockingTransport):
 
         :param str remotedir: the full path of the remote directory
         """
-        remotedir = path_2_str(remotedir)
+        remotedir = path_to_str(remotedir)
         connect_string = self._gotocomputer_string(remotedir)
         cmd = f'bash -c {connect_string}'
         return cmd
 
-    def rename(self, oldpath: _TransportPath, newpath: _TransportPath):
+    def rename(self, oldpath: TransportPath, newpath: TransportPath):
         """Rename a file or folder from oldpath to newpath.
 
         :param str oldpath: existing name of the file or folder
@@ -865,8 +865,8 @@ class LocalTransport(BlockingTransport):
         :raises OSError: if src/dst is not found
         :raises ValueError: if src/dst is not a valid string
         """
-        oldpath = path_2_str(oldpath)
-        newpath = path_2_str(newpath)
+        oldpath = path_to_str(oldpath)
+        newpath = path_to_str(newpath)
         if not oldpath:
             raise ValueError(f'Source {oldpath} is not a valid string')
         if not newpath:
@@ -878,15 +878,15 @@ class LocalTransport(BlockingTransport):
 
         shutil.move(oldpath, newpath)
 
-    def symlink(self, remotesource: _TransportPath, remotedestination: _TransportPath):
+    def symlink(self, remotesource: TransportPath, remotedestination: TransportPath):
         """Create a symbolic link between the remote source and the remote
         remotedestination
 
         :param remotesource: remote source. Can contain a pattern.
         :param remotedestination: remote destination
         """
-        remotesource = os.path.normpath(path_2_str(remotesource))
-        remotedestination = os.path.normpath(path_2_str(remotedestination))
+        remotesource = os.path.normpath(path_to_str(remotesource))
+        remotedestination = os.path.normpath(path_to_str(remotedestination))
 
         if self.has_magic(remotesource):
             if self.has_magic(remotedestination):
@@ -905,9 +905,9 @@ class LocalTransport(BlockingTransport):
             except OSError:
                 raise OSError(f'!!: {remotesource}, {self.curdir}, {remotedestination}')
 
-    def path_exists(self, path: _TransportPath):
+    def path_exists(self, path: TransportPath):
         """Check if path exists"""
-        path = path_2_str(path)
+        path = path_to_str(path)
         return os.path.exists(os.path.join(self.curdir, path))
 
 

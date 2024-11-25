@@ -21,14 +21,14 @@ if t.TYPE_CHECKING:
 
     from aiida import orm
     from aiida.orm.implementation import StorageBackend
-    from aiida.transports import AsyncTransport, BlockingTransport
+    from aiida.transports import AsyncTransport, Transport
 
 
-def clean_remote(transport: Union['BlockingTransport', 'AsyncTransport'], path: str) -> None:
+def clean_remote(transport: Union['Transport', 'AsyncTransport'], path: str) -> None:
     """Recursively remove a remote folder, with the given absolute path, and all its contents. The path should be
     made accessible through the transport channel, which should already be open
 
-    :param transport: an open Union['BlockingTransport', 'AsyncTransport'] channel
+    :param transport: an open Union['Transport', 'AsyncTransport'] channel
     :param path: an absolute path on the remote made available through the transport
     """
     if not isinstance(path, str):

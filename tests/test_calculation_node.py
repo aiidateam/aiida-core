@@ -120,7 +120,7 @@ class TestProcessNode:
 
     def test_get_transport(self):
         """Test that we can get the Transport object from the calculation instance."""
-        from aiida.transports import AsyncTransport, BlockingTransport
+        from aiida.transports import AsyncTransport, Transport
 
         transport = self.calcjob.get_transport()
-        assert isinstance(transport, BlockingTransport) or isinstance(transport, AsyncTransport)
+        assert isinstance(transport, Transport) or isinstance(transport, AsyncTransport)

@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Awaitable, Dict, Hashable, Iterator, Optional,
 from aiida.orm import AuthInfo
 
 if TYPE_CHECKING:
-    from aiida.transports import AsyncTransport, BlockingTransport
+    from aiida.transports import AsyncTransport, Transport
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,9 +54,7 @@ class TransportQueue:
         return self._loop
 
     @contextlib.contextmanager
-    def request_transport(
-        self, authinfo: AuthInfo
-    ) -> Iterator[Awaitable[Union['BlockingTransport', 'AsyncTransport']]]:
+    def request_transport(self, authinfo: AuthInfo) -> Iterator[Awaitable[Union['Transport', 'AsyncTransport']]]:
         """Request a transport from an authinfo.  Because the client is not allowed to
         request a transport immediately they will instead be given back a future
         that can be awaited to get the transport::

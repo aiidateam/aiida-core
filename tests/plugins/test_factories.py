@@ -18,7 +18,7 @@ from aiida.plugins import entry_point, factories
 from aiida.schedulers import Scheduler
 from aiida.tools.data.orbital import Orbital
 from aiida.tools.dbimporters import DbImporter
-from aiida.transports import AsyncTransport, BlockingTransport
+from aiida.transports import AsyncTransport, Transport
 
 
 def custom_load_entry_point(group, name):
@@ -69,7 +69,7 @@ def custom_load_entry_point(group, name):
         },
         'aiida.transports': {
             'valid_A': AsyncTransport,
-            'valid_B': BlockingTransport,
+            'valid_B': Transport,
             'invalid': Node,
         },
         'aiida.workflows': {
@@ -191,7 +191,7 @@ class TestFactories:
     def test_transport_factory(self):
         """Test the ``TransportFactory``."""
         plugin = factories.TransportFactory('valid_B')
-        assert plugin is BlockingTransport
+        assert plugin is Transport
 
         plugin = factories.TransportFactory('valid_A')
         assert plugin is AsyncTransport

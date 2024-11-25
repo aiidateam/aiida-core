@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
     from aiida.orm.implementation import StorageBackend
     from aiida.schedulers import Scheduler
-    from aiida.transports import AsyncTransport, BlockingTransport
+    from aiida.transports import AsyncTransport, Transport
 
 __all__ = ('Computer',)
 
@@ -622,7 +622,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             # Return False if the user is not configured (in a sense, it is disabled for that user)
             return False
 
-    def get_transport(self, user: Optional['User'] = None) -> Union['BlockingTransport', 'AsyncTransport']:
+    def get_transport(self, user: Optional['User'] = None) -> Union['Transport', 'AsyncTransport']:
         """Return a Transport class, configured with all correct parameters.
         The Transport is closed (meaning that if you want to run any operation with
         it, you have to open it first (i.e., e.g. for a SSH transport, you have
@@ -646,7 +646,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         authinfo = authinfos.AuthInfo.get_collection(self.backend).get(dbcomputer=self, aiidauser=user)
         return authinfo.get_transport()
 
-    def get_transport_class(self) -> Union[Type['BlockingTransport'], Type['AsyncTransport']]:
+    def get_transport_class(self) -> Union[Type['Transport'], Type['AsyncTransport']]:
         """Get the transport class for this computer.  Can be used to instantiate a transport instance."""
         try:
             return TransportFactory(self.transport_type)

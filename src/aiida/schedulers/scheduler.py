@@ -22,7 +22,7 @@ from aiida.engine.processes.exit_code import ExitCode
 from aiida.schedulers.datastructures import JobInfo, JobResource, JobTemplate, JobTemplateCodeInfo
 
 if t.TYPE_CHECKING:
-    from aiida.transports import AsyncTransport, BlockingTransport
+    from aiida.transports import AsyncTransport, Transport
 
 __all__ = ('Scheduler', 'SchedulerError', 'SchedulerParsingError')
 
@@ -366,7 +366,7 @@ class Scheduler(metaclass=abc.ABCMeta):
 
         return self._transport
 
-    def set_transport(self, transport: Union['BlockingTransport', 'AsyncTransport']):
+    def set_transport(self, transport: Union['Transport', 'AsyncTransport']):
         """Set the transport to be used to query the machine or to submit scripts.
 
         This class assumes that the transport is open and active.

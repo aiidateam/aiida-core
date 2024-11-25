@@ -95,8 +95,7 @@ class TestKpointsAtomisticStructureData:
     def init_profile(self):
         """Initialize the profile."""
 
-        from aiida_atomistic import StructureData as AtomisticStructureData
-        from aiida_atomistic import StructureDataMutable
+        from aiida_atomistic import StructureData, StructureDataMutable
 
         alat = 5.430  # angstrom
         cell = [
@@ -117,7 +116,7 @@ class TestKpointsAtomisticStructureData:
         mutable.set_cell(cell)
         mutable.add_atom(positions=(0.000 * alat, 0.000 * alat, 0.000 * alat), symbols='Si')
         mutable.add_atom(positions=(0.250 * alat, 0.250 * alat, 0.250 * alat), symbols='Si')
-        self.structure = AtomisticStructureData.from_mutable(mutable)
+        self.structure = StructureData.from_mutable(mutable)
         # Define the expected reciprocal cell
         val = 2.0 * np.pi / alat
         self.expected_reciprocal_cell = np.array([[val, val, -val], [-val, val, val], [val, -val, val]])

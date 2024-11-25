@@ -1851,26 +1851,23 @@ class TestStructureDataReload:
 
 
 @skip_atomistic
-class TestAtomisticStructureData:
-    """Tests the creation of StructureData objects (cell and pbc), and its conversion to the new atomistic StructureData."""
+def test_to_atomistic(self):
+    """Test the conversion from orm.StructureData to the atomistic structure."""
 
-    def test_to_atomistic(self):
-        """Test the conversion to the atomistic structure."""
+    # Create a structure with a single atom
+    from aiida_atomistic import StructureData as AtomisticStructureData
 
-        # Create a structure with a single atom
-        from aiida_atomistic import StructureData as AtomisticStructureData
+    legacy = StructureData(cell=((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0)))
+    legacy.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'], name='Ba1')
 
-        legacy = StructureData(cell=((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0)))
-        legacy.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'], name='Ba1')
+    # Convert to atomistic structure
+    structure = legacy.to_atomistic()
 
-        # Convert to atomistic structure
-        structure = legacy.to_atomistic()
-
-        # Check that the structure is as expected
-        assert isinstance(structure, AtomisticStructureData)
-        assert structure.properties.sites[0].kinds == legacy.sites[0].kind_name
-        assert structure.properties.sites[0].positions == list(legacy.sites[0].position)
-        assert structure.properties.cell == legacy.cell
+    # Check that the structure is as expected
+    assert isinstance(structure, AtomisticStructureData)
+    assert structure.properties.sites[0].kinds == legacy.sites[0].kind_name
+    assert structure.properties.sites[0].positions == list(legacy.sites[0].position)
+    assert structure.properties.cell == legacy.cell
 
 
 class TestStructureDataFromAse:

@@ -102,7 +102,7 @@ def has_pymatgen():
     return True
 
 
-def has_atomistic():
+def has_atomistic() -> bool:
     """:return: True if the StructureData and StructureDataMutable from aiida-atomistic module can be imported, False otherwise."""
     try:
         import aiida_atomistic  # noqa: F401
@@ -1884,24 +1884,21 @@ class StructureData(Data):
                 please install it to have full support for atomistic structures'
             )
         else:
-            from aiida_atomistic import StructureData as AtomisticStructureData
-            from aiida_atomistic import StructureDataMutable as AtomisticStructureDataMutable
+            from aiida_atomistic import StructureData, StructureDataMutable
 
-        atomistic = AtomisticStructureDataMutable()
+        atomistic = StructureDataMutable()
         atomistic.set_pbc(self.pbc)
         atomistic.set_cell(self.cell)
 
         for site in self.sites:
             atomistic.add_atom(
-                **{
-                    'symbols': self.get_kind(site.kind_name).symbol,
-                    'masses': self.get_kind(site.kind_name).mass,
-                    'positions': site.position,
-                    'kinds': site.kind_name,
-                }
+                    symbols= self.get_kind(site.kind_name).symbol,
+                    masses= self.get_kind(site.kind_name).mass,
+                    positions= site.position,
+                    kinds= site.kind_name,
             )
 
-        return AtomisticStructureData.from_mutable(atomistic)
+        return StructureData.from_mutable(atomistic)
 
 
 class Kind:

@@ -22,6 +22,7 @@ import subprocess
 import types
 import typing as t
 import warnings
+from enum import Enum
 from pathlib import Path
 
 import click
@@ -37,7 +38,14 @@ if t.TYPE_CHECKING:
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
 
-def pytest_collection_modifyitems(items):
+class TestDbBackend(Enum):
+    """Options for the '--db-backend' CLI argument when running pytest."""
+
+    SQLITE = 'sqlite'
+    PSQL = 'psql'
+
+
+def pytest_collection_modifyitems(items, config):
     """Automatically generate markers for certain tests.
 
     Most notably, we add the 'presto' marker for all tests that
@@ -46,6 +54,14 @@ def pytest_collection_modifyitems(items):
     filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
     filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
     filepath_sqla = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'sqlalchemy_branch'
+
+    # If the user requested the SQLite backend, automatically skip incompatible tests
+    if config.option.db_backend is TestDbBackend.SQLITE:
+        if config.option.markexpr != '':
+            # Don't overwrite markers that the user already provided via '-m ' cmdline argument
+            config.option.markexpr += ' and (not requires_psql)'
+        else:
+            config.option.markexpr = 'not requires_psql'
 
     for item in items:
         filepath_item = Path(item.fspath)
@@ -68,6 +84,30 @@ def pytest_collection_modifyitems(items):
             item.add_marker('presto')
 
 
+def db_backend_type(string):
+    """Conversion function for the custom '--db-backend' pytest CLI option
+
+    :param string: String provided by the user via CLI
+    :returns: DbBackend enum corresponding to user input string
+    """
+    try:
+        return TestDbBackend(string)
+    except ValueError:
+        msg = f"Invalid --db-backend option '{string}'\nMust be one of: {tuple(db.value for db in TestDbBackend)}"
+        raise pytest.UsageError(msg)
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        '--db-backend',
+        action='store',
+        default=TestDbBackend.SQLITE,
+        required=False,
+        help=f'Database backend to be used for tests {tuple(db.value for db in TestDbBackend)}',
+        type=db_backend_type,
+    )
+
+
 @pytest.fixture(scope='session')
 def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql_dos, config_sqlite_dos):
     """Create and load a profile with ``core.psql_dos`` as a storage backend and RabbitMQ as the broker.
@@ -77,18 +117,22 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
     be run against the main storage backend, which is ``core.sqlite_dos``.
     """
     marker_opts = pytestconfig.getoption('-m')
+    db_backend = pytestconfig.getoption('--db-backend')
 
-    # By default we use RabbitMQ broker and psql_dos storage
+    # We use RabbitMQ broker by default unless 'presto' marker is specified
     broker = 'core.rabbitmq'
     if 'not requires_rmq' in marker_opts or 'presto' in marker_opts:
         broker = None
 
-    if 'not requires_psql' in marker_opts or 'presto' in marker_opts:
+    if db_backend is TestDbBackend.SQLITE:
         storage = 'core.sqlite_dos'
         config = config_sqlite_dos()
-    else:
+    elif db_backend is TestDbBackend.PSQL:
         storage = 'core.psql_dos'
         config = config_psql_dos()
+    else:
+        # This should be unreachable
+        raise ValueError(f'Invalid DB backend {db_backend}')
 
     with aiida_profile_factory(
         aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker

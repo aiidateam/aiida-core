@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Script: minor-release.sh
+# Script: patch-release.sh
 # Description:
 #   Cherry-picks a list of commits, amends each with the original commit hash for tracking,
 #   and generates a summary from the short github commit messages with links to each commit.
 #
 # Usage:
-#   ./minor-release.sh <commit1> <commit2> ...
+#   ./patch-release.sh <commit1> <commit2> ...
 #
 # Example:
-#   ./minor-release.sh abc1234 def5678
+#   ./patch-release.sh abc1234 def5678
 
 set -e
 

@@ -85,7 +85,7 @@ jobs:
       uses: ./.github/actions/install-aiida-core
 
     - name: Run sub-set of test suite
-      run: pytest -sv -k 'requires_rmq'
+      run: pytest -s -k 'requires_rmq'
 
   publish:
 

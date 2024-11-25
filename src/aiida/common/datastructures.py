@@ -145,7 +145,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         email: None | str
         email_on_started: bool
         email_on_terminated: bool
-        uuid: None | str
+        uuid: str
         prepend_text: None | str
         append_text: None | str
         num_machines: None | int

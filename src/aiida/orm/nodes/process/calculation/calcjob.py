@@ -312,7 +312,7 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_list)
         self.base.attributes.set(self.RETRIEVE_LIST_KEY, retrieve_list)
 
-    def get_retrieve_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
+    def get_retrieve_list(self) -> Sequence[str | tuple[str, str, int | None]] | None:
         """Return the list of files/directories to be retrieved on the cluster after the calculation has completed.
 
         :return: a list of file directives
@@ -330,7 +330,7 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_temporary_list)
         self.base.attributes.set(self.RETRIEVE_TEMPORARY_LIST_KEY, retrieve_temporary_list)
 
-    def get_retrieve_temporary_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
+    def get_retrieve_temporary_list(self) -> Sequence[str | tuple[str, str, int | None]] | None:
         """Return list of files to be retrieved from the cluster which will be available during parsing.
 
         :return: a list of file directives

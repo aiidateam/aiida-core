@@ -430,7 +430,7 @@ class Manager:
         if with_persistence and 'persister' not in settings:
             settings['persister'] = self.get_persister()
 
-        return runners.Runner(**settings)
+        return runners.Runner(**settings)  # type: ignore[arg-type]
 
     def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
         """Create and return a new daemon runner.

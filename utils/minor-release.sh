@@ -20,7 +20,6 @@ if [ "$#" -lt 1 ]; then
     exit 1
 fi
 
-# The first argument is the GitHub repo identifier
 GITHUB_REPO="aiidateam/aiida-core"
 
 # Create an array to store commit summaries
@@ -46,6 +45,7 @@ for commit in "$@"; do
         echo "Failed to cherry-pick commit $commit"
         # Abort the cherry-pick in case of conflict
         git cherry-pick --abort
+        exit 1
     fi
 done
 

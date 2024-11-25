@@ -116,7 +116,6 @@ repos:
         src/aiida/cmdline/utils/echo.py|
         src/aiida/common/extendeddicts.py|
         src/aiida/common/utils.py|
-        src/aiida/engine/daemon/execmanager.py|
         src/aiida/engine/processes/calcjobs/manager.py|
         src/aiida/engine/processes/calcjobs/monitors.py|
         src/aiida/engine/processes/calcjobs/tasks.py|

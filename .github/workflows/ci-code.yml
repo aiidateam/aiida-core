@@ -97,7 +97,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Setup environment
-      run: .github/workflows/setup.sh
+      run: source .venv/bin/activate && .github/workflows/setup.sh
 
     - name: Run test suite
       env:

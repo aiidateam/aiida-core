@@ -161,6 +161,7 @@ def aiida_instance(
     :return: The configuration the AiiDA instance loaded for this test session.
     """
     from aiida.manage import configuration
+    from aiida.manage.configuration import settings
     from aiida.manage.configuration.settings import AiiDAConfigDir
 
     if aiida_test_profile:

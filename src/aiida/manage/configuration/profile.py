@@ -10,14 +10,13 @@
 
 from __future__ import annotations
 
+import collections
 import os
 import pathlib
-from collections import abc
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, Type
 
 from aiida.common import exceptions
-from aiida.common.lang import type_check
 
 from .options import parse_option
 
@@ -30,33 +29,34 @@ __all__ = ('Profile',)
 class Profile:
     """Class that models a profile as it is stored in the configuration file of an AiiDA instance."""
 
-    KEY_UUID: str = 'PROFILE_UUID'
-    KEY_DEFAULT_USER_EMAIL: str = 'default_user_email'
-    KEY_STORAGE: str = 'storage'
-    KEY_PROCESS: str = 'process_control'
-    KEY_STORAGE_BACKEND: str = 'backend'
-    KEY_STORAGE_CONFIG: str = 'config'
-    KEY_PROCESS_BACKEND: str = 'backend'
-    KEY_PROCESS_CONFIG: str = 'config'
-    KEY_OPTIONS: str = 'options'
-    KEY_TEST_PROFILE: str = 'test_profile'
+    KEY_UUID = 'PROFILE_UUID'
+    KEY_DEFAULT_USER_EMAIL = 'default_user_email'
+    KEY_STORAGE = 'storage'
+    KEY_PROCESS = 'process_control'
+    KEY_STORAGE_BACKEND = 'backend'
+    KEY_STORAGE_CONFIG = 'config'
+    KEY_PROCESS_BACKEND = 'backend'
+    KEY_PROCESS_CONFIG = 'config'
+    KEY_OPTIONS = 'options'
+    KEY_TEST_PROFILE = 'test_profile'
 
     # keys that are expected to be in the parsed configuration
-    REQUIRED_KEYS: tuple[str, str] = (
+    REQUIRED_KEYS = (
         KEY_STORAGE,
         KEY_PROCESS,
     )
 
-    def __init__(self, name: str, config: abc.Mapping[str, Any], validate: bool = True):
+    def __init__(self, name: str, config: Mapping[str, Any], validate=True):
         """Load a profile with the profile configuration."""
-        type_check(config, abc.Mapping)
+        if not isinstance(config, collections.abc.Mapping):
+            raise TypeError(f'config should be a mapping but is {type(config)}')
         if validate and not set(config.keys()).issuperset(self.REQUIRED_KEYS):
             raise exceptions.ConfigurationError(
                 f'profile {name!r} configuration does not contain all required keys: {self.REQUIRED_KEYS}'
             )
 
-        self._name: str = name
-        self._attributes: dict[str, Any] = deepcopy(config)  # type: ignore
+        self._name = name
+        self._attributes: Dict[str, Any] = deepcopy(config)  # type: ignore[arg-type]
 
         # Create a default UUID if not specified
         if self._attributes.get(self.KEY_UUID, None) is None:
@@ -84,12 +84,12 @@ class Profile:
         self._attributes[self.KEY_UUID] = value
 
     @property
-    def default_user_email(self) -> str | None:
+    def default_user_email(self) -> Optional[str]:
         """Return the default user email."""
         return self._attributes.get(self.KEY_DEFAULT_USER_EMAIL, None)
 
     @default_user_email.setter
-    def default_user_email(self, value: str | None) -> None:
+    def default_user_email(self, value: Optional[str]) -> None:
         """Set the default user email."""
         self._attributes[self.KEY_DEFAULT_USER_EMAIL] = value
 
@@ -99,11 +99,11 @@ class Profile:
         return self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_BACKEND]
 
     @property
-    def storage_config(self) -> dict[str, Any]:
+    def storage_config(self) -> Dict[str, Any]:
         """Return the configuration required by the storage backend."""
         return self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG]
 
-    def set_storage(self, name: str, config: dict[str, Any]) -> None:
+    def set_storage(self, name: str, config: Dict[str, Any]) -> None:
         """Set the storage backend and its configuration.
 
         :param name: the name of the storage backend
@@ -114,7 +114,7 @@ class Profile:
         self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG] = config
 
     @property
-    def storage_cls(self) -> type['StorageBackend']:
+    def storage_cls(self) -> Type['StorageBackend']:
         """Return the storage backend class for this profile."""
         from aiida.plugins import StorageFactory
 
@@ -126,11 +126,11 @@ class Profile:
         return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_BACKEND]
 
     @property
-    def process_control_config(self) -> dict[str, Any]:
+    def process_control_config(self) -> Dict[str, Any]:
         """Return the configuration required by the process control backend."""
         return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG] or {}
 
-    def set_process_controller(self, name: str, config: dict[str, Any]) -> None:
+    def set_process_controller(self, name: str, config: Dict[str, Any]) -> None:
         """Set the process control backend and its configuration.
 
         :param name: the name of the process backend
@@ -175,7 +175,7 @@ class Profile:
         return self._name
 
     @property
-    def dictionary(self) -> dict[str, Any]:
+    def dictionary(self) -> Dict[str, Any]:
         """Return the profile attributes as a dictionary with keys as it is stored in the config
 
         :return: the profile configuration dictionary

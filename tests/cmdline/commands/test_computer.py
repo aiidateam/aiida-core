@@ -773,40 +773,30 @@ class TestVerdiComputerCommands:
         # The new label should be available
         orm.Computer.collection.get(label='comp_cli_test_computer')
 
-    def test_computer_delete_with_nodes(self):
-        """check if 'verdi computer delete' works when there are associated nodes"""
+    # ensure that 'yes' works for backwards compatibility, see issue #6422
+    @pytest.mark.parametrize('user_input', ['y', 'yes'])
+    def test_computer_delete_existing_computer_successful(self, user_input):
+        """Test if `verdi computer delete` works correctly for an existing computer when it is deleted"""
         from aiida.common.exceptions import NotExistent
 
-        label = 'computer_69'
-        compute_temp = orm.Computer(
+        label = 'computer_temp'
+        computer_temp = orm.Computer(
             label=label,
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
             workdir='/tmp/aiida',
         )
-        compute_temp.store()
-        compute_temp.configure(safe_interval=0)
+        computer_temp.store()
+        computer_temp.configure(safe_interval=0)
 
-        c_label = 'code_69'
+        code_label = 'code_temp'
         orm.InstalledCode(
-            label=c_label,
+            label=code_label,
             default_calc_job_plugin='core.arithmetic.add',
-            computer=compute_temp,
+            computer=computer_temp,
             filepath_executable='/remote/abs/path',
         ).store()
-
-        false_user_input = ''  # most common mistake
-        user_input = 'yes'
-
-        # Abort in case of wrong input
-        self.cli_runner(computer_delete, [label], user_input=false_user_input, raises=True)
-        orm.load_code(c_label)
-
-        # Safety check in case of --dry-run
-        options = [label, '--dry-run']
-        self.cli_runner(computer_delete, options)
-        orm.load_code(c_label)
 
         # A successul delete, including all associated nodes
         self.cli_runner(computer_delete, [label], user_input=user_input)
@@ -815,34 +805,43 @@ class TestVerdiComputerCommands:
             orm.Computer.collection.get(label=label)
 
         with pytest.raises(NotExistent):
-            orm.load_code(c_label)
+            orm.load_code(code_label)
 
-    def test_computer_delete(self):
-        """Test if 'verdi computer delete' command works"""
-        from aiida.common.exceptions import NotExistent
-
-        # Setup a computer to delete during the test
-        label = 'computer_for_test_label'
-        orm.Computer(
+    def test_computer_delete_existing_computer(self):
+        """Test if `verdi computer delete` works correctly for an existing computer when it is not deleted"""
+        label = 'computer_temp'
+        computer_temp = orm.Computer(
             label=label,
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
             workdir='/tmp/aiida',
+        )
+        computer_temp.store()
+        computer_temp.configure(safe_interval=0)
+
+        code_label = 'code_temp'
+        orm.InstalledCode(
+            label=code_label,
+            default_calc_job_plugin='core.arithmetic.add',
+            computer=computer_temp,
+            filepath_executable='/remote/abs/path',
         ).store()
-        # and configure it
-        options = ['core.local', label, '--non-interactive', '--safe-interval', '0']
-        self.cli_runner(computer_configure, options)
 
-        # See if the command complains about not getting an invalid computer
-        user_input = 'yes'
-        self.cli_runner(computer_delete, ['computer_that_does_not_exist'], raises=True, user_input=user_input)
+        # Tests that Abort in case of wrong input
+        false_user_input = ''  # most common input that could happen by accident
+        self.cli_runner(computer_delete, [label], user_input=false_user_input, raises=True)
+        orm.load_code(code_label)
 
-        # Delete a computer name successully.
-        self.cli_runner(computer_delete, [label], user_input=user_input)
-        # Check that the computer really was deleted
-        with pytest.raises(NotExistent):
-            orm.Computer.collection.get(label=label)
+        # Safety check in case of --dry-run
+        options = [label, '--dry-run']
+        self.cli_runner(computer_delete, options)
+        orm.load_code(code_label)
+
+    def test_computer_delete_nonexisting_computer(self):
+        """Test if `verdi computer delete` command works correctly for a nonexisting computer"""
+        # See if the command complains about not getting an nonexisting computer
+        self.cli_runner(computer_delete, ['computer_that_does_not_exist'], raises=True)
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)

@@ -669,6 +669,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             if value in value_types:
                 expr = jsonb_typeof(database_entity) == value
             elif value in null_types:
+                # https://www.postgresql.org/docs/current/functions-json.html
+                # json_typeof('null'::json) → null
+                # json_typeof(NULL::json) IS NULL → t
                 tp = jsonb_typeof(database_entity)
                 expr = or_(tp == 'null', tp.is_(None))
         elif operator == 'like':

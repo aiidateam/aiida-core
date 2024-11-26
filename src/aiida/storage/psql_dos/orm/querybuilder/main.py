@@ -625,7 +625,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             elif isinstance(value, dict) or value is None:
                 type_filter = jsonb_typeof(path_in_json) == 'object'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
-            elif isinstance(value, dict):
+            elif isinstance(value, list):
                 type_filter = jsonb_typeof(path_in_json) == 'array'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
             elif isinstance(value, str):
@@ -661,10 +661,16 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif operator == 'of_type':
             # http://www.postgresql.org/docs/9.5/static/functions-json.html
             #  Possible types are object, array, string, number, boolean, and null.
-            valid_types = ('object', 'array', 'string', 'number', 'boolean', 'null')
+            value_types = ('object', 'array', 'string', 'number', 'boolean')
+            null_types = ('null',)
+            valid_types = value_types + null_types
             if value not in valid_types:
                 raise ValueError(f'value {value} for of_type is not among valid types\n{valid_types}')
-            expr = jsonb_typeof(database_entity) == value
+            if value in value_types:
+                expr = jsonb_typeof(database_entity) == value
+            elif value in null_types:
+                tp = jsonb_typeof(database_entity)
+                expr = or_(tp == 'null', tp.is_(None))
         elif operator == 'like':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
             expr = case((type_filter, casted_entity.like(value)), else_=False)

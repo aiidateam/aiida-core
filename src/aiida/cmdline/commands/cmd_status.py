@@ -65,7 +65,7 @@ def verdi_status(print_traceback, no_rmq):
     from aiida.manage.manager import get_manager
 
     exit_code = ExitCode.SUCCESS
-    configure_directory = AiiDAConfigDir.get_configuration_directory()
+    configure_directory = AiiDAConfigDir.get()
 
     print_status(ServiceStatus.UP, 'version', f'AiiDA v{__version__}')
     print_status(ServiceStatus.UP, 'config', configure_directory)

@@ -387,7 +387,7 @@ def empty_config(tmp_path) -> Config:
 
     # Set the configuration directory to a temporary directory. This will create the necessary folders for an empty
     # AiiDA configuration and set relevant global variables in :mod:`aiida.manage.configuration.settings`.
-    AiiDAConfigDir.set_configuration_directory(tmp_path)
+    AiiDAConfigDir.set(tmp_path)
 
     # The constructor of `Config` called by `load_config` will print warning messages about migrating it
     with Capturing():
@@ -405,7 +405,7 @@ def empty_config(tmp_path) -> Config:
         # like the :class:`aiida.engine.daemon.client.DaemonClient` will not function properly after a test that uses
         # this fixture because the paths of the daemon files would still point to the path of the temporary config
         # folder created by this fixture.
-        AiiDAConfigDir.set_configuration_directory(pathlib.Path(current_config_path))
+        AiiDAConfigDir.set(pathlib.Path(current_config_path))
 
         # Reload the original profile
         manager.load_profile(current_profile_name)

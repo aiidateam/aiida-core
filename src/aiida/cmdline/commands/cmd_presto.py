@@ -92,7 +92,7 @@ def detect_postgres_config(
     except Exception as exception:
         raise ConnectionError(f'Unable to automatically create the PostgreSQL user and database: {exception}')
 
-    aiida_config_folder = AiiDAConfigDir.get_configuration_directory()
+    aiida_config_folder = AiiDAConfigDir.get()
 
     return {
         'database_hostname': postgres_hostname,

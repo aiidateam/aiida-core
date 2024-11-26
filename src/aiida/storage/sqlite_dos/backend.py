@@ -204,7 +204,7 @@ class SqliteDosStorage(PsqlDosBackend):
             title='Directory of the backend',
             description='Filepath of the directory in which to store data for this backend.',
             default_factory=lambda: str(
-                AiiDAConfigDir.get_configuration_directory() / 'repository' / f'sqlite_dos_{uuid4().hex}'
+                AiiDAConfigDir.get() / 'repository' / f'sqlite_dos_{uuid4().hex}'
             ),
         )
 

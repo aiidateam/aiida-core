@@ -171,7 +171,7 @@ def profile_list():
         # they can at least verify that it is correctly set.
         from aiida.manage.configuration.settings import AiiDAConfigDir
 
-        echo.echo_report(f'configuration folder: {AiiDAConfigDir.get_configuration_directory()}')
+        echo.echo_report(f'configuration folder: {AiiDAConfigDir.get()}')
         echo.echo_critical(str(exception))
     else:
         echo.echo_report(f'configuration folder: {config.dirpath}')

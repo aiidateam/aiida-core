@@ -43,7 +43,7 @@ def cache_aiida_path_variable():
 
     # Make sure to reset the global variables set by the following call that are dependent on the environment variable
     # ``DEFAULT_AIIDA_PATH_VARIABLE``. It may have been changed by a test using this fixture.
-    AiiDAConfigDir.set_configuration_directory()
+    AiiDAConfigDir.set()
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
@@ -66,11 +66,11 @@ def test_environment_variable_not_set(chdir_tmp_path, monkeypatch):
         del os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE]
     except KeyError:
         pass
-    AiiDAConfigDir.set_configuration_directory()
+    AiiDAConfigDir.set()
 
     config_folder = chdir_tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert os.path.isdir(config_folder)
-    assert AiiDAConfigDir.get_configuration_directory() == pathlib.Path(config_folder)
+    assert AiiDAConfigDir.get() == pathlib.Path(config_folder)
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
@@ -79,12 +79,12 @@ def test_environment_variable_set_single_path_without_config_folder(tmp_path):
     """If `AIIDA_PATH` is set but does not contain a configuration folder, it should be created."""
     # Set the environment variable and call configuration initialization
     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(tmp_path)
-    AiiDAConfigDir.set_configuration_directory()
+    AiiDAConfigDir.set()
 
     # This should have created the configuration directory in the path
     config_folder = tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert config_folder.is_dir()
-    assert AiiDAConfigDir.get_configuration_directory() == config_folder
+    assert AiiDAConfigDir.get() == config_folder
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
@@ -95,12 +95,12 @@ def test_environment_variable_set_single_path_with_config_folder(tmp_path):
 
     # Set the environment variable and call configuration initialization
     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(tmp_path)
-    AiiDAConfigDir.set_configuration_directory()
+    AiiDAConfigDir.set()
 
     # This should have created the configuration directory in the path
     config_folder = tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert config_folder.is_dir()
-    assert AiiDAConfigDir.get_configuration_directory() == config_folder
+    assert AiiDAConfigDir.get() == config_folder
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
@@ -115,12 +115,12 @@ def test_environment_variable_path_including_config_folder(tmp_path):
     """
     # Set the environment variable with a path that include base folder name and call config initialization
     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(tmp_path / settings.DEFAULT_CONFIG_DIR_NAME)
-    AiiDAConfigDir.set_configuration_directory()
+    AiiDAConfigDir.set()
 
     # This should have created the configuration directory in the pathpath
     config_folder = tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert config_folder.is_dir()
-    assert AiiDAConfigDir.get_configuration_directory() == config_folder
+    assert AiiDAConfigDir.get() == config_folder
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
@@ -138,12 +138,12 @@ def test_environment_variable_set_multiple_path(tmp_path):
     # Set the environment variable to contain three paths and call configuration initialization
     env_variable = f'{directory_a}:{directory_b}:{directory_c}'
     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = env_variable
-    AiiDAConfigDir.set_configuration_directory()
+    AiiDAConfigDir.set()
 
     # This should have created the configuration directory in the last path
     config_folder = directory_c / settings.DEFAULT_CONFIG_DIR_NAME
     assert os.path.isdir(config_folder)
-    assert AiiDAConfigDir.get_configuration_directory() == config_folder
+    assert AiiDAConfigDir.get() == config_folder
 
 
 def compare_config_in_memory_and_on_disk(config, filepath):

@@ -70,7 +70,7 @@ def get_config_path():
 
     from .settings import DEFAULT_CONFIG_FILE_NAME
 
-    return os.path.join(AiiDAConfigDir.get_configuration_directory(), DEFAULT_CONFIG_FILE_NAME)
+    return os.path.join(AiiDAConfigDir.get(), DEFAULT_CONFIG_FILE_NAME)
 
 
 def load_config(create=False) -> 'Config':

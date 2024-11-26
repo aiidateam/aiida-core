@@ -14,6 +14,7 @@ import logging
 import os
 from pathlib import Path
 
+from aiida.common.exceptions import NotExistent
 from aiida.orm import AuthInfo
 from aiida.orm.fields import add_field
 from aiida.transports import Transport
@@ -212,13 +213,23 @@ class RemoteData(Data):
         """
 
         from aiida.common.utils import format_directory_size
+        from aiida.manage import get_manager
 
         if relpath is None:
             relpath = Path('.')
 
-        authinfo = self.get_authinfo()
+        print('self: ', self, type(self))
+        # raise SystemExit
+        try:
+            authinfo = self.get_authinfo()
+        except NotExistent:
+            manager = get_manager()
+            # authinfo =
+        print(authinfo)
         full_path = Path(self.get_remote_path()) / relpath
+        print(full_path)
         computer_label = self.computer.label if self.computer is not None else ''
+        print(computer_label)
 
         with authinfo.get_transport() as transport:
             if not transport.path_exists(str(full_path)):

@@ -13,7 +13,7 @@ import stat
 import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.params import arguments, types
+from aiida.cmdline.params import arguments, types, options
 from aiida.cmdline.utils import echo
 
 
@@ -87,3 +87,11 @@ def remote_show(datum):
     """Show information for a RemoteData object."""
     echo.echo(f'- Remote computer name: {datum.computer.label}')
     echo.echo(f'- Remote folder full path: {datum.get_remote_path()}')
+
+
+@remote.command('size')
+@arguments.NODE()
+def remote_size(node):
+    """Print the total size of a RemoteData object."""
+    print(node)
+    total_size = node.get_size_on_disk()

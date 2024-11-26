@@ -67,7 +67,7 @@ jobs:
       uses: ./.github/actions/install-aiida-core
 
     - name: Run sub-set of test suite
-      run: pytest -sv -m requires_rmq --db-backend=sqlite tests/
+      run: pytest -s -m requires_rmq --db-backend=sqlite tests/
 
   publish:
 

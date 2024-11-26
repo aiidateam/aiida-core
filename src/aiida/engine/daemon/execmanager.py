@@ -20,7 +20,7 @@ from collections.abc import Mapping
 from logging import LoggerAdapter
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import TYPE_CHECKING, Any, Optional, Sequence, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 from typing import Mapping as MappingType
 
 from aiida.common import AIIDA_LOGGER, exceptions
@@ -35,6 +35,7 @@ from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
 
 if TYPE_CHECKING:
+    from aiida.orm.nodes.process.calculation.calcjob import RetrievedList
     from aiida.transports import Transport
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
@@ -609,7 +610,7 @@ def retrieve_files_from_list(
     calculation: CalcJobNode,
     transport: Transport,
     folder: str,
-    retrieve_list: Sequence[str | tuple[str, str, int | None]] | None,
+    retrieve_list: RetrievedList,
 ) -> None:
     """Retrieve all the files in the retrieve_list from the remote into the
     local folder instance through the transport. The entries in the retrieve_list

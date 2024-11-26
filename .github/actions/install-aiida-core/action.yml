@@ -33,7 +33,7 @@ runs:
 
   - name: Install dependencies from uv lock
     if: ${{ inputs.from-requirements == 'true' }}
-    run: uv sync --locked
+    run: uv sync --locked --extra pre-commit
     shell: bash
 
   - name: Install aiida-core

@@ -125,7 +125,6 @@ repos:
         src/aiida/engine/processes/ports.py|
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
-        src/aiida/manage/configuration/profile.py|
         src/aiida/manage/external/rmq/launcher.py|
         src/aiida/manage/tests/main.py|
         src/aiida/manage/tests/pytest_fixtures.py|

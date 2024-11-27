@@ -61,7 +61,7 @@ class AsyncSshTransport(AsyncTransport):
     # note, I intentionally wanted to keep connection parameters as simple as possible.
     _valid_auth_options = [
         (
-            'machine',
+            'machine_',
             {
                 'type': str,
                 'prompt': 'machine as in `ssh machine` command',
@@ -100,7 +100,7 @@ class AsyncSshTransport(AsyncTransport):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.machine = kwargs.pop('machine')
+        self.machine = kwargs.pop('machine_')
         self.script_before = kwargs.pop('script_before', 'None')
         self.script_during = kwargs.pop('script_during', 'None')
 

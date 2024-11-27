@@ -783,7 +783,7 @@ class Config:
             os.rename(handle.name, self.filepath)
 
     def filepaths(self, profile: Profile):
-        """Return the filepaths used by this profile.
+        """Return the filepaths used by a profile.
 
         :return: a dictionary of filepaths
         """

@@ -59,9 +59,8 @@ class AiiDAConfigDir:
 
 @final
 class AiiDAConfigPathResolver:
-    """For resolving configuration directory, daemon dir,
-    daemon log dir and access control dir.
-    The locations are all trivially derived from the config location,
+    """For resolving configuration directory, daemon dir, daemon log dir and access control dir.
+    The locations are all trivially derived from the config directory.
     """
 
     def __init__(self, config_folder: pathlib.Path | None = None) -> None:
@@ -87,9 +86,9 @@ class AiiDAConfigPathResolver:
 def _create_instance_directories(aiida_config_folder: pathlib.Path | None) -> None:
     """Create the base directories required for a new AiiDA instance.
 
-    This will create the base AiiDA directory defined by the ``aiida_config_folder`` if not provided
-    ``_glb_aiida_config_folder`` will be the default config folder, unless it already exists.
-    Subsequently, it will create the daemon directory within it and the daemon log directory.
+    This will create the base AiiDA directory in ``aiida_config_folder``.
+    If it not provided, the directory returned from ``AiiDAConfigDir.get()`` will be the default config folder,
+    unless it already exists. Subsequently, it will create the daemon directory within it and the daemon log directory.
     """
     from aiida.common import ConfigurationError
 

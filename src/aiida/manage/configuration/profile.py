@@ -238,7 +238,7 @@ class Profile:
         from aiida.common.warnings import warn_deprecation
         from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
-        warn_deprecation('This method has been deprecated', version=3)
+        warn_deprecation('This method has been deprecated, use `filepaths` method from `Config` obj instead', version=3)
 
         daemon_dir = AiiDAConfigPathResolver().daemon_dir
         daemon_log_dir = AiiDAConfigPathResolver().daemon_log_dir

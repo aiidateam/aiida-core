@@ -148,6 +148,23 @@
 
          To the architecture guide
 
+   .. grid-item-card:: :fa:`sitemap;mr-1` Common plugins
+      :text-align: center
+      :shadow: md
+
+      Commonly used general AiiDA plugins to extend core functionality
+
+      +++++++++++++++++++++++++++++++++++++++++++++
+
+      .. button-ref:: internals/index
+         :ref-type: doc
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
+
+         To the plugin overview
+
 ------------------------------
 
 .. admonition:: Need support?

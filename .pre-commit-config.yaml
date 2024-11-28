@@ -2,7 +2,7 @@ ci:
   autofix_prs: true
   autoupdate_commit_msg: 'Devops: Update pre-commit dependencies'
   autoupdate_schedule: quarterly
-  skip: [mypy, dm-generate-all, dependencies, verdi-autodocs]
+  skip: [mypy, check-uv-lock, generate-conda-environment, validate-conda-environment, verdi-autodocs]
 
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -205,7 +205,7 @@ repos:
         pyproject.toml|
       )$
 
-  - id: generate-environment-yml
+  - id: generate-conda-environment
     name: Update conda environment file
     entry: python ./utils/dependency_management.py generate-environment-yml
     language: system
@@ -216,7 +216,7 @@ repos:
         utils/dependency_management.py
       )$
 
-  - id: dependencies
+  - id: validate-conda-environment
     name: Validate environment.yml
     entry: python ./utils/dependency_management.py validate-environment-yml
     language: system

@@ -20,8 +20,6 @@ jobs:
 
   tests:
 
-    needs: [check-requirements]
-
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -88,7 +86,6 @@ jobs:
 
   tests-presto:
 
-    needs: [check-requirements]
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -114,7 +111,6 @@ jobs:
 
   verdi:
 
-    needs: [check-requirements]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

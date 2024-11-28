@@ -274,7 +274,9 @@ def export(code, output_file, overwrite, sort):
     except Exception as exception:
         echo.echo_critical(f'Error in the `data_export` function: {exception}')
 
-    echo.echo_success(f'Code<{code.pk}> {code.label} exported to file `{output_file}`.')
+   
+    echo.echo_success(f"Success: Code '{code.label}' (ID: {code.pk}) exported to file '{output_file}'.")
+
 
 
 @verdi_code.command()

@@ -30,18 +30,24 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.9
+    - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
         python-version: '3.9'
 
-    - name: Install utils/ dependencies
-      run: pip install -r utils/requirements.txt
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: 0.5.5
 
-    - name: Validate
-      run: |
-        python ./utils/dependency_management.py check-requirements
-        python ./utils/dependency_management.py validate-all
+    - name: Install utils/ dependencies
+      run: uv pip install --system -r utils/requirements.txt
+
+    - name: Validate uv lockfile
+      run: uv lock --locked
+
+    - name: Validate conda environment file
+      run: python ./utils/dependency_management.py validate-environment-yml
 
   resolve-pip-dependencies:
     # Check whether the environments defined in the requirements/* files are

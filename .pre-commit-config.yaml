@@ -194,9 +194,9 @@ repos:
         src/aiida/workflows/arithmetic/multiply_add.py|
       )$
 
-  - id: dm-generate-all
-    name: Update all requirements files
-    entry: python ./utils/dependency_management.py generate-all
+  - id: generate-environment-yml
+    name: Update conda environment file
+    entry: python ./utils/dependency_management.py generate-environment-yml
     language: system
     pass_filenames: false
     files: >-

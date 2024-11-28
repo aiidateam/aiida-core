@@ -31,6 +31,7 @@ runs:
       version: 0.5.5
 
   - name: Install dependencies from uv lock
+    # NOTE: We're also asserting that the lockfile is up to date
     if: ${{ inputs.from-lock == 'true' }}
     run: uv sync --locked --extra pre-commit
     shell: bash

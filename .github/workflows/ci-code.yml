@@ -18,37 +18,6 @@ env:
 
 jobs:
 
-  check-requirements:
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-
-    - name: Install utils/ dependencies
-      run: pip install -r utils/requirements.txt
-
-    # TODO: Change this to make sure that the lock is up-to-date
-    - name: Check requirements files
-      id: check_reqs
-      run: python ./utils/dependency_management.py check-requirements DEFAULT
-
-    - name: Create commit comment
-      if: failure() && steps.check_reqs.outputs.error
-      uses: peter-evans/commit-comment@v3
-      with:
-        path: pyproject.toml
-        body: |
-          ${{ steps.check_reqs.outputs.error }}
-
-          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information on dependency management.
-
   tests:
 
     needs: [check-requirements]

@@ -194,6 +194,17 @@ repos:
         src/aiida/workflows/arithmetic/multiply_add.py|
       )$
 
+  - id: check-uv-lock
+    name: Check uv lockfile up to date
+    # NOTE: This will not automatically update the lockfile
+    entry: uv lock --locked
+    language: system
+    pass_filenames: false
+    files: >-
+      (?x)^(
+        pyproject.toml|
+      )$
+
   - id: generate-environment-yml
     name: Update conda environment file
     entry: python ./utils/dependency_management.py generate-environment-yml

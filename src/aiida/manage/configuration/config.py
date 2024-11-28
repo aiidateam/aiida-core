@@ -21,6 +21,7 @@ import io
 import json
 import os
 import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import (
@@ -780,3 +781,32 @@ class Config:
 
             handle.flush()
             os.rename(handle.name, self.filepath)
+
+    def filepaths(self, profile: Profile):
+        """Return the filepaths used by a profile.
+
+        :return: a dictionary of filepaths
+        """
+        from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+
+        _config_path_resolver: AiiDAConfigPathResolver = AiiDAConfigPathResolver(Path(self.dirpath))
+        daemon_dir = _config_path_resolver.daemon_dir
+        daemon_log_dir = _config_path_resolver.daemon_log_dir
+
+        return {
+            'circus': {
+                'log': str(daemon_log_dir / f'circus-{profile.name}.log'),
+                'pid': str(daemon_dir / f'circus-{profile.name}.pid'),
+                'port': str(daemon_dir / f'circus-{profile.name}.port'),
+                'socket': {
+                    'file': str(daemon_dir / f'circus-{profile.name}.sockets'),
+                    'controller': 'circus.c.sock',
+                    'pubsub': 'circus.p.sock',
+                    'stats': 'circus.s.sock',
+                },
+            },
+            'daemon': {
+                'log': str(daemon_log_dir / f'aiida-{profile.name}.log'),
+                'pid': str(daemon_dir / f'aiida-{profile.name}.pid'),
+            },
+        }

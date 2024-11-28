@@ -4,8 +4,6 @@
 Common plugins to AiiDA core
 ============================
 
-.. abc
-
 .. aiida-shell
 .. aiida-workgraph
 

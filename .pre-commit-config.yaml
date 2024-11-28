@@ -90,6 +90,7 @@ repos:
         .docker/.*|
         docs/.*|
         utils/.*|
+        tests/.*|
 
         src/aiida/calculations/arithmetic/add.py|
         src/aiida/calculations/diff_tutorial/calculations.py|
@@ -124,7 +125,6 @@ repos:
         src/aiida/engine/processes/ports.py|
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
-        src/aiida/manage/configuration/profile.py|
         src/aiida/manage/external/rmq/launcher.py|
         src/aiida/manage/tests/main.py|
         src/aiida/manage/tests/pytest_fixtures.py|
@@ -192,17 +192,6 @@ repos:
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|
         src/aiida/workflows/arithmetic/multiply_add.py|
-
-        tests/conftest.py|
-        tests/repository/conftest.py|
-        tests/repository/test_repository.py|
-        tests/sphinxext/sources/workchain/conf.py|
-        tests/sphinxext/sources/workchain_broken/conf.py|
-        tests/storage/psql_dos/migrations/conftest.py|
-        tests/storage/psql_dos/migrations/django_branch/test_0026_0027_traj_data.py|
-        tests/test_calculation_node.py|
-        tests/test_nodes.py|
-
       )$
 
   - id: dm-generate-all

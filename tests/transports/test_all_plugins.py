@@ -51,11 +51,12 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
     elif request.param == 'core.ssh_auto':
         kwargs = {'machine': 'localhost'}
-        # The transport config is store in a indepenednt tmp path to not mix up with the files under operating.
+        # The transport config is store in a independent temporary path per test to not mix up
+        # with the files under operating.
         filepath_config = tmp_path_factory.mktemp('transport') / 'config'
         monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
-        if not filepath_config.exists():
-            filepath_config.write_text('Host localhost')
+
+        filepath_config.write_text('Host localhost')
     else:
         kwargs = {}
 
@@ -496,9 +497,17 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
         # TODO : get doesn't retrieve empty files.
         # Is it what we want?
         transport.get(remote_file_abs_path, retrieved_file_abs_path)
-        # overwrite retrieved_file_name
+        assert Path(retrieved_file_abs_path).exists()
+        t1 = Path(retrieved_file_abs_path).stat().st_mtime_ns
+
+        # overwrite retrieved_file_name in 0.01 s
+        time.sleep(0.01)
         transport.getfile(remote_file_abs_path, retrieved_file_abs_path)
-        assert 'file_retrieved.txt' in [p.name for p in (local_dir / directory).iterdir()]
+        assert Path(retrieved_file_abs_path).exists()
+        t2 = Path(retrieved_file_abs_path).stat().st_mtime_ns
+
+        # Check st_mtime_ns to sure it is override
+        assert t2 > t1
 
 
 def test_put_and_get_tree(custom_transport, tmp_path_remote, tmp_path_local):

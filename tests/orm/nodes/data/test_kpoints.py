@@ -10,15 +10,20 @@
 
 import numpy as np
 import pytest
-from aiida.orm import KpointsData, load_node, StructureData as LegacyStructureData
+from aiida.orm import KpointsData, load_node
+from aiida.orm import StructureData as LegacyStructureData
 from aiida.orm.nodes.data.structure import has_atomistic
 
 if not has_atomistic():
-    structures_classes = [LegacyStructureData,]
+    structures_classes = [
+        LegacyStructureData,
+    ]
 else:
     from aiida_atomistic import StructureData
+
     structures_classes = [LegacyStructureData, StructureData]
-    
+
+
 @pytest.mark.parametrize('structure_class', structures_classes)
 class TestKpoints:
     """Test for the `Kpointsdata` class."""

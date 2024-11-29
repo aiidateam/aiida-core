@@ -590,8 +590,17 @@ def process_repair(manager, broker, dry_run):
     '--flat',
     is_flag=True,
     default=False,
+    show_default=True,
     help='Dump files in a flat directory for every step of the workflow.',
 )
+@click.option(
+    '--dump-unsealed',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Also allow the dumping of unsealed process nodes.',
+)
+@options.INCREMENTAL()
 def process_dump(
     process,
     path,
@@ -601,6 +610,8 @@ def process_dump(
     include_attributes,
     include_extras,
     flat,
+    dump_unsealed,
+    incremental,
 ) -> None:
     """Dump process input and output files to disk.
 
@@ -618,6 +629,7 @@ def process_dump(
     node data for further inspection.
     """
 
+    from aiida.tools.archive.exceptions import ExportValidationError
     from aiida.tools.dumping.processes import ProcessDumper
 
     process_dumper = ProcessDumper(
@@ -627,6 +639,8 @@ def process_dump(
         include_extras=include_extras,
         overwrite=overwrite,
         flat=flat,
+        dump_unsealed=dump_unsealed,
+        incremental=incremental,
     )
 
     try:
@@ -635,6 +649,8 @@ def process_dump(
         echo.echo_critical(
             'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
         )
+    except ExportValidationError as e:
+        echo.echo_critical(f'{e!s}')
     except Exception as e:
         echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')
 

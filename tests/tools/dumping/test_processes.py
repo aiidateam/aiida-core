@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import io
+import shutil
 from pathlib import Path
 
 import pytest
@@ -114,11 +115,19 @@ def generate_workchain_node_io():
 # Only test top-level actions, like path and README creation
 # Other things tested via `_dump_workflow` and `_dump_calculation`
 def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path):
+    from aiida.tools.archive.exceptions import ExportValidationError
+
     dump_parent_path = tmp_path / 'wc-dump-test-io'
     process_dumper = ProcessDumper()
     # Don't attach outputs, as it would require storing the calculation_node and then it cannot be used in the workchain
     cj_nodes = [generate_calculation_node_io(attach_outputs=False), generate_calculation_node_io(attach_outputs=False)]
     wc_node = generate_workchain_node_io(cj_nodes=cj_nodes)
+
+    # Raises if ProcessNode not sealed
+    with pytest.raises(ExportValidationError):
+        return_path = process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
+
+    wc_node.seal()
     return_path = process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
 
     assert dump_parent_path.is_dir()
@@ -266,14 +275,31 @@ def test_dump_calculation_flat(tmp_path, generate_calculation_node_io):
 
 
 # Here, in principle, test only non-default arguments, as defaults tested above
-# @pytest.mark.parametrize('overwrite', (True, False))
-def test_dump_calculation_overwrite(tmp_path, generate_calculation_node_io):
+def test_dump_calculation_overwr_incr(tmp_path, generate_calculation_node_io):
+    """Tests the ProcessDumper for the overwrite and incremental option."""
     dump_parent_path = tmp_path / 'cj-dump-test-overwrite'
-    process_dumper = ProcessDumper(overwrite=False)
+    process_dumper = ProcessDumper(overwrite=False, incremental=False)
     calculation_node = generate_calculation_node_io()
-    process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
+    calculation_node.seal()
+    # Create safeguard file to mock existing dump directory
+    dump_parent_path.mkdir()
+    # we create safeguard file so the dumping works
+    (dump_parent_path / '.aiida_node_metadata.yaml').touch()
     with pytest.raises(FileExistsError):
         process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
+    # With overwrite option true no error is raised and the dumping can run through.
+    process_dumper = ProcessDumper(overwrite=True, incremental=False)
+    process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
+    assert (dump_parent_path / inputs_relpath / filename).is_file()
+
+    shutil.rmtree(dump_parent_path)
+
+    # Incremental also does work
+    dump_parent_path.mkdir()
+    (dump_parent_path / '.aiida_node_metadata.yaml').touch()
+    process_dumper = ProcessDumper(overwrite=False, incremental=True)
+    process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
+    assert (dump_parent_path / inputs_relpath / filename).is_file()
 
 
 # With both inputs and outputs being dumped is the standard test case above, so only test without inputs here
@@ -303,43 +329,65 @@ def test_dump_calculation_add(tmp_path, generate_calculation_node_add):
 
 # Tests for helper methods
 @pytest.mark.usefixtures('chdir_tmp_path')
-def test_validate_make_dump_path(tmp_path):
-    safeguard_file = node_metadata_file
+def test_prepare_dump_path(tmp_path):
+    from aiida.tools.dumping.utils import prepare_dump_path
 
-    # Path must be provided
-    process_dumper = ProcessDumper(overwrite=False)
-    with pytest.raises(TypeError):
-        process_dumper._validate_make_dump_path()
+    test_dir = tmp_path / Path('test-dir')
+    test_file = test_dir / filename
+    safeguard_file = node_metadata_file
+    safeguard_file_path = test_dir / safeguard_file
+
+    # Cannot set both overwrite and incremental to True
+    with pytest.raises(ValueError):
+        prepare_dump_path(path_to_validate=test_dir, overwrite=True, incremental=True)
+
+    # Check that fails if file with same name as output dir
+    test_dir.touch()
+    with pytest.raises(FileExistsError):
+        prepare_dump_path(path_to_validate=test_dir)
+    test_dir.unlink()
 
     # Check if path created if non-existent
-    test_dir = tmp_path / Path('test-dir')
-    test_dir.mkdir()
-    output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
-    assert output_path == test_dir
+    prepare_dump_path(path_to_validate=test_dir)
+    assert test_dir.exists()
+    assert safeguard_file_path.is_file()
 
-    # Empty path is fine -> No error and full path returned
-    output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
-    assert output_path == test_dir
+    # Directory exists, but empty -> is fine
+    safeguard_file_path.unlink()
+    prepare_dump_path(path_to_validate=test_dir)
+    assert test_dir.exists()
+    assert safeguard_file_path.is_file()
 
     # Fails if directory not empty, safeguard file existent, and overwrite set to False
-    (test_dir / filename).touch()
-    (test_dir / safeguard_file).touch()
+    test_file.touch()
+    safeguard_file_path.touch()
     with pytest.raises(FileExistsError):
-        output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
-    assert (test_dir / filename).is_file()
+        prepare_dump_path(path_to_validate=test_dir, overwrite=False, incremental=False)
 
-    # Works if directory not empty, but overwrite=True and safeguard_file (e.g. `.aiida_node_metadata.yaml`) contained
-    process_dumper = ProcessDumper(overwrite=True)
-    output_path = process_dumper._validate_make_dump_path(validate_path=test_dir, safeguard_file=safeguard_file)
-    assert output_path == test_dir
-    assert not (test_dir / safeguard_file).is_file()
+    # Fails if directory not empty, overwrite set to True, but safeguard_file not found (for safety reasons)
+    safeguard_file_path.unlink()
+    test_file.touch()
+    with pytest.raises(FileNotFoundError):
+        prepare_dump_path(path_to_validate=test_dir, overwrite=True, incremental=False)
 
-    # Fails if directory not empty and overwrite set to True, but safeguard_file not found (for safety reasons)
-    # Could define new Exception for this...
-    (test_dir / filename).touch()
-    with pytest.raises(Exception):
-        output_path = process_dumper._validate_make_dump_path(validate_path=test_dir)
-    assert (test_dir / filename).is_file()
+    # Works if directory not empty, overwrite set to True and safeguard_file contained
+    # -> After function call, test_file is deleted, and safeguard_file again created
+    safeguard_file_path.touch()
+    prepare_dump_path(
+        path_to_validate=test_dir,
+        safeguard_file=safeguard_file,
+        overwrite=True,
+        incremental=False,
+    )
+    assert not test_file.is_file()
+    assert safeguard_file_path.is_file()
+
+    # Works if directory not empty, but incremental=True and safeguard_file (e.g. `.aiida_node_metadata.yaml`) contained
+    # -> After function call, test file and safeguard_file still there
+    test_file.touch()
+    prepare_dump_path(path_to_validate=test_dir, safeguard_file=safeguard_file, incremental=True)
+    assert safeguard_file_path.is_file()
+    assert test_file.is_file()
 
 
 def test_generate_default_dump_path(

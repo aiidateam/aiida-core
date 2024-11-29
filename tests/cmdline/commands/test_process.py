@@ -367,13 +367,13 @@ class TestVerdiProcess:
         assert result.exception is None, result.output
         assert 'Success:' in result.output
 
-        # Trying to run the dumping again in the same path but without overwrite=True should raise exception
-        options = [str(node.pk), '-p', str(test_path)]
+        # Trying to run the dumping again in the same path but with overwrite=False should raise exception
+        options = [str(node.pk), '-p', str(test_path), '--no-incremental']
         result = run_cli_command(cmd_process.process_dump, options, raises=True)
         assert result.exit_code is ExitCode.CRITICAL
 
         # Works fine when using overwrite=True
-        options = [str(node.pk), '-p', str(test_path), '-o']
+        options = [str(node.pk), '-p', str(test_path), '-o', '--no-incremental']
         result = run_cli_command(cmd_process.process_dump, options)
         assert result.exception is None, result.output
         assert 'Success:' in result.output

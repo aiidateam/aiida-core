@@ -581,7 +581,11 @@ class SshTransport(Transport):
         return f"{'OPEN' if self._is_open else 'CLOSED'} [{conn_info}]"
 
     def chdir(self, path):
-        """Change directory of the SFTP session. Emulated internally by paramiko.
+        """
+        PLEASE DON'T USE `chdir()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
+        `chdir()` is DEPRECATED and will be removed in the next major version.
+
+        Change directory of the SFTP session. Emulated internally by paramiko.
 
         Differently from paramiko, if you pass None to chdir, nothing
         happens and the cwd is unchanged.
@@ -646,7 +650,11 @@ class SshTransport(Transport):
         return self.sftp.lstat(path)
 
     def getcwd(self):
-        """Return the current working directory for this SFTP session, as
+        """
+        PLEASE DON'T USE `getcwd()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
+        `getcwd()` is DEPRECATED and will be removed in the next major version.
+
+        Return the current working directory for this SFTP session, as
         emulated by paramiko. If no directory has been set with chdir,
         this method will return None. But in __enter__ this is set explicitly,
         so this should never happen within this class.
@@ -1218,17 +1226,18 @@ class SshTransport(Transport):
         :param pattern: returns the list of files matching pattern.
                              Unix only. (Use to emulate ``ls *`` for example)
         """
-        if not pattern:
-            return self.sftp.listdir(path)
         if path.startswith('/'):
-            base_dir = path
+            abs_dir = path
         else:
-            base_dir = os.path.join(self.getcwd(), path)
+            abs_dir = os.path.join(self.getcwd(), path)
 
-        filtered_list = self.glob(os.path.join(base_dir, pattern))
-        if not base_dir.endswith('/'):
-            base_dir += '/'
-        return [re.sub(base_dir, '', i) for i in filtered_list]
+        if not pattern:
+            return self.sftp.listdir(abs_dir)
+
+        filtered_list = self.glob(os.path.join(abs_dir, pattern))
+        if not abs_dir.endswith('/'):
+            abs_dir += '/'
+        return [re.sub(abs_dir, '', i) for i in filtered_list]
 
     def remove(self, path):
         """Remove a single file at 'path'"""
@@ -1276,11 +1285,9 @@ class SshTransport(Transport):
                 return False
             raise  # Typically if I don't have permissions (errno=13)
 
-    def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1):
+    def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1, workdir=None):
         """Executes the specified command in bash login shell.
 
-        Before the command is executed, changes directory to the current
-        working directory as returned by self.getcwd().
 
         For executing commands and waiting for them to finish, use
         exec_command_wait.
@@ -1291,6 +1298,10 @@ class SshTransport(Transport):
                 stderr on the same buffer (i.e., stdout).
                 Note: If combine_stderr is True, stderr will always be empty.
         :param bufsize: same meaning of the one used by paramiko.
+        :param workdir: (optional, default=None) if set, the command will be executed
+                in the specified working directory.
+                if None, the command will be executed in the current working directory,
+                from DEPRECATED `self.getcwd()`, if that has a value.
 
         :return: a tuple with (stdin, stdout, stderr, channel),
             where stdin, stdout and stderr behave as file-like objects,
@@ -1300,8 +1311,10 @@ class SshTransport(Transport):
         channel = self.sshclient.get_transport().open_session()
         channel.set_combine_stderr(combine_stderr)
 
-        if self.getcwd() is not None:
-            escaped_folder = escape_for_bash(self.getcwd())
+        if workdir is not None:
+            command_to_execute = f'cd {workdir} &&  ( {command} )'
+        elif (cwd := self.getcwd()) is not None:
+            escaped_folder = escape_for_bash(cwd)
             command_to_execute = f'cd {escaped_folder} && ( {command} )'
         else:
             command_to_execute = command
@@ -1320,7 +1333,9 @@ class SshTransport(Transport):
 
         return stdin, stdout, stderr, channel
 
-    def exec_command_wait_bytes(self, command, stdin=None, combine_stderr=False, bufsize=-1, timeout=0.01):
+    def exec_command_wait_bytes(
+        self, command, stdin=None, combine_stderr=False, bufsize=-1, timeout=0.01, workdir=None
+    ):
         """Executes the specified command and waits for it to finish.
 
         :param command: the command to execute
@@ -1330,6 +1345,8 @@ class SshTransport(Transport):
                    self._exec_command_internal()
         :param bufsize: same meaning of paramiko.
         :param timeout: ssh channel timeout for stdout, stderr.
+        :param workdir: (optional, default=None) if set, the command will be executed
+                in the specified working directory.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are both bytes and the return_value is an int.
@@ -1337,7 +1354,9 @@ class SshTransport(Transport):
         import socket
         import time
 
-        ssh_stdin, stdout, stderr, channel = self._exec_command_internal(command, combine_stderr, bufsize=bufsize)
+        ssh_stdin, stdout, stderr, channel = self._exec_command_internal(
+            command, combine_stderr, bufsize=bufsize, workdir=workdir
+        )
 
         if stdin is not None:
             if isinstance(stdin, str):

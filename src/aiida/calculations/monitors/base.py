@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+from pathlib import Path
 
 from aiida.orm import CalcJobNode
 from aiida.transports import Transport
@@ -19,7 +20,11 @@ def always_kill(node: CalcJobNode, transport: Transport) -> str | None:
     :returns: A string if the job should be killed, `None` otherwise.
     """
     with tempfile.NamedTemporaryFile('w+') as handle:
-        transport.getfile('_aiidasubmit.sh', handle.name)
+        cwd = node.get_remote_workdir()
+        if cwd is None:
+            raise ValueError('The remote work directory cannot be None')
+
+        transport.getfile(str(Path(cwd).joinpath('_aiidasubmit.sh')), handle.name)
         handle.seek(0)
         output = handle.read()
 

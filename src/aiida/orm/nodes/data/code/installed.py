@@ -137,6 +137,13 @@ class InstalledCode(Code):
             with override_log_level():  # Temporarily suppress noisy logging
                 with self.computer.get_transport() as transport:
                     file_exists = transport.isfile(str(self.filepath_executable))
+                    if file_exists:
+                        mode = transport.get_mode(str(self.filepath_executable))
+                        # `format(mode, 'b')` with default permissions
+                        # gives 110110100, representing rw-rw-r--
+                        # Check on index 2 if user has execute
+                        user_has_execute = format(mode, 'b')[2] == '1'
+
         except Exception as exception:
             raise exceptions.ValidationError(
                 'Could not connect to the configured computer to determine whether the specified executable exists.'
@@ -146,6 +153,13 @@ class InstalledCode(Code):
             raise exceptions.ValidationError(
                 f'The provided remote absolute path `{self.filepath_executable}` does not exist on the computer.'
             )
+
+        if not user_has_execute:
+            execute_msg = (
+                f'The file at the remote absolute path `{self.filepath_executable}` exists, '
+                'but might not actually be executable. Check the permissions.'
+            )
+            raise exceptions.ValidationError(execute_msg)
 
     def can_run_on_computer(self, computer: Computer) -> bool:
         """Return whether the code can run on a given computer.

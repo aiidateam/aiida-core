@@ -366,14 +366,14 @@ class SlurmScheduler(BashCliScheduler):
                 lines.append(f'#SBATCH --time={days:d}-{hours:02d}:{minutes:02d}:{seconds:02d}')
 
         # It is the memory per node, not per cpu!
-        if job_tmpl.max_memory_kb:
+        if job_tmpl.max_memory_kb is not None:
             try:
                 physical_memory_kb = int(job_tmpl.max_memory_kb)
-                if physical_memory_kb <= 0:
+                if physical_memory_kb < 0:  # 0 is allowed and means no limit (https://slurm.schedmd.com/sbatch.html)
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    f'max_memory_kb must be a positive integer (in kB)! It is instead `{job_tmpl.max_memory_kb}`'
+                    f'max_memory_kb must be a non-negative integer (in kB)! It is instead `{job_tmpl.max_memory_kb}`'
                 )
             # --mem: Specify the real memory required per node in MegaBytes.
             # --mem and  --mem-per-cpu  are  mutually exclusive.

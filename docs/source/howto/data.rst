@@ -129,19 +129,24 @@ top-level process. Further, numbered subdirectories are created for each step of
 ``aiida.out`` of the ``ArithmeticAddCalculation`` are placed in ``inputs`` and ``outputs``. In addition, these also
 contain the submission script ``_aiidasubmit.sh``, as well as the scheduler stdout and stderr, ``_scheduler-stdout.txt``
 and ``_scheduler-stderr.txt``, respectively. Lastly, the source code of the ``multiply`` ``calcfunction`` presenting the
-first step of the workflow is contained in the ``source_file``.
+first step of the workflow is contained in the ``source_file``. Since child processes are explored recursively,
+arbitrarily complex, nested workflows can be dumped. Upon having a closer look at the directory, we also find the hidden
+``.aiida_node_metadata.yaml`` files, which are created for every ``ProcessNode`` and contain additional information
+about the ``Node``, the ``User``, and the ``Computer``, as well as the ``.aiida`` subdirectory with machine-readable
+AiiDA-internal data in JSON format.
 
-Upon having a closer look at the directory, we also find the hidden ``.aiida_node_metadata.yaml`` files, which are
-created for every ``ProcessNode`` and contain additional information about the ``Node``, the ``User``, and the
-``Computer``, as well as the ``.aiida`` subdirectory with machine-readable AiiDA-internal data in JSON format.
+As already seen above, the ``-p`` flag allows to specify a custom dumping path. If none is provided, it is automatically
+generated from the ``process_label`` (or ``process_type``) and the ``pk``. In addition, the command provides the
+``-o/--overwrite`` flag to fully overwrite an existing dumping directory, as well as the ``--incremental`` flag, with
+which files are gradually added to an existing directory (this is the default behavior). By default, only sealed process
+nodes can be dumped, however, the behavior can be changed with the ``--dump-unsealed`` flag, which can be useful in
+conjunction with ``--incremental`` to gradually obtain data while a process is running. Furthermore, the ``-f/--flat``
+flag can be used to dump all files for each ``CalculationNode`` of the workflow in a flat directory structure, and the
+``--include-inputs/--exclude-inputs`` (``--include-outputs/--exclude-outputs``) flags are used to also dump additional
+node inputs (outputs) of each ``CalculationNode`` of the workflow into ``node_inputs`` (``node_outputs``)
+subdirectories.
 
-Since child processes are explored recursively, arbitrarily complex, nested workflows can be dumped. As already seen
-above, the ``-p`` flag allows to specify a custom dumping path. If none is provided, it is automatically generated from
-the ``process_label`` (or ``process_type``) and the ``pk``. In addition, the command provides the ``-o`` flag to
-overwrite existing directories, the ``-f`` flag to dump all files for each ``CalculationNode`` of the workflow in a flat
-directory structure, and the ``--include-inputs/--exclude-inputs`` (``--include-outputs/--exclude-outputs``) flags to
-also dump additional node inputs (outputs) of each ``CalculationNode`` of the workflow into ``node_inputs``
-(``node_outputs``) subdirectories. For a full list of available options, call :code:`verdi process dump --help`.
+For a full list of available options, call :code:`verdi process dump --help`.
 
 .. _how-to:data:import:provenance:
 

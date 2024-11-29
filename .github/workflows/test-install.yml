@@ -229,7 +229,7 @@ jobs:
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-      run: pytest --verbose tests -m 'not nightly'
+      run: pytest --db-backend psql tests -m 'not nightly' tests/
 
     - name: Freeze test environment
       run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt
@@ -306,7 +306,7 @@ jobs:
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
       id: create_update_requirements_pr
       continue-on-error: true
-      uses: peter-evans/create-pull-request@v6
+      uses: peter-evans/create-pull-request@v7
       with:
         branch: update-requirements
         commit-message: Automated update of requirements/ files.

@@ -20,7 +20,7 @@ from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
-from aiida.cmdline.utils.common import generate_validate_output_file
+from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
@@ -134,11 +134,7 @@ def _computer_create_temp_file(transport, scheduler, authinfo, computer):
     file_content = f"Test from 'verdi computer test' on {datetime.datetime.now().isoformat()}"
     workdir = authinfo.get_workdir().format(username=transport.whoami())
 
-    try:
-        transport.chdir(workdir)
-    except OSError:
-        transport.makedirs(workdir)
-        transport.chdir(workdir)
+    transport.makedirs(workdir, ignore_existing=True)
 
     with tempfile.NamedTemporaryFile(mode='w+') as tempf:
         fname = os.path.split(tempf.name)[1]
@@ -766,10 +762,10 @@ def computer_export_setup(computer, output_file, overwrite, sort):
         'append_text': computer.get_append_text(),
     }
 
+    if output_file is None:
+        output_file = pathlib.Path(f'{computer.label}-setup.yaml')
     try:
-        output_file = generate_validate_output_file(
-            output_file=output_file, entity_label=computer.label, overwrite=overwrite, appendix='-setup'
-        )
+        validate_output_filename(output_file=output_file, overwrite=overwrite)
     except (FileExistsError, IsADirectoryError) as exception:
         raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
 
@@ -804,10 +800,10 @@ def computer_export_config(computer, output_file, user, overwrite, sort):
             ' because computer has not been configured yet.'
         )
     else:
+        if output_file is None:
+            output_file = pathlib.Path(f'{computer.label}-config.yaml')
         try:
-            output_file = generate_validate_output_file(
-                output_file=output_file, entity_label=computer.label, overwrite=overwrite, appendix='-config'
-            )
+            validate_output_filename(output_file=output_file, overwrite=overwrite)
         except (FileExistsError, IsADirectoryError) as exception:
             raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
 

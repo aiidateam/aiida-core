@@ -190,23 +190,21 @@ class KpointsData(ArrayData):
 
         :param structuredata: an instance of StructureData
         """
-        from aiida.orm.nodes.data.structure import StructureData, has_atomistic
+        from aiida.orm.nodes.data.structure import StructureData as LegacyStructureData
+        from aiida.orm.nodes.data.structure import has_atomistic
 
-        if not isinstance(structuredata, StructureData):
-            error_message = (
-                'An instance of StructureData or aiida-atomistic StructureData should be passed to '
-                'the KpointsData, found instead {}'.format(structuredata.__class__)
+        if not has_atomistic():
+            structures_classes = (LegacyStructureData,)  # type: tuple
+        else:
+            from aiida_atomistic import StructureData  # type: ignore[import-untyped]
+
+            structures_classes = (LegacyStructureData, StructureData)
+
+        if not isinstance(structuredata, structures_classes):
+            raise TypeError(
+                f'An instance of {structures_classes} should be passed to '
+                f'the KpointsData, found instead {type(structuredata)}'
             )
-            if has_atomistic():
-                from aiida_atomistic import StructureData as AtomisticStructureData
-
-                if not isinstance(structuredata, AtomisticStructureData):
-                    raise ValueError(error_message)
-                else:
-                    cell = structuredata.cell
-                    self.set_cell(cell, structuredata.pbc)
-            else:
-                raise ValueError(error_message)
         else:
             cell = structuredata.cell
             self.set_cell(cell, structuredata.pbc)

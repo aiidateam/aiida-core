@@ -223,12 +223,15 @@ class KpointsData(ArrayData):
 
         :param structuredata: an instance of StructureData
         """
-        from aiida.orm.nodes.data.structure import has_atomistic, StructureData as LegacyStructureData
-        
-        if has_atomistic():
-            structures_classes = (StructureData, LegacyStructureData)
+        from aiida.orm.nodes.data.structure import StructureData as LegacyStructureData
+        from aiida.orm.nodes.data.structure import has_atomistic
+
+        if not has_atomistic():
+            structures_classes = (LegacyStructureData,)  # type: tuple
         else:
-            structures_classes = (LegacyStructureData,)
+            from aiida_atomistic import StructureData  # type: ignore[import-untyped]
+
+            structures_classes = (LegacyStructureData, StructureData)
 
         if not isinstance(structuredata, structures_classes):
             raise TypeError(

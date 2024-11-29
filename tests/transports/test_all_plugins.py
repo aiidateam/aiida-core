@@ -112,6 +112,7 @@ def test_makedirs(custom_transport, tmp_path_remote):
         # recreate but with ignore flag
         transport.makedirs(dir_tree, True)
 
+
 def test_rmtree(custom_transport, tmp_path_remote):
     """Verify the functioning of rmtree command"""
     with custom_transport as transport:

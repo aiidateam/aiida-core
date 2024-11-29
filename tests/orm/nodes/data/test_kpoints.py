@@ -14,12 +14,12 @@ from aiida.orm import KpointsData, load_node
 from aiida.orm import StructureData as LegacyStructureData
 from aiida.orm.nodes.data.structure import has_atomistic
 
+skip_atomistic = pytest.mark.skipif(not has_atomistic(), reason='aiida-atomistic not installed')
+
 if not has_atomistic():
-    structures_classes = [
-        LegacyStructureData,
-    ]
+    structures_classes = [LegacyStructureData, pytest.param('StructureData', marks=skip_atomistic)]
 else:
-    from aiida_atomistic import StructureData
+    from aiida_atomistic import StructureData  # type: ignore[import-untyped]
 
     structures_classes = [LegacyStructureData, StructureData]
 

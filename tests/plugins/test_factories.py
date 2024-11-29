@@ -68,8 +68,8 @@ def custom_load_entry_point(group, name):
             'invalid': Node,
         },
         'aiida.transports': {
-            'valid_A': AsyncTransport,
-            'valid_B': Transport,
+            'valid_AsyncTransport': AsyncTransport,
+            'valid_Transport': Transport,
             'invalid': Node,
         },
         'aiida.workflows': {
@@ -190,10 +190,10 @@ class TestFactories:
     @pytest.mark.usefixtures('mock_load_entry_point')
     def test_transport_factory(self):
         """Test the ``TransportFactory``."""
-        plugin = factories.TransportFactory('valid_B')
+        plugin = factories.TransportFactory('valid_Transport')
         assert plugin is Transport
 
-        plugin = factories.TransportFactory('valid_A')
+        plugin = factories.TransportFactory('valid_AsyncTransport')
         assert plugin is AsyncTransport
 
         with pytest.raises(InvalidEntryPointTypeError):

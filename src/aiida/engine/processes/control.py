@@ -144,7 +144,7 @@ def pause_processes(
 
     .. note:: Requires the daemon to be running, or processes will be unresponsive.
 
-    :param processes: List of processes to play.
+    :param processes: List of processes to pause.
     :param all_entries: Pause all playing processes.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
     :param wait: Set to ``True`` to wait for process response, for ``False`` the action is fire-and-forget.
@@ -279,9 +279,12 @@ def _resolve_futures(
             try:
                 # unwrap is need here since LoopCommunicator will also wrap a future
                 unwrapped = unwrap_kiwi_future(future)
-                result = unwrapped.result()
+                result = unwrapped.result(timeout=timeout)
             except communications.TimeoutError:
-                LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out')
+                if process.is_terminated:
+                    LOGGER.report(f'request to {infinitive} Process<{process.pk}> sent')
+                else:
+                    LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out')
             except Exception as exception:
                 LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
             else:

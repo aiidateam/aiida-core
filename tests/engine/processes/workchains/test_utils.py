@@ -9,6 +9,7 @@
 """Tests for `aiida.engine.processes.workchains.utils` module."""
 
 import pytest
+
 from aiida.engine import ExitCode, ProcessState
 from aiida.engine.processes.workchains.restart import BaseRestartWorkChain
 from aiida.engine.processes.workchains.utils import ProcessHandlerReport, process_handler
@@ -31,7 +32,7 @@ class TestRegisterProcessHandler:
                 def _(self, node):
                     pass
 
-        class SomeWorkChain(BaseRestartWorkChain):  # noqa: F811
+        class SomeWorkChain(BaseRestartWorkChain):
             @process_handler(priority=400)
             def _(self, node):
                 pass
@@ -110,7 +111,7 @@ class TestRegisterProcessHandler:
                 def _(self, node):
                     pass
 
-        class SomeWorkChain(BaseRestartWorkChain):  # noqa: F811
+        class SomeWorkChain(BaseRestartWorkChain):
             @process_handler(exit_codes=ExitCode())
             def _(self, node):
                 pass
@@ -132,7 +133,7 @@ class TestRegisterProcessHandler:
                     def _(self, node):
                         pass
 
-        class SomeWorkChain(BaseRestartWorkChain):  # noqa: F811
+        class SomeWorkChain(BaseRestartWorkChain):
             @process_handler(exit_codes=ExitCode(400, 'Some exit code'))
             def _(self, node):
                 pass
@@ -183,7 +184,7 @@ class TestRegisterProcessHandler:
                 def _(self, node):
                     pass
 
-        class SomeWorkChain(BaseRestartWorkChain):  # noqa: F811
+        class SomeWorkChain(BaseRestartWorkChain):
             @process_handler(enabled=False)
             def _(self, node):
                 pass

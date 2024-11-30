@@ -17,10 +17,10 @@ import pytest
 def restapi_server():
     """Make REST API server"""
     import socket
+    from werkzeug.serving import make_server
 
     from aiida.restapi.common.config import CLI_DEFAULTS
     from aiida.restapi.run_api import configure_api
-    from werkzeug.serving import make_server
 
     def _restapi_server(restapi=None):
         # Dynamically find a free port

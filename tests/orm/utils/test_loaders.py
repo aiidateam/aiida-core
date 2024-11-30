@@ -9,6 +9,7 @@
 """Module to test orm utilities to load nodes, codes etc."""
 
 import pytest
+
 from aiida.common.exceptions import NotExistent
 from aiida.orm import Data, Group, Node
 from aiida.orm.utils import load_code, load_computer, load_entity, load_group, load_node

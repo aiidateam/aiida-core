@@ -9,6 +9,7 @@
 """Tests for the ``DirectScheduler`` plugin."""
 
 import pytest
+
 from aiida.common.datastructures import CodeRunMode
 from aiida.schedulers import SchedulerError
 from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
@@ -85,8 +86,9 @@ def test_kill_job(scheduler, tmpdir):
     import multiprocessing
     import time
 
-    from aiida.transports.plugins.local import LocalTransport
     from psutil import Process
+
+    from aiida.transports.plugins.local import LocalTransport
 
     def run_sleep_100():
         import subprocess

@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 import click
+from flask_restful import Resource
+
 from aiida import load_profile
 from aiida.restapi import common
 from aiida.restapi.api import AiidaApi, App
 from aiida.restapi.run_api import run_api
-from flask_restful import Resource
 
 
 class NewResource(Resource):

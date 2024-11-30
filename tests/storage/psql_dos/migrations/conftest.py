@@ -11,11 +11,12 @@
 from uuid import uuid4
 
 import pytest
+from pgtest.pgtest import PGTest
+from sqlalchemy import text
+
 from aiida.manage.configuration import Profile
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
-from pgtest.pgtest import PGTest
-from sqlalchemy import text
 
 
 @pytest.fixture(scope='session')

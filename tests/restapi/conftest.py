@@ -14,9 +14,10 @@ import pytest
 @pytest.fixture(scope='function')
 def restapi_server():
     """Make REST API server"""
+    from werkzeug.serving import make_server
+
     from aiida.restapi.common.config import CLI_DEFAULTS
     from aiida.restapi.run_api import configure_api
-    from werkzeug.serving import make_server
 
     def _restapi_server(restapi=None):
         if restapi is None:

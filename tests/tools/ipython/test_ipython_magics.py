@@ -2,8 +2,9 @@
 
 import textwrap
 
-from aiida.tools.ipython.ipython_magics import register_ipython_extension
 from IPython.testing.globalipapp import get_ipython
+
+from aiida.tools.ipython.ipython_magics import register_ipython_extension
 
 
 def test_ipython_magics():

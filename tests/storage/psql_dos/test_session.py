@@ -11,8 +11,9 @@
 import uuid
 
 import pytest
-from aiida.storage.psql_dos.utils import create_scoped_session_factory
 from sqlalchemy.orm import sessionmaker
+
+from aiida.storage.psql_dos.utils import create_scoped_session_factory
 
 
 class TestSessionSqla:

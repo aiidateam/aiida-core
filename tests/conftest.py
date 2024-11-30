@@ -27,6 +27,7 @@ from pathlib import Path
 
 import click
 import pytest
+
 from aiida import get_profile
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
@@ -782,9 +783,10 @@ def run_cli_command_subprocess(command, parameters, user_input, profile_name, su
 
 def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs):
     """Run CLI command through ``click.testing.CliRunner``."""
+    from click.testing import CliRunner
+
     from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
     from aiida.cmdline.groups.verdi import LazyVerdiObjAttributeDict
-    from click.testing import CliRunner
 
     if initialize_ctx_obj:
         config = get_config()

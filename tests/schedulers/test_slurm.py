@@ -15,6 +15,7 @@ import unittest
 import uuid
 
 import pytest
+
 from aiida.engine import CalcJob
 from aiida.schedulers import JobState, SchedulerError
 from aiida.schedulers.plugins.slurm import SlurmJobResource, SlurmScheduler

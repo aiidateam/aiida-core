@@ -9,6 +9,7 @@
 """orm.AuthInfo tests for the export and import routines"""
 
 import pytest
+
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 from aiida.tools.archive.abstract import get_format

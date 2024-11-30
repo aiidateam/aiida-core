@@ -14,6 +14,7 @@ import pathlib
 import uuid
 
 import pytest
+
 from aiida.common.exceptions import ConfigurationError
 from aiida.manage.configuration.migrations import check_and_migrate_config
 from aiida.manage.configuration.migrations.migrations import MIGRATIONS, Initial, downgrade_config, upgrade_config

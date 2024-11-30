@@ -17,6 +17,7 @@ import pytest
 def restapi_server():
     """Make REST API server"""
     import socket
+
     from werkzeug.serving import make_server
 
     from aiida.restapi.common.config import CLI_DEFAULTS

@@ -11,6 +11,7 @@
 from unittest import TestCase
 
 import pytest
+
 from aiida.manage.external.postgres import Postgres
 
 

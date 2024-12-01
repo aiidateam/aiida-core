@@ -13,11 +13,12 @@ import tempfile
 import uuid
 
 import pytest
+from pgtest.pgtest import PGTest
+
 from aiida import orm
 from aiida.cmdline.commands import cmd_setup
 from aiida.manage import configuration
 from aiida.manage.external.postgres import Postgres
-from pgtest.pgtest import PGTest
 
 pytestmark = pytest.mark.requires_psql
 

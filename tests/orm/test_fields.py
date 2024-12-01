@@ -9,10 +9,11 @@
 """Test for entity fields"""
 
 import pytest
+from importlib_metadata import entry_points
+
 from aiida import orm
 from aiida.orm.fields import add_field
 from aiida.plugins import load_entry_point
-from importlib_metadata import entry_points
 
 EPS = entry_points()
 

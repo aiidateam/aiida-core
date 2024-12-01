@@ -36,17 +36,19 @@ def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
     This test will fail, if database connections are not being properly closed by the end-point calls.
     """
     server = restapi_server()
-    computer_id = aiida_localhost.uuid
 
     # Create a thread that will contain the running server,
     # since we do not wish to block the main thread
     server_thread = Thread(target=server.serve_forever)
+    _server_url = server_url(port=server.server_port)
+
+    computer_id = aiida_localhost.uuid
 
     try:
         server_thread.start()
 
         for _ in range(NO_OF_REQUESTS):
-            response = requests.get(f'{server_url}/computers/{computer_id}', timeout=10)
+            response = requests.get(f'{_server_url}/computers/{computer_id}', timeout=10)
 
             assert response.status_code == 200
 

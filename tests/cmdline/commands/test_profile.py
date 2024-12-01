@@ -9,11 +9,12 @@
 """Tests for ``verdi profile``."""
 
 import pytest
+from pgtest.pgtest import PGTest
+
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
 from aiida.manage import configuration
 from aiida.plugins import StorageFactory
 from aiida.tools.archive.create import create_archive
-from pgtest.pgtest import PGTest
 
 # NOTE: Most of these tests would work with sqlite_dos,
 # but would require generalizing a bunch of fixtures ('profile_factory' et al) in tests/conftest.py

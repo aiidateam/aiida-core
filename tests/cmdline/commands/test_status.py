@@ -9,6 +9,7 @@
 """Tests for `verdi status`."""
 
 import pytest
+
 from aiida import __version__, get_profile
 from aiida.cmdline.commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode

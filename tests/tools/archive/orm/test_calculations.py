@@ -9,6 +9,7 @@
 """orm.CalcNode tests for the export and import routines"""
 
 import pytest
+
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.common.links import LinkType

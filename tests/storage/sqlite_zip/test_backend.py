@@ -3,9 +3,10 @@
 import pathlib
 
 import pytest
+from pydantic_core import ValidationError
+
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 from aiida.storage.sqlite_zip.migrator import validate_storage
-from pydantic_core import ValidationError
 
 
 def test_initialise(tmp_path, caplog):

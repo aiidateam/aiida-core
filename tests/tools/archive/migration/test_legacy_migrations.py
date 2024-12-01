@@ -9,10 +9,10 @@
 """Test archive file migration from old export versions to the newest"""
 
 import pytest
+
 from aiida import orm
 from aiida.common.exceptions import StorageMigrationError
 from aiida.tools.archive import ArchiveFormatSqlZip
-
 from tests.utils.archives import get_archive_file
 
 # archives to test migration against

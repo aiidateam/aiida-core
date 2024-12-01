@@ -9,6 +9,7 @@
 """Tests for ``verdi config``."""
 
 import pytest
+
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_verdi
 

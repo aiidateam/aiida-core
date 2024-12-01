@@ -1,9 +1,10 @@
 """Tests for fixtures in the ``conftest.py``."""
 
 import pytest
+from importlib_metadata import EntryPoint
+
 from aiida.common.exceptions import MissingEntryPointError
 from aiida.plugins.entry_point import get_entry_point, load_entry_point
-from importlib_metadata import EntryPoint
 
 ENTRY_POINT_GROUP = 'aiida.calculations.importers'
 

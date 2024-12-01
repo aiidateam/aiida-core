@@ -12,6 +12,7 @@ import io
 import pathlib
 
 import pytest
+
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager

@@ -12,8 +12,8 @@ import os
 
 import numpy
 import pytest
-from aiida import orm, plugins
 
+from aiida import orm, plugins
 from tests.static import STATIC_DIR
 
 

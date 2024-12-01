@@ -108,7 +108,7 @@ jobs:
 
     - name: Upload coverage report
       if: matrix.python-version == 3.9 && github.repository == 'aiidateam/aiida-core'
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         name: aiida-pytests-py3.9

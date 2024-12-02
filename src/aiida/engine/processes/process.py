@@ -854,7 +854,7 @@ class Process(PlumpyProcess):
         ):
             return [(parent_name, port_value)]
 
-        if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
+        if (port is None and isinstance(port_value, Mapping)) or isinstance(port, PortNamespace):
             items = []
             for name, value in port_value.items():
                 prefixed_key = parent_name + separator + name if parent_name else name
@@ -892,10 +892,10 @@ class Process(PlumpyProcess):
         :return: flat list of outputs
 
         """
-        if port is None and isinstance(port_value, orm.Node) or isinstance(port, OutputPort):
+        if (port is None and isinstance(port_value, orm.Node)) or isinstance(port, OutputPort):
             return [(parent_name, port_value)]
 
-        if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
+        if (port is None and isinstance(port_value, Mapping)) or isinstance(port, PortNamespace):
             items = []
             for name, value in port_value.items():
                 prefixed_key = parent_name + separator + name if parent_name else name

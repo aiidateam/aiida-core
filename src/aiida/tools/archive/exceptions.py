@@ -15,13 +15,13 @@ Note: In order to not override the built-in `ImportError`,
 from aiida.common.exceptions import AiidaException
 
 __all__ = (
-    'ExportImportException',
     'ArchiveExportError',
-    'ExportValidationError',
     'ArchiveImportError',
-    'ImportValidationError',
-    'ImportUniquenessError',
+    'ExportImportException',
+    'ExportValidationError',
     'ImportTestRun',
+    'ImportUniquenessError',
+    'ImportValidationError',
 )
 
 

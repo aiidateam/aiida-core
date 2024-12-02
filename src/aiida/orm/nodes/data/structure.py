@@ -22,7 +22,7 @@ from aiida.orm.fields import add_field
 
 from .data import Data
 
-__all__ = ('StructureData', 'Kind', 'Site')
+__all__ = ('Kind', 'Site', 'StructureData')
 
 # Threshold used to check if the mass of two different Site objects is the same.
 

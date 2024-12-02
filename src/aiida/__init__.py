@@ -106,7 +106,10 @@ def get_file_header(comment_char: str = '# ') -> str:
 
 
 def load_ipython_extension(ipython):
-    """Load the AiiDA IPython extension, using ``%load_ext aiida``."""
+    """Load the AiiDA IPython extension, using ``%load_ext aiida``.
+
+    :param ipython: InteractiveShell instance. If ``None``, the global InteractiveShell is used.
+    """
     from aiida.tools.ipython.ipython_magics import load_ipython_extension
 
     load_ipython_extension(ipython)

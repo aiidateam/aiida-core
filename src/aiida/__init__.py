@@ -44,6 +44,7 @@ __all__ = [
     'get_strict_version',
     'get_version',
     'get_file_header',
+    'load_ipython_extension',
 ]
 
 
@@ -104,8 +105,8 @@ def get_file_header(comment_char: str = '# ') -> str:
     return '\n'.join(f'{comment_char}{line}' for line in lines)
 
 
-def _load_ipython_extension(ipython):
+def load_ipython_extension(ipython):
     """Load the AiiDA IPython extension, using ``%load_ext aiida``."""
-    from .tools.ipython.ipython_magics import AiiDALoaderMagics
+    from aiida.tools.ipython.ipython_magics import load_ipython_extension
 
-    ipython.register_magics(AiiDALoaderMagics)
+    load_ipython_extension(ipython)

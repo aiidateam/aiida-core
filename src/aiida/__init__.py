@@ -19,8 +19,8 @@ and workflow engine for the automation of complex sequences of simulations.
 More information at http://www.aiida.net
 """
 
-from aiida.common.log import configure_logging  # noqa: F401
-from aiida.manage.configuration import get_config_option, get_profile, load_profile, profile_context  # noqa: F401
+from aiida.common.log import configure_logging
+from aiida.manage.configuration import get_config_option, get_profile, load_profile, profile_context
 
 __copyright__ = (
     'Copyright (c), This file is part of the AiiDA platform. '
@@ -34,6 +34,17 @@ __paper__ = (
     'data provenance", Scientific Data 7, 300 (2020); https://doi.org/10.1038/s41597-020-00638-4'
 )
 __paper_short__ = 'S. P. Huber et al., Scientific Data 7, 300 (2020).'
+
+__all__ = [
+    'load_profile',
+    'configure_logging',
+    'get_config_option',
+    'get_profile',
+    'profile_context',
+    'get_strict_version',
+    'get_version',
+    'get_file_header',
+]
 
 
 def get_strict_version():
@@ -93,7 +104,7 @@ def get_file_header(comment_char: str = '# ') -> str:
     return '\n'.join(f'{comment_char}{line}' for line in lines)
 
 
-def load_ipython_extension(ipython):
+def _load_ipython_extension(ipython):
     """Load the AiiDA IPython extension, using ``%load_ext aiida``."""
     from .tools.ipython.ipython_magics import AiiDALoaderMagics
 

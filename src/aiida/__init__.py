@@ -36,15 +36,15 @@ __paper__ = (
 __paper_short__ = 'S. P. Huber et al., Scientific Data 7, 300 (2020).'
 
 __all__ = [
-    'load_profile',
     'configure_logging',
     'get_config_option',
+    'get_file_header',
     'get_profile',
-    'profile_context',
     'get_strict_version',
     'get_version',
-    'get_file_header',
     'load_ipython_extension',
+    'load_profile',
+    'profile_context',
 ]
 
 

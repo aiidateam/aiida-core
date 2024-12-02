@@ -173,7 +173,7 @@ def aiida_instance(
         if configuration.CONFIG is not None:
             reset = True
             current_config = configuration.CONFIG
-            current_config_path = current_config.dirpath
+            current_config_path = pathlib.Path(current_config.dirpath)
             current_profile = configuration.get_profile()
             current_path_variable = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
 

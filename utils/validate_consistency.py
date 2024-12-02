@@ -91,8 +91,9 @@ def cli():
 @cli.command('verdi-autodocs')
 def validate_verdi_documentation():
     """Auto-generate the documentation for `verdi` through `click`."""
-    from aiida.cmdline.commands.cmd_verdi import verdi
     from click import Context
+
+    from aiida.cmdline.commands.cmd_verdi import verdi
 
     width = 90  # The maximum width of the formatted help strings in characters
 

@@ -9,11 +9,11 @@
 """Test using the archive backend directly."""
 
 import pytest
+
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation import StorageBackend
 from aiida.tools.archive import ArchiveFormatSqlZip, ArchiveReaderAbstract
-
 from tests.utils.archives import get_archive_file
 
 

@@ -72,11 +72,11 @@ jobs:
         AIIDA_WARN_v3: 1
       # Python 3.12 has a performance regression when running with code coverage
       # so run code coverage only for python 3.9.
-      run: uv run pytest --db-backend psql -m 'not nightly' tests/ ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
+      run: uv run pytest -n auto --db-backend psql -m 'not nightly' tests/ ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
 
     - name: Upload coverage report
       if: matrix.python-version == 3.9 && github.repository == 'aiidateam/aiida-core'
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         name: aiida-pytests-py3.9
@@ -106,7 +106,7 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0
-      run: uv run pytest -m 'presto' tests/
+      run: uv run pytest -n auto -m 'presto' tests/
 
 
   verdi:

@@ -9,12 +9,14 @@
 """orm.AuthInfo tests for the export and import routines"""
 
 import pytest
+
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 from aiida.tools.archive.abstract import get_format
 
 
 @pytest.mark.usefixtures('aiida_localhost')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_create_all_no_authinfo(tmp_path):
     """Test archive creation that does not include authinfo."""
     filename1 = tmp_path / 'export1.aiida'
@@ -24,6 +26,7 @@ def test_create_all_no_authinfo(tmp_path):
 
 
 @pytest.mark.usefixtures('aiida_localhost')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_create_all_with_authinfo(tmp_path):
     """Test archive creation that does include authinfo."""
     filename1 = tmp_path / 'export1.aiida'
@@ -32,6 +35,7 @@ def test_create_all_with_authinfo(tmp_path):
         assert archive.querybuilder().append(orm.AuthInfo).count() == 1
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_create_comp_with_authinfo(tmp_path, aiida_localhost):
     """Test archive creation that does include authinfo."""
     filename1 = tmp_path / 'export1.aiida'
@@ -40,6 +44,7 @@ def test_create_comp_with_authinfo(tmp_path, aiida_localhost):
         assert archive.querybuilder().append(orm.AuthInfo).count() == 1
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_import_authinfo(aiida_profile, tmp_path, aiida_localhost):
     """Test archive import, including authinfo"""
     filename1 = tmp_path / 'export1.aiida'

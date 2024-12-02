@@ -9,6 +9,7 @@
 """Tests for StructureData-related functions."""
 
 import pytest
+
 from aiida.orm.nodes.data.structure import StructureData, get_formula
 
 

@@ -16,6 +16,7 @@ from collections import OrderedDict
 
 import pytest
 import yaml
+
 from aiida import orm
 from aiida.cmdline.commands.cmd_computer import (
     computer_configure,

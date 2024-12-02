@@ -9,6 +9,7 @@
 """Unit tests for the AuthInfo ORM class."""
 
 import pytest
+
 from aiida.common import exceptions
 from aiida.orm import authinfos, computers
 

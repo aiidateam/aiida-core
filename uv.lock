@@ -42,7 +42,8 @@ dependencies = [
     { name = "pgsu" },
     { name = "plumpy" },
     { name = "psutil" },
-    { name = "psycopg", extra = ["binary"] },
+    { name = "psycopg" },
+    { name = "psycopg-binary" },
     { name = "pydantic" },
     { name = "pytz" },
     { name = "pyyaml" },
@@ -160,7 +161,7 @@ requires-dist = [
     { name = "archive-path", specifier = "~=0.4.2" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.18" },
     { name = "bpython", marker = "extra == 'bpython'", specifier = "~=0.18.0" },
-    { name = "circus", specifier = "~=0.18.0" },
+    { name = "circus", specifier = "~=0.19.0", index = "https://test.pypi.org/simple/" },
     { name = "click", specifier = "~=8.1" },
     { name = "click-spinner", specifier = "~=0.1.8" },
     { name = "coverage", marker = "extra == 'tests'", specifier = "~=7.0" },
@@ -193,7 +194,8 @@ requires-dist = [
     { name = "plumpy", specifier = "~=0.22.3" },
     { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=3.5" },
     { name = "psutil", specifier = "~=5.6" },
-    { name = "psycopg", extras = ["binary"], specifier = "~=3.0" },
+    { name = "psycopg", specifier = "~=3.0" },
+    { name = "psycopg-binary", specifier = ">=3.2.2" },
     { name = "pyasn1", marker = "extra == 'ssh-kerberos'", specifier = "~=0.4.8" },
     { name = "pycifrw", marker = "extra == 'atomic-tools'", specifier = "~=4.4" },
     { name = "pydantic", specifier = "~=2.4" },
@@ -731,16 +733,16 @@ wheels = [
 
 [[package]]
 name = "circus"
-version = "0.18.0"
-source = { registry = "https://pypi.org/simple" }
+version = "0.19.0"
+source = { registry = "https://test.pypi.org/simple/" }
 dependencies = [
     { name = "psutil" },
     { name = "pyzmq" },
     { name = "tornado" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/53/93/4a918c0bb13347c62ad1c72e9bdee9edc9074918bb6d7fc4306bbe3b702f/circus-0.18.0.tar.gz", hash = "sha256:193ce8224e068ced66724cf483106fb6674b51a57583ac1a0e7ed7a7ee8c71ab", size = 142587 }
+sdist = { url = "https://test-files.pythonhosted.org/packages/ba/ad/fd57a81fa88e4cf119489790cd89ce741dc6b9bc5a2086ea17d304860958/circus-0.19.0.tar.gz", hash = "sha256:38bff0858a151df098bad2818274e68bd49ed7d63cf1907a8c5313f82805f984", size = 94128 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7b/fd/254a8a04ae1b57af59917bcd2670b31d42ce0da94d0aa257c80096c9089e/circus-0.18.0-py3-none-any.whl", hash = "sha256:f3ee4167bea16d34b42bab61440284f3936d2548f5546e70cf79f66daec867b0", size = 200600 },
+    { url = "https://test-files.pythonhosted.org/packages/79/57/929da3bb89165085796571af23e7839976b696902690859fd3c6ca20a237/circus-0.19.0-py3-none-any.whl", hash = "sha256:e9da962fe2df98d845813c3907d5c54e36004ddeafa6d49125af6075175d96d9", size = 118173 },
 ]
 
 [[package]]

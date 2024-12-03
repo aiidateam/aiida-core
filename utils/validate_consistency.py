@@ -7,14 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Validate consistency of versions and dependencies.
-
-Validates consistency of
-
- * pyproject.toml
- * environment.yml
-
-"""
+"""Autogenerate verdi CLI documentation from click."""
 
 import os
 

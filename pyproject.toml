@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
   'alembic~=1.2',
   'archive-path~=0.4.2',
-  'circus~=0.18.0',
+  'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click~=8.1',
   'disk-objectstore~=1.2',
@@ -37,7 +37,8 @@ dependencies = [
   'plumpy~=0.22.3',
   'pgsu~=0.3.0',
   'psutil~=5.6',
-  'psycopg[binary]~=3.0',
+  'psycopg-binary>=3.2.2',
+  'psycopg~=3.0',
   'pydantic~=2.4',
   'pytz~=2021.1',
   'pyyaml~=6.0',
@@ -185,6 +186,7 @@ atomic_tools = [
   'PyCifRW~=4.4',
   'ase~=3.18',
   'matplotlib~=3.3,>=3.3.4',
+  'scipy~=1.14.1;python_version>="3.13"',
   'pymatgen>=2022.1.20',
   'pymysql~=0.9.3',
   'seekpath~=1.9,>=1.9.3',
@@ -508,3 +510,13 @@ passenv =
     AIIDA_TEST_WORKERS
 commands = molecule {posargs:test}
 """
+
+[tool.uv]
+
+[[tool.uv.index]]
+explicit = true
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+
+[tool.uv.sources]
+circus = {index = "testpypi"}

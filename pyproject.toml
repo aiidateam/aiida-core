@@ -425,16 +425,6 @@ select = [
   'RUF'  # ruff
 ]
 
-[tool.uv]
-
-[tool.uv.sources]
-circus = { index = "testpypi" }
-
-[[tool.uv.index]]
-name = "testpypi"
-url = "https://test.pypi.org/simple/"
-explicit = true
-
 [tool.tox]
 legacy_tox_ini = """
 [tox]
@@ -520,3 +510,13 @@ passenv =
     AIIDA_TEST_WORKERS
 commands = molecule {posargs:test}
 """
+
+[tool.uv]
+
+[[tool.uv.index]]
+explicit = true
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+
+[tool.uv.sources]
+circus = {index = "testpypi"}

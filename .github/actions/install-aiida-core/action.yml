@@ -31,7 +31,7 @@ runs:
   - name: Set up uv
     uses: astral-sh/setup-uv@v4
     with:
-      version: 0.5.5
+      version: 0.5.6
 
   - name: Install dependencies from uv lock
     if: ${{ inputs.from-lock == 'true' }}

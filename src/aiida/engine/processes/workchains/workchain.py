@@ -35,7 +35,7 @@ from .awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_aw
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner
 
-__all__ = ('WorkChain', 'if_', 'while_', 'return_')
+__all__ = ('WorkChain', 'if_', 'return_', 'while_')
 
 
 class WorkChainSpec(ProcessSpec, PlumpyWorkChainSpec):

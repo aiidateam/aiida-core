@@ -14,7 +14,7 @@ from click.types import StringParamType
 from ...utils import decorators
 from .identifier import IdentifierParamType
 
-__all__ = ('ComputerParamType', 'ShebangParamType', 'MpirunCommandParamType')
+__all__ = ('ComputerParamType', 'MpirunCommandParamType', 'ShebangParamType')
 
 
 class ComputerParamType(IdentifierParamType):

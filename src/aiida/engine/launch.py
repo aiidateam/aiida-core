@@ -25,7 +25,7 @@ from .processes.process import Process
 from .runners import ResultAndPk
 from .utils import instantiate_process, is_process_scoped, prepare_inputs
 
-__all__ = ('run', 'run_get_pk', 'run_get_node', 'submit', 'await_processes')
+__all__ = ('await_processes', 'run', 'run_get_node', 'run_get_pk', 'submit')
 
 TYPE_RUN_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
 # run can also be process function, but it is not clear what type this should be

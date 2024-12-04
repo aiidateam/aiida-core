@@ -71,9 +71,7 @@ class SinglefileData(Data):
 
     @t.overload
     @contextlib.contextmanager
-    def open(  # type: ignore[overload-overlap]
-        self, path: None = None, mode: t.Literal['r'] = ...
-    ) -> t.Iterator[t.TextIO]: ...
+    def open(self, path: None = None, mode: t.Literal['r'] = ...) -> t.Iterator[t.TextIO]: ...
 
     @t.overload
     @contextlib.contextmanager

@@ -9,10 +9,10 @@
 """orm.Computer tests for the export and import routines"""
 
 import pytest
+
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 from aiida.tools.archive.imports import DUPLICATE_LABEL_TEMPLATE
-
 from tests.utils.archives import import_test_archive
 
 

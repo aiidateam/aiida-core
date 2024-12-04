@@ -11,7 +11,6 @@
 from aiida.storage.psql_dos.migrations.utils.calc_state import STATE_MAPPING
 from aiida.storage.sqlite_zip.migrations.legacy import migrate_v5_to_v6  # type: ignore[attr-defined]
 from aiida.storage.sqlite_zip.migrations.utils import verify_metadata_version
-
 from tests.utils.archives import get_archive_file, read_json_files
 
 

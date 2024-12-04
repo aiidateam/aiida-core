@@ -9,6 +9,7 @@
 """Unit tests for the Comment ORM class."""
 
 import pytest
+
 from aiida import orm
 from aiida.common import exceptions
 from aiida.orm.comments import Comment

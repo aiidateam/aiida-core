@@ -12,6 +12,7 @@ import asyncio
 import contextlib
 
 import pytest
+
 from aiida import orm
 from aiida.engine import calcfunction, workfunction
 from aiida.engine.utils import (

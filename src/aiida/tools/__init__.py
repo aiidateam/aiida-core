@@ -30,8 +30,8 @@ from .groups import *
 from .visualization import *
 
 __all__ = (
-    'CalculationTools',
     'DELETE_LOGGER',
+    'CalculationTools',
     'Graph',
     'GroupNotFoundError',
     'GroupNotUniqueError',

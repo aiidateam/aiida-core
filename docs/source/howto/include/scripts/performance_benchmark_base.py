@@ -2,6 +2,7 @@
 """Script to benchmark the performance of the AiiDA workflow engine on a given installation."""
 
 import click
+
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 

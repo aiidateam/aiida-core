@@ -11,6 +11,7 @@
 from unittest import mock
 
 import pytest
+
 from aiida.cmdline.utils.decorators import load_backend_if_not_loaded
 from aiida.common.exceptions import InvalidOperation
 from aiida.manage import get_manager

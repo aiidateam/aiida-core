@@ -64,7 +64,7 @@ except AttributeError:
 if TYPE_CHECKING:
     from .exit_code import ExitCode
 
-__all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
+__all__ = ('FunctionProcess', 'calcfunction', 'workfunction')
 
 LOGGER = logging.getLogger(__name__)
 

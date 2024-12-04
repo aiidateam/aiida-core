@@ -56,7 +56,7 @@ class Profile:
             )
 
         self._name = name
-        self._attributes: Dict[str, Any] = deepcopy(config)
+        self._attributes: Dict[str, Any] = deepcopy(config)  # type: ignore[arg-type]
 
         # Create a default UUID if not specified
         if self._attributes.get(self.KEY_UUID, None) is None:
@@ -235,22 +235,28 @@ class Profile:
 
         :return: a dictionary of filepaths
         """
-        from .settings import DAEMON_DIR, DAEMON_LOG_DIR
+        from aiida.common.warnings import warn_deprecation
+        from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+
+        warn_deprecation('This method has been deprecated, use `filepaths` method from `Config` obj instead', version=3)
+
+        daemon_dir = AiiDAConfigPathResolver().daemon_dir
+        daemon_log_dir = AiiDAConfigPathResolver().daemon_log_dir
 
         return {
             'circus': {
-                'log': str(DAEMON_LOG_DIR / f'circus-{self.name}.log'),
-                'pid': str(DAEMON_DIR / f'circus-{self.name}.pid'),
-                'port': str(DAEMON_DIR / f'circus-{self.name}.port'),
+                'log': str(daemon_log_dir / f'circus-{self.name}.log'),
+                'pid': str(daemon_dir / f'circus-{self.name}.pid'),
+                'port': str(daemon_dir / f'circus-{self.name}.port'),
                 'socket': {
-                    'file': str(DAEMON_DIR / f'circus-{self.name}.sockets'),
+                    'file': str(daemon_dir / f'circus-{self.name}.sockets'),
                     'controller': 'circus.c.sock',
                     'pubsub': 'circus.p.sock',
                     'stats': 'circus.s.sock',
                 },
             },
             'daemon': {
-                'log': str(DAEMON_LOG_DIR / f'aiida-{self.name}.log'),
-                'pid': str(DAEMON_DIR / f'aiida-{self.name}.pid'),
+                'log': str(daemon_log_dir / f'aiida-{self.name}.log'),
+                'pid': str(daemon_dir / f'aiida-{self.name}.pid'),
             },
         }

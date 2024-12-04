@@ -15,13 +15,13 @@ from aiida.common.log import AIIDA_LOGGER
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',
+    'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
-    'get_current_version',
     'check_and_migrate_config',
     'config_needs_migrating',
-    'upgrade_config',
     'downgrade_config',
-    'MIGRATIONS',
+    'get_current_version',
+    'upgrade_config',
 )
 
 ConfigType = Dict[str, Any]

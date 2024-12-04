@@ -169,9 +169,9 @@ def profile_list():
         # This can happen for a fresh install and the `verdi setup` has not yet been run. In this case it is still nice
         # to be able to see the configuration directory, for instance for those who have set `AIIDA_PATH`. This way
         # they can at least verify that it is correctly set.
-        from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+        from aiida.manage.configuration.settings import AiiDAConfigDir
 
-        echo.echo_report(f'configuration folder: {AIIDA_CONFIG_FOLDER}')
+        echo.echo_report(f'configuration folder: {AiiDAConfigDir.get()}')
         echo.echo_critical(str(exception))
     else:
         echo.echo_report(f'configuration folder: {config.dirpath}')

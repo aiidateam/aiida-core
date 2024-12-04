@@ -21,12 +21,12 @@ from types import TracebackType
 from typing import Any, Callable, Optional, Type
 
 __all__ = (
-    'get_progress_reporter',
-    'set_progress_reporter',
-    'set_progress_bar_tqdm',
-    'ProgressReporterAbstract',
     'TQDM_BAR_FORMAT',
+    'ProgressReporterAbstract',
     'create_callback',
+    'get_progress_reporter',
+    'set_progress_bar_tqdm',
+    'set_progress_reporter',
 )
 
 TQDM_BAR_FORMAT = '{desc:40.40}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'

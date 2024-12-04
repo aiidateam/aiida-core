@@ -12,7 +12,6 @@ from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
 from aiida.tools.archive import ArchiveFormatSqlZip, create_archive, import_archive
-
 from tests.tools.archive.utils import get_all_node_links
 
 
@@ -410,7 +409,7 @@ def link_flags_export_helper(name, all_nodes, tmp_path, nodes_to_export, flags, 
 
     export_nodes_uuid = {_: set() for _ in export_types}
     for node in nodes_to_export:
-        for node_type in export_nodes_uuid:
+        for node_type in export_nodes_uuid:  # noqa: PLC0206
             if node.startswith(node_type):
                 export_nodes_uuid[node_type].update({all_nodes[node]['uuid']})
     nodes_to_export = ([all_nodes[_]['node'] for _ in nodes_to_export], export_nodes_uuid)
@@ -419,7 +418,7 @@ def link_flags_export_helper(name, all_nodes, tmp_path, nodes_to_export, flags, 
     for expected_node_list in expected_nodes_temp:
         expected_nodes_uuid = {_: set() for _ in expected_types}
         for node in expected_node_list:
-            for node_type in expected_nodes_uuid:
+            for node_type in expected_nodes_uuid:  # noqa: PLC0206
                 if node.startswith(node_type):
                     expected_nodes_uuid[node_type].update({all_nodes[node]['uuid']})
         expected_nodes.append(expected_nodes_uuid)

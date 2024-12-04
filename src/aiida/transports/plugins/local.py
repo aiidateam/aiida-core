@@ -478,8 +478,8 @@ class LocalTransport(Transport):
         """Copies a file recursively from 'remote' remotepath to
         'local' localpath.
 
-        :param remotepath: path to local file
-        :param localpath: absolute path to remote file
+        :param remotepath: absolute path to remote file
+        :param localpath: path to local file
         :param overwrite: if True overwrites localpath.
                                Default = False
 
@@ -489,6 +489,10 @@ class LocalTransport(Transport):
         """
         remotepath = path_to_str(remotepath)
         localpath = path_to_str(localpath)
+        
+        if not os.path.isabs(localpath):
+            raise ValueError('localpath must be an absolute path')
+
         overwrite = kwargs.get('overwrite', args[0] if args else True)
         if not localpath:
             raise ValueError('Input localpath to get function must be a non empty string')

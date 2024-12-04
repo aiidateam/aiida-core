@@ -12,7 +12,7 @@ import re
 
 from click.types import StringParamType
 
-__all__ = ('EmailType', 'EntryPointType', 'HostnameType', 'NonEmptyStringParamType', 'LabelStringType')
+__all__ = ('EmailType', 'EntryPointType', 'HostnameType', 'LabelStringType', 'NonEmptyStringParamType')
 
 
 class NonEmptyStringParamType(StringParamType):

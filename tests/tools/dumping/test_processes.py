@@ -15,6 +15,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+
 from aiida.common.links import LinkType
 from aiida.tools.dumping.processes import ProcessDumper
 
@@ -42,6 +43,7 @@ node_metadata_file = '.aiida_node_metadata.yaml'
 def generate_calculation_node_io(generate_calculation_node, tmp_path):
     def _generate_calculation_node_io(entry_point: str | None = None, attach_outputs: bool = True):
         import numpy as np
+
         from aiida.orm import ArrayData, FolderData, SinglefileData
 
         singlefiledata_input = SinglefileData.from_string(content=filecontent, filename=filename)

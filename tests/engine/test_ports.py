@@ -9,6 +9,7 @@
 """Tests for process spec ports."""
 
 import pytest
+
 from aiida.engine.processes.ports import InputPort, PortNamespace
 from aiida.orm import Dict, Int, to_aiida_type
 

@@ -12,6 +12,7 @@ import uuid
 
 import click
 import pytest
+
 from aiida.cmdline.params.types import CodeParamType
 from aiida.orm import InstalledCode
 from aiida.orm.utils.loaders import OrmEntityLoader

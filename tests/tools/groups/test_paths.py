@@ -9,6 +9,7 @@
 """Tests for GroupPath"""
 
 import pytest
+
 from aiida import orm
 from aiida.tools.groups.paths import GroupAttr, GroupNotFoundError, GroupPath, InvalidPath, NoGroupsInPathError
 
@@ -124,6 +125,7 @@ def test_walk_with_invalid_path():
     assert [c.path for c in sorted(group_path.walk())] == expected
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_walk_nodes():
     """Test the ``GroupPath.walk_nodes()`` function."""
     group, _ = orm.Group.collection.get_or_create('a')

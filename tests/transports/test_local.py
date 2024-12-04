@@ -11,6 +11,7 @@
 import getpass
 
 import pytest
+
 from aiida.transports.plugins.local import LocalTransport
 from aiida.transports.transport import TransportInternalError
 

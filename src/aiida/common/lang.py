@@ -96,4 +96,4 @@ class classproperty(Generic[ReturnType]):  # noqa: N801
         self.getter = getter
 
     def __get__(self, instance: Any, owner: SelfType) -> ReturnType:
-        return self.getter(owner)
+        return self.getter(owner)  # type: ignore[arg-type]

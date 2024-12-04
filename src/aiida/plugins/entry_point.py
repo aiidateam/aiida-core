@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     # So for now we use the backport importlib_metadata package.
     from importlib_metadata import EntryPoint, EntryPoints
 
-__all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
+__all__ = ('get_entry_points', 'load_entry_point', 'load_entry_point_from_string', 'parse_entry_point')
 
 ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'

@@ -9,8 +9,17 @@
 """Testing the general methods of the psql_dos backend."""
 
 import pytest
+
 from aiida.manage import get_manager
 from aiida.orm import User
+
+
+def test_all_tests_marked_with_requires_psql(request):
+    """Test that all tests in this folder are marked with 'requires_psql'"""
+    own_markers = [marker.name for marker in request.node.own_markers]
+
+    assert len(own_markers) == 1
+    assert own_markers[0] == 'requires_psql'
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

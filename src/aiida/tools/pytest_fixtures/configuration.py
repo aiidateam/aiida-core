@@ -10,6 +10,8 @@ import typing as t
 
 import pytest
 
+from aiida.manage.configuration.settings import AiiDAConfigDir
+
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
 
@@ -53,7 +55,7 @@ def aiida_config_factory():
 
         dirpath_config = dirpath / settings.DEFAULT_CONFIG_DIR_NAME
         os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_config)
-        settings.set_configuration_directory(dirpath_config)
+        AiiDAConfigDir.set(dirpath_config)
         config = get_config(create=True)
 
         try:
@@ -61,7 +63,7 @@ def aiida_config_factory():
         finally:
             if current_config:
                 reset_config()
-                settings.set_configuration_directory(pathlib.Path(current_config.dirpath))
+                AiiDAConfigDir.set(pathlib.Path(current_config.dirpath))
                 get_config()
 
             if current_path_variable is None:

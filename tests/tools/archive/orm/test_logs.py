@@ -12,7 +12,7 @@ from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 
 
-def test_critical_log_msg_and_metadata(tmp_path, aiida_profile):
+def test_critical_log_msg_and_metadata(tmp_path, aiida_profile_clean):
     """Testing logging of critical message"""
     message = 'Testing logging of critical failure'
     calc = orm.CalculationNode()
@@ -33,7 +33,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile):
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([calc], filename=export_file)
 
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
 
     import_archive(export_file)
 
@@ -45,7 +45,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile):
     assert logs[0].metadata == log_metadata
 
 
-def test_exclude_logs_flag(tmp_path, aiida_profile):
+def test_exclude_logs_flag(tmp_path, aiida_profile_clean):
     """Test that the `include_logs` argument for `export` works."""
     log_msg = 'Testing logging of critical failure'
 
@@ -65,7 +65,7 @@ def test_exclude_logs_flag(tmp_path, aiida_profile):
     create_archive([calc], filename=export_file, include_logs=False)
 
     # Clean database and reimport exported data
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
     import_archive(export_file)
 
     # Finding all the log messages
@@ -80,7 +80,7 @@ def test_exclude_logs_flag(tmp_path, aiida_profile):
     assert str(import_calcs[0][0]) == calc_uuid
 
 
-def test_export_of_imported_logs(tmp_path, aiida_profile):
+def test_export_of_imported_logs(tmp_path, aiida_profile_clean):
     """Test export of imported Log"""
     log_msg = 'Testing export of imported log'
 
@@ -102,7 +102,7 @@ def test_export_of_imported_logs(tmp_path, aiida_profile):
     create_archive([calc], filename=export_file)
 
     # Clean database and reimport exported data
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
     import_archive(export_file)
 
     # Finding all the log messages
@@ -123,7 +123,7 @@ def test_export_of_imported_logs(tmp_path, aiida_profile):
     create_archive([calc], filename=re_export_file)
 
     # Clean database and reimport exported data
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
     import_archive(re_export_file)
 
     # Finding all the log messages

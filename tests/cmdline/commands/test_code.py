@@ -17,6 +17,7 @@ import uuid
 
 import click
 import pytest
+
 from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
 from aiida.common.exceptions import MultipleObjectsError, NotExistent

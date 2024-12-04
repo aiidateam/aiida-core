@@ -31,7 +31,6 @@ __all__ = (
     'NODE',
     'NODES',
     'OUTPUT_FILE',
-    'OverridableArgument',
     'PROCESS',
     'PROCESSES',
     'PROFILE',
@@ -39,6 +38,7 @@ __all__ = (
     'USER',
     'WORKFLOW',
     'WORKFLOWS',
+    'OverridableArgument',
 )
 
 # fmt: on

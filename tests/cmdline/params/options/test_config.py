@@ -13,6 +13,7 @@ import textwrap
 
 import click
 import pytest
+
 from aiida.cmdline.params.options import CONFIG_FILE
 
 

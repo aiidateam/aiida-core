@@ -13,11 +13,12 @@ import uuid
 
 import pytest
 import requests
+from kiwipy.rmq import RmqThreadCommunicator
+from packaging.version import parse
+
 from aiida.brokers.rabbitmq import client, utils
 from aiida.engine.processes import ProcessState, control
 from aiida.orm import Int
-from kiwipy.rmq import RmqThreadCommunicator
-from packaging.version import parse
 
 pytestmark = pytest.mark.requires_rmq
 

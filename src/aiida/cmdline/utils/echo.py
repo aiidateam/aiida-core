@@ -20,14 +20,14 @@ import click
 CMDLINE_LOGGER = logging.getLogger('verdi')
 
 __all__ = (
-    'echo_report',
-    'echo_info',
-    'echo_success',
-    'echo_warning',
-    'echo_error',
     'echo_critical',
-    'echo_tabulate',
     'echo_dictionary',
+    'echo_error',
+    'echo_info',
+    'echo_report',
+    'echo_success',
+    'echo_tabulate',
+    'echo_warning',
 )
 
 

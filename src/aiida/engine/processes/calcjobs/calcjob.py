@@ -1062,7 +1062,7 @@ class CalcJob(Process):
 
         def encoder(obj):
             if dataclasses.is_dataclass(obj):
-                return dataclasses.asdict(obj)
+                return dataclasses.asdict(obj)  # type: ignore[arg-type]
             raise TypeError(f' {obj!r} is not JSON serializable')
 
         subfolder = folder.get_subfolder('.aiida', create=True)

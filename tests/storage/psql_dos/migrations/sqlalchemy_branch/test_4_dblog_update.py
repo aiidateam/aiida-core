@@ -12,9 +12,10 @@
 import json
 
 import pytest
+from sqlalchemy import column
+
 from aiida.storage.psql_dos.migrations.utils import dblog_update
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
-from sqlalchemy import column
 
 # The values that will be exported for the log records that will be deleted
 values_to_export = ('id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata')

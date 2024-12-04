@@ -23,7 +23,7 @@ from aiida.common.warnings import warn_deprecation
 
 from ..transport import Transport, TransportInternalError, TransportPath, path_to_str
 
-__all__ = ('parse_sshconfig', 'convert_to_bool', 'SshTransport')
+__all__ = ('SshTransport', 'convert_to_bool', 'parse_sshconfig')
 
 
 def parse_sshconfig(computername):

@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from .extendeddicts import DefaultFieldsAttributeDict
 
-__all__ = ('StashMode', 'CalcJobState', 'CalcInfo', 'CodeInfo', 'CodeRunMode')
+__all__ = ('CalcInfo', 'CalcJobState', 'CodeInfo', 'CodeRunMode', 'StashMode')
 
 
 class StashMode(Enum):

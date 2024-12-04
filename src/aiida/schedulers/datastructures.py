@@ -30,13 +30,13 @@ from aiida.common.timezone import make_aware, timezone_from_name
 SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
 
 __all__ = (
-    'JobState',
-    'JobResource',
-    'JobTemplate',
     'JobInfo',
+    'JobResource',
+    'JobState',
+    'JobTemplate',
+    'MachineInfo',
     'NodeNumberJobResource',
     'ParEnvJobResource',
-    'MachineInfo',
 )
 
 

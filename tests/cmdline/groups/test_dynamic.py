@@ -2,9 +2,10 @@
 
 import typing as t
 
-from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 from pydantic import BaseModel, Field
 from pydantic_core import PydanticUndefined
+
+from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 
 
 class CustomClass:
@@ -17,7 +18,7 @@ class CustomClass:
         union_type: t.Union[int, float] = Field(title='Union type')
         without_default: str = Field(title='Without default')
         with_default: str = Field(title='With default', default='default')
-        with_default_factory: str = Field(title='With default factory', default_factory=lambda: True)
+        with_default_factory: str = Field(title='With default factory', default_factory=lambda: True)  # type: ignore[assignment]
 
 
 def test_list_options(entry_points):

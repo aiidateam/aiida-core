@@ -24,7 +24,7 @@ from typing import Union
 import psutil
 import pytest
 
-from aiida.plugins import SchedulerFactory, TransportFactory
+from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
 from aiida.transports import AsyncTransport, Transport
 
 # TODO : test for copy with pattern
@@ -45,8 +45,11 @@ def tmp_path_local(tmp_path_factory):
     return tmp_path_factory.mktemp('local')
 
 
-# @pytest.fixture(scope='function', params=entry_point.get_entry_point_names('aiida.transports'))
-@pytest.fixture(scope='function', params=['core.ssh', 'core.ssh_auto', 'core.ssh_async'])
+# Skip for any transport plugins that are locally installed but are not part of `aiida-core`
+@pytest.fixture(
+    scope='function',
+    params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
+)
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Union['Transport', 'AsyncTransport']:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
     plugin = TransportFactory(request.param)

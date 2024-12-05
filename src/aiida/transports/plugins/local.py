@@ -489,7 +489,7 @@ class LocalTransport(Transport):
         """
         remotepath = path_to_str(remotepath)
         localpath = path_to_str(localpath)
-        
+
         if not os.path.isabs(localpath):
             raise ValueError('localpath must be an absolute path')
 

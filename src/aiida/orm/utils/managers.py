@@ -16,7 +16,7 @@ from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotE
 from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
 
-__all__ = ('NodeLinksManager', 'AttributeManager')
+__all__ = ('AttributeManager', 'NodeLinksManager')
 
 
 class NodeLinksManager:

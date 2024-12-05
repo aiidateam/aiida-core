@@ -16,7 +16,7 @@ from aiida.manage import get_manager
 from aiida.orm import Group, Node, QueryBuilder
 from aiida.tools.graph.graph_traversers import get_nodes_delete
 
-__all__ = ('DELETE_LOGGER', 'delete_nodes', 'delete_group_nodes')
+__all__ = ('DELETE_LOGGER', 'delete_group_nodes', 'delete_nodes')
 
 DELETE_LOGGER = AIIDA_LOGGER.getChild('delete')
 

@@ -17,7 +17,7 @@ from flask_cors import CORS
 from . import api as api_classes
 from .common.config import API_CONFIG, APP_CONFIG, CLI_DEFAULTS
 
-__all__ = ('run_api', 'configure_api')
+__all__ = ('configure_api', 'run_api')
 
 
 def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs):

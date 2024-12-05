@@ -18,39 +18,7 @@ env:
 
 jobs:
 
-  check-requirements:
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-
-    - name: Install utils/ dependencies
-      run: pip install -r utils/requirements.txt
-
-    - name: Check requirements files
-      id: check_reqs
-      run: python ./utils/dependency_management.py check-requirements DEFAULT
-
-    - name: Create commit comment
-      if: failure() && steps.check_reqs.outputs.error
-      uses: peter-evans/commit-comment@v3
-      with:
-        path: pyproject.toml
-        body: |
-          ${{ steps.check_reqs.outputs.error }}
-
-          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information on dependency management.
-
   tests:
-
-    needs: [check-requirements]
 
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -96,7 +64,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Setup environment
-      run: .github/workflows/setup.sh
+      # Note: The virtual environment in .venv was created by uv in previous step
+      run: source .venv/bin/activate && .github/workflows/setup.sh
 
     - name: Run test suite
       env:
@@ -104,7 +73,7 @@ jobs:
         AIIDA_WARN_v3: 1
       # Python 3.12 has a performance regression when running with code coverage
       # so run code coverage only for python 3.9.
-      run: pytest -n auto --db-backend psql -m 'not nightly' tests/ ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
+      run: uv run pytest -n auto --db-backend psql -m 'not nightly' tests/ ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
 
     - name: Upload coverage report
       if: matrix.python-version == 3.9 && github.repository == 'aiidateam/aiida-core'
@@ -118,7 +87,6 @@ jobs:
 
   tests-presto:
 
-    needs: [check-requirements]
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -139,12 +107,11 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0
-      run: pytest -n auto -m 'presto' tests/
+      run: uv run pytest -n auto -m 'presto' tests/
 
 
   verdi:
 
-    needs: [check-requirements]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -155,7 +122,7 @@ jobs:
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.12'
-        from-requirements: 'false'
+        from-lock: 'false'
 
     - name: Run verdi tests
       run: |

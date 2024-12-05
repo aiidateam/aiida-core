@@ -120,7 +120,7 @@ pillow==10.1.0
 platformdirs==3.11.0
 plotly==5.17.0
 pluggy==1.3.0
-plumpy@git+https://github.com/khsrali/plumpy.git@allow-async-upload-download#egg=plumpy
+plumpy@git+https://github.com/aiidateam/plumpy.git@async-run#egg=plumpy
 prometheus-client==0.17.1
 prompt-toolkit==3.0.39
 psutil==5.9.6

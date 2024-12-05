@@ -2,6 +2,7 @@ import random
 import string
 
 import pytest
+
 from aiida import orm
 from aiida.orm.querybuilder import QueryBuilder
 

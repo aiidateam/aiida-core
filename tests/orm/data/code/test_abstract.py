@@ -11,6 +11,7 @@
 import pathlib
 
 import pytest
+
 from aiida.orm.nodes.data.code.abstract import AbstractCode
 
 

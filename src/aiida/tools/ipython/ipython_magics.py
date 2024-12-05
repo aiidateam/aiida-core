@@ -205,7 +205,6 @@ def register_ipython_extension(ipython=None):
     The %aiida IPython extension provides the same environment as the `verdi shell`.
 
     :param ipython: InteractiveShell instance. If omitted, the global InteractiveShell is used.
-
     """
     if ipython is None:
         ipython = get_ipython()

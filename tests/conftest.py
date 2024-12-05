@@ -27,6 +27,7 @@ from pathlib import Path
 
 import click
 import pytest
+
 from aiida import get_profile
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
@@ -373,7 +374,7 @@ def empty_config(tmp_path) -> Config:
     """
     from aiida.common.utils import Capturing
     from aiida.manage import configuration, get_manager
-    from aiida.manage.configuration import settings
+    from aiida.manage.configuration.settings import AiiDAConfigDir
 
     manager = get_manager()
 
@@ -387,7 +388,7 @@ def empty_config(tmp_path) -> Config:
 
     # Set the configuration directory to a temporary directory. This will create the necessary folders for an empty
     # AiiDA configuration and set relevant global variables in :mod:`aiida.manage.configuration.settings`.
-    settings.set_configuration_directory(tmp_path)
+    AiiDAConfigDir.set(tmp_path)
 
     # The constructor of `Config` called by `load_config` will print warning messages about migrating it
     with Capturing():
@@ -405,7 +406,7 @@ def empty_config(tmp_path) -> Config:
         # like the :class:`aiida.engine.daemon.client.DaemonClient` will not function properly after a test that uses
         # this fixture because the paths of the daemon files would still point to the path of the temporary config
         # folder created by this fixture.
-        settings.set_configuration_directory(pathlib.Path(current_config_path))
+        AiiDAConfigDir.set(pathlib.Path(current_config_path))
 
         # Reload the original profile
         manager.load_profile(current_profile_name)
@@ -782,9 +783,10 @@ def run_cli_command_subprocess(command, parameters, user_input, profile_name, su
 
 def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs):
     """Run CLI command through ``click.testing.CliRunner``."""
+    from click.testing import CliRunner
+
     from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
     from aiida.cmdline.groups.verdi import LazyVerdiObjAttributeDict
-    from click.testing import CliRunner
 
     if initialize_ctx_obj:
         config = get_config()

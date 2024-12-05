@@ -6,25 +6,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the links utilities."""
+"""Tests for the :mod:`aiida.cmdline.utils.ascii_vis` module."""
 
-import pytest
-
-from aiida.common.links import validate_link_label
+from aiida.orm.nodes.process.process import ProcessNode
 
 
-def test_validate_link_label():
-    """Test that illegal link labels will raise a `ValueError`."""
-    illegal_link_labels = [
-        '_leading_underscore',
-        'trailing_underscore_',
-        'non_numeric_%',
-        'including.period',
-        'disallowed👻unicodecharacters',
-        'white space',
-        'das-hes',
-    ]
+def test_build_call_graph():
+    from aiida.cmdline.utils.ascii_vis import build_call_graph
 
-    for link_label in illegal_link_labels:
-        with pytest.raises(ValueError):
-            validate_link_label(link_label)
+    node = ProcessNode()
+
+    call_graph = build_call_graph(node)
+    assert call_graph == 'None<None> None'

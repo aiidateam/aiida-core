@@ -14,7 +14,7 @@ from aiida.orm import ProcessNode
 
 from .awaitable import Awaitable, AwaitableAction, construct_awaitable
 
-__all__ = ('ToContext', 'assign_', 'append_')
+__all__ = ('ToContext', 'append_', 'assign_')
 
 ToContext = dict
 

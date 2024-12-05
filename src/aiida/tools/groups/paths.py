@@ -17,7 +17,7 @@ from typing import Any, Iterator, List, Optional, Tuple
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 
-__all__ = ('GroupPath', 'InvalidPath', 'GroupNotFoundError', 'GroupNotUniqueError', 'NoGroupsInPathError')
+__all__ = ('GroupNotFoundError', 'GroupNotUniqueError', 'GroupPath', 'InvalidPath', 'NoGroupsInPathError')
 
 REGEX_ATTR = re.compile('^[a-zA-Z][\\_a-zA-Z0-9]*$')
 

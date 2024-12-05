@@ -11,6 +11,7 @@
 import pickle
 
 import pytest
+
 from aiida import orm
 from aiida.common.exceptions import InvalidOperation
 

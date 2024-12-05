@@ -241,6 +241,7 @@ tests = [
   'pytest-rerunfailures~=12.0',
   'pytest-benchmark~=4.0',
   'pytest-regressions~=2.2',
+  'pytest-xdist~=3.6',
   'pympler~=1.0',
   'coverage~=7.0',
   'sphinx~=7.2.0',
@@ -388,6 +389,10 @@ testpaths = [
 xfail_strict = true
 
 [tool.ruff]
+exclude = [
+  'docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py',
+  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py'
+]
 line-length = 120
 
 [tool.ruff.format]

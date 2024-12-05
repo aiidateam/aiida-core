@@ -93,9 +93,9 @@ async def copy_from_remote_to_remote_async(
 ):
     """Copy files or folders from a remote computer to another remote computer.
     Note: To have a proper async performance,
-        both transports should be instance `core.async_ssh`.
-        Even if either or both are not async, the function will work,
-        but the performance might be lower than the sync version.
+    both transports should be instance `core.async_ssh`.
+    Even if either or both are not async, the function will work,
+    but the performance might be lower than the sync version.
 
     :param transportsource: transport to be used for the source computer
     :param transportdestination: transport to be used for the destination computer

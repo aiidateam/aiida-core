@@ -20,7 +20,7 @@ ase==3.22.1
 asn1crypto==1.5.1
 asttokens==2.4.0
 async-generator==1.10
-asyncssh~=2.18.0
+asyncssh@git+https://github.com/ronf/asyncssh.git@033ef54302b2b09d496d68ccf39778b9e5fc89e2#egg=asyncssh
 attrs==23.1.0
 babel==2.13.1
 backcall==0.2.0

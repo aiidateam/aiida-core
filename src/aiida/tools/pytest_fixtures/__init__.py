@@ -35,7 +35,6 @@ __all__ = (
     'aiida_computer_local',
     'aiida_computer_ssh',
     'aiida_computer_ssh_async',
-    'aiida_computer',
     'aiida_config',
     'aiida_config_factory',
     'aiida_config_tmp',

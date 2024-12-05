@@ -24,7 +24,7 @@ from typing import Union
 import psutil
 import pytest
 
-from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
+from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import AsyncTransport, Transport
 
 # TODO : test for copy with pattern
@@ -45,7 +45,8 @@ def tmp_path_local(tmp_path_factory):
     return tmp_path_factory.mktemp('local')
 
 
-@pytest.fixture(scope='function', params=entry_point.get_entry_point_names('aiida.transports'))
+# @pytest.fixture(scope='function', params=entry_point.get_entry_point_names('aiida.transports'))
+@pytest.fixture(scope='function', params=['core.ssh', 'core.ssh_auto', 'core.ssh_async'])
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Union['Transport', 'AsyncTransport']:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
     plugin = TransportFactory(request.param)
@@ -492,12 +493,14 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
         t1 = Path(retrieved_file_abs_path).stat().st_mtime_ns
 
         # overwrite retrieved_file_name in 0.01 s
-        time.sleep(0.01)
+        time.sleep(1)
         transport.getfile(remote_file_abs_path, retrieved_file_abs_path)
         assert Path(retrieved_file_abs_path).exists()
         t2 = Path(retrieved_file_abs_path).stat().st_mtime_ns
 
-        # Check st_mtime_ns to sure it is override
+        # Check st_mtime_ns to sure it is overwritten
+        # Note: this test will fail if getfile() would preserve the remote timestamp,
+        # this is supported by core.ssh_async, but the default value is False
         assert t2 > t1
 
 

@@ -231,6 +231,10 @@ class SshTransport(Transport):
     # if too large commands are sent, clogging the outputs or logs
     _MAX_EXEC_COMMAND_LOG_SIZE = None
 
+    # NOTE: all the methods that start with _get_ are class methods that
+    # return a suggestion for the specific field. They are being used in
+    # a function called transport_option_default in transports/cli.py,
+    # during an interactive `verdi computer configure` command.
     @classmethod
     def _get_username_suggestion_string(cls, computer):
         """Return a suggestion for the specific field."""

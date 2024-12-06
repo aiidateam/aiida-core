@@ -4,6 +4,8 @@
 Common plugins to AiiDA core
 ============================
 
+.. Non domain-specific plugins
+
 .. aiida-shell
 .. aiida-workgraph
 
@@ -11,15 +13,32 @@ Common plugins to AiiDA core
 .. aiida-hyperqueue
 
 .. aiida-project
-.. aiida-plugin-cutter
-
 .. aiida-code-registry
+
+.. aiida-plugin-cutter
 .. aiida-pythonjob
+
+
+This page lists common non domain-specific AiiDA plugins that extend the core functionality.
 
 .. grid:: 1 2 2 4
    :gutter: 3
 
-   .. grid-item-card:: :fa:`icon;mr-1` AiiDA shell
+   .. grid-item-card:: AiiDA WorkGraph
+      :text-align: center
+      :shadow: md
+
+      Efficiently design and manage flexible workflows with AiiDA.
+
+      +++++++++++++++++++++++++++++++++++++++++++++
+
+      .. button-link:: https://github.com/aiidateam/aiida-workgraph
+         :color: primary
+         :outline:
+
+         ``aiida-workgraph`` on GitHub
+
+   .. grid-item-card:: AiiDA shell
       :text-align: center
       :shadow: md
 
@@ -31,27 +50,13 @@ Common plugins to AiiDA core
          :color: primary
          :outline:
 
-         AiiDA shell
+         ``aiida-shell`` on GitHub
 
-   .. grid-item-card:: :fa:`icon;mr-1` Title 2
+   .. grid-item-card:: AiiDA submission controller
       :text-align: center
       :shadow: md
 
-      AiiDA WorkGraph
-
-      +++++++++++++++++++++++++++++++++++++++++++++
-
-      .. button-link:: https://github.com/aiidateam/aiida-workgraph
-         :color: primary
-         :outline:
-
-         Go to GitHub
-
-   .. grid-item-card:: :fa:`icon;mr-1` Title 3
-      :text-align: center
-      :shadow: md
-
-      AiiDA submission controller
+      Classes to help managing large numbers of submissions.
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -59,13 +64,13 @@ Common plugins to AiiDA core
          :color: primary
          :outline:
 
-         Go to GitHub
+         ``aiida-submission-controller`` on GitHub
 
-   .. grid-item-card:: :fa:`icon;mr-1` Title 4
+   .. grid-item-card:: AiiDA hyperqueue
       :text-align: center
       :shadow: md
 
-      AiiDA hyperqueue
+      Plugin for the HyperQueue metascheduler enabling sub-node jobs.
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -73,13 +78,13 @@ Common plugins to AiiDA core
          :color: primary
          :outline:
 
-         Go to GitHub
+         ``aiida-hyperqueue`` on GitHub
 
-   .. grid-item-card:: :fa:`icon;mr-1` Title 5
+   .. grid-item-card:: AiiDA project
       :text-align: center
       :shadow: md
 
-      AiiDA project
+      AiiDA project manager with custom Python environments and isolated project directories.
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -87,27 +92,13 @@ Common plugins to AiiDA core
          :color: primary
          :outline:
 
-         Go to GitHub
+         ``aiida-project`` on GitHub
 
-   .. grid-item-card:: :fa:`icon;mr-1` Title 6
+   .. grid-item-card:: AiiDA code registry
       :text-align: center
       :shadow: md
 
-      AiiDA plugin cookiecutter
-
-      +++++++++++++++++++++++++++++++++++++++++++++
-
-      .. button-link::https://github.com/aiidateam/aiida-plugin-cutter
-         :color: primary
-         :outline:
-
-         Go to GitHub
-
-   .. grid-item-card:: :fa:`icon;mr-1` Title 7
-      :text-align: center
-      :shadow: md
-
-      AiiDA code registry
+      Registry of simulation codes and computers for easy setup in AiiDA.
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -115,13 +106,27 @@ Common plugins to AiiDA core
          :color: primary
          :outline:
 
-         Go to GitHub
+         ``aiida-code-registry`` on GitHub
 
-   .. grid-item-card:: :fa:`icon;mr-1` Title 8
+   .. grid-item-card:: AiiDA plugin cutter
       :text-align: center
       :shadow: md
 
-      AiiDA PythonJob
+      Cookie cutter recipe for AiiDA plugins.
+
+      +++++++++++++++++++++++++++++++++++++++++++++
+
+      .. button-link::https://github.com/aiidateam/aiida-plugin-cutter
+         :color: primary
+         :outline:
+
+         ``aiida-plugin-cutter`` on GitHub
+
+   .. grid-item-card:: AiiDA PythonJob
+      :text-align: center
+      :shadow: md
+
+      Run non-AiiDA Python functions on a remote computer (pre-alpha).
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -129,4 +134,17 @@ Common plugins to AiiDA core
          :color: primary
          :outline:
 
-         Go to GitHub
+         ``aiida-pythonjob`` on GitHub
+
+
+Honorable mentions
+===================
+
+- `aiida-firecrest <https://github.com/aiidateam/aiida-firecrest>`_: Transport/Scheduler plugins for interfacing with
+  FirecREST (RESTful services gateway and interface for managing HPC resources).
+- `aiida-resource-registry <https://github.com/aiidateam/aiida-resource-registry>`_: Registry of simulation codes and computers for easy setup in AiiDAlab.
+- `aiida-restapi <https://github.com/aiidateam/aiida-restapi>`_: RESTful AiiDA Web API for data queries and workflow management.
+- `aiida-diff <https://github.com/aiidateam/aiida-diff>`_: AiiDA demo plugin that computes the difference between two
+  files.
+
+The full list of available plugins can be found on the `AiiDA plugin registry <https://aiidateam.github.io/aiida-registry/>`

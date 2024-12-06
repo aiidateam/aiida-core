@@ -4,22 +4,7 @@
 Common plugins to AiiDA core
 ============================
 
-.. Non domain-specific plugins
-
-.. aiida-shell
-.. aiida-workgraph
-
-.. aiida-submission-controller
-.. aiida-hyperqueue
-
-.. aiida-project
-.. aiida-code-registry
-
-.. aiida-plugin-cutter
-.. aiida-pythonjob
-
-
-This page lists common non domain-specific AiiDA plugins that extend the core functionality.
+This page lists common AiiDA plugins which are not specific to any research domain, but extend the core functionality.
 
 .. grid:: 1 2 2 4
    :gutter: 3

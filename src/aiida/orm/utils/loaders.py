@@ -20,18 +20,18 @@ if TYPE_CHECKING:
     from aiida.orm import Code, Computer, Group, Node
 
 __all__ = (
-    'load_code',
-    'load_computer',
-    'load_group',
-    'load_node',
-    'load_entity',
-    'get_loader',
-    'OrmEntityLoader',
     'CalculationEntityLoader',
     'CodeEntityLoader',
     'ComputerEntityLoader',
     'GroupEntityLoader',
     'NodeEntityLoader',
+    'OrmEntityLoader',
+    'get_loader',
+    'load_code',
+    'load_computer',
+    'load_entity',
+    'load_group',
+    'load_node',
 )
 
 

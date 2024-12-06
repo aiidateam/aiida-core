@@ -26,7 +26,7 @@ from aiida.tools.graph.graph_traversers import traverse_graph
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
 
-__all__ = ('Graph', 'default_link_styles', 'default_node_styles', 'pstate_node_styles', 'default_node_sublabels')
+__all__ = ('Graph', 'default_link_styles', 'default_node_styles', 'default_node_sublabels', 'pstate_node_styles')
 
 LinkAnnotateType = Literal[None, 'label', 'type', 'both']
 IdentifierType = Literal['pk', 'uuid', 'label']

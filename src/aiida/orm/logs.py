@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from aiida.orm.implementation.logs import BackendLog  # noqa: F401
     from aiida.orm.querybuilder import FilterType, OrderByType
 
-__all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')
+__all__ = ('ASCENDING', 'DESCENDING', 'Log', 'OrderSpecifier')
 
 ASCENDING = 'asc'
 DESCENDING = 'desc'

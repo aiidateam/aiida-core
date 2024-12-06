@@ -9,6 +9,7 @@
 """Tests for the links utilities."""
 
 import pytest
+
 from aiida.common.links import validate_link_label
 
 

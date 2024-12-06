@@ -27,7 +27,7 @@ from . import echo
 
 DAEMON_NOT_RUNNING_DEFAULT_MESSAGE = 'daemon is not running'
 
-__all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
+__all__ = ('dbenv', 'only_if_daemon_running', 'with_dbenv')
 
 
 @decorator

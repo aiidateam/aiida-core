@@ -9,6 +9,7 @@
 """Tests for the `Node` utils."""
 
 import pytest
+
 from aiida.orm import Data
 from aiida.orm.utils.node import load_node_class
 

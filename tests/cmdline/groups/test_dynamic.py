@@ -2,9 +2,10 @@
 
 import typing as t
 
-from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 from pydantic import BaseModel, Field
 from pydantic_core import PydanticUndefined
+
+from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 
 
 class CustomClass:

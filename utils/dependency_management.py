@@ -21,8 +21,6 @@ import requests
 import tomli
 import yaml
 from packaging.requirements import Requirement
-from packaging.specifiers import Specifier
-from packaging.utils import canonicalize_name
 from packaging.version import parse
 
 ROOT = Path(__file__).resolve().parent.parent  # repository root
@@ -154,13 +152,6 @@ def generate_environment_yml():
         )
 
 
-@cli.command()
-@click.pass_context
-def generate_all(ctx):
-    """Generate all dependent requirement files."""
-    ctx.invoke(generate_environment_yml)
-
-
 @cli.command('validate-environment-yml', help="Validate 'environment.yml'.")
 def validate_environment_yml():
     """Validate that 'environment.yml' is consistent with 'pyproject.toml'."""
@@ -233,105 +224,6 @@ def validate_environment_yml():
         )
 
     click.secho('Conda dependency specification is consistent.', fg='green')
-
-
-@cli.command('validate-all', help='Validate consistency of all requirements.')
-@click.pass_context
-def validate_all(ctx):
-    """Validate consistency of all requirement specifications of the package.
-
-    Validates that the specification of requirements/dependencies is consistent across
-    the following files:
-
-    - pyproject.toml
-    - environment.yml
-
-    """
-    ctx.invoke(validate_environment_yml)
-
-
-@cli.command()
-@click.argument('extras', nargs=-1)
-@click.option(
-    '--github-annotate/--no-github-annotate',
-    default=True,
-    hidden=True,
-    help='Control whether to annotate files with context-specific warnings '
-    'as part of a GitHub actions workflow. Note: Requires environment '
-    'variable GITHUB_ACTIONS=true .',
-)
-def check_requirements(extras, github_annotate):
-    """Check the 'requirements/*.txt' files.
-
-    Checks that the environments specified in the requirements files
-    match all the dependencies specified in 'pyproject.toml'.
-
-    The arguments allow to specify which 'extra' requirements to expect.
-    Use 'DEFAULT' to select 'atomic_tools', 'docs', 'notebook', 'rest', and 'tests'.
-
-    """
-    if len(extras) == 1 and extras[0] == 'DEFAULT':
-        extras = ['atomic_tools', 'docs', 'notebook', 'rest', 'tests']
-
-    # Read the requirements from 'pyproject.toml''
-    pyproject = _load_pyproject()
-    install_requires = pyproject['project']['dependencies']
-    for extra in extras:
-        install_requires.extend(pyproject['project']['optional-dependencies'][extra])
-    install_requires = set(parse_requirements(install_requires))
-
-    not_installed = defaultdict(list)
-    for fn_req in (ROOT / 'requirements').iterdir():
-        match = re.match(r'.*-py-(.*)\.txt', str(fn_req))
-        if not match:
-            continue
-        env = {'python_version': match.groups()[0]}
-        requirements_abstract = {r for r in install_requires if r.marker is None or r.marker.evaluate(env)}
-        installed = []
-
-        with open(fn_req, encoding='utf8') as req_file:
-            requirements_concrete = parse_requirements(req_file)
-
-        for requirement_abstract in requirements_abstract:
-            for requirement_concrete in requirements_concrete:
-                version = Specifier(str(requirement_concrete.specifier)).version
-                if canonicalize_name(requirement_abstract.name) == canonicalize_name(
-                    requirement_concrete.name
-                ) and requirement_abstract.specifier.contains(version):
-                    installed.append(requirement_abstract)
-                    break
-
-        for dependency in requirements_abstract.difference(set(installed)):
-            not_installed[dependency].append(fn_req)
-
-    if any(not_installed.values()):
-        setup_json_linenos = _find_linenos_of_requirements_in_pyproject(not_installed)
-
-        # Format error message to be presented to user.
-        error_msg = ["The requirements/ files are missing dependencies specified in the 'pyproject.toml' file.", '']
-        for dependency, fn_reqs in not_installed.items():
-            src = 'pyproject.toml' + ','.join(str(lineno + 1) for lineno in setup_json_linenos[dependency])
-            error_msg.append(f'{src}: No match for dependency `{dependency}` in:')
-            for fn_req in sorted(fn_reqs):
-                error_msg.append(f' - {fn_req.relative_to(ROOT)}')
-
-        if GITHUB_ACTIONS:
-            # Set the step ouput error message which can be used, e.g., for display as part of an issue comment.
-            print('::set-output name=error::' + '%0A'.join(error_msg))
-
-        if GITHUB_ACTIONS and github_annotate:
-            # Annotate the pyproject.toml' file with specific warnings.
-            for dependency, fn_reqs in not_installed.items():
-                for lineno in setup_json_linenos[dependency]:
-                    print(
-                        f'::warning file=pyproject.toml,line={lineno+1}::'
-                        f"No match for dependency '{dependency}' in: "
-                        + ','.join(str(fn_req.relative_to(ROOT)) for fn_req in fn_reqs)
-                    )
-
-        raise DependencySpecificationError('\n'.join(error_msg))
-
-    click.secho("Requirements files appear to be in sync with specifications in 'pyproject.toml''.", fg='green')
 
 
 @cli.command()

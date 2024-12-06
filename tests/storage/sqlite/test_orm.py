@@ -11,6 +11,7 @@
 import json
 
 import pytest
+
 from aiida.orm import Dict, QueryBuilder
 from aiida.storage.sqlite_temp import SqliteTempBackend
 

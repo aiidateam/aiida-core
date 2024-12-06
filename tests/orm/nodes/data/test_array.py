@@ -10,6 +10,7 @@
 
 import numpy
 import pytest
+
 from aiida.orm import ArrayData, load_node
 
 

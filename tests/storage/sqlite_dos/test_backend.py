@@ -3,6 +3,7 @@
 import pathlib
 
 import pytest
+
 from aiida.storage.sqlite_dos.backend import FILENAME_CONTAINER, FILENAME_DATABASE, SqliteDosStorage
 
 
@@ -18,7 +19,6 @@ def test_archive_import(aiida_config, aiida_profile_factory):
     """Test that archives can be imported."""
     from aiida.orm import Node, QueryBuilder
     from aiida.tools.archive.imports import import_archive
-
     from tests.utils.archives import get_archive_file
 
     with aiida_profile_factory(aiida_config, storage_backend='core.sqlite_dos'):

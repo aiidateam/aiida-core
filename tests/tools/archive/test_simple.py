@@ -12,15 +12,16 @@ import functools
 import json
 
 import pytest
+from archive_path import ZipPath
+
 from aiida import orm
 from aiida.common.exceptions import IncompatibleStorageSchema, LicensingException
 from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
-from archive_path import ZipPath
 
 
 @pytest.mark.parametrize('entities', ['all', 'specific'])
-def test_base_data_nodes(aiida_profile, tmp_path, entities):
+def test_base_data_nodes(aiida_profile_clean, tmp_path, entities):
     """Test ex-/import of Base Data nodes"""
     # producing values for each base type
     values = ('Hello', 6, -1.2399834e12, False)
@@ -45,7 +46,7 @@ def test_base_data_nodes(aiida_profile, tmp_path, entities):
     # actually export now
     create(filename=filename)
     # cleaning:
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
     # Importing back the data:
     import_archive(filename)
     # Checking whether values are preserved:

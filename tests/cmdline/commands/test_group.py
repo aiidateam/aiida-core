@@ -9,6 +9,7 @@
 """Tests for the `verdi group` command."""
 
 import pytest
+
 from aiida import orm
 from aiida.cmdline.commands import cmd_group
 from aiida.cmdline.utils.echo import ExitCode

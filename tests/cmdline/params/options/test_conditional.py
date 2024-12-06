@@ -12,6 +12,7 @@ import functools
 
 import click
 import pytest
+
 from aiida.cmdline.params.options.conditional import ConditionalOption
 
 

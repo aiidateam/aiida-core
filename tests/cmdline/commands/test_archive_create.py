@@ -13,11 +13,11 @@ import uuid
 import zipfile
 
 import pytest
+
 from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Computer, Dict, Group, InstalledCode
 from aiida.storage.sqlite_zip.migrator import list_versions
 from aiida.tools.archive import ArchiveFormatSqlZip
-
 from tests.utils.archives import get_archive_file
 
 pytest.mark.usefixtures('chdir_tmp_path')

@@ -9,6 +9,7 @@
 """Tests for the `FolderData` class."""
 
 import pytest
+
 from aiida.orm import FolderData
 
 

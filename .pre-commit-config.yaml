@@ -2,7 +2,7 @@ ci:
   autofix_prs: true
   autoupdate_commit_msg: 'Devops: Update pre-commit dependencies'
   autoupdate_schedule: quarterly
-  skip: [mypy, dm-generate-all, dependencies, verdi-autodocs]
+  skip: [mypy, check-uv-lock, generate-conda-environment, validate-conda-environment, verdi-autodocs]
 
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -37,16 +37,10 @@ repos:
     args: [--line-length=120, --fail-on-change]
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.5.0
+  rev: v0.8.0
   hooks:
   - id: ruff-format
-    exclude: &exclude_ruff >
-      (?x)^(
-        docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py|
-        docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py|
-      )$
   - id: ruff
-    exclude: *exclude_ruff
     args: [--fix, --exit-non-zero-on-fix, --show-fixes]
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
@@ -194,9 +188,20 @@ repos:
         src/aiida/workflows/arithmetic/multiply_add.py|
       )$
 
-  - id: dm-generate-all
-    name: Update all requirements files
-    entry: python ./utils/dependency_management.py generate-all
+  - id: check-uv-lock
+    name: Check uv lockfile up to date
+    # NOTE: This will not automatically update the lockfile
+    entry: uv lock --locked
+    language: system
+    pass_filenames: false
+    files: >-
+      (?x)^(
+        pyproject.toml|
+      )$
+
+  - id: generate-conda-environment
+    name: Update conda environment file
+    entry: python ./utils/dependency_management.py generate-environment-yml
     language: system
     pass_filenames: false
     files: >-
@@ -205,7 +210,7 @@ repos:
         utils/dependency_management.py
       )$
 
-  - id: dependencies
+  - id: validate-conda-environment
     name: Validate environment.yml
     entry: python ./utils/dependency_management.py validate-environment-yml
     language: system

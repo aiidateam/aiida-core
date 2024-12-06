@@ -12,7 +12,7 @@ from collections.abc import Mapping
 
 from . import exceptions
 
-__all__ = ('AttributeDict', 'FixedFieldsAttributeDict', 'DefaultFieldsAttributeDict')
+__all__ = ('AttributeDict', 'DefaultFieldsAttributeDict', 'FixedFieldsAttributeDict')
 
 
 class AttributeDict(dict):

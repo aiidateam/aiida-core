@@ -11,6 +11,7 @@
 import uuid
 
 import pytest
+
 from aiida.common import exceptions
 from aiida.orm import AuthInfo, Computer, User
 from aiida.plugins import TransportFactory

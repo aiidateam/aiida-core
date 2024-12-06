@@ -9,6 +9,7 @@
 """Tests for :class:`aiida.orm.nodes.data.dict.Dict` class."""
 
 import pytest
+
 from aiida.orm import Dict
 
 

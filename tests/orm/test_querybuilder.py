@@ -17,6 +17,7 @@ from datetime import date, datetime, timedelta
 from itertools import chain
 
 import pytest
+
 from aiida import orm, plugins
 from aiida.common.links import LinkType
 from aiida.orm.querybuilder import _get_ormclass
@@ -371,6 +372,7 @@ class TestBasic:
         assert dictionary['*'].pk == node.pk
         assert dictionary['id'] == node.pk
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_operators_eq_lt_gt(self):
         nodes = [orm.Data() for _ in range(8)]
 
@@ -393,6 +395,7 @@ class TestBasic:
         assert orm.QueryBuilder().append(orm.Node, filters={'attributes.fa': {'>': 1.02}}).count() == 4
         assert orm.QueryBuilder().append(orm.Node, filters={'attributes.fa': {'>=': 1.02}}).count() == 5
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_subclassing(self):
         s = orm.StructureData()
         s.base.attributes.set('cat', 'miau')
@@ -513,6 +516,7 @@ class TestBasic:
         # So this should work now:
         qb.append(orm.StructureData, tag='s').limit(2).dict()
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_tuples(self):
         """Test appending ``cls`` tuples."""
         orm.Group(label='helloworld').store()
@@ -695,6 +699,7 @@ class TestBasic:
 class TestMultipleProjections:
     """Unit tests for the QueryBuilder ORM class."""
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_first_multiple_projections(self):
         """Test `first()` returns correct types and numbers for multiple projections."""
         orm.Data().store()

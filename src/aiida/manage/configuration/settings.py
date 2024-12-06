@@ -26,7 +26,7 @@ DEFAULT_DAEMON_DIR_NAME = 'daemon'
 DEFAULT_DAEMON_LOG_DIR_NAME = 'log'
 DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 
-__all__ = ('AiiDAConfigPathResolver', 'AiiDAConfigDir')
+__all__ = ('AiiDAConfigDir', 'AiiDAConfigPathResolver')
 
 
 @final

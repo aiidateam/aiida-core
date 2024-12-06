@@ -22,7 +22,7 @@ from aiida.common.escaping import escape_for_bash
 
 from ..transport import Transport, TransportInternalError
 
-__all__ = ('parse_sshconfig', 'convert_to_bool', 'SshTransport')
+__all__ = ('SshTransport', 'convert_to_bool', 'parse_sshconfig')
 
 
 def parse_sshconfig(computername):

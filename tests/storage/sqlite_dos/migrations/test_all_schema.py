@@ -9,6 +9,7 @@
 """Basic tests for all migrations"""
 
 import pytest
+
 from aiida.storage.sqlite_dos.backend import SqliteDosMigrator
 
 

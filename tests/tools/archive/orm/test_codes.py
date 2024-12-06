@@ -13,7 +13,6 @@ import uuid
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
-
 from tests.tools.archive.utils import get_all_node_links
 
 

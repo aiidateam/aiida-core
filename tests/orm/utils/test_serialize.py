@@ -14,6 +14,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pytest
+
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm.utils import serialize

@@ -10,9 +10,10 @@
 
 from datetime import datetime
 
+from sqlalchemy import select
+
 from aiida.common import timezone
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
-from sqlalchemy import select
 
 
 def test_attr_extra_migration(perform_migrations: PsqlDosMigrator):

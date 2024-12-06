@@ -17,7 +17,7 @@ from aiida.orm import Dict
 from .exit_code import ExitCode, ExitCodesNamespace
 from .ports import CalcJobOutputPort, InputPort, PortNamespace
 
-__all__ = ('ProcessSpec', 'CalcJobProcessSpec')
+__all__ = ('CalcJobProcessSpec', 'ProcessSpec')
 
 
 class ProcessSpec(plumpy.process_spec.ProcessSpec):

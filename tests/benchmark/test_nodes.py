@@ -15,6 +15,7 @@ such as storage and deletion from the database and repository.
 from io import StringIO
 
 import pytest
+
 from aiida.common import NotExistent
 from aiida.orm import Data, load_node
 

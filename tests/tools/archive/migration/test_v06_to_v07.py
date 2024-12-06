@@ -9,6 +9,7 @@
 """Test archive file migration from export version 0.6 to 0.7"""
 
 import pytest
+
 from aiida.common.exceptions import CorruptStorage
 from aiida.storage.sqlite_zip.migrations.legacy.v06_to_v07 import (
     data_migration_legacy_process_attributes,

@@ -18,8 +18,8 @@ from aiida.common.exceptions import InvalidEntryPointTypeError
 __all__ = (
     'BaseFactory',
     'BrokerFactory',
-    'CalculationFactory',
     'CalcJobImporterFactory',
+    'CalculationFactory',
     'DataFactory',
     'DbImporterFactory',
     'GroupFactory',

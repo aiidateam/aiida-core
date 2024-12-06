@@ -12,6 +12,7 @@ import uuid
 from argparse import Namespace
 
 import pytest
+
 from aiida.common.exceptions import NotExistent
 from aiida.orm import BandsData, Group, User
 from aiida.orm.nodes.data.array.bands import get_bands_and_parents_structure

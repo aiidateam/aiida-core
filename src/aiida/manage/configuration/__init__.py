@@ -39,13 +39,13 @@ __all__ = (
 
 
 __all__ += (
+    'CONFIG',
     'get_config',
     'get_config_option',
     'get_config_path',
     'get_profile',
     'load_profile',
     'reset_config',
-    'CONFIG',
 )
 
 import os

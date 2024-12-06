@@ -25,7 +25,7 @@ jobs:
       with:
         python-version: '3.9'
         extras: '[docs,tests,rest,atomic_tools]'
-        from-requirements: 'false'
+        from-lock: 'false'
 
     - name: Build HTML docs
       id: linkcheck

@@ -14,6 +14,7 @@ import pathlib
 import uuid
 
 import pytest
+
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, settings
 from aiida.manage.configuration.config import Config

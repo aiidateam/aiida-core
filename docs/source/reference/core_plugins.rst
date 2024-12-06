@@ -19,11 +19,11 @@ Common plugins to AiiDA core
 .. grid:: 1 2 2 4
    :gutter: 3
 
-   .. grid-item-card:: :fa:`icon;mr-1` Title 1
+   .. grid-item-card:: :fa:`icon;mr-1` AiiDA shell
       :text-align: center
       :shadow: md
 
-      AiiDA shell
+      Plugin that makes running shell commands easy.
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -31,7 +31,7 @@ Common plugins to AiiDA core
          :color: primary
          :outline:
 
-         Go to GitHub
+         AiiDA shell
 
    .. grid-item-card:: :fa:`icon;mr-1` Title 2
       :text-align: center

@@ -285,8 +285,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             return case((type_filter, casted_entity.ilike(value, escape='\\')), else_=False)
 
         if operator == 'contains':
-            # to-do, see: https://github.com/sqlalchemy/sqlalchemy/discussions/7836
-            raise NotImplementedError('The operator `contains` is not implemented for SQLite-based storage plugins.')
+            return func.json_contains(database_entity, json.dumps(value))
 
         if operator == 'has_key':
             return (

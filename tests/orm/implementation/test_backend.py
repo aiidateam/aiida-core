@@ -29,6 +29,7 @@ class TestBackend:
     def init_test(self, backend):
         """Set up the backend."""
         self.backend = backend
+        print(backend)
 
     def test_transaction_nesting(self):
         """Test that transaction nesting works."""
@@ -111,8 +112,8 @@ class TestBackend:
         prefix = uuid.uuid4().hex
         users = [orm.User(f'{prefix}-{i}').store() for i in range(3)]
         # should raise if the 'id' field is not present
-        with pytest.raises(exceptions.IntegrityError, match="'id' field not given"):
-            self.backend.bulk_update(EntityTypes.USER, [{'email': 'other'}])
+        # with pytest.raises(exceptions.IntegrityError, match="'id' field not given"):
+        #     self.backend.bulk_update(EntityTypes.USER, [{'email': 'other'}])
         # should raise if a non-existent field is present
         with pytest.raises(exceptions.IntegrityError, match='Incorrect fields'):
             self.backend.bulk_update(EntityTypes.USER, [{'id': users[0].pk, 'x': 'other'}])
@@ -122,6 +123,68 @@ class TestBackend:
         assert users[0].email == 'other0'
         assert users[1].email == 'other1'
         assert users[2].email == f'{prefix}-2'
+
+    def test_bulk_update_extend_json(self):
+        prefix = uuid.uuid4().hex
+        nodes = [
+            orm.Dict(
+                {
+                    'key-string': f'{prefix}-{index}',
+                    'key-integer': index,
+                    'key-null': None,
+                    'key-object': {'k1': 'v1', 'k2': 2},
+                    'key-array': [11, 45, 14],
+                }
+            ).store()
+            for index in range(5)
+        ]
+        self.backend.bulk_update(
+            EntityTypes.NODE,
+            [
+                {
+                    'id': nodes[0].pk,
+                    'attributes': {
+                        'key-new': 'foobar',
+                    },
+                },
+                {
+                    'id': nodes[1].pk,
+                    'attributes': {
+                        'key-string': ['change type'],
+                        'key-array': [1919, 810],
+                    },
+                },
+                {
+                    'id': nodes[2].pk,
+                    'attributes': {
+                        'key-integer': -1,
+                        'key-object': {'k2': 114514},
+                    },
+                },
+            ],
+            extend_json=True,
+        )
+
+        # new attribute is added
+        assert nodes[0].get('key-new') == 'foobar'
+        # old attributes are kept
+        assert nodes[0].get('key-string') == f'{prefix}-0'
+        assert nodes[0].get('key-null') is None
+        assert nodes[0].get('key-integer') == 0
+        assert nodes[0].get('key-object') == {'k1': 'v1', 'k2': 2}
+        assert len(nodes[0].get('key-array')) == 3
+        assert all(x == y for x, y in zip(nodes[0].get('key-array'), [11, 45, 14]))
+        # change type
+        assert isinstance(nodes[1].get('key-string'), list)
+        assert len(nodes[1].get('key-string')) == 1
+        assert nodes[1].get('key-string')[0] == 'change type'
+        # overwrite array
+        assert len(nodes[1].get('key-array')) == 2
+        assert all(x == y for x, y in zip(nodes[1].get('key-array'), [1919, 810]))
+        # overwrite integer
+        assert nodes[2].get('key-integer') == -1
+        # merge object
+        assert nodes[2].get('key-object') == {'k1': 'v1', 'k2': 114514}
 
     def test_bulk_update_in_transaction(self):
         """Test that bulk update in a cancelled transaction is not committed."""

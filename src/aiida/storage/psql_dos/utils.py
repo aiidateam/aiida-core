@@ -10,6 +10,7 @@
 
 import json
 from typing import TypedDict
+from sqlalchemy import event
 
 
 class PsqlConfig(TypedDict, total=False):
@@ -24,6 +25,47 @@ class PsqlConfig(TypedDict, total=False):
     engine_kwargs: dict
     """keyword argument that will be passed on to the SQLAlchemy engine."""
 
+
+# Adapted from https://stackoverflow.com/a/79133234/9184828
+JSONB_PATCH_FUNCTION = """
+CREATE OR REPLACE FUNCTION json_patch (
+    target jsonb, -- target JSON value
+    patch jsonb -- patch JSON value
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+IMMUTABLE AS $$
+BEGIN
+    -- If the patch is not a JSON object, return the patch as the result (base case)
+    IF patch isnull or jsonb_typeof(patch) != 'object' THEN
+        RETURN patch;
+    END IF;
+
+    -- If the target is not an object, set it to an empty object
+    IF target isnull or jsonb_typeof(target) != 'object' THEN
+        target := '{}';
+    END IF;
+
+    RETURN coalesce(
+            jsonb_object_agg(
+                    coalesce(targetKey, patchKey), -- there will be either one or both keys equal
+                    CASE
+                        WHEN patchKey isnull THEN targetValue -- key missing in patch - retain target value
+                        ELSE json_patch(targetValue, patchValue)
+                    END
+            ),
+            '{}'::jsonb -- if SELECT will return no keys (empty table), then jsonb_object_agg will return NULL, need to return {} in that case
+    )
+    FROM jsonb_each(target) temp1(targetKey, targetValue)
+         FULL JOIN jsonb_each(patch) temp2(patchKey, patchValue)
+         ON targetKey = patchKey
+    WHERE jsonb_typeof(patchValue) != 'null' OR patchValue isnull; -- remove keys which are set to null in patch object
+END;
+$$;
+""".strip()
+
+def register_jsonb_patch_function(conn, *args, **kwargs):
+    print('reg', conn.execute(JSONB_PATCH_FUNCTION))
 
 def create_sqlalchemy_engine(config: PsqlConfig):
     """Create SQLAlchemy engine (to be used for QueryBuilder queries)
@@ -50,12 +92,14 @@ def create_sqlalchemy_engine(config: PsqlConfig):
         port=config['database_port'],
         name=config['database_name'],
     )
-    return create_engine(
+    engine = create_engine(
         engine_url,
         json_serializer=json.dumps,
         json_deserializer=json.loads,
         **config.get('engine_kwargs', {}),
     )
+    event.listen(engine, 'connect', register_jsonb_patch_function)
+    return engine
 
 
 def create_scoped_session_factory(engine, **kwargs):

@@ -14,14 +14,16 @@ import functools
 import hashlib
 import os
 import shutil
+from collections import defaultdict
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any, BinaryIO, Iterator, Sequence
 
 from pydantic import BaseModel, Field
-from sqlalchemy import column, insert, update
+from sqlalchemy import column, func, insert, update
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.expression import case
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
 from aiida.manage.configuration import Profile
@@ -268,18 +270,36 @@ class SqliteTempBackend(StorageBackend):
             result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
         return [row.id for row in result]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: list[dict], extend_json: bool = False) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
             return None
+
+        cases = defaultdict(list)
+        id_list = []
         for row in rows:
-            if 'id' not in row:
-                raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
             if not keys.issuperset(row):
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+            if 'id' in row:
+                when = mapper.c.id == row['id']
+                id_list.append(row['id'])
+            else:
+                raise IntegrityError(f"neither 'id' nor 'uuid' field given for {entity_type}: {set(row)}")
+
+            for key, value in row.items():
+                if key == 'id':
+                    continue
+
+                update_value = value
+                if extend_json and key in ['extra', 'attributes']:
+                    update_value = func.json_patch(mapper.c[key], value)
+                cases[key].append((when, update_value))
+
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
-            session.execute(update(mapper), rows)
+            values = {k: case(*v, else_=mapper.c[key]) for k, v in cases.items()}
+            stmt = update(mapper).where(mapper.c.id.in_(id_list)).values(**values)
+            session.execute(stmt)
 
     def delete(self) -> None:
         """Delete the storage and all the data."""

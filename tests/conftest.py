@@ -536,6 +536,7 @@ def event_loop(manager):
 @pytest.fixture
 def backend(manager):
     """Get the ``Backend`` storage instance of the currently loaded profile."""
+    print(manager)
     return manager.get_profile_storage()
 
 

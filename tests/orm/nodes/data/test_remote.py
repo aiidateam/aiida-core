@@ -92,7 +92,7 @@ def test_get_size_on_disk(request, fixture):
 def test_get_size_on_disk_sizes(tmp_path, num_char, sizes, request, fixture):
     """Test the different implementations implementations to obtain the size of a RemoteData on disk."""
 
-    remote_data = request.getfixturevalue(fixture) # (num_char=num_char)
+    remote_data = request.getfixturevalue(fixture)  # (num_char=num_char)
 
     content = b'a' * num_char
     (tmp_path / 'file.txt').write_bytes(content)
@@ -157,4 +157,4 @@ def test_get_size_on_disk_lstat(request, fixture):
 
         # Raises OSError for non-existent directory
         with pytest.raises(OSError, match='The required remote folder.*'):
-            remote_data._get_size_on_disk_lstat(transport=transport, full_path = full_path / 'non-existent')
+            remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path / 'non-existent')

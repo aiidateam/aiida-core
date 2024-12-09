@@ -87,3 +87,11 @@ def remote_show(datum):
     """Show information for a RemoteData object."""
     echo.echo(f'- Remote computer name: {datum.computer.label}')
     echo.echo(f'- Remote folder full path: {datum.get_remote_path()}')
+
+
+@remote.command('size')
+@arguments.NODE()
+def remote_size(node):
+    """Print the total size of a RemoteData object."""
+    print(node)
+    total_size = node.get_size_on_disk()

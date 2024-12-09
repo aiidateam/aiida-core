@@ -14,7 +14,6 @@ import logging
 import os
 from pathlib import Path
 
-from aiida.common.exceptions import NotExistent
 from aiida.orm import AuthInfo
 from aiida.orm.fields import add_field
 from aiida.transports import Transport

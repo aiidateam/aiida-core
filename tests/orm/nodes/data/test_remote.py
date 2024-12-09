@@ -8,6 +8,8 @@
 ###########################################################################
 """Tests for the :mod:`aiida.orm.nodes.data.remote.base.RemoteData` module."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import pytest
@@ -16,8 +18,9 @@ from aiida.orm import RemoteData
 
 
 @pytest.fixture
-def remote_data_local(tmp_path, aiida_localhost, num_char: int | None = None):
+def remote_data_local(tmp_path, aiida_computer_local, num_char: int | None = None):
     """Return a non-empty ``RemoteData`` instance."""
+    aiida_localhost = aiida_computer_local(label='localhost')
     node = RemoteData(computer=aiida_localhost)
     node.set_remote_path(str(tmp_path))
     node.store()
@@ -31,15 +34,18 @@ def remote_data_local(tmp_path, aiida_localhost, num_char: int | None = None):
 
 
 @pytest.fixture
-def remote_data_ssh(tmp_path, aiida_computer_ssh):
+def remote_data_ssh(tmp_path, aiida_computer_ssh, num_char: int | None = None):
     """Return a non-empty ``RemoteData`` instance."""
-    # Compared to `aiida_localhost`, `aiida_computer_ssh` doesn't return an actual `Computer`, but just a factory
-    # Thus, we need to call the factory here passing the label to actually create the `Computer` instance
-    localhost_ssh = aiida_computer_ssh(label='localhost-ssh')
-    node = RemoteData(computer=localhost_ssh)
+    aiida_localhost_ssh = aiida_computer_ssh(label='localhost-ssh')
+    node = RemoteData(computer=aiida_localhost_ssh)
     node.set_remote_path(str(tmp_path))
     node.store()
-    (tmp_path / 'file.txt').write_bytes(b'some content')
+
+    if num_char is None:
+        content = b'some content'
+    else:
+        content = b'a' * num_char
+    (tmp_path / 'file.txt').write_bytes(content)
     return node
 
 
@@ -58,7 +64,7 @@ def test_clean(request, fixture):
 
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
 def test_get_size_on_disk(request, fixture):
-    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
+    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.get_size_on_disk` method."""
 
     remote_data = request.getfixturevalue(fixture)
 
@@ -82,14 +88,15 @@ def test_get_size_on_disk(request, fixture):
         (int(1e6), {'du': 1004096, 'lstat': int(1e6), 'human': '980.56 KB'}),
     ),
 )
-def test_get_size_on_disk_sizes(aiida_localhost, tmp_path, remote_data_local, num_char, sizes):
-    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
+@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
+def test_get_size_on_disk_sizes(tmp_path, num_char, sizes, request, fixture):
+    """Test the different implementations implementations to obtain the size of a RemoteData on disk."""
 
-    remote_data = RemoteData(computer=aiida_localhost)
-    remote_data.set_remote_path(str(tmp_path))
+    remote_data = request.getfixturevalue(fixture) # (num_char=num_char)
+
+    content = b'a' * num_char
+    (tmp_path / 'file.txt').write_bytes(content)
     remote_data.store()
-
-    (tmp_path / 'file.txt').write_bytes(b'a' * num_char)
 
     authinfo = remote_data.get_authinfo()
     full_path = Path(remote_data.get_remote_path())
@@ -106,7 +113,7 @@ def test_get_size_on_disk_sizes(aiida_localhost, tmp_path, remote_data_local, nu
 
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
 def test_get_size_on_disk_du(request, fixture, monkeypatch):
-    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
+    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData._get_size_on_disk_du` private method."""
 
     remote_data = request.getfixturevalue(fixture)
 
@@ -117,6 +124,14 @@ def test_get_size_on_disk_du(request, fixture, monkeypatch):
     with authinfo.get_transport() as transport:
         size_on_disk = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
     assert size_on_disk == 4108
+
+    # Monkeypatch transport exec_command_wait command to simulate it not being implemented, e.g., for FirecREST plugin
+    def mock_exec_command_wait(command):
+        raise NotImplementedError('`exec_command_wait` not implemented for the current transport plugin.')
+
+    monkeypatch.setattr(transport, 'exec_command_wait', mock_exec_command_wait)
+    with pytest.raises(NotImplementedError, match='`exec_command_wait` not implemented.*'):
+        remote_data._get_size_on_disk_du(full_path, transport)
 
     # Monkeypatch transport exec_command_wait command to simulate `du` failure
     def mock_exec_command_wait(command):
@@ -129,7 +144,7 @@ def test_get_size_on_disk_du(request, fixture, monkeypatch):
 
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
 def test_get_size_on_disk_lstat(request, fixture):
-    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
+    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData._get_size_on_disk_lstat` private method."""
 
     remote_data = request.getfixturevalue(fixture)
 
@@ -138,4 +153,8 @@ def test_get_size_on_disk_lstat(request, fixture):
 
     with authinfo.get_transport() as transport:
         size_on_disk = remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path)
-    assert size_on_disk == 12
+        assert size_on_disk == 12
+
+        # Raises OSError for non-existent directory
+        with pytest.raises(OSError, match='The required remote folder.*'):
+            remote_data._get_size_on_disk_lstat(transport=transport, full_path = full_path / 'non-existent')

@@ -252,7 +252,7 @@ class RemoteData(Data):
         :param transport: Open transport instance.
         :raises NotImplementedError: When ``exec_command_wait`` is not implemented, e.g., for the FirecREST plugin.
         :raises RuntimeError: When ``du`` command cannot be successfully executed.
-        :return: Total size of directory recursively in bytes.
+        :return: Total size of directory in bytes (including all its contents).
         """
 
         try:
@@ -278,7 +278,7 @@ class RemoteData(Data):
         :param full_path: Full path of which the size should be evaluated.
         :param transport: Open transport instance.
         :raises OSError: When directory given by ``full_path`` not existing or not a directory.
-        :return: Total size of directory recursively in bytes.
+        :return: Total size of directory in bytes (including all its contents).
         """
         try:
             total_size = 0

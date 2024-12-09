@@ -111,10 +111,8 @@ class RemoteData(Data):
             try:
                 return transport.listdir(full_path)
             except OSError as exception:
-                if exception.errno in (
-                    2,
-                    20,
-                ):  # directory not existing or not a directory
+                if exception.errno in (2, 20):
+                    # directory not existing or not a directory
                     exc = OSError(
                         f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
                         'directory or has been deleted.'
@@ -143,10 +141,8 @@ class RemoteData(Data):
             try:
                 return transport.listdir_withattributes(full_path)
             except OSError as exception:
-                if exception.errno in (
-                    2,
-                    20,
-                ):  # directory not existing or not a directory
+                if exception.errno in (2, 20):
+                    # directory not existing or not a directory
                     exc = OSError(
                         f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
                         'directory or has been deleted.'
@@ -206,30 +202,20 @@ class RemoteData(Data):
         human-readable format.
 
         :param relpath: File or directory path for which the total size should be returned, relative to
-        ``self.get_remote_path``.
+        ``self.get_remote_path()``.
         :return: Total size of file or directory in human-readable format.
 
-        :raises: FileNotFoundError, if file or directory does not exist.
+        :raises: ``FileNotFoundError``, if file or directory does not exist anymore on the remote ``Computer``.
         """
 
         from aiida.common.utils import format_directory_size
-        from aiida.manage import get_manager
 
         if relpath is None:
             relpath = Path('.')
 
-        print('self: ', self, type(self))
-        # raise SystemExit
-        try:
-            authinfo = self.get_authinfo()
-        except NotExistent:
-            manager = get_manager()
-            # authinfo =
-        print(authinfo)
+        authinfo = self.get_authinfo()
         full_path = Path(self.get_remote_path()) / relpath
-        print(full_path)
         computer_label = self.computer.label if self.computer is not None else ''
-        print(computer_label)
 
         with authinfo.get_transport() as transport:
             if not transport.path_exists(str(full_path)):
@@ -242,7 +228,7 @@ class RemoteData(Data):
             try:
                 total_size: int = self._get_size_on_disk_du(full_path, transport)
 
-            except RuntimeError:
+            except (RuntimeError, NotImplementedError):
                 lstat_warn = (
                     'Problem executing `du` command. Will return total file size based on `lstat`. '
                     'Take the result with a grain of salt, as `lstat` does not consider the file system block size, '
@@ -251,35 +237,38 @@ class RemoteData(Data):
                 )
                 _logger.warning(lstat_warn)
 
-                total_size: int = self._get_size_on_disk_lstat(full_path, transport)
+                try:
+                    total_size: int = self._get_size_on_disk_lstat(full_path, transport)
 
-            except OSError:
-                _logger.critical('Could not evaluate directory size using either `du` or `lstat`.')
+                except OSError:
+                    _logger.critical('Could not evaluate directory size using either `du` or `lstat`.')
 
         return format_directory_size(size_in_bytes=total_size)
 
-    def _get_size_on_disk_du(self, full_path: Path, transport: 'Transport') -> int:
+    def _get_size_on_disk_du(self, full_path: Path, transport: Transport) -> int:
         """Connects to the remote folder and returns the total size of all files in the directory recursively in bytes
-        using `du`.
+        using the ``du`` command.
 
-        :param full_path: Full path of which the size should be evaluated
-        :type full_path: Path
-        :param transport: Open transport instance
-        :type transport: Transport
-        :raises RuntimeError: When `du` command cannot be successfully executed
+        :param full_path: Full path of which the size should be evaluated.
+        :param transport: Open transport instance.
+        :raises NotImplementedError: When ``exec_command_wait`` is not implemented, e.g., for the FirecREST plugin.
+        :raises RuntimeError: When ``du`` command cannot be successfully executed.
         :return: Total size of directory recursively in bytes.
-        :rtype: int
         """
 
-        retval, stdout, stderr = transport.exec_command_wait(f'du --bytes {full_path}')
+        try:
+            retval, stdout, stderr = transport.exec_command_wait(f'du --bytes {full_path}')
+            if not stderr and retval == 0:
+                total_size: int = int(stdout.split('\t')[0])
+                return total_size
+            else:
+                raise RuntimeError(f'Error executing `du` command: {stderr}')
 
-        if not stderr and retval == 0:
-            total_size: int = int(stdout.split('\t')[0])
-            return total_size
-        else:
-            raise RuntimeError(f'Error executing `du` command: {stderr}')
+        except NotImplementedError as exc:
+            raise NotImplementedError('`exec_command_wait` not implemented for the current transport plugin.') from exc
+            # _logger.critical('`exec_command_wait` not implemented for the current transport plugin.')
 
-    def _get_size_on_disk_lstat(self, full_path: Path, transport: 'Transport') -> int:
+    def _get_size_on_disk_lstat(self, full_path: Path, transport: Transport) -> int:
         """
         Connects to the remote folder and returns the total size of all files in the directory recursively in bytes
         using ``lstat``. Note that even if a file is only 1 byte, on disk, it still occupies one full disk block size.
@@ -288,12 +277,9 @@ class RemoteData(Data):
         repository metadata. Thus, this function only serves as a fallback in the absence of the ``du`` command.
 
         :param full_path: Full path of which the size should be evaluated.
-        :type full_path: Path
         :param transport: Open transport instance.
-        :type transport: Transport
-        :raises RuntimeError: When `du` command cannot be successfully executed.
+        :raises OSError: When directory given by ``full_path`` not existing or not a directory.
         :return: Total size of directory recursively in bytes.
-        :rtype: int
         """
         try:
             total_size = 0
@@ -309,5 +295,15 @@ class RemoteData(Data):
                     total_size += self._get_size_on_disk_lstat(item_path, transport)
 
             return total_size
-        except OSError:
-            raise
+
+        except OSError as exception:
+            if exception.errno in (2, 20):
+                # directory not existing or not a directory
+                exc = OSError(
+                    f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
+                    'directory or has been deleted.'
+                )
+                exc.errno = exception.errno
+                raise exc from exception
+            else:
+                raise

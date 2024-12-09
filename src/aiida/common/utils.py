@@ -579,10 +579,8 @@ def format_directory_size(size_in_bytes: int) -> str:
     Converts a size in bytes to a human-readable string with the appropriate prefix.
 
     :param size_in_bytes: Size in bytes.
-    :type size_in_bytes: int
     :raises ValueError: If the size is negative.
     :return: Human-readable size string with a prefix (e.g., "1.23 KB", "5.67 MB").
-    :rtype: str
 
     The function converts a given size in bytes to a more readable format by
     adding the appropriate unit suffix (e.g., KB, MB, GB). It uses the binary

@@ -4,7 +4,7 @@
 Common plugins to AiiDA core
 ============================
 
-This page lists common AiiDA plugins which are not specific to any research domain, but extend the core functionality.
+This page lists common AiiDA plugins which are not specific to any research domain, but extend the core functionality:
 
 .. grid:: 1 2 2 4
    :gutter: 3
@@ -21,7 +21,7 @@ This page lists common AiiDA plugins which are not specific to any research doma
          :color: primary
          :outline:
 
-         ``aiida-workgraph`` on GitHub
+         Go to GitHub
 
    .. grid-item-card:: AiiDA shell
       :text-align: center
@@ -35,7 +35,7 @@ This page lists common AiiDA plugins which are not specific to any research doma
          :color: primary
          :outline:
 
-         ``aiida-shell`` on GitHub
+         Go to GitHub
 
    .. grid-item-card:: AiiDA submission controller
       :text-align: center
@@ -49,7 +49,7 @@ This page lists common AiiDA plugins which are not specific to any research doma
          :color: primary
          :outline:
 
-         ``aiida-submission-controller`` on GitHub
+         Go to GitHub
 
    .. grid-item-card:: AiiDA hyperqueue
       :text-align: center
@@ -63,7 +63,7 @@ This page lists common AiiDA plugins which are not specific to any research doma
          :color: primary
          :outline:
 
-         ``aiida-hyperqueue`` on GitHub
+         Go to GitHub
 
    .. grid-item-card:: AiiDA project
       :text-align: center
@@ -77,7 +77,7 @@ This page lists common AiiDA plugins which are not specific to any research doma
          :color: primary
          :outline:
 
-         ``aiida-project`` on GitHub
+         Go to GitHub
 
    .. grid-item-card:: AiiDA code registry
       :text-align: center
@@ -87,11 +87,11 @@ This page lists common AiiDA plugins which are not specific to any research doma
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
-      .. button-link::https://github.com/aiidateam/aiida-code-registry
+      .. button-link:: https://github.com/aiidateam/aiida-code-registry
          :color: primary
          :outline:
 
-         ``aiida-code-registry`` on GitHub
+         Go to GitHub
 
    .. grid-item-card:: AiiDA plugin cutter
       :text-align: center
@@ -101,11 +101,11 @@ This page lists common AiiDA plugins which are not specific to any research doma
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
-      .. button-link::https://github.com/aiidateam/aiida-plugin-cutter
+      .. button-link:: https://github.com/aiidateam/aiida-plugin-cutter
          :color: primary
          :outline:
 
-         ``aiida-plugin-cutter`` on GitHub
+         Go to GitHub
 
    .. grid-item-card:: AiiDA PythonJob
       :text-align: center
@@ -115,11 +115,11 @@ This page lists common AiiDA plugins which are not specific to any research doma
 
       +++++++++++++++++++++++++++++++++++++++++++++
 
-      .. button-link::https://github.com/aiidateam/aiida-pythonjob
+      .. button-link:: https://github.com/aiidateam/aiida-pythonjob
          :color: primary
          :outline:
 
-         ``aiida-pythonjob`` on GitHub
+         Go to GitHub
 
 
 Honorable mentions
@@ -132,4 +132,4 @@ Honorable mentions
 - `aiida-diff <https://github.com/aiidateam/aiida-diff>`_: AiiDA demo plugin that computes the difference between two
   files.
 
-The full list of available plugins can be found on the `AiiDA plugin registry <https://aiidateam.github.io/aiida-registry/>`
+The full list of available plugins can be found on the `AiiDA plugin registry <https://aiidateam.github.io/aiida-registry/>`_.

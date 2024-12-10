@@ -2,7 +2,7 @@ ci:
   autofix_prs: true
   autoupdate_commit_msg: 'Devops: Update pre-commit dependencies'
   autoupdate_schedule: quarterly
-  skip: [mypy, dm-generate-all, dependencies, verdi-autodocs]
+  skip: [mypy, check-uv-lock, generate-conda-environment, validate-conda-environment, verdi-autodocs]
 
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -188,9 +188,20 @@ repos:
         src/aiida/workflows/arithmetic/multiply_add.py|
       )$
 
-  - id: dm-generate-all
-    name: Update all requirements files
-    entry: python ./utils/dependency_management.py generate-all
+  - id: check-uv-lock
+    name: Check uv lockfile up to date
+    # NOTE: This will not automatically update the lockfile
+    entry: uv lock --locked
+    language: system
+    pass_filenames: false
+    files: >-
+      (?x)^(
+        pyproject.toml|
+      )$
+
+  - id: generate-conda-environment
+    name: Update conda environment file
+    entry: python ./utils/dependency_management.py generate-environment-yml
     language: system
     pass_filenames: false
     files: >-
@@ -199,7 +210,7 @@ repos:
         utils/dependency_management.py
       )$
 
-  - id: dependencies
+  - id: validate-conda-environment
     name: Validate environment.yml
     entry: python ./utils/dependency_management.py validate-environment-yml
     language: system

@@ -30,7 +30,6 @@ class TestBackend:
     def init_test(self, backend):
         """Set up the backend."""
         self.backend = backend
-        print(backend)
 
     def test_transaction_nesting(self):
         """Test that transaction nesting works."""
@@ -113,8 +112,8 @@ class TestBackend:
         prefix = uuid.uuid4().hex
         users = [orm.User(f'{prefix}-{i}').store() for i in range(3)]
         # should raise if the 'id' field is not present
-        # with pytest.raises(exceptions.IntegrityError, match="'id' field not given"):
-        #     self.backend.bulk_update(EntityTypes.USER, [{'email': 'other'}])
+        with pytest.raises(exceptions.IntegrityError, match="'id' field not given"):
+            self.backend.bulk_update(EntityTypes.USER, [{'email': 'other'}])
         # should raise if a non-existent field is present
         with pytest.raises(exceptions.IntegrityError, match='Incorrect fields'):
             self.backend.bulk_update(EntityTypes.USER, [{'id': users[0].pk, 'x': 'other'}])
@@ -142,7 +141,7 @@ class TestBackend:
                     'key-object': {'k1': 'v1', 'k2': 2},
                     'key-array': [11, 45, 14],
                 },
-                backend=backend
+                backend=backend,
             ).store()
             for index in range(5)
         ]

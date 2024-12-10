@@ -55,7 +55,8 @@ BEGIN
                         ELSE json_patch(targetValue, patchValue)
                     END
             ),
-            '{}'::jsonb -- if SELECT will return no keys (empty table), then jsonb_object_agg will return NULL, need to return {} in that case
+            '{}'::jsonb -- if SELECT will return no keys (empty table),
+                        -- then jsonb_object_agg will return NULL, need to return {} in that case
     )
     FROM jsonb_each(target) temp1(targetKey, targetValue)
          FULL JOIN jsonb_each(patch) temp2(patchKey, patchValue)
@@ -67,7 +68,7 @@ $$;
 
 
 def register_jsonb_patch_function(conn, *args, **kwargs):
-    print('reg', conn.execute(JSONB_PATCH_FUNCTION))
+    conn.execute(JSONB_PATCH_FUNCTION)
 
 
 def create_sqlalchemy_engine(config: PsqlConfig):

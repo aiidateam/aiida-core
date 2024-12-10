@@ -14,7 +14,7 @@ import json
 import pathlib
 from collections import defaultdict
 from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, Iterator, Optional, Sequence, Set, Union
+from typing import TYPE_CHECKING, Any, Iterator, Optional, Sequence, Set, Union
 
 from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field
@@ -345,12 +345,17 @@ class PsqlDosBackend(StorageBackend):
         if not rows:
             return None
 
-        to_json = functools.partial(cast, type_=JSONB)
-        if self.get_session().bind.dialect.name == 'sqlite':
+        session = self.get_session()
+
+        def to_json(x: dict[str, Any]):
+            return cast(x, JSONB)
+
+        if session.bind is not None and session.bind.dialect.name == 'sqlite':
             # TODO: A dirty workaround:
             #   SQLite DOS now doesn't have a dedicated background, and SQLite don't have JSONB type,
             #   so the casting need to be implement specifically.
-            to_json = json.dumps
+            def to_json(x: dict[str, Any]):
+                return json.dumps(x)
 
         cases = defaultdict(list)
         id_list = []
@@ -370,7 +375,6 @@ class PsqlDosBackend(StorageBackend):
                 update_value = value
                 if extend_json and key in ['extra', 'attributes']:
                     update_value = func.json_patch(mapper.c[key], to_json(value))
-                print(key, update_value, mapper.c[key].type)
                 cases[key].append((when, update_value))
 
         session = self.get_session()

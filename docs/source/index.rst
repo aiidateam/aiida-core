@@ -189,9 +189,9 @@
    tutorials/index
    howto/index
    topics/index
+   internals/index
    reference/core_plugins
    reference/index
-   internals/index
 
 ===========
 How to cite

@@ -142,7 +142,7 @@ class TestBackend:
                     'key-object': {'k1': 'v1', 'k2': 2},
                     'key-array': [11, 45, 14],
                 },
-                backend=backend
+                backend=backend,
             ).store()
             for index in range(5)
         ]

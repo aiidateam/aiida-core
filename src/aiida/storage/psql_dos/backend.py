@@ -372,9 +372,9 @@ class PsqlDosBackend(StorageBackend):
                 if key == 'id':
                     continue
 
-                update_value = value
-                if extend_json and key in ['extra', 'attributes']:
-                    update_value = func.json_patch(mapper.c[key], to_json(value))
+                update_value = to_json(value)
+                if extend_json and key in ['extras', 'attributes']:
+                    update_value = func.json_patch(mapper.c[key], update_value)
                 cases[key].append((when, update_value))
 
         session = self.get_session()

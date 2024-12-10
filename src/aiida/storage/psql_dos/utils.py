@@ -10,6 +10,7 @@
 
 import json
 from typing import TypedDict
+
 from sqlalchemy import event
 
 
@@ -64,8 +65,10 @@ END;
 $$;
 """.strip()
 
+
 def register_jsonb_patch_function(conn, *args, **kwargs):
     print('reg', conn.execute(JSONB_PATCH_FUNCTION))
+
 
 def create_sqlalchemy_engine(config: PsqlConfig):
     """Create SQLAlchemy engine (to be used for QueryBuilder queries)

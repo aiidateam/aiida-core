@@ -10,11 +10,11 @@
 
 import functools
 import gc
+import json
 import pathlib
 from collections import defaultdict
 from contextlib import contextmanager, nullcontext
 from typing import TYPE_CHECKING, Iterator, Optional, Sequence, Set, Union
-import json
 
 from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field

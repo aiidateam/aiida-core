@@ -655,7 +655,9 @@ class AsyncSshTransport(AsyncTransport):
                 to_copy_list = await self.glob_async(remotesource)
 
                 if len(to_copy_list) > 1:
-                    if not self.path_exists(remotedestination) or self.isfile(remotedestination):
+                    if not await self.path_exists_async(remotedestination) or await self.isfile_async(
+                        remotedestination
+                    ):
                         raise OSError("Can't copy more than one file in the same destination file")
 
                 for file in to_copy_list:
@@ -718,22 +720,26 @@ class AsyncSshTransport(AsyncTransport):
         stdin: Optional[str] = None,
         encoding: str = 'utf-8',
         workdir: Optional[TransportPath] = None,
-        timeout: Optional[float] = 2,
+        timeout: Optional[float] = None,
         **kwargs,
     ):
         """Execute a command on the remote machine and wait for it to finish.
 
         :param command: the command to execute
         :param stdin: the input to pass to the command
+            Default = None
         :param encoding: (IGNORED) this is here just to keep the same signature as the one in `Transport` class
+            Default = 'utf-8'
         :param workdir: the working directory where to execute the command
+            Default = None
         :param timeout: the timeout in seconds
+            Default = None
 
         :type command: str
         :type stdin: str
         :type encoding: str
-        :type workdir: Union[TransportPath, None]
-        :type timeout: float
+        :type workdir: Optional[TransportPath]
+        :type timeout: Optional[float]
 
         :return: a tuple with the return code, the stdout and the stderr of the command
         :rtype: tuple(int, str, str)

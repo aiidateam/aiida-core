@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import json
 import os
 import shutil
 from collections import defaultdict
@@ -292,7 +293,7 @@ class SqliteTempBackend(StorageBackend):
 
                 update_value = value
                 if extend_json and key in ['extra', 'attributes']:
-                    update_value = func.json_patch(mapper.c[key], value)
+                    update_value = func.json_patch(mapper.c[key], json.dumps(value))
                 cases[key].append((when, update_value))
 
         session = self.get_session()

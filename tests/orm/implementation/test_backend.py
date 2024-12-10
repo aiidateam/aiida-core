@@ -20,6 +20,7 @@ from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
+from aiida.storage.sqlite_temp.backend import SqliteTempBackend
 
 
 class TestBackend:
@@ -124,7 +125,13 @@ class TestBackend:
         assert users[1].email == 'other1'
         assert users[2].email == f'{prefix}-2'
 
-    def test_bulk_update_extend_json(self):
+    @pytest.mark.parametrize('use_sqlite_temp_backend', (True, False))
+    def test_bulk_update_extend_json(self, use_sqlite_temp_backend):
+        backend = self.backend
+        if use_sqlite_temp_backend:
+            profile = SqliteTempBackend.create_profile(debug=False)
+            backend = SqliteTempBackend(profile)
+
         prefix = uuid.uuid4().hex
         nodes = [
             orm.Dict(
@@ -134,11 +141,12 @@ class TestBackend:
                     'key-null': None,
                     'key-object': {'k1': 'v1', 'k2': 2},
                     'key-array': [11, 45, 14],
-                }
+                },
+                backend=backend
             ).store()
             for index in range(5)
         ]
-        self.backend.bulk_update(
+        backend.bulk_update(
             EntityTypes.NODE,
             [
                 {

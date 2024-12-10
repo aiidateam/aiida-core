@@ -114,23 +114,6 @@
 
          To the topics
 
-   .. grid-item-card:: :fa:`cogs;mr-1` API Reference
-      :text-align: center
-      :shadow: md
-
-      Comprehensive documentation of CLI, Python API and REST API.
-
-      +++++++++++++++++++++++++++++++++++++++++++++
-
-      .. button-ref:: reference/index
-         :ref-type: doc
-         :click-parent:
-         :expand:
-         :color: primary
-         :outline:
-
-         To the reference guide
-
    .. grid-item-card:: :fa:`sitemap;mr-1` Internal Architecture
       :text-align: center
       :shadow: md
@@ -165,6 +148,23 @@
 
          To the plugin overview
 
+   .. grid-item-card:: :fa:`cogs;mr-1` API Reference
+      :text-align: center
+      :shadow: md
+
+      Comprehensive documentation of CLI, Python API and REST API.
+
+      +++++++++++++++++++++++++++++++++++++++++++++
+
+      .. button-ref:: reference/index
+         :ref-type: doc
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
+
+         To the reference guide
+
 ------------------------------
 
 .. admonition:: Need support?
@@ -189,6 +189,7 @@
    tutorials/index
    howto/index
    topics/index
+   reference/core_plugins
    reference/index
    internals/index
 

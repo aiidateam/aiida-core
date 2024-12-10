@@ -1,8 +1,8 @@
 .. _reference:core_plugins:
 
-============================
-Common plugins to AiiDA core
-============================
+=======
+Plugins
+=======
 
 This page lists common AiiDA plugins which are not specific to any research domain, but extend the core functionality:
 

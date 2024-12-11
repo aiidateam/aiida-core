@@ -24,15 +24,15 @@ The generic transport class contains a set of minimal methods that an implementa
 If not, a ``NotImplementedError`` will be raised, interrupting the managing of the calculation or whatever is using the transport plugin.
 
 As for the general functioning of the plugin, the :py:meth:`~aiida.transports.transport.Transport.__init__` method is used only to initialize the class instance, without actually opening the transport channel.
-The connection must be opened only by the :py:meth:`~aiida.transports.transport.Transport.__enter__` method, (and closed by :py:meth:`~aiida.transports.transport.Transport.__exit__`).
-The :py:meth:`~aiida.transports.transport.Transport.__enter__` method lets you use the transport class using the ``with`` statement (see `python docs <https://docs.python.org/3/reference/compound_stmts.html#with>`_), in a way similar to the following:
+The connection must be opened only by the :py:meth:`~aiida.transports.transport._BaseTransport.__enter__` method, (and closed by :py:meth:`~aiida.transports.transport._BaseTransport.__exit__`).
+The :py:meth:`~aiida.transports.transport._BaseTransport.__enter__` method lets you use the transport class using the ``with`` statement (see `python docs <https://docs.python.org/3/reference/compound_stmts.html#with>`_), in a way similar to the following:
 
 .. code-block:: python
 
     with TransportPlugin() as transport:
         transport.some_method()
 
-To ensure this, for example, the local plugin uses a hidden boolean variable ``_is_open`` that is set when the :py:meth:`~aiida.transports.transport.Transport.__enter__` and :py:meth:`~aiida.transports.transport.Transport.__exit__` methods are called.
+To ensure this, for example, the local plugin uses a hidden boolean variable ``_is_open`` that is set when the :py:meth:`~aiida.transports.transport._BaseTransport.__enter__` and :py:meth:`~aiida.transports.transport._BaseTransport.__exit__` methods are called.
 The ``ssh`` logic is instead given by the property sftp.
 
 The other functions that require some care are the copying functions, called using the following terminology:

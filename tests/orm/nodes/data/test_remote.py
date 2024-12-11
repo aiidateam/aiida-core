@@ -70,12 +70,65 @@ def test_get_size_on_disk(request, fixture):
 
     # Check here for human-readable output string, as integer byte values are checked in
     # `test_get_size_on_disk_[du|lstat]`
-    size_on_disk = remote_data.get_size_on_disk()
+    size_on_disk, method = remote_data.get_size_on_disk(method='du')
     assert size_on_disk == '4.01 KB'
+    assert method == 'du'
+
+    size_on_disk, method = remote_data.get_size_on_disk(method='lstat')
+    assert size_on_disk == '12.00 B'
+    assert method == 'lstat'
 
     # Path/file non-existent
     with pytest.raises(FileNotFoundError, match='.*does not exist, is not a directory.*'):
         remote_data.get_size_on_disk(relpath=Path('non-existent'))
+
+@pytest.mark.parametrize(
+    'num_char, relpath, sizes',
+    (
+        (1, '.', {'du': 12291, 'lstat': 8195, 'human': '12.00 KB'}),
+        (100, '.', {'du': 12588, 'lstat': 8492, 'human': '12.29 KB'}),
+        (int(1e6), '.', {'du': 3012288, 'lstat': 3008192, 'human': '2.87 MB'}),
+        (1, 'subdir1', {'du': 8194, 'lstat': 4098, 'human': '8.00 KB'}),
+        (100, 'subdir1', {'du': 8392, 'lstat': 4296, 'human': '8.20 KB'}),
+        (int(1e6), 'subdir1', {'du': 2008192, 'lstat': 2004096, 'human': '1.92 MB'}),
+    ),
+)
+def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, sizes):
+
+    sub_dir1 = tmp_path / "subdir1"
+    sub_dir1.mkdir()
+
+    sub_dir2 = tmp_path / "subdir1" / "subdir2"
+    sub_dir2.mkdir()
+
+    # Create some files with known sizes
+    file1 = sub_dir1 / "file1.txt"
+    file1.write_text("a"*num_char)
+
+    file2 = sub_dir2 / "file2.bin"
+    file2.write_bytes(b"a" * num_char)
+
+    file3 = tmp_path / "file3.txt"
+    file3.write_text("a" * num_char)
+
+    remote_data = RemoteData(computer=aiida_localhost, remote_path=tmp_path)
+
+    authinfo = remote_data.get_authinfo()
+    full_path = Path(remote_data.get_remote_path()) / relpath
+
+    with authinfo.get_transport() as transport:
+
+        size_on_disk_du = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
+        size_on_disk_lstat = remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path)
+
+        size_on_disk_human, _ = remote_data.get_size_on_disk(relpath=relpath)
+
+    print(f'du: {size_on_disk_du}, lstat: {size_on_disk_lstat}, human: {size_on_disk_human}')
+    assert size_on_disk_du == sizes['du']
+    assert size_on_disk_lstat == sizes['lstat']
+    assert size_on_disk_human == sizes['human']
+
+    # Do the same possibly for subtrees
 
 
 @pytest.mark.parametrize(
@@ -104,7 +157,7 @@ def test_get_size_on_disk_sizes(tmp_path, num_char, sizes, request, fixture):
     with authinfo.get_transport() as transport:
         size_on_disk_du = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
         size_on_disk_lstat = remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path)
-        size_on_disk_human = remote_data.get_size_on_disk()
+        size_on_disk_human, _ = remote_data.get_size_on_disk()
 
     assert size_on_disk_du == sizes['du']
     assert size_on_disk_lstat == sizes['lstat']

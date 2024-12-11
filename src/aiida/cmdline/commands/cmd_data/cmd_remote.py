@@ -9,6 +9,7 @@
 """`verdi data core.remote` command."""
 
 import stat
+from pathlib import Path
 
 import click
 
@@ -89,9 +90,31 @@ def remote_show(datum):
     echo.echo(f'- Remote folder full path: {datum.get_remote_path()}')
 
 
-@remote.command('size')
+@remote.command("size")
 @arguments.NODE()
-def remote_size(node):
+@click.option(
+    "-m",
+    "--method",
+    type=click.STRING,
+    default="du",
+    help="The method that should be used to evaluate the size (either ``du`` or ``lstat``.)",
+)
+@click.option(
+    "-p",
+    "--path",
+    type=click.Path(),
+    default=None,
+    help="Relative path of the object of the ``RemoteData`` node for which the size should be evaluated.",
+)
+def remote_size(node, method, path):
     """Print the total size of a RemoteData object."""
-    print(node)
-    total_size = node.get_size_on_disk()
+    try:
+        total_size, method = node.get_size_on_disk(relpath=path, method=method)
+        remote_path = Path(node.get_remote_path())
+        full_path = remote_path / path if path is not None else remote_path
+        echo.echo(
+            f"Estimated total size of directory `{full_path}` on the Computer "
+            f"`{node.computer.label}` obtained via `{method}`: {total_size}"
+        )
+    except FileNotFoundError as exc:
+        echo.echo_critical(str(exc))

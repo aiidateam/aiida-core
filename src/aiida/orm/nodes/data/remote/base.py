@@ -195,13 +195,14 @@ class RemoteData(Data):
     def get_authinfo(self):
         return AuthInfo.get_collection(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)
 
-    def get_size_on_disk(self, relpath: Path | None = None) -> str:
+    def get_size_on_disk(self, relpath: Path | None = None, method: str = "du") -> str:
         """
         Connects to the remote folder and returns the total size of all files in the directory recursively in a
         human-readable format.
 
         :param relpath: File or directory path for which the total size should be returned, relative to
         ``self.get_remote_path()``.
+        :param method: Method to be used to evaluate the directory/file size (either ``du`` or ``lstat``).
         :return: Total size of file or directory in human-readable format.
 
         :raises: ``FileNotFoundError``, if file or directory does not exist anymore on the remote ``Computer``.
@@ -210,39 +211,57 @@ class RemoteData(Data):
         from aiida.common.utils import format_directory_size
 
         if relpath is None:
-            relpath = Path('.')
+            relpath = Path(".")
 
         authinfo = self.get_authinfo()
         full_path = Path(self.get_remote_path()) / relpath
-        computer_label = self.computer.label if self.computer is not None else ''
+        computer_label = self.computer.label if self.computer is not None else ""
 
         with authinfo.get_transport() as transport:
             if not transport.path_exists(str(full_path)):
                 exc_message = (
-                    f'The required remote folder {full_path} on Computer <{computer_label}>'
-                    'does not exist, is not a directory or has been deleted.'
+                    f"The required remote folder {full_path} on Computer <{computer_label}> "
+                    "does not exist, is not a directory or has been deleted."
                 )
                 raise FileNotFoundError(exc_message)
 
-            try:
-                total_size: int = self._get_size_on_disk_du(full_path, transport)
-
-            except (RuntimeError, NotImplementedError):
-                lstat_warn = (
-                    'Problem executing `du` command. Will return total file size based on `lstat`. '
-                    'Take the result with a grain of salt, as `lstat` does not consider the file system block size, '
-                    'but instead returns the true size of the files in bytes, which differs from the actual space'
-                    'requirements on disk.'
+            if method not in ("du", "lstat"):
+                raise NotImplementedError(
+                    f"Specified method `{method}` for evaluating the size on disk not implemented."
                 )
-                _logger.warning(lstat_warn)
 
+            if method == "du":
+                try:
+                    total_size: int = self._get_size_on_disk_du(full_path, transport)
+
+                except (RuntimeError, NotImplementedError):
+                    lstat_warn = (
+                        "Problem executing `du` command. Will return total file size based on `lstat`. "
+                        "Take the result with a grain of salt, as `lstat` does not consider the file system block size,"
+                        " but instead returns the true size of the files in bytes, which differs from the actual space"
+                        "requirements on disk."
+                    )
+
+                    _logger.warning(lstat_warn)
+                    method = "lstat"
+
+                else:
+                    _logger.report("Obtained size on the remote using `du`.")
+
+            # No elif here, but another if, to allow that the method is internally changed to `lstat`, if `du` fails
+            if method == "lstat":
                 try:
                     total_size: int = self._get_size_on_disk_lstat(full_path, transport)
+                    print(f"TOTAL_SIZE: {total_size}")
 
                 except OSError:
-                    _logger.critical('Could not evaluate directory size using either `du` or `lstat`.')
+                    _logger.critical(
+                        "Could not evaluate directory size using either `du` or `lstat`."
+                    )
+                else:
+                    _logger.report("Obtained size on the remote using `lstat`.")
 
-        return format_directory_size(size_in_bytes=total_size)
+            return format_directory_size(size_in_bytes=total_size), method
 
     def _get_size_on_disk_du(self, full_path: Path, transport: Transport) -> int:
         """Connects to the remote folder and returns the total size of all files in the directory recursively in bytes
@@ -256,16 +275,19 @@ class RemoteData(Data):
         """
 
         try:
-            retval, stdout, stderr = transport.exec_command_wait(f'du --bytes {full_path}')
+            retval, stdout, stderr = transport.exec_command_wait(
+                f"du -s --bytes {full_path}"
+            )
             if not stderr and retval == 0:
-                total_size: int = int(stdout.split('\t')[0])
+                total_size: int = int(stdout.split("\t")[0])
                 return total_size
             else:
-                raise RuntimeError(f'Error executing `du` command: {stderr}')
+                raise RuntimeError(f"Error executing `du` command: {stderr}")
 
         except NotImplementedError as exc:
-            raise NotImplementedError('`exec_command_wait` not implemented for the current transport plugin.') from exc
-            # _logger.critical('`exec_command_wait` not implemented for the current transport plugin.')
+            raise NotImplementedError(
+                "`exec_command_wait` not implemented for the current transport plugin."
+            ) from exc
 
     def _get_size_on_disk_lstat(self, full_path: Path, transport: Transport) -> int:
         """
@@ -280,27 +302,39 @@ class RemoteData(Data):
         :raises OSError: When directory given by ``full_path`` not existing or not a directory.
         :return: Total size of directory in bytes (including all its contents).
         """
-        try:
-            total_size = 0
+        def _get_size_on_disk_lstat_recursive(full_path, transport):
+
+            current_size = 0
+
             contents = self.listdir_withattributes(full_path)
 
             for item in contents:
-                item_path = full_path / item['name']
+                item_path = full_path / item["name"]
                 # Add size of current item (file or directory metadata)
-                total_size += item['attributes']['st_size']
+                # breakpoint()
+                # print(f'ITEM: {item["name"]}, {item["attributes"]["st_size"]}({item_path})')
+                current_size += item["attributes"]["st_size"]
 
                 # If it's a directory, recursively get size of contents
-                if item['isdir']:
-                    total_size += self._get_size_on_disk_lstat(item_path, transport)
+                if item["isdir"]:
+                    # print(item["name"])
+                    current_size += _get_size_on_disk_lstat_recursive(item_path, transport)
 
+                # print(f"CURRENT_SIZE: {current_size}")
+
+            return current_size
+
+        try:
+            total_size = _get_size_on_disk_lstat_recursive(full_path, transport)
             return total_size
 
         except OSError as exception:
+            print(exception.errno, exception)
             if exception.errno in (2, 20):
                 # directory not existing or not a directory
                 exc = OSError(
-                    f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
-                    'directory or has been deleted.'
+                    f"The required remote folder {full_path} on {self.computer.label} does not exist, is not a "
+                    "directory or has been deleted."
                 )
                 exc.errno = exception.errno
                 raise exc from exception

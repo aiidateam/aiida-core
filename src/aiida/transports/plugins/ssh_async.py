@@ -747,7 +747,7 @@ class AsyncSshTransport(AsyncTransport):
 
         if workdir:
             workdir = path_to_str(workdir)
-            command = f'cd {workdir} && {command}'
+            command = f'cd {workdir} && ( {command} )'
 
         bash_commmand = self._bash_command_str + '-c '
 

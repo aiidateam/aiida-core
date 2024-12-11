@@ -41,7 +41,6 @@ import plumpy.persistence
 import plumpy.processes
 from kiwipy.communications import UnroutableError
 from plumpy.process_states import Finished, ProcessState
-from plumpy.processes import ConnectionClosed  # type: ignore[attr-defined]
 from plumpy.processes import Process as PlumpyProcess
 from plumpy.utils import AttributesFrozendict
 
@@ -334,6 +333,8 @@ class Process(PlumpyProcess):
 
         :param msg: message
         """
+        from plumpy.exceptions import CommunicatorConnectionClosed
+
         self.node.logger.info(f'Request to kill Process<{self.node.pk}>')
 
         had_been_terminated = self.has_terminated()
@@ -352,7 +353,7 @@ class Process(PlumpyProcess):
                     result = asyncio.wrap_future(result)  # type: ignore[arg-type]
                     if asyncio.isfuture(result):
                         killing.append(result)
-                except ConnectionClosed:
+                except CommunicatorConnectionClosed:
                     self.logger.info('no connection available to kill child<%s>', child.pk)
                 except UnroutableError:
                     self.logger.info('kill signal was unable to reach child<%s>', child.pk)

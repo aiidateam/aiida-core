@@ -201,16 +201,16 @@ class RemoteData(Data):
         method: str = 'du',
         return_bytes: bool = False,
     ) -> int | str:
-        """Connects to the remote Computer of the `RemoteData` ojbect and returns the total size of a file or a
+        """Connects to the remote Computer of the `RemoteData` object and returns the total size of a file or a
         directory at the given `relpath` in a human-readable format.
 
         :param relpath: File or directory path for which the total size should be returned, relative to
-        ``self.get_remote_path()``.
+            ``self.get_remote_path()``.
         :param method: Method to be used to evaluate the directory/file size (either ``du`` or ``lstat``).
         :param return_bytes: Return the total byte size is int, or in human-readable format.
 
-        :raises: ``FileNotFoundError``, if file or directory does not exist anymore on the remote ``Computer``.
-        :raises: ``NotImplementedError``, if a method other than ``du`` or ``lstat`` is selected.
+        :raises FileNotFoundError: If file or directory does not exist anymore on the remote ``Computer``.
+        :raises NotImplementedError: If a method other than ``du`` or ``lstat`` is selected.
 
         :return: Total size of given file or directory.
         """

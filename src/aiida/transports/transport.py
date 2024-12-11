@@ -22,7 +22,7 @@ from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
 
-__all__ = ('AsyncTransport', 'Transport')
+__all__ = ('AsyncTransport', 'Transport', 'TransportPath')
 
 TransportPath = Union[str, Path, PurePosixPath]
 
@@ -302,7 +302,7 @@ class Transport(abc.ABC, _BaseTransport):
         :param path: path to file
         :param mode: new permissions
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type mode: int
         """
 
@@ -317,7 +317,7 @@ class Transport(abc.ABC, _BaseTransport):
         :param uid: new owner's uid
         :param gid: new group id
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type uid: int
         :type gid: int
         """
@@ -332,8 +332,8 @@ class Transport(abc.ABC, _BaseTransport):
         :param dereference: if True copy the contents of any symlinks found, otherwise copy the symlinks themselves
         :param recursive: if True copy directories recursively, otherwise only copy the specified file(s)
 
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
         :type recursive: bool
 
@@ -349,8 +349,8 @@ class Transport(abc.ABC, _BaseTransport):
         :param remotedestination: path of the remote destination directory / file
         :param dereference: if True copy the contents of any symlinks found, otherwise copy the symlinks themselves
 
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
 
         :raises OSError: if one of src or dst does not exist
@@ -365,8 +365,8 @@ class Transport(abc.ABC, _BaseTransport):
         :param remotedestination: path of the remote destination directory / file
         :param dereference: if True copy the contents of any symlinks found, otherwise copy the symlinks themselves
 
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
 
         :raise OSError: if one of src or dst does not exist
@@ -388,9 +388,10 @@ class Transport(abc.ABC, _BaseTransport):
         :param kwargs: keyword parameters passed to the call to transportdestination.put,
             except for 'dereference' that is passed to self.get
 
-        :type transportdestination: Union['Transport', 'AsyncTransport']
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type transportdestination: :class:`Transport <aiida.transports.transport.Transport>`,
+            or :class:`AsyncTransport <aiida.transports.transport.AsyncTransport>`
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         .. note:: the keyword 'dereference' SHOULD be set to False for the
          final put (onto the destination), while it can be set to the
@@ -448,7 +449,7 @@ class Transport(abc.ABC, _BaseTransport):
                 in the specified working directory.
 
         :type command: str
-        :type workdir: TransportPath
+        :type workdir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: stdin, stdout, stderr and the session, when this exists \
                  (can be None).
@@ -469,7 +470,7 @@ class Transport(abc.ABC, _BaseTransport):
                 in the specified working directory.
 
         :type command: str
-        :type workdir: TransportPath
+        :type workdir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a tuple: the retcode (int), stdout (bytes) and stderr (bytes).
         """
@@ -496,7 +497,7 @@ class Transport(abc.ABC, _BaseTransport):
 
         :type command: str
         :type encoding: str
-        :type workdir: TransportPath
+        :type workdir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr are both strings, decoded
             with the specified encoding.
@@ -518,8 +519,8 @@ class Transport(abc.ABC, _BaseTransport):
         :param remotepath: remote_folder_path
         :param localpath: (local_folder_path
 
-        :type remotepath: TransportPath
-        :type localpath: TransportPath
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -530,8 +531,8 @@ class Transport(abc.ABC, _BaseTransport):
         :param remotepath: remote_folder_path
         :param localpath: local_folder_path
 
-        :type remotepath: TransportPath
-        :type localpath: TransportPath
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -542,8 +543,8 @@ class Transport(abc.ABC, _BaseTransport):
         :param remotepath: remote_folder_path
         :param localpath: local_folder_path
 
-        :type remotepath: TransportPath
-        :type localpath: TransportPath
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -581,7 +582,7 @@ class Transport(abc.ABC, _BaseTransport):
 
         :param path: path to file
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: object FixedFieldsAttributeDict
         """
@@ -591,7 +592,7 @@ class Transport(abc.ABC, _BaseTransport):
 
         :param path: path to file
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: the portion of the file's mode that can be set by chmod()
         """
@@ -606,7 +607,7 @@ class Transport(abc.ABC, _BaseTransport):
 
         :param path: path to directory
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: boolean
         """
@@ -618,7 +619,7 @@ class Transport(abc.ABC, _BaseTransport):
 
         :param path: path to file
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: boolean
         """
@@ -634,7 +635,7 @@ class Transport(abc.ABC, _BaseTransport):
         :param pattern: if used, listdir returns a list of files matching
                             filters in Unix style. Unix only.
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a list of strings
         """
@@ -649,7 +650,7 @@ class Transport(abc.ABC, _BaseTransport):
             taken from DEPRECATED `self.getcwd()`.
         :param pattern: if used, listdir returns a list of files matching
                             filters in Unix style. Unix only.
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type pattern: str
         :return: a list of dictionaries, one per entry.
             The schema of the dictionary is
@@ -691,7 +692,7 @@ class Transport(abc.ABC, _BaseTransport):
         :param path: directory to create
         :param bool ignore_existing: if set to true, it doesn't give any error
                                      if the leaf directory does already exist
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises: OSError, if directory at path already exists
         """
@@ -703,7 +704,7 @@ class Transport(abc.ABC, _BaseTransport):
         :param path: name of the folder to create
         :param bool ignore_existing: if True, does not give any error if the
                                      directory already exists
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises: OSError, if directory at path already exists
         """
@@ -716,7 +717,7 @@ class Transport(abc.ABC, _BaseTransport):
 
         :param path: path to be normalized
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raise OSError: if the path can't be resolved on the server
         """
@@ -733,8 +734,8 @@ class Transport(abc.ABC, _BaseTransport):
         :param localpath: absolute path to local source
         :param remotepath: path to remote destination
 
-        :type localpath: TransportPath
-        :type remotepath: TransportPath
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -745,8 +746,8 @@ class Transport(abc.ABC, _BaseTransport):
         :param localpath: absolute path to local file
         :param remotepath: path to remote file
 
-        :type localpath: TransportPath
-        :type remotepath: TransportPath
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -757,8 +758,8 @@ class Transport(abc.ABC, _BaseTransport):
         :param localpath: absolute path to local folder
         :param remotepath: path to remote folder
 
-        :type localpath: TransportPath
-        :type remotepath: TransportPath
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -768,7 +769,7 @@ class Transport(abc.ABC, _BaseTransport):
 
         :param path: path to file to remove
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raise OSError: if the path is a directory
         """
@@ -780,8 +781,8 @@ class Transport(abc.ABC, _BaseTransport):
         :param oldpath: existing name of the file or folder
         :param newpath: new name for the file or folder
 
-        :type oldpath: TransportPath
-        :type newpath: TransportPath
+        :type oldpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type newpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises OSError: if oldpath/newpath is not found
         :raises ValueError: if oldpath/newpath is not a valid string
@@ -794,7 +795,7 @@ class Transport(abc.ABC, _BaseTransport):
 
         :param path: absolute path to the folder to remove
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -803,7 +804,7 @@ class Transport(abc.ABC, _BaseTransport):
 
         :param  path: absolute path to remove
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raise OSError: if the rm execution failed.
         """
@@ -821,7 +822,7 @@ class Transport(abc.ABC, _BaseTransport):
 
         :param remotedir: the full path of the remote directory
 
-        :type remotedir: TransportPath
+        :type remotedir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -832,8 +833,8 @@ class Transport(abc.ABC, _BaseTransport):
         :param remotesource: remote source
         :param remotedestination: remote destination
 
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     def whoami(self):
@@ -861,7 +862,7 @@ class Transport(abc.ABC, _BaseTransport):
 
         :param path: path to check for existence
 
-        :type path: TransportPath"""
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`"""
 
     # The following definitions are almost copied and pasted
     # from the python module glob.
@@ -874,7 +875,7 @@ class Transport(abc.ABC, _BaseTransport):
             It should only be an absolute path.
             DEPRECATED: using relative path is deprecated.
 
-        :type pathname: TransportPath
+        :type pathname:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a list of paths matching the pattern.
         """
@@ -1135,7 +1136,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param path: path to file or directory
         :param mode: new permissions
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type mode: int
         """
 
@@ -1147,7 +1148,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param uid: user id of the new owner
         :param gid: group id of the new owner
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type uid: int
         :type gid: int
         """
@@ -1162,8 +1163,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param dereference: follow symbolic links
         :param recursive: copy recursively
 
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
         :type recursive: bool
 
@@ -1179,8 +1180,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param remotedestination: path to the remote destination file
         :param dereference: follow symbolic links
 
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
 
         :raises: OSError, src does not exist or if the copy execution failed."""
@@ -1194,8 +1195,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param remotedestination: path to the remote destination folder
         :param dereference: follow symbolic links
 
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
 
         :raises: OSError, src does not exist or if the copy execution failed."""
@@ -1216,9 +1217,10 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param kwargs: keyword parameters passed to the call to transportdestination.put,
             except for 'dereference' that is passed to self.get
 
-        :type transportdestination: Union['Transport', 'AsyncTransport']
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type transportdestination: :class:`Transport <aiida.transports.transport.Transport>`,
+            or :class:`AsyncTransport <aiida.transports.transport.AsyncTransport>`
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -1240,7 +1242,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :type command: str
         :type stdin: str
         :type encoding: str
-        :type workdir: Union[TransportPath, None]
+        :type workdir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr are both strings.
         :rtype: Tuple[int, str, str]
@@ -1257,8 +1259,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param remotepath: remote_folder_path
         :param localpath: local_folder_path
 
-        :type remotepath: TransportPath
-        :type localpath: TransportPath
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -1269,8 +1271,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param remotepath: remote_folder_path
         :param localpath: local_folder_path
 
-        :type remotepath: TransportPath
-        :type localpath: TransportPath
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -1281,8 +1283,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param remotepath: remote_folder_path
         :param localpath: local_folder_path
 
-        :type remotepath: TransportPath
-        :type localpath: TransportPath
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -1305,7 +1307,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param path: path to file
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: object FixedFieldsAttributeDict
         """
@@ -1315,7 +1317,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param str path: path to file
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: the portion of the file's mode that can be set by chmod()
         """
@@ -1331,7 +1333,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param path: path to directory
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: boolean
         """
@@ -1343,7 +1345,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param path: path to file
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: boolean
         """
@@ -1358,7 +1360,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param pattern: if used, listdir returns a list of files matching
                         filters in Unix style. Unix only.
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a list of strings
         """
@@ -1377,7 +1379,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param pattern: if used, listdir returns a list of files matching
                         filters in Unix style. Unix only.
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type pattern: str
         :return: a list of dictionaries, one per entry.
             The schema of the dictionary is
@@ -1403,7 +1405,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param path: directory to create
         :param bool ignore_existing: if set to true, it doesn't give any error
                                      if the leaf directory does already exist
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises: OSError, if directory at path already exists
         """
@@ -1415,7 +1417,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param path: name of the folder to create
         :param bool ignore_existing: if True, does not give any error if the
                                      directory already exists.
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises: OSError, if directory at path already exists
         """
@@ -1428,7 +1430,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param path: path to be normalized
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raise OSError: if the path can't be resolved on the server
         """
@@ -1445,8 +1447,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param localpath: absolute path to local source
         :param remotepath: path to remote destination
 
-        :type localpath: TransportPath
-        :type remotepath: TransportPath
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -1457,8 +1459,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param localpath: absolute path to local file
         :param remotepath: path to remote file
 
-        :type localpath: TransportPath
-        :type remotepath: TransportPath
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -1469,8 +1471,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param localpath: absolute path to local folder
         :param remotepath: path to remote folder
 
-        :type localpath: TransportPath
-        :type remotepath: TransportPath
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -1480,7 +1482,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param path: path to file to remove
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raise OSError: if the path is a directory
         """
@@ -1492,8 +1494,8 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param oldpath: existing name of the file or folder
         :param newpath: new name for the file or folder
 
-        :type oldpath: TransportPath
-        :type newpath: TransportPath
+        :type oldpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type newpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises OSError: if oldpath/newpath is not found
         :raises ValueError: if oldpath/newpath is not a valid string
@@ -1506,7 +1508,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param path: absolute path to the folder to remove
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -1515,7 +1517,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param  path: absolute path to remove
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raise OSError: if the rm execution failed.
         """
@@ -1536,7 +1538,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param remotedir: the full path of the remote directory
 
-        :type remotedir: TransportPath
+        :type remotedir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -1565,7 +1567,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
         :param path: path to check for existence
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
     @abc.abstractmethod
@@ -1577,7 +1579,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :param pathname: the pathname pattern to match.
             It should only be absolute path.
 
-        :type pathname: TransportPath
+        :type pathname:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a list of paths matching the pattern.
         """

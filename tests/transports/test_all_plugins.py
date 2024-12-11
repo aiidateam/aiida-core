@@ -678,9 +678,6 @@ def test_copy(custom_transport, tmp_path_remote):
         transport.copy((base_dir), (workdir / 'prova'))
         assert set(['origin']) == set(transport.listdir((workdir / 'prova')))
         assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir((workdir / 'prova' / 'origin')))
-        transport.rmtree((workdir / 'prova'))
-        # exit
-        transport.rmtree((workdir))
 
 
 def test_put(custom_transport, tmp_path_remote, tmp_path_local):

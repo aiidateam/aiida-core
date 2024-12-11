@@ -19,6 +19,7 @@ __all__ = (
     'AsyncTransport',
     'SshTransport',
     'Transport',
+    'TransportPath',
     'convert_to_bool',
     'parse_sshconfig',
 )

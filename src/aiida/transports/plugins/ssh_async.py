@@ -17,12 +17,11 @@ from typing import Optional, Union
 
 import asyncssh
 import click
-from asyncssh import SFTPFileAlreadyExists, SFTPOpUnsupported
+from asyncssh import SFTPFileAlreadyExists
 
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import InvalidOperation
-
-from ..transport import AsyncTransport, Transport, TransportInternalError, TransportPath, path_to_str
+from aiida.transports.transport import AsyncTransport, Transport, TransportInternalError, TransportPath, path_to_str
 
 __all__ = ('AsyncSshTransport',)
 
@@ -160,8 +159,8 @@ class AsyncSshTransport(AsyncTransport):
         :param preserve: preserve file attributes
             Default = False
 
-        :type remotepath: TransportPath
-        :type localpath: TransportPath
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
         :type overwrite: bool
         :type ignore_nonexisting: bool
@@ -240,8 +239,8 @@ class AsyncSshTransport(AsyncTransport):
         :param preserve: preserve file attributes
             Default = False
 
-        :type remotepath: TransportPath
-        :type localpath: TransportPath
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
         :type overwrite: bool
         :type preserve: bool
@@ -290,8 +289,8 @@ class AsyncSshTransport(AsyncTransport):
         :param preserve: preserve file attributes
             Default = False
 
-        :type remotepath: TransportPath
-        :type localpath: TransportPath
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
         :type overwrite: bool
         :type preserve: bool
@@ -363,8 +362,8 @@ class AsyncSshTransport(AsyncTransport):
         :param preserve: preserve file attributes
             Default = False
 
-        :type remotepath: TransportPath
-        :type localpath: TransportPath
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
         :type overwrite: bool
         :type ignore_nonexisting: bool
@@ -443,8 +442,8 @@ class AsyncSshTransport(AsyncTransport):
         :param preserve: preserve file attributes
             Default = False
 
-        :type remotepath: TransportPath
-        :type localpath: TransportPath
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
         :type overwrite: bool
         :type preserve: bool
@@ -494,8 +493,8 @@ class AsyncSshTransport(AsyncTransport):
         :param preserve: preserve file attributes
             Default = False
 
-        :type localpath: TransportPath
-        :type remotepath: TransportPath
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
         :type overwrite: bool
         :type preserve: bool
@@ -562,8 +561,8 @@ class AsyncSshTransport(AsyncTransport):
         :param preserve: preserve file attributes
             Default = False
 
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
         :type recursive: bool
         :type preserve: bool
@@ -586,30 +585,31 @@ class AsyncSshTransport(AsyncTransport):
         # For performance reasons, we should check if the remote copy is supported, if so use
         # self._sftp.mcopy() & self._sftp.copy() otherwise send a `cp` command to the remote machine.
         # See here: https://github.com/ronf/asyncssh/issues/724
-        try:
-            if self.has_magic(remotesource):
-                await self._sftp.mcopy(
-                    remotesource,
-                    remotedestination,
-                    preserve=preserve,
-                    recurse=recursive,
-                    follow_symlinks=dereference,
-                    remote_only=True,
-                )
-            else:
-                if not await self.path_exists_async(remotesource):
-                    raise OSError(f'The remote path {remotesource} does not exist')
-                await self._sftp.copy(
-                    remotesource,
-                    remotedestination,
-                    preserve=preserve,
-                    recurse=recursive,
-                    follow_symlinks=dereference,
-                    remote_only=True,
-                )
-        except asyncssh.sftp.SFTPFailure as exc:
-            raise OSError(f'Error while copying {remotesource} to {remotedestination}: {exc}')
-        except SFTPOpUnsupported:
+        if self._sftp.supports_remote_copy:
+            try:
+                if self.has_magic(remotesource):
+                    await self._sftp.mcopy(
+                        remotesource,
+                        remotedestination,
+                        preserve=preserve,
+                        recurse=recursive,
+                        follow_symlinks=dereference,
+                        remote_only=True,
+                    )
+                else:
+                    if not await self.path_exists_async(remotesource):
+                        raise OSError(f'The remote path {remotesource} does not exist')
+                    await self._sftp.copy(
+                        remotesource,
+                        remotedestination,
+                        preserve=preserve,
+                        recurse=recursive,
+                        follow_symlinks=dereference,
+                        remote_only=True,
+                    )
+            except asyncssh.sftp.SFTPFailure as exc:
+                raise OSError(f'Error while copying {remotesource} to {remotedestination}: {exc}')
+        else:
             self.logger.warning('The remote copy is not supported, using the `cp` command to copy the file/folder')
             # I copy pasted the whole logic below from SshTransport class:
 
@@ -681,8 +681,8 @@ class AsyncSshTransport(AsyncTransport):
         :param preserve: preserve file attributes
             Default = False
 
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
         :type preserve: bool
 
@@ -705,8 +705,8 @@ class AsyncSshTransport(AsyncTransport):
         :param preserve: preserve file attributes
             Default = False
 
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type dereference: bool
         :type preserve: bool
 
@@ -738,8 +738,8 @@ class AsyncSshTransport(AsyncTransport):
         :type command: str
         :type stdin: str
         :type encoding: str
-        :type workdir: Optional[TransportPath]
-        :type timeout: Optional[float]
+        :type workdir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type timeout: float
 
         :return: a tuple with the return code, the stdout and the stderr of the command
         :rtype: tuple(int, str, str)
@@ -776,7 +776,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :param path: path to file
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: object FixedFieldsAttributeDict
         """
@@ -809,7 +809,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :param path: the absolute path to check
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: True if the path is a directory, False otherwise
         """
@@ -827,7 +827,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :param path: the absolute path to check
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: True if the path is a file, False otherwise
         """
@@ -848,7 +848,7 @@ class AsyncSshTransport(AsyncTransport):
         :param pattern: if used, listdir returns a list of files matching
                         filters in Unix style. Unix only.
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a list of strings
         """
@@ -876,7 +876,7 @@ class AsyncSshTransport(AsyncTransport):
         :param pattern: if used, listdir returns a list of files matching
                             filters in Unix style. Unix only.
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type pattern: str
         :return: a list of dictionaries, one per entry.
             The schema of the dictionary is
@@ -911,7 +911,7 @@ class AsyncSshTransport(AsyncTransport):
         :param bool ignore_existing: if set to true, it doesn't give any error
                 if the leaf directory does already exist
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises: OSError, if directory at path already exists
         """
@@ -934,7 +934,7 @@ class AsyncSshTransport(AsyncTransport):
         :param bool ignore_existing: if set to true, it doesn't give any error
                 if the leaf directory does already exist
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises: OSError, if directory at path already exists
         """
@@ -965,7 +965,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :param path: path to file to remove
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raise OSError: if the path is a directory
         """
@@ -984,8 +984,8 @@ class AsyncSshTransport(AsyncTransport):
         :param oldpath: existing name of the file or folder
         :param newpath: new name for the file or folder
 
-        :type oldpath: TransportPath
-        :type newpath: TransportPath
+        :type oldpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type newpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises OSError: if oldpath/newpath is not found
         :raises ValueError: if oldpath/newpath is not a valid string
@@ -1006,7 +1006,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :param str path: absolute path to the folder to remove
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
         path = path_to_str(path)
         try:
@@ -1019,7 +1019,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :param str path: absolute path to the folder to remove
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises OSError: if the operation fails
         """
@@ -1034,7 +1034,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :param path: path to check
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
         path = path_to_str(path)
         return await self._sftp.exists(path)
@@ -1065,8 +1065,8 @@ class AsyncSshTransport(AsyncTransport):
         :param remotesource: absolute path to remote source
         :param remotedestination: absolute path to remote destination
 
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises ValueError: if remotedestination has patterns
         """
@@ -1095,7 +1095,7 @@ class AsyncSshTransport(AsyncTransport):
         :param pathname: the pathname pattern to match.
             It should only be absolute path.
 
-        :type pathname: TransportPath
+        :type pathname:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a list of paths matching the pattern.
         """
@@ -1109,7 +1109,7 @@ class AsyncSshTransport(AsyncTransport):
         :param mode: the new permissions
         :param bool follow_symlinks: if True, follow symbolic links
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type mode: int
         :type follow_symlinks: bool
 
@@ -1130,7 +1130,7 @@ class AsyncSshTransport(AsyncTransport):
         :param uid: the new owner id
         :param gid: the new group id
 
-        :type path: TransportPath
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type uid: int
         :type gid: int
 
@@ -1159,9 +1159,10 @@ class AsyncSshTransport(AsyncTransport):
         :param kwargs: keyword parameters passed to the call to transportdestination.put,
             except for 'dereference' that is passed to self.get
 
-        :type transportdestination: Union['Transport', 'AsyncTransport']
-        :type remotesource: TransportPath
-        :type remotedestination: TransportPath
+        :type transportdestination: :class:`Transport <aiida.transports.transport.Transport>`,
+            or :class:`AsyncTransport <aiida.transports.transport.AsyncTransport>`
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         .. note:: the keyword 'dereference' SHOULD be set to False for the
          final put (onto the destination), while it can be set to the
@@ -1210,7 +1211,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :param remotedir: the remote directory to connect to
 
-        :type remotedir: TransportPath
+        :type remotedir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
         connect_string = self._gotocomputer_string(remotedir)
         cmd = f'ssh -t {self.machine} {connect_string}'

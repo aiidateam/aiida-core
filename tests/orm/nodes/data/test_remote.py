@@ -63,24 +63,55 @@ def test_clean(request, fixture):
 
 
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
-def test_get_size_on_disk(request, fixture):
+@pytest.mark.parametrize(
+    'setup, results',
+    (
+        (('du', False), ('4.01 KB', 'du')),
+        (('du', True), (4108, 'du')),
+        (('lstat', False), ('12.00 B', 'lstat')),
+        (('lstat', True), (12, 'lstat')),
+    ),
+)
+def test_get_size_on_disk_params(request, fixture, setup, results):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.get_size_on_disk` method."""
 
     remote_data = request.getfixturevalue(fixture)
 
-    # Check here for human-readable output string, as integer byte values are checked in
-    # `test_get_size_on_disk_[du|lstat]`
-    size_on_disk, method = remote_data.get_size_on_disk(method='du')
-    assert size_on_disk == '4.01 KB'
-    assert method == 'du'
+    size_on_disk, method = remote_data.get_size_on_disk(method=setup[0], return_bytes=setup[1])
+    assert (size_on_disk, method) == results
 
-    size_on_disk, method = remote_data.get_size_on_disk(method='lstat')
-    assert size_on_disk == '12.00 B'
-    assert method == 'lstat'
 
-    # Path/file non-existent
-    with pytest.raises(FileNotFoundError, match='.*does not exist, is not a directory.*'):
-        remote_data.get_size_on_disk(relpath=Path('non-existent'))
+@pytest.mark.parametrize(
+    'num_char, sizes',
+    (
+        (1, {'du': 4097, 'lstat': 1, 'human': '4.00 KB'}),
+        (10, {'du': 4106, 'lstat': 10, 'human': '4.01 KB'}),
+        (100, {'du': 4196, 'lstat': 100, 'human': '4.10 KB'}),
+        (1000, {'du': 5096, 'lstat': 1000, 'human': '4.98 KB'}),
+        (int(1e6), {'du': 1004096, 'lstat': int(1e6), 'human': '980.56 KB'}),
+    ),
+)
+@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
+def test_get_size_on_disk_sizes(tmp_path, num_char, sizes, request, fixture):
+    """Test the different implementations implementations to obtain the size of a RemoteData on disk."""
+
+    remote_data = request.getfixturevalue(fixture)  # (num_char=num_char)
+
+    content = b'a' * num_char
+    (tmp_path / 'file.txt').write_bytes(content)
+    remote_data.store()
+
+    authinfo = remote_data.get_authinfo()
+    full_path = Path(remote_data.get_remote_path())
+
+    with authinfo.get_transport() as transport:
+        size_on_disk_du = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
+        size_on_disk_lstat = remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path)
+        size_on_disk_human, _ = remote_data.get_size_on_disk()
+
+    assert size_on_disk_du == sizes['du']
+    assert size_on_disk_lstat == sizes['lstat']
+    assert size_on_disk_human == sizes['human']
 
 
 @pytest.mark.parametrize(
@@ -122,50 +153,30 @@ def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, s
 
         size_on_disk_human, _ = remote_data.get_size_on_disk(relpath=relpath)
 
-    print(f'du: {size_on_disk_du}, lstat: {size_on_disk_lstat}, human: {size_on_disk_human}')
     assert size_on_disk_du == sizes['du']
     assert size_on_disk_lstat == sizes['lstat']
     assert size_on_disk_human == sizes['human']
 
-    # Do the same possibly for subtrees
 
-
-@pytest.mark.parametrize(
-    'num_char, sizes',
-    (
-        (1, {'du': 4097, 'lstat': 1, 'human': '4.00 KB'}),
-        (10, {'du': 4106, 'lstat': 10, 'human': '4.01 KB'}),
-        (100, {'du': 4196, 'lstat': 100, 'human': '4.10 KB'}),
-        (1000, {'du': 5096, 'lstat': 1000, 'human': '4.98 KB'}),
-        (int(1e6), {'du': 1004096, 'lstat': int(1e6), 'human': '980.56 KB'}),
-    ),
-)
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
-def test_get_size_on_disk_sizes(tmp_path, num_char, sizes, request, fixture):
-    """Test the different implementations implementations to obtain the size of a RemoteData on disk."""
+def test_get_size_on_disk_excs(request, fixture):
+    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.get_size_on_disk` method."""
+    # Extra function to avoid unnecessary parametrization here
+    remote_data = request.getfixturevalue(fixture)
 
-    remote_data = request.getfixturevalue(fixture)  # (num_char=num_char)
+    # Path/file non-existent
+    with pytest.raises(FileNotFoundError, match='.*does not exist.*'):
+        remote_data.get_size_on_disk(relpath=Path('non-existent'))
 
-    content = b'a' * num_char
-    (tmp_path / 'file.txt').write_bytes(content)
-    remote_data.store()
-
-    authinfo = remote_data.get_authinfo()
-    full_path = Path(remote_data.get_remote_path())
-
-    with authinfo.get_transport() as transport:
-        size_on_disk_du = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
-        size_on_disk_lstat = remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path)
-        size_on_disk_human, _ = remote_data.get_size_on_disk()
-
-    assert size_on_disk_du == sizes['du']
-    assert size_on_disk_lstat == sizes['lstat']
-    assert size_on_disk_human == sizes['human']
+    # Non-valid method
+    with pytest.raises(NotImplementedError, match='.*for evaluating the size on disk not implemented.'):
+        remote_data.get_size_on_disk(method='fake-du')
 
 
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
 def test_get_size_on_disk_du(request, fixture, monkeypatch):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData._get_size_on_disk_du` private method."""
+    # No additional parametrization here, as already done in `test_get_size_on_disk_sizes`.
 
     remote_data = request.getfixturevalue(fixture)
 
@@ -197,6 +208,7 @@ def test_get_size_on_disk_du(request, fixture, monkeypatch):
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
 def test_get_size_on_disk_lstat(request, fixture):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData._get_size_on_disk_lstat` private method."""
+    # No additional parametrization here, as already done in `test_get_size_on_disk_sizes`.
 
     remote_data = request.getfixturevalue(fixture)
 

@@ -594,7 +594,7 @@ def format_directory_size(size_in_bytes: int) -> str:
         raise ValueError('Size cannot be negative.')
 
     # Define size prefixes
-    prefixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+    prefixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
     factor = 1024  # 1 KB = 1024 B
     index = 0
 

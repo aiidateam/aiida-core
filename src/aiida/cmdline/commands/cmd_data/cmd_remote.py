@@ -106,15 +106,25 @@ def remote_show(datum):
     default=None,
     help='Relative path of the object of the ``RemoteData`` node for which the size should be evaluated.',
 )
-def remote_size(node, method, path):
-    """Print the total size of a RemoteData object."""
+@click.option(
+    '-b',
+    '--bytes',
+    'return_bytes',
+    type=bool,
+    is_flag=True,
+    default=False,
+    help='Return the size in bytes or human-readable format?',
+)
+def remote_size(node, method, path, return_bytes):
+    """Obtain the total size of a file or directory at a given path that is stored as a ``RemoteData`` object."""
     try:
-        total_size, method = node.get_size_on_disk(relpath=path, method=method)
+        # `method` might change, if `du` fails, so the variable is reassigned.
+        total_size, method = node.get_size_on_disk(relpath=path, method=method, return_bytes=return_bytes)
         remote_path = Path(node.get_remote_path())
         full_path = remote_path / path if path is not None else remote_path
         echo.echo(
-            f'Estimated total size of directory `{full_path}` on the Computer '
-            f'`{node.computer.label}` obtained via `{method}`: {total_size}'
+            f'Estimated total size of file/directory `{full_path}` on the Computer '
+            f'<{node.computer.label}> obtained via `{method}`: {total_size}'
         )
-    except FileNotFoundError as exc:
+    except (OSError, FileNotFoundError, NotImplementedError) as exc:
         echo.echo_critical(str(exc))

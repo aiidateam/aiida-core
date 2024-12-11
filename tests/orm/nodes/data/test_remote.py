@@ -82,6 +82,7 @@ def test_get_size_on_disk(request, fixture):
     with pytest.raises(FileNotFoundError, match='.*does not exist, is not a directory.*'):
         remote_data.get_size_on_disk(relpath=Path('non-existent'))
 
+
 @pytest.mark.parametrize(
     'num_char, relpath, sizes',
     (
@@ -94,22 +95,21 @@ def test_get_size_on_disk(request, fixture):
     ),
 )
 def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, sizes):
-
-    sub_dir1 = tmp_path / "subdir1"
+    sub_dir1 = tmp_path / 'subdir1'
     sub_dir1.mkdir()
 
-    sub_dir2 = tmp_path / "subdir1" / "subdir2"
+    sub_dir2 = tmp_path / 'subdir1' / 'subdir2'
     sub_dir2.mkdir()
 
     # Create some files with known sizes
-    file1 = sub_dir1 / "file1.txt"
-    file1.write_text("a"*num_char)
+    file1 = sub_dir1 / 'file1.txt'
+    file1.write_text('a' * num_char)
 
-    file2 = sub_dir2 / "file2.bin"
-    file2.write_bytes(b"a" * num_char)
+    file2 = sub_dir2 / 'file2.bin'
+    file2.write_bytes(b'a' * num_char)
 
-    file3 = tmp_path / "file3.txt"
-    file3.write_text("a" * num_char)
+    file3 = tmp_path / 'file3.txt'
+    file3.write_text('a' * num_char)
 
     remote_data = RemoteData(computer=aiida_localhost, remote_path=tmp_path)
 
@@ -117,7 +117,6 @@ def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, s
     full_path = Path(remote_data.get_remote_path()) / relpath
 
     with authinfo.get_transport() as transport:
-
         size_on_disk_du = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
         size_on_disk_lstat = remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path)
 

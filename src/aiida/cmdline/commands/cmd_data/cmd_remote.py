@@ -90,21 +90,21 @@ def remote_show(datum):
     echo.echo(f'- Remote folder full path: {datum.get_remote_path()}')
 
 
-@remote.command("size")
+@remote.command('size')
 @arguments.NODE()
 @click.option(
-    "-m",
-    "--method",
+    '-m',
+    '--method',
     type=click.STRING,
-    default="du",
-    help="The method that should be used to evaluate the size (either ``du`` or ``lstat``.)",
+    default='du',
+    help='The method that should be used to evaluate the size (either ``du`` or ``lstat``.)',
 )
 @click.option(
-    "-p",
-    "--path",
+    '-p',
+    '--path',
     type=click.Path(),
     default=None,
-    help="Relative path of the object of the ``RemoteData`` node for which the size should be evaluated.",
+    help='Relative path of the object of the ``RemoteData`` node for which the size should be evaluated.',
 )
 def remote_size(node, method, path):
     """Print the total size of a RemoteData object."""
@@ -113,8 +113,8 @@ def remote_size(node, method, path):
         remote_path = Path(node.get_remote_path())
         full_path = remote_path / path if path is not None else remote_path
         echo.echo(
-            f"Estimated total size of directory `{full_path}` on the Computer "
-            f"`{node.computer.label}` obtained via `{method}`: {total_size}"
+            f'Estimated total size of directory `{full_path}` on the Computer '
+            f'`{node.computer.label}` obtained via `{method}`: {total_size}'
         )
     except FileNotFoundError as exc:
         echo.echo_critical(str(exc))

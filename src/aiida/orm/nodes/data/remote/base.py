@@ -201,9 +201,8 @@ class RemoteData(Data):
         method: str = 'du',
         return_bytes: bool = False,
     ) -> int | str:
-        """
-        Connects to the remote Computer of the `RemoteData` ojbect and returns the total size of a file or a directory
-        at the given `relpath` in a human-readable format.
+        """Connects to the remote Computer of the `RemoteData` ojbect and returns the total size of a file or a
+        directory at the given `relpath` in a human-readable format.
 
         :param relpath: File or directory path for which the total size should be returned, relative to
         ``self.get_remote_path()``.
@@ -280,9 +279,8 @@ class RemoteData(Data):
                     return format_directory_size(size_in_bytes=total_size), method
 
     def _get_size_on_disk_du(self, full_path: Path, transport: Transport) -> int:
-        """
-        Returns the total size of a file/directory at the given ``full_path`` on the remote Computer in bytes using the
-        ``du`` command.
+        """Returns the total size of a file/directory at the given ``full_path`` on the remote Computer in bytes using
+        the ``du`` command.
 
         :param full_path: Full path of file or directory for which the size should be evaluated.
         :param transport: Open transport instance.
@@ -305,9 +303,8 @@ class RemoteData(Data):
             raise NotImplementedError('`exec_command_wait` not implemented for the current transport plugin.') from exc
 
     def _get_size_on_disk_lstat(self, full_path: Path, transport: Transport) -> int:
-        """
-        Returns the total size of a file/directory at the given ``full_path`` on the remote Computer in bytes using the
-        ``lstat`` command.
+        """Returns the total size of a file/directory at the given ``full_path`` on the remote Computer in bytes using
+        the ``lstat`` command.
 
         Connects to the remote folder and returns the total size of all files in the directory in bytes using ``lstat``.
         Note that even if a file is only 1 byte, on disk, it still occupies one full disk block size.  As such, getting

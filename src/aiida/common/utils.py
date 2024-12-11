@@ -575,8 +575,7 @@ class DatetimePrecision:
 
 
 def format_directory_size(size_in_bytes: int) -> str:
-    """
-    Converts a size in bytes to a human-readable string with the appropriate prefix.
+    """Converts a size in bytes to a human-readable string with the appropriate prefix.
 
     :param size_in_bytes: Size in bytes.
     :raises ValueError: If the size is negative.

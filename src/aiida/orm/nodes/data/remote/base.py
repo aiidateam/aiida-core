@@ -217,10 +217,8 @@ class RemoteData(Data):
 
         from aiida.common.utils import format_directory_size
 
-        total_size = -1
+        total_size: int = -1
 
-        # Initialize it here and only return if set. Avoid repeating the code in the `else` of the try-except-else
-        # blocks for each method
         if relpath is None:
             relpath = Path('.')
 
@@ -231,7 +229,7 @@ class RemoteData(Data):
         with authinfo.get_transport() as transport:
             if not transport.path_exists(str(full_path)):
                 exc_message = (
-                    f'The required remote folder {full_path} on Computer <{computer_label}> ' 'does not exist.'
+                    f'The required remote path {full_path} on Computer <{computer_label}> ' 'does not exist.'
                 )
                 raise FileNotFoundError(exc_message)
 
@@ -305,13 +303,15 @@ class RemoteData(Data):
         the ``stat`` command.
 
         Connects to the remote folder and returns the total size of all files in the directory in bytes using ``stat``.
-        Note that even if a file is only 1 byte, on disk, it still occupies one full disk block size.  As such, getting
-        accurate measures of the total expected size on disk when retrieving a ``RemoteData`` is not straightforward
-        with ``stat``, as one would need to consider the occupied block sizes for each file, as well as repository
-        metadata. Thus, this function only serves as a fallback in the absence of the ``du`` command, and the returned
-        estimate is expected to be smaller than the size on disk that is actually occupied.
+        Note that `stat` returns the apparent file size, not actual disk usage.  Thus, even if a file is only 1 byte, on
+        disk, it still occupies one full disk block size. As such, getting accurate measures of the total expected size
+        on disk when retrieving a ``RemoteData`` is not straightforward with ``stat``, as one would need to consider the
+        occupied block sizes for each file, as well as repository metadata. Therefore, this function only serves as a
+        fallback in the absence of the ``du`` command, and the returned estimate is expected to be smaller than the size
+        on disk that is actually occupied. Further note that the `Transport.get_attribute` method that is
+        eventually being called on each file, calls `lstat`, which is equivalent to ``os.stat(follow_symlinks=False)``.
 
-        :param full_path: Full path of file or directory for which the size should be evaluated.
+        :param full_path: Full path of file or directory of which the size should be evaluated.
         :param transport: Open transport instance.
 
         :raises OSError: When object at ``full_path`` doesn't exist.

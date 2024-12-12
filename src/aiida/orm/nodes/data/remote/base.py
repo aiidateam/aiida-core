@@ -228,9 +228,7 @@ class RemoteData(Data):
 
         with authinfo.get_transport() as transport:
             if not transport.path_exists(str(full_path)):
-                exc_message = (
-                    f'The required remote path {full_path} on Computer <{computer_label}> ' 'does not exist.'
-                )
+                exc_message = f'The required remote path {full_path} on Computer <{computer_label}> ' 'does not exist.'
                 raise FileNotFoundError(exc_message)
 
             if method not in ('du', 'stat'):

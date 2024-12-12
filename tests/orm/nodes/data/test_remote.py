@@ -68,8 +68,8 @@ def test_clean(request, fixture):
     (
         (('du', False), ('4.01 KB', 'du')),
         (('du', True), (4108, 'du')),
-        (('lstat', False), ('12.00 B', 'lstat')),
-        (('lstat', True), (12, 'lstat')),
+        (('stat', False), ('12.00 B', 'stat')),
+        (('stat', True), (12, 'stat')),
     ),
 )
 def test_get_size_on_disk_params(request, fixture, setup, results):
@@ -84,11 +84,11 @@ def test_get_size_on_disk_params(request, fixture, setup, results):
 @pytest.mark.parametrize(
     'num_char, sizes',
     (
-        (1, {'du': 4097, 'lstat': 1, 'human': '4.00 KB'}),
-        (10, {'du': 4106, 'lstat': 10, 'human': '4.01 KB'}),
-        (100, {'du': 4196, 'lstat': 100, 'human': '4.10 KB'}),
-        (1000, {'du': 5096, 'lstat': 1000, 'human': '4.98 KB'}),
-        (int(1e6), {'du': 1004096, 'lstat': int(1e6), 'human': '980.56 KB'}),
+        (1, {'du': 4097, 'stat': 1, 'human': '4.00 KB'}),
+        (10, {'du': 4106, 'stat': 10, 'human': '4.01 KB'}),
+        (100, {'du': 4196, 'stat': 100, 'human': '4.10 KB'}),
+        (1000, {'du': 5096, 'stat': 1000, 'human': '4.98 KB'}),
+        (int(1e6), {'du': 1004096, 'stat': int(1e6), 'human': '980.56 KB'}),
     ),
 )
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
@@ -106,23 +106,23 @@ def test_get_size_on_disk_sizes(tmp_path, num_char, sizes, request, fixture):
 
     with authinfo.get_transport() as transport:
         size_on_disk_du = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
-        size_on_disk_lstat = remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path)
+        size_on_disk_stat = remote_data._get_size_on_disk_stat(transport=transport, full_path=full_path)
         size_on_disk_human, _ = remote_data.get_size_on_disk()
 
     assert size_on_disk_du == sizes['du']
-    assert size_on_disk_lstat == sizes['lstat']
+    assert size_on_disk_stat == sizes['stat']
     assert size_on_disk_human == sizes['human']
 
 
 @pytest.mark.parametrize(
     'num_char, relpath, sizes',
     (
-        (1, '.', {'du': 12291, 'lstat': 8195, 'human': '12.00 KB'}),
-        (100, '.', {'du': 12588, 'lstat': 8492, 'human': '12.29 KB'}),
-        (int(1e6), '.', {'du': 3012288, 'lstat': 3008192, 'human': '2.87 MB'}),
-        (1, 'subdir1', {'du': 8194, 'lstat': 4098, 'human': '8.00 KB'}),
-        (100, 'subdir1', {'du': 8392, 'lstat': 4296, 'human': '8.20 KB'}),
-        (int(1e6), 'subdir1', {'du': 2008192, 'lstat': 2004096, 'human': '1.92 MB'}),
+        (1, '.', {'du': 12291, 'stat': 8195, 'human': '12.00 KB'}),
+        (100, '.', {'du': 12588, 'stat': 8492, 'human': '12.29 KB'}),
+        (int(1e6), '.', {'du': 3012288, 'stat': 3008192, 'human': '2.87 MB'}),
+        (1, 'subdir1', {'du': 8194, 'stat': 4098, 'human': '8.00 KB'}),
+        (100, 'subdir1', {'du': 8392, 'stat': 4296, 'human': '8.20 KB'}),
+        (int(1e6), 'subdir1', {'du': 2008192, 'stat': 2004096, 'human': '1.92 MB'}),
     ),
 )
 def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, sizes):
@@ -149,12 +149,12 @@ def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, s
 
     with authinfo.get_transport() as transport:
         size_on_disk_du = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
-        size_on_disk_lstat = remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path)
+        size_on_disk_stat = remote_data._get_size_on_disk_stat(transport=transport, full_path=full_path)
 
         size_on_disk_human, _ = remote_data.get_size_on_disk(relpath=relpath)
 
     assert size_on_disk_du == sizes['du']
-    assert size_on_disk_lstat == sizes['lstat']
+    assert size_on_disk_stat == sizes['stat']
     assert size_on_disk_human == sizes['human']
 
 
@@ -206,8 +206,8 @@ def test_get_size_on_disk_du(request, fixture, monkeypatch):
 
 
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
-def test_get_size_on_disk_lstat(request, fixture):
-    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData._get_size_on_disk_lstat` private method."""
+def test_get_size_on_disk_stat(request, fixture):
+    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData._get_size_on_disk_stat` private method."""
     # No additional parametrization here, as already done in `test_get_size_on_disk_sizes`.
 
     remote_data = request.getfixturevalue(fixture)
@@ -216,9 +216,9 @@ def test_get_size_on_disk_lstat(request, fixture):
     full_path = Path(remote_data.get_remote_path())
 
     with authinfo.get_transport() as transport:
-        size_on_disk = remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path)
+        size_on_disk = remote_data._get_size_on_disk_stat(transport=transport, full_path=full_path)
         assert size_on_disk == 12
 
         # Raises OSError for non-existent directory
         with pytest.raises(OSError, match='The required remote folder.*'):
-            remote_data._get_size_on_disk_lstat(transport=transport, full_path=full_path / 'non-existent')
+            remote_data._get_size_on_disk_stat(transport=transport, full_path=full_path / 'non-existent')

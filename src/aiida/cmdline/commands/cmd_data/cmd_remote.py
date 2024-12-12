@@ -97,7 +97,7 @@ def remote_show(datum):
     '--method',
     type=click.STRING,
     default='du',
-    help='The method that should be used to evaluate the size (either ``du`` or ``lstat``.)',
+    help='The method that should be used to evaluate the size (either ``du`` or ``stat``.)',
 )
 @click.option(
     '-p',
@@ -116,14 +116,14 @@ def remote_show(datum):
     help='Return the size in bytes or human-readable format?',
 )
 def remote_size(node, method, path, return_bytes):
-    """Obtain the total size of a file or directory at a given path that is stored as a ``RemoteData`` object."""
+    """Obtain the total size of a file or directory at a given path that is stored via a ``RemoteData`` object."""
     try:
         # `method` might change, if `du` fails, so the variable is reassigned.
         total_size, method = node.get_size_on_disk(relpath=path, method=method, return_bytes=return_bytes)
         remote_path = Path(node.get_remote_path())
         full_path = remote_path / path if path is not None else remote_path
-        echo.echo(
-            f'Estimated total size of file/directory `{full_path}` on the Computer '
+        echo.echo_success(
+            f'Estimated total size of path `{full_path}` on the Computer '
             f'<{node.computer.label}> obtained via `{method}`: {total_size}'
         )
     except (OSError, FileNotFoundError, NotImplementedError) as exc:

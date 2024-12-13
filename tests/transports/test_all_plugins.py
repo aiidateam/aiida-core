@@ -65,7 +65,9 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Union['Transport
         if not filepath_config.exists():
             filepath_config.write_text('Host localhost')
     elif request.param == 'core.ssh_async':
-        kwargs = {'machine_or_host': 'localhost', 'max_io_allowed': 8}
+        kwargs = {
+            'machine': 'localhost',
+        }
     else:
         kwargs = {}
 

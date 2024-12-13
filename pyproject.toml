@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
   'alembic~=1.2',
   'archive-path~=0.4.2',
-  "asyncssh",
+  "asyncssh~=2.19.0",
   'circus~=0.18.0',
   'click-spinner~=0.1.8',
   'click~=8.1',

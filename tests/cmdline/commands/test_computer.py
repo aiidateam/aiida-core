@@ -998,6 +998,14 @@ def test_computer_ssh_async(run_cli_command, aiida_computer):
 
     # It is important that 'ssh localhost' is functional in your test environment.
     # It should connect without asking for a password.
-    options = ['core.ssh_async', computer.uuid, '--non-interactive', '--safe-interval', '0', '--machine', 'localhost']
+    options = [
+        'core.ssh_async',
+        computer.uuid,
+        '--non-interactive',
+        '--safe-interval',
+        '0',
+        '--machine-or-host',
+        'localhost',
+    ]
     run_cli_command(computer_configure, options, use_subprocess=False)
     assert computer.is_configured

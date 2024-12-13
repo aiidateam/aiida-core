@@ -64,6 +64,8 @@ def validate_machine(ctx, param, value: str):
 class AsyncSshTransport(AsyncTransport):
     """Transport plugin via SSH, asynchronously."""
 
+    _DEFAULT_max_io_allowed = 8
+
     # note, I intentionally wanted to keep connection parameters as simple as possible.
     _valid_auth_options = [
         (
@@ -84,7 +86,7 @@ class AsyncSshTransport(AsyncTransport):
             'max_io_allowed',
             {
                 'type': int,
-                'default': 8,
+                'default': _DEFAULT_max_io_allowed,
                 'prompt': 'Maximum number of concurrent I/O operations.',
                 'help': 'Depends on various factors, such as your network bandwidth, the server load, etc.'
                 ' (An experimental number)',
@@ -117,23 +119,30 @@ class AsyncSshTransport(AsyncTransport):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.machine = kwargs.pop('machine_or_host')
-        self._max_io_allowed = kwargs.pop('max_io_allowed')
+        # the machine is passed as `machine=computer.hostname` in the codebase
+        # 'machine' is immutable.
+        # 'machine_or_host' is mutable, so it can be changed via command:
+        # 'verdi computer configure core.ssh_async <LABEL>'.
+        # by default, 'machine_or_host' is set to 'machine' in the __init__ method, if not provided.
+        # NOTE: to guarantee a connection,
+        # a computer with core.ssh_async transport plugin should be configured before any instantiation.
+        self.machine = kwargs.pop('machine_or_host', kwargs.pop('machine'))
+        self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
 
-        self._councurrent_io = 0
+        self._concurrent_io = 0
 
     @property
     def max_io_allowed(self):
         return self._max_io_allowed
 
     async def _lock(self, sleep_time=0.5):
-        while self._councurrent_io >= self.max_io_allowed:
+        while self._concurrent_io >= self.max_io_allowed:
             await asyncio.sleep(sleep_time)
-        self._councurrent_io += 1
+        self._concurrent_io += 1
 
     async def _unlock(self):
-        self._councurrent_io -= 1
+        self._concurrent_io -= 1
 
     async def open_async(self):
         """Open the transport.

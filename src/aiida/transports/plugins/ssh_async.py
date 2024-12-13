@@ -21,12 +21,19 @@ from asyncssh import SFTPFileAlreadyExists
 
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import InvalidOperation
-from aiida.transports.transport import AsyncTransport, Transport, TransportInternalError, TransportPath, path_to_str
+from aiida.transports.transport import (
+    AsyncTransport,
+    Transport,
+    TransportInternalError,
+    TransportPath,
+    path_to_str,
+    validate_positive_number,
+)
 
 __all__ = ('AsyncSshTransport',)
 
 
-def _validate_script(ctx, param, value: str):
+def validate_script(ctx, param, value: str):
     if value == 'None':
         return value
     if not os.path.isabs(value):
@@ -38,7 +45,7 @@ def _validate_script(ctx, param, value: str):
     return value
 
 
-def _validate_machine(ctx, param, value: str):
+def validate_machine(ctx, param, value: str):
     async def attempt_connection():
         try:
             await asyncssh.connect(value)
@@ -60,15 +67,29 @@ class AsyncSshTransport(AsyncTransport):
     # note, I intentionally wanted to keep connection parameters as simple as possible.
     _valid_auth_options = [
         (
-            'machine',
+            # the underscore is added to avoid conflict with the machine property
+            # which is passed to __init__ as parameter `machine=computer.hostname`
+            'machine_or_host',
             {
                 'type': str,
-                'prompt': 'machine as in `ssh machine` command',
-                'help': 'Password-less host-setup to connect, as in command `ssh machine`. '
-                "You'll need to have a `Host machine` "
-                'entry defined in your `~/.ssh/config` file. ',
+                'prompt': 'Machine(or host) name as in `ssh <your-host-name>` command.'
+                ' (It should be a password-less setup)',
+                'help': 'Password-less host-setup to connect, as in command `ssh <your-host-name>`. '
+                "You'll need to have a `Host <your-host-name>` entry defined in your `~/.ssh/config` file.",
                 'non_interactive_default': True,
-                'callback': _validate_machine,
+                'callback': validate_machine,
+            },
+        ),
+        (
+            'max_io_allowed',
+            {
+                'type': int,
+                'default': 8,
+                'prompt': 'Maximum number of concurrent I/O operations.',
+                'help': 'Depends on various factors, such as your network bandwidth, the server load, etc.'
+                ' (An experimental number)',
+                'non_interactive_default': True,
+                'callback': validate_positive_number,
             },
         ),
         (
@@ -80,7 +101,7 @@ class AsyncSshTransport(AsyncTransport):
                 'help': ' (optional) Specify a script to run *before* opening SSH connection. '
                 'The script should be executable',
                 'non_interactive_default': True,
-                'callback': _validate_script,
+                'callback': validate_script,
             },
         ),
     ]
@@ -96,8 +117,23 @@ class AsyncSshTransport(AsyncTransport):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.machine = kwargs.pop('machine')
+        self.machine = kwargs.pop('machine_or_host')
+        self._max_io_allowed = kwargs.pop('max_io_allowed')
         self.script_before = kwargs.pop('script_before', 'None')
+
+        self._councurrent_io = 0
+
+    @property
+    def max_io_allowed(self):
+        return self._max_io_allowed
+
+    async def _lock(self, sleep_time=0.5):
+        while self._councurrent_io >= self.max_io_allowed:
+            await asyncio.sleep(sleep_time)
+        self._councurrent_io += 1
+
+    async def _unlock(self):
+        self._councurrent_io -= 1
 
     async def open_async(self):
         """Open the transport.
@@ -258,6 +294,7 @@ class AsyncSshTransport(AsyncTransport):
             raise OSError('Destination already exists: not overwriting it')
 
         try:
+            await self._lock()
             await self._sftp.get(
                 remotepaths=remotepath,
                 localpath=localpath,
@@ -265,6 +302,7 @@ class AsyncSshTransport(AsyncTransport):
                 recurse=False,
                 follow_symlinks=dereference,
             )
+            await self._unlock()
         except (OSError, asyncssh.Error) as exc:
             raise OSError(f'Error while uploading file {localpath}: {exc}')
 
@@ -327,6 +365,7 @@ class AsyncSshTransport(AsyncTransport):
         content_list = await self.listdir_async(remotepath)
         for content_ in content_list:
             try:
+                await self._lock()
                 await self._sftp.get(
                     remotepaths=PurePath(remotepath) / content_,
                     localpath=localpath,
@@ -334,6 +373,7 @@ class AsyncSshTransport(AsyncTransport):
                     recurse=True,
                     follow_symlinks=dereference,
                 )
+                await self._unlock()
             except (OSError, asyncssh.Error) as exc:
                 raise OSError(f'Error while uploading file {localpath}: {exc}')
 
@@ -462,6 +502,7 @@ class AsyncSshTransport(AsyncTransport):
             raise OSError('Destination already exists: not overwriting it')
 
         try:
+            await self._lock()
             await self._sftp.put(
                 localpaths=localpath,
                 remotepath=remotepath,
@@ -469,6 +510,7 @@ class AsyncSshTransport(AsyncTransport):
                 recurse=False,
                 follow_symlinks=dereference,
             )
+            await self._unlock()
         except (OSError, asyncssh.Error) as exc:
             raise OSError(f'Error while uploading file {localpath}: {exc}')
 
@@ -534,6 +576,7 @@ class AsyncSshTransport(AsyncTransport):
         content_list = os.listdir(localpath)
         for content_ in content_list:
             try:
+                await self._lock()
                 await self._sftp.put(
                     localpaths=PurePath(localpath) / content_,
                     remotepath=remotepath,
@@ -541,6 +584,7 @@ class AsyncSshTransport(AsyncTransport):
                     recurse=True,
                     follow_symlinks=dereference,
                 )
+                await self._unlock()
             except (OSError, asyncssh.Error) as exc:
                 raise OSError(f'Error while uploading file {PurePath(localpath)/content_}: {exc}')
 

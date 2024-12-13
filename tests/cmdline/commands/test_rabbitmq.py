@@ -9,11 +9,12 @@
 """Tests for ``verdi devel rabbitmq``."""
 
 import pytest
+from plumpy.process_comms import RemoteProcessThreadController
+
 from aiida.cmdline.commands import cmd_rabbitmq
 from aiida.engine import ProcessState, submit
 from aiida.engine.processes import control
 from aiida.orm import Int
-from plumpy.process_comms import RemoteProcessThreadController
 
 
 @pytest.mark.requires_rmq

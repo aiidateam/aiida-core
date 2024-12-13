@@ -11,8 +11,9 @@
 import sys
 
 import pytest
-from aiida.cmdline.commands.cmd_verdi import verdi
 from click.shell_completion import ShellComplete
+
+from aiida.cmdline.commands.cmd_verdi import verdi
 
 SLOW_IMPORTS = ['pydantic']
 

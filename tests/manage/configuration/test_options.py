@@ -9,6 +9,7 @@
 """Tests for the configuration options."""
 
 import pytest
+
 from aiida import get_profile
 from aiida.common.exceptions import ConfigurationError
 from aiida.manage.configuration import get_config, get_config_option

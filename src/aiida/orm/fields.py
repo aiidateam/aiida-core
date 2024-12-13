@@ -44,12 +44,12 @@ class QbField:
     """A field of an ORM entity, accessible via the ``QueryBuilder``"""
 
     __slots__ = (
-        '_key',
         '_backend_key',
         '_doc',
         '_dtype',
         '_is_attribute',
         '_is_subscriptable',
+        '_key',
     )
 
     def __init__(

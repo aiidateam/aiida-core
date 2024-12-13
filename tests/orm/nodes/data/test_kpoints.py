@@ -14,6 +14,7 @@ from aiida.orm import KpointsData, load_node
 from aiida.orm import StructureData as LegacyStructureData
 from aiida.orm.nodes.data.structure import has_atomistic
 
+
 skip_atomistic = pytest.mark.skipif(not has_atomistic(), reason='aiida-atomistic not installed')
 
 if not has_atomistic():

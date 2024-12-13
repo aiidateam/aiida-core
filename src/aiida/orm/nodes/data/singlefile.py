@@ -39,6 +39,17 @@ class SinglefileData(Data):
         """
         return cls(io.StringIO(content), filename, **kwargs)
 
+    @classmethod
+    def from_bytes(
+        cls, content: bytes, filename: str | pathlib.Path | None = None, **kwargs: t.Any
+    ) -> 'SinglefileData':
+        """Construct a new instance and set ``content`` as its contents.
+
+        :param content: The content as bytes.
+        :param filename: Specify filename to use (defaults to ``file.txt``).
+        """
+        return cls(io.BytesIO(content), filename, **kwargs)
+
     def __init__(
         self, file: str | pathlib.Path | t.IO, filename: str | pathlib.Path | None = None, **kwargs: t.Any
     ) -> None:
@@ -71,9 +82,7 @@ class SinglefileData(Data):
 
     @t.overload
     @contextlib.contextmanager
-    def open(  # type: ignore[overload-overlap]
-        self, path: None = None, mode: t.Literal['r'] = ...
-    ) -> t.Iterator[t.TextIO]: ...
+    def open(self, path: None = None, mode: t.Literal['r'] = ...) -> t.Iterator[t.TextIO]: ...
 
     @t.overload
     @contextlib.contextmanager

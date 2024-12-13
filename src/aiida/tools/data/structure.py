@@ -33,7 +33,7 @@ except exceptions.MissingEntryPointError:
 else:
     structures_classes = (LegacyStructureData, StructureData)  # type: ignore[assignment]
 
-__all__ = ('structure_to_spglib_tuple', 'spglib_tuple_to_structure')
+__all__ = ('spglib_tuple_to_structure', 'structure_to_spglib_tuple')
 
 
 @calcfunction

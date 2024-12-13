@@ -11,9 +11,10 @@
 from textwrap import dedent
 
 import pytest
+from click.testing import CliRunner
+
 from aiida import orm
 from aiida.cmdline.commands.cmd_group import group_path_ls
-from click.testing import CliRunner
 
 
 @pytest.fixture

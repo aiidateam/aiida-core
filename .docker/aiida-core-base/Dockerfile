@@ -24,7 +24,7 @@ ENV SYSTEM_USER="${SYSTEM_USER}"
 
 # Install all OS dependencies for notebook server that starts but lacks all
 # features (e.g., download as all possible file formats)
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update --yes && \
     # - apt-get upgrade is run to patch known vulnerabilities in apt-get packages as
     #   the ubuntu base image is rebuilt too seldom sometimes (less than once a month)
@@ -145,7 +145,7 @@ RUN set -x && \
 # Add ~/.local/bin to PATH where the dependencies get installed via pip
 # This require the package installed with `--user` flag in pip, which we set as default.
 ENV PATH=${PATH}:/home/${SYSTEM_USER}/.local/bin
-ENV PIP_USER 1
+ENV PIP_USER=1
 
 # Switch to root to install AiiDA and set AiiDA as service
 # Install AiiDA from source code

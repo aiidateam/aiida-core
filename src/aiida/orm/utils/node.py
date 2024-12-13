@@ -16,10 +16,10 @@ from aiida.common.utils import strip_prefix
 from aiida.orm.fields import EntityFieldMeta
 
 __all__ = (
-    'load_node_class',
-    'get_type_string_from_class',
-    'get_query_type_from_type_string',
     'AbstractNodeMeta',
+    'get_query_type_from_type_string',
+    'get_type_string_from_class',
+    'load_node_class',
 )
 
 

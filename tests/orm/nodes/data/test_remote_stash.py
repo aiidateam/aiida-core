@@ -9,6 +9,7 @@
 """Tests for the :mod:`aiida.orm.nodes.data.remote.stash` module."""
 
 import pytest
+
 from aiida.common.datastructures import StashMode
 from aiida.common.exceptions import StoringNotAllowed
 from aiida.orm import RemoteStashData, RemoteStashFolderData

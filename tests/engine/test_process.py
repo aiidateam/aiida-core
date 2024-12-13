@@ -12,6 +12,8 @@ import threading
 
 import plumpy
 import pytest
+from plumpy.utils import AttributesFrozendict
+
 from aiida import orm
 from aiida.common.lang import override
 from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
@@ -20,8 +22,6 @@ from aiida.manage.caching import disable_caching, enable_caching
 from aiida.orm import to_aiida_type
 from aiida.orm.nodes.caching import NodeCaching
 from aiida.plugins import CalculationFactory
-from plumpy.utils import AttributesFrozendict
-
 from tests.utils import processes as test_processes
 
 

@@ -12,9 +12,10 @@ import collections
 import pathlib
 
 import pytest
+from sqlalchemy import text
+
 from aiida.manage.configuration import Profile
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
-from sqlalchemy import text
 
 
 @pytest.fixture

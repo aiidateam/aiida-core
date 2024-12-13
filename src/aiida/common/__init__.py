@@ -25,6 +25,7 @@ from .progress_reporter import *
 
 __all__ = (
     'AIIDA_LOGGER',
+    'TQDM_BAR_FORMAT',
     'AiidaException',
     'AttributeDict',
     'CalcInfo',
@@ -74,7 +75,6 @@ __all__ = (
     'StashMode',
     'StorageMigrationError',
     'StoringNotAllowed',
-    'TQDM_BAR_FORMAT',
     'TestsNotAllowedError',
     'TransportTaskException',
     'UniquenessError',

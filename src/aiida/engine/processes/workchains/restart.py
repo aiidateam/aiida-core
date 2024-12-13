@@ -29,7 +29,7 @@ __all__ = ('BaseRestartWorkChain',)
 
 
 def validate_handler_overrides(
-    process_class: 'BaseRestartWorkChain', handler_overrides: Optional[orm.Dict], ctx: 'PortNamespace'
+    process_class: type['BaseRestartWorkChain'], handler_overrides: Optional[orm.Dict], ctx: 'PortNamespace'
 ) -> Optional[str]:
     """Validator for the ``handler_overrides`` input port of the ``BaseRestartWorkChain``.
 

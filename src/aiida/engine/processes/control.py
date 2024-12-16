@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import collections
-import concurrent
+import concurrent.futures
 import functools
 import typing as t
 
@@ -207,7 +207,7 @@ def kill_processes(
 
 def _perform_actions(
     processes: list[ProcessNode],
-    action: t.Callable,
+    action: t.Callable[[int | None], kiwipy.Future],
     infinitive: str,
     present: str,
     timeout: t.Optional[float] = None,
@@ -234,7 +234,7 @@ def _perform_actions(
             continue
 
         try:
-            future = action(process.pk, **kwargs)
+            future = action(process.pk)
         except communications.UnroutableError:
             LOGGER.error(f'Process<{process.pk}> is unreachable.')
         else:
@@ -244,7 +244,7 @@ def _perform_actions(
 
 
 def _resolve_futures(
-    futures: dict[concurrent.futures.Future, ProcessNode],
+    futures: dict[kiwipy.Future, ProcessNode],
     infinitive: str,
     present: str,
     wait: bool = False,

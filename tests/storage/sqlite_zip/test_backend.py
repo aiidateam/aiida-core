@@ -2,7 +2,7 @@
 
 import pathlib
 
-import pytest 
+import pytest
 from pydantic_core import ValidationError
 
 from aiida.common.exceptions import IncompatibleExternalDependencies

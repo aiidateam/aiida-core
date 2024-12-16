@@ -8,8 +8,9 @@
 ###########################################################################
 """A module to test class loader factories."""
 
-import aiida
 import pytest
+
+import aiida
 from aiida.engine import Process
 from aiida.plugins import CalculationFactory
 

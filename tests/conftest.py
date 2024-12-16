@@ -18,13 +18,16 @@ import copy
 import dataclasses
 import os
 import pathlib
+import subprocess
 import types
 import typing as t
 import warnings
+from enum import Enum
 from pathlib import Path
 
 import click
 import pytest
+
 from aiida import get_profile
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
@@ -36,7 +39,14 @@ if t.TYPE_CHECKING:
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
 
-def pytest_collection_modifyitems(items):
+class TestDbBackend(Enum):
+    """Options for the '--db-backend' CLI argument when running pytest."""
+
+    SQLITE = 'sqlite'
+    PSQL = 'psql'
+
+
+def pytest_collection_modifyitems(items, config):
     """Automatically generate markers for certain tests.
 
     Most notably, we add the 'presto' marker for all tests that
@@ -45,6 +55,14 @@ def pytest_collection_modifyitems(items):
     filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
     filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
     filepath_sqla = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'sqlalchemy_branch'
+
+    # If the user requested the SQLite backend, automatically skip incompatible tests
+    if config.option.db_backend is TestDbBackend.SQLITE:
+        if config.option.markexpr != '':
+            # Don't overwrite markers that the user already provided via '-m ' cmdline argument
+            config.option.markexpr += ' and (not requires_psql)'
+        else:
+            config.option.markexpr = 'not requires_psql'
 
     for item in items:
         filepath_item = Path(item.fspath)
@@ -67,6 +85,30 @@ def pytest_collection_modifyitems(items):
             item.add_marker('presto')
 
 
+def db_backend_type(string):
+    """Conversion function for the custom '--db-backend' pytest CLI option
+
+    :param string: String provided by the user via CLI
+    :returns: DbBackend enum corresponding to user input string
+    """
+    try:
+        return TestDbBackend(string)
+    except ValueError:
+        msg = f"Invalid --db-backend option '{string}'\nMust be one of: {tuple(db.value for db in TestDbBackend)}"
+        raise pytest.UsageError(msg)
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        '--db-backend',
+        action='store',
+        default=TestDbBackend.SQLITE,
+        required=False,
+        help=f'Database backend to be used for tests {tuple(db.value for db in TestDbBackend)}',
+        type=db_backend_type,
+    )
+
+
 @pytest.fixture(scope='session')
 def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql_dos, config_sqlite_dos):
     """Create and load a profile with ``core.psql_dos`` as a storage backend and RabbitMQ as the broker.
@@ -76,18 +118,22 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
     be run against the main storage backend, which is ``core.sqlite_dos``.
     """
     marker_opts = pytestconfig.getoption('-m')
+    db_backend = pytestconfig.getoption('--db-backend')
 
-    # By default we use RabbitMQ broker and psql_dos storage
+    # We use RabbitMQ broker by default unless 'presto' marker is specified
     broker = 'core.rabbitmq'
     if 'not requires_rmq' in marker_opts or 'presto' in marker_opts:
         broker = None
 
-    if 'not requires_psql' in marker_opts or 'presto' in marker_opts:
+    if db_backend is TestDbBackend.SQLITE:
         storage = 'core.sqlite_dos'
         config = config_sqlite_dos()
-    else:
+    elif db_backend is TestDbBackend.PSQL:
         storage = 'core.psql_dos'
         config = config_psql_dos()
+    else:
+        # This should be unreachable
+        raise ValueError(f'Invalid DB backend {db_backend}')
 
     with aiida_profile_factory(
         aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker
@@ -202,6 +248,36 @@ def generate_work_chain():
 
 
 @pytest.fixture
+def generate_calcjob_node():
+    """Generate an instance of a `CalcJobNode`."""
+    from aiida.engine import ProcessState
+
+    def _generate_calcjob_node(
+        process_state: ProcessState = ProcessState.FINISHED,
+        exit_status: int | None = None,
+        entry_point: str | None = None,
+        workdir: pathlib.Path | None = None,
+    ):
+        """Generate an instance of a `CalcJobNode`..
+
+        :param process_state: state to set
+        :param exit_status: optional exit status, will be set to `0` if `process_state` is `ProcessState.FINISHED`
+        :return: a `CalcJobNode` instance.
+        """
+        from aiida.orm import CalcJobNode
+
+        if process_state is ProcessState.FINISHED and exit_status is None:
+            exit_status = 0
+
+        calcjob_node = CalcJobNode(process_type=entry_point)
+        calcjob_node.set_remote_workdir(workdir)
+
+        return calcjob_node
+
+    return _generate_calcjob_node
+
+
+@pytest.fixture
 def generate_calculation_node():
     """Generate an instance of a `CalculationNode`."""
     from aiida.engine import ProcessState
@@ -298,7 +374,7 @@ def empty_config(tmp_path) -> Config:
     """
     from aiida.common.utils import Capturing
     from aiida.manage import configuration, get_manager
-    from aiida.manage.configuration import settings
+    from aiida.manage.configuration.settings import AiiDAConfigDir
 
     manager = get_manager()
 
@@ -312,7 +388,7 @@ def empty_config(tmp_path) -> Config:
 
     # Set the configuration directory to a temporary directory. This will create the necessary folders for an empty
     # AiiDA configuration and set relevant global variables in :mod:`aiida.manage.configuration.settings`.
-    settings.set_configuration_directory(tmp_path)
+    AiiDAConfigDir.set(tmp_path)
 
     # The constructor of `Config` called by `load_config` will print warning messages about migrating it
     with Capturing():
@@ -330,7 +406,7 @@ def empty_config(tmp_path) -> Config:
         # like the :class:`aiida.engine.daemon.client.DaemonClient` will not function properly after a test that uses
         # this fixture because the paths of the daemon files would still point to the path of the temporary config
         # folder created by this fixture.
-        settings.set_configuration_directory(pathlib.Path(current_config_path))
+        AiiDAConfigDir.set(pathlib.Path(current_config_path))
 
         # Reload the original profile
         manager.load_profile(current_profile_name)
@@ -707,9 +783,10 @@ def run_cli_command_subprocess(command, parameters, user_input, profile_name, su
 
 def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs):
     """Run CLI command through ``click.testing.CliRunner``."""
+    from click.testing import CliRunner
+
     from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
     from aiida.cmdline.groups.verdi import LazyVerdiObjAttributeDict
-    from click.testing import CliRunner
 
     if initialize_ctx_obj:
         config = get_config()
@@ -860,3 +937,17 @@ def serialize_file_hierarchy():
         return serialized
 
     return factory
+
+
+@pytest.fixture(scope='session')
+def bash_path() -> Path:
+    run_process = subprocess.run(['which', 'bash'], capture_output=True, check=True)
+    path = run_process.stdout.decode('utf-8').strip()
+    return Path(path)
+
+
+@pytest.fixture(scope='session')
+def cat_path() -> Path:
+    run_process = subprocess.run(['which', 'cat'], capture_output=True, check=True)
+    path = run_process.stdout.decode('utf-8').strip()
+    return Path(path)

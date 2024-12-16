@@ -253,7 +253,6 @@ async def task_monitor_job(
     async def do_monitor():
         with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
-            transport.chdir(node.get_remote_workdir())
             return monitors.process(node, transport)
 
     try:

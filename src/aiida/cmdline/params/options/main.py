@@ -68,6 +68,7 @@ __all__ = (
     'GROUP_CLEAR',
     'HOSTNAME',
     'IDENTIFIER',
+    'INCREMENTAL',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
@@ -80,8 +81,8 @@ __all__ = (
     'ORDER_BY',
     'ORDER_DIRECTION',
     'OVERWRITE',
-    'PATH',
     'PAST_DAYS',
+    'PATH',
     'PAUSED',
     'PORT',
     'PREPEND_TEXT',
@@ -765,12 +766,12 @@ PATH = OverridableOption(
 )
 
 OVERWRITE = OverridableOption(
-    '--overwrite',
     '-o',
+    '--overwrite',
     is_flag=True,
     default=False,
     show_default=True,
-    help='Overwrite file/directory if writing to disk.',
+    help='Overwrite file/directory when writing to disk.',
 )
 
 SORT = OverridableOption(
@@ -780,4 +781,12 @@ SORT = OverridableOption(
     default=True,
     help='Sort the keys of the output YAML.',
     show_default=True,
+)
+
+INCREMENTAL = OverridableOption(
+    '--incremental/--no-incremental',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help="Incremental dumping of data to disk. Doesn't require using overwrite to clean previous directories.",
 )

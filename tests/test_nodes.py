@@ -11,6 +11,7 @@ import io
 import tempfile
 
 import pytest
+
 from aiida import get_profile, orm
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
@@ -162,7 +163,6 @@ class TestQueryWithAiidaObjects:
         """Initialize the profile."""
         self.computer = aiida_localhost
 
-    @pytest.mark.requires_psql
     def test_with_subclasses(self):
         from aiida.plugins import DataFactory
 

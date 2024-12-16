@@ -29,7 +29,7 @@ def calc_info(node, call_link_label: bool = False) -> str:
         raise TypeError(f'Unknown type: {type(node)}')
 
     process_label = node.process_label
-    process_state = node.process_state.value.capitalize()
+    process_state = 'None' if node.process_state is None else node.process_state.value.capitalize()
     exit_status = node.exit_status
 
     if call_link_label and (caller := node.caller):

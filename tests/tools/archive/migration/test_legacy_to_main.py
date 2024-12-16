@@ -9,9 +9,9 @@
 """Test archive file migration from legacy format (JSON) to main format (SQLite)."""
 
 import pytest
+
 from aiida.common.exceptions import StorageMigrationError
 from aiida.storage.sqlite_zip.migrator import migrate
-
 from tests.utils.archives import get_archive_file
 
 

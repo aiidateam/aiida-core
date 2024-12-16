@@ -12,6 +12,7 @@ import io
 import pathlib
 
 import pytest
+
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
@@ -111,7 +112,7 @@ def test_hierarchy_utility(file_hierarchy, tmp_path, create_file_hierarchy, seri
 )
 def test_retrieve_files_from_list(
     tmp_path_factory,
-    generate_calculation_node,
+    generate_calcjob_node,
     file_hierarchy,
     retrieve_list,
     expected_hierarchy,
@@ -125,8 +126,7 @@ def test_retrieve_files_from_list(
     create_file_hierarchy(file_hierarchy, source)
 
     with LocalTransport() as transport:
-        node = generate_calculation_node()
-        transport.chdir(source)
+        node = generate_calcjob_node(workdir=source)
         execmanager.retrieve_files_from_list(node, transport, target, retrieve_list)
 
     assert serialize_file_hierarchy(target, read_bytes=False) == expected_hierarchy

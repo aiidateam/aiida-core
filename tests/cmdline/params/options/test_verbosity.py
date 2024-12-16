@@ -12,6 +12,7 @@ import functools
 import logging
 
 import pytest
+
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import echo
 from aiida.common import log

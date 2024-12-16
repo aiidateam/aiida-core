@@ -9,6 +9,7 @@
 """Tests for the :mod:`aiida.common.escaping`."""
 
 import pytest
+
 from aiida.common.escaping import escape_for_bash
 
 

@@ -15,6 +15,7 @@ import typing as t
 import uuid
 
 import pytest
+
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
 from aiida.cmdline.utils.echo import ExitCode
@@ -23,7 +24,6 @@ from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
-
 from tests.utils.processes import WaitProcess
 
 
@@ -365,13 +365,13 @@ class TestVerdiProcess:
         assert result.exception is None, result.output
         assert 'Success:' in result.output
 
-        # Trying to run the dumping again in the same path but without overwrite=True should raise exception
-        options = [str(node.pk), '-p', str(test_path)]
+        # Trying to run the dumping again in the same path but with overwrite=False should raise exception
+        options = [str(node.pk), '-p', str(test_path), '--no-incremental']
         result = run_cli_command(cmd_process.process_dump, options, raises=True)
         assert result.exit_code is ExitCode.CRITICAL
 
         # Works fine when using overwrite=True
-        options = [str(node.pk), '-p', str(test_path), '-o']
+        options = [str(node.pk), '-p', str(test_path), '-o', '--no-incremental']
         result = run_cli_command(cmd_process.process_dump, options)
         assert result.exception is None, result.output
         assert 'Success:' in result.output

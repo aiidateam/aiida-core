@@ -16,6 +16,7 @@ import os
 import warnings
 
 import pytest
+
 from aiida import orm
 from aiida.cmdline.commands import cmd_node
 from aiida.cmdline.utils.echo import ExitCode

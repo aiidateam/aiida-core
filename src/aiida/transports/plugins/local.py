@@ -8,14 +8,6 @@
 ###########################################################################
 """Local transport"""
 
-###
-### GP: a note on the local transport:
-### I believe that we must not use os.chdir to keep track of the folder
-### in which we are, since this may have very nasty side effects in other
-### parts of code, and make things not thread-safe.
-### we should instead keep track internally of the 'current working directory'
-### in the exact same way as paramiko does already.
-
 import contextlib
 import errno
 import glob
@@ -101,7 +93,11 @@ class LocalTransport(Transport):
         raise TransportInternalError('Error, local method called for LocalTransport without opening the channel first')
 
     def chdir(self, path):
-        """Changes directory to path, emulated internally.
+        """
+        PLEASE DON'T USE `chdir()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
+        `chdir()` is DEPRECATED and will be removed in the next major version.
+
+        Changes directory to path, emulated internally.
         :param path: path to cd into
         :raise OSError: if the directory does not have read attributes.
         """
@@ -123,7 +119,11 @@ class LocalTransport(Transport):
         return os.path.realpath(os.path.join(self.curdir, path))
 
     def getcwd(self):
-        """Returns the current working directory, emulated by the transport"""
+        """
+        PLEASE DON'T USE `getcwd()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
+        `getcwd()` is DEPRECATED and will be removed in the next major version.
+
+        Returns the current working directory, emulated by the transport"""
         return self.curdir
 
     @staticmethod
@@ -453,8 +453,8 @@ class LocalTransport(Transport):
         """Copies a file recursively from 'remote' remotepath to
         'local' localpath.
 
-        :param remotepath: path to local file
-        :param localpath: absolute path to remote file
+        :param remotepath: absolute path to remote file
+        :param localpath: path to local file
         :param overwrite: if True overwrites localpath.
                                Default = False
 
@@ -462,6 +462,9 @@ class LocalTransport(Transport):
         :raise ValueError: if 'local' localpath is not valid
         :raise OSError: if unintentionally overwriting
         """
+        if not os.path.isabs(localpath):
+            raise ValueError('localpath must be an absolute path')
+
         overwrite = kwargs.get('overwrite', args[0] if args else True)
         if not localpath:
             raise ValueError('Input localpath to get function must be a non empty string')
@@ -695,11 +698,9 @@ class LocalTransport(Transport):
         return os.path.isfile(os.path.join(self.curdir, path))
 
     @contextlib.contextmanager
-    def _exec_command_internal(self, command, **kwargs):
+    def _exec_command_internal(self, command, workdir=None, **kwargs):
         """Executes the specified command in bash login shell.
 
-        Before the command is executed, changes directory to the current
-        working directory as returned by self.getcwd().
 
         For executing commands and waiting for them to finish, use
         exec_command_wait.
@@ -710,6 +711,10 @@ class LocalTransport(Transport):
 
         :param  command: the command to execute. The command is assumed to be
             already escaped using :py:func:`aiida.common.escaping.escape_for_bash`.
+        :param workdir: (optional, default=None) if set, the command will be executed
+                in the specified working directory.
+                if None, the command will be executed in the current working directory,
+                from DEPRECATED `self.getcwd()`.
 
         :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
@@ -724,26 +729,35 @@ class LocalTransport(Transport):
 
         command = bash_commmand + escape_for_bash(command)
 
+        if workdir:
+            cwd = workdir
+        else:
+            cwd = self.getcwd()
+
         with subprocess.Popen(
             command,
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=self.getcwd(),
+            cwd=cwd,
             start_new_session=True,
         ) as process:
             yield process
 
-    def exec_command_wait_bytes(self, command, stdin=None, **kwargs):
+    def exec_command_wait_bytes(self, command, stdin=None, workdir=None, **kwargs):
         """Executes the specified command and waits for it to finish.
 
         :param command: the command to execute
+        :param workdir: (optional, default=None) if set, the command will be executed
+                in the specified working directory.
+                if None, the command will be executed in the current working directory,
+                from DEPRECATED `self.getcwd()`.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are both bytes and the return_value is an int.
         """
-        with self._exec_command_internal(command) as process:
+        with self._exec_command_internal(command, workdir) as process:
             if stdin is not None:
                 # Implicitly assume that the desired encoding is 'utf-8' if I receive a string.
                 # Also, if I get a StringIO, I just read it all in memory and put it into a BytesIO.

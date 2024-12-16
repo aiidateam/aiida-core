@@ -2,7 +2,7 @@ ci:
   autofix_prs: true
   autoupdate_commit_msg: 'Devops: Update pre-commit dependencies'
   autoupdate_schedule: quarterly
-  skip: [mypy, dm-generate-all, dependencies, verdi-autodocs]
+  skip: [mypy, check-uv-lock, generate-conda-environment, validate-conda-environment, verdi-autodocs]
 
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -37,16 +37,10 @@ repos:
     args: [--line-length=120, --fail-on-change]
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.5.0
+  rev: v0.8.0
   hooks:
   - id: ruff-format
-    exclude: &exclude_ruff >
-      (?x)^(
-        docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py|
-        docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py|
-      )$
   - id: ruff
-    exclude: *exclude_ruff
     args: [--fix, --exit-non-zero-on-fix, --show-fixes]
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
@@ -90,6 +84,7 @@ repos:
         .docker/.*|
         docs/.*|
         utils/.*|
+        tests/.*|
 
         src/aiida/calculations/arithmetic/add.py|
         src/aiida/calculations/diff_tutorial/calculations.py|
@@ -124,7 +119,6 @@ repos:
         src/aiida/engine/processes/ports.py|
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
-        src/aiida/manage/configuration/profile.py|
         src/aiida/manage/external/rmq/launcher.py|
         src/aiida/manage/tests/main.py|
         src/aiida/manage/tests/pytest_fixtures.py|
@@ -192,22 +186,22 @@ repos:
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|
         src/aiida/workflows/arithmetic/multiply_add.py|
-
-        tests/conftest.py|
-        tests/repository/conftest.py|
-        tests/repository/test_repository.py|
-        tests/sphinxext/sources/workchain/conf.py|
-        tests/sphinxext/sources/workchain_broken/conf.py|
-        tests/storage/psql_dos/migrations/conftest.py|
-        tests/storage/psql_dos/migrations/django_branch/test_0026_0027_traj_data.py|
-        tests/test_calculation_node.py|
-        tests/test_nodes.py|
-
       )$
 
-  - id: dm-generate-all
-    name: Update all requirements files
-    entry: python ./utils/dependency_management.py generate-all
+  - id: check-uv-lock
+    name: Check uv lockfile up to date
+    # NOTE: This will not automatically update the lockfile
+    entry: uv lock --locked
+    language: system
+    pass_filenames: false
+    files: >-
+      (?x)^(
+        pyproject.toml|
+      )$
+
+  - id: generate-conda-environment
+    name: Update conda environment file
+    entry: python ./utils/dependency_management.py generate-environment-yml
     language: system
     pass_filenames: false
     files: >-
@@ -216,7 +210,7 @@ repos:
         utils/dependency_management.py
       )$
 
-  - id: dependencies
+  - id: validate-conda-environment
     name: Validate environment.yml
     entry: python ./utils/dependency_management.py validate-environment-yml
     language: system

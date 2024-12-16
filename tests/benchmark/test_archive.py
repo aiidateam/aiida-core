@@ -15,6 +15,7 @@ parts of the database.
 from io import StringIO
 
 import pytest
+
 from aiida.common.links import LinkType
 from aiida.engine import ProcessState
 from aiida.orm import CalcFunctionNode, Dict, load_node

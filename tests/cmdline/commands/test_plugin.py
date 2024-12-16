@@ -9,6 +9,7 @@
 """Tests for the `verdi plugin list` command."""
 
 import pytest
+
 from aiida.cmdline.commands import cmd_plugin
 from aiida.parsers import Parser
 from aiida.plugins import BaseFactory

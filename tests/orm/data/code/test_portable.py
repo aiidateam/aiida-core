@@ -12,18 +12,19 @@ import io
 import pathlib
 
 import pytest
+
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.nodes.data.code.portable import PortableCode
 
 
-def test_constructor_raises(tmp_path):
+def test_constructor_raises(tmp_path, bash_path):
     """Test the constructor when it is supposed to raise."""
     with pytest.raises(TypeError, match=r'missing .* required positional argument'):
         PortableCode()
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
-        PortableCode(filepath_executable=pathlib.Path('/usr/bin/bash'), filepath_files=tmp_path)
+        PortableCode(filepath_executable=bash_path, filepath_files=tmp_path)
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         PortableCode(filepath_executable='bash', filepath_files='string')

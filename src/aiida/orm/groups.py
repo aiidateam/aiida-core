@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
     from aiida.orm.implementation.groups import BackendGroup  # noqa: F401
 
-__all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
+__all__ = ('AutoGroup', 'Group', 'ImportGroup', 'UpfFamily')
 
 SelfType = TypeVar('SelfType', bound='Group')
 

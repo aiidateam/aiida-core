@@ -17,6 +17,7 @@ import uuid
 
 import click
 import pytest
+
 from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
@@ -533,7 +534,7 @@ def test_code_test(run_cli_command):
 
 
 @pytest.fixture
-def command_options(request, aiida_localhost, tmp_path):
+def command_options(request, aiida_localhost, tmp_path, bash_path):
     """Return tuple of list of options and entry point."""
     options = [request.param, '-n', '--label', str(uuid.uuid4())]
 
@@ -553,7 +554,7 @@ def command_options(request, aiida_localhost, tmp_path):
                 '--computer',
                 str(aiida_localhost.pk),
                 '--filepath-executable',
-                '/usr/bin/bash',
+                str(bash_path.absolute()),
                 '--engine-command',
                 engine_command,
                 '--image-name',

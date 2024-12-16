@@ -129,7 +129,7 @@ class Scheduler(metaclass=abc.ABCMeta):
     def submit_job(self, working_directory: str, filename: str) -> str | ExitCode:
         """Submit a job.
 
-        :param working_directory: The absolute filepath to the working directory where the job is to be exectued.
+        :param working_directory: The absolute filepath to the working directory where the job is to be executed.
         :param filename: The filename of the submission script relative to the working directory.
         :returns:
         """

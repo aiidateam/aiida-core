@@ -18,8 +18,9 @@ Create Date: 2024-05-29
 
 from __future__ import annotations
 
-from aiida.common.log import AIIDA_LOGGER
 from alembic import op
+
+from aiida.common.log import AIIDA_LOGGER
 
 LOGGER = AIIDA_LOGGER.getChild(__file__)
 
@@ -39,9 +40,10 @@ def drop_hashes(conn, hash_extra_key: str, entry_point_string: str | None = None
         value should be a complete entry point string, e.g., ``aiida.node:process.calculation.calcjob`` to drop the hash
         of all ``CalcJobNode`` rows.
     """
+    from sqlalchemy.sql import text
+
     from aiida.orm.utils.node import get_type_string_from_class
     from aiida.plugins import load_entry_point_from_string
-    from sqlalchemy.sql import text
 
     if entry_point_string is not None:
         entry_point = load_entry_point_from_string(entry_point_string)

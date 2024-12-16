@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 import pytest
 import zmq
+
 from aiida.engine.daemon.client import (
     DaemonClient,
     DaemonNotRunningException,

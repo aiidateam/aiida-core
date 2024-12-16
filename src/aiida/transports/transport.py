@@ -14,9 +14,11 @@ import os
 import re
 import sys
 from collections import OrderedDict
+from pathlib import Path
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
+from aiida.common.warnings import warn_deprecation
 
 __all__ = ('Transport',)
 
@@ -245,12 +247,20 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def chdir(self, path):
-        """Change directory to 'path'
+        """
+        DEPRECATED: This method is deprecated and should be removed in the next major version.
+            PLEASE DON'T USE IT IN THE INTERFACE!!
 
+        Change directory to 'path'.
         :param str path: path to change working directory into.
         :raises: OSError, if the requested path does not exist
         :rtype: str
         """
+
+        warn_deprecation(
+            '`chdir()` is deprecated and will be removed in the next major version.',
+            version=3,
+        )
 
     @abc.abstractmethod
     def chmod(self, path, mode):
@@ -363,35 +373,38 @@ class Transport(abc.ABC):
                 transportdestination.put(os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put)
 
     @abc.abstractmethod
-    def _exec_command_internal(self, command, **kwargs):
+    def _exec_command_internal(self, command, workdir=None, **kwargs):
         """Execute the command on the shell, similarly to os.system.
 
-        Enforce the execution to be run from the cwd (as given by
-        self.getcwd), if this is not None.
+        Enforce the execution to be run from `workdir`.
 
         If possible, use the higher-level
         exec_command_wait function.
 
         :param str command: execute the command given as a string
+        :param workdir: (optional, default=None) if set, the command will be executed
+                in the specified working directory.
         :return: stdin, stdout, stderr and the session, when this exists \
                  (can be None).
         """
 
     @abc.abstractmethod
-    def exec_command_wait_bytes(self, command, stdin=None, **kwargs):
+    def exec_command_wait_bytes(self, command, stdin=None, workdir=None, **kwargs):
         """Execute the command on the shell, waits for it to finish,
         and return the retcode, the stdout and the stderr as bytes.
 
-        Enforce the execution to be run from the pwd (as given by self.getcwd), if this is not None.
+        Enforce the execution to be run from workdir, if this is not None.
 
         The command implementation can have some additional plugin-specific kwargs.
 
         :param str command: execute the command given as a string
         :param stdin: (optional,default=None) can be a string or a file-like object.
+        :param workdir: (optional, default=None) if set, the command will be executed
+                in the specified working directory.
         :return: a tuple: the retcode (int), stdout (bytes) and stderr (bytes).
         """
 
-    def exec_command_wait(self, command, stdin=None, encoding='utf-8', **kwargs):
+    def exec_command_wait(self, command, stdin=None, encoding='utf-8', workdir=None, **kwargs):
         """Executes the specified command and waits for it to finish.
 
         :note: this function also decodes the bytes received into a string with the specified encoding,
@@ -406,11 +419,15 @@ class Transport(abc.ABC):
         :param command: the command to execute
         :param stdin: (optional,default=None) can be a string or a file-like object.
         :param encoding: the encoding to use to decode the byte stream received from the remote command execution.
+        :param workdir: (optional, default=None) if set, the command will be executed
+            in the specified working directory.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr are both strings, decoded
             with the specified encoding.
         """
-        retval, stdout_bytes, stderr_bytes = self.exec_command_wait_bytes(command=command, stdin=stdin, **kwargs)
+        retval, stdout_bytes, stderr_bytes = self.exec_command_wait_bytes(
+            command=command, stdin=stdin, workdir=workdir, **kwargs
+        )
         # Return the decoded strings
         return (retval, stdout_bytes.decode(encoding), stderr_bytes.decode(encoding))
 
@@ -443,10 +460,18 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     def getcwd(self):
-        """Get working directory
+        """
+        DEPRECATED: This method is deprecated and should be removed in the next major version.
+            PLEASE DON'T USE IT IN THE INTERFACE!!
 
+        Get working directory
         :return: a string identifying the current working directory
         """
+
+        warn_deprecation(
+            '`getcwd()` is deprecated and will be removed in the next major version.',
+            version=3,
+        )
 
     @abc.abstractmethod
     def get_attribute(self, path):
@@ -514,6 +539,8 @@ class Transport(abc.ABC):
         entries '.' and '..' even if they are present in the directory.
 
         :param str path: path to list (default to '.')
+            if using a relative path, it is relative to the current working directory,
+            taken from DEPRECATED `self.getcwd()`.
         :param str pattern: if used, listdir returns a list of files matching
                             filters in Unix style. Unix only.
         :return: a list of dictionaries, one per entry.
@@ -531,9 +558,17 @@ class Transport(abc.ABC):
             transport.get_attribute(); isdir is a boolean indicating if the object is a directory or not.
         """
         retlist = []
-        full_path = self.getcwd()
-        for file_name in self.listdir():
-            filepath = os.path.join(full_path, file_name)
+        if path.startswith('/'):
+            cwd = Path(path).resolve().as_posix()
+        else:
+            warn_deprecation(
+                'Using relative paths in `listdir_withattributes` is no longer supported '
+                'and will be removed in the next major version.',
+                version=3,
+            )
+            cwd = self.getcwd()
+        for file_name in self.listdir(cwd):
+            filepath = os.path.join(cwd, file_name)
             attributes = self.get_attribute(filepath)
             retlist.append({'name': file_name, 'attributes': attributes, 'isdir': self.isdir(filepath)})
         return retlist
@@ -689,7 +724,18 @@ class Transport(abc.ABC):
         """Return a list of paths matching a pathname pattern.
 
         The pattern may contain simple shell-style wildcards a la fnmatch.
+
+        :param str pathname: the pathname pattern to match.
+            It should only be absolute path.
+            DEPRECATED: using relative path is deprecated.
+        :return: a list of paths matching the pattern.
         """
+        if not pathname.startswith('/'):
+            warn_deprecation(
+                'Using relative paths across transport in `glob` is deprecated '
+                'and will be removed in the next major version.',
+                version=3,
+            )
         return list(self.iglob(pathname))
 
     def iglob(self, pathname):
@@ -757,6 +803,7 @@ class Transport(abc.ABC):
         return []
 
     def has_magic(self, string):
+        """Return True if the given string contains any special shell characters."""
         return self._MAGIC_CHECK.search(string) is not None
 
     def _gotocomputer_string(self, remotedir):

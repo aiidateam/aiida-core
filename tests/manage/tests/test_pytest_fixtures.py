@@ -3,6 +3,7 @@
 import uuid
 
 import pytest
+
 from aiida.manage.configuration import get_config
 from aiida.manage.configuration.config import Config
 from aiida.orm import Computer

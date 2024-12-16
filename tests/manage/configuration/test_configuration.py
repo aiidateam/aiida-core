@@ -1,7 +1,8 @@
 """Tests for the :mod:`aiida.manage.configuration` module."""
 
-import aiida
 import pytest
+
+import aiida
 from aiida.manage.configuration import Profile, create_profile, get_profile, profile_context
 from aiida.manage.manager import get_manager
 

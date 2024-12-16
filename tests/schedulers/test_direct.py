@@ -9,6 +9,7 @@
 """Tests for the ``DirectScheduler`` plugin."""
 
 import pytest
+
 from aiida.common.datastructures import CodeRunMode
 from aiida.schedulers import SchedulerError
 from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
@@ -70,3 +71,42 @@ def test_submit_script_with_num_cores_per_mpiproc(scheduler, template):
     )
     result = scheduler.get_submit_script(template)
     assert f'export OMP_NUM_THREADS={num_cores_per_mpiproc}' in result
+
+
+@pytest.mark.timeout(timeout=10)
+def test_kill_job(scheduler, tmpdir):
+    """Test if kill_job kill all descendant children from the process.
+    For that we spawn a new process that runs a sleep command, then we
+    kill it and check if the sleep process is still alive.
+
+    current process     forked process                 run script.sh
+         python─────────────python───────────────────bash──────sleep
+                     we kill this process       we check if still running
+    """
+    import multiprocessing
+    import time
+
+    from psutil import Process
+
+    from aiida.transports.plugins.local import LocalTransport
+
+    def run_sleep_100():
+        import subprocess
+
+        script = tmpdir / 'sleep.sh'
+        script.write('sleep 100')
+        # this is blocking for the process entering
+        subprocess.run(['bash', script.strpath], check=False)
+
+    forked_process = multiprocessing.Process(target=run_sleep_100)
+    forked_process.start()
+    while len(forked_process_children := Process(forked_process.pid).children(recursive=True)) != 2:
+        time.sleep(0.1)
+    bash_process = forked_process_children[0]
+    sleep_process = forked_process_children[1]
+    with LocalTransport() as transport:
+        scheduler.set_transport(transport)
+        scheduler.kill_job(forked_process.pid)
+    while bash_process.is_running() or sleep_process.is_running():
+        time.sleep(0.1)
+    forked_process.join()

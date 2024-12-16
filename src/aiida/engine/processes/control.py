@@ -5,7 +5,6 @@ from __future__ import annotations
 import collections
 import concurrent
 import functools
-from pydoc import text
 import typing as t
 
 import kiwipy

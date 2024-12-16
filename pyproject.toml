@@ -515,4 +515,4 @@ commands = molecule {posargs:test}
 
 [tool.uv.sources]
 asyncssh = {git = "https://github.com/ronf/asyncssh", branch = "develop"}
-plumpy = {git = "https://github.com/aiidateam/plumpy", branch = "master"}
+plumpy = {git = "https://github.com/aiidateam/plumpy", rev = "4611154c76ac0991bcf7371b21488f4390648c28"}

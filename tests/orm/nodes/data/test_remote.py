@@ -18,7 +18,7 @@ from aiida.orm import RemoteData
 
 
 @pytest.fixture
-def remote_data_local(tmp_path, aiida_computer_local, content: str = b'some content'): # num_char: int | None = None):
+def remote_data_local(tmp_path, aiida_computer_local, content: str = b'some content'):  # num_char: int | None = None):
     """Return a non-empty ``RemoteData`` instance."""
     aiida_localhost = aiida_computer_local(label='localhost')
     node = RemoteData(computer=aiida_localhost)
@@ -29,7 +29,7 @@ def remote_data_local(tmp_path, aiida_computer_local, content: str = b'some cont
 
 
 @pytest.fixture
-def remote_data_ssh(tmp_path, aiida_computer_ssh, content: str = b'some content'): #num_char: int | None = None):
+def remote_data_ssh(tmp_path, aiida_computer_ssh, content: str = b'some content'):  # num_char: int | None = None):
     """Return a non-empty ``RemoteData`` instance."""
     aiida_localhost_ssh = aiida_computer_ssh(label='localhost-ssh')
     node = RemoteData(computer=aiida_localhost_ssh)
@@ -75,10 +75,10 @@ def test_get_size_on_disk_params(request, fixture, setup, results):
     'content, sizes',
     (
         (b'a', {'du': 4097, 'stat': 1, 'human': '4.00 KB'}),
-        (10*b'a', {'du': 4106, 'stat': 10, 'human': '4.01 KB'}),
-        (100*b'a', {'du': 4196, 'stat': 100, 'human': '4.10 KB'}),
-        (1000*b'a', {'du': 5096, 'stat': 1000, 'human': '4.98 KB'}),
-        (int(1e6),*b'a', {'du': 1004096, 'stat': int(1e6), 'human': '980.56 KB'}),
+        (10 * b'a', {'du': 4106, 'stat': 10, 'human': '4.01 KB'}),
+        (100 * b'a', {'du': 4196, 'stat': 100, 'human': '4.10 KB'}),
+        (1000 * b'a', {'du': 5096, 'stat': 1000, 'human': '4.98 KB'}),
+        (int(1e6), *b'a', {'du': 1004096, 'stat': int(1e6), 'human': '980.56 KB'}),
     ),
 )
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])

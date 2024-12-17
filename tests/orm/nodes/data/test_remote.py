@@ -18,33 +18,23 @@ from aiida.orm import RemoteData
 
 
 @pytest.fixture
-def remote_data_local(tmp_path, aiida_computer_local, num_char: int | None = None):
+def remote_data_local(tmp_path, aiida_computer_local, content: str = b'some content'): # num_char: int | None = None):
     """Return a non-empty ``RemoteData`` instance."""
     aiida_localhost = aiida_computer_local(label='localhost')
     node = RemoteData(computer=aiida_localhost)
     node.set_remote_path(str(tmp_path))
     node.store()
-
-    if num_char is None:
-        content = b'some content'
-    else:
-        content = b'a' * num_char
     (tmp_path / 'file.txt').write_bytes(content)
     return node
 
 
 @pytest.fixture
-def remote_data_ssh(tmp_path, aiida_computer_ssh, num_char: int | None = None):
+def remote_data_ssh(tmp_path, aiida_computer_ssh, content: str = b'some content'): #num_char: int | None = None):
     """Return a non-empty ``RemoteData`` instance."""
     aiida_localhost_ssh = aiida_computer_ssh(label='localhost-ssh')
     node = RemoteData(computer=aiida_localhost_ssh)
     node.set_remote_path(str(tmp_path))
     node.store()
-
-    if num_char is None:
-        content = b'some content'
-    else:
-        content = b'a' * num_char
     (tmp_path / 'file.txt').write_bytes(content)
     return node
 
@@ -82,24 +72,21 @@ def test_get_size_on_disk_params(request, fixture, setup, results):
 
 
 @pytest.mark.parametrize(
-    'num_char, sizes',
+    'content, sizes',
     (
-        (1, {'du': 4097, 'stat': 1, 'human': '4.00 KB'}),
-        (10, {'du': 4106, 'stat': 10, 'human': '4.01 KB'}),
-        (100, {'du': 4196, 'stat': 100, 'human': '4.10 KB'}),
-        (1000, {'du': 5096, 'stat': 1000, 'human': '4.98 KB'}),
-        (int(1e6), {'du': 1004096, 'stat': int(1e6), 'human': '980.56 KB'}),
+        (b'a', {'du': 4097, 'stat': 1, 'human': '4.00 KB'}),
+        (10*b'a', {'du': 4106, 'stat': 10, 'human': '4.01 KB'}),
+        (100*b'a', {'du': 4196, 'stat': 100, 'human': '4.10 KB'}),
+        (1000*b'a', {'du': 5096, 'stat': 1000, 'human': '4.98 KB'}),
+        (int(1e6),*b'a', {'du': 1004096, 'stat': int(1e6), 'human': '980.56 KB'}),
     ),
 )
 @pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
-def test_get_size_on_disk_sizes(tmp_path, num_char, sizes, request, fixture):
+def test_get_size_on_disk_sizes(tmp_path, content, sizes, request, fixture):
     """Test the different implementations implementations to obtain the size of a RemoteData on disk."""
 
-    remote_data = request.getfixturevalue(fixture)  # (num_char=num_char)
-
-    content = b'a' * num_char
-    (tmp_path / 'file.txt').write_bytes(content)
-    remote_data.store()
+    # TODO How to pass an argument/parameter here to the actual fixture
+    remote_data = request.getfixturevalue(fixture)  # (content=content)
 
     authinfo = remote_data.get_authinfo()
     full_path = Path(remote_data.get_remote_path())
@@ -126,6 +113,7 @@ def test_get_size_on_disk_sizes(tmp_path, num_char, sizes, request, fixture):
     ),
 )
 def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, sizes):
+    # TODO: Use create file hierarchy fixture from test_execmanager?
     sub_dir1 = tmp_path / 'subdir1'
     sub_dir1.mkdir()
 

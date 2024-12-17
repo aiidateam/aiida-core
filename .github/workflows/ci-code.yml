@@ -68,12 +68,6 @@ jobs:
       # Note: The virtual environment in .venv was created by uv in previous step
       run: source .venv/bin/activate && .github/workflows/setup.sh
 
-    - name: upterm
-      uses: lhotari/action-upterm@v1
-      if: ${{ failure() }}
-      with:
-        wait-timeout-minutes: 10
-
     - name: Run test suite
       env:
         AIIDA_TEST_PROFILE: test_aiida
@@ -90,6 +84,12 @@ jobs:
         name: aiida-pytests-py3.9
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
+
+    - name: upterm
+      uses: lhotari/action-upterm@v1
+      if: ${{ failure() }}
+      with:
+        wait-timeout-minutes: 10
 
 
   tests-presto:

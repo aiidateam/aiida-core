@@ -85,6 +85,11 @@ jobs:
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
+    - name: upterm
+      uses: lhotari/action-upterm@v1
+      if: ${{ failure() }}
+      with:
+        wait-timeout-minutes: 60
 
   tests-presto:
 

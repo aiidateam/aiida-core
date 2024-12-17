@@ -18,32 +18,30 @@ from aiida.orm import RemoteData
 
 
 @pytest.fixture
-def remote_data_local(tmp_path, aiida_computer_local, content: str = b'some content'):  # num_char: int | None = None):
-    """Return a non-empty ``RemoteData`` instance."""
-    aiida_localhost = aiida_computer_local(label='localhost')
-    node = RemoteData(computer=aiida_localhost)
-    node.set_remote_path(str(tmp_path))
-    node.store()
-    (tmp_path / 'file.txt').write_bytes(content)
-    return node
+def remote_data_factory(tmp_path, aiida_computer_local, aiida_computer_ssh):
+    """Factory fixture to create RemoteData instances."""
+    def _create_remote_data(mode: str, content: str | bytes = b'some content'):
+        if mode == 'local':
+            computer = aiida_computer_local(label='localhost')
+        elif mode == 'ssh':
+            computer = aiida_computer_ssh(label='localhost-ssh')
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
+
+        node = RemoteData(computer=computer)
+        node.set_remote_path(str(tmp_path))
+        node.store()
+        (tmp_path / 'file.txt').write_bytes(content)
+        return node
+
+    return _create_remote_data
 
 
-@pytest.fixture
-def remote_data_ssh(tmp_path, aiida_computer_ssh, content: str = b'some content'):  # num_char: int | None = None):
-    """Return a non-empty ``RemoteData`` instance."""
-    aiida_localhost_ssh = aiida_computer_ssh(label='localhost-ssh')
-    node = RemoteData(computer=aiida_localhost_ssh)
-    node.set_remote_path(str(tmp_path))
-    node.store()
-    (tmp_path / 'file.txt').write_bytes(content)
-    return node
-
-
-@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
-def test_clean(request, fixture):
+@pytest.mark.parametrize('mode', ('local', 'ssh'))
+def test_clean(remote_data_factory, mode):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
 
-    remote_data = request.getfixturevalue(fixture)
+    remote_data = remote_data_factory(mode=mode)
 
     assert not remote_data.is_empty
     assert not remote_data.is_cleaned
@@ -52,7 +50,7 @@ def test_clean(request, fixture):
     assert remote_data.is_cleaned
 
 
-@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
+@pytest.mark.parametrize('mode', ('local', 'ssh'))
 @pytest.mark.parametrize(
     'setup, results',
     (
@@ -62,31 +60,31 @@ def test_clean(request, fixture):
         (('stat', True), (12, 'stat')),
     ),
 )
-def test_get_size_on_disk_params(request, fixture, setup, results):
+def test_get_size_on_disk_params(remote_data_factory, mode, setup, results):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.get_size_on_disk` method."""
 
-    remote_data = request.getfixturevalue(fixture)
+    remote_data = remote_data_factory(mode=mode)
 
     size_on_disk, method = remote_data.get_size_on_disk(method=setup[0], return_bytes=setup[1])
     assert (size_on_disk, method) == results
 
 
+@pytest.mark.parametrize("mode", ("local", "ssh"))
 @pytest.mark.parametrize(
-    'content, sizes',
+    "content, sizes",
     (
-        (b'a', {'du': 4097, 'stat': 1, 'human': '4.00 KB'}),
-        (10 * b'a', {'du': 4106, 'stat': 10, 'human': '4.01 KB'}),
-        (100 * b'a', {'du': 4196, 'stat': 100, 'human': '4.10 KB'}),
-        (1000 * b'a', {'du': 5096, 'stat': 1000, 'human': '4.98 KB'}),
-        (int(1e6), *b'a', {'du': 1004096, 'stat': int(1e6), 'human': '980.56 KB'}),
+        (b"a", {"du": 4097, "stat": 1, "human": "4.00 KB"}),
+        (10 * b"a", {"du": 4106, "stat": 10, "human": "4.01 KB"}),
+        (100 * b"a", {"du": 4196, "stat": 100, "human": "4.10 KB"}),
+        (1000 * b"a", {"du": 5096, "stat": 1000, "human": "4.98 KB"}),
+        (1000000 * b"a", {"du": 1004096, "stat": int(1e6), "human": "980.56 KB"}),
     ),
+    ids=["1-byte", "10-bytes", "100-bytes", "1000-bytes", "1e6-bytes"],
 )
-@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
-def test_get_size_on_disk_sizes(tmp_path, content, sizes, request, fixture):
+def test_get_size_on_disk_sizes(remote_data_factory, mode, content, sizes):
     """Test the different implementations implementations to obtain the size of a RemoteData on disk."""
 
-    # TODO How to pass an argument/parameter here to the actual fixture
-    remote_data = request.getfixturevalue(fixture)  # (content=content)
+    remote_data = remote_data_factory(mode=mode, content=content)
 
     authinfo = remote_data.get_authinfo()
     full_path = Path(remote_data.get_remote_path())
@@ -146,11 +144,11 @@ def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, s
     assert size_on_disk_human == sizes['human']
 
 
-@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
-def test_get_size_on_disk_excs(request, fixture):
+@pytest.mark.parametrize('mode', ('local', 'ssh'))
+def test_get_size_on_disk_excs(remote_data_factory, mode):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.get_size_on_disk` method."""
     # Extra function to avoid unnecessary parametrization here
-    remote_data = request.getfixturevalue(fixture)
+    remote_data = remote_data_factory(mode=mode)
 
     # Path/file non-existent
     with pytest.raises(FileNotFoundError, match='.*does not exist.*'):
@@ -161,12 +159,12 @@ def test_get_size_on_disk_excs(request, fixture):
         remote_data.get_size_on_disk(method='fake-du')
 
 
-@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
-def test_get_size_on_disk_du(request, fixture, monkeypatch):
+@pytest.mark.parametrize('mode', ('local', 'ssh'))
+def test_get_size_on_disk_du(remote_data_factory, mode, monkeypatch):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData._get_size_on_disk_du` private method."""
     # No additional parametrization here, as already done in `test_get_size_on_disk_sizes`.
 
-    remote_data = request.getfixturevalue(fixture)
+    remote_data = remote_data_factory(mode=mode)
 
     # Normal call
     authinfo = remote_data.get_authinfo()
@@ -193,12 +191,12 @@ def test_get_size_on_disk_du(request, fixture, monkeypatch):
         remote_data._get_size_on_disk_du(full_path, transport)
 
 
-@pytest.mark.parametrize('fixture', ['remote_data_local', 'remote_data_ssh'])
-def test_get_size_on_disk_stat(request, fixture):
+@pytest.mark.parametrize('mode', ('local', 'ssh'))
+def test_get_size_on_disk_stat(remote_data_factory, mode):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData._get_size_on_disk_stat` private method."""
     # No additional parametrization here, as already done in `test_get_size_on_disk_sizes`.
 
-    remote_data = request.getfixturevalue(fixture)
+    remote_data = remote_data_factory(mode=mode)
 
     authinfo = remote_data.get_authinfo()
     full_path = Path(remote_data.get_remote_path())

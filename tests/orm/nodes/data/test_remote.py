@@ -20,13 +20,14 @@ from aiida.orm import RemoteData
 @pytest.fixture
 def remote_data_factory(tmp_path, aiida_computer_local, aiida_computer_ssh):
     """Factory fixture to create RemoteData instances."""
+
     def _create_remote_data(mode: str, content: str | bytes = b'some content'):
         if mode == 'local':
             computer = aiida_computer_local(label='localhost')
         elif mode == 'ssh':
             computer = aiida_computer_ssh(label='localhost-ssh')
         else:
-            raise ValueError(f"Unknown mode: {mode}")
+            raise ValueError(f'Unknown mode: {mode}')
 
         node = RemoteData(computer=computer)
         node.set_remote_path(str(tmp_path))
@@ -69,17 +70,17 @@ def test_get_size_on_disk_params(remote_data_factory, mode, setup, results):
     assert (size_on_disk, method) == results
 
 
-@pytest.mark.parametrize("mode", ("local", "ssh"))
+@pytest.mark.parametrize('mode', ('local', 'ssh'))
 @pytest.mark.parametrize(
-    "content, sizes",
+    'content, sizes',
     (
-        (b"a", {"du": 4097, "stat": 1, "human": "4.00 KB"}),
-        (10 * b"a", {"du": 4106, "stat": 10, "human": "4.01 KB"}),
-        (100 * b"a", {"du": 4196, "stat": 100, "human": "4.10 KB"}),
-        (1000 * b"a", {"du": 5096, "stat": 1000, "human": "4.98 KB"}),
-        (1000000 * b"a", {"du": 1004096, "stat": int(1e6), "human": "980.56 KB"}),
+        (b'a', {'du': 4097, 'stat': 1, 'human': '4.00 KB'}),
+        (10 * b'a', {'du': 4106, 'stat': 10, 'human': '4.01 KB'}),
+        (100 * b'a', {'du': 4196, 'stat': 100, 'human': '4.10 KB'}),
+        (1000 * b'a', {'du': 5096, 'stat': 1000, 'human': '4.98 KB'}),
+        (1000000 * b'a', {'du': 1004096, 'stat': int(1e6), 'human': '980.56 KB'}),
     ),
-    ids=["1-byte", "10-bytes", "100-bytes", "1000-bytes", "1e6-bytes"],
+    ids=['1-byte', '10-bytes', '100-bytes', '1000-bytes', '1e6-bytes'],
 )
 def test_get_size_on_disk_sizes(remote_data_factory, mode, content, sizes):
     """Test the different implementations implementations to obtain the size of a RemoteData on disk."""

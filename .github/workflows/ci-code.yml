@@ -68,6 +68,12 @@ jobs:
       # Note: The virtual environment in .venv was created by uv in previous step
       run: source .venv/bin/activate && .github/workflows/setup.sh
 
+    - name: upterm
+      uses: lhotari/action-upterm@v1
+      if: ${{ failure() }}
+      with:
+        wait-timeout-minutes: 10
+
     - name: Run test suite
       env:
         AIIDA_TEST_PROFILE: test_aiida

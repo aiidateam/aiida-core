@@ -99,3 +99,21 @@ def test_storage_corrupted(run_cli_command, monkeypatch):
     result = run_cli_command(cmd_status.verdi_status, raises=True, use_subprocess=False)
     assert 'Storage is corrupted' in result.output
     assert result.exit_code is ExitCode.CRITICAL
+
+
+@pytest.mark.parametrize('storage_backend', ('core.sqlite_dos', 'core.sqlite_zip'))
+def test_sqlite_version(run_cli_command, monkeypatch, isolated_config, aiida_profile_factory, storage_backend):
+    """Test `verdi status` when the sqlite version is incompatible with the required version.
+    the main functionality of this test is triggered only by the pytest marker 'presto',
+    through `pytest -m 'presto'`"""
+    monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '100.0.0')
+    aiida_profile_factory(isolated_config, storage_backend=storage_backend)
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False, raises=True)
+    assert (
+        'IncompatibleExternalDependencies: Storage backend requires sqlite 100.0.0 or higher. But you have'
+        in result.stderr
+    )
+
+    # Should not raise if installed version is higher than the supported one.
+    monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '0.0.0')
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)

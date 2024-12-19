@@ -232,9 +232,8 @@ class RemoteData(Data):
                 raise FileNotFoundError(exc_message)
 
             if method not in ('du', 'stat'):
-                raise NotImplementedError(
-                    f'Specified method `{method}` for evaluating the size on disk not implemented.'
-                )
+                exc_message = f'Specified method `{method}` is not an valid input. Please choose either `du` or `stat`.'
+                raise ValueError(exc_message)
 
             if method == 'du':
                 try:

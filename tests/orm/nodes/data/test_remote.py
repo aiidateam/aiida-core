@@ -83,7 +83,7 @@ def test_get_size_on_disk_params(remote_data_factory, mode, setup, results):
     ids=['1-byte', '10-bytes', '100-bytes', '1000-bytes', '1e6-bytes'],
 )
 def test_get_size_on_disk_sizes(remote_data_factory, mode, content, sizes):
-    """Test the different implementations implementations to obtain the size of a RemoteData on disk."""
+    """Test the different implementations to obtain the size of a ``RemoteData`` on disk."""
 
     remote_data = remote_data_factory(mode=mode, content=content)
 

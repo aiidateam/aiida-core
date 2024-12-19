@@ -986,3 +986,26 @@ def test_computer_ssh_auto(run_cli_command, aiida_computer):
     options = ['core.ssh_auto', computer.uuid, '--non-interactive', '--safe-interval', '0']
     run_cli_command(computer_configure, options, use_subprocess=False)
     assert computer.is_configured
+
+
+def test_computer_ssh_async(run_cli_command, aiida_computer):
+    """Test setup of computer with ``core.ssh_async`` entry point.
+
+    The configure step should only require the common shared options ``safe_interval`` and ``use_login_shell``.
+    """
+    computer = aiida_computer(transport_type='core.ssh_async').store()
+    assert not computer.is_configured
+
+    # It is important that 'ssh localhost' is functional in your test environment.
+    # It should connect without asking for a password.
+    options = [
+        'core.ssh_async',
+        computer.uuid,
+        '--non-interactive',
+        '--safe-interval',
+        '0',
+        '--machine-or-host',
+        'localhost',
+    ]
+    run_cli_command(computer_configure, options, use_subprocess=False)
+    assert computer.is_configured

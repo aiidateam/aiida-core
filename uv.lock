@@ -25,6 +25,7 @@ source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "archive-path" },
+    { name = "asyncssh" },
     { name = "circus" },
     { name = "click" },
     { name = "click-spinner" },
@@ -160,6 +161,7 @@ requires-dist = [
     { name = "alembic", specifier = "~=1.2" },
     { name = "archive-path", specifier = "~=0.4.2" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.18" },
+    { name = "asyncssh", git = "https://github.com/ronf/asyncssh?branch=develop" },
     { name = "bpython", marker = "extra == 'bpython'", specifier = "~=0.18.0" },
     { name = "circus", specifier = "~=0.18.0" },
     { name = "click", specifier = "~=8.1" },
@@ -191,7 +193,7 @@ requires-dist = [
     { name = "pg8000", marker = "extra == 'tests'", specifier = "~=1.13" },
     { name = "pgsu", specifier = "~=0.3.0" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3,>=1.3.1" },
-    { name = "plumpy", specifier = "~=0.22.3" },
+    { name = "plumpy", git = "https://github.com/aiidateam/plumpy?rev=4611154c76ac0991bcf7371b21488f4390648c28" },
     { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=3.5" },
     { name = "psutil", specifier = "~=5.6" },
     { name = "psycopg", extras = ["binary"], specifier = "~=3.0" },
@@ -445,6 +447,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/80/e2/2b4651eff771f6fd900d233e175ddc5e2be502c7eb62c0c42f975c6d36cd/async-lru-2.0.4.tar.gz", hash = "sha256:b8a59a5df60805ff63220b2a0c5b5393da5521b113cd5465a44eb037d81a5627", size = 10019 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/9f/3c3503693386c4b0f245eaf5ca6198e3b28879ca0a40bde6b0e319793453/async_lru-2.0.4-py3-none-any.whl", hash = "sha256:ff02944ce3c288c5be660c42dbcca0742b32c3b279d6dceda655190240b99224", size = 6111 },
+]
+
+[[package]]
+name = "asyncssh"
+version = "2.18.0"
+source = { git = "https://github.com/ronf/asyncssh?branch=develop#e8169bf19c74e5dcaa184123764db403ad131a36" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "typing-extensions" },
 ]
 
 [[package]]
@@ -2920,15 +2931,12 @@ wheels = [
 [[package]]
 name = "plumpy"
 version = "0.22.3"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/aiidateam/plumpy?rev=4611154c76ac0991bcf7371b21488f4390648c28#4611154c76ac0991bcf7371b21488f4390648c28" }
 dependencies = [
     { name = "kiwipy", extra = ["rmq"] },
     { name = "nest-asyncio" },
     { name = "pyyaml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ab/99/6c931d3f4697acd34cf18eb3fbfe96ed55cd0408d9be7c0f316349117a8e/plumpy-0.22.3.tar.gz", hash = "sha256:e58f45e6360f173babf04e2a4abacae9867622768ce2a126c8260db3b46372c4", size = 73582 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/d9/12fd8281f494ca79d6a7a9d40099616d16415be5807959e5b024dffe8aed/plumpy-0.22.3-py3-none-any.whl", hash = "sha256:63ae6c90713f52483836a3b2b3e1941eab7ada920c303092facc27e78229bdc3", size = 74244 },
+    { name = "typing-extensions" },
 ]
 
 [[package]]

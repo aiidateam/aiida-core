@@ -20,7 +20,7 @@ build:
     - asdf install uv 0.2.9
     - asdf global uv 0.2.9
     post_install:
-    - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install .[docs,tests,rest,atomic_tools]
+    - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install .[docs,tests,rest,atomic_tools] --preview
 
 # Let the build fail if there are any warnings
 sphinx:

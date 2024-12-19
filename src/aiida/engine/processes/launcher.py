@@ -57,9 +57,6 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         from aiida.orm import Data, load_node
         from aiida.orm.utils import serialize
 
-        LOGGER.error("SHOWTHIS???")
-        print("!!!HTHTHTH")
-
         try:
             node = load_node(pk=pid)
         except (exceptions.MultipleObjectsError, exceptions.NotExistent):
@@ -88,7 +85,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             return future.result()
 
         try:
-            result = await super()._continue(communicator, pid, nowait, tag)
+            result = await super()._continue(pid, nowait, tag)
         except ImportError as exception:
             message = 'the class of the process could not be imported.'
             self.handle_continue_exception(node, exception, message)

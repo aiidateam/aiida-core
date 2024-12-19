@@ -38,7 +38,8 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             node.set_process_state(ProcessState.EXCEPTED)
             node.seal()
 
-    async def _continue(self, communicator, pid, nowait, tag=None):
+
+    async def _continue(self, pid, nowait, tag=None):
         """Continue the task.
 
         Note that the task may already have been completed, as indicated from the corresponding the node, in which
@@ -55,6 +56,9 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         from aiida.engine.exceptions import PastException
         from aiida.orm import Data, load_node
         from aiida.orm.utils import serialize
+
+        LOGGER.error("SHOWTHIS???")
+        print("!!!HTHTHTH")
 
         try:
             node = load_node(pk=pid)

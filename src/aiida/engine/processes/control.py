@@ -8,7 +8,7 @@ import typing as t
 
 import kiwipy
 from kiwipy import communications
-from plumpy.futures import unwrap_kiwi_future
+from plumpy.rmq.futures import unwrap_kiwi_future
 
 from aiida.brokers import Broker
 from aiida.common.exceptions import AiidaException

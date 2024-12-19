@@ -156,7 +156,7 @@ def test_get_size_on_disk_excs(remote_data_factory, mode):
         remote_data.get_size_on_disk(relpath=Path('non-existent'))
 
     # Non-valid method
-    with pytest.raises(NotImplementedError, match='.*for evaluating the size on disk not implemented.'):
+    with pytest.raises(ValueError, match='.*is not an valid input. Please choose either.*.'):
         remote_data.get_size_on_disk(method='fake-du')
 
 

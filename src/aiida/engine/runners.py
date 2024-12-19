@@ -19,10 +19,10 @@ import uuid
 from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
 
 import kiwipy
-from plumpy.communications import wrap_communicator
+from plumpy.rmq import wrap_communicator
 from plumpy.events import reset_event_loop_policy, set_event_loop_policy
 from plumpy.persistence import Persister
-from plumpy.process_comms import RemoteProcessThreadController
+from plumpy.rmq import RemoteProcessThreadController
 
 from aiida.common import exceptions
 from aiida.orm import ProcessNode, load_node

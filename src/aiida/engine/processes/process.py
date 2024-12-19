@@ -39,9 +39,9 @@ import plumpy.exceptions
 import plumpy.futures
 import plumpy.persistence
 import plumpy.processes
-from kiwipy.communications import UnroutableError
+# from kiwipy.communications import UnroutableError
 from plumpy.process_states import Finished, ProcessState
-from plumpy.processes import ConnectionClosed  # type: ignore[attr-defined]
+# from plumpy.processes import ConnectionClosed  # type: ignore[attr-defined]
 from plumpy.processes import Process as PlumpyProcess
 from plumpy.utils import AttributesFrozendict
 
@@ -178,7 +178,7 @@ class Process(PlumpyProcess):
             inputs=self.spec().inputs.serialize(inputs),
             logger=logger,
             loop=self._runner.loop,
-            communicator=self._runner.communicator,
+            coordinator=self._runner.communicator,
         )
 
         self._node: Optional[orm.ProcessNode] = None
@@ -352,10 +352,12 @@ class Process(PlumpyProcess):
                     result = asyncio.wrap_future(result)  # type: ignore[arg-type]
                     if asyncio.isfuture(result):
                         killing.append(result)
-                except ConnectionClosed:
-                    self.logger.info('no connection available to kill child<%s>', child.pk)
-                except UnroutableError:
-                    self.logger.info('kill signal was unable to reach child<%s>', child.pk)
+                # except ConnectionClosed:
+                #     self.logger.info('no connection available to kill child<%s>', child.pk)
+                # except UnroutableError:
+                #     self.logger.info('kill signal was unable to reach child<%s>', child.pk)
+                except Exception:
+                    raise
 
             if asyncio.isfuture(result):
                 # We ourselves are waiting to be killed so add it to the list

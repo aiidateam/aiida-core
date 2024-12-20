@@ -387,8 +387,8 @@ minversion = '7.0'
 testpaths = [
   'tests'
 ]
-xfail_strict = true
 timeout = 30
+xfail_strict = true
 
 [tool.ruff]
 exclude = [

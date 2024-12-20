@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import functools
 import logging
 import tempfile
@@ -101,13 +102,13 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
 
     try:
         logger.info(f'scheduled request to upload CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.futures.CancelledError, PreSubmitException, plumpy.process_states.Interruption)
+        ignore_exceptions = (concurrent.futures.CancelledError, PreSubmitException, plumpy.process_states.Interruption)
         skip_submit = await exponential_backoff_retry(
             do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except PreSubmitException:
         raise
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
+    except (concurrent.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'uploading CalcJob<{node.pk}> failed')
@@ -149,11 +150,11 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
 
     try:
         logger.info(f'scheduled request to submit CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
+        ignore_exceptions = (concurrent.futures.CancelledError, plumpy.process_states.Interruption)
         result = await exponential_backoff_retry(
             do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
+    except (concurrent.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'submitting CalcJob<{node.pk}> failed')
@@ -207,11 +208,11 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
 
     try:
         logger.info(f'scheduled request to update CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
+        ignore_exceptions = (concurrent.futures.CancelledError, plumpy.process_states.Interruption)
         job_done = await exponential_backoff_retry(
             do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
+    except (concurrent.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'updating CalcJob<{node.pk}> failed')
@@ -257,11 +258,11 @@ async def task_monitor_job(
 
     try:
         logger.info(f'scheduled request to monitor CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
+        ignore_exceptions = (concurrent.futures.CancelledError, plumpy.process_states.Interruption)
         monitor_result = await exponential_backoff_retry(
             do_monitor, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
+    except (concurrent.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'monitoring CalcJob<{node.pk}> failed')
@@ -333,11 +334,11 @@ async def task_retrieve_job(
 
     try:
         logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
+        ignore_exceptions = (concurrent.futures.CancelledError, plumpy.process_states.Interruption)
         result = await exponential_backoff_retry(
             do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
+    except (concurrent.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'retrieving CalcJob<{node.pk}> failed')
@@ -569,7 +570,7 @@ class Waiting(plumpy.process_states.Waiting):
             await self._kill_job(node, transport_queue)
             node.set_process_status(str(exception))
             return self.retrieve(monitor_result=self._monitor_result)
-        except (plumpy.futures.CancelledError, asyncio.CancelledError):
+        except (concurrent.futures.CancelledError, asyncio.CancelledError):
             node.set_process_status(f'Transport task {self._command} was cancelled')
             raise
         except plumpy.process_states.Interruption:

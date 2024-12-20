@@ -25,6 +25,7 @@ source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "archive-path" },
+    { name = "asyncssh" },
     { name = "circus" },
     { name = "click" },
     { name = "click-spinner" },
@@ -160,6 +161,7 @@ requires-dist = [
     { name = "alembic", specifier = "~=1.2" },
     { name = "archive-path", specifier = "~=0.4.2" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.18" },
+    { name = "asyncssh", specifier = "~=2.19.0" },
     { name = "bpython", marker = "extra == 'bpython'", specifier = "~=0.18.0" },
     { name = "circus", specifier = "~=0.18.0" },
     { name = "click", specifier = "~=8.1" },
@@ -191,7 +193,7 @@ requires-dist = [
     { name = "pg8000", marker = "extra == 'tests'", specifier = "~=1.13" },
     { name = "pgsu", specifier = "~=0.3.0" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3,>=1.3.1" },
-    { name = "plumpy", specifier = "~=0.22.3" },
+    { name = "plumpy", specifier = "~=0.23.0" },
     { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=3.5" },
     { name = "psutil", specifier = "~=5.6" },
     { name = "psycopg", extras = ["binary"], specifier = "~=3.0" },
@@ -246,16 +248,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/ea/90/1c9c13f2fdfa96602
 
 [[package]]
 name = "aio-pika"
-version = "9.5.0"
+version = "9.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiormq" },
-    { name = "exceptiongroup" },
     { name = "yarl" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/34/7f/887bd24feaa14f9b7290ca2d4d840af4f340b528a8127fdcd6601b8af0d4/aio_pika-9.5.0.tar.gz", hash = "sha256:d45d49e6543bcdfd2fe4b1a0ee59d931c15a96e99497bc599cf0fddb94061925", size = 48323 }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/69/8649bdb97fa1521af3dafe23dbc5debadd4b01abb2850a4d193dae9b0451/aio_pika-9.4.3.tar.gz", hash = "sha256:fd2b1fce25f6ed5203ef1dd554dc03b90c9a46a64aaf758d032d78dc31e5295d", size = 47693 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/66/89/f4248e0da87cf492a97fdd9166bd14f197fb99baee77a3dcbb6f51289bb8/aio_pika-9.5.0-py3-none-any.whl", hash = "sha256:7e03b80fab5a0d354dca45fb5ac95f074b87c639db34c6a1962cabe0fd95bd56", size = 54165 },
+    { url = "https://files.pythonhosted.org/packages/85/66/cad391d83b7266a667c85c826bb6c0d7f68519a0eed7634098c12fb39a4b/aio_pika-9.4.3-py3-none-any.whl", hash = "sha256:f1423d2d5a8b7315d144efe1773763bf687ac17aa1535385982687e9e5ed49bb", size = 53240 },
 ]
 
 [[package]]
@@ -445,6 +446,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/80/e2/2b4651eff771f6fd900d233e175ddc5e2be502c7eb62c0c42f975c6d36cd/async-lru-2.0.4.tar.gz", hash = "sha256:b8a59a5df60805ff63220b2a0c5b5393da5521b113cd5465a44eb037d81a5627", size = 10019 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/9f/3c3503693386c4b0f245eaf5ca6198e3b28879ca0a40bde6b0e319793453/async_lru-2.0.4-py3-none-any.whl", hash = "sha256:ff02944ce3c288c5be660c42dbcca0742b32c3b279d6dceda655190240b99224", size = 6111 },
+]
+
+[[package]]
+name = "asyncssh"
+version = "2.19.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/75/85/c723aa7dd69570a31b6638c1405e659712f18f569f280da2da27989445d3/asyncssh-2.19.0.tar.gz", hash = "sha256:723dead4d068b558708dc66a4ca7e7a93a813aa9416036eccb9af4c03ae2cf30", size = 533702 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/95/8f/f0749af566fa39204f6380473e6f9632b804daeb0ecb24cc7de1fc9f2717/asyncssh-2.19.0-py3-none-any.whl", hash = "sha256:bb82ac30ff0cb4393fbaf1114e606ad7a4f13d6c4bdaed423c033ee26b455228", size = 372704 },
 ]
 
 [[package]]
@@ -1914,16 +1928,16 @@ wheels = [
 
 [[package]]
 name = "kiwipy"
-version = "0.8.4"
+version = "0.8.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecation" },
     { name = "pyyaml" },
     { name = "shortuuid" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0e/ae/3831e1562f1273195e686796690cba656e8937f414d2efcf47466ebfd949/kiwipy-0.8.4.tar.gz", hash = "sha256:625830fa07faac2c2a307bd3aa1caedac6596f37f9b9aba31b7f84c3d9c9f57a", size = 40782 }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/c9/60f4597b2f7ce9f1ce9f202c1ddc70b857716597d828fc5baa123a2fa17e/kiwipy-0.8.5.tar.gz", hash = "sha256:23b746f60577120764d662673335cea40cf34083d15f1ee8ab4fa6155b50d60f", size = 41087 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f7/fe/ad668377767dcc44d94258ac3ccbedbd55645cba893da842ed820c4ed937/kiwipy-0.8.4-py3-none-any.whl", hash = "sha256:f2b260f1595689a0d835f1e2bf5373714001203d17c4d94e56ec299e793da495", size = 41753 },
+    { url = "https://files.pythonhosted.org/packages/68/50/2d180b54272d467a3e5eb4d7e64df80a8bb11d483e908404d71905a2801b/kiwipy-0.8.5-py3-none-any.whl", hash = "sha256:b6acf17ba69fdfc9ce246673efd35e1db06a27b2c624ba1735d2159f8e665a1b", size = 41820 },
 ]
 
 [package.optional-dependencies]
@@ -2919,16 +2933,16 @@ wheels = [
 
 [[package]]
 name = "plumpy"
-version = "0.22.3"
+version = "0.23.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "kiwipy", extra = ["rmq"] },
     { name = "nest-asyncio" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ab/99/6c931d3f4697acd34cf18eb3fbfe96ed55cd0408d9be7c0f316349117a8e/plumpy-0.22.3.tar.gz", hash = "sha256:e58f45e6360f173babf04e2a4abacae9867622768ce2a126c8260db3b46372c4", size = 73582 }
+sdist = { url = "https://files.pythonhosted.org/packages/05/49/1b3fb528192668bcae90e5aaa695c85d1759edfd04568b120bb3c61977e3/plumpy-0.23.0.tar.gz", hash = "sha256:ec3cf7d16edcb377eba89f1a6aca9eeed534d5d639eaa5d6e40772d50872b5c8", size = 73920 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/d9/12fd8281f494ca79d6a7a9d40099616d16415be5807959e5b024dffe8aed/plumpy-0.22.3-py3-none-any.whl", hash = "sha256:63ae6c90713f52483836a3b2b3e1941eab7ada920c303092facc27e78229bdc3", size = 74244 },
+    { url = "https://files.pythonhosted.org/packages/db/d6/46d534213aea8e8a1826752d094cce527b264fdf37e3f00e329bc9ce85a8/plumpy-0.23.0-py3-none-any.whl", hash = "sha256:bd2a48933bb1bfc1f327f3e600ad9c0d8cc985ab00b1e6ed9f2772a97f8634a4", size = 73533 },
 ]
 
 [[package]]

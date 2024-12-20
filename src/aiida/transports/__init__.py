@@ -16,8 +16,10 @@ from .plugins import *
 from .transport import *
 
 __all__ = (
+    'AsyncTransport',
     'SshTransport',
     'Transport',
+    'TransportPath',
     'convert_to_bool',
     'parse_sshconfig',
 )

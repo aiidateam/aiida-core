@@ -8,6 +8,7 @@ import enum
 import inspect
 import typing as t
 from datetime import datetime, timedelta
+from typing import Union
 
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
@@ -15,7 +16,7 @@ from aiida.orm import CalcJobNode, Dict
 from aiida.plugins import BaseFactory
 
 if t.TYPE_CHECKING:
-    from aiida.transports import Transport
+    from aiida.transports import AsyncTransport, Transport
 
 LOGGER = AIIDA_LOGGER.getChild(__name__)
 
@@ -122,7 +123,9 @@ class CalcJobMonitor:
         parameters = list(signature.parameters.keys())
 
         if any(required_parameter not in parameters for required_parameter in ('node', 'transport')):
-            correct_signature = '(node: CalcJobNode, transport: Transport, **kwargs) str | None:'
+            correct_signature = (
+                "(node: CalcJobNode, transport: Union['Transport', 'AsyncTransport'], **kwargs) str | None:"
+            )
             raise ValueError(
                 f'The monitor `{self.entry_point}` has an invalid function signature, it should be: {correct_signature}'
             )
@@ -176,7 +179,7 @@ class CalcJobMonitors:
     def process(
         self,
         node: CalcJobNode,
-        transport: Transport,
+        transport: Union['Transport', 'AsyncTransport'],
     ) -> CalcJobMonitorResult | None:
         """Call all monitors in order and return the result as one returns anything other than ``None``.
 

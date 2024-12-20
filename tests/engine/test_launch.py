@@ -16,7 +16,6 @@ import pytest
 from aiida import orm
 from aiida.common import exceptions
 from aiida.engine import CalcJob, Process, WorkChain, calcfunction, launch
-from aiida.engine.daemon.client import get_daemon_client
 from aiida.plugins import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')

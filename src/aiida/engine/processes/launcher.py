@@ -38,7 +38,6 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             node.set_process_state(ProcessState.EXCEPTED)
             node.seal()
 
-
     async def _continue(self, pid, nowait, tag=None):
         """Continue the task.
 

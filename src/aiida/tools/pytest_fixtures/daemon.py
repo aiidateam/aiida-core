@@ -63,13 +63,15 @@ def started_daemon_client(daemon_client: DaemonClient):
         daemon_client.start_daemon()
         assert daemon_client.is_daemon_running
 
-    import time
     import threading
-    # XXX: watchdog and pytest-timeout as extra deps of tests
-    from watchdog.observers import Observer
+    import time
+
     from watchdog.events import FileSystemEventHandler
 
-    logger = logging.getLogger("tests.daemon:started_daemon_client")
+    # XXX: watchdog and pytest-timeout as extra deps of tests
+    from watchdog.observers import Observer
+
+    logger = logging.getLogger('tests.daemon:started_daemon_client')
 
     logger.debug(f'Daemon log file is located at: {daemon_client.daemon_log_file}')
 
@@ -104,7 +106,6 @@ def started_daemon_client(daemon_client: DaemonClient):
         finally:
             observer.stop()
             observer.join()
-
 
     # Start a background thread to continuously print new log lines
     t = threading.Thread(target=print_log_content, daemon=True)

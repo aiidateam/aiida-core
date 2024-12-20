@@ -11,7 +11,6 @@
 import asyncio
 import threading
 
-import plumpy
 import pytest
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation

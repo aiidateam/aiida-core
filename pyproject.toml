@@ -388,6 +388,7 @@ testpaths = [
   'tests'
 ]
 xfail_strict = true
+timeout = 30
 
 [tool.ruff]
 exclude = [

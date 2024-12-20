@@ -23,6 +23,7 @@ name = "aiida-core"
 version = "2.6.2.post0"
 source = { editable = "." }
 dependencies = [
+    { name = "aiormq" },
     { name = "alembic" },
     { name = "archive-path" },
     { name = "circus" },
@@ -157,6 +158,7 @@ tui = [
 requires-dist = [
     { name = "aiida-core", extras = ["atomic-tools", "rest", "tests", "tui"], marker = "extra == 'pre-commit'" },
     { name = "aiida-export-migration-tests", marker = "extra == 'tests'", specifier = "==0.9.0" },
+    { name = "aiormq", git = "https://github.com/unkcpz/aiormq?rev=f4da0adbddfec4b984f44093e8d04021fb163464" },
     { name = "alembic", specifier = "~=1.2" },
     { name = "archive-path", specifier = "~=0.4.2" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.18" },
@@ -261,14 +263,10 @@ wheels = [
 [[package]]
 name = "aiormq"
 version = "6.8.1"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/unkcpz/aiormq?rev=f4da0adbddfec4b984f44093e8d04021fb163464#f4da0adbddfec4b984f44093e8d04021fb163464" }
 dependencies = [
     { name = "pamqp" },
     { name = "yarl" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a4/79/5397756a8782bf3d0dce392b48260c3ec81010f16bef8441ff03505dccb4/aiormq-6.8.1.tar.gz", hash = "sha256:a964ab09634be1da1f9298ce225b310859763d5cf83ef3a7eae1a6dc6bd1da1a", size = 30528 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2e/be/1a613ae1564426f86650ff58c351902895aa969f7e537e74bfd568f5c8bf/aiormq-6.8.1-py3-none-any.whl", hash = "sha256:5da896c8624193708f9409ffad0b20395010e2747f22aa4150593837f40aa017", size = 31174 },
 ]
 
 [[package]]

@@ -340,8 +340,8 @@ def process_kill(processes, all_entries, timeout, wait):
 
     with capture_logging() as stream:
         try:
-            message = 'Killed through `verdi process kill`'
-            control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
+            msg_text = 'Killed through `verdi process kill`'
+            control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, msg_text=msg_text)
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
 
@@ -371,8 +371,8 @@ def process_pause(processes, all_entries, timeout, wait):
 
     with capture_logging() as stream:
         try:
-            message = 'Paused through `verdi process pause`'
-            control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
+            msg_text = 'Paused through `verdi process pause`'
+            control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, msg_text=msg_text)
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
 

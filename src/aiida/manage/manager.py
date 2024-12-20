@@ -369,9 +369,10 @@ class Manager:
         :return: the process controller instance
 
         """
-        from plumpy.process_comms import RemoteProcessThreadController
+        from plumpy.rmq import RemoteProcessThreadController
 
         if self._process_controller is None:
+            # FIXME: use coordinator wrapper
             self._process_controller = RemoteProcessThreadController(self.get_communicator())
 
         return self._process_controller

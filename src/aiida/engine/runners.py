@@ -250,7 +250,7 @@ class Runner:
                     LOGGER.warning('runner received interrupt, process %s already being killed', process_inited.pid)
                     return
                 LOGGER.critical('runner received interrupt, killing process %s', process_inited.pid)
-                process_inited.kill(msg='Process was killed because the runner received an interrupt')
+                process_inited.kill(msg_text='Process was killed because the runner received an interrupt')
 
             original_handler_int = signal.getsignal(signal.SIGINT)
             original_handler_term = signal.getsignal(signal.SIGTERM)

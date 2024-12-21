@@ -81,7 +81,7 @@ class Runner:
         ), 'Must supply a persister if you want to submit using communicator'
 
         set_event_loop_policy()
-        self._loop = loop if loop is not None else asyncio.get_event_loop()
+        self._loop = loop or asyncio.get_event_loop()
         self._poll_interval = poll_interval
         self._broker_submit = broker_submit
         self._transport = transports.TransportQueue(self._loop)

@@ -31,7 +31,7 @@ class TestWf:
 
         # No polling
         future = processes.futures.ProcessFuture(
-            pk=process.pid, loop=runner.loop, communicator=manager.get_communicator()
+            pk=process.pid, loop=runner.loop, communicator=manager.get_coordinator()
         )
 
         run(process)

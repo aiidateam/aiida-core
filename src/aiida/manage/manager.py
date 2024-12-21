@@ -12,9 +12,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-if TYPE_CHECKING:
-    import asyncio
+import asyncio
+import kiwipy
 
+if TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
     from plumpy.process_comms import RemoteProcessThreadController
 
@@ -381,7 +382,6 @@ class Manager:
         """Return a runner that is based on the current profile settings and can be used globally by the code.
 
         :return: the global runner
-
         """
         if self._runner is None:
             self._runner = self.create_runner(**kwargs)
@@ -392,20 +392,25 @@ class Manager:
         """Set the currently used runner
 
         :param new_runner: the new runner to use
-
         """
         if self._runner is not None:
             self._runner.close()
 
         self._runner = new_runner
 
-    def create_runner(self, with_persistence: bool = True, **kwargs: Any) -> 'Runner':
-        """Create and return a new runner
+    def create_runner(
+        self,
+        poll_interval: Union[int, float] | None = None,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        communicator: Optional[kiwipy.Communicator] = None,
+        broker_submit: bool = False,
+        persister: Optional[AiiDAPersister] = None,
+    ) -> 'Runner':
+        """Create and return a new runner, with default settings from profile.
 
         :param with_persistence: create a runner with persistence enabled
 
         :return: a new runner instance
-
         """
         from aiida.common import ConfigurationError
         from aiida.engine import runners
@@ -415,23 +420,20 @@ class Manager:
             raise ConfigurationError(
                 'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
             )
-        poll_interval = 0.0 if profile.is_test_profile else self.get_option('runner.poll.interval')
 
-        settings = {'broker_submit': False, 'poll_interval': poll_interval}
-        settings.update(kwargs)
+        _default_poll_interval = 0.0 if profile.is_test_profile else self.get_option('runner.poll.interval')
+        _default_broker_submit = False
+        _default_communicator = self.get_communicator()
+        _default_persister = self.get_persister()
 
-        if 'communicator' not in settings:
-            # Only call get_communicator if we have to as it will lazily create
-            try:
-                settings['communicator'] = self.get_communicator()
-            except ConfigurationError:
-                # The currently loaded profile does not define a broker and so there is no communicator
-                pass
-
-        if with_persistence and 'persister' not in settings:
-            settings['persister'] = self.get_persister()
-
-        return runners.Runner(**settings)  # type: ignore[arg-type]
+        runner = runners.Runner(
+            poll_interval=poll_interval or _default_poll_interval,
+            loop=loop or asyncio.get_event_loop(),
+            communicator=communicator or _default_communicator,
+            broker_submit=broker_submit or _default_broker_submit,
+            persister=persister or _default_persister,
+        )
+        return runner
 
     def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
         """Create and return a new daemon runner.

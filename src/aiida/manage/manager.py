@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 
 import asyncio
 import kiwipy
+from plumpy.coordinator import Coordinator
 
 if TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
@@ -60,8 +61,8 @@ class Manager:
 
     3. A single storage backend object for the profile, to connect to data storage resources
     5. A single daemon client object for the profile, to connect to the AiiDA daemon
-    4. A single communicator object for the profile, to connect to the process control resources
-    6. A single process controller object for the profile, which uses the communicator to control process tasks
+    4. A single coordinator object for the profile, to connect to the process control resources
+    6. A single process controller object for the profile, which uses the coordinator to control process tasks
     7. A single runner object for the profile, which uses the process controller to start and stop processes
     8. A single persister object for the profile, which can persist running processes to the profile storage
 
@@ -343,6 +344,23 @@ class Manager:
 
         return broker.get_communicator()
 
+    def get_coordinator(self) -> 'Coordinator':
+        """Return the coordinator
+
+        :return: a global coordinator instance
+        """
+        from aiida.common import ConfigurationError
+
+        broker = self.get_broker()
+
+        if broker is None:
+            assert self._profile is not None
+            raise ConfigurationError(
+                f'profile `{self._profile.name}` does not provide a coordinator because it does not define a broker'
+            )
+
+        return broker.get_coordinator()
+
     def get_daemon_client(self) -> 'DaemonClient':
         """Return the daemon client for the current profile.
 
@@ -373,8 +391,7 @@ class Manager:
         from plumpy.rmq import RemoteProcessThreadController
 
         if self._process_controller is None:
-            # FIXME: use coordinator wrapper
-            self._process_controller = RemoteProcessThreadController(self.get_communicator())
+            self._process_controller = RemoteProcessThreadController(self.get_coordinator())
 
         return self._process_controller
 
@@ -402,7 +419,7 @@ class Manager:
         self,
         poll_interval: Union[int, float] | None = None,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-        communicator: Optional[kiwipy.Communicator] = None,
+        coordinator: Optional[Coordinator] = None,
         broker_submit: bool = False,
         persister: Optional[AiiDAPersister] = None,
     ) -> 'Runner':
@@ -423,13 +440,13 @@ class Manager:
 
         _default_poll_interval = 0.0 if profile.is_test_profile else self.get_option('runner.poll.interval')
         _default_broker_submit = False
-        _default_communicator = self.get_communicator()
+        _default_coordinator = self.get_coordinator()
         _default_persister = self.get_persister()
 
         runner = runners.Runner(
             poll_interval=poll_interval or _default_poll_interval,
             loop=loop or asyncio.get_event_loop(),
-            communicator=communicator or _default_communicator,
+            coordinator=coordinator or _default_coordinator,
             broker_submit=broker_submit or _default_broker_submit,
             persister=persister or _default_persister,
         )
@@ -461,8 +478,8 @@ class Manager:
             loader=persistence.get_object_loader(),
         )
 
-        assert runner.communicator is not None, 'communicator not set for runner'
-        runner.communicator.add_task_subscriber(task_receiver)
+        assert runner.coordinator is not None, 'coordinator not set for runner'
+        runner.coordinator.add_task_subscriber(task_receiver)
 
         return runner
 

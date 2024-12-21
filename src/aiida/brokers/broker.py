@@ -24,6 +24,10 @@ class Broker:
         """Return an instance of :class:`kiwipy.Communicator`."""
 
     @abc.abstractmethod
+    def get_coordinator(self):
+        """Return an instance of coordinator."""
+
+    @abc.abstractmethod
     def iterate_tasks(self):
         """Return an iterator over the tasks in the launch queue."""
 

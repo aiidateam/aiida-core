@@ -5,6 +5,8 @@ from __future__ import annotations
 import functools
 import typing as t
 
+from plumpy.rmq import RmqCoordinator
+
 from aiida.brokers.broker import Broker
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config_option
@@ -13,7 +15,6 @@ from .utils import get_launch_queue_name, get_message_exchange_name, get_task_ex
 
 if t.TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
-
     from aiida.manage.configuration.profile import Profile
 
 LOGGER = AIIDA_LOGGER.getChild('broker.rabbitmq')
@@ -57,6 +58,11 @@ class RabbitmqBroker(Broker):
             self.check_rabbitmq_version()
 
         return self._communicator
+
+    def get_coordinator(self):
+        coordinator = RmqCoordinator(self.get_communicator())
+
+        return coordinator
 
     def _create_communicator(self) -> 'RmqThreadCommunicator':
         """Return an instance of :class:`kiwipy.Communicator`."""

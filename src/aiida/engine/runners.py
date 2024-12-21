@@ -24,10 +24,10 @@ from plumpy.events import reset_event_loop_policy, set_event_loop_policy
 from plumpy.persistence import Persister
 from plumpy.rmq import RemoteProcessThreadController, wrap_communicator
 
+from aiida.brokers import Broker
 from aiida.common import exceptions
 from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
-from aiida.brokers import Broker
 
 from . import transports, utils
 from .processes import Process, ProcessBuilder, ProcessState, futures

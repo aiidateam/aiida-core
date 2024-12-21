@@ -326,24 +326,6 @@ class Manager:
 
         return self._persister
 
-    def get_communicator(self) -> 'RmqThreadCommunicator':
-        """Return the communicator
-
-        :return: a global communicator instance
-
-        """
-        from aiida.common import ConfigurationError
-
-        broker = self.get_broker()
-
-        if broker is None:
-            assert self._profile is not None
-            raise ConfigurationError(
-                f'profile `{self._profile.name}` does not provide a communicator because it does not define a broker'
-            )
-
-        return broker.get_communicator()
-
     def get_coordinator(self) -> 'Coordinator':
         """Return the coordinator
 

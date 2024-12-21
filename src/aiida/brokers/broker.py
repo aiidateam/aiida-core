@@ -3,8 +3,10 @@
 import abc
 import typing as t
 
+
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.profile import Profile
+    from plumpy.coordinator import Coordinator
 
 __all__ = ('Broker',)
 
@@ -20,11 +22,7 @@ class Broker:
         self._profile = profile
 
     @abc.abstractmethod
-    def get_communicator(self):
-        """Return an instance of :class:`kiwipy.Communicator`."""
-
-    @abc.abstractmethod
-    def get_coordinator(self):
+    def get_coordinator(self) -> 'Coordinator':
         """Return an instance of coordinator."""
 
     @abc.abstractmethod

@@ -31,7 +31,7 @@ class RabbitmqBroker(Broker):
         :param profile: The profile.
         """
         self._profile = profile
-        self._communicator: 'RmqThreadCommunicator' | None = None
+        self._communicator: 'RmqThreadCommunicator | None' = None
         self._prefix = f'aiida-{self._profile.uuid}'
 
     def __str__(self):
@@ -48,19 +48,16 @@ class RabbitmqBroker(Broker):
 
     def iterate_tasks(self):
         """Return an iterator over the tasks in the launch queue."""
-        for task in self.get_communicator().task_queue(get_launch_queue_name(self._prefix)):
+        for task in self.get_coordinator().communicator.task_queue(get_launch_queue_name(self._prefix)):
             yield task
 
-    def get_communicator(self) -> 'RmqThreadCommunicator':
+    def get_coordinator(self):
         if self._communicator is None:
             self._communicator = self._create_communicator()
             # Check whether a compatible version of RabbitMQ is being used.
             self.check_rabbitmq_version()
 
-        return self._communicator
-
-    def get_coordinator(self):
-        coordinator = RmqCoordinator(self.get_communicator())
+        coordinator = RmqCoordinator(self._communicator)
 
         return coordinator
 
@@ -70,7 +67,7 @@ class RabbitmqBroker(Broker):
 
         from aiida.orm.utils import serialize
 
-        self._communicator = RmqThreadCommunicator.connect(
+        _communicator = RmqThreadCommunicator.connect(
             connection_params={'url': self.get_url()},
             message_exchange=get_message_exchange_name(self._prefix),
             encoder=functools.partial(serialize.serialize, encoding='utf-8'),
@@ -84,7 +81,7 @@ class RabbitmqBroker(Broker):
             testing_mode=self._profile.is_test_profile,
         )
 
-        return self._communicator
+        return _communicator
 
     def check_rabbitmq_version(self):
         """Check the version of RabbitMQ that is being connected to and emit warning if it is not compatible."""
@@ -128,4 +125,4 @@ class RabbitmqBroker(Broker):
         """
         from packaging.version import parse
 
-        return parse(self.get_communicator().server_properties['version'])
+        return parse(self.get_coordinator().communicator.server_properties['version'])

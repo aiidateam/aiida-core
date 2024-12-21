@@ -10,12 +10,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-if TYPE_CHECKING:
-    import asyncio
+from plumpy.coordinator import Coordinator
 
-    from kiwipy.rmq import RmqThreadCommunicator
+if TYPE_CHECKING:
     from plumpy.process_comms import RemoteProcessThreadController
 
     from aiida.brokers.broker import Broker
@@ -59,8 +59,8 @@ class Manager:
 
     3. A single storage backend object for the profile, to connect to data storage resources
     5. A single daemon client object for the profile, to connect to the AiiDA daemon
-    4. A single communicator object for the profile, to connect to the process control resources
-    6. A single process controller object for the profile, which uses the communicator to control process tasks
+    4. A single coordinator object for the profile, to connect to the process control resources
+    6. A single process controller object for the profile, which uses the coordinator to control process tasks
     7. A single runner object for the profile, which uses the process controller to start and stop processes
     8. A single persister object for the profile, which can persist running processes to the profile storage
 
@@ -167,7 +167,7 @@ class Manager:
         self._profile_storage = None
 
     def reset_broker(self) -> None:
-        """Reset the communicator."""
+        """Reset the broker."""
         from concurrent import futures
 
         if self._broker is not None:
@@ -324,11 +324,10 @@ class Manager:
 
         return self._persister
 
-    def get_communicator(self) -> 'RmqThreadCommunicator':
-        """Return the communicator
+    def get_coordinator(self) -> 'Coordinator':
+        """Return the coordinator
 
-        :return: a global communicator instance
-
+        :return: a global coordinator instance
         """
         from aiida.common import ConfigurationError
 
@@ -337,10 +336,10 @@ class Manager:
         if broker is None:
             assert self._profile is not None
             raise ConfigurationError(
-                f'profile `{self._profile.name}` does not provide a communicator because it does not define a broker'
+                f'profile `{self._profile.name}` does not provide a coordinator because it does not define a broker'
             )
 
-        return broker.get_communicator()
+        return broker.get_coordinator()
 
     def get_daemon_client(self) -> 'DaemonClient':
         """Return the daemon client for the current profile.
@@ -369,10 +368,10 @@ class Manager:
         :return: the process controller instance
 
         """
-        from plumpy.process_comms import RemoteProcessThreadController
+        from plumpy.rmq import RemoteProcessThreadController
 
         if self._process_controller is None:
-            self._process_controller = RemoteProcessThreadController(self.get_communicator())
+            self._process_controller = RemoteProcessThreadController(self.get_coordinator())
 
         return self._process_controller
 
@@ -380,7 +379,6 @@ class Manager:
         """Return a runner that is based on the current profile settings and can be used globally by the code.
 
         :return: the global runner
-
         """
         if self._runner is None:
             self._runner = self.create_runner(**kwargs)
@@ -391,20 +389,25 @@ class Manager:
         """Set the currently used runner
 
         :param new_runner: the new runner to use
-
         """
         if self._runner is not None:
             self._runner.close()
 
         self._runner = new_runner
 
-    def create_runner(self, with_persistence: bool = True, **kwargs: Any) -> 'Runner':
-        """Create and return a new runner
+    def create_runner(
+        self,
+        poll_interval: Union[int, float] | None = None,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        broker: Broker | None = None,
+        broker_submit: bool = False,
+        persister: Optional[AiiDAPersister] = None,
+    ) -> 'Runner':
+        """Create and return a new runner, with default settings from profile.
 
         :param with_persistence: create a runner with persistence enabled
 
         :return: a new runner instance
-
         """
         from aiida.common import ConfigurationError
         from aiida.engine import runners
@@ -414,25 +417,22 @@ class Manager:
             raise ConfigurationError(
                 'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
             )
-        poll_interval = 0.0 if profile.is_test_profile else self.get_option('runner.poll.interval')
 
-        settings = {'broker_submit': False, 'poll_interval': poll_interval}
-        settings.update(kwargs)
+        _default_poll_interval = 0.0 if profile.is_test_profile else self.get_option('runner.poll.interval')
+        _default_broker_submit = False
+        _default_persister = self.get_persister()
+        _default_broker = self.get_broker()
 
-        if 'communicator' not in settings:
-            # Only call get_communicator if we have to as it will lazily create
-            try:
-                settings['communicator'] = self.get_communicator()
-            except ConfigurationError:
-                # The currently loaded profile does not define a broker and so there is no communicator
-                pass
+        runner = runners.Runner(
+            poll_interval=poll_interval or _default_poll_interval,
+            loop=loop or asyncio.get_event_loop(),
+            broker=broker or _default_broker,
+            broker_submit=broker_submit or _default_broker_submit,
+            persister=persister or _default_persister,
+        )
+        return runner
 
-        if with_persistence and 'persister' not in settings:
-            settings['persister'] = self.get_persister()
-
-        return runners.Runner(**settings)  # type: ignore[arg-type]
-
-    def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
+    def create_daemon_runner(self) -> 'Runner':
         """Create and return a new daemon runner.
 
         This is used by workers when the daemon is running and in testing.
@@ -447,7 +447,7 @@ class Manager:
         from aiida.engine import persistence
         from aiida.engine.processes.launcher import ProcessLauncher
 
-        runner = self.create_runner(broker_submit=True, loop=loop)
+        runner = self.create_runner(broker_submit=True, loop=None)
         runner_loop = runner.loop
 
         # Listen for incoming launch requests
@@ -458,8 +458,8 @@ class Manager:
             loader=persistence.get_object_loader(),
         )
 
-        assert runner.communicator is not None, 'communicator not set for runner'
-        runner.communicator.add_task_subscriber(task_receiver)
+        assert runner.coordinator is not None, 'coordinator not set for runner'
+        runner.coordinator.add_task_subscriber(task_receiver)
 
         return runner
 

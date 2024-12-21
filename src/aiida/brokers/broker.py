@@ -3,7 +3,11 @@
 import abc
 import typing as t
 
+from plumpy.controller import ProcessController
+
 if t.TYPE_CHECKING:
+    from plumpy.coordinator import Coordinator
+
     from aiida.manage.configuration.profile import Profile
 
 __all__ = ('Broker',)
@@ -20,8 +24,13 @@ class Broker:
         self._profile = profile
 
     @abc.abstractmethod
-    def get_communicator(self):
-        """Return an instance of :class:`kiwipy.Communicator`."""
+    def get_coordinator(self) -> 'Coordinator':
+        """Return an instance of coordinator."""
+
+    @abc.abstractmethod
+    def get_controller(self) -> ProcessController:
+        """Return the process controller"""
+        ...
 
     @abc.abstractmethod
     def iterate_tasks(self):

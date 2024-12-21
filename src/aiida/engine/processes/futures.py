@@ -12,6 +12,7 @@ import asyncio
 from typing import Optional, Union
 
 import kiwipy
+from plumpy.coordinator import Coordinator
 
 from aiida.orm import Node, load_node
 
@@ -28,17 +29,17 @@ class ProcessFuture(asyncio.Future):
         pk: int,
         loop: Optional[asyncio.AbstractEventLoop] = None,
         poll_interval: Union[None, int, float] = None,
-        communicator: Optional[kiwipy.Communicator] = None,
+        coordinator: Optional[Coordinator] = None,
     ):
         """Construct a future for a process node being finished.
 
         If a None poll_interval is supplied polling will not be used.
-        If a communicator is supplied it will be used to listen for broadcast messages.
+        If a coordinator is supplied it will be used to listen for broadcast messages.
 
         :param pk: process pk
         :param loop: An event loop
         :param poll_interval: optional polling interval, if None, polling is not activated.
-        :param communicator: optional communicator, if None, will not subscribe to broadcasts.
+        :param coordinator: optional coordinator, if None, will not subscribe to broadcasts.
         """
         from .process import ProcessState
 
@@ -46,18 +47,18 @@ class ProcessFuture(asyncio.Future):
         loop = loop if loop is not None else asyncio.get_event_loop()
         super().__init__(loop=loop)
 
-        assert not (poll_interval is None and communicator is None), 'Must poll or have a communicator to use'
+        assert not (poll_interval is None and coordinator is None), 'Must poll or have a coordinator to use'
 
         node = load_node(pk=pk)
 
         if node.is_terminated:
             self.set_result(node)
         else:
-            self._communicator = communicator
+            self._coordinator = coordinator
             self.add_done_callback(lambda _: self.cleanup())
 
             # Try setting up a filtered broadcast subscriber
-            if self._communicator is not None:
+            if self._coordinator is not None:
 
                 def _subscriber(*args, **kwargs):
                     if not self.done():
@@ -66,17 +67,17 @@ class ProcessFuture(asyncio.Future):
                 broadcast_filter = kiwipy.BroadcastFilter(_subscriber, sender=pk)
                 for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
                     broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
-                self._broadcast_identifier = self._communicator.add_broadcast_subscriber(broadcast_filter)
+                self._broadcast_identifier = self._coordinator.add_broadcast_subscriber(broadcast_filter)
 
             # Start polling
             if poll_interval is not None:
                 loop.create_task(self._poll_process(node, poll_interval))
 
     def cleanup(self) -> None:
-        """Clean up the future by removing broadcast subscribers from the communicator if it still exists."""
-        if self._communicator is not None:
-            self._communicator.remove_broadcast_subscriber(self._broadcast_identifier)
-            self._communicator = None
+        """Clean up the future by removing broadcast subscribers from the coordinator if it still exists."""
+        if self._coordinator is not None:
+            self._coordinator.remove_broadcast_subscriber(self._broadcast_identifier)
+            self._coordinator = None
             self._broadcast_identifier = None
 
     async def _poll_process(self, node: Node, poll_interval: Union[int, float]) -> None:

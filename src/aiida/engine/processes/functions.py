@@ -235,7 +235,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
                 def kill_process(_num, _frame):
                     """Send the kill signal to the process in the current scope."""
                     LOGGER.critical('runner received interrupt, killing process %s', process.pid)
-                    result = process.kill(msg='Process was killed because the runner received an interrupt')
+                    result = process.kill(msg_text='Process was killed because the runner received an interrupt')
                     return result
 
                 # Store the current handler on the signal such that it can be restored after process has terminated

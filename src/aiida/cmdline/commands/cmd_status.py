@@ -132,7 +132,7 @@ def verdi_status(print_traceback, no_rmq):
 
     if broker:
         try:
-            broker.get_communicator()
+            broker.get_coordinator()
         except Exception as exc:
             message = f'Unable to connect to broker: {broker}'
             print_status(ServiceStatus.ERROR, 'broker', message, exception=exc, print_traceback=print_traceback)

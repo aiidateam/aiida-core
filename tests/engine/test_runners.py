@@ -11,7 +11,6 @@
 import asyncio
 import threading
 
-import plumpy
 import pytest
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
@@ -51,7 +50,7 @@ def test_call_on_process_finish(runner):
     """Test call on calculation finish."""
     loop = runner.loop
     proc = Proc(runner=runner, inputs={'a': Str('input')})
-    future = plumpy.Future()
+    future = asyncio.Future()
     event = threading.Event()
 
     def calc_done():

@@ -21,11 +21,15 @@ def test_disconnect():
     demonstrate the problematic behavior. Getting the communicator and then disconnecting it (through calling
     :meth:`aiida.manage.manager.Manager.reset_profile`) works fine. However, if a process is a run before closing it,
     for example running a calcfunction, the closing of the communicator will raise a ``TimeoutError``.
+
+    The problem was solved by:
+    - https://github.com/aiidateam/aiida-core/pull/6672
+    - https://github.com/mosquito/aiormq/pull/208
     """
     from aiida.manage import get_manager
 
     manager = get_manager()
-    manager.get_communicator()
+    _ = manager.get_coordinator()
     manager.reset_profile()  # This returns just fine
 
     result, node = add_calcfunction.run_get_node(1)

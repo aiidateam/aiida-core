@@ -116,6 +116,7 @@ def test_walk(setup_groups):
 
 
 @pytest.mark.filterwarnings('ignore::UserWarning')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_walk_with_invalid_path():
     """Test the ``GroupPath.walk`` method with invalid paths."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f', 'bad//group', 'bad/other']:

@@ -94,7 +94,7 @@ class TestProcessControl:
             assert calc_node.paused
 
             kill_message = 'Sorry, you have to go mate'
-            kill_future = controller.kill_process(calc_node.pk, msg=kill_message)
+            kill_future = controller.kill_process(calc_node.pk, msg_text=kill_message)
             future = await with_timeout(asyncio.wrap_future(kill_future))
             result = await self.wait_future(asyncio.wrap_future(future))
             assert result
@@ -112,7 +112,7 @@ class TestProcessControl:
                 await asyncio.sleep(0.1)
 
             pause_message = 'Take a seat'
-            pause_future = controller.pause_process(calc_node.pk, msg=pause_message)
+            pause_future = controller.pause_process(calc_node.pk, msg_text=pause_message)
             future = await with_timeout(asyncio.wrap_future(pause_future))
             result = await self.wait_future(asyncio.wrap_future(future))
             assert calc_node.paused
@@ -127,7 +127,7 @@ class TestProcessControl:
             assert calc_node.process_status is None
 
             kill_message = 'Sorry, you have to go mate'
-            kill_future = controller.kill_process(calc_node.pk, msg=kill_message)
+            kill_future = controller.kill_process(calc_node.pk, msg_text=kill_message)
             future = await with_timeout(asyncio.wrap_future(kill_future))
             result = await self.wait_future(asyncio.wrap_future(future))
             assert result
@@ -145,7 +145,7 @@ class TestProcessControl:
                 await asyncio.sleep(0.1)
 
             kill_message = 'Sorry, you have to go mate'
-            kill_future = controller.kill_process(calc_node.pk, msg=kill_message)
+            kill_future = controller.kill_process(calc_node.pk, msg_text=kill_message)
             future = await with_timeout(asyncio.wrap_future(kill_future))
             result = await self.wait_future(asyncio.wrap_future(future))
             assert result

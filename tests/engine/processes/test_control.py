@@ -1,7 +1,7 @@
 """Tests for the :mod:`aiida.engine.processes.control` module."""
 
 import pytest
-from plumpy.process_comms import RemoteProcessThreadController
+from plumpy.rmq import RemoteProcessThreadController
 
 from aiida.engine import ProcessState
 from aiida.engine.launch import submit
@@ -82,6 +82,7 @@ def test_kill_processes(submit_and_await):
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
     control.kill_processes([node], wait=True)
+    # __import__('ipdb').set_trace()
     assert node.is_terminated
     assert node.is_killed
     assert node.process_status == 'Killed through `aiida.engine.processes.control.kill_processes`'

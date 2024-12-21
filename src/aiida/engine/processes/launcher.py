@@ -38,7 +38,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             node.set_process_state(ProcessState.EXCEPTED)
             node.seal()
 
-    async def _continue(self, communicator, pid, nowait, tag=None):
+    async def _continue(self, pid, nowait, tag=None):
         """Continue the task.
 
         Note that the task may already have been completed, as indicated from the corresponding the node, in which
@@ -84,7 +84,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             return future.result()
 
         try:
-            result = await super()._continue(communicator, pid, nowait, tag)
+            result = await super()._continue(pid, nowait, tag)
         except ImportError as exception:
             message = 'the class of the process could not be imported.'
             self.handle_continue_exception(node, exception, message)

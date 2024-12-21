@@ -27,6 +27,7 @@ from plumpy.rmq import RemoteProcessThreadController, wrap_communicator
 from aiida.common import exceptions
 from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
+from aiida.brokers import Broker
 
 from . import transports, utils
 from .processes import Process, ProcessBuilder, ProcessState, futures
@@ -64,7 +65,7 @@ class Runner:
         self,
         poll_interval: Union[int, float] = 0,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-        coordinator: Optional[Coordinator] = None,
+        broker: Broker | None = None,
         broker_submit: bool = False,
         persister: Optional[Persister] = None,
     ):
@@ -72,14 +73,14 @@ class Runner:
 
         :param poll_interval: interval in seconds between polling for status of active sub processes
         :param loop: an asyncio event loop, if none is suppled a new one will be created
-        :param coordinator: the coordinator to use
+        :param broker: the broker to use
         :param broker_submit: if True, processes will be submitted to the broker, otherwise they will be scheduled here
         :param persister: the persister to use to persist processes
 
         """
         assert not (
             broker_submit and persister is None
-        ), 'Must supply a persister if you want to submit using coordinator'
+        ), 'Must supply a persister if you want to submit using coordinator/broker'
 
         set_event_loop_policy()
         self._loop = loop or asyncio.get_event_loop()
@@ -90,11 +91,14 @@ class Runner:
         self._persister = persister
         self._plugin_version_provider = PluginVersionProvider()
 
-        if coordinator is not None:
-            # FIXME: the wrap is not needed, when passed in, the coordinator should already wrapped
-            self._coordinator = wrap_communicator(coordinator.communicator, self._loop)
-            self._controller = RemoteProcessThreadController(coordinator)
+        # FIXME: broker and coordinator overlap the concept there for over-abstraction, remove the abstraction
+        if broker is not None:
+            _coordinator = broker.get_coordinator()
+            # FIXME: the wrap should not be needed
+            self._coordinator = wrap_communicator(_coordinator.communicator, self._loop)
+            self._controller = broker.get_controller()
         elif self._broker_submit:
+            # FIXME: if broker then broker_submit else False
             LOGGER.warning('Disabling broker submission, no coordinator provided')
             self._broker_submit = False
 
@@ -350,7 +354,7 @@ class Runner:
 
         :return: A future representing the completion of the process node
         """
-        return futures.ProcessFuture(pk, self._loop, self._poll_interval, self._coordinator)
+        return futures.ProcessFuture(pk, self._loop, self._poll_interval, self.coordinator)
 
     def _poll_process(self, node, callback):
         """Check whether the process state of the node is terminated and call the callback or reschedule it.

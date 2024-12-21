@@ -5,7 +5,9 @@ from __future__ import annotations
 import functools
 import typing as t
 
-from plumpy.rmq import RmqCoordinator
+from plumpy.rmq import RemoteProcessThreadController, RmqCoordinator
+from plumpy import ProcessController
+from plumpy.rmq.process_control import RemoteProcessController
 
 from aiida.brokers.broker import Broker
 from aiida.common.log import AIIDA_LOGGER
@@ -15,6 +17,7 @@ from .utils import get_launch_queue_name, get_message_exchange_name, get_task_ex
 
 if t.TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
+
     from aiida.manage.configuration.profile import Profile
 
 LOGGER = AIIDA_LOGGER.getChild('broker.rabbitmq')
@@ -60,6 +63,10 @@ class RabbitmqBroker(Broker):
         coordinator = RmqCoordinator(self._communicator)
 
         return coordinator
+
+    def get_controller(self) -> ProcessController:
+        coordinator = self.get_coordinator()
+        return RemoteProcessThreadController(coordinator)
 
     def _create_communicator(self) -> 'RmqThreadCommunicator':
         """Return an instance of :class:`kiwipy.Communicator`."""

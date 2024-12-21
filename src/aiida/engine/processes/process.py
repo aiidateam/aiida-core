@@ -43,7 +43,6 @@ import plumpy.processes
 # from kiwipy.communications import UnroutableError
 # from plumpy.processes import ConnectionClosed  # type: ignore[attr-defined]
 from plumpy.process_states import Finished, ProcessState
-
 from plumpy.processes import Process as PlumpyProcess
 from plumpy.utils import AttributesFrozendict
 

@@ -10,14 +10,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-import asyncio
-import kiwipy
 from plumpy.coordinator import Coordinator
 
 if TYPE_CHECKING:
-    from kiwipy.rmq import RmqThreadCommunicator
     from plumpy.process_comms import RemoteProcessThreadController
 
     from aiida.brokers.broker import Broker
@@ -169,7 +167,7 @@ class Manager:
         self._profile_storage = None
 
     def reset_broker(self) -> None:
-        """Reset the communicator."""
+        """Reset the broker."""
         from concurrent import futures
 
         if self._broker is not None:
@@ -401,7 +399,7 @@ class Manager:
         self,
         poll_interval: Union[int, float] | None = None,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-        coordinator: Optional[Coordinator] = None,
+        broker: Broker | None = None,
         broker_submit: bool = False,
         persister: Optional[AiiDAPersister] = None,
     ) -> 'Runner':
@@ -422,19 +420,19 @@ class Manager:
 
         _default_poll_interval = 0.0 if profile.is_test_profile else self.get_option('runner.poll.interval')
         _default_broker_submit = False
-        _default_coordinator = self.get_coordinator()
         _default_persister = self.get_persister()
+        _default_broker = self.get_broker()
 
         runner = runners.Runner(
             poll_interval=poll_interval or _default_poll_interval,
             loop=loop or asyncio.get_event_loop(),
-            coordinator=coordinator or _default_coordinator,
+            broker=broker or _default_broker,
             broker_submit=broker_submit or _default_broker_submit,
             persister=persister or _default_persister,
         )
         return runner
 
-    def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
+    def create_daemon_runner(self) -> 'Runner':
         """Create and return a new daemon runner.
 
         This is used by workers when the daemon is running and in testing.
@@ -449,7 +447,7 @@ class Manager:
         from aiida.engine import persistence
         from aiida.engine.processes.launcher import ProcessLauncher
 
-        runner = self.create_runner(broker_submit=True, loop=loop)
+        runner = self.create_runner(broker_submit=True, loop=None)
         runner_loop = runner.loop
 
         # Listen for incoming launch requests

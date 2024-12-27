@@ -30,7 +30,7 @@ __all__ = ('RabbitmqBroker',)
 class RabbitmqBroker(Broker):
     """Implementation of the message broker interface using RabbitMQ through ``kiwipy``."""
 
-    def __init__(self, profile: Profile) -> None:
+    def __init__(self, profile: Profile, loop=None) -> None:
         """Construct a new instance.
 
         :param profile: The profile.
@@ -38,8 +38,8 @@ class RabbitmqBroker(Broker):
         self._profile = profile
         self._communicator: 'RmqThreadCommunicator | None' = None
         self._prefix = f'aiida-{self._profile.uuid}'
-        # FIXME: ??? should make the event loop setable??
-        self._loop = asyncio.get_event_loop()
+        self._coordinator = None
+        self._loop = loop or asyncio.get_event_loop()
 
     def __str__(self):
         try:
@@ -59,6 +59,12 @@ class RabbitmqBroker(Broker):
             yield task
 
     def get_coordinator(self):
+        if self._coordinator is not None:
+            return self._coordinator
+
+        return self.create_coordinator()
+
+    def create_coordinator(self):
         if self._communicator is None:
             self._communicator = self._create_communicator()
             # Check whether a compatible version of RabbitMQ is being used.

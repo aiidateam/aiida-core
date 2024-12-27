@@ -18,6 +18,7 @@ Provides:
 
 """
 
+import asyncio
 from contextlib import contextmanager
 
 from click_spinner import spinner
@@ -325,7 +326,8 @@ def requires_broker(wrapped, _, args, kwargs):
 
     assert profile is not None
 
-    if manager.get_broker() is None:
+    loop = asyncio.get_event_loop()
+    if manager.create_broker(loop) is None:
         echo.echo_critical(
             f'profile `{profile.name}` does not define a broker and so cannot use this functionality.'
             f'See {URL_NO_BROKER} for more details.'

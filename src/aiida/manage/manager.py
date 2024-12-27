@@ -285,7 +285,10 @@ class Manager:
 
         return self._profile_storage
 
-    def get_broker(self) -> 'Broker' | None:
+    def get_broker(self) -> 'Broker | None':
+        return self._broker
+
+    def create_broker(self, loop) -> 'Broker | None':
         """Return an instance of :class:`aiida.brokers.broker.Broker` if the profile defines a broker.
 
         :returns: The broker of the profile, or ``None`` if the profile doesn't define one.
@@ -307,7 +310,7 @@ class Manager:
                 entry_point = 'core.rabbitmq'
 
             broker_cls = BrokerFactory(entry_point)
-            self._broker = broker_cls(self._profile)
+            self._broker = broker_cls(self._profile, loop)
 
         return self._broker
 
@@ -421,11 +424,14 @@ class Manager:
         _default_poll_interval = 0.0 if profile.is_test_profile else self.get_option('runner.poll.interval')
         _default_broker_submit = False
         _default_persister = self.get_persister()
-        _default_broker = self.get_broker()
+        _default_loop = asyncio.get_event_loop()
+
+        loop = loop or _default_loop
+        _default_broker = self.create_broker(loop)
 
         runner = runners.Runner(
             poll_interval=poll_interval or _default_poll_interval,
-            loop=loop or asyncio.get_event_loop(),
+            loop=loop,
             broker=broker or _default_broker,
             broker_submit=broker_submit or _default_broker_submit,
             persister=persister or _default_persister,

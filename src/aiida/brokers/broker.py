@@ -13,17 +13,19 @@ if t.TYPE_CHECKING:
 __all__ = ('Broker',)
 
 
+# FIXME: make me a protocol
 class Broker:
     """Interface for a message broker that facilitates communication with and between process runners."""
 
-    def __init__(self, profile: 'Profile') -> None:
-        """Construct a new instance.
-
-        :param profile: The profile.
-        """
-        self._profile = profile
+    # def __init__(self, profile: 'Profile') -> None:
+    #     """Construct a new instance.
+    #
+    #     :param profile: The profile.
+    #     """
+    #     self._profile = profile
 
     @abc.abstractmethod
+    # FIXME: make me a property
     def get_coordinator(self) -> 'Coordinator':
         """Return an instance of coordinator."""
 

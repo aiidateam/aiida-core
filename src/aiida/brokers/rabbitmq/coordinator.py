@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from asyncio import AbstractEventLoop
+import asyncio
 from typing import Generic, TypeVar, final
 import kiwipy
 import concurrent.futures
@@ -84,3 +85,7 @@ class RmqLoopCoordinator(Generic[U]):
 
     def close(self):
         self._comm.close()
+
+    def is_closed(self) -> bool:
+        """Return `True` if the communicator was closed"""
+        return self._comm.is_closed()

@@ -326,8 +326,7 @@ def requires_broker(wrapped, _, args, kwargs):
 
     assert profile is not None
 
-    loop = asyncio.get_event_loop()
-    if manager.create_broker(loop) is None:
+    if manager.get_broker() is None:
         echo.echo_critical(
             f'profile `{profile.name}` does not define a broker and so cannot use this functionality.'
             f'See {URL_NO_BROKER} for more details.'

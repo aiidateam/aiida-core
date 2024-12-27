@@ -286,9 +286,13 @@ class Manager:
         return self._profile_storage
 
     def get_broker(self) -> 'Broker | None':
-        return self._broker
+        if self._broker is not None:
+            return self._broker
 
-    def create_broker(self, loop) -> 'Broker | None':
+        _default_loop = asyncio.get_event_loop()
+        return self._create_broker(_default_loop)
+
+    def _create_broker(self, loop) -> 'Broker | None':
         """Return an instance of :class:`aiida.brokers.broker.Broker` if the profile defines a broker.
 
         :returns: The broker of the profile, or ``None`` if the profile doesn't define one.
@@ -427,7 +431,7 @@ class Manager:
         _default_loop = asyncio.get_event_loop()
 
         loop = loop or _default_loop
-        _default_broker = self.create_broker(loop)
+        _default_broker = self._create_broker(loop)
 
         runner = runners.Runner(
             poll_interval=poll_interval or _default_poll_interval,

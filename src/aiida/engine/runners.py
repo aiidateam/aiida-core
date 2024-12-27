@@ -92,9 +92,13 @@ class Runner:
         self._plugin_version_provider = PluginVersionProvider()
 
         # FIXME: broker and coordinator overlap the concept there for over-abstraction, remove the abstraction
+        # Broker should always create inside runner? since they should share the loop.
         if broker is not None:
             self._coordinator = broker.get_coordinator()
             self._controller = broker.get_controller()
+
+            # FIXME: why with wrapper, the pending task not exist??
+            # self._coordinator = wrap_communicator(broker.get_coordinator().communicator, self._loop)
         elif self._broker_submit:
             # FIXME: if broker then broker_submit else False
             LOGGER.warning('Disabling broker submission, no coordinator provided')

@@ -94,12 +94,12 @@ def test_communicator(url):
 
 def test_add_rpc_subscriber(coordinator):
     """Test ``add_rpc_subscriber``."""
-    coordinator.add_rpc_subscriber(None)
+    coordinator.add_rpc_subscriber(lambda: None)
 
 
 def test_add_broadcast_subscriber(coordinator):
     """Test ``add_broadcast_subscriber``."""
-    coordinator.add_broadcast_subscriber(None)
+    coordinator.add_broadcast_subscriber(lambda: None)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

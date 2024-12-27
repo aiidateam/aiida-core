@@ -93,9 +93,7 @@ class Runner:
 
         # FIXME: broker and coordinator overlap the concept there for over-abstraction, remove the abstraction
         if broker is not None:
-            _coordinator = broker.get_coordinator()
-            # FIXME: the wrap should not be needed
-            self._coordinator = wrap_communicator(_coordinator.communicator, self._loop)
+            self._coordinator = broker.get_coordinator()
             self._controller = broker.get_controller()
         elif self._broker_submit:
             # FIXME: if broker then broker_submit else False

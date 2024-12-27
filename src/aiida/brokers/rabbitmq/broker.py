@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import typing as t
 
@@ -10,6 +11,7 @@ from plumpy import ProcessController
 from plumpy.rmq.process_control import RemoteProcessController
 
 from aiida.brokers.broker import Broker
+from aiida.brokers.rabbitmq.coordinator import RmqLoopCoordinator
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config_option
 
@@ -36,6 +38,8 @@ class RabbitmqBroker(Broker):
         self._profile = profile
         self._communicator: 'RmqThreadCommunicator | None' = None
         self._prefix = f'aiida-{self._profile.uuid}'
+        # FIXME: ??? should make the event loop setable??
+        self._loop = asyncio.get_event_loop()
 
     def __str__(self):
         try:
@@ -60,7 +64,7 @@ class RabbitmqBroker(Broker):
             # Check whether a compatible version of RabbitMQ is being used.
             self.check_rabbitmq_version()
 
-        coordinator = RmqCoordinator(self._communicator)
+        coordinator = RmqLoopCoordinator(self._communicator, self._loop)
 
         return coordinator
 

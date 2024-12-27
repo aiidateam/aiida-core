@@ -18,7 +18,6 @@ Provides:
 
 """
 
-import asyncio
 from contextlib import contextmanager
 
 from click_spinner import spinner

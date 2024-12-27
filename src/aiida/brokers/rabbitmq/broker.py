@@ -6,9 +6,8 @@ import asyncio
 import functools
 import typing as t
 
-from plumpy.rmq import RemoteProcessThreadController, RmqCoordinator
 from plumpy import ProcessController
-from plumpy.rmq.process_control import RemoteProcessController
+from plumpy.rmq import RemoteProcessThreadController
 
 from aiida.brokers.broker import Broker
 from aiida.brokers.rabbitmq.coordinator import RmqLoopCoordinator

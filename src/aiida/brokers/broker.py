@@ -8,7 +8,6 @@ from plumpy.controller import ProcessController
 if t.TYPE_CHECKING:
     from plumpy.coordinator import Coordinator
 
-    from aiida.manage.configuration.profile import Profile
 
 __all__ = ('Broker',)
 

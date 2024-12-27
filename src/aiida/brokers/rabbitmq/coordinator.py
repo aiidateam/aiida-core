@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
-from asyncio import AbstractEventLoop
-import asyncio
-from typing import Generic, TypeVar, final
-import kiwipy
 import concurrent.futures
+from asyncio import AbstractEventLoop
+from typing import Generic, TypeVar, final
 
+import kiwipy
 from plumpy.exceptions import CoordinatorConnectionError
 from plumpy.rmq.communications import convert_to_comm
 
@@ -71,7 +69,7 @@ class RmqLoopCoordinator(Generic[U]):
         subject=None,
         correlation_id=None,
     ):
-        from aio_pika.exceptions import ChannelInvalidStateError, AMQPConnectionError
+        from aio_pika.exceptions import AMQPConnectionError, ChannelInvalidStateError
 
         try:
             rsp = self._comm.broadcast_send(body, sender, subject, correlation_id)

@@ -63,8 +63,9 @@ def create_daemon_runner(manager: Manager) -> 'Runner':
         loader=persistence.get_object_loader(),
     )
 
-    assert runner.coordinator is not None, 'coordinator not set for runner'
-    runner.coordinator.add_task_subscriber(task_receiver)
+    coordinator = manager.get_coordinator()
+    assert coordinator is not None, 'coordinator not set for runner'
+    coordinator.add_task_subscriber(task_receiver)
 
     return runner
 

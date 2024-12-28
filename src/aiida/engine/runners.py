@@ -125,11 +125,6 @@ class Runner:
         return self._persister
 
     @property
-    def coordinator(self) -> Optional[Coordinator]:
-        """Get the coordinator used by this runner."""
-        return self._coordinator
-
-    @property
     def plugin_version_provider(self) -> PluginVersionProvider:
         return self._plugin_version_provider
 
@@ -337,16 +332,16 @@ class Runner:
                 callback()
             finally:
                 event.set()
-                if self.coordinator:
-                    self.coordinator.remove_broadcast_subscriber(subscriber_identifier)
+                if self._coordinator:
+                    self._coordinator.remove_broadcast_subscriber(subscriber_identifier)
 
         broadcast_filter = kiwipy.BroadcastFilter(functools.partial(inline_callback, event), sender=pk)
         for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
             broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
 
-        if self.coordinator:
+        if self._coordinator:
             LOGGER.info('adding subscriber for broadcasts of %d', pk)
-            self.coordinator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
+            self._coordinator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
         self._poll_process(node, functools.partial(inline_callback, event))
 
     def get_process_future(self, pk: int) -> futures.ProcessFuture:
@@ -356,7 +351,7 @@ class Runner:
 
         :return: A future representing the completion of the process node
         """
-        return futures.ProcessFuture(pk, self._loop, self._poll_interval, self.coordinator)
+        return futures.ProcessFuture(pk, self._loop, self._poll_interval, self._coordinator)
 
     def _poll_process(self, node, callback):
         """Check whether the process state of the node is terminated and call the callback or reschedule it.

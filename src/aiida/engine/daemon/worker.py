@@ -17,6 +17,7 @@ from aiida.common.log import configure_logging
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.runners import Runner
 from aiida.manage import get_config_option, get_manager
+from aiida.manage.manager import Manager
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +37,36 @@ async def shutdown_worker(runner: Runner) -> None:
 
     LOGGER.info('Daemon worker stopped')
 
+def create_daemon_runner(manager: Manager) -> 'Runner':
+    """Create and return a new daemon runner.
+
+    This is used by workers when the daemon is running and in testing.
+
+    :param loop: the (optional) asyncio event loop to use
+
+    :return: a runner configured to work in the daemon configuration
+
+    """
+    from plumpy.persistence import LoadSaveContext
+
+    from aiida.engine import persistence
+    from aiida.engine.processes.launcher import ProcessLauncher
+
+    runner = manager.create_runner(broker_submit=True, loop=None)
+    runner_loop = runner.loop
+
+    # Listen for incoming launch requests
+    task_receiver = ProcessLauncher(
+        loop=runner_loop,
+        persister=manager.get_persister(),
+        load_context=LoadSaveContext(runner=runner),
+        loader=persistence.get_object_loader(),
+    )
+
+    assert runner.coordinator is not None, 'coordinator not set for runner'
+    runner.coordinator.add_task_subscriber(task_receiver)
+
+    return runner
 
 def start_daemon_worker(foreground: bool = False) -> None:
     """Start a daemon worker for the currently configured profile.
@@ -51,7 +82,7 @@ def start_daemon_worker(foreground: bool = False) -> None:
 
     try:
         manager = get_manager()
-        runner = manager.create_daemon_runner()
+        runner = create_daemon_runner(manager)
         manager.set_runner(runner)
     except Exception:
         LOGGER.exception('daemon worker failed to start')

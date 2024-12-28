@@ -442,37 +442,6 @@ class Manager:
         )
         return runner
 
-    def create_daemon_runner(self) -> 'Runner':
-        """Create and return a new daemon runner.
-
-        This is used by workers when the daemon is running and in testing.
-
-        :param loop: the (optional) asyncio event loop to use
-
-        :return: a runner configured to work in the daemon configuration
-
-        """
-        from plumpy.persistence import LoadSaveContext
-
-        from aiida.engine import persistence
-        from aiida.engine.processes.launcher import ProcessLauncher
-
-        runner = self.create_runner(broker_submit=True, loop=None)
-        runner_loop = runner.loop
-
-        # Listen for incoming launch requests
-        task_receiver = ProcessLauncher(
-            loop=runner_loop,
-            persister=self.get_persister(),
-            load_context=LoadSaveContext(runner=runner),
-            loader=persistence.get_object_loader(),
-        )
-
-        assert runner.coordinator is not None, 'coordinator not set for runner'
-        runner.coordinator.add_task_subscriber(task_receiver)
-
-        return runner
-
     def check_version(self):
         """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
 

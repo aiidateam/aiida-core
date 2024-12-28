@@ -173,12 +173,13 @@ class Process(PlumpyProcess):
         from aiida.manage import manager
 
         self._runner = runner if runner is not None else manager.get_manager().get_runner()
+        _coordinator = manager.get_manager().get_coordinator()
 
         super().__init__(
             inputs=self.spec().inputs.serialize(inputs),
             logger=logger,
             loop=self._runner.loop,
-            coordinator=self._runner.coordinator,
+            coordinator=_coordinator,
         )
 
         self._node: Optional[orm.ProcessNode] = None
@@ -318,7 +319,9 @@ class Process(PlumpyProcess):
         else:
             self._runner = manager.get_manager().get_runner()
 
-        load_context = load_context.copyextend(loop=self._runner.loop, coordinator=self._runner.coordinator)
+        _coordinator = manager.get_manager().get_coordinator()
+
+        load_context = load_context.copyextend(loop=self._runner.loop, coordinator=_coordinator)
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:

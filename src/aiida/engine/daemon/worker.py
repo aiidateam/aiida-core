@@ -12,6 +12,7 @@ import asyncio
 import logging
 import signal
 import sys
+import threading
 
 from aiida.common.log import configure_logging
 from aiida.engine.daemon.client import get_daemon_client
@@ -98,9 +99,13 @@ def start_daemon_worker(foreground: bool = False) -> None:
         # https://github.com/python/mypy/issues/12557
         runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))  # type: ignore[misc]
 
+    # XXX: check the threading use is elegantly implemented: e.g. log handle, error handle, shutdown handle.
+    LOGGER.info('Starting a daemon worker')
+    runner_thread = threading.Thread(target=runner.start, daemon=True)
+    runner_thread.start()
+
     try:
-        LOGGER.info('Starting a daemon worker')
-        runner.start()
+        runner_thread.join()
     except SystemError as exception:
         LOGGER.info('Received a SystemError: %s', exception)
         runner.close()

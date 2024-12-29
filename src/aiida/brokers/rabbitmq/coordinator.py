@@ -33,15 +33,19 @@ class RmqLoopCoordinator(Generic[U]):
         sender_filters=None,
         identifier=None,
     ):
-        subscriber = kiwipy.BroadcastFilter(subscriber)
+        # XXX: this change behavior of create_task when decide whether the broadcast is_filtered.
+        # Need to understand the BroadcastFilter and make the improvement.
+        # To manifest the issue of run_task not await, run twice 'test_launch.py::test_submit_wait'.
 
-        subject_filters = subject_filters or []
-        sender_filters = sender_filters or []
-
-        for filter in subject_filters:
-            subscriber.add_subject_filter(filter)
-        for filter in sender_filters:
-            subscriber.add_sender_filter(filter)
+        # subscriber = kiwipy.BroadcastFilter(subscriber)
+        #
+        # subject_filters = subject_filters or []
+        # sender_filters = sender_filters or []
+        #
+        # for filter in subject_filters:
+        #     subscriber.add_subject_filter(filter)
+        # for filter in sender_filters:
+        #     subscriber.add_sender_filter(filter)
 
         subscriber = convert_to_comm(subscriber, self._loop)
         return self._comm.add_broadcast_subscriber(subscriber, identifier)

@@ -122,6 +122,9 @@ jobs:
       with:
         python-version: '3.12'
         from-lock: 'true'
+        # NOTE: The `verdi devel check-undesired-imports` fails if
+        # the 'tui' extra is installed.
+        extras: ''
 
     - name: Run verdi tests
       run: |

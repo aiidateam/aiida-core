@@ -39,7 +39,7 @@ runs:
   - name: Install dependencies from uv lock
     if: ${{ inputs.from-lock == 'true' }}
     # NOTE: We're asserting that the lockfile is up to date
-    run: uv sync --locked --extra ${{ inputs.extras }}
+    run: uv sync --locked ${{ inputs.extras && '--extra ' + inputs.extras }}
     shell: bash
 
   - name: Install aiida-core

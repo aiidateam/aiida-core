@@ -64,8 +64,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Setup environment
-      # Note: The virtual environment in .venv was created by uv in previous step
-      run: source .venv/bin/activate && .github/workflows/setup.sh
+      run: .github/workflows/setup.sh
 
     - name: Run test suite
       env:
@@ -122,7 +121,7 @@ jobs:
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.12'
-        from-lock: 'false'
+        from-lock: 'true'
 
     - name: Run verdi tests
       run: |

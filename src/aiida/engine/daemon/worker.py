@@ -100,12 +100,17 @@ def start_daemon_worker(foreground: bool = False) -> None:
         runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))  # type: ignore[misc]
 
     # XXX: check the threading use is elegantly implemented: e.g. log handle, error handle, shutdown handle.
+    # it should work and it is better to have runner has its own event loop to handle the aiida processes only.
+    # however, it randomly fail some test because of resources not elegantly handled.
+    # The problem is the runner running in thread is not closed when thread join, the join should be the shutdown operation.
+
     LOGGER.info('Starting a daemon worker')
-    runner_thread = threading.Thread(target=runner.start, daemon=True)
-    runner_thread.start()
+    # runner_thread = threading.Thread(target=runner.start, daemon=False)
+    # runner_thread.start()
 
     try:
-        runner_thread.join()
+        runner.start()
+        # runner_thread.join()
     except SystemError as exception:
         LOGGER.info('Received a SystemError: %s', exception)
         runner.close()

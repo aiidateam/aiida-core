@@ -12,7 +12,6 @@ import asyncio
 import logging
 import signal
 import sys
-import threading
 
 from aiida.common.log import configure_logging
 from aiida.engine.daemon.client import get_daemon_client
@@ -37,6 +36,7 @@ async def shutdown_worker(runner: Runner) -> None:
     runner.close()
 
     LOGGER.info('Daemon worker stopped')
+
 
 def create_daemon_runner(manager: Manager) -> 'Runner':
     """Create and return a new daemon runner.
@@ -69,6 +69,7 @@ def create_daemon_runner(manager: Manager) -> 'Runner':
     coordinator.add_task_subscriber(task_receiver)
 
     return runner
+
 
 def start_daemon_worker(foreground: bool = False) -> None:
     """Start a daemon worker for the currently configured profile.

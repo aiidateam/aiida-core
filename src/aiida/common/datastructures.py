@@ -141,11 +141,13 @@ class CalcInfo(DefaultFieldsAttributeDict):
     )
 
     if TYPE_CHECKING:
+        from aiida.orm.nodes.process.calculation.calcjob import RetrievedList
+
         job_environment: None | dict[str, str]
         email: None | str
         email_on_started: bool
         email_on_terminated: bool
-        uuid: None | str
+        uuid: str
         prepend_text: None | str
         append_text: None | str
         num_machines: None | int
@@ -154,8 +156,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         max_wallclock_seconds: None | int
         max_memory_kb: None | int
         rerunnable: bool
-        retrieve_list: None | list[str | tuple[str, str, str]]
-        retrieve_temporary_list: None | list[str | tuple[str, str, str]]
+        retrieve_list: RetrievedList
+        retrieve_temporary_list: RetrievedList
         local_copy_list: None | list[tuple[str, str, str]]
         remote_copy_list: None | list[tuple[str, str, str]]
         remote_symlink_list: None | list[tuple[str, str, str]]

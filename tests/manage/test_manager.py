@@ -25,6 +25,7 @@ def test_disconnect():
     The problem was solved by:
     - https://github.com/aiidateam/aiida-core/pull/6672
     - https://github.com/mosquito/aiormq/pull/208
+    # XXX: this may wrong, because in the new combination of rmq-out, problem solved without the change in aiormq
     """
     from aiida.manage import get_manager
 

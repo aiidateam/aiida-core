@@ -3,11 +3,11 @@
 import datetime
 import math
 
-from aiida.orm.nodes.data.structure import has_pymatgen
 import pytest
 
 from aiida.orm import load_node
 from aiida.orm.nodes.data.jsonable import JsonableData
+from aiida.orm.nodes.data.structure import has_pymatgen
 
 
 class JsonableClass:

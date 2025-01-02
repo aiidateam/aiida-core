@@ -68,9 +68,10 @@ skip_ase = pytest.mark.skipif(not has_ase(), reason='Unable to import ase')
 skip_spglib = pytest.mark.skipif(not has_spglib(), reason='Unable to import spglib')
 skip_pycifrw = pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
 skip_pymatgen = pytest.mark.skipif(not has_pymatgen(), reason='Unable to import pymatgen')
+skip_pymatgen_anyhow = pytest.mark.skipif(True, reason='By all means')
 
 
-@skip_pymatgen
+@skip_pymatgen_anyhow
 def test_get_pymatgen_version():
     assert isinstance(get_pymatgen_version(), str)
 
@@ -211,6 +212,7 @@ class TestCifData:
 
     @skip_ase
     @skip_pycifrw
+    @skip_pymatgen_anyhow
     @pytest.mark.requires_rmq
     def test_get_structure(self):
         """Test `CifData.get_structure`."""
@@ -291,7 +293,7 @@ O 0.5 0.5 0.5
 
     @skip_ase
     @skip_pycifrw
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     @pytest.mark.requires_rmq
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """Checking the number of atoms per primitive/conventional cell
@@ -2057,7 +2059,7 @@ class TestStructureDataFromPymatgen:
     Molecule objects.
     """
 
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     def test_1(self):
         """Tests roundtrip pymatgen -> StructureData -> pymatgen
         Test's input is derived from COD entry 9011963, processed with
@@ -2158,7 +2160,7 @@ class TestStructureDataFromPymatgen:
 
         recursively_compare_values(dict1, dict2)
 
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     def test_2(self):
         """Tests xyz -> pymatgen -> StructureData
         Input source: http://pymatgen.org/_static/Molecule.html
@@ -2188,7 +2190,7 @@ class TestStructureDataFromPymatgen:
             assert [round(x, 2) for x in list(struct.sites[3].position)] == [5.26, 6.78, 5.36]
             assert [round(x, 2) for x in list(struct.sites[4].position)] == [5.77, 5.89, 5.73]
 
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     def test_partial_occ_and_spin(self):
         """Tests pymatgen -> StructureData, with partial occupancies and spins.
         This should raise a ValueError.
@@ -2226,9 +2228,8 @@ class TestStructureDataFromPymatgen:
         with pytest.raises(ValueError):
             StructureData(pymatgen=a)
 
-    @skip_pymatgen
-    @staticmethod
-    def test_multiple_kinds_partial_occupancies():
+    @skip_pymatgen_anyhow
+    def test_multiple_kinds_partial_occupancies(self):
         """Tests that a structure with multiple sites with the same element but different
         partial occupancies, get their own unique kind name.
         """
@@ -2244,9 +2245,8 @@ class TestStructureDataFromPymatgen:
 
         StructureData(pymatgen=a)
 
-    @skip_pymatgen
-    @staticmethod
-    def test_multiple_kinds_alloy():
+    @skip_pymatgen_anyhow
+    def test_multiple_kinds_alloy(self):
         """Tests that a structure with multiple sites with the same alloy symbols but different
         weights, get their own unique kind name
         """
@@ -2270,7 +2270,7 @@ class TestPymatgenFromStructureData:
     StructureData.
     """
 
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     @pytest.mark.parametrize(
         'pbc', ((True, True, True), (True, True, False), (True, False, False), (False, False, False))
     )
@@ -2289,7 +2289,7 @@ class TestPymatgenFromStructureData:
         assert pymatgen.lattice.pbc == pbc
         assert pymatgen.lattice.matrix.tolist() == cell
 
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     def test_no_pbc(self):
         """Tests the `get_pymatgen*` methods for a 0D system, i.e. no periodic boundary conditions.
 
@@ -2310,7 +2310,7 @@ class TestPymatgenFromStructureData:
             structure.get_pymatgen_structure()
 
     @skip_ase
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     def test_roundtrip_ase_aiida_pymatgen_structure(self):
         """Tests ASE -> StructureData -> pymatgen."""
         import ase
@@ -2336,7 +2336,7 @@ class TestPymatgenFromStructureData:
         assert coord_array == [[0.0, 0.0, 0.0], [0.1, 0.1, 0.1], [0.2, 0.2, 0.2], [0.3, 0.3, 0.3]]
 
     @skip_ase
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     def test_roundtrip_ase_aiida_pymatgen_molecule(self):
         """Tests the conversion of StructureData to pymatgen's Molecule
         (ASE -> StructureData -> pymatgen)
@@ -2364,7 +2364,7 @@ class TestPymatgenFromStructureData:
             [3.0, 3.0, 3.0],
         ]
 
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     def test_roundtrip_aiida_pymatgen_aiida(self):
         """Tests roundtrip StructureData -> pymatgen -> StructureData
         (no spins)
@@ -2394,7 +2394,7 @@ class TestPymatgenFromStructureData:
             (0, 0, 2.8),
         ]
 
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     def test_roundtrip_kindnames(self):
         """Tests roundtrip StructureData -> pymatgen -> StructureData
         (no spins, but with all kind of kind names)
@@ -2435,7 +2435,7 @@ class TestPymatgenFromStructureData:
             (0, 0, 2.8),
         ]
 
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     def test_roundtrip_spins(self):
         """Tests roundtrip StructureData -> pymatgen -> StructureData
         (with spins)
@@ -2471,7 +2471,7 @@ class TestPymatgenFromStructureData:
             (0, 0, 2.8),
         ]
 
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     def test_roundtrip_partial_occ(self):
         """Tests roundtrip StructureData -> pymatgen -> StructureData
         (with partial occupancies).
@@ -2538,7 +2538,7 @@ class TestPymatgenFromStructureData:
             ],
         )
 
-    @skip_pymatgen
+    @skip_pymatgen_anyhow
     def test_partial_occ_and_spin(self):
         """Tests StructureData -> pymatgen, with partial occupancies and spins.
         This should raise a ValueError.

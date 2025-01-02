@@ -3,8 +3,8 @@
 import datetime
 import math
 
+from aiida.orm.nodes.data.structure import has_pymatgen
 import pytest
-from pymatgen.core.structure import Molecule
 
 from aiida.orm import load_node
 from aiida.orm.nodes.data.jsonable import JsonableData
@@ -113,8 +113,14 @@ def test_obj():
         assert left == right
 
 
+skip_pymatgen_anyhow = pytest.mark.skipif(not has_pymatgen(), reason='Unable to import pymatgen')
+
+
+@skip_pymatgen_anyhow
 def test_unimportable_module():
     """Test the ``JsonableData.obj`` property if the associated module cannot be loaded."""
+    from pymatgen.core.structure import Molecule
+
     obj = Molecule(['H'], [[0, 0, 0]])
     node = JsonableData(obj)
 
@@ -128,8 +134,11 @@ def test_unimportable_module():
         _ = loaded.obj
 
 
+@skip_pymatgen_anyhow
 def test_unimportable_class():
     """Test the ``JsonableData.obj`` property if the associated class cannot be loaded."""
+    from pymatgen.core.structure import Molecule
+
     obj = Molecule(['H'], [[0, 0, 0]])
     node = JsonableData(obj)
 
@@ -143,8 +152,11 @@ def test_unimportable_class():
         _ = loaded.obj
 
 
+@skip_pymatgen_anyhow
 def test_msonable():
     """Test that an ``MSONAble`` object can be wrapped, stored and loaded again."""
+    from pymatgen.core.structure import Molecule
+
     obj = Molecule(['H'], [[0, 0, 0]])
     node = JsonableData(obj)
     node.store()

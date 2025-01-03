@@ -103,9 +103,7 @@ def has_pymatgen():
 
 
 def has_atomistic() -> bool:
-    """:return: True if the StructureData and StructureDataMutable from
-    aiida-atomistic module can be imported, False otherwise.
-    """
+    """:return: True if theaiida-atomistic module can be imported, False otherwise."""
     try:
         import aiida_atomistic  # noqa: F401
     except ImportError:

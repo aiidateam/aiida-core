@@ -70,9 +70,13 @@ jobs:
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-      # Python 3.12 has a performance regression when running with code coverage
+      # NOTE1: Python 3.12 has a performance regression when running with code coverage
       # so run code coverage only for python 3.9.
-      run: uv run pytest -n auto --db-backend psql -m 'not nightly' tests/ ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
+      # NOTE2: Unset CI envvar to workaround a pymatgen issue for Python 3.9
+      # https://github.com/materialsproject/pymatgen/issues/4243
+      run: |
+        ${{ matrix.python-version == '3.9' && 'unset CI' || '' }}
+        pytest -n auto --db-backend psql -m 'not nightly' tests/ ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
 
     - name: Upload coverage report
       if: matrix.python-version == 3.9 && github.repository == 'aiidateam/aiida-core'

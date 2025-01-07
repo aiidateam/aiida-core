@@ -211,4 +211,8 @@ jobs:
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-      run: pytest -n auto --db-backend psql tests -m 'not nightly' tests/
+      # Unset CI envvar to workaround a pymatgen issue for Python 3.9
+      # https://github.com/materialsproject/pymatgen/issues/4243
+      run: |
+        ${{ matrix.python-version == '3.9' && 'unset CI' || '' }}
+        pytest -n auto --db-backend psql tests -m 'not nightly' tests/

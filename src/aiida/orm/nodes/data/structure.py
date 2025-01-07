@@ -94,6 +94,13 @@ def has_ase():
 
 
 def has_pymatgen():
+    from monty.dev import deprecated
+
+    def noop(*args, **kwargs):
+        pass
+
+    deprecated.raise_deadline_warning = noop
+
     """:return: True if the pymatgen module can be imported, False otherwise."""
     try:
         import pymatgen  # noqa: F401

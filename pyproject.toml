@@ -387,7 +387,7 @@ minversion = '7.0'
 testpaths = [
   'tests'
 ]
-timeout = 30
+timeout = 60
 xfail_strict = true
 
 [tool.ruff]

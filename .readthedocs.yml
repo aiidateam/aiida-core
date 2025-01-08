@@ -22,12 +22,10 @@ build:
     create_environment:
     - uv venv
     install:
-    - uv pip install .[docs,tests,rest,atomic_tools]
-
-# Let the build fail if there are any warnings
-sphinx:
-  builder: html
-  fail_on_warning: true
+    - uv sync --extra docs --extra tests --extra rest --extra atomic_tools
+    build:
+      html:
+      - uv run sphinx-build -T -W --keep-going -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
 
 search:
   ranking:

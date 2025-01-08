@@ -191,12 +191,13 @@ repos:
   - id: check-uv-lock
     name: Check uv lockfile up to date
     # NOTE: This will not automatically update the lockfile
-    entry: uv lock --locked
+    entry: uv lock --check
     language: system
     pass_filenames: false
     files: >-
       (?x)^(
         pyproject.toml|
+        uv.lock|
       )$
 
   - id: generate-conda-environment

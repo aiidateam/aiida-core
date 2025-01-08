@@ -7,8 +7,10 @@ inputs:
     default: '3.9'              # Lowest supported version
     required: false
   extras:
-    description: aiida-core extras (including brackets)
-    default: ''
+    description: list of optional dependencies
+    # NOTE: The default 'pre-commit' extra recursively contains
+    # other extras needed to run the tests.
+    default: pre-commit
     required: false
   # NOTE: Hard-learned lesson: we cannot use type=boolean here, apparently :-(
   # https://stackoverflow.com/a/76294014
@@ -16,7 +18,7 @@ inputs:
   # are installed in a virtual environment located in .venv directory.
   # Subsuquent jobs steps must either activate the environment or use `uv run`
   from-lock:
-    description: Install aiida-core dependencies from a uv lock file
+    description: Install aiida-core dependencies from uv lock file
     default: 'true'
     required: false
 
@@ -29,19 +31,18 @@ runs:
       python-version: ${{ inputs.python-version }}
 
   - name: Set up uv
-    uses: astral-sh/setup-uv@v4
+    uses: astral-sh/setup-uv@v5
     with:
-      version: 0.5.6
+      version: 0.5.x
+      python-version: ${{ inputs.python-version }}
 
   - name: Install dependencies from uv lock
     if: ${{ inputs.from-lock == 'true' }}
     # NOTE: We're asserting that the lockfile is up to date
-    # NOTE2: 'pre-commit' extra recursively contains other extras
-    # needed to run the tests.
-    run: uv sync --locked --extra pre-commit
+    run: uv sync --locked ${{ inputs.extras && format('--extra {0}', inputs.extras) || '' }}
     shell: bash
 
   - name: Install aiida-core
     if: ${{ inputs.from-lock != 'true' }}
-    run: uv pip install --system -e .${{ inputs.extras }}
+    run: uv pip install -e .${{ inputs.extras }}
     shell: bash

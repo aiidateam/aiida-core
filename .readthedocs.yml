@@ -15,12 +15,14 @@ build:
   jobs:
     # Use uv to speed up the build
     # https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-uv
-    post_create_environment:
+    pre_create_environment:
     - asdf plugin add uv
-    - asdf install uv 0.2.9
-    - asdf global uv 0.2.9
-    post_install:
-    - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install .[docs,tests,rest,atomic_tools]
+    - asdf install uv 0.5.16
+    - asdf global uv 0.5.16
+    create_environment:
+    - uv venv
+    install:
+    - uv pip install .[docs,tests,rest,atomic_tools]
 
 # Let the build fail if there are any warnings
 sphinx:

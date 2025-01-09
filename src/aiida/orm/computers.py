@@ -622,7 +622,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             # Return False if the user is not configured (in a sense, it is disabled for that user)
             return False
 
-    def get_transport(self, user: Optional['User'] = None) -> Union['Transport', 'AsyncTransport']:
+    def get_transport(self, user: Optional['User'] = None) -> 'Transport':
         """Return a Transport class, configured with all correct parameters.
         The Transport is closed (meaning that if you want to run any operation with
         it, you have to open it first (i.e., e.g. for a SSH transport, you have

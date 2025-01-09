@@ -35,7 +35,7 @@ from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
 
 if TYPE_CHECKING:
-    from aiida.transports import AsyncTransport, Transport
+    from aiida.transports import Transport
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
@@ -64,7 +64,7 @@ def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
 
 async def upload_calculation(
     node: CalcJobNode,
-    transport: Union['Transport', 'AsyncTransport'],
+    transport: Transport,
     calc_info: CalcInfo,
     folder: Folder,
     inputs: Optional[MappingType[str, Any]] = None,
@@ -393,7 +393,7 @@ async def _copy_sandbox_files(logger, node, transport, folder, workdir: Path):
         await transport.put_async(folder.get_abs_path(filename), workdir.joinpath(filename))
 
 
-def submit_calculation(calculation: CalcJobNode, transport: Union['Transport', 'AsyncTransport']) -> str | ExitCode:
+def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
@@ -423,7 +423,7 @@ def submit_calculation(calculation: CalcJobNode, transport: Union['Transport', '
     return result
 
 
-async def stash_calculation(calculation: CalcJobNode, transport: Union['Transport', 'AsyncTransport']) -> None:
+async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     """Stash files from the working directory of a completed calculation to a permanent remote folder.
 
     After a calculation has been completed, optionally stash files from the work directory to a storage location on the
@@ -489,7 +489,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Union['Transpor
 
 
 async def retrieve_calculation(
-    calculation: CalcJobNode, transport: Union['Transport', 'AsyncTransport'], retrieved_temporary_folder: str
+    calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str
 ) -> FolderData | None:
     """Retrieve all the files of a completed job calculation using the given transport.
 
@@ -554,7 +554,7 @@ async def retrieve_calculation(
     return retrieved_files
 
 
-def kill_calculation(calculation: CalcJobNode, transport: Union['Transport', 'AsyncTransport']) -> None:
+def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     """Kill the calculation through the scheduler
 
     :param calculation: the instance of CalcJobNode to kill.
@@ -589,7 +589,7 @@ def kill_calculation(calculation: CalcJobNode, transport: Union['Transport', 'As
 
 async def retrieve_files_from_list(
     calculation: CalcJobNode,
-    transport: Union['Transport', 'AsyncTransport'],
+    transport: Transport,
     folder: str,
     retrieve_list: List[Union[str, Tuple[str, str, int], list]],
 ) -> None:

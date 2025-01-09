@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from aiida.parsers import Parser
     from aiida.schedulers.datastructures import JobInfo, JobState
     from aiida.tools.calculations import CalculationTools
-    from aiida.transports import AsyncTransport, Transport
+    from aiida.transports import Transport
 
 __all__ = ('CalcJobNode',)
 
@@ -450,10 +450,10 @@ class CalcJobNode(CalculationNode):
 
         return computer.get_authinfo(self.user)
 
-    def get_transport(self) -> Union['Transport', 'AsyncTransport']:
+    def get_transport(self) -> 'Transport':
         """Return the transport for this calculation.
 
-        :return: Union['Transport', 'AsyncTransport'] configured
+        :return: Transport configured
             with the `AuthInfo` associated to the computer of this node
         """
         return self.get_authinfo().get_transport()

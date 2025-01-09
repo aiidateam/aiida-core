@@ -21,7 +21,7 @@ from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
 from aiida.common.warnings import warn_deprecation
 
-from ..transport import Transport, TransportInternalError, TransportPath, path_to_str
+from ..transport import BlockingTransport, TransportInternalError, TransportPath, path_to_str
 
 __all__ = ('SshTransport', 'convert_to_bool', 'parse_sshconfig')
 
@@ -62,7 +62,7 @@ def convert_to_bool(string):
     raise ValueError('Invalid boolean value provided')
 
 
-class SshTransport(Transport):
+class SshTransport(BlockingTransport):
     """Support connection, command execution and data transfer to remote computers via SSH+SFTP."""
 
     # Valid keywords accepted by the connect method of paramiko.SSHClient

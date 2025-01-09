@@ -422,7 +422,7 @@ def TransportFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
 def TransportFactory(
     entry_point_name: str, load: bool = True
 ) -> Union[EntryPoint, Type['Transport'], Type['AsyncTransport']]:
-    """Return the Union['Transport', 'AsyncTransport'] sub class registered under the given entry point.
+    """Return the Transport sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.

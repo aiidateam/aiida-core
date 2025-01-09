@@ -13,7 +13,7 @@ import asyncio
 import glob
 import os
 from pathlib import Path, PurePath
-from typing import Optional, Union
+from typing import Optional
 
 import asyncssh
 import click
@@ -175,6 +175,9 @@ class AsyncSshTransport(AsyncTransport):
         self._conn.close()
         await self._conn.wait_closed()
         self._is_open = False
+
+    def chown(self, path, uid, gid):
+        raise NotImplementedError
 
     def __str__(self):
         return f"{'OPEN' if self._is_open else 'CLOSED'} [AsyncSshTransport]"
@@ -1199,7 +1202,7 @@ class AsyncSshTransport(AsyncTransport):
 
     async def copy_from_remote_to_remote_async(
         self,
-        transportdestination: Union['Transport', 'AsyncTransport'],
+        transportdestination: Transport,
         remotesource: TransportPath,
         remotedestination: TransportPath,
         **kwargs,

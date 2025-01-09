@@ -8,7 +8,7 @@
 ###########################################################################
 """Module for the `AuthInfo` ORM class."""
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.common import exceptions
 from aiida.manage import get_manager
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from aiida.orm import Computer, User
     from aiida.orm.implementation import StorageBackend
     from aiida.orm.implementation.authinfos import BackendAuthInfo  # noqa: F401
-    from aiida.transports import AsyncTransport, Transport
+    from aiida.transports import Transport
 
 __all__ = ('AuthInfo',)
 
@@ -166,7 +166,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         except KeyError:
             return self.computer.get_workdir()
 
-    def get_transport(self) -> Union['Transport', 'AsyncTransport']:
+    def get_transport(self) -> 'Transport':
         """Return a fully configured transport that can be used to connect to the computer set for this instance."""
         computer = self.computer
         transport_type = computer.transport_type

@@ -7,7 +7,7 @@ import pytest
 from aiida.manage.configuration import get_config
 from aiida.manage.configuration.config import Config
 from aiida.orm import Computer
-from aiida.transports import AsyncTransport, Transport
+from aiida.transports import AsyncTransport, BlockingTransport
 
 
 def test_profile_config():
@@ -30,7 +30,7 @@ def test_aiida_computer_local(aiida_computer_local):
     assert computer.transport_type == 'core.local'
 
     with computer.get_transport() as transport:
-        assert isinstance(transport, Transport)
+        assert isinstance(transport, BlockingTransport)
 
     # Calling it again with the same label should simply return the existing computer
     computer_alt = aiida_computer_local(label=computer.label)
@@ -53,7 +53,7 @@ def test_aiida_computer_ssh(aiida_computer_ssh):
     assert computer.transport_type == 'core.ssh'
 
     with computer.get_transport() as transport:
-        assert isinstance(transport, Transport)
+        assert isinstance(transport, BlockingTransport)
 
     # Calling it again with the same label should simply return the existing computer
     computer_alt = aiida_computer_ssh(label=computer.label)

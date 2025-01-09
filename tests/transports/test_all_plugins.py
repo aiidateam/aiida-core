@@ -19,13 +19,12 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Union
 
 import psutil
 import pytest
 
 from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
-from aiida.transports import AsyncTransport, Transport
+from aiida.transports import Transport
 
 # TODO : test for copy with pattern
 # TODO : test for copy with/without patterns, overwriting folder
@@ -50,7 +49,7 @@ def tmp_path_local(tmp_path_factory):
     scope='function',
     params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
 )
-def custom_transport(request, tmp_path_factory, monkeypatch) -> Union['Transport', 'AsyncTransport']:
+def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
     plugin = TransportFactory(request.param)
 

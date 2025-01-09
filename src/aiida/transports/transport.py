@@ -16,13 +16,13 @@ import re
 import sys
 from collections import OrderedDict
 from pathlib import Path, PurePosixPath
-from typing import Optional, Union
+from typing import Optional, Self, Union
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
 
-__all__ = ('AsyncTransport', 'Transport', 'TransportPath')
+__all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
 TransportPath = Union[str, Path, PurePosixPath]
 
@@ -49,7 +49,7 @@ def path_to_str(path: TransportPath) -> str:
     return str(path)
 
 
-class _BaseTransport:
+class Transport(abc.ABC):
     """Abstract class for a generic blocking transport.
     A plugin inhereting from this class should implement the blocking methods, only."""
 
@@ -58,10 +58,15 @@ class _BaseTransport:
 
     # This is used as a global default in case subclasses don't redefine this,
     # but this should  be redefined in plugins where appropriate
-    _DEFAULT_SAFE_OPEN_INTERVAL = 3.0
+    _DEFAULT_SAFE_OPEN_INTERVAL = 30.0
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
+    # This will be used for connection authentication
+    # To be defined in the subclass, the format is a list of tuples
+    # where the first element is the name of the parameter and the second
+    # is a dictionary with the following
+    # keys: 'default', 'prompt', 'help', 'non_interactive_default'
     _valid_auth_params = None
     _MAGIC_CHECK = re.compile('[*?[]')
     _valid_auth_options: list = []
@@ -113,6 +118,13 @@ class _BaseTransport:
 
         # for accessing the identity of the underlying machine
         self.hostname = kwargs.get('machine')
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__}: {self!s}>'
+
+    @abc.abstractmethod
+    def __str__(self):
+        """return [Transport class or subclass]"""
 
     @abc.abstractmethod
     def open(self):
@@ -272,28 +284,7 @@ class _BaseTransport:
 
         return connect_string
 
-
-class Transport(abc.ABC, _BaseTransport):
-    """Abstract class for a generic blocking transport.
-    A plugin inhereting from this class should implement the blocking methods, only."""
-
-    # This will be used for connection authentication
-    # To be defined in the subclass, the format is a list of tuples
-    # where the first element is the name of the parameter and the second
-    # is a dictionary with the following
-    # keys: 'default', 'prompt', 'help', 'non_interactive_default'
-    _valid_auth_options = []
-
-    def __init__(self, *args, **kwargs):
-        # if __init__ is overridden in a subclass, it should always call the parent __init__
-        super().__init__(*args, **kwargs)
-
-    def __repr__(self):
-        return f'<{self.__class__.__name__}: {self!s}>'
-
-    @abc.abstractmethod
-    def __str__(self):
-        """return [Transport class or subclass]"""
+    ## Blocking abstract methods
 
     @abc.abstractmethod
     def chmod(self, path: TransportPath, mode):
@@ -372,10 +363,10 @@ class Transport(abc.ABC, _BaseTransport):
         :raise OSError: if one of src or dst does not exist
         """
 
-    ## non-abtract methods. Plugin developers can safely ingore developing these methods
+    ## non-abtract methods. Plugin developers can safely ignore developing these methods
     def copy_from_remote_to_remote(
         self,
-        transportdestination: Union['Transport', 'AsyncTransport'],
+        transportdestination: Self,
         remotesource: TransportPath,
         remotedestination: TransportPath,
         **kwargs,
@@ -547,7 +538,6 @@ class Transport(abc.ABC, _BaseTransport):
         :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
-    @abc.abstractmethod
     def getcwd(self):
         """
         DEPRECATED: This method is deprecated and should be removed in the next major version.
@@ -814,6 +804,9 @@ class Transport(abc.ABC, _BaseTransport):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
+        NOTE: This method is not async, and need not to be,
+            as it's eventually used for interactive shell commands.
+
         Expected behaviors:
 
         * A new bash session is opened
@@ -958,162 +951,7 @@ class Transport(abc.ABC, _BaseTransport):
             return [basename]
         return []
 
-    ## Here we bring the async counterparts of the methods.
-    ## This is done by defining new methods that calls the sync method and awaits.
     ## aiida-core engine is ultimately moving towards async, so this is a step in that direction.
-    ## To keep backward compatibility, the sync methods are kept as they are.
-
-    async def open_async(self):
-        """Counterpart to open() that is async."""
-        return self.open()
-
-    async def close_async(self):
-        """Counterpart to close() that is async."""
-        return self.close()
-
-    async def chmod_async(self, path, mode):
-        """Counterpart to chmod() that is async."""
-        return self.chmod(path, mode)
-
-    async def chown_async(self, path, uid, gid):
-        """Counterpart to chown() that is async."""
-        return self.chown(path, uid, gid)
-
-    async def copy_async(self, remotesource, remotedestination, dereference=False, recursive=True):
-        """Counterpart to copy() that is async."""
-        return self.copy(remotesource, remotedestination, dereference, recursive)
-
-    async def copyfile_async(self, remotesource, remotedestination, dereference=False):
-        """Counterpart to copyfile() that is async."""
-        return self.copyfile(remotesource, remotedestination, dereference)
-
-    async def copytree_async(self, remotesource, remotedestination, dereference=False):
-        """Counterpart to copytree() that is async."""
-        return self.copytree(remotesource, remotedestination, dereference)
-
-    async def copy_from_remote_to_remote_async(self, transportdestination, remotesource, remotedestination, **kwargs):
-        """Counterpart to copy_from_remote_to_remote()."""
-        return self.copy_from_remote_to_remote(transportdestination, remotesource, remotedestination, **kwargs)
-
-    async def exec_command_internal_async(self, command, workdir=None, **kwargs):
-        """Counterpart to _exec_command_internal() that is async."""
-        return self._exec_command_internal(command, workdir, **kwargs)
-
-    async def exec_command_wait_bytes_async(self, command, stdin=None, workdir=None, **kwargs):
-        """Counterpart to exec_command_wait_bytes() that is async."""
-        return self.exec_command_wait_bytes(command, stdin, workdir, **kwargs)
-
-    async def exec_command_wait_async(self, command, stdin=None, encoding='utf-8', workdir=None, **kwargs):
-        """Counterpart to exec_command_wait() that is async."""
-        return self.exec_command_wait(command, stdin, encoding, workdir, **kwargs)
-
-    async def get_async(self, remotepath, localpath, *args, **kwargs):
-        """Counterpart to get() that is async."""
-        return self.get(remotepath, localpath, *args, **kwargs)
-
-    async def getfile_async(self, remotepath, localpath, *args, **kwargs):
-        """Counterpart to getfile() that is async."""
-        return self.getfile(remotepath, localpath, *args, **kwargs)
-
-    async def gettree_async(self, remotepath, localpath, *args, **kwargs):
-        """Counterpart to gettree() that is async."""
-        return self.gettree(remotepath, localpath, *args, **kwargs)
-
-    async def get_attribute_async(self, path):
-        """Counterpart to get_attribute() that is async."""
-        return self.get_attribute(path)
-
-    async def get_mode_async(self, path):
-        """Counterpart to get_mode() that is async."""
-        return self.get_mode(path)
-
-    async def isdir_async(self, path):
-        """Counterpart to isdir() that is async."""
-        return self.isdir(path)
-
-    async def isfile_async(self, path):
-        """Counterpart to isfile() that is async."""
-        return self.isfile(path)
-
-    async def listdir_async(self, path, pattern=None):
-        """Counterpart to listdir() that is async."""
-        return self.listdir(path, pattern)
-
-    async def listdir_withattributes_async(self, path: TransportPath, pattern=None):
-        """Counterpart to listdir_withattributes() that is async."""
-        return self.listdir_withattributes(path, pattern)
-
-    async def makedirs_async(self, path, ignore_existing=False):
-        """Counterpart to makedirs() that is async."""
-        return self.makedirs(path, ignore_existing)
-
-    async def mkdir_async(self, path, ignore_existing=False):
-        """Counterpart to mkdir() that is async."""
-        return self.mkdir(path, ignore_existing)
-
-    async def normalize_async(self, path):
-        """Counterpart to normalize() that is async."""
-        return self.normalize(path)
-
-    async def put_async(self, localpath, remotepath, *args, **kwargs):
-        """Counterpart to put() that is async."""
-        return self.put(localpath, remotepath, *args, **kwargs)
-
-    async def putfile_async(self, localpath, remotepath, *args, **kwargs):
-        """Counterpart to putfile() that is async."""
-        return self.putfile(localpath, remotepath, *args, **kwargs)
-
-    async def puttree_async(self, localpath, remotepath, *args, **kwargs):
-        """Counterpart to puttree() that is async."""
-        return self.puttree(localpath, remotepath, *args, **kwargs)
-
-    async def remove_async(self, path):
-        """Counterpart to remove() that is async."""
-        return self.remove(path)
-
-    async def rename_async(self, oldpath, newpath):
-        """Counterpart to rename() that is async."""
-        return self.rename(oldpath, newpath)
-
-    async def rmdir_async(self, path):
-        """Counterpart to rmdir() that is async."""
-        return self.rmdir(path)
-
-    async def rmtree_async(self, path):
-        """Counterpart to rmtree() that is async."""
-        return self.rmtree(path)
-
-    async def symlink_async(self, remotesource, remotedestination):
-        """Counterpart to symlink() that is async."""
-        return self.symlink(remotesource, remotedestination)
-
-    async def whoami_async(self):
-        """Counterpart to whoami() that is async."""
-        return self.whoami()
-
-    async def path_exists_async(self, path):
-        """Counterpart to path_exists() that is async."""
-        return self.path_exists(path)
-
-    async def glob_async(self, pathname):
-        """Counterpart to glob() that is async."""
-        return self.glob(pathname)
-
-
-class AsyncTransport(abc.ABC, _BaseTransport):
-    """An abstract base class for asynchronous transports.
-    All methods are asynchronous and should be implemented by subclasses.
-    avoid overriding the sync methods, as they are implemented for backward compatibility, only."""
-
-    # This will be used for connection authentication
-    # To be defined in the subclass, the format is a list of tuples
-    # where the first element is the name of the parameter and the second
-    # is a dictionary with the following
-    # keys: 'default', 'prompt', 'help', 'non_interactive_default'
-    _valid_auth_options = []
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     @abc.abstractmethod
     async def open_async(self):
@@ -1204,7 +1042,7 @@ class AsyncTransport(abc.ABC, _BaseTransport):
     @abc.abstractmethod
     async def copy_from_remote_to_remote_async(
         self,
-        transportdestination: Union['Transport', 'AsyncTransport'],
+        transportdestination: Self,
         remotesource: TransportPath,
         remotedestination: TransportPath,
         **kwargs,
@@ -1523,25 +1361,6 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         """
 
     @abc.abstractmethod
-    def gotocomputer_command(self, remotedir: TransportPath):
-        """Return a string to be run using os.system in order to connect
-        via the transport to the remote directory.
-
-        NOTE: This method is not async, abd need not to be,
-            as it's eventually used for interactive shell commands.
-
-        Expected behaviors:
-
-        * A new bash session is opened
-
-        * A reasonable error message is produced if the folder does not exist
-
-        :param remotedir: the full path of the remote directory
-
-        :type remotedir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
-        """
-
-    @abc.abstractmethod
     async def symlink_async(self, remotesource: TransportPath, remotedestination: TransportPath):
         """Create a symbolic link between the remote source and the remote destination.
 
@@ -1584,11 +1403,159 @@ class AsyncTransport(abc.ABC, _BaseTransport):
         :return: a list of paths matching the pattern.
         """
 
-    ## Blocking counterpart methods. We need these for backwards compatibility
-    # We need these methods, only because some part of codebase and
-    # many external plugins are synchronous, in those cases blocking calls make more sense.
-    # However, be aware you cannot use these methods in an async functions,
-    # because they will block the event loop.
+
+class BlockingTransport(Transport):
+    """Abstract class for a generic blocking transport.
+    A plugin inheriting from this class can safely ignore implementing async abstract methods.
+
+    Here we overwrite the async counterparts of the methods.
+    This is done by awaiting the sync methods.
+    """
+
+    async def open_async(self):
+        """Counterpart to open() that is async."""
+        return self.open()
+
+    async def close_async(self):
+        """Counterpart to close() that is async."""
+        return self.close()
+
+    async def chmod_async(self, path, mode):
+        """Counterpart to chmod() that is async."""
+        return self.chmod(path, mode)
+
+    async def chown_async(self, path, uid, gid):
+        """Counterpart to chown() that is async."""
+        return self.chown(path, uid, gid)
+
+    async def copy_async(self, remotesource, remotedestination, dereference=False, recursive=True):
+        """Counterpart to copy() that is async."""
+        return self.copy(remotesource, remotedestination, dereference, recursive)
+
+    async def copyfile_async(self, remotesource, remotedestination, dereference=False):
+        """Counterpart to copyfile() that is async."""
+        return self.copyfile(remotesource, remotedestination, dereference)
+
+    async def copytree_async(self, remotesource, remotedestination, dereference=False):
+        """Counterpart to copytree() that is async."""
+        return self.copytree(remotesource, remotedestination, dereference)
+
+    async def copy_from_remote_to_remote_async(self, transportdestination, remotesource, remotedestination, **kwargs):
+        """Counterpart to copy_from_remote_to_remote()."""
+        return self.copy_from_remote_to_remote(transportdestination, remotesource, remotedestination, **kwargs)
+
+    async def exec_command_internal_async(self, command, workdir=None, **kwargs):
+        """Counterpart to _exec_command_internal() that is async."""
+        return self._exec_command_internal(command, workdir, **kwargs)
+
+    async def exec_command_wait_bytes_async(self, command, stdin=None, workdir=None, **kwargs):
+        """Counterpart to exec_command_wait_bytes() that is async."""
+        return self.exec_command_wait_bytes(command, stdin, workdir, **kwargs)
+
+    async def exec_command_wait_async(self, command, stdin=None, encoding='utf-8', workdir=None, **kwargs):
+        """Counterpart to exec_command_wait() that is async."""
+        return self.exec_command_wait(command, stdin, encoding, workdir, **kwargs)
+
+    async def get_async(self, remotepath, localpath, *args, **kwargs):
+        """Counterpart to get() that is async."""
+        return self.get(remotepath, localpath, *args, **kwargs)
+
+    async def getfile_async(self, remotepath, localpath, *args, **kwargs):
+        """Counterpart to getfile() that is async."""
+        return self.getfile(remotepath, localpath, *args, **kwargs)
+
+    async def gettree_async(self, remotepath, localpath, *args, **kwargs):
+        """Counterpart to gettree() that is async."""
+        return self.gettree(remotepath, localpath, *args, **kwargs)
+
+    async def get_attribute_async(self, path):
+        """Counterpart to get_attribute() that is async."""
+        return self.get_attribute(path)
+
+    async def get_mode_async(self, path):
+        """Counterpart to get_mode() that is async."""
+        return self.get_mode(path)
+
+    async def isdir_async(self, path):
+        """Counterpart to isdir() that is async."""
+        return self.isdir(path)
+
+    async def isfile_async(self, path):
+        """Counterpart to isfile() that is async."""
+        return self.isfile(path)
+
+    async def listdir_async(self, path, pattern=None):
+        """Counterpart to listdir() that is async."""
+        return self.listdir(path, pattern)
+
+    async def listdir_withattributes_async(self, path: TransportPath, pattern=None):
+        """Counterpart to listdir_withattributes() that is async."""
+        return self.listdir_withattributes(path, pattern)
+
+    async def makedirs_async(self, path, ignore_existing=False):
+        """Counterpart to makedirs() that is async."""
+        return self.makedirs(path, ignore_existing)
+
+    async def mkdir_async(self, path, ignore_existing=False):
+        """Counterpart to mkdir() that is async."""
+        return self.mkdir(path, ignore_existing)
+
+    async def normalize_async(self, path):
+        """Counterpart to normalize() that is async."""
+        return self.normalize(path)
+
+    async def put_async(self, localpath, remotepath, *args, **kwargs):
+        """Counterpart to put() that is async."""
+        return self.put(localpath, remotepath, *args, **kwargs)
+
+    async def putfile_async(self, localpath, remotepath, *args, **kwargs):
+        """Counterpart to putfile() that is async."""
+        return self.putfile(localpath, remotepath, *args, **kwargs)
+
+    async def puttree_async(self, localpath, remotepath, *args, **kwargs):
+        """Counterpart to puttree() that is async."""
+        return self.puttree(localpath, remotepath, *args, **kwargs)
+
+    async def remove_async(self, path):
+        """Counterpart to remove() that is async."""
+        return self.remove(path)
+
+    async def rename_async(self, oldpath, newpath):
+        """Counterpart to rename() that is async."""
+        return self.rename(oldpath, newpath)
+
+    async def rmdir_async(self, path):
+        """Counterpart to rmdir() that is async."""
+        return self.rmdir(path)
+
+    async def rmtree_async(self, path):
+        """Counterpart to rmtree() that is async."""
+        return self.rmtree(path)
+
+    async def symlink_async(self, remotesource, remotedestination):
+        """Counterpart to symlink() that is async."""
+        return self.symlink(remotesource, remotedestination)
+
+    async def whoami_async(self):
+        """Counterpart to whoami() that is async."""
+        return self.whoami()
+
+    async def path_exists_async(self, path):
+        """Counterpart to path_exists() that is async."""
+        return self.path_exists(path)
+
+    async def glob_async(self, pathname):
+        """Counterpart to glob() that is async."""
+        return self.glob(pathname)
+
+
+class AsyncTransport(Transport):
+    """An abstract base class for asynchronous transports.
+    All asynchronous abstract methods of the parent class should be implemented by subclasses.
+    While blocking method can be safely ignored, as this class overwrites them.
+    However, be aware you cannot use the blocking methods in an async function,
+    because they will block the event loop.
+    """
 
     def run_command_blocking(self, func, *args, **kwargs):
         loop = asyncio.get_event_loop()
@@ -1635,6 +1602,12 @@ class AsyncTransport(abc.ABC, _BaseTransport):
 
     def exec_command_wait(self, *args, **kwargs):
         return self.run_command_blocking(self.exec_command_wait_async, *args, **kwargs)
+
+    def exec_command_wait_bytes(self, *args, **kwargs):
+        raise NotImplementedError('Use exec_command_wait instead')
+
+    def _exec_command_internal(self, *args, **kwargs):
+        raise NotImplementedError('Use exec_command_wait instead')
 
     def get_attribute(self, *args, **kwargs):
         return self.run_command_blocking(self.get_attribute_async, *args, **kwargs)

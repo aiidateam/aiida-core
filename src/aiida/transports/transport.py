@@ -16,7 +16,7 @@ import re
 import sys
 from collections import OrderedDict
 from pathlib import Path, PurePosixPath
-from typing import Optional, Self, Union
+from typing import Optional, TypeVar, Union
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
@@ -24,6 +24,7 @@ from aiida.common.warnings import warn_deprecation
 
 __all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
+Self = TypeVar('Self', bound='Transport')
 TransportPath = Union[str, Path, PurePosixPath]
 
 

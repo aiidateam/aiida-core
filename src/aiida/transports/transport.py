@@ -16,7 +16,7 @@ import re
 import sys
 from collections import OrderedDict
 from pathlib import Path, PurePosixPath
-from typing import Optional, TypeVar, Union
+from typing import Optional, Union
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
@@ -24,7 +24,6 @@ from aiida.common.warnings import warn_deprecation
 
 __all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
-Self = TypeVar('Self', bound='Transport')
 TransportPath = Union[str, Path, PurePosixPath]
 
 
@@ -367,7 +366,7 @@ class Transport(abc.ABC):
     ## non-abtract methods. Plugin developers can safely ignore developing these methods
     def copy_from_remote_to_remote(
         self,
-        transportdestination: Self,
+        transportdestination: 'Transport',
         remotesource: TransportPath,
         remotedestination: TransportPath,
         **kwargs,
@@ -381,7 +380,6 @@ class Transport(abc.ABC):
             except for 'dereference' that is passed to self.get
 
         :type transportdestination: :class:`Transport <aiida.transports.transport.Transport>`,
-            or :class:`AsyncTransport <aiida.transports.transport.AsyncTransport>`
         :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
@@ -1043,7 +1041,7 @@ class Transport(abc.ABC):
     @abc.abstractmethod
     async def copy_from_remote_to_remote_async(
         self,
-        transportdestination: Self,
+        transportdestination: 'Transport',
         remotesource: TransportPath,
         remotedestination: TransportPath,
         **kwargs,
@@ -1056,8 +1054,7 @@ class Transport(abc.ABC):
         :param kwargs: keyword parameters passed to the call to transportdestination.put,
             except for 'dereference' that is passed to self.get
 
-        :type transportdestination: :class:`Transport <aiida.transports.transport.Transport>`,
-            or :class:`AsyncTransport <aiida.transports.transport.AsyncTransport>`
+        :type transportdestination: :class:`Transport <aiida.transports.transport.Transport>`
         :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """

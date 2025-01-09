@@ -1216,7 +1216,6 @@ class AsyncSshTransport(AsyncTransport):
             except for 'dereference' that is passed to self.get
 
         :type transportdestination: :class:`Transport <aiida.transports.transport.Transport>`,
-            or :class:`AsyncTransport <aiida.transports.transport.AsyncTransport>`
         :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 

@@ -27,7 +27,7 @@ jobs:
   nightly-tests:
 
     if: github.repository == 'aiidateam/aiida-core'      # Prevent running the builds on forks as well
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       postgres:
@@ -95,7 +95,7 @@ jobs:
   # Run a subset of test suite to ensure compatibility with latest RabbitMQ releases
   rabbitmq-tests:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
 
     strategy:

@@ -141,3 +141,11 @@ jobs:
         verdi devel check-load-time
         verdi devel check-undesired-imports
         .github/workflows/verdi.sh
+
+  test-du:
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+    - name: Install aiida-core
+      run: which du && du -sm

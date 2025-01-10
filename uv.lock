@@ -1,12 +1,18 @@
 version = 1
 requires-python = ">=3.9"
 resolution-markers = [
-    "python_full_version >= '3.12' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.10.*' and sys_platform == 'win32'",
-    "python_full_version >= '3.12' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform != 'win32'",
     "python_full_version < '3.10'",
 ]
 
@@ -538,7 +544,7 @@ name = "blessed"
 version = "1.20.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "jinxed", marker = "sys_platform == 'win32'" },
+    { name = "jinxed", marker = "platform_system == 'Windows'" },
     { name = "six" },
     { name = "wcwidth" },
 ]
@@ -752,7 +758,7 @@ name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "platform_system == 'Windows'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/0090cbf739cee7d23781ad4b89a9894a41538e4fcf4c31dcdd705b78eb8b/click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a", size = 226593 }
 wheels = [
@@ -872,12 +878,18 @@ name = "contourpy"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.12' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.10.*' and sys_platform == 'win32'",
-    "python_full_version >= '3.12' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "numpy", marker = "python_full_version >= '3.10'" },
@@ -1576,7 +1588,7 @@ name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "appnope", marker = "sys_platform == 'darwin'" },
+    { name = "appnope", marker = "(python_full_version < '3.10' and platform_system == 'Darwin') or (platform_system == 'Darwin' and sys_platform != 'win32')" },
     { name = "comm" },
     { name = "debugpy" },
     { name = "ipython", version = "8.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -1626,12 +1638,18 @@ name = "ipython"
 version = "8.31.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.12' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.10.*' and sys_platform == 'win32'",
-    "python_full_version >= '3.12' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "colorama", marker = "python_full_version >= '3.10' and sys_platform == 'win32'" },
@@ -1727,7 +1745,7 @@ name = "jinxed"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ansicon", marker = "sys_platform == 'win32'" },
+    { name = "ansicon", marker = "platform_system == 'Windows'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/20/d0/59b2b80e7a52d255f9e0ad040d2e826342d05580c4b1d7d7747cfb8db731/jinxed-1.3.0.tar.gz", hash = "sha256:1593124b18a41b7a3da3b078471442e51dbad3d77b4d4f2b0c26ab6f7d660dbf", size = 80981 }
 wheels = [
@@ -2153,12 +2171,18 @@ name = "kiwisolver"
 version = "1.4.8"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.12' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.10.*' and sys_platform == 'win32'",
-    "python_full_version >= '3.12' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform != 'win32'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/82/59/7c91426a8ac292e1cdd53a63b6d9439abd573c875c3f92c146767dd33faf/kiwisolver-1.4.8.tar.gz", hash = "sha256:23d5f023bdc8c7e54eb65f03ca5d5bb25b601eac4d7f1a042888a1f45237987e", size = 97538 }
 wheels = [
@@ -2432,12 +2456,18 @@ name = "matplotlib"
 version = "3.10.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.12' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.10.*' and sys_platform == 'win32'",
-    "python_full_version >= '3.12' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "contourpy", version = "1.3.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -2553,12 +2583,18 @@ name = "monty"
 version = "2025.1.3"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.12' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.10.*' and sys_platform == 'win32'",
-    "python_full_version >= '3.12' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "numpy", marker = "python_full_version >= '3.10'" },
@@ -2761,12 +2797,18 @@ name = "myst-parser"
 version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.12' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.10.*' and sys_platform == 'win32'",
-    "python_full_version >= '3.12' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "docutils", marker = "python_full_version >= '3.10'" },
@@ -2878,12 +2920,18 @@ name = "networkx"
 version = "3.4.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.12' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.10.*' and sys_platform == 'win32'",
-    "python_full_version >= '3.12' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform != 'win32'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fd/1d/06475e1cd5264c0b870ea2cc6fdb3e37177c1e565c43f56ff17a10e3937f/networkx-3.4.2.tar.gz", hash = "sha256:307c3669428c5362aab27c8a1260aa8f47c4e91d3891f48be0141738d8d053e1", size = 2151368 }
 wheels = [
@@ -3109,7 +3157,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess" },
+    { name = "ptyprocess", marker = "python_full_version < '3.10' or sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450 }
 wheels = [
@@ -3767,12 +3815,18 @@ name = "pymatgen"
 version = "2024.11.13"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.12' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.10.*' and sys_platform == 'win32'",
-    "python_full_version >= '3.12' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "joblib", marker = "python_full_version >= '3.10'" },
@@ -3814,7 +3868,7 @@ name = "pympler"
 version = "1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pywin32", marker = "sys_platform == 'win32'" },
+    { name = "pywin32", marker = "platform_system == 'Windows'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/dd/37/c384631908029676d8e7213dd956bb686af303a80db7afbc9be36bc49495/pympler-1.1.tar.gz", hash = "sha256:1eaa867cb8992c218430f1708fdaccda53df064144d1c5656b1e6f1ee6000424", size = 179954 }
 wheels = [
@@ -4490,12 +4544,18 @@ name = "scipy"
 version = "1.15.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.12' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.10.*' and sys_platform == 'win32'",
-    "python_full_version >= '3.12' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and platform_system != 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system == 'Windows' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and platform_system != 'Windows' and sys_platform != 'win32'",
 ]
 dependencies = [
     { name = "numpy", marker = "python_full_version >= '3.10'" },
@@ -5028,7 +5088,7 @@ name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "platform_system == 'Windows'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737 }
 wheels = [

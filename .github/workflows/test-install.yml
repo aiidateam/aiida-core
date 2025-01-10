@@ -218,4 +218,4 @@ jobs:
       run: |
         ${{ matrix.python-version == '3.9' && 'unset CI' || '' }}
         ${{ matrix.python-version == '3.9' && 'VIRTUAL_ENV=$PWD/.venv' || '' }}
-        pytest -n auto --db-backend psql tests -m 'not nightly' tests/
+        pytest -n auto --db-backend psql -m 'not nightly' tests/

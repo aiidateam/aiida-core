@@ -27,6 +27,10 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ['3.9', '3.12']
+        database-backend: [psql]
+        include:
+        - python-version: '3.9'
+          database-backend: sqlite
 
     services:
       postgres:
@@ -64,16 +68,22 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Setup environment
-      # Note: The virtual environment in .venv was created by uv in previous step
-      run: source .venv/bin/activate && .github/workflows/setup.sh
+      run: .github/workflows/setup.sh
 
     - name: Run test suite
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-      # Python 3.12 has a performance regression when running with code coverage
+      # NOTE1: Python 3.12 has a performance regression when running with code coverage
       # so run code coverage only for python 3.9.
-      run: uv run pytest -n auto --db-backend psql -m 'not nightly' tests/ ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
+      # NOTE2: Unset CI envvar to workaround a pymatgen issue for Python 3.9
+      # https://github.com/materialsproject/pymatgen/issues/4243
+      # TODO: Remove a workaround for VIRTUAL_ENV once the setup-uv action is updated
+      # https://github.com/astral-sh/setup-uv/issues/219
+      run: |
+        ${{ matrix.python-version == '3.9' && 'unset CI' || '' }}
+        ${{ matrix.python-version == '3.9' && 'VIRTUAL_ENV=$PWD/.venv' || '' }}
+        pytest -n auto --db-backend ${{ matrix.database-backend }} -m 'not nightly' tests/ ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
 
     - name: Upload coverage report
       if: matrix.python-version == 3.9 && github.repository == 'aiidateam/aiida-core'
@@ -83,7 +93,6 @@ jobs:
         name: aiida-pytests-py3.9
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
-
 
   tests-presto:
 
@@ -122,7 +131,10 @@ jobs:
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.12'
-        from-lock: 'false'
+        from-lock: 'true'
+        # NOTE: The `verdi devel check-undesired-imports` fails if
+        # the 'tui' extra is installed.
+        extras: ''
 
     - name: Run verdi tests
       run: |

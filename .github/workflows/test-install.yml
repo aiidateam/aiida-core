@@ -11,6 +11,9 @@ on:
   schedule:
   - cron: 30 02 * * *      # nightly build
 
+env:
+  FORCE_COLOR: 1
+
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
   # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
@@ -32,18 +35,18 @@ jobs:
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.11'
 
     - name: Set up uv
-      uses: astral-sh/setup-uv@v4
+      uses: astral-sh/setup-uv@v5
       with:
-        version: 0.5.6
+        version: 0.5.x
 
     - name: Install utils/ dependencies
       run: uv pip install --system -r utils/requirements.txt
 
     - name: Validate uv lockfile
-      run: uv lock --locked
+      run: uv lock --check
 
     - name: Validate conda environment file
       run: python ./utils/dependency_management.py validate-environment-yml
@@ -208,4 +211,11 @@ jobs:
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-      run: pytest -n auto --db-backend psql tests -m 'not nightly' tests/
+      # Unset CI envvar to workaround a pymatgen issue for Python 3.9
+      # https://github.com/materialsproject/pymatgen/issues/4243
+      # TODO: Remove a workaround for VIRTUAL_ENV once the setup-uv action is updated
+      # https://github.com/astral-sh/setup-uv/issues/219
+      run: |
+        ${{ matrix.python-version == '3.9' && 'unset CI' || '' }}
+        ${{ matrix.python-version == '3.9' && 'VIRTUAL_ENV=$PWD/.venv' || '' }}
+        pytest -n auto --db-backend psql -m 'not nightly' tests/

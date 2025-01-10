@@ -2,7 +2,7 @@ ci:
   autofix_prs: true
   autoupdate_commit_msg: 'Devops: Update pre-commit dependencies'
   autoupdate_schedule: quarterly
-  skip: [mypy, check-uv-lock, generate-conda-environment, validate-conda-environment, verdi-autodocs]
+  skip: [mypy, generate-conda-environment, validate-conda-environment, verdi-autodocs]
 
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -55,6 +55,12 @@ repos:
         tests/.*|
         environment.yml|
       )$
+
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: 0.5.20
+  hooks:
+    # Check and update the uv lockfile
+  - id: uv-lock
 
 - repo: local
 
@@ -185,18 +191,6 @@ repos:
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|
         src/aiida/workflows/arithmetic/multiply_add.py|
-      )$
-
-  - id: check-uv-lock
-    name: Check uv lockfile up to date
-    # NOTE: This will not automatically update the lockfile
-    entry: uv lock --check
-    language: system
-    pass_filenames: false
-    files: >-
-      (?x)^(
-        pyproject.toml|
-        uv.lock|
       )$
 
   - id: generate-conda-environment

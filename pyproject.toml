@@ -246,7 +246,6 @@ tests = [
   'pympler~=1.0',
   'coverage~=7.0',
   'sphinx~=7.2.0',
-  'watchdog~=6.0',
   'docutils~=0.20'
 ]
 tui = [

@@ -63,59 +63,7 @@ def started_daemon_client(daemon_client: DaemonClient):
         daemon_client.start_daemon()
         assert daemon_client.is_daemon_running
 
-    import threading
-    import time
-
-    from watchdog.events import FileSystemEventHandler
-
-    # XXX: watchdog and pytest-timeout as extra deps of tests
-    from watchdog.observers import Observer
-
-    logger = logging.getLogger('tests.daemon:started_daemon_client')
-
-    logger.debug(f'Daemon log file is located at: {daemon_client.daemon_log_file}')
-
-    # This flag will be used to stop the thread when the fixture is torn down
-    stop_thread = False
-
-    class LogFileEventHandler(FileSystemEventHandler):
-        def __init__(self, filepath):
-            self.filepath = filepath
-            # Keep track of how many bytes have been read so we print only new data
-            self._pos = 0
-
-        def on_modified(self, event):
-            if event.src_path == self.filepath:
-                # The file was modified, read from the last known position
-                with open(self.filepath, 'r') as f:
-                    f.seek(self._pos)
-                    new_output = f.read()
-                    if new_output:
-                        logger.debug(new_output)
-                        self._pos = f.tell()
-
-    def print_log_content(check_interval=0.1):
-        event_handler = LogFileEventHandler(daemon_client.daemon_log_file)
-        observer = Observer()
-        _ = observer.schedule(event_handler, str(pathlib.Path(daemon_client.daemon_log_file)), recursive=False)
-        observer.start()
-
-        try:
-            while not stop_thread:
-                time.sleep(check_interval)
-        finally:
-            observer.stop()
-            observer.join()
-
-    # Start a background thread to continuously print new log lines
-    t = threading.Thread(target=print_log_content, daemon=True)
-    t.start()
-
     yield daemon_client
-
-    # After the test finishes, signal the thread to stop and join it
-    stop_thread = True
-    t.join(timeout=5)
 
 
 @pytest.fixture

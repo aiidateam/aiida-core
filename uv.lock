@@ -200,7 +200,7 @@ requires-dist = [
     { name = "pg8000", marker = "extra == 'tests'", specifier = "~=1.13" },
     { name = "pgsu", specifier = "~=0.3.0" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3,>=1.3.1" },
-    { name = "plumpy", git = "https://github.com/unkcpz/plumpy?branch=rmq-out" },
+    { name = "plumpy", editable = "../plumpy" },
     { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=3.5" },
     { name = "psutil", specifier = "~=5.6" },
     { name = "psycopg", extras = ["binary"], specifier = "~=3.0" },
@@ -3085,7 +3085,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess" },
+    { name = "ptyprocess", marker = "python_full_version < '3.10' or sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450 }
 wheels = [
@@ -3242,11 +3242,36 @@ wheels = [
 [[package]]
 name = "plumpy"
 version = "0.24.0"
-source = { git = "https://github.com/unkcpz/plumpy?branch=rmq-out#42738fc839e9c4d955e30d47853f3774628fb67d" }
+source = { editable = "../plumpy" }
 dependencies = [
     { name = "kiwipy", extra = ["rmq"] },
     { name = "nest-asyncio" },
     { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "importlib-metadata", marker = "extra == 'docs'", specifier = "~=4.12.0" },
+    { name = "importlib-resources", marker = "extra == 'tests'", specifier = "~=5.2" },
+    { name = "ipykernel", marker = "extra == 'tests'", specifier = "==6.12.1" },
+    { name = "ipython", marker = "extra == 'docs'", specifier = "~=7.0" },
+    { name = "jinja2", marker = "extra == 'docs'", specifier = "==2.11.3" },
+    { name = "kiwipy", extras = ["docs"], marker = "extra == 'docs'", specifier = "~=0.8.3" },
+    { name = "kiwipy", extras = ["rmq"], specifier = "~=0.8.5" },
+    { name = "markupsafe", marker = "extra == 'docs'", specifier = "==2.0.1" },
+    { name = "mypy", marker = "extra == 'pre-commit'", specifier = "==1.13.0" },
+    { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=0.11.0" },
+    { name = "nest-asyncio", specifier = "~=1.5,>=1.5.1" },
+    { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=2.2" },
+    { name = "pytest", marker = "extra == 'tests'", specifier = "~=7.0" },
+    { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = "~=0.12,<0.17" },
+    { name = "pytest-cov", marker = "extra == 'tests'", specifier = "~=4.1" },
+    { name = "pytest-notebook", marker = "extra == 'tests'", specifier = ">=0.8.0" },
+    { name = "pyyaml", specifier = "~=6.0" },
+    { name = "shortuuid", marker = "extra == 'tests'", specifier = "==1.0.8" },
+    { name = "sphinx", marker = "extra == 'docs'", specifier = "~=3.2.0" },
+    { name = "sphinx-book-theme", marker = "extra == 'docs'", specifier = "~=0.0.39" },
+    { name = "types-pyyaml", marker = "extra == 'pre-commit'" },
 ]
 
 [[package]]

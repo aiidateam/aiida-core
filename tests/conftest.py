@@ -32,6 +32,7 @@ from aiida import get_profile
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage.configuration import Profile, get_config, load_profile
+from aiida.manage.manager import Manager
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
@@ -540,9 +541,9 @@ def backend(manager):
 
 
 @pytest.fixture
-def communicator(manager):
-    """Get the ``Communicator`` instance of the currently loaded profile to communicate with RabbitMQ."""
-    return manager.get_communicator()
+def coordinator(manager: Manager):
+    """Get the ``Coordinator`` instance of the currently loaded profile to communicate with RabbitMQ."""
+    return manager.get_coordinator()
 
 
 @pytest.fixture

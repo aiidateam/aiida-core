@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import typing as t
 
+from plumpy import ProcessController
+from plumpy.rmq import RemoteProcessThreadController
+
 from aiida.brokers.broker import Broker
+from aiida.brokers.rabbitmq.coordinator import RmqLoopCoordinator
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config_option
 
@@ -24,14 +29,16 @@ __all__ = ('RabbitmqBroker',)
 class RabbitmqBroker(Broker):
     """Implementation of the message broker interface using RabbitMQ through ``kiwipy``."""
 
-    def __init__(self, profile: Profile) -> None:
+    def __init__(self, profile: Profile, loop=None) -> None:
         """Construct a new instance.
 
         :param profile: The profile.
         """
         self._profile = profile
-        self._communicator: 'RmqThreadCommunicator' | None = None
+        self._communicator: 'RmqThreadCommunicator | None' = None
         self._prefix = f'aiida-{self._profile.uuid}'
+        self._coordinator = None
+        self._loop = loop or asyncio.get_event_loop()
 
     def __str__(self):
         try:
@@ -47,16 +54,28 @@ class RabbitmqBroker(Broker):
 
     def iterate_tasks(self):
         """Return an iterator over the tasks in the launch queue."""
-        for task in self.get_communicator().task_queue(get_launch_queue_name(self._prefix)):
+        for task in self.get_coordinator().communicator.task_queue(get_launch_queue_name(self._prefix)):
             yield task
 
-    def get_communicator(self) -> 'RmqThreadCommunicator':
+    def get_coordinator(self):
+        if self._coordinator is not None:
+            return self._coordinator
+
+        return self.create_coordinator()
+
+    def create_coordinator(self):
         if self._communicator is None:
             self._communicator = self._create_communicator()
             # Check whether a compatible version of RabbitMQ is being used.
             self.check_rabbitmq_version()
 
-        return self._communicator
+        coordinator = RmqLoopCoordinator(self._communicator, self._loop)
+
+        return coordinator
+
+    def get_controller(self) -> ProcessController:
+        coordinator = self.get_coordinator()
+        return RemoteProcessThreadController(coordinator)
 
     def _create_communicator(self) -> 'RmqThreadCommunicator':
         """Return an instance of :class:`kiwipy.Communicator`."""
@@ -64,7 +83,7 @@ class RabbitmqBroker(Broker):
 
         from aiida.orm.utils import serialize
 
-        self._communicator = RmqThreadCommunicator.connect(
+        _communicator = RmqThreadCommunicator.connect(
             connection_params={'url': self.get_url()},
             message_exchange=get_message_exchange_name(self._prefix),
             encoder=functools.partial(serialize.serialize, encoding='utf-8'),
@@ -78,7 +97,7 @@ class RabbitmqBroker(Broker):
             testing_mode=self._profile.is_test_profile,
         )
 
-        return self._communicator
+        return _communicator
 
     def check_rabbitmq_version(self):
         """Check the version of RabbitMQ that is being connected to and emit warning if it is not compatible."""
@@ -122,4 +141,4 @@ class RabbitmqBroker(Broker):
         """
         from packaging.version import parse
 
-        return parse(self.get_communicator().server_properties['version'])
+        return parse(self.get_coordinator().communicator.server_properties['version'])

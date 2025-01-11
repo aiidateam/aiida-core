@@ -1,0 +1,38 @@
+ERROR tests/brokers/test_rabbitmq.py::test_duplicate_subscriber_identifier - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_process.py::test_process_pause - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_process.py::test_process_play - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_daemon.py::test_daemon_restart[options0] - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_process.py::test_process_play_all - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_daemon.py::test_daemon_restart[options1] - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_process.py::test_process_kill - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/test_work_chain.py::TestWorkchain::test_member_calcfunction_daemon - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_process.py::test_process_kill_all - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_devel.py::test_launch_add_daemon - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/test_launch.py::test_submit_wait - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_process.py::test_process_repair_running_daemon - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/test_launch.py::test_await_processes - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_daemon.py::test_daemon_status - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/daemon/test_worker.py::test_logging_configuration - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_rabbitmq.py::test_tasks_list_running_daemon - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_daemon.py::test_daemon_status_timeout - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_rabbitmq.py::test_tasks_analyze_running_daemon - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/processes/test_control.py::test_processes_all_exclusivity[pause_processes] - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_rabbitmq.py::test_revive - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/test_memory_leaks.py::test_leak_run_process - AssertionError: Memory leak: process instances remain in memory: {<tests.utils.processes.DummyProcess object at 0x76bfcf0d3a60>}
+ERROR tests/engine/processes/test_control.py::test_processes_all_exclusivity[play_processes] - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/processes/test_control.py::test_processes_all_exclusivity[kill_processes] - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/test_memory_leaks.py::test_leak_local_calcjob - AssertionError: Memory leak: process instances remain in memory: {<aiida.calculations.arithmetic.add.ArithmeticAddCalculation object at 0x76bf815eddf0>}
+ERROR tests/engine/processes/test_control.py::test_pause_processes - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/processes/test_control.py::test_pause_processes_all_entries - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/processes/test_control.py::test_play_processes - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/processes/test_control.py::test_play_processes_all_entries - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/processes/test_control.py::test_kill_processes - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/processes/test_control.py::test_kill_processes_all_entries - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/processes/test_control.py::test_revive - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/processes/calcjobs/test_calc_job.py::test_restart_after_daemon_reset - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/cmdline/commands/test_storage.py::tests_storage_migrate_running_daemon - aiida.engine.daemon.client.DaemonTimeoutException: The daemon failed to start or is unresponsive after 2 seconds.
+ERROR tests/engine/test_memory_leaks.py::test_leak_ssh_calcjob - AssertionError: Memory leak: process instances remain in memory: {<aiida.calculations.arithmetic.add.ArithmeticAddCalculation object at 0x76bfcf2a75e0>}
+FAILED tests/cmdline/commands/test_daemon.py::test_daemon_start - AssertionError: Traceback (most recent call last):
+FAILED tests/cmdline/commands/test_daemon.py::test_daemon_start_number - AssertionError: Traceback (most recent call last):
+FAILED tests/cmdline/commands/test_daemon.py::test_daemon_start_number_config - AssertionError: Traceback (most recent call last):
+FAILED tests/cmdline/commands/test_devel.py::test_launch_multiply_add_daemon - RuntimeError: Timed out waiting for process with state `ProcessState.CREATED` to enter state `ProcessState.FINISHED`.

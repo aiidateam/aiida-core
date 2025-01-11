@@ -39,9 +39,10 @@ import plumpy.exceptions
 import plumpy.futures
 import plumpy.persistence
 import plumpy.processes
-from kiwipy.communications import UnroutableError
+
+# from kiwipy.communications import UnroutableError
+# from plumpy.processes import ConnectionClosed  # type: ignore[attr-defined]
 from plumpy.process_states import Finished, ProcessState
-from plumpy.processes import ConnectionClosed  # type: ignore[attr-defined]
 from plumpy.processes import Process as PlumpyProcess
 from plumpy.utils import AttributesFrozendict
 
@@ -172,13 +173,13 @@ class Process(PlumpyProcess):
         from aiida.manage import manager
 
         self._runner = runner if runner is not None else manager.get_manager().get_runner()
-        # assert self._runner.communicator is not None, 'communicator not set for runner'
+        _coordinator = manager.get_manager().get_coordinator()
 
         super().__init__(
             inputs=self.spec().inputs.serialize(inputs),
             logger=logger,
             loop=self._runner.loop,
-            communicator=self._runner.communicator,
+            coordinator=_coordinator,
         )
 
         self._node: Optional[orm.ProcessNode] = None
@@ -318,7 +319,9 @@ class Process(PlumpyProcess):
         else:
             self._runner = manager.get_manager().get_runner()
 
-        load_context = load_context.copyextend(loop=self._runner.loop, communicator=self._runner.communicator)
+        _coordinator = manager.get_manager().get_coordinator()
+
+        load_context = load_context.copyextend(loop=self._runner.loop, coordinator=_coordinator)
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
@@ -329,7 +332,7 @@ class Process(PlumpyProcess):
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
-    def kill(self, msg: Union[str, None] = None) -> Union[bool, plumpy.futures.Future]:
+    def kill(self, msg_text: Union[str, None] = None) -> Union[bool, plumpy.futures.Future]:
         """Kill the process and all the children calculations it called
 
         :param msg: message
@@ -338,7 +341,7 @@ class Process(PlumpyProcess):
 
         had_been_terminated = self.has_terminated()
 
-        result = super().kill(msg)
+        result = super().kill(msg_text)
 
         # Only kill children if we could be killed ourselves
         if result is not False and not had_been_terminated:
@@ -348,14 +351,17 @@ class Process(PlumpyProcess):
                     self.logger.info('no controller available to kill child<%s>', child.pk)
                     continue
                 try:
-                    result = self.runner.controller.kill_process(child.pk, f'Killed by parent<{self.node.pk}>')
+                    result = self.runner.controller.kill_process(child.pk, msg_text=f'Killed by parent<{self.node.pk}>')
                     result = asyncio.wrap_future(result)  # type: ignore[arg-type]
                     if asyncio.isfuture(result):
                         killing.append(result)
-                except ConnectionClosed:
-                    self.logger.info('no connection available to kill child<%s>', child.pk)
-                except UnroutableError:
-                    self.logger.info('kill signal was unable to reach child<%s>', child.pk)
+                # FIXME: use generic exception to catch the coordinator side exception
+                # except ConnectionClosed:
+                #     self.logger.info('no connection available to kill child<%s>', child.pk)
+                # except UnroutableError:
+                #     self.logger.info('kill signal was unable to reach child<%s>', child.pk)
+                except Exception:
+                    raise
 
             if asyncio.isfuture(result):
                 # We ourselves are waiting to be killed so add it to the list
@@ -363,10 +369,10 @@ class Process(PlumpyProcess):
 
             if killing:
                 # We are waiting for things to be killed, so return the 'gathered' future
-                kill_future = plumpy.futures.gather(*killing)
+                kill_future = asyncio.gather(*killing)
                 result = self.loop.create_future()
 
-                def done(done_future: plumpy.futures.Future):
+                def done(done_future: asyncio.Future):
                     is_all_killed = all(done_future.result())
                     result.set_result(is_all_killed)
 

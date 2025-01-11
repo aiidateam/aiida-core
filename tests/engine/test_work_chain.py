@@ -28,7 +28,7 @@ from aiida.orm import Bool, Float, Int, Str, load_node
 def run_until_paused(proc):
     """Set up a future that will be resolved when process is paused"""
     listener = plumpy.ProcessListener()
-    paused = plumpy.Future()
+    paused = asyncio.Future()
 
     if proc.paused:
         paused.set_result(True)
@@ -49,7 +49,7 @@ def run_until_waiting(proc):
     from aiida.engine import ProcessState
 
     listener = plumpy.ProcessListener()
-    in_waiting = plumpy.Future()
+    in_waiting = asyncio.Future()
 
     if proc.state == ProcessState.WAITING:
         in_waiting.set_result(True)

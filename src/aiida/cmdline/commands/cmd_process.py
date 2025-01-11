@@ -10,6 +10,7 @@
 
 import click
 
+from aiida.brokers.broker import Broker
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
@@ -340,8 +341,8 @@ def process_kill(processes, all_entries, timeout, wait):
 
     with capture_logging() as stream:
         try:
-            message = 'Killed through `verdi process kill`'
-            control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
+            msg_text = 'Killed through `verdi process kill`'
+            control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, msg_text=msg_text)
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
 
@@ -371,8 +372,8 @@ def process_pause(processes, all_entries, timeout, wait):
 
     with capture_logging() as stream:
         try:
-            message = 'Paused through `verdi process pause`'
-            control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
+            msg_text = 'Paused through `verdi process pause`'
+            control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, msg_text=msg_text)
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
 
@@ -416,7 +417,7 @@ def process_play(processes, all_entries, timeout, wait):
 @decorators.with_dbenv()
 @decorators.with_broker
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
-def process_watch(broker, processes, most_recent_node):
+def process_watch(broker: Broker, processes, most_recent_node):
     """Watch the state transitions of processes.
 
     Watch the state transitions for one or multiple running processes."""
@@ -436,7 +437,7 @@ def process_watch(broker, processes, most_recent_node):
 
     from kiwipy import BroadcastFilter
 
-    def _print(communicator, body, sender, subject, correlation_id):
+    def _print(coordinator, body, sender, subject, correlation_id):
         """Format the incoming broadcast data into a message and echo it to stdout."""
         if body is None:
             body = 'No message specified'
@@ -446,7 +447,7 @@ def process_watch(broker, processes, most_recent_node):
 
         echo.echo(f'Process<{sender}> [{subject}|{correlation_id}]: {body}')
 
-    communicator = broker.get_communicator()
+    coordinator = broker.get_coordinator()
     echo.echo_report('watching for broadcasted messages, press CTRL+C to stop...')
 
     if most_recent_node:
@@ -457,7 +458,7 @@ def process_watch(broker, processes, most_recent_node):
             echo.echo_error(f'Process<{process.pk}> is already terminated')
             continue
 
-        communicator.add_broadcast_subscriber(BroadcastFilter(_print, sender=process.pk))
+        coordinator.add_broadcast_subscriber(BroadcastFilter(_print, sender=process.pk))
 
     try:
         # Block this thread indefinitely until interrupt
@@ -467,7 +468,7 @@ def process_watch(broker, processes, most_recent_node):
         echo.echo('')  # add a new line after the interrupt character
         echo.echo_report('received interrupt, exiting...')
         try:
-            communicator.close()
+            coordinator.close()
         except RuntimeError:
             pass
 

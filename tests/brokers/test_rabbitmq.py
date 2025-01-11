@@ -32,7 +32,7 @@ def test_str_method(monkeypatch, manager):
     broker = manager.get_broker()
     assert 'RabbitMQ v' in str(broker)
 
-    monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
+    monkeypatch.setattr(broker, 'get_coordinator', raise_connection_error)
     assert 'RabbitMQ @' in str(broker)
 
 
@@ -92,14 +92,14 @@ def test_communicator(url):
     RmqThreadCommunicator.connect(connection_params={'url': url})
 
 
-def test_add_rpc_subscriber(communicator):
+def test_add_rpc_subscriber(coordinator):
     """Test ``add_rpc_subscriber``."""
-    communicator.add_rpc_subscriber(None)
+    coordinator.add_rpc_subscriber(lambda: None)
 
 
-def test_add_broadcast_subscriber(communicator):
+def test_add_broadcast_subscriber(coordinator):
     """Test ``add_broadcast_subscriber``."""
-    communicator.add_broadcast_subscriber(None)
+    coordinator.add_broadcast_subscriber(lambda: None)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

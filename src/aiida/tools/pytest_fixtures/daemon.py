@@ -7,6 +7,8 @@ import typing as t
 
 import pytest
 
+from aiida.engine.daemon.client import DaemonClient
+
 if t.TYPE_CHECKING:
     from aiida.engine import Process, ProcessBuilder
     from aiida.orm import ProcessNode
@@ -47,7 +49,7 @@ def daemon_client(aiida_profile):
 
 
 @pytest.fixture
-def started_daemon_client(daemon_client):
+def started_daemon_client(daemon_client: DaemonClient):
     """Ensure that the daemon is running for the test profile and return the associated client.
 
     Usage::

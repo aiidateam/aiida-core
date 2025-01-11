@@ -20,6 +20,7 @@ import wrapt
 from aiida.cmdline.commands.cmd_devel import verdi_devel
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo, echo_tabulate
+from aiida.manage.manager import Manager
 
 if t.TYPE_CHECKING:
     import requests
@@ -131,12 +132,13 @@ def with_client(ctx, wrapped, _, args, kwargs):
 
 @cmd_rabbitmq.command('server-properties')
 @decorators.with_manager
-def cmd_server_properties(manager):
+def cmd_server_properties(manager: Manager):
     """List the server properties."""
     import yaml
 
     data = {}
-    for key, value in manager.get_communicator().server_properties.items():
+    # FIXME: server_properties as an common API for coordinator?
+    for key, value in manager.get_coordinator().communicator.server_properties.items():
         data[key] = value.decode('utf-8') if isinstance(value, bytes) else value
     click.echo(yaml.dump(data, indent=4))
 

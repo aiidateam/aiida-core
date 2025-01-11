@@ -200,7 +200,7 @@ requires-dist = [
     { name = "pg8000", marker = "extra == 'tests'", specifier = "~=1.13" },
     { name = "pgsu", specifier = "~=0.3.0" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3,>=1.3.1" },
-    { name = "plumpy", specifier = "~=0.22.3" },
+    { name = "plumpy", specifier = "~=0.24.0" },
     { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=3.5" },
     { name = "psutil", specifier = "~=5.6" },
     { name = "psycopg", extras = ["binary"], specifier = "~=3.0" },
@@ -3085,7 +3085,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess" },
+    { name = "ptyprocess", marker = "python_full_version < '3.10' or sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450 }
 wheels = [
@@ -3241,16 +3241,16 @@ wheels = [
 
 [[package]]
 name = "plumpy"
-version = "0.22.3"
+version = "0.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "kiwipy", extra = ["rmq"] },
     { name = "nest-asyncio" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ab/99/6c931d3f4697acd34cf18eb3fbfe96ed55cd0408d9be7c0f316349117a8e/plumpy-0.22.3.tar.gz", hash = "sha256:e58f45e6360f173babf04e2a4abacae9867622768ce2a126c8260db3b46372c4", size = 73582 }
+sdist = { url = "https://files.pythonhosted.org/packages/d9/0c/0bb568982e461f5e428606ccbdfe6d43c11dab0e3f5a8090298feb321172/plumpy-0.24.0.tar.gz", hash = "sha256:c17c8efbd124d7f5ec2f27cb1f2c3de7901143e61551ce81f3ee22bf7e2ed42d", size = 75634 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/d9/12fd8281f494ca79d6a7a9d40099616d16415be5807959e5b024dffe8aed/plumpy-0.22.3-py3-none-any.whl", hash = "sha256:63ae6c90713f52483836a3b2b3e1941eab7ada920c303092facc27e78229bdc3", size = 74244 },
+    { url = "https://files.pythonhosted.org/packages/99/d3/68c83d4774f7a4f8e8dd4e30ce34e46071706a4b4dc40d3a1ad77de793fc/plumpy-0.24.0-py3-none-any.whl", hash = "sha256:09efafe97c88c8928e73f1dc08cf02a2c4737fa767920bff23dfa26226252cc6", size = 74955 },
 ]
 
 [[package]]

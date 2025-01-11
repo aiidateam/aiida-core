@@ -8,6 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Autogenerate verdi CLI documentation from click."""
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "click",
+# ]
+# ///
 
 import os
 

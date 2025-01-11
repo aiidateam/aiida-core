@@ -42,11 +42,8 @@ jobs:
       with:
         version: latest
 
-    - name: Install utils/ dependencies
-      run: uv pip install --system -r utils/requirements.txt
-
     - name: Validate conda environment file
-      run: python ./utils/dependency_management.py validate-environment-yml
+      run: uv run --script ./utils/dependency_management.py validate-environment-yml
 
   create-conda-environment:
     # Verify that we can create a valid conda environment from the environment.yml file.

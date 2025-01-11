@@ -217,7 +217,7 @@ repos:
       )$
 
   - id: verdi-autodocs
-    name: Automatically generating verdi docs
+    name: Generate verdi docs
     entry: python ./utils/validate_consistency.py verdi-autodocs
     language: system
     pass_filenames: false

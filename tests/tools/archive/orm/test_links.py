@@ -8,6 +8,8 @@
 ###########################################################################
 """orm links tests for the export and import routines"""
 
+import pytest
+
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
@@ -262,6 +264,7 @@ def test_complex_workflow_graph_links(aiida_profile_clean, tmp_path, aiida_local
     assert set(export_set) == set(import_set)
 
 
+@pytest.mark.nightly
 def test_complex_workflow_graph_export_sets(aiida_profile, tmp_path, aiida_localhost_factory):
     """Test ex-/import of individual nodes in complex graph"""
     for export_conf in range(0, 9):
@@ -296,6 +299,7 @@ def test_complex_workflow_graph_export_sets(aiida_profile, tmp_path, aiida_local
         )
 
 
+@pytest.mark.nightly
 def test_high_level_workflow_links(aiida_profile, tmp_path, aiida_localhost_factory):
     """This test checks that all the needed links are correctly exported and imported.
     INPUT_CALC, INPUT_WORK, CALL_CALC, CALL_WORK, CREATE, and RETURN
@@ -450,6 +454,7 @@ def link_flags_export_helper(name, all_nodes, tmp_path, nodes_to_export, flags, 
     return ret
 
 
+@pytest.mark.nightly
 def test_link_flags(aiida_profile, tmp_path, aiida_localhost_factory):
     """Verify all link follow flags are working as intended.
 

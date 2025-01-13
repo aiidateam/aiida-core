@@ -16,6 +16,7 @@ import pytest
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
+from aiida.manage import get_manager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
 from aiida.transports.plugins.local import LocalTransport
 
@@ -124,10 +125,11 @@ def test_retrieve_files_from_list(
     target = tmp_path_factory.mktemp('target')
 
     create_file_hierarchy(file_hierarchy, source)
+    runner = get_manager().get_runner()
 
     with LocalTransport() as transport:
         node = generate_calcjob_node(workdir=source)
-        execmanager.retrieve_files_from_list(node, transport, target, retrieve_list)
+        runner.loop.run_until_complete(execmanager.retrieve_files_from_list(node, transport, target, retrieve_list))
 
     assert serialize_file_hierarchy(target, read_bytes=False) == expected_hierarchy
 
@@ -165,7 +167,8 @@ def test_upload_local_copy_list(
     calc_info.local_copy_list = [[folder.uuid] + local_copy_list]
 
     with node.computer.get_transport() as transport:
-        execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        runner = get_manager().get_runner()
+        runner.loop.run_until_complete(execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox))
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
     # through the ``local_copy_list``.
@@ -202,7 +205,8 @@ def test_upload_local_copy_list_files_folders(
     ]
 
     with node.computer.get_transport() as transport:
-        execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        runner = get_manager().get_runner()
+        runner.loop.run_until_complete(execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox))
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
     # through the ``local_copy_list``.
@@ -233,7 +237,8 @@ def test_upload_remote_symlink_list(
     ]
 
     with node.computer.get_transport() as transport:
-        execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        runner = get_manager().get_runner()
+        runner.loop.run_until_complete(execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox))
 
     filepath_workdir = pathlib.Path(node.get_remote_workdir())
     assert (filepath_workdir / 'file_a.txt').is_symlink()
@@ -297,7 +302,8 @@ def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, order, e
         calc_info.file_copy_operation_order = order
 
     with node.computer.get_transport() as transport:
-        execmanager.upload_calculation(node, transport, calc_info, sandbox, inputs)
+        runner = get_manager().get_runner()
+        runner.loop.run_until_complete(execmanager.upload_calculation(node, transport, calc_info, sandbox, inputs))
         filepath = pathlib.Path(node.get_remote_workdir()) / 'file.txt'
         assert filepath.is_file()
         assert filepath.read_text() == expected
@@ -568,18 +574,20 @@ def test_upload_combinations(
         calc_info.remote_copy_list.append(
             (node.computer.uuid, (sub_tmp_path_remote / source_path).as_posix(), target_path)
         )
-
+    runner = get_manager().get_runner()
     if expected_exception is not None:
         with pytest.raises(expected_exception):
             with node.computer.get_transport() as transport:
-                execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+                runner.loop.run_until_complete(
+                    execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+                )
 
             filepath_workdir = pathlib.Path(node.get_remote_workdir())
 
             assert serialize_file_hierarchy(filepath_workdir, read_bytes=False) == expected_hierarchy
     else:
         with node.computer.get_transport() as transport:
-            execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+            runner.loop.run_until_complete(execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox))
 
         filepath_workdir = pathlib.Path(node.get_remote_workdir())
 
@@ -607,9 +615,12 @@ def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_info, t
     calc_info.codes_info = [code_info]
 
     with node.computer.get_transport() as transport:
-        execmanager.upload_calculation(
-            node,
-            transport,
-            calc_info,
-            fixture_sandbox,
+        runner = get_manager().get_runner()
+        runner.loop.run_until_complete(
+            execmanager.upload_calculation(
+                node,
+                transport,
+                calc_info,
+                fixture_sandbox,
+            )
         )

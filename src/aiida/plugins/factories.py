@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from aiida.schedulers import Scheduler
     from aiida.tools.data.orbital import Orbital
     from aiida.tools.dbimporters import DbImporter
-    from aiida.transports import Transport
+    from aiida.transports import AsyncTransport, Transport
 
 
 def raise_invalid_type_error(entry_point_name: str, entry_point_group: str, valid_classes: Tuple[Any, ...]) -> NoReturn:
@@ -410,15 +410,19 @@ def StorageFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint
 
 
 @overload
-def TransportFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Transport']: ...
+def TransportFactory(
+    entry_point_name: str, load: Literal[True] = True
+) -> Union[Type['Transport'], Type['AsyncTransport']]: ...
 
 
 @overload
 def TransportFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def TransportFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Transport']]:
-    """Return the `Transport` sub class registered under the given entry point.
+def TransportFactory(
+    entry_point_name: str, load: bool = True
+) -> Union[EntryPoint, Type['Transport'], Type['AsyncTransport']]:
+    """Return the Transport sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
@@ -426,16 +430,16 @@ def TransportFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoi
     """
     from inspect import isclass
 
-    from aiida.transports import Transport
+    from aiida.transports import AsyncTransport, Transport
 
     entry_point_group = 'aiida.transports'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
-    valid_classes = (Transport,)
+    valid_classes = (Transport, AsyncTransport)
 
     if not load:
         return entry_point
 
-    if isclass(entry_point) and issubclass(entry_point, Transport):
+    if isclass(entry_point) and (issubclass(entry_point, Transport) or issubclass(entry_point, AsyncTransport)):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)

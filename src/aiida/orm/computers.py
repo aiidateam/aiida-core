@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
     from aiida.orm.implementation import StorageBackend
     from aiida.schedulers import Scheduler
-    from aiida.transports import Transport
+    from aiida.transports import AsyncTransport, Transport
 
 __all__ = ('Computer',)
 
@@ -626,12 +626,12 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """Return a Transport class, configured with all correct parameters.
         The Transport is closed (meaning that if you want to run any operation with
         it, you have to open it first (i.e., e.g. for a SSH transport, you have
-        to open a connection). To do this you can call ``transports.open()``, or simply
+        to open a connection). To do this you can call ``transport.open()``, or simply
         run within a ``with`` statement::
 
            transport = Computer.get_transport()
            with transport:
-               print(transports.whoami())
+               print(transport.whoami())
 
         :param user: if None, try to obtain a transport for the default user.
             Otherwise, pass a valid User.
@@ -646,7 +646,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         authinfo = authinfos.AuthInfo.get_collection(self.backend).get(dbcomputer=self, aiidauser=user)
         return authinfo.get_transport()
 
-    def get_transport_class(self) -> Type['Transport']:
+    def get_transport_class(self) -> Union[Type['Transport'], Type['AsyncTransport']]:
         """Get the transport class for this computer.  Can be used to instantiate a transport instance."""
         try:
             return TransportFactory(self.transport_type)

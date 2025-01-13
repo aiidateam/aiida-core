@@ -297,7 +297,7 @@ class WorkChain(Process, metaclass=Protect):
 
     @override
     @Protect.final
-    def run(self) -> t.Any:
+    async def run(self) -> t.Any:
         self._stepper = self.spec().get_outline().create_stepper(self)  # type: ignore[arg-type]
         return self._do_step()
 

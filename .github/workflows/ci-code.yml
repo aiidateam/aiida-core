@@ -20,7 +20,7 @@ jobs:
 
   tests:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     strategy:
@@ -93,7 +93,7 @@ jobs:
 
   tests-presto:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:
@@ -118,7 +118,7 @@ jobs:
 
   verdi:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
 
     steps:
@@ -138,3 +138,11 @@ jobs:
         verdi devel check-load-time
         verdi devel check-undesired-imports
         .github/workflows/verdi.sh
+
+  test-du:
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+    - name: Install aiida-core
+      run: which du && du -sm

@@ -285,6 +285,12 @@ class RemoteData(Data):
         """
 
         try:
+            # Initially, we were using the `--bytes` option here. However, this is equivalent to `--apparent-size
+            # --block-size=1`, with the `apparent-size` option being rather fragile (e.g. its implementation changed
+            # between Ubuntu 22.04 and 24.04, causing the tests to fail). Thus, we retain only `--block-size=1` to
+            # obtain the total size in bytes. Still, block sizes might be different for different disk formattings, OSs,
+            # etc. However, as 4092 bytes is the default for Linux and macOS, it should be fine to expect it in the
+            # corresponding tests. Lastly, the `-s` (`--summarize`) option yields only a single total file size value.
             retval, stdout, stderr = transport.exec_command_wait(f'du -s --block-size=1 {full_path}')
         except NotImplementedError as exc:
             raise NotImplementedError('`exec_command_wait` not implemented for the current transport plugin.') from exc

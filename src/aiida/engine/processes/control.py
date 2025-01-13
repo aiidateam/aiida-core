@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections
 import concurrent
+import functools
 import typing as t
 
 import kiwipy
@@ -135,7 +136,7 @@ def play_processes(
 def pause_processes(
     processes: list[ProcessNode] | None = None,
     *,
-    message: str = 'Paused through `aiida.engine.processes.control.pause_processes`',
+    msg_text: str = 'Paused through `aiida.engine.processes.control.pause_processes`',
     all_entries: bool = False,
     timeout: float = 5.0,
     wait: bool = False,
@@ -164,13 +165,14 @@ def pause_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.pause_process, 'pause', 'pausing', timeout, wait, msg=message)
+    action = functools.partial(controller.pause_process, msg_text=msg_text)
+    _perform_actions(processes, action, 'pause', 'pausing', timeout, wait)
 
 
 def kill_processes(
     processes: list[ProcessNode] | None = None,
     *,
-    message: str = 'Killed through `aiida.engine.processes.control.kill_processes`',
+    msg_text: str = 'Killed through `aiida.engine.processes.control.kill_processes`',
     all_entries: bool = False,
     timeout: float = 5.0,
     wait: bool = False,
@@ -199,7 +201,8 @@ def kill_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.kill_process, 'kill', 'killing', timeout, wait, msg=message)
+    action = functools.partial(controller.kill_process, msg_text=msg_text)
+    _perform_actions(processes, action, 'kill', 'killing', timeout, wait)
 
 
 def _perform_actions(

@@ -211,11 +211,8 @@ jobs:
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-      # Unset CI envvar to workaround a pymatgen issue for Python 3.9
-      # https://github.com/materialsproject/pymatgen/issues/4243
       # TODO: Remove a workaround for VIRTUAL_ENV once the setup-uv action is updated
       # https://github.com/astral-sh/setup-uv/issues/219
       run: |
-        ${{ matrix.python-version == '3.9' && 'unset CI' || '' }}
         ${{ matrix.python-version == '3.9' && 'VIRTUAL_ENV=$PWD/.venv' || '' }}
         pytest -n auto --db-backend psql -m 'not nightly' tests/

@@ -285,7 +285,7 @@ class RemoteData(Data):
         """
 
         try:
-            retval, stdout, stderr = transport.exec_command_wait(f'du -s --bytes {full_path}')
+            retval, stdout, stderr = transport.exec_command_wait(f'du -s --block-size=1 {full_path}')
         except NotImplementedError as exc:
             raise NotImplementedError('`exec_command_wait` not implemented for the current transport plugin.') from exc
 

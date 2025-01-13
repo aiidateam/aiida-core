@@ -55,8 +55,8 @@ def test_clean(remote_data_factory, mode):
 @pytest.mark.parametrize(
     'setup, results',
     (
-        (('du', False), ('4.01 KB', 'du')),
-        (('du', True), (4108, 'du')),
+        (('du', False), ('8.00 KB', 'du')),
+        (('du', True), (8192, 'du')),
         (('stat', False), ('12.00 B', 'stat')),
         (('stat', True), (12, 'stat')),
     ),
@@ -74,13 +74,12 @@ def test_get_size_on_disk_params(remote_data_factory, mode, setup, results):
 @pytest.mark.parametrize(
     'content, sizes',
     (
-        (b'a', {'du': 4097, 'stat': 1, 'human': '4.00 KB'}),
-        (10 * b'a', {'du': 4106, 'stat': 10, 'human': '4.01 KB'}),
-        (100 * b'a', {'du': 4196, 'stat': 100, 'human': '4.10 KB'}),
-        (1000 * b'a', {'du': 5096, 'stat': 1000, 'human': '4.98 KB'}),
-        (1000000 * b'a', {'du': 1004096, 'stat': int(1e6), 'human': '980.56 KB'}),
+        (b'a', {'du': 8192, 'stat': 1, 'human': '8.00 KB'}),
+        (10 * b'a', {'du': 8192, 'stat': 10, 'human': '8.00 KB'}),
+        (1000 * b'a', {'du': 8192, 'stat': 1000, 'human': '8.00 KB'}),
+        (1000000 * b'a', {'du': 1007616, 'stat': int(1e6), 'human': '984.00 KB'}),
     ),
-    ids=['1-byte', '10-bytes', '100-bytes', '1000-bytes', '1e6-bytes'],
+    ids=['1-byte', '10-bytes', '1000-bytes', '1e6-bytes'],
 )
 def test_get_size_on_disk_sizes(remote_data_factory, mode, content, sizes):
     """Test the different implementations to obtain the size of a ``RemoteData`` on disk."""
@@ -103,12 +102,12 @@ def test_get_size_on_disk_sizes(remote_data_factory, mode, content, sizes):
 @pytest.mark.parametrize(
     'num_char, relpath, sizes',
     (
-        (1, '.', {'du': 12291, 'stat': 8195, 'human': '12.00 KB'}),
-        (100, '.', {'du': 12588, 'stat': 8492, 'human': '12.29 KB'}),
-        (int(1e6), '.', {'du': 3012288, 'stat': 3008192, 'human': '2.87 MB'}),
-        (1, 'subdir1', {'du': 8194, 'stat': 4098, 'human': '8.00 KB'}),
-        (100, 'subdir1', {'du': 8392, 'stat': 4296, 'human': '8.20 KB'}),
-        (int(1e6), 'subdir1', {'du': 2008192, 'stat': 2004096, 'human': '1.92 MB'}),
+        (1, '.', {'du': 24576, 'stat': 8195, 'human': '24.00 KB'}),
+        (100, '.', {'du': 24576, 'stat': 8492, 'human': '24.00 KB'}),
+        (int(1e6), '.', {'du': 3022848, 'stat': 3008192, 'human': '2.88 MB'}),
+        (1, 'subdir1', {'du': 16384, 'stat': 4098, 'human': '16.00 KB'}),
+        (100, 'subdir1', {'du': 16384, 'stat': 4296, 'human': '16.00 KB'}),
+        (int(1e6), 'subdir1', {'du': 2015232, 'stat': 2004096, 'human': '1.92 MB'}),
     ),
 )
 def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, sizes):
@@ -173,7 +172,7 @@ def test_get_size_on_disk_du(remote_data_factory, mode, monkeypatch):
 
     with authinfo.get_transport() as transport:
         size_on_disk = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
-    assert size_on_disk == 4108
+    assert size_on_disk == 8192
 
     # Monkeypatch transport exec_command_wait command to simulate it not being implemented, e.g., for FirecREST plugin
     def mock_exec_command_wait(command):

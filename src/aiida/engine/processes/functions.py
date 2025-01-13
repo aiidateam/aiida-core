@@ -222,7 +222,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
             if kwargs and not process_class.spec().inputs.dynamic:
                 raise ValueError(f'{function.__name__} does not support these kwargs: {kwargs.keys()}')
 
-            process = process_class(inputs=inputs, runner=runner)
+            process: Process = process_class(inputs=inputs, runner=runner)
 
             # Only add handlers for interrupt signal to kill the process if we are in a local and not a daemon runner.
             # Without this check, running process functions in a daemon worker would be killed if the daemon is shutdown
@@ -235,7 +235,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
                 def kill_process(_num, _frame):
                     """Send the kill signal to the process in the current scope."""
                     LOGGER.critical('runner received interrupt, killing process %s', process.pid)
-                    result = process.kill(msg='Process was killed because the runner received an interrupt')
+                    result = process.kill(msg_text='Process was killed because the runner received an interrupt')
                     return result
 
                 # Store the current handler on the signal such that it can be restored after process has terminated
@@ -567,7 +567,7 @@ class FunctionProcess(Process):
         self.node.store_source_info(self._func)
 
     @override
-    def run(self) -> 'ExitCode' | None:
+    async def run(self) -> 'ExitCode' | None:
         """Run the process."""
         from .exit_code import ExitCode
 

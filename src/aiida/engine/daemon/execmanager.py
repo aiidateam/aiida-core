@@ -62,7 +62,7 @@ def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
     return data_node
 
 
-def upload_calculation(
+async def upload_calculation(
     node: CalcJobNode,
     transport: Transport,
     calc_info: CalcInfo,
@@ -206,15 +206,15 @@ def upload_calculation(
 
     for file_copy_operation in file_copy_operation_order:
         if file_copy_operation is FileCopyOperation.LOCAL:
-            _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir=workdir)
+            await _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir=workdir)
         elif file_copy_operation is FileCopyOperation.REMOTE:
             if not dry_run:
-                _copy_remote_files(
+                await _copy_remote_files(
                     logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir=workdir
                 )
         elif file_copy_operation is FileCopyOperation.SANDBOX:
             if not dry_run:
-                _copy_sandbox_files(logger, node, transport, folder, workdir=workdir)
+                await _copy_sandbox_files(logger, node, transport, folder, workdir=workdir)
         else:
             raise RuntimeError(f'file copy operation {file_copy_operation} is not yet implemented.')
 
@@ -279,7 +279,7 @@ def upload_calculation(
     return None
 
 
-def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir: Path):
+async def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir: Path):
     """Perform the copy instructions of the ``remote_copy_list`` and ``remote_symlink_list``."""
     for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
         if remote_computer_uuid == computer.uuid:
@@ -328,7 +328,7 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
             )
 
 
-def _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir: Path):
+async def _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir: Path):
     """Perform the copy instructions of the ``local_copy_list``."""
     for uuid, filename, target in local_copy_list:
         logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
@@ -386,7 +386,7 @@ def _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir:
                 transport.put(str(filepath_target), str(workdir.joinpath(target)))
 
 
-def _copy_sandbox_files(logger, node, transport, folder, workdir: Path):
+async def _copy_sandbox_files(logger, node, transport, folder, workdir: Path):
     """Copy the contents of the sandbox folder to the working directory."""
     for filename in folder.get_content_list():
         logger.debug(f'[submission of calculation {node.pk}] copying file/folder {filename}...')
@@ -423,7 +423,7 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | 
     return result
 
 
-def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     """Stash files from the working directory of a completed calculation to a permanent remote folder.
 
     After a calculation has been completed, optionally stash files from the work directory to a storage location on the
@@ -488,7 +488,7 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
 
 
-def retrieve_calculation(
+async def retrieve_calculation(
     calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str
 ) -> FolderData | None:
     """Retrieve all the files of a completed job calculation using the given transport.
@@ -529,14 +529,14 @@ def retrieve_calculation(
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
 
         with SandboxFolder(filepath_sandbox) as folder:
-            retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
+            await retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
             retrieved_files.base.repository.put_object_from_tree(folder.abspath)
 
         # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key
         if retrieve_temporary_list:
-            retrieve_files_from_list(calculation, transport, retrieved_temporary_folder, retrieve_temporary_list)
+            await retrieve_files_from_list(calculation, transport, retrieved_temporary_folder, retrieve_temporary_list)
 
             # Log the files that were retrieved in the temporary folder
             for filename in os.listdir(retrieved_temporary_folder):
@@ -587,7 +587,7 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
             )
 
 
-def retrieve_files_from_list(
+async def retrieve_files_from_list(
     calculation: CalcJobNode,
     transport: Transport,
     folder: str,

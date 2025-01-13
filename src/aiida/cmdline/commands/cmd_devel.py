@@ -61,12 +61,11 @@ def devel_check_load_time():
 def devel_check_undesired_imports():
     """Check that verdi does not import python modules it shouldn't.
 
-    Note: The blacklist was taken from the list of packages in the 'atomic_tools' extra but can be extended.
+    This is to keep the verdi CLI snappy, especially for tab-completion.
     """
     loaded_modules = 0
 
-    for modulename in [
-        'asyncio',
+    unwanted_modules = [
         'requests',
         'plumpy',
         'disk_objectstore',
@@ -78,7 +77,12 @@ def devel_check_undesired_imports():
         'spglib',
         'pymysql',
         'yaml',
-    ]:
+    ]
+    # trogon powers the optional TUI and uses asyncio.
+    # Check for asyncio only when the optional tui extras are not installed.
+    if 'trogon' not in sys.modules:
+        unwanted_modules += 'asyncio'
+    for modulename in unwanted_modules:
         if modulename in sys.modules:
             echo.echo_warning(f'Detected loaded module "{modulename}"')
             loaded_modules += 1

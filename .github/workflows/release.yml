@@ -18,7 +18,7 @@ jobs:
 
     # Only run this job on the main repository and not on forks
     if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v4
@@ -31,7 +31,7 @@ jobs:
   pre-commit:
 
     needs: [check-release-tag]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     steps:
@@ -50,7 +50,7 @@ jobs:
   tests:
 
     needs: [check-release-tag]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     services:
@@ -75,7 +75,7 @@ jobs:
 
     needs: [check-release-tag, pre-commit, tests]
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout source

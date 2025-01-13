@@ -72,7 +72,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
     node = process.node
 
     if node.get_state() == CalcJobState.SUBMITTING:
-        logger.warning(f'CalcJob<{node.pk}> already marked as SUBMITTING, skipping task_update_job')
+        logger.warning(f'CalcJob<{node.pk}> already marked as SUBMITTING, skipping task_upload_job')
         return
 
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)

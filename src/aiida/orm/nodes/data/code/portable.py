@@ -44,6 +44,7 @@ class PortableCode(Code):
 
     _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
+    _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""

@@ -29,7 +29,6 @@ def verdi_profile():
 def command_create_profile(
     ctx: click.Context,
     storage_cls,
-    non_interactive: bool,
     profile: Profile,
     set_as_default: bool = True,
     email: str | None = None,

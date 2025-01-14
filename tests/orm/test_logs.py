@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ORM Log tests"""
+
 import json
 import logging
 
@@ -24,18 +24,15 @@ class TestBackendLog:
     """Test the Log entity"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.log_record = {
             'time': now(),
             'loggername': 'loggername',
             'levelname': logging.getLevelName(LOG_LEVEL_REPORT),
             'dbnode_id': None,
             'message': 'This is a template record message',
-            'metadata': {
-                'content': 'test'
-            },
+            'metadata': {'content': 'test'},
         }
 
     def create_log(self):
@@ -45,9 +42,7 @@ class TestBackendLog:
         return Log(**record), node
 
     def test_create_log_message(self):
-        """
-        Test the manual creation of a log entry
-        """
+        """Test the manual creation of a log entry"""
         entry, node = self.create_log()
 
         assert entry.time == self.log_record['time']
@@ -166,9 +161,7 @@ class TestBackendLog:
 
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_find_orderby(self):
-        """
-        Test the order_by option of log.find
-        """
+        """Test the order_by option of log.find"""
         from aiida.orm.logs import ASCENDING, DESCENDING, OrderSpecifier
 
         node_ids = []
@@ -186,9 +179,7 @@ class TestBackendLog:
         assert res_entries[0].dbnode_id == node_ids[-1]
 
     def test_find_limit(self):
-        """
-        Test the limit option of log.find
-        """
+        """Test the limit option of log.find"""
         node = orm.Data().store()
         limit = 2
         for _ in range(limit * 2):
@@ -198,9 +189,7 @@ class TestBackendLog:
         assert len(entries) == limit
 
     def test_find_filter(self):
-        """
-        Test the filter option of log.find
-        """
+        """Test the filter option of log.find"""
         from random import randint
 
         node_ids = []
@@ -216,8 +205,7 @@ class TestBackendLog:
 
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_db_log_handler(self):
-        """
-        Verify that the db log handler is attached correctly
+        """Verify that the db log handler is attached correctly
         by firing a log message through the regular logging module
         attached to a calculation node
         """
@@ -253,7 +241,7 @@ class TestBackendLog:
         assert logs[1].message == message2
 
     def test_log_querybuilder(self):
-        """ Test querying for logs by joining on nodes in the QueryBuilder """
+        """Test querying for logs by joining on nodes in the QueryBuilder"""
         from aiida.orm import QueryBuilder
 
         # Setup nodes
@@ -282,8 +270,7 @@ class TestBackendLog:
             assert str(log[0]) in [str(log_1.uuid), str(log_2.uuid), str(log_3.uuid)]
 
     def test_raise_wrong_metadata_type_error(self):
-        """
-        Test a TypeError exception is thrown with string metadata.
+        """Test a TypeError exception is thrown with string metadata.
         Also test that metadata is correctly created.
         """
         # Create CalculationNode
@@ -293,7 +280,7 @@ class TestBackendLog:
         correct_metadata_format = {
             'msg': 'Life is like riding a bicycle.',
             'args': '()',
-            'name': 'aiida.orm.node.process.calculation.CalculationNode'
+            'name': 'aiida.orm.node.process.calculation.CalculationNode',
         }
 
         # str of dict metadata
@@ -310,7 +297,7 @@ class TestBackendLog:
                 logging.getLevelName(LOG_LEVEL_REPORT),
                 calc.pk,
                 'To keep your balance, you must keep moving',
-                metadata=wrong_metadata_format
+                metadata=wrong_metadata_format,
             )
 
         # Check no error is raised when creating a Log with dict metadata
@@ -320,7 +307,7 @@ class TestBackendLog:
             logging.getLevelName(LOG_LEVEL_REPORT),
             calc.pk,
             'To keep your balance, you must keep moving',
-            metadata=correct_metadata_format
+            metadata=correct_metadata_format,
         )
 
         # Check metadata is correctly created
@@ -333,7 +320,7 @@ class TestBackendLog:
             logging.getLevelName(LOG_LEVEL_REPORT),
             calc.pk,
             'To keep your balance, you must keep moving',
-            metadata=json_metadata_format
+            metadata=json_metadata_format,
         )
 
         # Check metadata is correctly created
@@ -346,7 +333,7 @@ class TestBackendLog:
             logging.getLevelName(LOG_LEVEL_REPORT),
             calc.pk,
             'To keep your balance, you must keep moving',
-            metadata=None
+            metadata=None,
         )
 
         # Check metadata is an empty dict for no_metadata_log

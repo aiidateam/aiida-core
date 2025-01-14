@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,7 +7,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests the `request_ProfileAccessManageraccess` class."""
-# pylint: disable=protected-access
 
 from os import listdir
 from pathlib import Path
@@ -34,6 +32,7 @@ from aiida.manage.profile_access import ProfileAccessManager
 def fixture_profile_access_manager():
     """Create special SQLAlchemy engine for use with QueryBuilder - backend-agnostic"""
     from aiida.manage import get_manager
+
     aiida_profile = get_manager().get_profile()
     return ProfileAccessManager(aiida_profile)
 
@@ -75,7 +74,7 @@ def test_check_methods(profile_access_manager, monkeypatch):
     are returned by `_get_tracking_files`, and when they are not.
     """
 
-    def mockfun_return_path(*args, **kwargs):  # pylint: disable=unused-argument
+    def mockfun_return_path(*args, **kwargs):
         """Mock of _raise_if_locked."""
         return [Path('file.txt')]
 
@@ -83,7 +82,7 @@ def test_check_methods(profile_access_manager, monkeypatch):
     assert profile_access_manager.is_active()
     assert profile_access_manager.is_locked()
 
-    def mockfun_return_empty(*args, **kwargs):  # pylint: disable=unused-argument
+    def mockfun_return_empty(*args, **kwargs):
         """Mock of _raise_if_locked."""
         return []
 
@@ -107,7 +106,7 @@ def test_raise_methods(profile_access_manager, monkeypatch):
     tempfile = Path(file_stem + '.txt')
     tempfile.write_text(file_content, encoding='utf-8')
 
-    def mock_get_tracking_files(*args, **kwargs):  # pylint: disable=unused-argument
+    def mock_get_tracking_files(*args, **kwargs):
         """Mock of _raise_if_locked."""
         return [tempfile]
 
@@ -176,7 +175,7 @@ def test_clear_stale_pid_files(profile_access_manager):
 ###########################################################################
 
 
-class MockProcess():
+class MockProcess:
     """Object that can start/stop an aiida process.
 
     After starting an aiida process, we need to check that the profile was loaded
@@ -190,17 +189,17 @@ class MockProcess():
 
     def _write_codefile(self, temppath_codefile, temppath_checkfile, runtime_secs=60):
         """Auxiliary function to write the code for the process."""
-        # pylint: disable=f-string-without-interpolation
         with temppath_codefile.open('w', encoding='utf-8') as fileobj:
-            fileobj.write(f'import time\n')
-            fileobj.write(f'from pathlib import Path\n')
+            fileobj.write('import time\n')
+            fileobj.write('from pathlib import Path\n')
             fileobj.write(f'logger_file = Path("{temppath_checkfile.resolve()}")\n')
-            fileobj.write(f'logger_file.touch()\n')
+            fileobj.write('logger_file.touch()\n')
             fileobj.write(f'time.sleep({runtime_secs})\n')
 
     def _wait_for_checkfile(self, temppath_checkfile):
         """Auxiliary function that waits for the checkfile to be written."""
         import time
+
         check_count = 0
 
         while check_count < 100 and not temppath_checkfile.exists():
@@ -221,7 +220,7 @@ class MockProcess():
         try:
             self._write_codefile(temppath_codefile, temppath_checkfile, runtime_secs)
 
-            self._process = Popen(['verdi', '-p', self._profile.name, 'run', 'temp_file.py'], stderr=PIPE)  # pylint: disable=consider-using-with
+            self._process = Popen(['verdi', '-p', self._profile.name, 'run', 'temp_file.py'], stderr=PIPE)
 
             if should_raise:
                 error = self._process.communicate()
@@ -318,7 +317,7 @@ def test_lock(profile_access_manager, monkeypatch):
     # It will not let other process access if it locks.
     # We need to mock the check on other accessing processes because otherwise
     # it will detect the pytest process.
-    def mock_raise_if_1(error_message):  # pylint: disable=unused-argument
+    def mock_raise_if_1(error_message):
         """Mock function for the `raise_if` methods."""
 
     monkeypatch.setattr(profile_access_manager, '_raise_if_active', mock_raise_if_1)

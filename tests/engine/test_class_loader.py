@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A module to test class loader factories."""
+
 import pytest
 
 import aiida
@@ -19,9 +19,8 @@ class TestCalcJob:
     """Test CalcJob."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
         yield
         assert Process.current() is None

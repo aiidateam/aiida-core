@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for :class:`aiida.orm.nodes.data.dict.Dict` class."""
+
 import pytest
 
 from aiida.orm import Dict
@@ -42,6 +41,15 @@ def test_dict_property(dictionary):
     node = Dict(dictionary)
     assert node.dict.value == dictionary['value']
     assert node.dict.nested == dictionary['nested']
+
+
+def test_get(dictionary):
+    """Test the ``get`` method."""
+    node = Dict(dictionary)
+    assert node.get('invalid') is None
+    assert node.get('invalid', 'default') == 'default'
+    assert node.get('value') == dictionary['value']
+    assert node.get('nested') == dictionary['nested']
 
 
 def test_get_item(dictionary):
@@ -115,7 +123,7 @@ def test_equality(dictionary):
     assert node != different_dict
 
     # Test equality comparison between `Dict` nodes
-    assert node is node  # pylint: disable=comparison-with-itself
+    assert node is node  # noqa: PLR0124
     assert node == clone
     assert node != different_node
 

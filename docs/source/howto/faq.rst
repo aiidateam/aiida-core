@@ -4,7 +4,8 @@
 Frequently Asked Questions
 ==========================
 
-If the problem you are facing is not addressed below, you can send an email to the `mailing list <http://www.aiida.net/mailing-list/>`_, or `open an issue on Github <https://github.com/aiidateam/aiida-core/issues/new/choose>`_ if you think it concerns a bug.
+If the problem you are facing is not addressed below, please refer to the `Discourse server <https://aiida.discourse.group/>`_.
+To file a bug report or open a feature request, please `open an issue on Github <https://github.com/aiidateam/aiida-core/issues/new/choose>`_.
 
 
 I have updated the version of AiiDA and now it is no longer working. What should I do?
@@ -84,7 +85,7 @@ For example, go to the directory that contains the file where you defined the pr
 
     $ echo "export PYTHONPATH=\$PYTHONPATH:$PWD" >> $HOME/.bashrc
     $ source $HOME/.bashrc
-    $ verdi daemon restart --reset
+    $ verdi daemon restart
 
 .. _how-to:faq:caching-not-enabled:
 
@@ -110,3 +111,9 @@ When the SSH key pair expires, AiiDA will fail to connect to the remote computer
 This will cause all calculations submitted on that computer to pause.
 To restart them, one needs to generate a new SSH key pair and play the paused processes using ``verdi process play --all``.
 Typically, this is all one needs to do - AiiDA will re-establish the connection to the computer and will continue following the calculations.
+
+How to back up AiiDA data?
+=============================================================================
+
+The most convenient way to back up an AiiDA profile is to use the ``verdi --profile <name> storage backup`` command.
+For more information, see :ref:`how-to:installation:backup`.

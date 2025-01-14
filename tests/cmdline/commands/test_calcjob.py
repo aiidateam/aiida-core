@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,12 +6,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=protected-access,too-many-locals,invalid-name,too-many-public-methods
 """Tests for `verdi calcjob`."""
+
 import io
 
-from click.testing import CliRunner
 import pytest
+from click.testing import CliRunner
 
 from aiida import orm
 from aiida.cmdline.commands import cmd_calcjob as command
@@ -33,10 +32,8 @@ class TestVerdiCalculation:
     """Tests for `verdi calcjob`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, tmp_path):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init,too-many-statements
-
         self.computer = aiida_localhost
         self.code = orm.InstalledCode(computer=self.computer, filepath_executable='/bin/true').store()
         self.group = orm.Group(label='test_group').store()
@@ -48,7 +45,6 @@ class TestVerdiCalculation:
 
         # Create 5 CalcJobNodes (one for each CalculationState)
         for index, calculation_state in enumerate(CalcJobState):
-
             dirpath = tmp_path / str(index)
             dirpath.mkdir()
 
@@ -73,10 +69,12 @@ class TestVerdiCalculation:
                 self.VAL_ONE = 'val_one'
                 self.VAL_TWO = 'val_two'
 
-                output_parameters = orm.Dict(dict={
-                    self.KEY_ONE: self.VAL_ONE,
-                    self.KEY_TWO: self.VAL_TWO,
-                }).store()
+                output_parameters = orm.Dict(
+                    dict={
+                        self.KEY_ONE: self.VAL_ONE,
+                        self.KEY_TWO: self.VAL_TWO,
+                    }
+                ).store()
 
                 output_parameters.base.links.add_incoming(calc, LinkType.CREATE, 'output_parameters')
 
@@ -106,9 +104,9 @@ class TestVerdiCalculation:
         import_test_archive('calcjob/arithmetic.add.aiida')
 
         # Get the imported ArithmeticAddCalculation node
-        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # noqa: N806
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
-        self.arithmetic_job: orm.CalcJobNode = calculations[0]  # type: ignore
+        self.arithmetic_job: orm.CalcJobNode = calculations[0]  # type: ignore[annotation-unchecked]
 
         self.cli_runner = CliRunner()
 
@@ -184,7 +182,6 @@ class TestVerdiCalculation:
 
     def test_calcjob_inputcat(self):
         """Test verdi calcjob inputcat"""
-
         options = []
         result = self.cli_runner.invoke(command.calcjob_inputcat, options)
         assert result.exception is not None, result.output
@@ -215,7 +212,6 @@ class TestVerdiCalculation:
 
     def test_calcjob_outputcat(self):
         """Test verdi calcjob outputcat"""
-
         options = []
         result = self.cli_runner.invoke(command.calcjob_outputcat, options)
         assert result.exception is not None
@@ -245,9 +241,8 @@ class TestVerdiCalculation:
         retrieved.base.repository._repository.put_object_from_filelike(io.BytesIO(b'5\n'), 'aiida.out')
         retrieved.base.repository._update_repository_metadata()
 
-    def test_calcjob_cleanworkdir(self):
+    def test_calcjob_cleanworkdir_basic(self):
         """Test verdi calcjob cleanworkdir"""
-
         # Specifying no filtering options and no explicit calcjobs should exit with non-zero status
         options = []
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
@@ -263,14 +258,15 @@ class TestVerdiCalculation:
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         assert result.exception is None, result.output
 
+        # The flag should have been set
+        assert self.result_job.outputs.remote_folder.base.extras.get('cleaned') is True
+
         # Do it again should fail as the calcjob has been cleaned
         options = ['-f', str(self.result_job.uuid)]
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         assert result.exception is not None, result.output
 
-        # The flag should have been set
-        assert self.result_job.outputs.remote_folder.base.extras.get('cleaned') is True
-
+    def test_calcjob_cleanworkdir_advanced(self):
         # Check applying both p and o filters
         for flag_p in ['-p', '--past-days']:
             for flag_o in ['-o', '--older-than']:
@@ -303,10 +299,9 @@ class TestVerdiCalculation:
 
     def test_calcjob_inoutputcat_old(self):
         """Test most recent process class / plug-in can be successfully used to find filenames"""
-
         # Import old archive of ArithmeticAddCalculation
         import_test_archive('calcjob/arithmetic.add_old.aiida')
-        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # noqa: N806
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()
         add_job = None
         for job in calculations:
@@ -357,3 +352,44 @@ class TestVerdiCalculation:
         options = [str(self.result_job.uuid), 'fileA.txt']
         result = self.cli_runner.invoke(command.calcjob_remotecat, options)
         assert result.stdout == 'test stringA'
+
+    def test_calcjob_gotocomputer(self):
+        """Test verdi calcjob gotocomputer"""
+
+        from unittest.mock import patch
+
+        from aiida.common.exceptions import NotExistent
+
+        options = [str(self.result_job.uuid)]
+
+        # Easy peasy no exception
+        with patch('os.system') as mock_os_system:
+            result = self.cli_runner.invoke(command.calcjob_gotocomputer, options)
+            mock_os_system.assert_called_once()
+            assert mock_os_system.call_args[0][0] is not None
+
+        def raise_(e):
+            raise e('something')
+
+        # Test when get_transport raises NotExistent
+        with patch(
+            'aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_transport', new=lambda _: raise_(NotExistent)
+        ):
+            result = self.cli_runner.invoke(command.calcjob_gotocomputer, options)
+            assert result.exit_code == 1
+            assert 'something' in result.output
+
+        # Test when get_remote_workdir returns None
+        with patch('aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_remote_workdir', new=lambda _: None):
+            result = self.cli_runner.invoke(command.calcjob_gotocomputer, options)
+            assert result.exit_code == 1
+            assert 'no remote work directory for this calcjob' in result.output
+
+        # Test when gotocomputer_command raises NotImplementedError
+        with patch(
+            'aiida.transports.plugins.local.LocalTransport.gotocomputer_command',
+            new=lambda _, __: raise_(NotImplementedError),
+        ):
+            result = self.cli_runner.invoke(command.calcjob_gotocomputer, options)
+            assert result.exit_code == 0
+            assert self.result_job.get_remote_workdir() in result.output

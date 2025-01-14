@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the AuthInfo ORM class."""
+
 import pytest
 
 from aiida.common import exceptions
@@ -18,11 +18,10 @@ class TestAuthinfo:
     """Unit tests for the AuthInfo ORM class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
-        self.auth_info = self.computer.configure()  # pylint: disable=no-member
+        self.auth_info = self.computer.configure()
 
     def test_set_auth_params(self):
         """Test the auth_params setter."""

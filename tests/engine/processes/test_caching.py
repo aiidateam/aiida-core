@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Test the caching functionality for a :class:`aiida.engine.processes.process.Process`."""
+
 from aiida.engine import Process, run
 from aiida.manage import enable_caching
 from aiida.orm import CalcJobNode, Int

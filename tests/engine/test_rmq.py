@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to test RabbitMQ."""
+
 import asyncio
 
 import plumpy
@@ -23,13 +23,11 @@ from tests.utils import processes as test_processes
 class TestProcessControl:
     """Test AiiDA's RabbitMQ functionalities."""
 
-    TIMEOUT = 2.
+    TIMEOUT = 2.0
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
-
         # The coroutine defined in testcase should run in runner's loop
         # and process need submit by runner.submit rather than `submit` import from
         # aiida.engine, since the broad one will create its own loop
@@ -37,7 +35,7 @@ class TestProcessControl:
         self.runner = manager.get_runner()
 
     def test_submit_simple(self):
-        """"Launch the process."""
+        """ "Launch the process."""
 
         async def do_submit():
             calc_node = self.runner.submit(test_processes.DummyProcess)
@@ -80,7 +78,6 @@ class TestProcessControl:
 
     def test_pause(self):
         """Testing sending a pause message to the process."""
-
         controller = get_manager().get_process_controller()
 
         async def do_pause():
@@ -96,8 +93,7 @@ class TestProcessControl:
             assert result
             assert calc_node.paused
 
-            kill_message = 'Sorry, you have to go mate'
-            kill_future = controller.kill_process(calc_node.pk, msg=kill_message)
+            kill_future = controller.kill_process(calc_node.pk, msg_text='Sorry, you have to go mate')
             future = await with_timeout(asyncio.wrap_future(kill_future))
             result = await self.wait_future(asyncio.wrap_future(future))
             assert result
@@ -106,7 +102,6 @@ class TestProcessControl:
 
     def test_pause_play(self):
         """Test sending a pause and then a play message."""
-
         controller = get_manager().get_process_controller()
 
         async def do_pause_play():
@@ -116,7 +111,7 @@ class TestProcessControl:
                 await asyncio.sleep(0.1)
 
             pause_message = 'Take a seat'
-            pause_future = controller.pause_process(calc_node.pk, msg=pause_message)
+            pause_future = controller.pause_process(calc_node.pk, msg_text=pause_message)
             future = await with_timeout(asyncio.wrap_future(pause_future))
             result = await self.wait_future(asyncio.wrap_future(future))
             assert calc_node.paused
@@ -130,8 +125,7 @@ class TestProcessControl:
             assert not calc_node.paused
             assert calc_node.process_status is None
 
-            kill_message = 'Sorry, you have to go mate'
-            kill_future = controller.kill_process(calc_node.pk, msg=kill_message)
+            kill_future = controller.kill_process(calc_node.pk, msg_text='Sorry, you have to go mate')
             future = await with_timeout(asyncio.wrap_future(kill_future))
             result = await self.wait_future(asyncio.wrap_future(future))
             assert result
@@ -140,7 +134,6 @@ class TestProcessControl:
 
     def test_kill(self):
         """Test sending a kill message."""
-
         controller = get_manager().get_process_controller()
 
         async def do_kill():
@@ -150,7 +143,7 @@ class TestProcessControl:
                 await asyncio.sleep(0.1)
 
             kill_message = 'Sorry, you have to go mate'
-            kill_future = controller.kill_process(calc_node.pk, msg=kill_message)
+            kill_future = controller.kill_process(calc_node.pk, msg_text=kill_message)
             future = await with_timeout(asyncio.wrap_future(kill_future))
             result = await self.wait_future(asyncio.wrap_future(future))
             assert result
@@ -161,13 +154,13 @@ class TestProcessControl:
 
         self.runner.loop.run_until_complete(do_kill())
 
-    async def wait_for_process(self, calc_node, timeout=2.):
+    async def wait_for_process(self, calc_node, timeout=2.0):
         future = self.runner.get_process_future(calc_node.pk)
         result = await with_timeout(future, timeout)
         return result
 
     @staticmethod
-    async def wait_future(future, timeout=2.):
+    async def wait_future(future, timeout=2.0):
         result = await with_timeout(future, timeout)
         return result
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -16,7 +15,7 @@ until "dbgroup_type_string_change_content" (django: 0022), both included.
 The effects of the large db migration "provenance_redesign" (django: 0020)
 is tested in `TestLinks`, since the greatest change concerns links.
 """
-# pylint: disable=too-many-locals
+
 import pytest
 
 from aiida import orm
@@ -24,10 +23,10 @@ from aiida.tools.archive import create_archive, import_archive
 
 
 def test_base_data_type_change(tmp_path, aiida_profile):
-    """ Base Data types type string changed
+    """Base Data types type string changed
     Example: Bool: “data.base.Bool.” → “data.bool.Bool.”
     """
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # Test content
     test_content = ('Hello', 6, -1.2399834e12, False)
@@ -58,7 +57,7 @@ def test_base_data_type_change(tmp_path, aiida_profile):
     create_archive(export_nodes, filename=filename)
 
     # Clean the database
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # Import nodes again
     import_archive(filename)
@@ -85,11 +84,11 @@ def test_base_data_type_change(tmp_path, aiida_profile):
 
 @pytest.mark.requires_rmq
 def test_node_process_type(aiida_profile, tmp_path):
-    """ Column `process_type` added to `Node` entity DB table """
+    """Column `process_type` added to `Node` entity DB table"""
     from aiida.engine import run_get_node
     from tests.utils.processes import AddProcess
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # Node types
     node_type = 'process.workflow.WorkflowNode.'
@@ -111,7 +110,7 @@ def test_node_process_type(aiida_profile, tmp_path):
     create_archive([node], filename=filename)
 
     # Clean the database and reimport data
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(filename)
 
     # Retrieve node and check exactly one node is imported
@@ -135,7 +134,7 @@ def test_node_process_type(aiida_profile, tmp_path):
 
 @pytest.mark.usefixtures('suppress_internal_deprecations')
 def test_code_type_change(aiida_profile, tmp_path, aiida_localhost):
-    """ Code type string changed
+    """Code type string changed
     Change: “code.Bool.” → “data.code.Code.”
     """
     # Create Code instance
@@ -153,7 +152,7 @@ def test_code_type_change(aiida_profile, tmp_path, aiida_localhost):
     create_archive([code], filename=filename)
 
     # Clean the database and reimport
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(filename)
 
     # Retrieve Code node and make sure exactly 1 is retrieved
@@ -175,7 +174,7 @@ def test_code_type_change(aiida_profile, tmp_path, aiida_localhost):
 
 
 def test_group_name_and_type_change(tmp_path, aiida_profile):
-    """ Group's name and type columns have changed
+    """Group's name and type columns have changed
     Change for columns:
     “name”            --> “label”
     "type"            --> "type_string"
@@ -196,21 +195,23 @@ def test_group_name_and_type_change(tmp_path, aiida_profile):
     """
     from aiida.orm.nodes.data.upf import upload_upf_family
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # To be saved
     groups_label = ['Users', 'UpfData']
     upf_filename = 'Al.test_file.UPF'
     # regular upf file version 2 header
-    upf_contents = '\n'.join([
-        "<UPF version=\"2.0.1\">",
-        'Human readable section is completely irrelevant for parsing!',
-        '<PP_HEADER',
-        'contents before element tag',
-        "element=\"Al\"",
-        'contents following element tag',
-        '>',
-    ])
+    upf_contents = '\n'.join(
+        [
+            '<UPF version="2.0.1">',
+            'Human readable section is completely irrelevant for parsing!',
+            '<PP_HEADER',
+            'contents before element tag',
+            'element="Al"',
+            'contents following element tag',
+            '>',
+        ]
+    )
     with (tmp_path / upf_filename).open('w') as upf_file:
         upf_file.write(upf_contents)
 
@@ -237,7 +238,7 @@ def test_group_name_and_type_change(tmp_path, aiida_profile):
     create_archive([group_user, group_upf], filename=filename)
 
     # Clean the database and reimport
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     import_archive(filename)
 
     # Retrieve Groups and make sure exactly 3 are retrieved (including the "import group")

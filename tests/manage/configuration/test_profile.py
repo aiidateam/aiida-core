@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :class:`aiida.manage.configuration.profile.Profile` class."""
+
 import uuid
 
 import pytest
@@ -31,9 +31,6 @@ def test_base_properties(profile_factory):
 
     # Check that the default user email field is not None
     assert profile.default_user_email is not None
-
-    # The RabbitMQ prefix should contain the profile UUID
-    assert profile.uuid in profile.rmq_prefix
 
 
 @pytest.mark.parametrize('test_profile', (True, False))

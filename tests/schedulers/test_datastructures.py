@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.schedulers.test_datastructures` module."""
+
 import pytest
 
 from aiida.schedulers.datastructures import NodeNumberJobResource, ParEnvJobResource
@@ -128,7 +128,7 @@ def test_serialization():
         'job_id': '12723',
         'title': 'some title',
         'queue_name': 'some_queue',
-        'account': 'my_account'
+        'account': 'my_account',
     }
 
     to_serialize = {'job_state': (JobState.QUEUED, 'job_state'), 'submission_time': (datetime.now(), 'date')}

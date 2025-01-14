@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -32,8 +31,16 @@ NODE_REPOS = {
     'd60b7c8a-4808-4f69-a72c-670df4d63700': {'.gitignore'},
     '9d73cf46-b8df-4fbb-af66-ac797194c24f': {'forces.npy', 'energy.npy', 'energy_accuracy.npy'},
     '3b429fd4-601c-4473-add5-7cbb76cf38cb': {
-        '.aiida', '.aiida/calcinfo.json', 'pseudo', 'pseudo/.gitignore', 'aiida.in', '_aiidasubmit.sh',
-        '.aiida/job_tmpl.json', 'out', '.gitignore', 'out/.gitignore'
+        '.aiida',
+        '.aiida/calcinfo.json',
+        'pseudo',
+        'pseudo/.gitignore',
+        'aiida.in',
+        '_aiidasubmit.sh',
+        '.aiida/job_tmpl.json',
+        'out',
+        '.gitignore',
+        'out/.gitignore',
     },
     'c03f49a0-f1b4-4792-bf7b-7a5330074dc1': {'.gitignore'},
     '4ff5a907-78a6-4b40-99b4-c69b51f0c3b0': {'.gitignore'},
@@ -41,17 +48,26 @@ NODE_REPOS = {
     'b4197406-cf07-4c89-a6da-a1f6ec75ab80': {'.gitignore'},
     'c1879cbe-8f6f-4343-b3f7-df8ecbd4d403': {'.gitignore'},
     'f75aaf40-f952-488c-be84-488a183a03d4': {
-        'K00003', 'K00001/eigenval.xml', 'K00004/eigenval.xml', 'K00002', '_scheduler-stderr.txt', 'K00001',
-        '_scheduler-stdout.txt', 'K00004', 'data-file.xml', 'aiida.out', 'K00003/eigenval.xml', 'K00002/eigenval.xml'
+        'K00003',
+        'K00001/eigenval.xml',
+        'K00004/eigenval.xml',
+        'K00002',
+        '_scheduler-stderr.txt',
+        'K00001',
+        '_scheduler-stdout.txt',
+        'K00004',
+        'data-file.xml',
+        'aiida.out',
+        'K00003/eigenval.xml',
+        'K00002/eigenval.xml',
     },
-    'e5098e78-8430-4e2d-a494-357686eb63dc': {'.gitignore'}
+    'e5098e78-8430-4e2d-a494-357686eb63dc': {'.gitignore'},
 }
 
 
 @pytest.mark.parametrize('archive_name', ('export_0.4_simple.aiida', 'export_0.4_simple.tar.gz'))
 def test_full_migration(tmp_path, core_archive, archive_name):
     """Test a migration from the first to newest archive version."""
-
     filepath_archive = get_archive_file(archive_name, **core_archive)
     archive_format = ArchiveFormatSqlZip()
 
@@ -139,7 +155,6 @@ def test_migrate_to_newest(external_archive, tmp_path, filename, nodes):
     assert archive_format.read_version(new_archive) == archive_format.latest_version
 
     with archive_format.open(new_archive, 'r') as reader:
-
         # count nodes
         archive_node_count = reader.querybuilder().append(orm.Node).count()
         assert archive_node_count == nodes
@@ -158,24 +173,9 @@ def test_migrate_to_newest(external_archive, tmp_path, filename, nodes):
             assert cell == [[4, 0, 0], [0, 4, 0], [0, 0, 4]]
 
         known_kinds = [
-            {
-                'name': 'Ba',
-                'mass': 137.327,
-                'weights': [1],
-                'symbols': ['Ba']
-            },
-            {
-                'name': 'Ti',
-                'mass': 47.867,
-                'weights': [1],
-                'symbols': ['Ti']
-            },
-            {
-                'name': 'O',
-                'mass': 15.9994,
-                'weights': [1],
-                'symbols': ['O']
-            },
+            {'name': 'Ba', 'mass': 137.327, 'weights': [1], 'symbols': ['Ba']},
+            {'name': 'Ti', 'mass': 47.867, 'weights': [1], 'symbols': ['Ti']},
+            {'name': 'O', 'mass': 15.9994, 'weights': [1], 'symbols': ['O']},
         ]
         kind_query = reader.querybuilder().append(orm.StructureData, project=['attributes.kinds'])
         for kinds in kind_query.all(flat=True):

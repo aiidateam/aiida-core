@@ -1,0 +1,9 @@
+version: '3.4'
+
+services:
+
+  aiida:
+    image: ${REGISTRY:-}${AIIDA_CORE_DEV_IMAGE:-aiidateam/aiida-core-dev}${TAG:-}
+    environment:
+      TZ: Europe/Zurich
+      SETUP_DEFAULT_AIIDA_PROFILE: 'true'

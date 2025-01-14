@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name,invalid-name
 """Tests for the :mod:`aiida.cmdline.utils.repository` module."""
+
 import io
 
 import pytest
@@ -21,6 +20,7 @@ from aiida.orm import FolderData
 def runner():
     """Return a `click` test runner."""
     from click.testing import CliRunner
+
     return CliRunner()
 
 

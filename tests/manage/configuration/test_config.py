@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,95 +7,106 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the ``Config`` class."""
+
 import json
 import os
 import pathlib
+import uuid
 
 import pytest
 
 from aiida.common import exceptions
-from aiida.manage.configuration import Config, Profile, settings
+from aiida.manage.configuration import Profile, settings
+from aiida.manage.configuration.config import Config
 from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 from aiida.manage.configuration.options import get_option
+from aiida.manage.configuration.settings import AiiDAConfigDir
+from aiida.storage.sqlite_temp import SqliteTempBackend
+
+
+class InvalidBaseStorage:
+    pass
 
 
 @pytest.fixture
 def cache_aiida_path_variable():
     """Fixture that will store the ``AIIDA_PATH`` environment variable and restore it after the yield."""
-    aiida_path_original = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
+    aiida_path_original = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE)
 
-    try:
-        yield
-    finally:
-        if aiida_path_original is not None:
-            os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = aiida_path_original
-        else:
-            try:
-                del os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE]
-            except KeyError:
-                pass
+    yield
+    if aiida_path_original is not None:
+        os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = aiida_path_original
+    else:
+        try:
+            del os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE]
+        except KeyError:
+            pass
 
     # Make sure to reset the global variables set by the following call that are dependent on the environment variable
     # ``DEFAULT_AIIDA_PATH_VARIABLE``. It may have been changed by a test using this fixture.
-    settings.set_configuration_directory()
+    AiiDAConfigDir.set()
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_environment_variable_not_set(tmp_path, monkeypatch):
+def test_environment_variable_not_set(chdir_tmp_path, monkeypatch):
     """Check that if the environment variable is not set, config folder will be created in `DEFAULT_AIIDA_PATH`.
 
     To make sure we do not mess with the actual default `.aiida` folder, which often lives in the home folder
     we create a temporary directory and set the `DEFAULT_AIIDA_PATH` to it.
+
+    Since if the environment variable is not set, the code will check for a config folder in the current working dir
+    or any of its parents, we switch the working directory to the temporary path, which is unlikely to have a config
+    directory in its hierarchy.
     """
     # Change the default configuration folder path to temp folder instead of probably `~`.
-    monkeypatch.setattr(settings, 'DEFAULT_AIIDA_PATH', tmp_path)
+    monkeypatch.setattr(settings, 'DEFAULT_AIIDA_PATH', chdir_tmp_path)
 
     # Make sure that the environment variable is not set
     try:
         del os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE]
     except KeyError:
         pass
-    settings.set_configuration_directory()
+    AiiDAConfigDir.set()
 
-    config_folder = os.path.join(tmp_path, settings.DEFAULT_CONFIG_DIR_NAME)
+    config_folder = chdir_tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert os.path.isdir(config_folder)
-    assert settings.AIIDA_CONFIG_FOLDER == pathlib.Path(config_folder)
+    assert AiiDAConfigDir.get() == pathlib.Path(config_folder)
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_environment_variable_set_single_path_without_config_folder(tmp_path):  # pylint: disable=invalid-name
+def test_environment_variable_set_single_path_without_config_folder(tmp_path):
     """If `AIIDA_PATH` is set but does not contain a configuration folder, it should be created."""
     # Set the environment variable and call configuration initialization
     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(tmp_path)
-    settings.set_configuration_directory()
+    AiiDAConfigDir.set()
 
     # This should have created the configuration directory in the path
     config_folder = tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert config_folder.is_dir()
-    assert settings.AIIDA_CONFIG_FOLDER == config_folder
+    assert AiiDAConfigDir.get() == config_folder
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_environment_variable_set_single_path_with_config_folder(tmp_path):  # pylint: disable=invalid-name
+def test_environment_variable_set_single_path_with_config_folder(tmp_path):
     """If `AIIDA_PATH` is set and already contains a configuration folder it should simply be used."""
     (tmp_path / settings.DEFAULT_CONFIG_DIR_NAME).mkdir()
 
     # Set the environment variable and call configuration initialization
     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(tmp_path)
-    settings.set_configuration_directory()
+    AiiDAConfigDir.set()
 
     # This should have created the configuration directory in the path
     config_folder = tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert config_folder.is_dir()
-    assert settings.AIIDA_CONFIG_FOLDER == config_folder
+    assert AiiDAConfigDir.get() == config_folder
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_environment_variable_path_including_config_folder(tmp_path):  # pylint: disable=invalid-name
+def test_environment_variable_path_including_config_folder(tmp_path):
     """If `AIIDA_PATH` is set and the path contains the base name of the config folder, it should work, i.e:
 
         `/home/user/.virtualenvs/dev/`
@@ -106,17 +116,17 @@ def test_environment_variable_path_including_config_folder(tmp_path):  # pylint:
     """
     # Set the environment variable with a path that include base folder name and call config initialization
     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(tmp_path / settings.DEFAULT_CONFIG_DIR_NAME)
-    settings.set_configuration_directory()
+    AiiDAConfigDir.set()
 
     # This should have created the configuration directory in the pathpath
     config_folder = tmp_path / settings.DEFAULT_CONFIG_DIR_NAME
     assert config_folder.is_dir()
-    assert settings.AIIDA_CONFIG_FOLDER == config_folder
+    assert AiiDAConfigDir.get() == config_folder
 
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_environment_variable_set_multiple_path(tmp_path):  # pylint: disable=invalid-name
+def test_environment_variable_set_multiple_path(tmp_path):
     """If `AIIDA_PATH` is set with multiple paths without actual config folder, one is created in the last."""
     directory_a = tmp_path / 'a'
     directory_b = tmp_path / 'b'
@@ -129,12 +139,12 @@ def test_environment_variable_set_multiple_path(tmp_path):  # pylint: disable=in
     # Set the environment variable to contain three paths and call configuration initialization
     env_variable = f'{directory_a}:{directory_b}:{directory_c}'
     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = env_variable
-    settings.set_configuration_directory()
+    AiiDAConfigDir.set()
 
     # This should have created the configuration directory in the last path
     config_folder = directory_c / settings.DEFAULT_CONFIG_DIR_NAME
     assert os.path.isdir(config_folder)
-    assert settings.AIIDA_CONFIG_FOLDER == config_folder
+    assert AiiDAConfigDir.get() == config_folder
 
 
 def compare_config_in_memory_and_on_disk(config, filepath):
@@ -144,9 +154,7 @@ def compare_config_in_memory_and_on_disk(config, filepath):
     :param filepath: absolute filepath to a configuration file
     :raises AssertionError: if content of `config` is not equal to that of file on disk
     """
-    from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE
-
-    in_memory = json.dumps(config.dictionary, indent=DEFAULT_CONFIG_INDENT_SIZE)
+    in_memory = json.dumps(config.dictionary, indent=settings.DEFAULT_CONFIG_INDENT_SIZE)
 
     # Read the content stored on disk
     with open(filepath, 'r', encoding='utf8') as handle:
@@ -161,7 +169,6 @@ def test_from_file(tmp_path):
 
     Regression test for #3790: make sure configuration is written to disk after it is loaded and migrated.
     """
-
     # If the config file does not exist, a completely new file is created with a migrated config
     filepath_nonexisting = tmp_path / 'config_nonexisting.json'
     config = Config.from_file(filepath_nonexisting)
@@ -178,7 +185,6 @@ def test_from_file(tmp_path):
 
     # Finally, we test that an existing configuration file with an outdated schema is migrated and written to disk
     with (tmp_path / 'config.json').open('wb') as handle:
-
         # Write content of configuration with old schema to disk
         filepath = pathlib.Path(__file__).parent.absolute() / 'migrations' / 'test_samples' / 'input' / '0.json'
         with filepath.open('rb') as source:
@@ -271,6 +277,18 @@ def test_default_profile(empty_config, profile_factory):
     # But with overwrite=True it should
     config.set_default_profile(alternative_profile.name, overwrite=True)
     assert config.default_profile_name == alternative_profile_name
+
+
+def test_set_default_user_email(config_with_profile):
+    """Test the :meth:`aiida.manage.configuration.config.Config.set_default_user_email`."""
+    config = config_with_profile
+    profile = config.get_profile()
+    default_user_email = profile.default_user_email
+    default_user_email_new = uuid.uuid4().hex
+    assert default_user_email != default_user_email_new
+    config.set_default_user_email(profile, default_user_email_new)
+    assert profile.default_user_email == default_user_email_new
+    assert config.get_profile(profile.name).default_user_email == default_user_email_new
 
 
 def test_profiles(config_with_profile, profile_factory):
@@ -414,9 +432,42 @@ def test_delete_profile(config_with_profile, profile_factory):
     # Write the contents to disk so that the to-be-deleted profile is in the config file on disk
     config.store()
 
-    config.delete_profile(profile_name)
+    config.delete_profile(profile_name, delete_storage=False)
     assert profile_name not in config.profile_names
 
     # Now reload the config from disk to make sure the changes after deletion were persisted to disk
     config_on_disk = Config.from_file(config.filepath)
     assert profile_name not in config_on_disk.profile_names
+
+
+def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):
+    """Test the ``create_profile`` method when it raises."""
+    config = config_with_profile
+    profile_name = uuid.uuid4().hex
+
+    def raise_storage_migration_error(*args, **kwargs):
+        raise exceptions.StorageMigrationError()
+
+    monkeypatch.setattr(SqliteTempBackend, 'initialise', raise_storage_migration_error)
+    entry_points.add(InvalidBaseStorage, 'aiida.storage:core.invalid_base')
+
+    with pytest.raises(ValueError, match=r'The profile `.*` already exists.'):
+        config.create_profile(config_with_profile.default_profile_name, 'core.sqlite_temp', {})
+
+    with pytest.raises(TypeError, match=r'The `storage_backend=.*` is not a subclass of `.*`.'):
+        config.create_profile(profile_name, 'core.invalid_base', {})
+
+    with pytest.raises(ValueError, match=r'The entry point `.*` could not be loaded'):
+        config.create_profile(profile_name, 'core.non_existant', {})
+
+    with pytest.raises(exceptions.StorageMigrationError, match='Storage backend initialisation failed.*'):
+        config.create_profile(profile_name, 'core.sqlite_temp', {})
+
+
+def test_create_profile(config_with_profile):
+    """Test the ``create_profile`` method."""
+    config = config_with_profile
+    profile_name = uuid.uuid4().hex
+
+    config.create_profile(profile_name, 'core.sqlite_temp', {})
+    assert profile_name in config.profile_names

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,7 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Extras tests for the export and import routines"""
-# pylint: disable=redefined-outer-name,unused-argument
+
 import pytest
 
 from aiida import orm
@@ -24,7 +23,7 @@ def new_archive(aiida_profile, tmp_path):
     data.base.extras.set_many({'b': 2, 'c': 3})
     archive_file = tmp_path / 'export.aiida'
     create_archive([data], filename=archive_file)
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     yield archive_file
 
 
@@ -72,7 +71,8 @@ def test_absence_of_extras(new_archive):
 
 def test_extras_import_mode_keep_existing(new_archive):
     """Check if old extras are not modified in case of name collision
-    (keep original, create new, leave original)"""
+    (keep original, create new, leave original)
+    """
     imported_node = import_extras(new_archive)
     imported_node = modify_extras(new_archive, imported_node, mode_existing=('k', 'c', 'l'))
 
@@ -84,7 +84,8 @@ def test_extras_import_mode_keep_existing(new_archive):
 
 def test_extras_import_mode_update_existing(new_archive):
     """Check if old extras are modified in case of name collision
-    (keep original, create new, update original)"""
+    (keep original, create new, update original)
+    """
     imported_node = import_extras(new_archive)
     imported_node = modify_extras(new_archive, imported_node, mode_existing=('k', 'c', 'u'))
 
@@ -96,7 +97,8 @@ def test_extras_import_mode_update_existing(new_archive):
 
 def test_extras_import_mode_mirror(new_archive):
     """Check if old extras are fully overwritten by the imported ones
-    (not keep original, create new, update original)"""
+    (not keep original, create new, update original)
+    """
     imported_node = import_extras(new_archive)
     imported_node = modify_extras(new_archive, imported_node, mode_existing=('n', 'c', 'u'))
 
@@ -111,7 +113,8 @@ def test_extras_import_mode_mirror(new_archive):
 
 def test_extras_import_mode_none(new_archive):
     """Check if old extras are fully overwritten by the imported ones
-    (keep original, not create new, leave original)"""
+    (keep original, not create new, leave original)
+    """
     imported_node = import_extras(new_archive)
     imported_node = modify_extras(new_archive, imported_node, mode_existing=('k', 'n', 'l'))
 
@@ -125,7 +128,8 @@ def test_extras_import_mode_none(new_archive):
 
 def test_extras_import_mode_strange(new_archive):
     """Check a mode that probably does not make much sense but is still available
-    (keep original, create new, delete)"""
+    (keep original, create new, delete)
+    """
     imported_node = import_extras(new_archive)
     imported_node = modify_extras(new_archive, imported_node, mode_existing=('k', 'c', 'd'))
 

@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name,invalid-name
 """Tests for the :mod:`aiida.repository.backend.abstract` module."""
+
 import io
 import tempfile
 from typing import BinaryIO, Iterable, List, Optional
@@ -34,10 +33,7 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         return 'key'
 
-    # pylint useless-super-delegation needs to be disabled here because it refuses to
-    # recognize that this is an abstract method and thus has to be overwritten. See the
-    # following issue: https://github.com/PyCQA/pylint/issues/1594
-    def delete_objects(self, keys: List[str]) -> None:  # pylint: disable=useless-super-delegation
+    def delete_objects(self, keys: List[str]) -> None:
         super().delete_objects(keys)
 
     def has_objects(self, keys: List[str]) -> List[bool]:
@@ -130,7 +126,7 @@ def test_passes_to_batch(repository, monkeypatch):
 def test_delete_objects_test(repository, monkeypatch):
     """Checks that the super of delete_objects will check for existence of the files."""
 
-    def has_objects_mock(self, keys):  # pylint: disable=unused-argument
+    def has_objects_mock(self, keys):
         return [False for key in keys]
 
     monkeypatch.setattr(RepositoryBackend, 'has_objects', has_objects_mock)

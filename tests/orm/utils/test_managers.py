@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,12 +7,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the various node managers (.inputs, .outputs, .dict, ...)."""
-# pylint: disable=unused-argument
+
+import warnings
+
 import pytest
 
 from aiida import orm
 from aiida.common import AttributeDict, LinkType
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
+from aiida.common.warnings import AiidaDeprecationWarning
 
 
 def test_dot_dict_manager():
@@ -169,12 +171,12 @@ def test_link_manager_with_nested_namespaces():
         assert calc.outputs.nested__sub__namespace.uuid == out1.uuid
 
     # Dunder methods should not invoke the deprecation warning
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
         try:
             calc.inputs.__name__
         except AttributeError:
             pass
-        assert not record, print(record.list[0].message)
 
     # Must raise a AttributeError, otherwise tab competion will not work
     for attribute in ['not_existent', 'not__existent__nested']:
@@ -188,10 +190,12 @@ def test_link_manager_with_nested_namespaces():
 
     # Note that `remote_folder` corresponds to an actual leaf node, but it is treated like an intermediate namespace
     with pytest.raises(AttributeError):
-        _ = calc.outputs.remote_folder__namespace
+        with pytest.warns(AiidaDeprecationWarning):
+            _ = calc.outputs.remote_folder__namespace
 
     with pytest.raises(KeyError):
-        _ = calc.outputs['remote_folder__namespace']
+        with pytest.warns(AiidaDeprecationWarning):
+            _ = calc.outputs['remote_folder__namespace']
 
 
 def test_link_manager_contains():

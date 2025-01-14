@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,17 +6,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unspecified-encoding
-"""
-This module contains tests for UpfData and UpfData related functions.
-"""
+"""This module contains tests for UpfData and UpfData related functions."""
+
 import json
 import os
 import uuid
 
 import numpy
-from numpy import array, isclose
 import pytest
+from numpy import array, isclose
 
 from aiida import orm
 from aiida.common.exceptions import ParsingError
@@ -27,7 +24,6 @@ from tests.static import STATIC_DIR
 
 def isnumeric(vector):
     """Check if elements of iterable `x` are numbers."""
-    # pylint: disable=invalid-name
     numeric_types = (float, int, numpy.float64, numpy.int64)
     for xi in vector:
         if isinstance(xi, numeric_types):
@@ -39,9 +35,8 @@ def isnumeric(vector):
 def compare_dicts(dd1, dd2):
     """Compare two dictionaries taking into account rounding errors."""
 
-    # pylint: disable=too-many-branches,too-many-nested-blocks,invalid-name
     def compare(dd1, dd2):
-        """compare dictionaries, returns a generator."""
+        """Compare dictionaries, returns a generator."""
         if not isinstance(dd1, dict) or not isinstance(dd2, dict):
             yield False
 
@@ -66,11 +61,10 @@ def compare_dicts(dd1, dd2):
                                     yield isclose(xi, yi)
                                 else:
                                     yield xi == yi
+            elif isinstance(dd1[k], (int, float, numpy.float64)):
+                yield isclose(dd1[k], dd2[k])
             else:
-                if isinstance(dd1[k], (int, float, numpy.float64)):
-                    yield isclose(dd1[k], dd2[k])
-                else:
-                    yield dd1[k] == dd2[k]
+                yield dd1[k] == dd2[k]
 
     return all(compare(dd1, dd2))
 
@@ -79,9 +73,8 @@ class TestUpfParser:
     """Tests UPF version / element_name parser function."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, tmp_path):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
         self.filepath_barium = os.path.join(filepath_base, 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
         self.filepath_oxygen = os.path.join(filepath_base, 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF')
@@ -114,7 +107,7 @@ class TestUpfParser:
 
     def test_get_upf_groups(self):
         """Test the `UpfData.get_upf_groups` class method."""
-        [orm.UpfFamily.collection.delete(g.pk) for g in orm.UpfFamily.collection.all()]  # pylint: disable=expression-not-assigned
+        [orm.UpfFamily.collection.delete(g.pk) for g in orm.UpfFamily.collection.all()]
 
         label_01 = 'family_01'
         label_02 = 'family_02'
@@ -154,18 +147,18 @@ class TestUpfParser:
 
     def test_upf_version_one(self):
         """Check if parsing for regular UPF file (version 1) succeeds."""
-
         upf_filename = 'O.test_file_v1.UPF'
         # regular upf file version 1 header
-        upf_contents = '\n'.join([
-            '<PP_INFO>'
-            'Human readable section is completely irrelevant for parsing!',
-            '<PP_HEADER',
-            'contents before element tag',
-            'O                     Element',
-            'contents following element tag',
-            '>',
-        ])
+        upf_contents = '\n'.join(
+            [
+                '<PP_INFO>' 'Human readable section is completely irrelevant for parsing!',
+                '<PP_HEADER',
+                'contents before element tag',
+                'O                     Element',
+                'contents following element tag',
+                '>',
+            ]
+        )
         path_to_upf = os.path.join(self.temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
@@ -177,18 +170,19 @@ class TestUpfParser:
 
     def test_upf_version_two(self):
         """Check if parsing for regular UPF file (version 2) succeeds."""
-
         upf_filename = 'Al.test_file_v2.UPF'
         # regular upf file version 2 header
-        upf_contents = '\n'.join([
-            "<UPF version=\"2.0.1\">",
-            'Human readable section is completely irrelevant for parsing!',
-            '<PP_HEADER',
-            'contents before element tag',
-            "element=\"Al\"",
-            'contents following element tag',
-            '>',
-        ])
+        upf_contents = '\n'.join(
+            [
+                '<UPF version="2.0.1">',
+                'Human readable section is completely irrelevant for parsing!',
+                '<PP_HEADER',
+                'contents before element tag',
+                'element="Al"',
+                'contents following element tag',
+                '>',
+            ]
+        )
         path_to_upf = os.path.join(self.temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
@@ -200,20 +194,21 @@ class TestUpfParser:
 
     def test_additional_header_line(self):
         """Regression #2228: check if parsing succeeds if additional header line is present."""
-
         upf_filename = 'Pt.test_file.UPF'
         # minimal contents required for parsing including additional header
         # file
-        upf_contents = '\n'.join([
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
-            "<UPF version=\"2.0.1\">",
-            'Human readable section is completely irrelevant for parsing!',
-            '<PP_HEADER',
-            'contents before element tag',
-            "element=\"Pt\"",
-            'contents following element tag',
-            '>',
-        ])
+        upf_contents = '\n'.join(
+            [
+                '<?xml version="1.0" encoding="UTF-8"?>',
+                '<UPF version="2.0.1">',
+                'Human readable section is completely irrelevant for parsing!',
+                '<PP_HEADER',
+                'contents before element tag',
+                'element="Pt"',
+                'contents following element tag',
+                '>',
+            ]
+        )
         path_to_upf = os.path.join(self.temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
@@ -225,18 +220,19 @@ class TestUpfParser:
 
     def test_check_filename(self):
         """Test built-in check for if file name matches element"""
-
         upf_filename = 'Al.test_file.UPF'
         # upf file header contents
-        upf_contents = '\n'.join([
-            "<UPF version=\"2.0.1\">",
-            'Human readable section is completely irrelevant for parsing!',
-            '<PP_HEADER',
-            'contents before element tag',
-            "element=\"Pt\"",
-            'contents following element tag',
-            '>',
-        ])
+        upf_contents = '\n'.join(
+            [
+                '<UPF version="2.0.1">',
+                'Human readable section is completely irrelevant for parsing!',
+                '<PP_HEADER',
+                'contents before element tag',
+                'element="Pt"',
+                'contents following element tag',
+                '>',
+            ]
+        )
         path_to_upf = os.path.join(self.temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
@@ -246,18 +242,19 @@ class TestUpfParser:
 
     def test_missing_element_upf_v2(self):
         """Test parsers exception on missing element name in UPF v2."""
-
         upf_filename = 'Ab.test_file_missing_element_v2.UPF'
         # upf file header contents
-        upf_contents = '\n'.join([
-            "<UPF version=\"2.0.1\">",
-            'Human readable section is completely irrelevant for parsing!',
-            '<PP_HEADER',
-            'contents before element tag',
-            'element should be here but is missing',
-            'contents following element tag',
-            '>',
-        ])
+        upf_contents = '\n'.join(
+            [
+                '<UPF version="2.0.1">',
+                'Human readable section is completely irrelevant for parsing!',
+                '<PP_HEADER',
+                'contents before element tag',
+                'element should be here but is missing',
+                'contents following element tag',
+                '>',
+            ]
+        )
         path_to_upf = os.path.join(self.temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
@@ -267,18 +264,18 @@ class TestUpfParser:
 
     def test_invalid_element_upf_v2(self):
         """Test parsers exception on invalid element name in UPF v2."""
-
         upf_filename = 'Ab.test_file_invalid_element_v2.UPF'
         # upf file header contents
-        upf_contents = '\n'.join([
-            "<UPF version=\"2.0.1\">",
-            'Human readable section is completely irrelevant for parsing!',
-            '<PP_HEADER',
-            'contents before element tag',
-            "element=\"Ab\""
-            'contents following element tag',
-            '>',
-        ])
+        upf_contents = '\n'.join(
+            [
+                '<UPF version="2.0.1">',
+                'Human readable section is completely irrelevant for parsing!',
+                '<PP_HEADER',
+                'contents before element tag',
+                'element="Ab"' 'contents following element tag',
+                '>',
+            ]
+        )
         path_to_upf = os.path.join(self.temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
@@ -288,18 +285,18 @@ class TestUpfParser:
 
     def test_missing_element_upf_v1(self):
         """Test parsers exception on missing element name in UPF v1."""
-
         upf_filename = 'O.test_file_missing_element_v1.UPF'
         # upf file header contents
-        upf_contents = '\n'.join([
-            '<PP_INFO>'
-            'Human readable section is completely irrelevant for parsing!',
-            '<PP_HEADER',
-            'contents before element tag',
-            'element should be here but is missing',
-            'contents following element tag',
-            '>',
-        ])
+        upf_contents = '\n'.join(
+            [
+                '<PP_INFO>' 'Human readable section is completely irrelevant for parsing!',
+                '<PP_HEADER',
+                'contents before element tag',
+                'element should be here but is missing',
+                'contents following element tag',
+                '>',
+            ]
+        )
         path_to_upf = os.path.join(self.temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
@@ -309,7 +306,6 @@ class TestUpfParser:
 
     def test_upf1_to_json_carbon(self):
         """Test UPF check Oxygen UPF1 pp conversion"""
-        # pylint: disable=protected-access
         json_string, _ = self.pseudo_carbon._prepare_json()
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
         with open(os.path.join(filepath_base, 'C.json'), 'r') as fhandle:
@@ -322,7 +318,6 @@ class TestUpfParser:
 
     def test_upf2_to_json_barium(self):
         """Test UPF check Bariium UPF1 pp conversion"""
-        # pylint: disable=protected-access
         json_string, _ = self.pseudo_barium._prepare_json()
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
         with open(os.path.join(filepath_base, 'Ba.json'), 'r') as fhandle:
@@ -335,18 +330,18 @@ class TestUpfParser:
 
     def test_invalid_element_upf_v1(self):
         """Test parsers exception on invalid element name in UPF v1."""
-
         upf_filename = 'Ab.test_file_invalid_element_v1.UPF'
         # upf file header contents
-        upf_contents = '\n'.join([
-            '<PP_INFO>'
-            'Human readable section is completely irrelevant for parsing!',
-            '<PP_HEADER',
-            'contents before element tag',
-            'Ab                     Element',
-            'contents following element tag',
-            '>',
-        ])
+        upf_contents = '\n'.join(
+            [
+                '<PP_INFO>' 'Human readable section is completely irrelevant for parsing!',
+                '<PP_HEADER',
+                'contents before element tag',
+                'Ab                     Element',
+                'contents following element tag',
+                '>',
+            ]
+        )
         path_to_upf = os.path.join(self.temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)

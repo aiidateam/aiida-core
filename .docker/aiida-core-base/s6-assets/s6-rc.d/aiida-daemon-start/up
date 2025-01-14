@@ -1,0 +1,6 @@
+#!/command/execlineb -S0
+
+with-contenv
+
+foreground { s6-echo "Calling /etc/init/aiida-daemon-start" }
+/etc/init/aiida-daemon-start.sh

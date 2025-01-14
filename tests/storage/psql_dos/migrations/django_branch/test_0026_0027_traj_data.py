@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test `TrajectoryData` nodes migration, moving symbol lists from repository array to attributes."""
+
 import numpy
 import pytest
 
@@ -74,7 +74,7 @@ def test_traj_data(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('django@django_0027')
 
     # it should no longer be in the repository
-    with pytest.raises(IOError):
+    with pytest.raises(OSError):
         utils.load_numpy_array_from_repository(repo_path, node_uuid, name)
 
     # and instead, it should be in the attributes
@@ -84,40 +84,45 @@ def test_traj_data(perform_migrations: PsqlDosMigrator):
         assert len(rows) == 0
         rows = session.query(attr_model).filter(attr_model.key.startswith(name)).order_by(attr_model.key).all()
         data = [{x.name: getattr(row, x.name) for x in row.__table__.columns if x.name != 'id'} for row in rows]
-        assert data == [{
-            'datatype': 'list',
-            'dbnode_id': node_id,
-            'key': 'symbols',
-            'bval': None,
-            'ival': 3,
-            'fval': None,
-            'tval': '',
-            'dval': None
-        }, {
-            'datatype': 'txt',
-            'dbnode_id': node_id,
-            'key': 'symbols.0',
-            'bval': None,
-            'ival': None,
-            'fval': None,
-            'tval': 'H',
-            'dval': None
-        }, {
-            'datatype': 'txt',
-            'dbnode_id': node_id,
-            'key': 'symbols.1',
-            'bval': None,
-            'ival': None,
-            'fval': None,
-            'tval': 'O',
-            'dval': None
-        }, {
-            'datatype': 'txt',
-            'dbnode_id': node_id,
-            'key': 'symbols.2',
-            'bval': None,
-            'ival': None,
-            'fval': None,
-            'tval': 'C',
-            'dval': None
-        }]
+        assert data == [
+            {
+                'datatype': 'list',
+                'dbnode_id': node_id,
+                'key': 'symbols',
+                'bval': None,
+                'ival': 3,
+                'fval': None,
+                'tval': '',
+                'dval': None,
+            },
+            {
+                'datatype': 'txt',
+                'dbnode_id': node_id,
+                'key': 'symbols.0',
+                'bval': None,
+                'ival': None,
+                'fval': None,
+                'tval': 'H',
+                'dval': None,
+            },
+            {
+                'datatype': 'txt',
+                'dbnode_id': node_id,
+                'key': 'symbols.1',
+                'bval': None,
+                'ival': None,
+                'fval': None,
+                'tval': 'O',
+                'dval': None,
+            },
+            {
+                'datatype': 'txt',
+                'dbnode_id': node_id,
+                'key': 'symbols.2',
+                'bval': None,
+                'ival': None,
+                'fval': None,
+                'tval': 'C',
+                'dval': None,
+            },
+        ]

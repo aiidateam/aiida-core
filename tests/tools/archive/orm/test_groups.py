@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm.Group tests for the export and import routines"""
+
 import uuid
 
 import pytest
@@ -18,9 +18,8 @@ from aiida.orm import load_group
 from aiida.tools.archive import create_archive, import_archive
 
 
-def test_nodes_in_group(aiida_profile, tmp_path, aiida_localhost):
-    """
-    This test checks that nodes that belong to a specific group are
+def test_nodes_in_group(aiida_profile_clean, tmp_path, aiida_localhost):
+    """This test checks that nodes that belong to a specific group are
     correctly imported and exported.
     """
     # Create another user
@@ -53,7 +52,7 @@ def test_nodes_in_group(aiida_profile, tmp_path, aiida_localhost):
     filename1 = tmp_path / 'export1.aiida'
     create_archive([sd1, jc1, gr1], filename=filename1)
     n_uuids = [sd1.uuid, jc1.uuid]
-    aiida_profile.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(filename1)
 
     # Check that the imported nodes are correctly imported and that
@@ -67,7 +66,7 @@ def test_nodes_in_group(aiida_profile, tmp_path, aiida_localhost):
     assert builder.count() == 1, 'The group was not found.'
 
 
-def test_group_export(tmp_path, aiida_profile):
+def test_group_export(tmp_path, aiida_profile_clean):
     """Exporting a group includes its extras and nodes."""
     # Create a new user
     new_email = uuid.uuid4().hex
@@ -91,7 +90,7 @@ def test_group_export(tmp_path, aiida_profile):
     filename = tmp_path / 'export.aiida'
     create_archive([group], filename=filename)
     n_uuids = [sd1.uuid]
-    aiida_profile.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(filename)
 
     # Check that the imported nodes are correctly imported and that
@@ -107,9 +106,8 @@ def test_group_export(tmp_path, aiida_profile):
     assert imported_group.base.extras.get('test') == 1, 'Extra missing on imported group'
 
 
-def test_group_import_existing(tmp_path, aiida_profile):
-    """
-    Testing what happens when I try to import a group that already exists in the
+def test_group_import_existing(tmp_path, aiida_profile_clean):
+    """Testing what happens when I try to import a group that already exists in the
     database. This should raise an appropriate exception
     """
     grouplabel = 'node_group_existing'
@@ -133,7 +131,7 @@ def test_group_import_existing(tmp_path, aiida_profile):
     # At this point we export the generated data
     filename = tmp_path / 'export1.aiida'
     create_archive([group], filename=filename)
-    aiida_profile.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     # Creating a group of the same name
     group = orm.Group(label='node_group_existing')
@@ -157,7 +155,7 @@ def test_group_import_existing(tmp_path, aiida_profile):
     assert builder.count() == 2
 
 
-def test_import_to_group(tmp_path, aiida_profile):
+def test_import_to_group(tmp_path, aiida_profile_clean):
     """Test `group` parameter
     Make sure an unstored Group is stored by the import function, forwarding the Group object.
     Make sure the Group is correctly handled and used for imported nodes.
@@ -170,7 +168,7 @@ def test_import_to_group(tmp_path, aiida_profile):
     # Export Nodes
     filename = tmp_path / 'export.aiida'
     create_archive([data1, data2], filename=filename)
-    aiida_profile.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     # Create Group, do not store
     group_label = 'import_madness'
@@ -186,15 +184,16 @@ def test_import_to_group(tmp_path, aiida_profile):
 
     # Check Group for content
     builder = orm.QueryBuilder().append(orm.Group, filters={'label': group_label}, project='uuid')
-    assert builder.count() == \
-        1, \
-        f'There should be exactly one Group with label {group_label}. Instead {builder.count()} was found.'
+    assert (
+        builder.count() == 1
+    ), f'There should be exactly one Group with label {group_label}. Instead {builder.count()} was found.'
     imported_group = load_group(builder.all()[0][0])
     assert imported_group.uuid == group_uuid
-    assert imported_group.count() == \
-        len(node_uuids), \
-        '{} Nodes were found in the automatic import group, instead there should have been exactly {} ' \
-        'Nodes'.format(imported_group.count(), len(node_uuids))
+    assert imported_group.count() == len(node_uuids), (
+        '{} Nodes were found in the automatic import group, instead there should have been exactly {} ' 'Nodes'.format(
+            imported_group.count(), len(node_uuids)
+        )
+    )
     for node in imported_group.nodes:
         assert node.uuid in node_uuids
 
@@ -207,10 +206,11 @@ def test_import_to_group(tmp_path, aiida_profile):
 
     imported_group = load_group(label=group_label)
     assert imported_group.uuid == group_uuid
-    assert imported_group.count() == \
-        len(node_uuids), \
-        '{} Nodes were found in the automatic import group, instead there should have been exactly {} ' \
-        'Nodes'.format(imported_group.count(), len(node_uuids))
+    assert imported_group.count() == len(node_uuids), (
+        '{} Nodes were found in the automatic import group, instead there should have been exactly {} ' 'Nodes'.format(
+            imported_group.count(), len(node_uuids)
+        )
+    )
     for node in imported_group.nodes:
         assert node.uuid in node_uuids
 

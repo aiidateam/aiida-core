@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,10 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Unit tests for the :class:`aiida.cmdline.params.options.config.ConfigOption`."""
+
 import functools
-import tempfile
 import textwrap
 
 import click
@@ -35,29 +33,40 @@ def cmd(integer, boolean):
     click.echo(f'Boolean: {boolean}')
 
 
-def test_valid(run_cli_command):
+def test_valid(run_cli_command, tmp_path):
     """Test the option for a valid configuration file."""
-    with tempfile.NamedTemporaryFile('w+') as handle:
-        handle.write(textwrap.dedent("""
+    filepath = tmp_path / 'config.yml'
+    filepath.write_text(
+        textwrap.dedent(
+            """
             integer: 1
             boolean: false
-        """))
-        handle.flush()
+            """
+        )
+    )
 
-        result = run_cli_command(cmd, ['--config', handle.name])
-        assert 'Integer: 1' in result.output_lines[0]
-        assert 'Boolean: False' in result.output_lines[1]
+    result = run_cli_command(cmd, ['--config', str(filepath)])
+    assert 'Integer: 1' in result.output_lines[0]
+    assert 'Boolean: False' in result.output_lines[1]
 
 
-def test_invalid_unknown_keys(run_cli_command):
-    """Test the option for an invalid configuration file containing unknown keys."""
-    with tempfile.NamedTemporaryFile('w+') as handle:
-        handle.write(textwrap.dedent("""
+@pytest.mark.filterwarnings('ignore')
+def test_invalid_unknown_keys(run_cli_command, tmp_path):
+    """Test the option for an invalid configuration file containing unknown keys.
+
+    The test emits a ``ResourceWarning`` because the config file is not closed since the command errors, but this is
+    just a side-effect of how the test is run and doesn't apply to the real CLI command invocation.
+    """
+    filepath = tmp_path / 'config.yml'
+    filepath.write_text(
+        textwrap.dedent(
+            """
             integer: 1
             unknown: 2.0
-        """))
-        handle.flush()
+            """
+        )
+    )
 
-        result = run_cli_command(cmd, ['--config', handle.name], raises=True)
-        assert "Error: Invalid value for '--config': Invalid configuration file" in result.stderr
-        assert "the following keys are not supported: {'unknown'}" in result.stderr
+    result = run_cli_command(cmd, ['--config', str(filepath)], raises=True)
+    assert "Error: Invalid value for '--config': Invalid configuration file" in result.stderr
+    assert "the following keys are not supported: {'unknown'}" in result.stderr

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test running a :class:`~aiida.orm.nodes.data.codes.containerized.ContainerizedCode` code."""
+
 from aiida import orm
 from aiida.engine import run_get_node
 

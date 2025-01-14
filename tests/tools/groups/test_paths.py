@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name,unused-argument
 """Tests for GroupPath"""
+
 import pytest
 
 from aiida import orm
@@ -16,7 +15,7 @@ from aiida.tools.groups.paths import GroupAttr, GroupNotFoundError, GroupPath, I
 
 
 @pytest.fixture
-def setup_groups(aiida_profile_clean):  # pylint: disable=unused-argument
+def setup_groups(aiida_profile_clean):
     """Setup some groups for testing."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f']:
         group, _ = orm.Group.collection.get_or_create(label)
@@ -126,6 +125,7 @@ def test_walk_with_invalid_path():
     assert [c.path for c in sorted(group_path.walk())] == expected
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_walk_nodes():
     """Test the ``GroupPath.walk_nodes()`` function."""
     group, _ = orm.Group.collection.get_or_create('a')
@@ -134,11 +134,9 @@ def test_walk_nodes():
     node.store()
     group.add_nodes(node)
     group_path = GroupPath()
-    assert [(r.group_path.path, r.node.base.attributes.all) for r in group_path.walk_nodes()
-            ] == [('a', {
-                'i': 1,
-                'j': 2
-            })]
+    assert [(r.group_path.path, r.node.base.attributes.all) for r in group_path.walk_nodes()] == [
+        ('a', {'i': 1, 'j': 2})
+    ]
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -166,7 +164,7 @@ def test_attr():
     assert group_path.browse.a.c.d().path == 'a/c/d'
     assert not set(dir(group_path.browse)).intersection(['bad space', 'bad@char', '_badstart'])
     with pytest.raises(AttributeError):
-        group_path.browse.a.c.x  # pylint: disable=pointless-statement
+        group_path.browse.a.c.x
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

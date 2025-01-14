@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for defining tests that required access to (a temporary) database."""
+
 from aiida import __version__ as version_core
 
 # The following statement needs to be here for the tests in `tests.plugins.test_utils.py` to work. There, some processes

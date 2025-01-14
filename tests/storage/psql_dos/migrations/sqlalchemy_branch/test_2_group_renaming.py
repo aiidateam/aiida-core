@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Test renaming of type strings: b8b23ddefad4 -> e72ad251bcdb"""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
@@ -19,8 +20,8 @@ def test_group_renaming(perform_migrations: PsqlDosMigrator):
     )  # b8b23ddefad4_dbgroup_name_to_label_type_to_type_string.py
 
     # setup the database
-    DbGroup = perform_migrations.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbGroup = perform_migrations.get_current_table('db_dbgroup')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         default_user = DbUser(email='user@aiida.net', is_superuser=True)
         session.add(default_user)
@@ -49,7 +50,7 @@ def test_group_renaming(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@e72ad251bcdb')  # e72ad251bcdb_dbgroup_class_change_type_string_values.py
 
     # perform some checks
-    DbGroup = perform_migrations.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+    DbGroup = perform_migrations.get_current_table('db_dbgroup')
     with perform_migrations.session() as session:
         # test user group type_string: '' -> 'user'
         group_user = session.query(DbGroup).filter(DbGroup.id == group_user_pk).one()

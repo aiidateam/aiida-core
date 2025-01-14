@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,7 +7,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test migrating from the base of the django branch, to the main head."""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
+
+
+def test_all_tests_marked_as_nightly(request):
+    """Test that all tests in this folder are tagged with 'nightly' marker"""
+    own_markers = [marker.name for marker in request.node.own_markers]
+
+    assert len(own_markers) == 2
+    assert 'nightly' in own_markers
+    assert 'requires_psql' in own_markers
 
 
 def test_migrate(perform_migrations: PsqlDosMigrator):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the `ComputerParamType`."""
+
 import uuid
 
 import pytest
@@ -37,7 +36,7 @@ def setup_computers():
         'hostname': 'localhost',
         'transport_type': 'core.local',
         'scheduler_type': 'core.direct',
-        'workdir': '/tmp/aiida'
+        'workdir': '/tmp/aiida',
     }
 
     entity_01 = orm.Computer(label=f'computer-{uuid.uuid4().hex}', **kwargs).store()
@@ -54,7 +53,7 @@ def test_shell_complete(setup_computers, parameter_type):
         'hostname': 'localhost',
         'transport_type': 'core.local',
         'scheduler_type': 'core.direct',
-        'workdir': '/tmp/aiida'
+        'workdir': '/tmp/aiida',
     }
     entity_01, entity_02, entity_03 = setup_computers
     entity_04 = orm.Computer(label='xavier', **kwargs).store()
@@ -67,9 +66,7 @@ def test_shell_complete(setup_computers, parameter_type):
 
 
 def test_get_by_id(setup_computers, parameter_type):
-    """
-    Verify that using the ID will retrieve the correct entity
-    """
+    """Verify that using the ID will retrieve the correct entity"""
     entity_01, _, _ = setup_computers
     identifier = f'{entity_01.pk}'
     result = parameter_type.convert(identifier, None, None)
@@ -77,9 +74,7 @@ def test_get_by_id(setup_computers, parameter_type):
 
 
 def test_get_by_uuid(setup_computers, parameter_type):
-    """
-    Verify that using the UUID will retrieve the correct entity
-    """
+    """Verify that using the UUID will retrieve the correct entity"""
     entity_01, _, _ = setup_computers
     identifier = f'{entity_01.uuid}'
     result = parameter_type.convert(identifier, None, None)
@@ -87,9 +82,7 @@ def test_get_by_uuid(setup_computers, parameter_type):
 
 
 def test_get_by_label(setup_computers, parameter_type):
-    """
-    Verify that using the LABEL will retrieve the correct entity
-    """
+    """Verify that using the LABEL will retrieve the correct entity"""
     entity_01, _, _ = setup_computers
     identifier = f'{entity_01.label}'
     result = parameter_type.convert(identifier, None, None)
@@ -97,8 +90,7 @@ def test_get_by_label(setup_computers, parameter_type):
 
 
 def test_ambiguous_label_pk(setup_computers, parameter_type):
-    """
-    Situation: LABEL of entity_02 is exactly equal to ID of entity_01
+    """Situation: LABEL of entity_02 is exactly equal to ID of entity_01
 
     Verify that using an ambiguous identifier gives precedence to the ID interpretation
     Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
@@ -114,8 +106,7 @@ def test_ambiguous_label_pk(setup_computers, parameter_type):
 
 
 def test_ambiguous_label_uuid(setup_computers, parameter_type):
-    """
-    Situation: LABEL of entity_03 is exactly equal to UUID of entity_01
+    """Situation: LABEL of entity_03 is exactly equal to UUID of entity_01
 
     Verify that using an ambiguous identifier gives precedence to the UUID interpretation
     Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL

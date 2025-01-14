@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -12,7 +11,7 @@
 import pytest
 
 from aiida.engine.processes.ports import InputPort, PortNamespace
-from aiida.orm import Dict, Int
+from aiida.orm import Dict, Int, to_aiida_type
 
 
 class TestInputPort:
@@ -20,7 +19,6 @@ class TestInputPort:
 
     def test_with_non_db(self):
         """Test the functionality of the `non_db` attribute upon construction and setting."""
-
         # When not specifying, it should get the default value and `non_db_explicitly_set` should be `False`
         port = InputPort('port')
         assert port.non_db is False
@@ -122,3 +120,26 @@ class TestPortNamespace:
         inputs = port_namespace.pre_process({'port': Int(3)})
         assert isinstance(inputs['port'], Int)
         assert inputs['port'].value == 3
+
+    @pytest.mark.parametrize('is_metadata', (True, False))
+    def test_serializer(self, is_metadata):
+        """Test the automatic setting of the serializer for non-metadata ports.
+
+        For non-metadata portnamespaces, the serializer should be automatically set to the
+        :meth:`aiida.orm.nodes.data.base.to_aiida_type` serializer, unless the port already defines a serializer itself.
+        """
+        namespace = PortNamespace('namespace', is_metadata=is_metadata)
+        port = InputPort('port')
+        namespace['port'] = port
+
+        if is_metadata:
+            assert port.serializer is None
+        else:
+            assert port.serializer is to_aiida_type
+
+        def custom_serializer(*args, **kwargs):
+            pass
+
+        other_port = InputPort('other_port', serializer=custom_serializer)
+        namespace['other_port'] = port
+        assert other_port.serializer is custom_serializer

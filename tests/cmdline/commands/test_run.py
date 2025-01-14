@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi run`."""
+
 import tempfile
 import textwrap
 
@@ -160,7 +160,7 @@ class TestAutoGroups:
             assert len(all_auto_groups) == 0, 'There should be no autogroup generated'
 
     @pytest.mark.requires_rmq
-    def test_autogroup_filter_class(self, run_cli_command):  # pylint: disable=too-many-locals
+    def test_autogroup_filter_class(self, run_cli_command):
         """Check if the autogroup is properly generated but filtered classes are skipped."""
         from aiida.orm import AutoGroup, Node, QueryBuilder, load_node
 
@@ -218,36 +218,53 @@ class TestAutoGroups:
             calc_in_autogroup,
             wf_in_autogroup,
             calcarithmetic_in_autogroup,
-        ) in enumerate([
-            [['--exclude', 'aiida.data:core.array.kpoints'], False, True, True, True, True, True],
-            # Check if % works anywhere - both 'int' and 'array.kpoints' contain an 'i'
-            [['--exclude', 'aiida.data:core.%i%'], False, True, False, True, True, True],
-            [['--exclude', 'aiida.data:core.int'], True, True, False, True, True, True],
-            [['--exclude', 'aiida.data:%'], False, False, False, True, True, True],
-            [['--exclude', 'aiida.data:core.array', 'aiida.data:core.array.%'], False, False, True, True, True, True],
-            [['--exclude', 'aiida.data:core.array', 'aiida.data:core.array.%', 'aiida.data:core.int'], False, False,
-             False, True, True, True],
-            [['--exclude', 'aiida.calculations:core.arithmetic.add'], True, True, True, True, True, False],
+        ) in enumerate(
             [
-                ['--include', 'aiida.node:process.calculation'],  # Base type, no specific plugin
-                False,
-                False,
-                False,
-                True,
-                False,
-                False
-            ],
-            [
-                ['--include', 'aiida.node:process.workflow'],  # Base type, no specific plugin
-                False,
-                False,
-                False,
-                False,
-                True,
-                False
-            ],
-            [[], True, True, True, True, True, True],
-        ]):
+                [['--exclude', 'aiida.data:core.array.kpoints'], False, True, True, True, True, True],
+                # Check if % works anywhere - both 'int' and 'array.kpoints' contain an 'i'
+                [['--exclude', 'aiida.data:core.%i%'], False, True, False, True, True, True],
+                [['--exclude', 'aiida.data:core.int'], True, True, False, True, True, True],
+                [['--exclude', 'aiida.data:%'], False, False, False, True, True, True],
+                [
+                    ['--exclude', 'aiida.data:core.array', 'aiida.data:core.array.%'],
+                    False,
+                    False,
+                    True,
+                    True,
+                    True,
+                    True,
+                ],
+                [
+                    ['--exclude', 'aiida.data:core.array', 'aiida.data:core.array.%', 'aiida.data:core.int'],
+                    False,
+                    False,
+                    False,
+                    True,
+                    True,
+                    True,
+                ],
+                [['--exclude', 'aiida.calculations:core.arithmetic.add'], True, True, True, True, True, False],
+                [
+                    ['--include', 'aiida.node:process.calculation'],  # Base type, no specific plugin
+                    False,
+                    False,
+                    False,
+                    True,
+                    False,
+                    False,
+                ],
+                [
+                    ['--include', 'aiida.node:process.workflow'],  # Base type, no specific plugin
+                    False,
+                    False,
+                    False,
+                    False,
+                    True,
+                    False,
+                ],
+                [[], True, True, True, True, True, True],
+            ]
+        ):
             with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
                 fhandle.write(script_content)
                 fhandle.flush()
@@ -294,24 +311,30 @@ class TestAutoGroups:
                 queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups_calcarithmetic = queryb.all()
 
-                assert len(all_auto_groups_kptdata) == (1 if kptdata_in_autogroup else 0), \
-                    'Wrong number of nodes in autogroup associated with the KpointsData node ' \
+                assert len(all_auto_groups_kptdata) == (1 if kptdata_in_autogroup else 0), (
+                    'Wrong number of nodes in autogroup associated with the KpointsData node '
                     "just created with flags '{}'".format(' '.join(flags))
-                assert len(all_auto_groups_arraydata) == (1 if arraydata_in_autogroup else 0), \
-                    'Wrong number of nodes in autogroup associated with the ArrayData node ' \
+                )
+                assert len(all_auto_groups_arraydata) == (1 if arraydata_in_autogroup else 0), (
+                    'Wrong number of nodes in autogroup associated with the ArrayData node '
                     "just created with flags '{}'".format(' '.join(flags))
-                assert len(all_auto_groups_int) == (1 if int_in_autogroup else 0), \
-                    'Wrong number of nodes in autogroup associated with the Int node ' \
+                )
+                assert len(all_auto_groups_int) == (1 if int_in_autogroup else 0), (
+                    'Wrong number of nodes in autogroup associated with the Int node '
                     "just created with flags '{}'".format(' '.join(flags))
-                assert len(all_auto_groups_calc) == (1 if calc_in_autogroup else 0), \
-                    'Wrong number of nodes in autogroup associated with the CalculationNode ' \
+                )
+                assert len(all_auto_groups_calc) == (1 if calc_in_autogroup else 0), (
+                    'Wrong number of nodes in autogroup associated with the CalculationNode '
                     "just created with flags '{}'".format(' '.join(flags))
-                assert len(all_auto_groups_wf) == (1 if wf_in_autogroup else 0), \
-                    'Wrong number of nodes in autogroup associated with the WorkflowNode ' \
+                )
+                assert len(all_auto_groups_wf) == (1 if wf_in_autogroup else 0), (
+                    'Wrong number of nodes in autogroup associated with the WorkflowNode '
                     "just created with flags '{}'".format(' '.join(flags))
-                assert len(all_auto_groups_calcarithmetic) == (1 if calcarithmetic_in_autogroup else 0), \
-                    'Wrong number of nodes in autogroup associated with the ArithmeticAdd CalcJobNode ' \
+                )
+                assert len(all_auto_groups_calcarithmetic) == (1 if calcarithmetic_in_autogroup else 0), (
+                    'Wrong number of nodes in autogroup associated with the ArithmeticAdd CalcJobNode '
                     "just created with flags '{}'".format(' '.join(flags))
+                )
 
     def test_autogroup_clashing_label(self, run_cli_command):
         """Check if the autogroup label is properly (re)generated when it clashes with an existing group name."""
@@ -352,7 +375,7 @@ class TestAutoGroups:
                 queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
                 queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups = queryb.all()
-                assert len(
-                    all_auto_groups
-                ) == 1, 'There should be only one autogroup associated with the node just created'
+                assert (
+                    len(all_auto_groups) == 1
+                ), 'There should be only one autogroup associated with the node just created'
                 assert all_auto_groups[0][0].label.startswith(autogroup_label)

@@ -3,20 +3,22 @@ name: test-install
 on:
   pull_request:
     paths:
-      - 'environment.yml'
-      - '**/requirements*.txt'
-      - 'pyproject.toml'
-      - 'util/dependency_management.py'
-      - '.github/workflows/test-install.yml'
+    - environment.yml
+    - pyproject.toml
+    - util/dependency_management.py
+    - .github/workflows/test-install.yml
     branches-ignore: [gh-pages]
   schedule:
-    - cron: '30 02 * * *'  # nightly build
+  - cron: 30 02 * * *      # nightly build
+
+env:
+  FORCE_COLOR: 1
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
-    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
 
@@ -28,57 +30,26 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.11'
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: 0.5.x
 
     - name: Install utils/ dependencies
-      run: pip install -r utils/requirements.txt
+      run: uv pip install --system -r utils/requirements.txt
 
-    - name: Validate
-      run: |
-        python ./utils/dependency_management.py check-requirements
-        python ./utils/dependency_management.py validate-all
+    - name: Validate uv lockfile
+      run: uv lock --check
 
-  resolve-pip-dependencies:
-    # Check whether the environments defined in the requirements/* files are
-    # resolvable.
-    #
-    # This job should use the planned `pip resolve` command once released:
-    # https://github.com/pypa/pip/issues/7819
-
-    needs: [validate-dependency-specification]
-    if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.9', '3.10', '3.11']
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Upgrade pip and setuptools
-      # Install specific version of setuptools, because 65.6.0 breaks a number of packages, such as numpy
-      run: |
-        pip install --upgrade pip
-        pip install setuptools==65.5.0
-        pip --version
-
-    - name: Create environment from requirements file.
-      run: |
-        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
-        pip freeze
+    - name: Validate conda environment file
+      run: python ./utils/dependency_management.py validate-environment-yml
 
   create-conda-environment:
     # Verify that we can create a valid conda environment from the environment.yml file.
@@ -89,10 +60,10 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@v3
       with:
         channels: conda-forge
 
@@ -111,13 +82,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        extras: [ '', '[atomic_tools,docs,notebook,rest,tests]' ]
+        extras: ['', '[atomic_tools,docs,notebook,rest,tests,tui]']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
 
@@ -130,8 +101,7 @@ jobs:
 
     - name: Test importing aiida
       if: steps.pip_install.outcome == 'success'
-      run:
-        python -c "import aiida"
+      run: python -c "import aiida"
 
   install-with-conda:
     # Verify that we can install AiiDA with conda.
@@ -144,7 +114,7 @@ jobs:
       fail-fast: false
       matrix:
 
-        python-version: ['3.9', '3.10', '3.11']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
 
         # Not being able to install with conda on a specific Python version is
         # not sufficient to fail the run, but something we want to be aware of.
@@ -153,14 +123,14 @@ jobs:
         include:
           # Installing with conda without specyfing the Python version should
           # not fail since this is advocated as part of the user documentation.
-          - python-version: ''
-            optional: false
+        - python-version: ''
+          optional: false
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@v3
       with:
         channels: conda-forge
 
@@ -190,12 +160,12 @@ jobs:
 
     needs: [install-with-pip]
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10', '3.11']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
 
     services:
       postgres:
@@ -210,157 +180,39 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5432:5432
+        - 5432:5432
       rabbitmq:
         image: rabbitmq:3.8.14-management
         ports:
-          - 5672:5672
-          - 15672:15672
+        - 5672:5672
+        - 15672:15672
       slurm:
         image: xenonmiddleware/slurm:17
         ports:
-          - 5001:22
+        - 5001:22
 
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
+    - uses: actions/checkout@v4
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz
 
-    - name: Upgrade pip and setuptools
-      # It is crucial to update `setuptools` or the installation of `pymatgen` can break
-      # Install specific version of setuptools, because 65.6.0 breaks a number of packages, such as numpy
-      run: |
-        pip install --upgrade pip
-        pip install setuptools==65.5.0
-        pip --version
-
     - name: Install aiida-core
-      run: |
-        pip install -e .[atomic_tools,docs,notebook,rest,tests]
-
-    - run: pip freeze
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: ${{ matrix.python-version }}
+        extras: '[atomic_tools,docs,notebook,rest,tests,tui]'
+        from-lock: 'false'
 
     - name: Setup AiiDA environment
-      run:
-        .github/workflows/setup.sh
+      run: .github/workflows/setup.sh
 
     - name: Run test suite
       env:
+        AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-        SQLALCHEMY_WARN_20: 1
-      run:
-        .github/workflows/tests.sh
-
-    - name: Freeze test environment
-      run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt
-
-    # Add python-version specific requirements/ file to the requirements.txt artifact.
-    # This artifact can be used in the next step to automatically create a pull request
-    # updating the requirements (in case they are  inconsistent with the pyproject.toml file).
-    - uses: actions/upload-artifact@v1
-      with:
-        name: requirements.txt
-        path: requirements-py-${{ matrix.python-version }}.txt
-
-# Check whether the requirements/ files are consistent with the dependency specification in the pyproject.toml file.
-# If the check fails, warn the user via a comment and try to automatically create a pull request to update the files
-# (does not work on pull requests from forks).
-
-  check-requirements:
-
-    needs: tests
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9
-
-    - name: Install utils/ dependencies
-      run: pip install -r utils/requirements.txt
-
-    - name: Check consistency of requirements/ files
-      id: check_reqs
-      continue-on-error: true
-      run: python ./utils/dependency_management.py check-requirements DEFAULT --no-github-annotate
-
-#
-# The following steps are only executed if the consistency check failed.
-#
-    - name: Create commit comment
-      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: peter-evans/commit-comment@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        path: pyproject.toml
-        body: |
-          The requirements/ files are inconsistent!
-
-    # Check out the base branch so that we can prepare the pull request.
-    - name: Checkout base branch
-      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: actions/checkout@v2
-      with:
-        ref: ${{ github.head_ref }}
-        clean: true
-
-    - name: Download requirements.txt files
-      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: actions/download-artifact@v1
-      with:
-        name: requirements.txt
-        path: requirements
-
-    - name: Commit requirements files
-      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
+      # TODO: Remove a workaround for VIRTUAL_ENV once the setup-uv action is updated
+      # https://github.com/astral-sh/setup-uv/issues/219
       run: |
-        git add requirements/*
-
-    - name: Create pull request for updated requirements files
-      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      id: create_update_requirements_pr
-      continue-on-error: true
-      uses: peter-evans/create-pull-request@v3
-      with:
-        branch: update-requirements
-        commit-message: "Automated update of requirements/ files."
-        title: "Update requirements/ files."
-        body: |
-          Update requirements files to ensure that they are consistent
-          with the dependencies specified in the 'pyproject.toml' file.
-
-          Please note, that this pull request was likely created to
-          resolve the inconsistency for a specific dependency, however
-          other versions that have changed since the last update will
-          be included as part of this commit as well.
-
-          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information.
-
-    - name: Create PR comment on success
-      if: steps.create_update_requirements_pr.outcome == 'Success'
-      uses: peter-evans/create-or-update-comment@v1
-      with:
-        issue-number: ${{ github.event.number }}
-        body: |
-          I automatically created a pull request (#${{ steps.create_update_requirements_pr.outputs.pr_number }}) that adapts the
-          requirements/ files according to the dependencies specified in the 'pyproject.toml' file.
-
-    - name: Create PR comment on failure
-      if: steps.create_update_requirements_pr.outcome == 'Failure'
-      uses: peter-evans/create-or-update-comment@v1
-      with:
-        issue-number: ${{ github.event.number }}
-        body: |
-          Please update the requirements/ files to ensure that they
-          are consistent with the dependencies specified in the 'pyproject.toml' file.
+        ${{ matrix.python-version == '3.9' && 'VIRTUAL_ENV=$PWD/.venv' || '' }}
+        pytest -n auto --db-backend psql -m 'not nightly' tests/

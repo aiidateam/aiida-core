@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Launch a calculation using the 'diff-tutorial' plugin"""
+
 from pathlib import Path
 
 from aiida import engine, orm
@@ -13,7 +13,9 @@ try:
     code = orm.load_code('diff@localhost')
 except NotExistent:
     # Setting up code via python API (or use "verdi code setup")
-    code = orm.InstalledCode(label='diff', computer=computer, filepath_executable='/usr/bin/diff', default_calc_job_plugin='diff-tutorial')
+    code = orm.InstalledCode(
+        label='diff', computer=computer, filepath_executable='/usr/bin/diff', default_calc_job_plugin='diff-tutorial'
+    )
 
 # Set up inputs
 builder = code.get_builder()

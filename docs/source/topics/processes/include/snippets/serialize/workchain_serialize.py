@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 from aiida.engine import WorkChain
 from aiida.orm import to_aiida_type
 
 
 class SerializeWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)

@@ -29,7 +29,7 @@ The hash of a :class:`~aiida.orm.ProcessNode` includes, on top of this, the hash
 Once a node is stored in the database, its hash is stored in the ``_aiida_hash`` extra, and this extra is used to find matching nodes.
 If a node of the same class with the same hash already exists in the database, this is considered a cache match.
 You can use the :meth:`~aiida.orm.nodes.caching.NodeCaching.get_hash` method to check the hash of any node.
-In order to figure out why a calculation is *not* being reused, the :meth:`~aiida.orm.nodes.caching.NodeCaching._get_objects_to_hash` method may be useful:
+In order to figure out why a calculation is *not* being reused, the :meth:`~aiida.orm.nodes.caching.NodeCaching.get_objects_to_hash` method may be useful:
 
 .. code-block:: ipython
 
@@ -38,24 +38,36 @@ In order to figure out why a calculation is *not* being reused, the :meth:`~aiid
     In [6]: node.base.caching.get_hash()
     Out[6]: '62eca804967c9428bdbc11c692b7b27a59bde258d9971668e19ccf13a5685eb8'
 
-    In [7]: node.base.caching._get_objects_to_hash()
+    In [7]: node.base.caching.get_objects_to_hash()
     Out[7]:
-    [
-        '1.0.0',
-        {
+    {
+        'class': "<class 'aiida.orm.nodes.process.calculation.calcjob.CalcJobNode'>",
+        'version': '2.6.0',
+        'attributes': {
             'resources': {'num_machines': 2, 'default_mpiprocs_per_machine': 28},
             'parser_name': 'cp2k',
             'linkname_retrieved': 'retrieved'
         },
-        <aiida.common.folders.Folder at 0x1171b9a20>,
-        '6850dc88-0949-482e-bba6-8b11205aec11',
-        {
+        'computer_uuid': '85faf55e-8597-4649-90e0-55881271c33c',
+        'links': {
             'code': 'f6bd65b9ca3a5f0cf7d299d9cfc3f403d32e361aa9bb8aaa5822472790eae432',
             'parameters': '2c20fdc49672c3505cebabacfb9b1258e71e7baae5940a80d25837bee0032b59',
             'structure': 'c0f1c1d1bbcfc7746dcf7d0d675904c62a5b1759d37db77b564948fa5a788769',
             'parent_calc_folder': 'e375178ceeffcde086546d3ddbce513e0527b5fa99993091b2837201ad96569c'
         }
     ]
+
+.. versionchanged:: 2.6
+    Version information removed from hash computation
+
+    Up until v2.6, the objects used to compute the hash of a ``ProcessNode`` included the ``version`` attribute.
+    This attribute stores a dictionary of the installed versions of the ``aiida-core`` and plugin packages (if relevant) at the time of creation.
+    When the caching mechanism was first introduced, this information was added intentionally to the hash to err on the safe side and prevent false positives as much as possible.
+    This turned out to be too limiting, however, as this means that each time ``aiida-core`` or a plugin package's version is updated, all existing valid cache sources are essentially invalidated.
+    Even if an identical process were to be run, its hash would be different, solely because the version information differs.
+    Therefore, as of v2.6, the version information is no longer part of the hash computation.
+    The most likely source for false positives due to changes in code are going to be ``CalcJob`` and ``Parser`` plugins.
+    See :ref:`this section <topics:provenance:caching:control-hashing:calcjobs-parsers>` on a mechanism to control the caching of ``CalcJob`` plugins.
 
 
 .. _topics:provenance:caching:control-hashing:
@@ -71,7 +83,7 @@ The hashing of *Data nodes* can be customized both when implementing a new data 
 In the :py:class:`~aiida.orm.Node` subclass:
 
 * Use the ``_hash_ignored_attributes`` to exclude a list of node attributes ``['attr1', 'attr2']`` from computing the hash.
-* Include extra information in computing the hash by overriding the :meth:`~aiida.orm.nodes.caching.NodeCaching._get_objects_to_hash` method.
+* Include extra information in computing the hash by overriding the :meth:`~aiida.orm.nodes.caching.NodeCaching.get_objects_to_hash` method.
   Use the ``super()`` method, and then append to the list of objects to hash.
 
 You can also modify hashing behavior during runtime by passing a keyword argument to :meth:`~aiida.orm.nodes.caching.NodeCaching.get_hash`, which are forwarded to :meth:`~aiida.common.hashing.make_hash`.
@@ -81,6 +93,37 @@ Process nodes
 
 The hashing of *Process nodes* is fixed and can only be influenced indirectly via the hashes of their inputs.
 For implementation details of the hashing mechanism for process nodes, see :ref:`here <internal_architecture:engine:caching>`.
+
+
+.. _topics:provenance:caching:control-hashing:calcjobs-parsers:
+
+Calculation jobs and parsers
+............................
+
+.. versionadded:: 2.6
+    Resetting the calculation job cache
+
+    When the implementation of a ``CalcJob`` or ``Parser`` plugin changes significantly, it can be the case that for identical inputs, significantly different outputs are expected
+    The following non-exhaustive list provides some examples:
+
+    * The ``CalcJob.prepare_for_submission`` changes input files that are written independent of input nodes
+    * The ``Parser`` adds an output node for identical output files produced by the calculation
+    * The ``Parser`` changes an existing output node even for identical output files produced by the calculation
+
+    In this case, existing completed nodes of the ``CalcJob`` plugin in question should be invalidated as a cache source, because they could constitute false positives.
+    For that reason, the ``CalcJob`` and ``Parser`` base classes each have the ``CACHE_VERSION`` class attribute.
+    By default it is set to ``None``, but when set to an integer, it is included into the computed hash for its nodes.
+    This allows a plugin developer to invalidate the cache of existing nodes by simply incrementing this attribute, for example:
+
+    .. code-block:: python
+
+        class SomeCalcJob(CalcJob):
+
+            CACHE_VERSION = 1
+
+    Note that the exact value of the ``CACHE_VERSION`` does not really matter, all that matters is that changing it, invalidates the existing cache.
+    To keep things simple, it is recommended to treat it as a counter and simply increment it by 1 each time.
+
 
 .. _topics:provenance:caching:control-caching:
 
@@ -103,9 +146,9 @@ This method calls the iterator :meth:`~aiida.orm.nodes.caching.NodeCaching._iter
 To find the list of `source` nodes that are equivalent to the `target` that is being stored, :meth:`~aiida.orm.nodes.caching.NodeCaching._iter_all_same_nodes` performs the following steps:
 
 1. It queries the database for all nodes that have the same hash as the `target` node.
-2. From the result, only those nodes are returned where the property :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` returns ``True``.
+2. From the result, only those nodes are returned where the property :attr:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` returns ``True``.
 
-The property :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` therefore allows to control whether a stored node can be used as a `source` in the caching mechanism.
+The property :attr:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` therefore allows to control whether a stored node can be used as a `source` in the caching mechanism.
 By default, for all nodes, the property returns ``True``.
 However, this can be changed on a per-node basis, by setting it to ``False``
 
@@ -123,8 +166,8 @@ Setting the property to ``False``, will cause an extra to be stored on the node 
 
 Through this method, it is possible to guarantee that individual nodes are never used as a `source` for caching.
 
-The :class:`~aiida.engine.processes.process.Process` class overrides the :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` property to give more fine-grained control on process nodes as caching sources.
-If either :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` of the base class or :meth:`~aiida.orm.nodes.process.process.ProcessNode.is_finished` returns ``False``, the process node is not a valid source.
+The :class:`~aiida.engine.processes.process.Process` class overrides the :attr:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` property to give more fine-grained control on process nodes as caching sources.
+If either :attr:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` of the base class or :meth:`~aiida.orm.nodes.process.process.ProcessNode.is_finished` returns ``False``, the process node is not a valid source.
 Likewise, if the process class cannot be loaded from the node, through the :meth:`~aiida.orm.nodes.process.process.ProcessNode.process_class`, the node is not a valid caching source.
 Finally, if the associated process class implements the :meth:`~aiida.engine.processes.process.Process.is_valid_cache` method, it is called, passing the node as an argument.
 If that returns ``True``, the node is considered to be a valid caching source.

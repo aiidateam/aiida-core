@@ -1,0 +1,7 @@
+content: QbStrField('content', dtype=str, is_attribute=False)
+ctime: QbNumericField('ctime', dtype=datetime, is_attribute=False)
+mtime: QbNumericField('mtime', dtype=datetime, is_attribute=False)
+node_pk: QbNumericField('node_pk', dtype=int, is_attribute=False)
+pk: QbNumericField('pk', dtype=int, is_attribute=False)
+user_pk: QbNumericField('user_pk', dtype=int, is_attribute=False)
+uuid: QbStrField('uuid', dtype=str, is_attribute=False)

@@ -7,7 +7,10 @@ name: release
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+*"
+    - v[0-9]+.[0-9]+.[0-9]+*
+
+env:
+  FORCE_COLOR: 1
 
 jobs:
 
@@ -18,9 +21,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
     - run: python .github/workflows/check_release_tag.py $GITHUB_REF
@@ -32,22 +35,15 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v4
+
+    - name: Install aiida-core and pre-commit
+      uses: ./.github/actions/install-aiida-core
       with:
-        python-version: '3.9'
-    - name: Install system dependencies
-      # note libkrb5-dev is required as a dependency for the gssapi pip install
-      run: |
-        sudo apt update
-        sudo apt install libkrb5-dev ruby ruby-dev
-    - name: Install python dependencies
-      run: |
-        pip install --upgrade pip
-        pip install -r requirements/requirements-py-3.9.txt
-        pip install -e .[pre-commit]
-        pip freeze
+        python-version: '3.11'
+        extras: '[pre-commit]'
+        from-lock: 'false'
+
     - name: Run pre-commit
       run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
@@ -58,47 +54,20 @@ jobs:
     timeout-minutes: 30
 
     services:
-      postgres:
-        image: postgres:10
-        env:
-          POSTGRES_DB: test_aiida
-          POSTGRES_PASSWORD: ''
-          POSTGRES_HOST_AUTH_METHOD: trust
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
       rabbitmq:
         image: rabbitmq:3.8.14-management
         ports:
-          - 5672:5672
-          - 15672:15672
+        - 5672:5672
+        - 15672:15672
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
-    - name: Install system dependencies
-      run: |
-        sudo apt update
-        sudo apt install postgresql graphviz
-
-    - name: Upgrade pip
-      run: |
-        pip install --upgrade pip
-        pip --version
+    - uses: actions/checkout@v4
 
     - name: Install aiida-core
-      run: |
-        pip install -r requirements/requirements-py-3.9.txt
-        pip install --no-deps -e .
+      uses: ./.github/actions/install-aiida-core
+
     - name: Run sub-set of test suite
-      run: pytest -sv -k 'requires_rmq'
+      run: pytest -s -m requires_rmq --db-backend=sqlite tests/
 
   publish:
 
@@ -110,9 +79,9 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
     - name: install flit

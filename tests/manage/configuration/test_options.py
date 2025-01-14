@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,11 +7,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the configuration options."""
+
 import pytest
 
 from aiida import get_profile
 from aiida.common.exceptions import ConfigurationError
-from aiida.manage.configuration import ConfigValidationError, config_schema, get_config, get_config_option
+from aiida.manage.configuration import get_config, get_config_option
+from aiida.manage.configuration.config import GlobalOptionsSchema
 from aiida.manage.configuration.options import Option, get_option, get_option_names, parse_option
 
 
@@ -23,7 +24,7 @@ class TestConfigurationOptions:
     def test_get_option_names(self):
         """Test `get_option_names` function."""
         assert isinstance(get_option_names(), list)
-        assert len(get_option_names()) == len(config_schema()['definitions']['options']['properties'])
+        assert len(get_option_names()) == len(GlobalOptionsSchema.model_fields)
 
     def test_get_option(self):
         """Test `get_option` function."""
@@ -37,11 +38,10 @@ class TestConfigurationOptions:
 
     def test_parse_option(self):
         """Test `parse_option` function."""
-
-        with pytest.raises(ConfigValidationError):
+        with pytest.raises(ConfigurationError):
             parse_option('logging.aiida_loglevel', 1)
 
-        with pytest.raises(ConfigValidationError):
+        with pytest.raises(ConfigurationError):
             parse_option('logging.aiida_loglevel', 'INVALID_LOG_LEVEL')
 
     def test_options(self):
@@ -50,8 +50,8 @@ class TestConfigurationOptions:
             option = get_option(option_name)
             assert option.name == option_name
             assert isinstance(option.description, str)
-            option.valid_type  # pylint: disable=pointless-statement
-            option.default  # pylint: disable=pointless-statement
+            option.valid_type
+            option.default
 
     def test_get_config_option_default(self):
         """Tests that `get_option` return option default if not specified globally or for current profile."""

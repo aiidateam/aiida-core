@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -23,10 +22,9 @@ class TestSealable:
     @staticmethod
     def test_change_updatable_attrs_after_store():
         """Verify that a Sealable node can alter updatable attributes even after storing."""
-
         node = CalculationNode().store()
 
-        for attr in CalculationNode._updatable_attributes:  # pylint: disable=protected-access,not-an-iterable
+        for attr in CalculationNode._updatable_attributes:
             if attr != Sealable.SEALED_KEY:
                 node.base.attributes.set(attr, 'a')
 

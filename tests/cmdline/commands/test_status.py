@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi status`."""
+
 import pytest
 
 from aiida import __version__, get_profile
@@ -27,7 +27,7 @@ def test_status(run_cli_command):
     assert 'The daemon is not running' in result.output
     assert result.exit_code is ExitCode.SUCCESS.value
 
-    for string in ['config', 'profile', 'postgres', 'rabbitmq', 'daemon']:
+    for string in ['config', 'profile', 'storage', 'broker', 'daemon']:
         assert string in result.output
 
     assert __version__ in result.output
@@ -49,13 +49,13 @@ def test_status_no_rmq(run_cli_command):
     assert 'rabbitmq' not in result.output
     assert result.exit_code is ExitCode.SUCCESS.value
 
-    for string in ['config', 'profile', 'postgres', 'daemon']:
+    for string in ['config', 'profile', 'storage', 'daemon']:
         assert string in result.output
 
 
+@pytest.mark.requires_psql
 def test_storage_unable_to_connect(run_cli_command):
     """Test `verdi status` when there is an unknown error while connecting to the storage."""
-    # pylint: disable=protected-access
     profile = get_profile()
 
     old_port = profile._attributes['storage']['config']['database_port']
@@ -63,17 +63,19 @@ def test_storage_unable_to_connect(run_cli_command):
 
     try:
         result = run_cli_command(cmd_status.verdi_status, raises=True, use_subprocess=False)
-        assert 'Unable to connect to profile\'s storage' in result.output
+        assert "Unable to connect to profile's storage" in result.output
         assert result.exit_code is ExitCode.CRITICAL
     finally:
         profile._attributes['storage']['config']['database_port'] = old_port
 
 
+@pytest.mark.requires_psql
 def test_storage_incompatible(run_cli_command, monkeypatch):
     """Test `verdi status` when storage schema version is incompatible with that of the code."""
 
-    def storage_cls(*args, **kwargs):  # pylint: disable=unused-argument
+    def storage_cls(*args, **kwargs):
         from aiida.common.exceptions import IncompatibleStorageSchema
+
         raise IncompatibleStorageSchema()
 
     monkeypatch.setattr(migrator.PsqlDosMigrator, 'validate_storage', storage_cls)
@@ -83,11 +85,13 @@ def test_storage_incompatible(run_cli_command, monkeypatch):
     assert result.exit_code is ExitCode.CRITICAL
 
 
+@pytest.mark.requires_psql
 def test_storage_corrupted(run_cli_command, monkeypatch):
     """Test `verdi status` when the storage is found to be corrupt (e.g. non-matching repository UUIDs)."""
 
-    def storage_cls(*args, **kwargs):  # pylint: disable=unused-argument
+    def storage_cls(*args, **kwargs):
         from aiida.common.exceptions import CorruptStorage
+
         raise CorruptStorage()
 
     monkeypatch.setattr(migrator.PsqlDosMigrator, 'validate_storage', storage_cls)

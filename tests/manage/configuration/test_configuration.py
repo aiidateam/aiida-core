@@ -1,10 +1,25 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.manage.configuration` module."""
+
 import pytest
 
 import aiida
-from aiida.manage.configuration import get_profile, profile_context
+from aiida.manage.configuration import Profile, create_profile, get_profile, profile_context
 from aiida.manage.manager import get_manager
+
+
+@pytest.mark.parametrize('entry_point', ('core.sqlite_temp', 'core.sqlite_dos'))
+def test_create_profile(isolated_config, tmp_path, entry_point):
+    """Test :func:`aiida.manage.configuration.tools.create_profile`."""
+    profile_name = 'testing'
+    profile = create_profile(
+        isolated_config,
+        name=profile_name,
+        email='test@localhost',
+        storage_backend=entry_point,
+        storage_config={'filepath': str(tmp_path)},
+    )
+    assert isinstance(profile, Profile)
+    assert profile_name in isolated_config.profile_names
 
 
 def test_check_version_release(monkeypatch, capsys, isolated_config):
@@ -27,7 +42,8 @@ def test_check_version_release(monkeypatch, capsys, isolated_config):
 
 
 @pytest.mark.parametrize('suppress_warning', (True, False))
-def test_check_version_development(monkeypatch, capsys, isolated_config, suppress_warning):
+@pytest.mark.usefixtures('isolated_config')
+def test_check_version_development(monkeypatch, capsys, suppress_warning, aiida_profile):
     """Test that ``Manager.check_version`` prints a warning for a post release development version.
 
     The warning can be suppressed by setting the option ``warnings.development_version`` to ``False``.
@@ -39,7 +55,7 @@ def test_check_version_development(monkeypatch, capsys, isolated_config, suppres
     version = '1.0.0.post0'
     monkeypatch.setattr(aiida, '__version__', version)
 
-    isolated_config.set_option('warnings.development_version', not suppress_warning)
+    aiida_profile.set_option('warnings.development_version', not suppress_warning)
 
     get_manager().check_version()
     captured = capsys.readouterr()

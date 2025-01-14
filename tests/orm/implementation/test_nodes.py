@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods
 """Unit tests for the BackendNode and BackendNodeCollection classes."""
+
 from collections import OrderedDict
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -23,9 +22,8 @@ class TestBackendNode:
     """Test BackendNode."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost, backend):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, backend):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.backend = backend
         self.computer = aiida_localhost.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
         self.user = backend.users.create(email=uuid4().hex).store()
@@ -37,7 +35,7 @@ class TestBackendNode:
             user=self.user,
             computer=self.computer,
             label=self.node_label,
-            description=self.node_description
+            description=self.node_description,
         )
 
     def create_node(self) -> BackendNode:
@@ -100,8 +98,7 @@ class TestBackendNode:
         assert node.mtime > node_mtime
 
     def test_creation_with_time(self):
-        """
-        Test creation of a BackendNode when passing the mtime and the ctime. The passed ctime and mtime
+        """Test creation of a BackendNode when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
         ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, timezone.utc)
@@ -113,7 +110,7 @@ class TestBackendNode:
             label=self.node_label,
             description=self.node_description,
             mtime=mtime,
-            ctime=ctime
+            ctime=ctime,
         )
 
         # Check that the ctime and mtime are the given ones

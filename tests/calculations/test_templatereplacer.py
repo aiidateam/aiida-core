@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `TemplatereplacerCalculation` plugin."""
+
 import io
 
 import pytest
@@ -19,18 +19,10 @@ from aiida.common import datastructures
 @pytest.mark.requires_rmq
 def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a base template that emulates the arithmetic add."""
-
     entry_point_name = 'core.templatereplacer'
     inputs = {
         'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
-        'metadata': {
-            'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'tot_num_mpiprocs': 1
-                }
-            }
-        },
+        'metadata': {'options': {'resources': {'num_machines': 1, 'tot_num_mpiprocs': 1}}},
         'template': orm.Dict(
             dict={
                 'input_file_template': 'echo $(({x} + {y}))',
@@ -39,10 +31,7 @@ def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
                 'output_file_name': 'output.txt',
             }
         ),
-        'parameters': orm.Dict(dict={
-            'x': 1,
-            'y': 2
-        }),
+        'parameters': orm.Dict(dict={'x': 1, 'y': 2}),
     }
 
     # Check the attributes of the resulting `CalcInfo`
@@ -71,7 +60,6 @@ def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
 @pytest.mark.requires_rmq
 def test_file_usage(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a base template that uses two files."""
-
     file1_node = orm.SinglefileData(io.BytesIO(b'Content of file 1'))
     file2_node = orm.SinglefileData(io.BytesIO(b'Content of file 2'))
 
@@ -79,21 +67,13 @@ def test_file_usage(fixture_sandbox, aiida_localhost, generate_calc_job):
     entry_point_name = 'core.templatereplacer'
     inputs = {
         'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
-        'metadata': {
-            'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'tot_num_mpiprocs': 1
-                }
+        'metadata': {'options': {'resources': {'num_machines': 1, 'tot_num_mpiprocs': 1}}},
+        'template': orm.Dict(
+            dict={
+                'files_to_copy': [('filenode1', 'file1.txt'), ('filenode2', 'file2.txt')],
             }
-        },
-        'template': orm.Dict(dict={
-            'files_to_copy': [('filenode1', 'file1.txt'), ('filenode2', 'file2.txt')],
-        }),
-        'files': {
-            'filenode1': file1_node,
-            'filenode2': file2_node
-        }
+        ),
+        'files': {'filenode1': file1_node, 'filenode2': file2_node},
     }
 
     calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)

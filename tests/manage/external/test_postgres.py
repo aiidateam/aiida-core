@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,11 +7,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for postgres database maintenance functionality"""
+
 from unittest import TestCase
+
+import pytest
 
 from aiida.manage.external.postgres import Postgres
 
 
+@pytest.mark.requires_psql
 class PostgresTest(TestCase):
     """Test the public API provided by the `Postgres` class"""
 

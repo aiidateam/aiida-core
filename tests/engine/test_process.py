@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,19 +6,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member,too-many-public-methods
 """Module to test AiiDA processes."""
+
 import threading
 
 import plumpy
-from plumpy.utils import AttributesFrozendict
 import pytest
+from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
 from aiida.common.lang import override
 from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
 from aiida.engine.processes.ports import PortNamespace
-from aiida.manage.caching import enable_caching
+from aiida.manage.caching import disable_caching, enable_caching
+from aiida.orm import to_aiida_type
+from aiida.orm.nodes.caching import NodeCaching
 from aiida.plugins import CalculationFactory
 from tests.utils import processes as test_processes
 
@@ -40,16 +41,16 @@ class TestProcessNamespace:
     """Test process namespace"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
         yield
         assert Process.current() is None
 
     def test_namespaced_process(self):
         """Test that inputs in nested namespaces are properly validated and the link labels
-        are properly formatted by connecting the namespaces with underscores."""
+        are properly formatted by connecting the namespaces with underscores.
+        """
         proc = NameSpacedProcess(inputs={'some': {'name': {'space': {'a': orm.Int(5)}}}})
 
         # Test that the namespaced inputs are AttributesFrozenDicts
@@ -81,14 +82,14 @@ class ProcessStackTest(Process):
 
     @override
     def on_create(self):
-        # pylint: disable=attribute-defined-outside-init
         super().on_create()
         self._thread_id = threading.current_thread().ident
 
     @override
     def on_stop(self):
         """The therad must match the one used in on_create because process
-        stack is using thread local storage to keep track of who called who."""
+        stack is using thread local storage to keep track of who called who.
+        """
         super().on_stop()
         assert self._thread_id is threading.current_thread().ident
 
@@ -98,9 +99,8 @@ class TestProcess:
     """Test AiiDA process."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
         self.computer = aiida_localhost
         yield
@@ -143,6 +143,7 @@ class TestProcess:
     def test_input_after_stored(self):
         """Verify that adding an input link after storing a `ProcessNode` will raise because it is illegal."""
         from aiida.common import LinkType
+
         process = test_processes.DummyProcess()
 
         with pytest.raises(ValueError):
@@ -174,6 +175,36 @@ class TestProcess:
         run(process)
         assert process.node.is_finished_ok
 
+    def test_on_finish_node_updated_before_broadcast(self, monkeypatch):
+        """Tests if the process state and output has been updated in the database before a broadcast is invoked.
+
+        In plumpy.Process.on_entered the state update is broadcasted. When a process is finished this results in the
+        next process being run. If the next process will access the process that just finished, it can result in not
+        being able to retrieve the outputs or correct process state because this information has yet not been updated
+        them in the database.
+        """
+        import copy
+
+        # By monkeypatching the parent class we can check the state when the
+        # parents class method is invoked and check if the state has be
+        # correctly updated.
+        original_on_entered = copy.deepcopy(plumpy.Process.on_entered)
+
+        def on_entered(self, from_state):
+            if self._state.LABEL.value == 'finished':
+                assert (
+                    self.node.is_finished_ok
+                ), 'Node state should have been updated before plumpy.Process.on_entered is invoked.'
+                assert (
+                    self.node.outputs.result.value == 2
+                ), 'Outputs should have been attached before plumpy.Process.on_entered is invoked.'
+            original_on_entered(self, from_state)
+
+        monkeypatch.setattr(plumpy.Process, 'on_entered', on_entered)
+        # Ensure that process has run correctly otherwise the asserts in the
+        # monkeypatched member function have been skipped
+        assert run_get_node(test_processes.AddProcess, a=1, b=1).node.is_finished_ok, 'Process should not fail.'
+
     @staticmethod
     def test_save_instance_state():
         """Test save instance's state."""
@@ -185,7 +216,7 @@ class TestProcess:
 
     def test_exit_codes(self):
         """Test the properties to return various (sub) sets of existing exit codes."""
-        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # noqa: N806
 
         exit_codes = ArithmeticAddCalculation.exit_codes
         assert isinstance(exit_codes, ExitCodesNamespace)
@@ -201,8 +232,7 @@ class TestProcess:
             ArithmeticAddCalculation.get_exit_statuses(['NON_EXISTING_EXIT_CODE_LABEL'])
 
     def test_exit_codes_invalidate_cache(self):
-        """
-        Test that returning an exit code with 'invalidates_cache' set to ``True``
+        """Test that returning an exit code with 'invalidates_cache' set to ``True``
         indeed means that the ProcessNode will not be cached from.
         """
         # Sanity check that caching works when the exit code is not returned.
@@ -210,17 +240,16 @@ class TestProcess:
             _, node1 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(False))
             _, node2 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(False))
             assert node1.base.extras.get('_aiida_hash') == node2.base.extras.get('_aiida_hash')
-            assert '_aiida_cached_from' in node2.base.extras
+            assert NodeCaching.CACHED_FROM_KEY in node2.base.extras
 
         with enable_caching():
             _, node3 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(True))
             _, node4 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(True))
             assert node3.base.extras.get('_aiida_hash') == node4.base.extras.get('_aiida_hash')
-            assert '_aiida_cached_from' not in node4.base.extras
+            assert NodeCaching.CACHED_FROM_KEY not in node4.base.extras
 
     def test_valid_cache_hook(self):
-        """
-        Test that the is_valid_cache behavior can be specified from
+        """Test that the is_valid_cache behavior can be specified from
         the method in the Process sub-class.
         """
         # Sanity check that caching works when the hook returns True.
@@ -228,13 +257,13 @@ class TestProcess:
             _, node1 = run_get_node(test_processes.IsValidCacheHook)
             _, node2 = run_get_node(test_processes.IsValidCacheHook)
             assert node1.base.extras.get('_aiida_hash') == node2.base.extras.get('_aiida_hash')
-            assert '_aiida_cached_from' in node2.base.extras
+            assert NodeCaching.CACHED_FROM_KEY in node2.base.extras
 
         with enable_caching():
             _, node3 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(True))
             _, node4 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(True))
             assert node3.base.extras.get('_aiida_hash') == node4.base.extras.get('_aiida_hash')
-            assert '_aiida_cached_from' not in node4.base.extras
+            assert NodeCaching.CACHED_FROM_KEY not in node4.base.extras
 
     def test_process_type_with_entry_point(self):
         """For a process with a registered entry point, the process_type will be its formatted entry point string."""
@@ -244,10 +273,7 @@ class TestProcess:
         parameters = orm.Dict(dict={})
         template = orm.Dict(dict={})
         options = {
-            'resources': {
-                'num_machines': 1,
-                'tot_num_mpiprocs': 1
-            },
+            'resources': {'num_machines': 1, 'tot_num_mpiprocs': 1},
             'max_wallclock_seconds': 1,
         }
 
@@ -257,7 +283,7 @@ class TestProcess:
             'template': template,
             'metadata': {
                 'options': options,
-            }
+            },
         }
 
         entry_point = 'core.templatereplacer'
@@ -272,8 +298,7 @@ class TestProcess:
         assert recovered_process == process_class
 
     def test_process_type_without_entry_point(self):
-        """
-        For a process without a registered entry point, the process_type will fall back on the fully
+        """For a process without a registered entry point, the process_type will fall back on the fully
         qualified class name
         """
         process = test_processes.DummyProcess()
@@ -383,12 +408,14 @@ class TestProcess:
         process = instantiate_process(runner, ParentProcess, input=orm.Int(1))
         exposed_outputs = process.exposed_outputs(node_child, ChildProcess)
 
-        expected = AttributeDict({
-            'name': {
-                'space': node_name_space,
-            },
-            'output': node_output,
-        })
+        expected = AttributeDict(
+            {
+                'name': {
+                    'space': node_name_space,
+                },
+                'output': node_output,
+            }
+        )
         assert exposed_outputs == expected
 
     def test_exposed_outputs_non_existing_namespace(self):
@@ -482,7 +509,7 @@ class TestNotRequiredNoneProcess(Process):
         spec.input('any_type', required=False)
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_not_required_accepts_none():
     """Test that a port that is not required, accepts ``None``."""
     from aiida.engine.utils import instantiate_process
@@ -514,21 +541,15 @@ class TestMetadataInputsProcess(Process):
         spec.input('metadata_portnamespace.without_default', is_metadata=True)
 
 
-def test_metadata_inputs():
+def test_metadata_inputs(runner):
     """Test that explicitly passed ``is_metadata`` inputs are stored in the attributes.
 
     This is essential to make it possible to recreate a builder for the process with the original inputs.
     """
-    from aiida.manage import get_manager
-
-    runner = get_manager().get_runner()
-
     inputs = {
         'metadata_port': 'value',
         'metadata_port_non_serializable': orm.Data().store(),
-        'metadata_portnamespace': {
-            'without_default': 100
-        }
+        'metadata_portnamespace': {'without_default': 100},
     }
     process = TestMetadataInputsProcess(runner=runner, inputs=inputs)
 
@@ -536,7 +557,70 @@ def test_metadata_inputs():
     # that are not JSON-serializable should also have been filtered out.
     assert process.node.get_metadata_inputs() == {
         'metadata_port': 'value',
-        'metadata_portnamespace': {
-            'without_default': 100
-        }
+        'metadata_portnamespace': {'without_default': 100},
     }
+
+
+class CachableProcess(Process):
+    """Dummy process that defines a storable and cachable node class."""
+
+    _node_class = orm.CalculationNode
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_metadata_disable_cache(runner, entry_points):
+    """Test the ``metadata.disable_cache`` input."""
+    from aiida.engine.processes import ProcessState
+
+    entry_points.add(CachableProcess, 'aiida.workflows:core.dummy')
+
+    # Create a ``ProcessNode`` instance that is a valid cache source
+    process_original = CachableProcess(runner=runner)
+    process_original.node.set_process_state(ProcessState.FINISHED)
+    process_original.node.seal()
+    assert process_original.node.base.caching.is_valid_cache
+
+    # Cache is disabled, so node should not be cached
+    with disable_caching():
+        process = CachableProcess(runner=runner)
+        assert not process.node.base.caching.is_created_from_cache
+
+    # Cache is disabled, fact that ``disable_cache`` is explicitly set to ``False`` should not change anything
+    with disable_caching():
+        process = CachableProcess(runner=runner, inputs={'metadata': {'disable_cache': False}})
+        assert not process.node.base.caching.is_created_from_cache
+
+    # Cache is enabled, so node should be cached
+    with enable_caching():
+        process = CachableProcess(runner=runner)
+        assert process.node.base.caching.is_created_from_cache
+
+    # Cache is enabled, but ``disable_cache`` is explicitly set to ``False``, so node should not be cached
+    with enable_caching():
+        process = CachableProcess(runner=runner, inputs={'metadata': {'disable_cache': True}})
+        assert not process.node.base.caching.is_created_from_cache
+
+
+def custom_serializer():
+    pass
+
+
+class AutoSerializeProcess(Process):
+    """Check the automatic assignment of ``to_aiida_type`` serializer."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('non_metadata_input')
+        spec.input('metadata_input', is_metadata=True)
+        spec.input('custom_input', serializer=custom_serializer)
+
+
+def test_auto_default_serializer():
+    """Test that all inputs ports automatically have ``to_aiida_type`` set as the serializer.
+
+    Exceptions are if the port is a metadata port or it defines an explicit serializer
+    """
+    assert AutoSerializeProcess.spec().inputs['non_metadata_input'].serializer is to_aiida_type
+    assert AutoSerializeProcess.spec().inputs['metadata_input'].serializer is None
+    assert AutoSerializeProcess.spec().inputs['custom_input'].serializer is custom_serializer

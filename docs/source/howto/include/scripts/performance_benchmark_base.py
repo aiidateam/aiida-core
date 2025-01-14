@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Script to benchmark the performance of the AiiDA workflow engine on a given installation."""
+
 import click
 
 from aiida.cmdline.params import options
@@ -109,7 +109,6 @@ def main(code, number, daemon):
         echo.echo_warning('At least one submitted calculation excepted or was killed.')
     else:
         echo.echo_success('All calculations finished successfully.')
-
 
     time_end = time.time()
     echo.echo(f'Elapsed time: {(time_end - time_start):.2f} seconds.')

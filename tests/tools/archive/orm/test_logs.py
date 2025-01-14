@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,13 +7,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm.Log tests for the export and import routines"""
-# pylint: disable=too-many-locals,too-many-statements
+
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 
 
-def test_critical_log_msg_and_metadata(tmp_path, aiida_profile):
-    """ Testing logging of critical message """
+def test_critical_log_msg_and_metadata(tmp_path, aiida_profile_clean):
+    """Testing logging of critical message"""
     message = 'Testing logging of critical failure'
     calc = orm.CalculationNode()
 
@@ -34,7 +33,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile):
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([calc], filename=export_file)
 
-    aiida_profile.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     import_archive(export_file)
 
@@ -46,7 +45,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile):
     assert logs[0].metadata == log_metadata
 
 
-def test_exclude_logs_flag(tmp_path, aiida_profile):
+def test_exclude_logs_flag(tmp_path, aiida_profile_clean):
     """Test that the `include_logs` argument for `export` works."""
     log_msg = 'Testing logging of critical failure'
 
@@ -66,7 +65,7 @@ def test_exclude_logs_flag(tmp_path, aiida_profile):
     create_archive([calc], filename=export_file, include_logs=False)
 
     # Clean database and reimport exported data
-    aiida_profile.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(export_file)
 
     # Finding all the log messages
@@ -81,7 +80,7 @@ def test_exclude_logs_flag(tmp_path, aiida_profile):
     assert str(import_calcs[0][0]) == calc_uuid
 
 
-def test_export_of_imported_logs(tmp_path, aiida_profile):
+def test_export_of_imported_logs(tmp_path, aiida_profile_clean):
     """Test export of imported Log"""
     log_msg = 'Testing export of imported log'
 
@@ -103,7 +102,7 @@ def test_export_of_imported_logs(tmp_path, aiida_profile):
     create_archive([calc], filename=export_file)
 
     # Clean database and reimport exported data
-    aiida_profile.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(export_file)
 
     # Finding all the log messages
@@ -124,7 +123,7 @@ def test_export_of_imported_logs(tmp_path, aiida_profile):
     create_archive([calc], filename=re_export_file)
 
     # Clean database and reimport exported data
-    aiida_profile.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(re_export_file)
 
     # Finding all the log messages
@@ -167,7 +166,7 @@ def test_multiple_imports_for_single_node(tmp_path, aiida_profile_clean):
     create_archive([node], filename=export_file_full)
 
     # Clean database and reimport "EXISTING" DB
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     import_archive(export_file_existing)
 
     # Check correct import
@@ -209,8 +208,7 @@ def test_multiple_imports_for_single_node(tmp_path, aiida_profile_clean):
 
 
 def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile_clean):
-    """
-    When a node with logs already exist in the DB, and more logs are imported
+    """When a node with logs already exist in the DB, and more logs are imported
     for the same node (same UUID), test that only new log-entries are added.
 
     Part I:
@@ -242,7 +240,7 @@ def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile_clean):
     export_filenames = {
         'EXISTING': 'export_EXISTING_db.tar.gz',
         'FULL': 'export_FULL_db.tar.gz',
-        'NEW': 'export_NEW_db.tar.gz'
+        'NEW': 'export_NEW_db.tar.gz',
     }
 
     log_msgs = ['Life is like riding a bicycle.', 'To keep your balance,', 'you must keep moving.']
@@ -291,7 +289,7 @@ def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile_clean):
     create_archive([calc], filename=export_file_full)
 
     # Clean database
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     ## Part II
     # Reimport "EXISTING" DB
@@ -329,7 +327,7 @@ def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile_clean):
     create_archive([calc], filename=export_file_new)
 
     # Clean database
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     ## Part III
     # Reimport "EXISTING" DB

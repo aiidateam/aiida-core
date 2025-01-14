@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `ProcessSpec` class."""
+
 import pytest
 
 from aiida.engine import Process
@@ -18,9 +18,8 @@ class TestProcessSpec:
     """Tests for the `ProcessSpec` class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
         self.spec = Process.spec()
         self.spec.inputs.valid_type = Data

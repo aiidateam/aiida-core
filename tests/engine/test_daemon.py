@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,10 +7,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test daemon module."""
+
 import asyncio
 
-from plumpy.process_states import ProcessState
 import pytest
+from plumpy.process_states import ProcessState
 
 from aiida.manage import get_manager
 from tests.utils import processes as test_processes

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the ORM Backend class."""
+
+from __future__ import annotations
+
+import json
+import pathlib
 import uuid
 
 import pytest
@@ -22,9 +26,9 @@ class TestBackend:
     """Test backend."""
 
     @pytest.fixture(autouse=True)
-    def init_test(self, backend):  # pylint: disable=unused-argument
+    def init_test(self, backend):
         """Set up the backend."""
-        self.backend = backend  # pylint: disable=attribute-defined-outside-init
+        self.backend = backend
 
     def test_transaction_nesting(self):
         """Test that transaction nesting works."""
@@ -113,13 +117,7 @@ class TestBackend:
         with pytest.raises(exceptions.IntegrityError, match='Incorrect fields'):
             self.backend.bulk_update(EntityTypes.USER, [{'id': users[0].pk, 'x': 'other'}])
         self.backend.bulk_update(
-            EntityTypes.USER, [{
-                'id': users[0].pk,
-                'email': 'other0'
-            }, {
-                'id': users[1].pk,
-                'email': 'other1'
-            }]
+            EntityTypes.USER, [{'id': users[0].pk, 'email': 'other0'}, {'id': users[1].pk, 'email': 'other1'}]
         )
         assert users[0].email == 'other0'
         assert users[1].email == 'other1'
@@ -132,13 +130,7 @@ class TestBackend:
         try:
             with self.backend.transaction():
                 self.backend.bulk_update(
-                    EntityTypes.USER, [{
-                        'id': users[0].pk,
-                        'email': 'random0'
-                    }, {
-                        'id': users[1].pk,
-                        'email': 'random1'
-                    }]
+                    EntityTypes.USER, [{'id': users[0].pk, 'email': 'random0'}, {'id': users[1].pk, 'email': 'random1'}]
                 )
                 raise RuntimeError
         except RuntimeError:
@@ -174,3 +166,46 @@ class TestBackend:
             orm.Node.collection.get(id=node_pk)
         assert len(calc_node.base.links.get_outgoing().all()) == 0
         assert len(group.nodes) == 0
+
+
+def test_backup_not_implemented(aiida_config, backend, monkeypatch, tmp_path):
+    """Test the backup functionality if the plugin does not implement it."""
+
+    def _backup(*args, **kwargs):
+        raise NotImplementedError
+
+    monkeypatch.setattr(backend, '_backup', _backup)
+
+    filepath_backup = tmp_path / 'backup_dir'
+
+    with pytest.raises(NotImplementedError):
+        backend.backup(str(filepath_backup))
+
+    # The backup directory should have been initialized but then cleaned up when the plugin raised the exception
+    assert not filepath_backup.is_dir()
+
+    # Now create the backup directory with the config file and some other content to it.
+    filepath_backup.mkdir()
+    (filepath_backup / 'config.json').write_text(json.dumps(aiida_config.dictionary))
+    (filepath_backup / 'backup-deadbeef').mkdir()
+
+    with pytest.raises(NotImplementedError):
+        backend.backup(str(filepath_backup))
+
+    # The backup directory should not have been delete
+    assert filepath_backup.is_dir()
+    assert (filepath_backup / 'config.json').is_file()
+
+
+def test_backup_implemented(backend, monkeypatch, tmp_path):
+    """Test the backup functionality if the plugin does implement it."""
+
+    def _backup(dest: str, keep: int | None = None):
+        (pathlib.Path(dest) / 'backup.file').touch()
+
+    monkeypatch.setattr(backend, '_backup', _backup)
+
+    filepath_backup = tmp_path / 'backup_dir'
+    backend.backup(str(filepath_backup))
+    assert (filepath_backup / 'config.json').is_file()
+    assert (filepath_backup / 'backup.file').is_file()

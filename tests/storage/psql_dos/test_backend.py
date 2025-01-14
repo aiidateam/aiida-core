@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,12 +6,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module,no-member,protected-access
 """Testing the general methods of the psql_dos backend."""
+
 import pytest
 
 from aiida.manage import get_manager
 from aiida.orm import User
+
+
+def test_all_tests_marked_with_requires_psql(request):
+    """Test that all tests in this folder are marked with 'requires_psql'"""
+    own_markers = [marker.name for marker in request.node.own_markers]
+
+    assert len(own_markers) == 1
+    assert own_markers[0] == 'requires_psql'
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -60,30 +67,18 @@ def test_get_unreferenced_keyset():
     assert 'aborting' in str(exc.value).lower()
 
 
-# yapf: disable
 @pytest.mark.parametrize(
+    ('kwargs', 'logged_texts'),
     (
-        'kwargs',
-        'logged_texts'
+        ({}, [' > live: True', ' > dry_run: False', ' > compress: False']),
+        ({'full': True, 'dry_run': True}, [' > live: False', ' > dry_run: True', ' > compress: False']),
+        (
+            {'full': True, 'dry_run': True, 'compress': True},
+            [' > live: False', ' > dry_run: True', ' > compress: True'],
+        ),
+        ({'extra_kwarg': 'molly'}, [' > live: True', ' > dry_run: False', ' > extra_kwarg: molly']),
     ),
-    ((
-        {},
-        [' > live: True', ' > dry_run: False', ' > compress: False']
-    ),
-    (
-        {'full': True, 'dry_run': True},
-        [' > live: False', ' > dry_run: True', ' > compress: False']
-    ),
-    (
-        {'full': True, 'dry_run': True, 'compress': True},
-        [' > live: False', ' > dry_run: True', ' > compress: True']
-    ),
-    (
-        {'extra_kwarg': 'molly'},
-        [' > live: True', ' > dry_run: False', ' > extra_kwarg: molly']
-    ),
-))
-# yapf: enable
+)
 @pytest.mark.usefixtures('aiida_profile_clean', 'stopped_daemon_client')
 def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
     """Test the ``maintain`` method."""
@@ -91,7 +86,7 @@ def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
 
     storage_backend = get_manager().get_profile_storage()
 
-    def mock_maintain(self, live=True, dry_run=False, compress=False, **kwargs):  # pylint: disable=unused-argument
+    def mock_maintain(self, live=True, dry_run=False, compress=False, **kwargs):
         logmsg = 'keywords provided:\n'
         logmsg += f' > live: {live}\n'
         logmsg += f' > dry_run: {dry_run}\n'
@@ -100,7 +95,7 @@ def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
             logmsg += f' > {key}: {val}\n'
         logging.info(logmsg)
 
-    RepoBackendClass = get_manager().get_profile_storage().get_repository().__class__  # pylint: disable=invalid-name
+    RepoBackendClass = get_manager().get_profile_storage().get_repository().__class__  # noqa: N806
     monkeypatch.setattr(RepoBackendClass, 'maintain', mock_maintain)
 
     with caplog.at_level(logging.INFO):
@@ -113,16 +108,15 @@ def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
 
 def test_get_info(monkeypatch):
     """Test the ``get_info`` method."""
-
     storage_backend = get_manager().get_profile_storage()
 
-    def mock_get_info(self, detailed=False, **kwargs):  # pylint: disable=unused-argument
+    def mock_get_info(self, detailed=False, **kwargs):
         output = {'value': 42}
         if detailed:
             output['extra_value'] = 0
         return output
 
-    RepoBackendClass = get_manager().get_profile_storage().get_repository().__class__  # pylint: disable=invalid-name
+    RepoBackendClass = get_manager().get_profile_storage().get_repository().__class__  # noqa: N806
     monkeypatch.setattr(RepoBackendClass, 'get_info', mock_get_info)
 
     storage_info_out = storage_backend.get_info()
@@ -147,16 +141,40 @@ def test_unload_profile():
 
     This is a regression test for #5506.
     """
-    from sqlalchemy.orm.session import _sessions  # pylint: disable=import-outside-toplevel
+    import gc
+
+    from sqlalchemy.orm.session import _sessions
+
+    # Run the garbage collector to ensure any lingering unrelated sessions do not cause the test to fail.
+    gc.collect()
 
     # Just running the test suite itself should have opened at least one session
-    assert len(_sessions) != 0, str(_sessions)
+    current_sessions = len(_sessions)
+    assert current_sessions != 0, str(_sessions)
 
     manager = get_manager()
     profile_name = manager.get_profile().name
 
     try:
         manager.unload_profile()
-        assert len(_sessions) == 0, str(_sessions)
+        # After unloading, the session should have been cleared, so we should have one less
+        assert len(_sessions) == current_sessions - 1, str(_sessions)
     finally:
         manager.load_profile(profile_name)
+
+
+def test_backup(tmp_path):
+    """Test that the backup function creates all the necessary files and folders"""
+    storage_backend = get_manager().get_profile_storage()
+
+    # note: this assumes that rsync and pg_dump are in PATH
+    storage_backend.backup(str(tmp_path))
+
+    last_backup = tmp_path / 'last-backup'
+    assert last_backup.is_symlink()
+
+    # make sure the necessary files are there
+    # note: disk-objectstore container backup is already tested in its own repo
+    contents = [c.name for c in last_backup.iterdir()]
+    for name in ['container', 'db.psql']:
+        assert name in contents

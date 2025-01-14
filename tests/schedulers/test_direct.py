@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the ``DirectScheduler`` plugin."""
+
 import pytest
 
 from aiida.common.datastructures import CodeRunMode
@@ -41,11 +40,11 @@ def template():
     (
         """21259 S+   broeder   0:00.04\n87619 S+   broeder   0:00.44\n87634 S+   broeder   0:00.01""",  # MacOS
         """11354 Ss   aiida    00:00:00\n\n87619 R+   aiida    00:00:00\n11384 S+   aiida    00:00:00""",  # Linux
-    )
+    ),
 )
 def test_parse_joblist_output(scheduler, stdout):
     """Test the ``_parse_joblist_output`` for output taken from MacOS and Linux."""
-    result = scheduler._parse_joblist_output(retval=0, stdout=stdout, stderr='')  # pylint: disable=protected-access
+    result = scheduler._parse_joblist_output(retval=0, stdout=stdout, stderr='')
     assert len(result) == 3
     assert '87619' in [job.job_id for job in result]
 
@@ -53,15 +52,15 @@ def test_parse_joblist_output(scheduler, stdout):
 def test_parse_joblist_output_incorrect(scheduler):
     """Test the ``_parse_joblist_output`` for invalid output."""
     with pytest.raises(SchedulerError):
-        scheduler._parse_joblist_output(retval=0, stdout='aaa', stderr='')  # pylint: disable=protected-access
+        scheduler._parse_joblist_output(retval=0, stdout='aaa', stderr='')
 
 
-def test_submit_script_rerunnable(scheduler, template, aiida_caplog):
+def test_submit_script_rerunnable(scheduler, template, caplog):
     """Test that setting the ``rerunnable`` option gives a warning."""
     template.rerunnable = True
     scheduler.get_submit_script(template)
-    assert 'rerunnable' in aiida_caplog.text
-    assert 'has no effect' in aiida_caplog.text
+    assert 'rerunnable' in caplog.text
+    assert 'has no effect' in caplog.text
 
 
 def test_submit_script_with_num_cores_per_mpiproc(scheduler, template):
@@ -72,3 +71,42 @@ def test_submit_script_with_num_cores_per_mpiproc(scheduler, template):
     )
     result = scheduler.get_submit_script(template)
     assert f'export OMP_NUM_THREADS={num_cores_per_mpiproc}' in result
+
+
+@pytest.mark.timeout(timeout=10)
+def test_kill_job(scheduler, tmpdir):
+    """Test if kill_job kill all descendant children from the process.
+    For that we spawn a new process that runs a sleep command, then we
+    kill it and check if the sleep process is still alive.
+
+    current process     forked process                 run script.sh
+         python─────────────python───────────────────bash──────sleep
+                     we kill this process       we check if still running
+    """
+    import multiprocessing
+    import time
+
+    from psutil import Process
+
+    from aiida.transports.plugins.local import LocalTransport
+
+    def run_sleep_100():
+        import subprocess
+
+        script = tmpdir / 'sleep.sh'
+        script.write('sleep 100')
+        # this is blocking for the process entering
+        subprocess.run(['bash', script.strpath], check=False)
+
+    forked_process = multiprocessing.Process(target=run_sleep_100)
+    forked_process.start()
+    while len(forked_process_children := Process(forked_process.pid).children(recursive=True)) != 2:
+        time.sleep(0.1)
+    bash_process = forked_process_children[0]
+    sleep_process = forked_process_children[1]
+    with LocalTransport() as transport:
+        scheduler.set_transport(transport)
+        scheduler.kill_job(forked_process.pid)
+    while bash_process.is_running() or sleep_process.is_running():
+        time.sleep(0.1)
+    forked_process.join()

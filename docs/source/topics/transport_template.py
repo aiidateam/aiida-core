@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 from aiida.transports import Transport
 
 
 class NewTransport(Transport):
-
     def __init__(self, machine, **kwargs):
         """Initialize the Transport class.
 
@@ -20,7 +18,7 @@ class NewTransport(Transport):
         """Change directory to 'path'.
 
         :param str path: path to change working directory into.
-        :raises: IOError, if the requested path does not exist
+        :raises: OSError, if the requested path does not exist
         :rtype: string
         """
 
@@ -37,7 +35,7 @@ class NewTransport(Transport):
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
-        :raises: IOError, if source or destination does not exist
+        :raises: OSError, if source or destination does not exist
         """
 
     def copyfile(self, remotesource, remotedestination, *args, **kwargs):
@@ -46,7 +44,7 @@ class NewTransport(Transport):
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
-        :raises IOError: if one of src or dst does not exist
+        :raises OSError: if one of src or dst does not exist
         """
 
     def copytree(self, remotesource, remotedestination, *args, **kwargs):
@@ -55,7 +53,7 @@ class NewTransport(Transport):
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
-        :raise IOError: if one of src or dst does not exist
+        :raise OSError: if one of src or dst does not exist
         """
 
     def exec_command_wait_bytes(self, command, stdin=None, **kwargs):
@@ -179,10 +177,10 @@ class NewTransport(Transport):
         "current folder".
 
         :param str path: path to be normalized
-        :raise IOError: if the path can't be resolved on the server
+        :raise OSError: if the path can't be resolved on the server
         """
 
-    def put(self, localpath, remotepath, *args, ** kwargs):
+    def put(self, localpath, remotepath, *args, **kwargs):
         """Put a file or a directory from local src to remote dst.
 
         Redirects to putfile and puttree.
@@ -193,7 +191,7 @@ class NewTransport(Transport):
         :param str remotepath: absolute path to local source
         """
 
-    def putfile(self, localpath, remotepath, *args, ** kwargs):
+    def putfile(self, localpath, remotepath, *args, **kwargs):
         """Put a file from local src to remote dst.
 
         .. note:: the destination must be an absolute path, the source not necessarily
@@ -202,7 +200,7 @@ class NewTransport(Transport):
         :param str remotepath: absolute path to local file
         """
 
-    def puttree(self, localpath, remotepath, *args, ** kwargs):
+    def puttree(self, localpath, remotepath, *args, **kwargs):
         """Put a folder recursively from local src to remote dst.
 
         .. note:: the destination must be an absolute path, the source not necessarily
@@ -211,12 +209,12 @@ class NewTransport(Transport):
         :param str remotepath: absolute path to local folder
         """
 
-    def rename(src, dst):
+    def rename(self, src, dst):
         """Rename a file or folder from src to dst.
 
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
-        :raises IOError: if src/dst is not found
+        :raises OSError: if src/dst is not found
         :raises ValueError: if src/dst is not a valid string
         """
 
@@ -226,7 +224,7 @@ class NewTransport(Transport):
         This only works on files; for removing folders (directories), use rmdir.
 
         :param str path: path to file to remove
-        :raise IOError: if the path is a directory
+        :raise OSError: if the path is a directory
         """
 
     def rmdir(self, path):

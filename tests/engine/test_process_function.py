@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -16,6 +15,7 @@ relating to the transformation of the wrapped function into a ``FunctionProcess`
 fly, but then anytime inputs or outputs would be attached to it in the tests, the ``validate_link`` function would
 complain as the dummy node class is not recognized as a valid process node.
 """
+
 from __future__ import annotations
 
 import enum
@@ -36,7 +36,7 @@ DEFAULT_DESCRIPTION = 'Default description'
 CUSTOM_LABEL = 'Custom label'
 CUSTOM_DESCRIPTION = 'Custom description'
 
-pytest.mark.requires_rmq  # pylint: disable=pointless-statement
+pytest.mark.requires_rmq
 
 
 @workfunction
@@ -45,8 +45,13 @@ def function_return_input(data):
 
 
 @calcfunction
-def function_variadic_arguments(int_a, int_b, *args):
-    return int_a + int_b + orm.Int(sum(args))
+def function_variadic_arguments(str_a, str_b, *args):
+    return orm.Str(' '.join([e.value for e in (str_a, str_b, *args)]))
+
+
+@calcfunction
+def function_variadic_arguments_and_keywords(*args, str_a, str_b):
+    return orm.Str(' '.join([e.value for e in (*args, str_a, str_b)]))
 
 
 @calcfunction
@@ -82,6 +87,15 @@ def function_kwargs(**kwargs):
 
 
 @workfunction
+def function_varargs_kwargs(*args, **kwargs):
+    """Return the positional and keyword arguments as is in a single dictionary."""
+    results = dict(kwargs)
+    for index, arg in enumerate(args):
+        results[f'arg_{index}'] = arg
+    return results
+
+
+@workfunction
 def function_args_and_kwargs(data_a, **kwargs):
     result = {'data_a': data_a}
     result.update(kwargs)
@@ -95,11 +109,8 @@ def function_args_and_default(data_a, data_b=lambda: orm.Int(DEFAULT_INT)):
 
 @workfunction
 def function_defaults(
-    data_a=lambda: orm.Int(DEFAULT_INT), metadata={
-        'label': DEFAULT_LABEL,
-        'description': DEFAULT_DESCRIPTION
-    }
-):  # pylint: disable=unused-argument,dangerous-default-value,missing-docstring
+    data_a=lambda: orm.Int(DEFAULT_INT), metadata={'label': DEFAULT_LABEL, 'description': DEFAULT_DESCRIPTION}
+):
     return data_a
 
 
@@ -189,7 +200,7 @@ def test_source_code_attributes():
     _, node = test_process_function.run_get_node(data=orm.Int(5))
 
     # Read the source file of the calculation function that should be stored in the repository
-    function_source_code = node.get_function_source_code().split('\n')
+    function_source_code = node.get_source_code_file().split('\n')
 
     # Verify that the function name is correct and the first source code linenumber is stored
     assert node.function_name == function_name
@@ -205,8 +216,8 @@ def test_source_code_attributes():
     assert node.function_name in function_name_from_source
 
 
-def test_get_function_source_code():
-    """Test that ``get_function_source_code`` returns ``None`` if no source code was stored.
+def test_get_source_code_file():
+    """Test that ``get_source_code_file`` returns ``None`` if no source code was stored.
 
     This is the case for example for functions defined in an interactive shell, where the retrieval of the source code
     upon storing the node fails and nothing is stored. The function should not except in this case.
@@ -216,24 +227,24 @@ def test_get_function_source_code():
     _, node = function_return_true.run_get_node()
 
     # Delete the source file by going down to the ``RepositoryBackend`` to circumvent the immutability check.
-    node.base.repository._repository.delete_object(FunctionCalculationMixin.FUNCTION_SOURCE_FILE_PATH)  # pylint: disable=protected-access
+    node.base.repository._repository.delete_object(FunctionCalculationMixin.FUNCTION_SOURCE_FILE_PATH)
 
-    assert node.get_function_source_code() is None
+    assert node.get_source_code_file() is None
 
 
 def test_function_varargs():
     """Test a function with variadic arguments."""
-    result, node = function_variadic_arguments.run_get_node(orm.Int(1), orm.Int(2), *(orm.Int(3), orm.Int(4)))
-    assert isinstance(result, orm.Int)
-    assert result.value == 10
+    result, node = function_variadic_arguments.run_get_node(orm.Str('a'), orm.Str('b'), *(orm.Str('c'), orm.Str('d')))
+    assert isinstance(result, orm.Str)
+    assert result.value == 'a b c d'
 
-    inputs = node.get_incoming().nested()
-    assert inputs['int_a'].value == 1
-    assert inputs['int_b'].value == 2
-    assert inputs['args_0'].value == 3
-    assert inputs['args_1'].value == 4
-    assert node.inputs.args_0.value == 3
-    assert node.inputs.args_1.value == 4
+    inputs = node.base.links.get_incoming().nested()
+    assert inputs['str_a'].value == 'a'
+    assert inputs['str_b'].value == 'b'
+    assert inputs['args_0'].value == 'c'
+    assert inputs['args_1'].value == 'd'
+    assert node.inputs.args_0.value == 'c'
+    assert node.inputs.args_1.value == 'd'
 
 
 def test_function_varargs_label_overlap():
@@ -245,12 +256,20 @@ def test_function_varargs_label_overlap():
         function_variadic_arguments_label_overlap.run_get_node(orm.Int(1), *(orm.Int(2), orm.Int(3)))
 
 
+def test_function_variadic_arguments_and_keywords():
+    """Test passing variable positional arguments before keyword arguments."""
+    result = function_variadic_arguments_and_keywords(
+        *(orm.Str('a'), orm.Str('b')), str_a=orm.Str('c'), str_b=orm.Str('d')
+    )
+    assert result.value == 'a b c d'
+
+
 def test_function_args():
     """Simple process function that defines a single positional argument."""
     arg = 1
 
     with pytest.raises(ValueError):
-        result = function_args()  # pylint: disable=no-value-for-parameter
+        result = function_args()
 
     result = function_args(data_a=orm.Int(arg))
     assert isinstance(result, orm.Int)
@@ -344,10 +363,20 @@ def test_function_args_and_kwargs_default():
     assert result == {'data_a': args_input_explicit[0], 'data_b': args_input_explicit[1]}
 
 
+def test_function_varargs_and_kwargs():
+    """Test function that accepts both positional and keyword arguments."""
+    results = function_varargs_kwargs(*(orm.Str('a'), orm.Str('b')), kwarg_c=orm.Str('c'), kwarg_d=orm.Str('d'))
+    assert sorted(results.keys()) == ['arg_0', 'arg_1', 'kwarg_c', 'kwarg_d']
+    assert results['arg_0'] == orm.Str('a')
+    assert results['arg_1'] == orm.Str('b')
+    assert results['kwarg_c'] == orm.Str('c')
+    assert results['kwarg_d'] == orm.Str('d')
+
+
 def test_function_args_passing_kwargs():
     """Cannot pass kwargs if the function does not explicitly define it accepts kwargs."""
     with pytest.raises(ValueError):
-        function_args(data_a=orm.Int(1), data_b=orm.Int(1))  # pylint: disable=unexpected-keyword-arg
+        function_args(data_a=orm.Int(1), data_b=orm.Int(1))
 
 
 def test_function_set_label_description():
@@ -401,8 +430,8 @@ def test_function_default_label():
     assert node.description == CUSTOM_DESCRIPTION
 
 
-def test_launchers():
-    """Verify that the various launchers are working."""
+def test_run_launchers():
+    """Verify that the various non-daemon launchers are working."""
     result = run(function_return_true)
     assert result
 
@@ -411,6 +440,10 @@ def test_launchers():
     assert result == get_true_node()
     assert isinstance(node, orm.CalcFunctionNode)
 
+
+@pytest.mark.requires_rmq
+def test_submit_launchers():
+    """Verify that submit to daemon works."""
     # Process function can be submitted and will be run by a daemon worker as long as the function is importable
     # Note that the actual running is not tested here but is done so in `.github/system_tests/test_daemon.py`.
     node = submit(add_multiply, x=orm.Int(1), y=orm.Int(2), z=orm.Int(3))
@@ -418,9 +451,7 @@ def test_launchers():
 
 
 def test_return_exit_code():
-    """
-    A process function that returns an ExitCode namedtuple should have its exit status and message set FINISHED
-    """
+    """A process function that returns an ExitCode namedtuple should have its exit status and message set FINISHED"""
     exit_status = 418
     exit_message = 'I am a teapot'
 
@@ -510,17 +541,18 @@ class DummyEnum(enum.Enum):
     VALUE = 'value'
 
 
-# yapf: disable
-@pytest.mark.parametrize('argument, node_cls', (
-    (True, orm.Bool),
-    ({'a': 1}, orm.Dict),
-    (1.0, orm.Float),
-    (1, orm.Int),
-    ('string', orm.Str),
-    ([1], orm.List),
-    (DummyEnum.VALUE, orm.EnumData),
-))
-# yapf: enable
+@pytest.mark.parametrize(
+    'argument, node_cls',
+    (
+        (True, orm.Bool),
+        ({'a': 1}, orm.Dict),
+        (1.0, orm.Float),
+        (1, orm.Int),
+        ('string', orm.Str),
+        ([1], orm.List),
+        (DummyEnum.VALUE, orm.EnumData),
+    ),
+)
 def test_input_serialization(argument, node_cls):
     """Test that Python base type inputs are automatically serialized to the AiiDA node counterpart."""
     result = function_args(argument)
@@ -536,17 +568,18 @@ def test_input_serialization(argument, node_cls):
         assert result.value == argument
 
 
-# yapf: disable
-@pytest.mark.parametrize('default, node_cls', (
-    (True, orm.Bool),
-    ({'a': 1}, orm.Dict),
-    (1.0, orm.Float),
-    (1, orm.Int),
-    ('string', orm.Str),
-    ([1], orm.List),
-    (DummyEnum.VALUE, orm.EnumData),
-))
-# yapf: enable
+@pytest.mark.parametrize(
+    'default, node_cls',
+    (
+        (True, orm.Bool),
+        ({'a': 1}, orm.Dict),
+        (1.0, orm.Float),
+        (1, orm.Int),
+        ('string', orm.Str),
+        ([1], orm.List),
+        (DummyEnum.VALUE, orm.EnumData),
+    ),
+)
 def test_default_serialization(default, node_cls):
     """Test that Python base type defaults are automatically serialized to the AiiDA node counterpart."""
 
@@ -570,7 +603,7 @@ def test_default_serialization(default, node_cls):
 def test_multiple_default_serialization():
     """Test that Python base type defaults are automatically serialized to the AiiDA node counterpart."""
 
-    @workfunction  # type: ignore
+    @workfunction  # type: ignore[misc]
     def function_with_multiple_defaults(integer: int = 10, string: str = 'default', boolean: bool = False):
         return {'integer': integer, 'string': string, 'boolean': boolean}
 
@@ -621,7 +654,7 @@ def test_nested_namespace():
     }
     results, node = function.run_get_node(**inputs)
     assert results == inputs
-    assert node.get_incoming().nested() == inputs
+    assert node.base.links.get_incoming().nested() == inputs
 
     inputs = {
         'nested': {
@@ -647,7 +680,6 @@ def test_type_hinting_spec_inference():
         f: t.Union[str, int],
         g: t.Optional[t.Dict] = None,
     ):
-        # pylint: disable=invalid-name,unused-argument
         pass
 
     input_namespace = function.spec().inputs
@@ -667,7 +699,7 @@ def test_type_hinting_spec_inference():
         assert input_namespace[key].valid_type == valid_types, key
 
 
-def test_type_hinting_spec_inference_pep_604(aiida_caplog):
+def test_type_hinting_spec_inference_pep_604(caplog):
     """Test the parsing of type hinting that uses union typing of PEP 604 which is only available to Python 3.10 and up.
 
     Even though adding ``from __future__ import annotations`` should backport this functionality to Python 3.9 and older
@@ -684,7 +716,6 @@ def test_type_hinting_spec_inference_pep_604(aiida_caplog):
         b: orm.Str | orm.Int,
         c: dict | None = None,
     ):
-        # pylint: disable=invalid-name,unused-argument
         pass
 
     input_namespace = function.spec().inputs
@@ -698,7 +729,7 @@ def test_type_hinting_spec_inference_pep_604(aiida_caplog):
             ('c', (orm.Dict, type(None))),
         )
     else:
-        assert 'function `function` has invalid type hints: unsupported operand type' in aiida_caplog.records[0].message
+        assert 'function `function` has invalid type hints: unsupported operand type' in caplog.records[0].message
         expected = (
             ('a', (orm.Data,)),
             ('b', (orm.Data,)),
@@ -715,7 +746,6 @@ def test_type_hinting_validation():
 
     @calcfunction  # type: ignore[misc]
     def function_type_hinting(a: t.Union[int, float]):
-        # pylint: disable=invalid-name
         return a + 1
 
     with pytest.raises(ValueError, match=r'.*value \'a\' is not of the right type.*'):
@@ -731,7 +761,7 @@ def test_help_text_spec_inference():
     """Test the parsing of docstrings to define the ``help`` message of the dynamically generated input ports."""
 
     @calcfunction
-    def function(param_a, param_b, param_c):  # pylint: disable=unused-argument
+    def function(param_a, param_b, param_c):
         """Some documentation.
 
         :param param_a: Some description.
@@ -745,7 +775,7 @@ def test_help_text_spec_inference():
     assert input_namespace['param_c'].help is None
 
 
-def test_help_text_spec_inference_invalid_docstring(aiida_caplog, monkeypatch):
+def test_help_text_spec_inference_invalid_docstring(caplog, monkeypatch):
     """Test the parsing of docstrings does not except for invalid docstrings, but simply logs a warning."""
     import docstring_parser
 
@@ -759,5 +789,5 @@ def test_help_text_spec_inference_invalid_docstring(aiida_caplog, monkeypatch):
         """Docstring."""
 
     # Now call the spec to have it parse the docstring.
-    function.spec()  # pylint: disable=expression-not-assigned
-    assert 'function `function` has a docstring that could not be parsed' in aiida_caplog.records[0].message
+    function.spec()
+    assert 'function `function` has a docstring that could not be parsed' in caplog.records[0].message

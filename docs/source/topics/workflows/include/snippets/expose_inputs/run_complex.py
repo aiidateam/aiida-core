@@ -1,5 +1,4 @@
 #!/usr/bin/env runaiida
-# -*- coding: utf-8 -*-
 
 from complex_parent import ComplexParentWorkChain
 
@@ -11,7 +10,7 @@ if __name__ == '__main__':
         ComplexParentWorkChain,
         a=Int(1),
         child_1=dict(b=Float(1.2), c=Bool(True)),
-        child_2=dict(b=Float(2.3), c=Bool(False))
+        child_2=dict(b=Float(2.3), c=Bool(False)),
     )
     print(result)
     # {

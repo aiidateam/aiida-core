@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the workfunction decorator and WorkFunctionNode."""
+
 import pytest
 
 from aiida.common.links import LinkType
@@ -24,9 +24,8 @@ class TestWorkFunction:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
         self.default_int = Int(256)
 
@@ -80,7 +79,6 @@ class TestWorkFunction:
 
     def test_call_link_label(self):
         """Verify that setting a `call_link_label` on a `calcfunction` called from a `workfunction` works."""
-
         link_label = 'non_default_call_link_label'
 
         @calcfunction
@@ -89,7 +87,7 @@ class TestWorkFunction:
 
         @workfunction
         def caller():
-            calculation(metadata={'call_link_label': link_label})  # pylint: disable=unexpected-keyword-arg
+            calculation(metadata={'call_link_label': link_label})
 
         _, node = caller.run_get_node()
 

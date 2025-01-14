@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.engine.processes.control` module."""
-from plumpy.process_comms import RemoteProcessThreadController
+
 import pytest
+from plumpy.process_comms import RemoteProcessThreadController
 
 from aiida.engine import ProcessState
 from aiida.engine.launch import submit
@@ -23,10 +23,10 @@ def test_processes_all_exclusivity(submit_and_await, action):
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'stopped_daemon_client')
 @pytest.mark.parametrize('action', (control.pause_processes, control.play_processes, control.kill_processes))
-def test_daemon_not_running(action, aiida_caplog):
+def test_daemon_not_running(action, caplog):
     """Test that control methods warns if the daemon is not running."""
     action(all_entries=True)
-    assert 'The daemon is not running' in aiida_caplog.records[0].message
+    assert 'The daemon is not running' in caplog.records[0].message
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
@@ -98,9 +98,9 @@ def test_kill_processes_all_entries(submit_and_await):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
-def test_revive(monkeypatch, aiida_local_code_factory, submit_and_await):
+def test_revive(monkeypatch, aiida_code_installed, submit_and_await):
     """Test :func:`aiida.engine.processes.control.revive_processes`."""
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     builder = code.get_builder()
     builder.x = Int(1)
     builder.y = Int(1)

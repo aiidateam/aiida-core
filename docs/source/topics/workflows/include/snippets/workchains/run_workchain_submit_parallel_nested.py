@@ -1,9 +1,10 @@
-# -*- coding: utf-8 -*-
 from aiida.engine import WorkChain
+from aiida.plugins.factories import CalculationFactory
+
+SomeOtherWorkChain = CalculationFactory('some.module')
 
 
 class SomeWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)
@@ -14,7 +15,7 @@ class SomeWorkChain(WorkChain):
 
     def submit_workchains(self):
         for i in range(3):
-            future = self.submit(SomeWorkChain)
+            future = self.submit(SomeOtherWorkChain)
             key = f'workchains.sub{i}'
             self.to_context(**{key: future})
 

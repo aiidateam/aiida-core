@@ -1,7 +1,9 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+import click
 from flask_restful import Resource
 
+from aiida import load_profile
+from aiida.restapi import common
 from aiida.restapi.api import AiidaApi, App
 from aiida.restapi.run_api import run_api
 
@@ -18,49 +20,42 @@ class NewResource(Resource):
         result = query.first()
 
         # Results are returned as a dictionary, datetime objects are serialized as ISO 8601
-        return dict(
-            id=result[0],
-            ctime=result[1].isoformat(),
-            attributes=result[2]
-        )
+        return dict(id=result[0], ctime=result[1].isoformat(), attributes=result[2])
 
 
 class NewApi(AiidaApi):
-
     def __init__(self, app=None, **kwargs):
-        """
-        This init serves to add new endpoints to the basic AiiDA Api
-
-        """
+        """This init serves to add new endpoints to the basic AiiDA Api"""
         super().__init__(app=app, **kwargs)
 
         self.add_resource(NewResource, '/new-endpoint/', strict_slashes=False)
 
+
 # processing the options and running the app
-
-from aiida import load_profile
-import aiida.restapi.common as common
-
 CONFIG_DIR = common.__path__[0]
-
-import click
 
 
 @click.command()
-@click.option('-P', '--port', type=click.INT, default=5000,
-    help='Port number')
-@click.option('-H', '--hostname', default='127.0.0.1',
-    help='Hostname')
-@click.option('-c','--config-dir','config',type=click.Path(exists=True), default=CONFIG_DIR,
-    help='the path of the configuration directory')
-@click.option('--debug', 'debug', is_flag=True, default=False,
-    help='run app in debug mode')
-@click.option('--wsgi-profile', 'wsgi_profile', is_flag=True, default=False,
-    help='to use WSGI profiler middleware for finding bottlenecks in web application')
+@click.option('-P', '--port', type=click.INT, default=5000, help='Port number')
+@click.option('-H', '--hostname', default='127.0.0.1', help='Hostname')
+@click.option(
+    '-c',
+    '--config-dir',
+    'config',
+    type=click.Path(exists=True),
+    default=CONFIG_DIR,
+    help='the path of the configuration directory',
+)
+@click.option('--debug', 'debug', is_flag=True, default=False, help='run app in debug mode')
+@click.option(
+    '--wsgi-profile',
+    'wsgi_profile',
+    is_flag=True,
+    default=False,
+    help='to use WSGI profiler middleware for finding bottlenecks in web application',
+)
 def newendpoint(**kwargs):
-    """
-    runs the REST api
-    """
+    """Runs the REST api"""
     # Invoke the runner
     run_api(App, NewApi, **kwargs)
 

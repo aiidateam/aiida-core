@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,8 +7,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the BackendLog and BackendLogCollection classes."""
-from datetime import datetime
+
 import logging
+from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
@@ -23,9 +23,8 @@ class TestBackendLog:
     """Test BackendLog."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost, backend):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, backend):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.backend = backend
         self.computer = aiida_localhost.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
         self.user = self.backend.users.create(email=uuid4().hex).store()
@@ -45,7 +44,7 @@ class TestBackendLog:
             levelname=logging.getLevelName(LOG_LEVEL_REPORT),
             dbnode_id=dbnode_id,
             message=self.log_message,
-            metadata={'content': 'test'}
+            metadata={'content': 'test'},
         )
 
     def test_creation(self):
@@ -84,8 +83,7 @@ class TestBackendLog:
             log.message = 'change message'
 
     def test_creation_with_static_time(self):
-        """
-        Test creation of a BackendLog when passing the mtime and the ctime. The passed ctime and mtime
+        """Test creation of a BackendLog when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
         time = datetime(2019, 2, 27, 16, 20, 12, 245738, timezone.utc)
@@ -140,10 +138,10 @@ class TestBackendLog:
         # Pass empty filter to delete_many, making sure ValidationError is raised
         with pytest.raises(exceptions.ValidationError):
             self.backend.logs.delete_many({})
-        assert len(orm.Log.collection.all()) == \
-            count, \
-            'No Logs should have been deleted. There should still be {} Log(s), ' \
+        assert len(orm.Log.collection.all()) == count, (
+            'No Logs should have been deleted. There should still be {} Log(s), '
             'however {} Log(s) was/were found.'.format(count, len(orm.Log.collection.all()))
+        )
 
     def test_delete_many_ids(self):
         """Test `delete_many` method filtering on both `id` and `uuid`"""
@@ -158,9 +156,9 @@ class TestBackendLog:
 
         # Make sure they exist
         count_logs_found = orm.QueryBuilder().append(orm.Log, filters={'uuid': {'in': log_uuids}}).count()
-        assert count_logs_found == \
-            len(log_uuids), \
-            f'There should be {len(log_uuids)} Logs, instead {count_logs_found} Log(s) was/were found'
+        assert count_logs_found == len(
+            log_uuids
+        ), f'There should be {len(log_uuids)} Logs, instead {count_logs_found} Log(s) was/were found'
 
         # Delete last two logs (log2, log3)
         filters = {'or': [{'id': log2.id}, {'uuid': str(log3.uuid)}]}
@@ -187,9 +185,9 @@ class TestBackendLog:
 
         # Make sure they exist
         count_logs_found = orm.QueryBuilder().append(orm.Log, filters={'uuid': {'in': log_uuids}}).count()
-        assert count_logs_found == \
-            len(log_uuids), \
-            f'There should be {len(log_uuids)} Logs, instead {count_logs_found} Log(s) was/were found'
+        assert count_logs_found == len(
+            log_uuids
+        ), f'There should be {len(log_uuids)} Logs, instead {count_logs_found} Log(s) was/were found'
 
         # Delete logs for self.node
         filters = {'dbnode_id': self.node.id}
@@ -301,10 +299,10 @@ class TestBackendLog:
         filters = {'dbnode_id': id_}
         self.backend.logs.delete_many(filters=filters)
         log_count_after = orm.QueryBuilder().append(orm.Log).count()
-        assert log_count_after == \
-            log_count_before, \
-            'The number of logs changed after performing `delete_many`, ' \
+        assert log_count_after == log_count_before, (
+            'The number of logs changed after performing `delete_many`, '
             "while filtering for a non-existing 'dbnode_id'"
+        )
 
     def test_delete_many_same_twice(self):
         """Test no exception is raised when entity is filtered by both `id` and `uuid`"""

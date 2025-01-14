@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,invalid-name,protected-access,missing-docstring,too-many-locals,too-many-statements
-# pylint: disable=too-many-public-methods,no-member
 import copy
 import io
 import tempfile
@@ -64,9 +61,7 @@ class TestNodeCopyDeepcopy:
 
 
 class TestNodeHashing:
-    """
-    Tests the functionality of hashing a node
-    """
+    """Tests the functionality of hashing a node"""
 
     @staticmethod
     def create_simple_node(a, b=0, c=0):
@@ -77,9 +72,7 @@ class TestNodeHashing:
         return n
 
     def test_node_uuid_hashing_for_querybuidler(self):
-        """
-        QueryBuilder results should be reusable and shouldn't brake hashing.
-        """
+        """QueryBuilder results should be reusable and shouldn't brake hashing."""
         n = orm.Data()
         n.store()
 
@@ -118,9 +111,7 @@ class TestNodeHashing:
         assert f1.base.caching.get_hash() != f2.base.caching.get_hash()
 
     def test_updatable_attributes(self):
-        """
-        Tests that updatable attributes are ignored.
-        """
+        """Tests that updatable attributes are ignored."""
         node = orm.CalculationNode().store()
         hash1 = node.base.caching.get_hash()
         node.set_process_state('finished')
@@ -130,9 +121,7 @@ class TestNodeHashing:
 
 
 class TestTransitiveNoLoops:
-    """
-    Test the transitive closure functionality
-    """
+    """Test the transitive closure functionality"""
 
     def test_loop_not_allowed(self):
         d1 = orm.Data().store()
@@ -151,14 +140,10 @@ class TestTransitiveNoLoops:
 
 
 class TestTypes:
-    """
-    Generic test class to test types
-    """
+    """Generic test class to test types"""
 
     def test_uuid_type(self):
-        """
-        Checking whether the UUID is returned as a string. In old implementations it was returned as uuid type
-        """
+        """Checking whether the UUID is returned as a string. In old implementations it was returned as uuid type"""
         orm.Data().store()
         orm.Data().store()
 
@@ -169,15 +154,13 @@ class TestTypes:
 
 
 class TestQueryWithAiidaObjects:
-    """
-    Test if queries work properly also with aiida.orm.Node classes instead of
+    """Test if queries work properly also with aiida.orm.Node classes instead of
     backend model objects.
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
 
     def test_with_subclasses(self):
@@ -185,7 +168,7 @@ class TestQueryWithAiidaObjects:
 
         extra_name = f'{self.__class__.__name__}/test_with_subclasses'
 
-        Dict = DataFactory('core.dict')
+        Dict = DataFactory('core.dict')  # noqa: N806
 
         a1 = orm.CalcJobNode(computer=self.computer)
         a1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
@@ -232,10 +215,10 @@ class TestQueryWithAiidaObjects:
 
 
 class TestNodeBasic:
-    """
-    These tests check the basic features of nodes
+    """These tests check the basic features of nodes
     (setting of attributes, copying of files, ...)
     """
+
     boolval = True
     intval = 123
     floatval = 4.56
@@ -245,33 +228,19 @@ class TestNodeBasic:
         'num': 3,
         'something': 'else',
         'emptydict': {},
-        'recursive': {
-            'a': 1,
-            'b': True,
-            'c': 1.2,
-            'd': [1, 2, None],
-            'e': {
-                'z': 'z',
-                'x': None,
-                'xx': {},
-                'yy': []
-            }
-        }
+        'recursive': {'a': 1, 'b': True, 'c': 1.2, 'd': [1, 2, None], 'e': {'z': 'z', 'x': None, 'xx': {}, 'yy': []}},
     }
     listval = [1, 's', True, None]
     emptydict = {}
     emptylist = []
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
 
     def test_uuid_uniquess(self):
-        """
-        A uniqueness constraint on the UUID column of the Node model should prevent multiple nodes with identical UUID
-        """
+        """Uniqueness constraint on UUID column of the Node model should prevent multiple nodes with identical UUID."""
         from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
 
         a = orm.Data()
@@ -283,8 +252,7 @@ class TestNodeBasic:
             b.store()
 
     def test_attribute_mutability(self):
-        """
-        Attributes of a node should be immutable after storing, unless the stored_check is
+        """Attributes of a node should be immutable after storing, unless the stored_check is
         disabled in the call
         """
         a = orm.Data()
@@ -370,7 +338,7 @@ class TestNodeBasic:
             'k6': self.listval,
             'k7': self.emptydict,
             'k8': self.emptylist,
-            'k9': None
+            'k9': None,
         }
 
         # Now I check if I can retrieve them, before the storage
@@ -412,7 +380,7 @@ class TestNodeBasic:
             'k6': self.listval,
             'k7': self.emptydict,
             'k8': self.emptylist,
-            'k9': None
+            'k9': None,
         }
 
         # Now I check if I can retrieve them, before the storage
@@ -554,9 +522,7 @@ class TestNodeBasic:
 
     @pytest.mark.skip('relies on deleting folders from the repo which is not yet implemented')
     def test_folders(self):
-        """
-        Similar as test_files, but I manipulate a tree of folders
-        """
+        """Similar as test_files, but I manipulate a tree of folders"""
         import os
         import random
         import shutil
@@ -668,8 +634,9 @@ class TestNodeBasic:
         # check new
         assert set(c.base.repository.list_object_names()) == set(['tree_1'])
         assert set(c.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
-        assert set(c.base.repository.list_object_names(os.path.join('tree_1',
-                                                                    'dir1'))) == set(['file2.txt', 'file4.txt'])
+        assert set(c.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(
+            ['file2.txt', 'file4.txt']
+        )
         with c.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content_different
         with c.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
@@ -770,8 +737,7 @@ class TestNodeBasic:
 
     @staticmethod
     def test_attr_and_extras_multikey():
-        """
-        Multiple nodes with the same key. This should not be a problem
+        """Multiple nodes with the same key. This should not be a problem
 
         I test only extras because the two tables are formally identical
         """
@@ -783,9 +749,7 @@ class TestNodeBasic:
         n2.base.extras.set('samename', 1)
 
     def test_attr_listing(self):
-        """
-        Checks that the list of attributes and extras is ok.
-        """
+        """Checks that the list of attributes and extras is ok."""
         a = orm.Data()
         attrs_to_set = {
             'none': None,
@@ -818,11 +782,9 @@ class TestNodeBasic:
         assert a.base.extras.all == all_extras
 
     def test_delete_extras(self):
-        """
-        Checks the ability of deleting extras, also when they are dictionaries
+        """Checks the ability of deleting extras, also when they are dictionaries
         or lists.
         """
-
         a = orm.Data().store()
         extras_to_set = {
             'bool': self.boolval,
@@ -851,8 +813,7 @@ class TestNodeBasic:
             assert a.base.extras.all == all_extras
 
     def test_replace_extras_1(self):
-        """
-        Checks the ability of replacing extras, removing the subkeys also when
+        """Checks the ability of replacing extras, removing the subkeys also when
         these are dictionaries or lists.
         """
         a = orm.Data().store()
@@ -861,16 +822,8 @@ class TestNodeBasic:
             'integer': 12,
             'float': 26.2,
             'string': 'a string',
-            'dict': {
-                'a': 'b',
-                'sublist': [1, 2, 3],
-                'subdict': {
-                    'c': 'd'
-                }
-            },
-            'list': [1, True, 'ggg', {
-                'h': 'j'
-            }, [9, 8, 7]],
+            'dict': {'a': 'b', 'sublist': [1, 2, 3], 'subdict': {'c': 'd'}},
+            'list': [1, True, 'ggg', {'h': 'j'}, [9, 8, 7]],
         }
         all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
@@ -879,10 +832,7 @@ class TestNodeBasic:
         new_extras = {
             'bool': 12,
             'integer': [2, [3], 'a'],
-            'float': {
-                'n': 'm',
-                'x': [1, 'r', {}]
-            },
+            'float': {'n': 'm', 'x': [1, 'r', {}]},
             'string': True,
             'dict': 'text',
             'list': 66.3,
@@ -904,9 +854,7 @@ class TestNodeBasic:
         assert a.base.extras.all == all_extras
 
     def test_basetype_as_attr(self):
-        """
-        Test that setting a basetype as an attribute works transparently
-        """
+        """Test that setting a basetype as an attribute works transparently"""
         # This one is unstored
         l1 = orm.List()
         l1.set_list(['b', [1, 2]])
@@ -943,9 +891,7 @@ class TestNodeBasic:
         assert isinstance(n.base.attributes.get('a')['b'][0], str)
 
     def test_basetype_as_extra(self):
-        """
-        Test that setting a basetype as an attribute works transparently
-        """
+        """Test that setting a basetype as an attribute works transparently"""
         # This one is unstored
         l1 = orm.List()
         l1.set_list(['b', [1, 2]])
@@ -1018,9 +964,7 @@ class TestNodeBasic:
 
     @pytest.mark.usefixtures('suppress_internal_deprecations')
     def test_code_loading_from_string(self):
-        """
-        Checks that the method Code.get_from_string works correctly.
-        """
+        """Checks that the method Code.get_from_string works correctly."""
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
         # Create some code nodes
@@ -1041,7 +985,7 @@ class TestNodeBasic:
         assert q_code_1.get_remote_exec_path() == code1.get_remote_exec_path()
 
         # Test that the code2 can be loaded correctly with its label
-        q_code_2 = orm.Code.get_from_string(f'{code2.label}@{self.computer.label}')  # pylint: disable=no-member
+        q_code_2 = orm.Code.get_from_string(f'{code2.label}@{self.computer.label}')
         assert q_code_2.pk == code2.pk
         assert q_code_2.label == code2.label
         assert q_code_2.get_remote_exec_path() == code2.get_remote_exec_path()
@@ -1066,9 +1010,7 @@ class TestNodeBasic:
 
     @pytest.mark.usefixtures('suppress_internal_deprecations')
     def test_code_loading_using_get(self):
-        """
-        Checks that the method Code.get(pk) works correctly.
-        """
+        """Checks that the method Code.get(pk) works correctly."""
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
         # Create some code nodes
@@ -1095,7 +1037,7 @@ class TestNodeBasic:
         assert q_code_1.get_remote_exec_path() == code1.get_remote_exec_path()
 
         # Test that the code2 can be loaded correctly with its label and computername
-        q_code_2 = orm.Code.get(label=code2.label, machinename=self.computer.label)  # pylint: disable=no-member
+        q_code_2 = orm.Code.get(label=code2.label, machinename=self.computer.label)
         assert q_code_2.pk == code2.pk
         assert q_code_2.label == code2.label
         assert q_code_2.get_remote_exec_path() == code2.get_remote_exec_path()
@@ -1137,9 +1079,7 @@ class TestNodeBasic:
 
     @pytest.mark.usefixtures('suppress_internal_deprecations')
     def test_list_for_plugin(self):
-        """
-        This test checks the Code.list_for_plugin()
-        """
+        """This test checks the Code.list_for_plugin()"""
         code1 = orm.Code()
         code1.set_remote_computer_exec((self.computer, '/bin/true'))
         code1.label = 'test_code1'
@@ -1159,9 +1099,7 @@ class TestNodeBasic:
         assert retrieved_labels == set([code1.label, code2.label])
 
     def test_load_node(self):
-        """
-        Tests the load node functionality
-        """
+        """Tests the load node functionality"""
         from aiida.common.exceptions import NotExistent
 
         # I only need one node to test
@@ -1200,11 +1138,9 @@ class TestNodeBasic:
 
 
 class TestSubNodesAndLinks:
-
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
 
     def test_cachelink(self):
@@ -1220,34 +1156,46 @@ class TestSubNodesAndLinks:
         # Try also reverse storage
         endcalc.base.links.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
-        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == {('N1', n1.uuid),
-                                                                                            ('N2', n2.uuid)}
+        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == {
+            ('N1', n1.uuid),
+            ('N2', n2.uuid),
+        }
 
         # Endnode not stored yet, n3 and n4 already stored
         endcalc.base.links.add_incoming(n3, LinkType.INPUT_CALC, 'N3')
         # Try also reverse storage
         endcalc.base.links.add_incoming(n4, LinkType.INPUT_CALC, 'N4')
 
-        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == \
-                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)}
+        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == {
+            ('N1', n1.uuid),
+            ('N2', n2.uuid),
+            ('N3', n3.uuid),
+            ('N4', n4.uuid),
+        }
 
         # Some parent nodes are not stored yet
         with pytest.raises(ModificationNotAllowed):
             endcalc.store()
 
-        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == \
-                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)}
+        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == {
+            ('N1', n1.uuid),
+            ('N2', n2.uuid),
+            ('N3', n3.uuid),
+            ('N4', n4.uuid),
+        }
 
         # This will also store n1 and n2!
         endcalc.store_all()
 
-        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == \
-                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)}
+        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == {
+            ('N1', n1.uuid),
+            ('N2', n2.uuid),
+            ('N3', n3.uuid),
+            ('N4', n4.uuid),
+        }
 
     def test_store_with_unstored_parents(self):
-        """
-        I want to check that if parents are unstored I cannot store
-        """
+        """I want to check that if parents are unstored I cannot store"""
         n1 = orm.Data()
         n2 = orm.Data().store()
         endcalc = orm.CalculationNode()
@@ -1263,13 +1211,13 @@ class TestSubNodesAndLinks:
         # Now I can store
         endcalc.store()
 
-        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == {('N1', n1.uuid),
-                                                                                            ('N2', n2.uuid)}
+        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == {
+            ('N1', n1.uuid),
+            ('N2', n2.uuid),
+        }
 
     def test_storeall_with_unstored_grandparents(self):
-        """
-        I want to check that if grandparents are unstored I cannot store_all
-        """
+        """I want to check that if grandparents are unstored I cannot store_all"""
         n1 = orm.CalculationNode()
         n2 = orm.Data()
         endcalc = orm.CalculationNode()
@@ -1334,9 +1282,7 @@ class TestSubNodesAndLinks:
         calc2b.base.links.add_incoming(d4, LinkType.INPUT_CALC, link_label='label3')
 
     def test_link_with_unstored(self):
-        """
-        It is possible to store links between nodes even if they are unstored these links are cached.
-        """
+        """It is possible to store links between nodes even if they are unstored these links are cached."""
         n1 = orm.Data()
         n2 = orm.WorkflowNode()
         n3 = orm.CalculationNode()
@@ -1355,27 +1301,31 @@ class TestSubNodesAndLinks:
         n3.store_all()
 
         n2_in_links = [(n.link_label, n.node.uuid) for n in n2.base.links.get_incoming()]
-        assert sorted(n2_in_links) == sorted([
-            ('l1', n1.uuid),
-        ])
+        assert sorted(n2_in_links) == sorted(
+            [
+                ('l1', n1.uuid),
+            ]
+        )
         n3_in_links = [(n.link_label, n.node.uuid) for n in n3.base.links.get_incoming()]
-        assert sorted(n3_in_links) == sorted([
-            ('l2', n2.uuid),
-            ('l3', n1.uuid),
-        ])
+        assert sorted(n3_in_links) == sorted(
+            [
+                ('l2', n2.uuid),
+                ('l3', n1.uuid),
+            ]
+        )
 
         n1_out_links = [(entry.link_label, entry.node.pk) for entry in n1.base.links.get_outgoing()]
-        assert sorted(n1_out_links) == sorted([
-            ('l1', n2.pk),
-            ('l3', n3.pk),
-        ])
+        assert sorted(n1_out_links) == sorted(
+            [
+                ('l1', n2.pk),
+                ('l3', n3.pk),
+            ]
+        )
         n2_out_links = [(entry.link_label, entry.node.pk) for entry in n2.base.links.get_outgoing()]
         assert sorted(n2_out_links) == sorted([('l2', n3.pk)])
 
     def test_multiple_create_links(self):
-        """
-        Cannot have two CREATE links for the same node.
-        """
+        """Cannot have two CREATE links for the same node."""
         n1 = orm.CalculationNode()
         n2 = orm.CalculationNode()
         n3 = orm.Data()
@@ -1388,7 +1338,7 @@ class TestSubNodesAndLinks:
     def test_valid_links(self):
         from aiida.plugins import DataFactory
 
-        SinglefileData = DataFactory('core.singlefile')
+        SinglefileData = DataFactory('core.singlefile')  # noqa: N806
 
         # I create some objects
         d1 = orm.Data().store()
@@ -1449,9 +1399,7 @@ class TestSubNodesAndLinks:
         assert len(calculation_inputs) == 2
 
     def test_check_single_calc_source(self):
-        """
-        Each data node can only have one input calculation
-        """
+        """Each data node can only have one input calculation"""
         d1 = orm.Data().store()
 
         calc = orm.CalcJobNode(computer=self.computer)
@@ -1468,8 +1416,7 @@ class TestSubNodesAndLinks:
             d1.base.links.add_incoming(calc2, link_type=LinkType.CREATE, link_label='link')
 
     def test_node_get_incoming_outgoing_links(self):
-        """
-        Test that the link_type parameter in get_incoming and get_outgoing only
+        """Test that the link_type parameter in get_incoming and get_outgoing only
         returns those nodes with the correct link type for stored nodes
         """
         node_origin = orm.WorkflowNode()
@@ -1515,19 +1462,15 @@ class TestSubNodesAndLinks:
 
 
 class AnyValue:
-    """
-    Helper class that compares equal to everything.
-    """
+    """Helper class that compares equal to everything."""
 
     def __eq__(self, other):
         return True
 
 
 class TestNodeDeletion:
-
     def _check_existence(self, uuids_check_existence, uuids_check_deleted):
-        """
-        I get 2 lists of uuids
+        """I get 2 lists of uuids
 
         :param uuids_check_existence: The list of uuids that have to exist
         :param uuids_check_deleted: The list of uuids that should not exist,
@@ -1565,6 +1508,7 @@ class TestNodeDeletion:
     def test_deletion_dry_run_callback(self):
         """Verify that a dry_run callback works."""
         from aiida.common.exceptions import NotExistent
+
         node = orm.Data().store()
         node_pk = node.pk
         callback_pks = []
@@ -1580,13 +1524,11 @@ class TestNodeDeletion:
             orm.load_node(node_pk)
         assert callback_pks == [node_pk]
 
-
-#   TEST BASIC CASES
+    #   TEST BASIC CASES
 
     @staticmethod
     def _create_simple_graph():
-        """
-        Creates a simple graph which has one parent workflow (WN2) that calls a child
+        """Creates a simple graph which has one parent workflow (WN2) that calls a child
         workflow (WN1) and then a calculation (CN2). The child workflow (WN1) calls
         its own calculation (CN1). There is one input data node (DNI), on middle data
         node (DNM) and one output data node (DNO). There is at least one link of each
@@ -1623,7 +1565,6 @@ class TestNodeDeletion:
             | DNI | -----------> | CN1 | --------> | DNM | -----------> | CN2 | --------> | DNO |
             +-----+              +-----+           +-----+              +-----+           +-----+
         """
-
         dni = orm.Data().store()
         dnm = orm.Data().store()
         dno = orm.Data().store()
@@ -1655,15 +1596,13 @@ class TestNodeDeletion:
         return dni, dnm, dno, cn1, cn2, wn1, wn2
 
     def test_delete_cases(self):
-        """
-        Using a simple graph to test all the conditions established for the
+        """Using a simple graph to test all the conditions established for the
         consistent deletion of nodes. The first part tests the default behavior,
         which is to delete every node within the highest level workflows that
         link to the targetted nodes (except for non targetted inputs).
         The second part tests the available options to customize deletion in
         their expected use cases.
         """
-
         # By default, targetting any workflow will propagate to any incoming or
         # outgoing workflows connected to it, therefore resulting in the deletion
         # of the highest level workflow that contains the targetted workflow and
@@ -1778,8 +1717,7 @@ class TestNodeDeletion:
 
     @staticmethod
     def _create_indep2w_graph():
-        """
-        Creates a simple graph with one workflow handling two independent workflows
+        """Creates a simple graph with one workflow handling two independent workflows
         (with one simple calculation each). It was designed and used mainly to point
         out how the deletion behaviour works when setting call_work_forward to true:
         in this case if PWA is deleted, the somewhat independent PWB will also be
@@ -1814,7 +1752,6 @@ class TestNodeDeletion:
             +-----+           +---+           +-----+   +-----+           +---+           +-----+
 
         """
-
         dia = orm.Data().store()
         dib = orm.Data().store()
 
@@ -1856,13 +1793,11 @@ class TestNodeDeletion:
         return dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0
 
     def test_indep2w(self):
-        """
-        Using a simple graph, will test the behaviour when deleting an independent
+        """Using a simple graph, will test the behaviour when deleting an independent
         workflow that is somehow connected to another one simply by being part of
         the the same parent workflow (i.e. two workflows connected by the logical
         provenance but not the data provenance).
         """
-
         # First of all one should notice that enabling all forward traverse rules
         # (call_calc, call_work, create) will end up deleting everything under both
         # workflows no matter what is targetted.
@@ -1920,8 +1855,7 @@ class TestNodeDeletion:
 
     @staticmethod
     def _create_looped_graph():
-        """
-        Creates a basic graph with one parent workflow (PWM) which first calls a child
+        """Creates a basic graph with one parent workflow (PWM) which first calls a child
         workflow (PWS) to choose one input from a set (DI1 from DI1-DI3), and then use
         it to perform a calculation (PCS) and obtain an output (DO1). The node PWM will
         call both PWS and PCS itself. The final graph looks like this::
@@ -1942,7 +1876,6 @@ class TestNodeDeletion:
                       +------------- | DI1 | ------------> | PCS | --------> | DO1 |
                                      +-----+               +-----+           +-----+
         """
-
         di1 = orm.Data().store()
         di2 = orm.Data().store()
         di3 = orm.Data().store()
@@ -1974,11 +1907,9 @@ class TestNodeDeletion:
         return di1, di2, di3, do1, pws, pcs, pwm
 
     def test_loop_cases(self):
-        """
-        Using a looped graph, will test the behaviour when deleting nodes that
+        """Using a looped graph, will test the behaviour when deleting nodes that
         can be both input and output of a workflow.
         """
-
         # Deleting any of the nodes while having enabled all the toggable
         # forward traversal rules will end up deleting the whole workflow
         # (excluding input nodes except specifically targetted).
@@ -2015,8 +1946,7 @@ class TestNodeDeletion:
 
     @staticmethod
     def _create_long_graph(total_calcs):
-        """
-        Creates a straighforward graph with the required number of calculation nodes.
+        """Creates a straighforward graph with the required number of calculation nodes.
         All these calculation nodes are connected through a series of data nodes,
         starting with a data node D0 as the first input and each calculation C(N)
         will have data node D(N-1) as an input and data node D(N) as an output.
@@ -2026,16 +1956,15 @@ class TestNodeDeletion:
             | D0 | --> | C1 | --> | D1 | --> | C2 | --> | D2 | --> ...
             +----+     +----+     +----+     +----+     +----+
         """
-
         old_data = orm.Data().store()
         node_list = [old_data]
 
         for ii in range(total_calcs):
             new_calc = orm.CalculationNode()
             new_data = orm.Data().store()
-            new_calc.base.links.add_incoming(old_data, link_type=LinkType.INPUT_CALC, link_label=f'inp{str(ii)}')
+            new_calc.base.links.add_incoming(old_data, link_type=LinkType.INPUT_CALC, link_label=f'inp{ii!s}')
             new_calc.store()
-            new_data.base.links.add_incoming(new_calc, link_type=LinkType.CREATE, link_label=f'out{str(ii)}')
+            new_data.base.links.add_incoming(new_calc, link_type=LinkType.CREATE, link_label=f'out{ii!s}')
             node_list.append(new_calc)
             node_list.append(new_data)
             old_data = new_data
@@ -2043,11 +1972,9 @@ class TestNodeDeletion:
         return node_list
 
     def test_long_case(self):
-        """
-        Using a simple but long graph, this test checks the propagation of the delete
+        """Using a simple but long graph, this test checks the propagation of the delete
         functionality forward in data provenance.
         """
-
         node_list = self._create_long_graph(10)
         uuids_check_existence = [n.uuid for n in node_list[:3]]
         uuids_check_deleted = [n.uuid for n in node_list[3:]]

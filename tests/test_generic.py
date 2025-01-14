@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument
 """Generic tests that need the use of the DB."""
+
 import pytest
 
 from aiida import orm
@@ -82,7 +81,7 @@ def test_code_remote(aiida_localhost):
     code.base.repository.delete_object('test.sh')
     code.store()
 
-    assert code.get_remote_computer().pk == aiida_localhost.pk  # pylint: disable=no-member
+    assert code.get_remote_computer().pk == aiida_localhost.pk
     assert code.get_remote_exec_path() == '/bin/ls'
     assert code.get_execname() == '/bin/ls'
 
@@ -92,7 +91,7 @@ def test_code_remote(aiida_localhost):
         hostname='localhost',
         transport_type='core.local',
         scheduler_type='core.pbspro',
-        workdir='/tmp/aiida'
+        workdir='/tmp/aiida',
     ).store()
     assert not code.can_run_on(othercomputer)
 

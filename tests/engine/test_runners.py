@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Module to test process runners."""
+
 import asyncio
 import threading
 
@@ -74,28 +73,29 @@ def test_call_on_process_finish(runner):
     assert future.result()
 
 
-def test_submit_args(runner):
-    """Test that a useful exception is raised when the inputs are passed as a dictionary instead of expanded kwargs.
+def test_submit(runner):
+    """Test that inputs can be specified either as a positional dictionary or through keyword arguments."""
+    inputs = {'a': Str('input')}
 
-    Regression test for #3609. Before, it would throw the validation exception of the first port to be validated. If
-    a user accidentally forgot to expand the inputs with `**` it would be a misleading error.
-    """
-    with pytest.raises(TypeError, match=r'takes 2 positional arguments but 3 were given'):
-        runner.submit(Proc, {'a': Str('input')})
+    with pytest.raises(ValueError, match='Cannot specify both `inputs` and `kwargs`.'):
+        runner.submit(Proc, inputs, **inputs)
+
+    runner.submit(Proc, inputs)
+    runner.submit(Proc, **inputs)
 
 
-def test_run_return_value_cached(aiida_local_code_factory):
+def test_run_return_value_cached(aiida_code_installed):
     """Test that :meth:`aiida.engine.runners.Runner._run` return process results even when cached.
 
     Regression test for https://github.com/aiidateam/aiida-core/issues/5994.
     """
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'),
         'x': Int(1),
         'y': Int(-2),
     }
     results_source, node_source = launch.run_get_node(ArithmeticAddCalculation, **inputs)
-    assert node_source.is_valid_cache
+    assert node_source.base.caching.is_valid_cache
 
     with enable_caching():
         results_cached, node_cached = launch.run_get_node(ArithmeticAddCalculation, **inputs)

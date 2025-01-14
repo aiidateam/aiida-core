@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to test transport."""
+
 import asyncio
 
 import pytest
@@ -20,14 +20,13 @@ class TestTransportQueue:
     """Tests for the transport queue."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
         self.authinfo = self.computer.get_authinfo(orm.User.collection.get_default())
 
     def test_simple_request(self):
-        """ Test a simple transport request """
+        """Test a simple transport request"""
         queue = TransportQueue()
         loop = queue.loop
 
@@ -104,15 +103,15 @@ class TestTransportQueue:
 
     def test_safe_interval(self):
         """Verify that the safe interval for a given in transport is respected by the transport queue."""
-
         # Temporarily set the safe open interval for the default transport to a finite value
         transport_class = self.authinfo.get_transport().__class__
-        original_interval = transport_class._DEFAULT_SAFE_OPEN_INTERVAL  # pylint: disable=protected-access
+        original_interval = transport_class._DEFAULT_SAFE_OPEN_INTERVAL
 
         try:
-            transport_class._DEFAULT_SAFE_OPEN_INTERVAL = 0.25  # pylint: disable=protected-access
+            transport_class._DEFAULT_SAFE_OPEN_INTERVAL = 0.25
 
             import time
+
             queue = TransportQueue()
             loop = queue.loop
 
@@ -131,4 +130,4 @@ class TestTransportQueue:
                 loop.run_until_complete(test(iteration))
 
         finally:
-            transport_class._DEFAULT_SAFE_OPEN_INTERVAL = original_interval  # pylint: disable=protected-access
+            transport_class._DEFAULT_SAFE_OPEN_INTERVAL = original_interval

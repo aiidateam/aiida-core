@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test migration of `type_string` after the `Group` class became pluginnable."""
+
 from uuid import uuid4
 
 from aiida.common import timezone
@@ -58,7 +58,6 @@ def test_group_type_string(perform_migrations: PsqlDosMigrator):
 
     group_model = perform_migrations.get_current_table('db_dbgroup')
     with perform_migrations.session() as session:
-
         # 'user' -> 'core'
         group_user = session.get(group_model, group_user_id)
         assert group_user.type_string == 'core'

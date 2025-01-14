@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the BackendGroup and BackendGroupCollection classes."""
+
 from aiida import orm
 
 
@@ -56,7 +56,7 @@ def test_add_nodes_skip_orm_batch():
     # Add nodes to groups using different batch size. Check in the end the correct addition.
     batch_sizes = (1, 3, 10, 1000)
     for batch_size in batch_sizes:
-        group = orm.Group(label=f'test_batches_{str(batch_size)}').store()
+        group = orm.Group(label=f'test_batches_{batch_size!s}').store()
         group.backend_entity.add_nodes(nodes, skip_orm=True, batch_size=batch_size)
         assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 

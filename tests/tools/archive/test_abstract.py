@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -11,6 +10,7 @@
 
 The tests highlight the features of the archive abstraction.
 """
+
 from io import BytesIO
 
 import pytest
@@ -37,7 +37,7 @@ def test_write_read(tmp_path):
             'email': 'jon@doe.com',
             'first_name': 'John',
             'last_name': 'Doe',
-            'institution': 'Doe Inc.'
+            'institution': 'Doe Inc.',
         }
         # should fail due to unknown field
         with pytest.raises(IntegrityError, match='Incorrect fields'):
@@ -80,7 +80,7 @@ def test_write_read(tmp_path):
             'email': 'jane@smith.com',
             'first_name': 'Jane',
             'last_name': 'Smith',
-            'institution': 'Doe Inc.'
+            'institution': 'Doe Inc.',
         }
         appender.bulk_insert(EntityTypes.USER, [user_row2])
         # delete the existing object

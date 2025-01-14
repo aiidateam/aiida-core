@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,12 +6,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument,protected-access
 """Performance benchmark tests for import/export utilities.
 
 The purpose of these tests is to benchmark and compare importing and exporting
 parts of the database.
 """
+
 from io import StringIO
 
 import pytest
@@ -39,7 +38,7 @@ def recursive_provenance(in_node, depth, breadth, num_objects=0):
 
         out_node = Dict(dict={str(i): i for i in range(10)})
         for idx in range(num_objects):
-            out_node.base.repository.put_object_from_filelike(StringIO('a' * 10000), f'key{str(idx)}')
+            out_node.base.repository.put_object_from_filelike(StringIO('a' * 10000), f'key{idx!s}')
         out_node.base.links.add_incoming(calcfunc, link_type=LinkType.CREATE, link_label='output')
         out_node.store()
 
@@ -92,7 +91,7 @@ def test_export(benchmark, tmp_path, depth, breadth, num_objects):
 @pytest.mark.benchmark(group='import-export')
 def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects):
     """Benchmark importing a provenance graph."""
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
     root_node = Dict()
     recursive_provenance(root_node, depth=depth, breadth=breadth, num_objects=num_objects)
     root_uuid = root_node.uuid
@@ -101,7 +100,7 @@ def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects)
     create_archive([root_node], **kwargs)
 
     def _setup():
-        aiida_profile.clear_profile()
+        aiida_profile.reset_storage()
 
     def _run():
         import_archive(str(out_path))

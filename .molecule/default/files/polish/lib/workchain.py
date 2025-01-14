@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -15,7 +14,7 @@ import os
 from pathlib import Path
 from string import Template
 
-from .expression import OPERATORS  # pylint: disable=relative-beyond-top-level
+from .expression import OPERATORS
 
 INDENTATION_WIDTH = 4
 
@@ -71,8 +70,7 @@ BLOCK_TPL_END = """
 
 
 def generate_outlines(expression):
-    """
-    For a given expression in Reverse Polish Notation, generate the nested symbolic structure of the outlines.
+    """For a given expression in Reverse Polish Notation, generate the nested symbolic structure of the outlines.
 
     :param expression: a valid expression
     :return: a nested list structure of strings representing the structure of the outlines
@@ -82,7 +80,6 @@ def generate_outlines(expression):
     outline = [['add']]
 
     for part in expression.split():
-
         if part not in OPERATORS:
             stack.appendleft(part)
             values.append(part)
@@ -107,8 +104,7 @@ def generate_outlines(expression):
 
 
 def format_outlines(outlines, use_calculations=False, use_calcfunctions=False):
-    """
-    Given the symbolic structure of the workchain outlines produced by ``generate_outlines``, format the actual
+    """Given the symbolic structure of the workchain outlines produced by ``generate_outlines``, format the actual
     string form of those workchain outlines
 
     :param outlines: the list of symbolic outline structures
@@ -119,7 +115,6 @@ def format_outlines(outlines, use_calculations=False, use_calcfunctions=False):
     outline_strings = []
 
     for sub_outline in outlines:
-
         outline_string = ''
 
         for instruction in sub_outline:
@@ -140,8 +135,7 @@ def format_outlines(outlines, use_calculations=False, use_calcfunctions=False):
 
 
 def format_block(instruction, level=0, use_calculations=False, use_calcfunctions=False):
-    """
-    Format the instruction into its proper string form
+    """Format the instruction into its proper string form
 
     :param use_calculations: use CalcJobs for the add operations
     :param use_calcfunctions: use calcfunctions for the subtract operations
@@ -176,8 +170,7 @@ def format_block(instruction, level=0, use_calculations=False, use_calcfunctions
 
 
 def format_indent(level=0, width=INDENTATION_WIDTH):
-    """
-    Format the indentation for the given indentation level and indentation width
+    """Format the indentation for the given indentation level and indentation width
 
     :param level: the level of indentation
     :param width: the width in spaces of a single indentation
@@ -187,8 +180,7 @@ def format_indent(level=0, width=INDENTATION_WIDTH):
 
 
 def write_workchain(outlines, directory=None) -> Path:
-    """
-    Given a list of string formatted outlines, write the corresponding workchains to file
+    """Given a list of string formatted outlines, write the corresponding workchains to file
 
     :returns: file path
     """
@@ -219,10 +211,9 @@ def write_workchain(outlines, directory=None) -> Path:
 
     counter = len(outlines) - 1
     for outline in outlines:
-
         outline_string = ''
         for subline in outline.split('\n'):
-            outline_string += f'\t\t\t{subline}\n'  # pylint: disable=consider-using-join
+            outline_string += f'\t\t\t{subline}\n'
 
         if counter == len(outlines) - 1:
             child_class = None

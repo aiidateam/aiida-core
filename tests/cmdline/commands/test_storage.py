@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi storage`."""
+
+import json
+
 import pytest
 
 from aiida import get_profile
@@ -22,15 +24,45 @@ def tests_storage_version(run_cli_command):
     assert version in result.output
 
 
+@pytest.mark.parametrize(
+    'exception_cls, exit_code',
+    (
+        (exceptions.CorruptStorage, 3),
+        (exceptions.UnreachableStorage, 3),
+        (exceptions.IncompatibleStorageSchema, 4),
+    ),
+)
+def tests_storage_version_non_zero_exit_code(aiida_profile, run_cli_command, monkeypatch, exception_cls, exit_code):
+    """Test the ``verdi storage version`` command when it returns a non-zero exit code."""
+
+    def validate_storage(self):
+        raise exception_cls()
+
+    with monkeypatch.context() as context:
+        context.setattr(aiida_profile.storage_cls.migrator, 'validate_storage', validate_storage)
+        result = run_cli_command(cmd_storage.storage_version, raises=True)
+        assert result.exit_code == exit_code
+
+
 def tests_storage_info(aiida_localhost, run_cli_command):
     """Test the ``verdi storage info`` command with the ``--detailed`` option."""
     from aiida import orm
+
     node = orm.Dict().store()
 
     result = run_cli_command(cmd_storage.storage_info, parameters=['--detailed'])
 
     assert aiida_localhost.label in result.output
     assert node.node_type in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def tests_storage_migrate_no_broker(aiida_config_tmp, aiida_profile_factory, run_cli_command):
+    """Test the ``verdi storage migrate`` command for a profile without a broker."""
+    with aiida_profile_factory(aiida_config_tmp) as profile:
+        assert profile.process_control_backend is None
+        result = run_cli_command(cmd_storage.storage_migrate, parameters=['--force'], use_subprocess=False)
+        assert 'Migrating to the head of the main branch' in result.output
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')
@@ -44,6 +76,7 @@ def tests_storage_migrate_force(run_cli_command):
 def tests_storage_migrate_interactive(run_cli_command):
     """Test the ``verdi storage migrate`` command (with interactive prompt)."""
     from aiida.manage import get_manager
+
     profile = get_manager().get_profile()
 
     result = run_cli_command(cmd_storage.storage_migrate, user_input='MIGRATE NOW')
@@ -68,27 +101,25 @@ def tests_storage_migrate_cancel_prompt(run_cli_command, monkeypatch):
     """Test that ``verdi storage migrate`` detects the cancelling of the interactive prompt."""
     import click
 
-    monkeypatch.setattr(click, 'prompt', lambda text, **kwargs: exec('import click\nraise click.Abort()'))  # pylint: disable=exec-used
+    monkeypatch.setattr(click, 'prompt', lambda text, **kwargs: exec('import click\nraise click.Abort()'))
     result = run_cli_command(cmd_storage.storage_migrate, raises=True, use_subprocess=False)
 
     assert 'aborted' in result.output.lower()
 
 
-@pytest.mark.parametrize('raise_type', [
-    exceptions.ConfigurationError,
-    exceptions.StorageMigrationError,
-])
 @pytest.mark.parametrize(
-    'call_kwargs', [
-        {
-            'raises': True,
-            'user_input': 'MIGRATE NOW'
-        },
-        {
-            'raises': True,
-            'parameters': ['--force']
-        },
-    ]
+    'raise_type',
+    [
+        exceptions.ConfigurationError,
+        exceptions.StorageMigrationError,
+    ],
+)
+@pytest.mark.parametrize(
+    'call_kwargs',
+    [
+        {'raises': True, 'user_input': 'MIGRATE NOW'},
+        {'raises': True, 'parameters': ['--force']},
+    ],
 )
 @pytest.mark.usefixtures('stopped_daemon_client')
 def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monkeypatch):
@@ -101,6 +132,7 @@ def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monke
     objects will have the modified method.
     """
     from aiida.manage import get_manager
+
     manager = get_manager()
 
     def mocked_migrate(self):
@@ -118,6 +150,7 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     """Test all the information and cases of the storage maintain command."""
     from aiida.common.log import AIIDA_LOGGER
     from aiida.manage import get_manager
+
     storage = get_manager().get_profile_storage()
 
     def mock_maintain(*args, **kwargs):
@@ -176,3 +209,54 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     assert ' > full: True' in message_list
     assert ' > do_repack: False' in message_list
     assert ' > dry_run: False' in message_list
+
+
+def tests_storage_backup(run_cli_command, tmp_path):
+    """Test the ``verdi storage backup`` command."""
+    result1 = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)])
+    assert 'backed up to' in result1.output
+    assert result1.exit_code == 0
+    assert (tmp_path / 'last-backup').is_symlink()
+    # make another backup in the same folder
+    result2 = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)])
+    assert 'backed up to' in result2.output
+    assert result2.exit_code == 0
+
+
+def tests_storage_backup_keep(run_cli_command, tmp_path):
+    """Test the ``verdi storage backup`` command with the keep argument"""
+    params = [str(tmp_path), '--keep', '1']
+    for i in range(3):
+        result = run_cli_command(cmd_storage.storage_backup, parameters=params)
+        assert 'backed up to' in result.output
+        assert result.exit_code == 0
+    # make sure only two copies of the backup are kept
+    assert len(list((tmp_path.glob('backup_*')))) == 2
+
+
+def tests_storage_backup_nonempty_dest(run_cli_command, tmp_path):
+    """Test that the ``verdi storage backup`` fails for non-empty destination."""
+    # add a file to the destination
+    (tmp_path / 'test.txt').touch()
+    result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)], raises=True)
+    assert result.exit_code == 1
+    assert 'destination is not empty' in result.output
+
+
+def tests_storage_backup_other_profile(run_cli_command, tmp_path):
+    """Test that the ``verdi storage backup`` fails for a destination that has been used for another profile."""
+    existing_backup_config = {
+        'CONFIG_VERSION': {'CURRENT': 9, 'OLDEST_COMPATIBLE': 9},
+        'profiles': {
+            'test': {
+                'PROFILE_UUID': 'test-uuid',
+                'storage': {'backend': 'core.psql_dos'},
+                'process_control': {'backend': 'rabbitmq'},
+            }
+        },
+    }
+    with open(tmp_path / 'config.json', 'w', encoding='utf-8') as fhandle:
+        json.dump(existing_backup_config, fhandle, indent=4)
+    result = run_cli_command(cmd_storage.storage_backup, parameters=[str(tmp_path)], raises=True)
+    assert result.exit_code == 1
+    assert 'contains backups of a different profile' in result.output

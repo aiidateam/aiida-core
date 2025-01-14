@@ -185,7 +185,7 @@ As you can see the work chain launched a single instance of the ``ArithmeticAddC
 
     .. code-block:: bash
 
-        $ verdi daemon restart --reset
+        $ verdi daemon restart
 
     Indeed, when updating an existing work chain file or adding a new one, it is **necessary** to restart the daemon **every time** after all changes have taken place.
 
@@ -249,7 +249,7 @@ When submitting or running the work chain using namespaced inputs (``add`` in th
 
     .. code-block:: bash
 
-        $ verdi daemon restart --reset
+        $ verdi daemon restart
 
 
 Customizing outputs
@@ -270,6 +270,17 @@ For example, if you want to remove a particular output from being attached, you 
 
 It is also possible to update the contents of one of the outputs returned by the last completed calculation job.
 In this case, it is important to go through a ``calcfunction``, as always, as to not lose any provenance.
+
+
+Attaching outputs
+=================
+
+In a normal run, the ``results`` method is the last step in the outline of the ``BaseRestartWorkChain``.
+In this step, the outputs of the last completed calculation job are "attached" to the work chain itself.
+The attaching of the outputs is implemented by the :meth:`~aiida.engine.processes.workchains.restart.BaseRestartWorkChain._attach_outputs` method.
+If the outputs need to be attached at a point in the workflow other then the ``results`` step, this method can be called manually.
+An example would be to call it in a process handler that will abort the work chain.
+In this case the work chain will be stopped immediately and the ``results`` step would no longer be called.
 
 
 Error handling

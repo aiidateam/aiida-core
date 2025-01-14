@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,7 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the extended dictionary classes."""
-# pylint: disable=pointless-statement,attribute-defined-outside-init
+
 import copy
 import json
 import pickle
@@ -18,16 +17,14 @@ from aiida.common import exceptions, extendeddicts
 
 
 class FFADExample(extendeddicts.FixedFieldsAttributeDict):
-    """
-    An example class that accepts only the 'alpha', 'beta' and 'gamma' keys/attributes.
-    """
+    """An example class that accepts only the 'alpha', 'beta' and 'gamma' keys/attributes."""
+
     _valid_fields = ('alpha', 'beta', 'gamma')
 
 
 class DFADExample(extendeddicts.DefaultFieldsAttributeDict):
-    """
-    An example class that has 'alpha', 'beta' and 'gamma' as default keys.
-    """
+    """An example class that has 'alpha', 'beta' and 'gamma' as default keys."""
+
     _default_fields = ('alpha', 'beta', 'gamma')
 
     @staticmethod
@@ -44,8 +41,7 @@ class DFADExample(extendeddicts.DefaultFieldsAttributeDict):
 
 
 class TestAttributeDictAccess(unittest.TestCase):
-    """
-    Try to access the dictionary elements in various ways, copying (shallow and
+    """Try to access the dictionary elements in various ways, copying (shallow and
     deep), check raised exceptions.
     """
 
@@ -230,9 +226,7 @@ class TestAttributeDictNested(unittest.TestCase):
 
 
 class TestAttributeDictSerialize(unittest.TestCase):
-    """
-    Test serialization/deserialization (with json, pickle, ...)
-    """
+    """Test serialization/deserialization (with json, pickle, ...)"""
 
     def test_json(self):
         """Test loading and dumping from json."""
@@ -293,8 +287,7 @@ class TestFFAD(unittest.TestCase):
             dictionary_02['delta'] = 2
 
     def test_class_attribute(self):
-        """
-        I test that the get_valid_fields() is working as a class method,
+        """I test that the get_valid_fields() is working as a class method,
         so I don't need to instantiate the class to get the list.
         """
         self.assertEqual(set(FFADExample.get_valid_fields()), set(['alpha', 'beta', 'gamma']))
@@ -330,8 +323,7 @@ class TestDFAD(unittest.TestCase):
         self.assertIsNone(dictionary.gamma)
 
     def test_class_attribute(self):
-        """
-        I test that the get_default_fields() is working as a class method,
+        """I test that the get_default_fields() is working as a class method,
         so I don't need to instantiate the class to get the list.
         """
         self.assertEqual(set(DFADExample.get_default_fields()), set(['alpha', 'beta', 'gamma']))

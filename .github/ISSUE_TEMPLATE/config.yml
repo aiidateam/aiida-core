@@ -1,7 +1,4 @@
 contact_links:
-  - name: AiiDA Discussions
-    url: https://github.com/aiidateam/aiida-core/discussions
-    about: For aiida-core questions and discussion
-  - name: AiiDA Users Forum
-    url: http://www.aiida.net/mailing-list/
-    about: For general questions and discussion
+- name: AiiDA Discourse group
+  url: https://aiida.discourse.group
+  about: For general questions and discussion

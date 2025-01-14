@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Tests for the provenance redesign: 140c971ae0a3 -> 239cea6d2452"""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
@@ -20,8 +21,8 @@ def test_provenance_redesign(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@140c971ae0a3')  # 140c971ae0a3_migrate_builtin_calculations
 
     # setup the database
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net', is_superuser=True)
         session.add(user)
@@ -58,7 +59,7 @@ def test_provenance_redesign(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@239cea6d2452')  # 239cea6d2452_provenance_redesign
 
     # perform some checks
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         # Migration of calculation job with known plugin class
         node_calc_job_known = session.query(DbNode).filter(DbNode.id == node_calc_job_known_id).one()

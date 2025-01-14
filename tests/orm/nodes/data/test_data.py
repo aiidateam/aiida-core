@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :class:`aiida.orm.nodes.data.data:Data` class."""
+
 import os
 
 import numpy
@@ -19,8 +18,7 @@ from tests.static import STATIC_DIR
 
 
 @pytest.fixture
-def generate_class_instance():
-    # pylint: disable=too-many-return-statements, too-many-statements
+def generate_class_instance(tmp_path, aiida_localhost):
     """Generate a dummy `Data` instance for the given sub class."""
 
     def _generate_class_instance(data_class):
@@ -40,7 +38,7 @@ def generate_class_instance():
         if data_class is orm.BandsData:
             kpoints = orm.KpointsData()
             kpoints.set_cell([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-            kpoints.set_kpoints([[0., 0., 0.], [0.1, 0.1, 0.1]])
+            kpoints.set_kpoints([[0.0, 0.0, 0.0], [0.1, 0.1, 0.1]])
             instance = data_class()
             instance.set_kpointsdata(kpoints)
             instance.set_bands([[1.0, 2.0], [3.0, 4.0]])
@@ -50,8 +48,8 @@ def generate_class_instance():
             instance = data_class()
             stepids = numpy.array([60])
             times = stepids * 0.01
-            cells = numpy.array([[[3., 0., 0.], [0., 3., 0.], [0., 0., 3.]]])
-            positions = numpy.array([[[0., 0., 0.]]])
+            cells = numpy.array([[[3.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 3.0]]])
+            positions = numpy.array([[[0.0, 0.0, 0.0]]])
             instance.set_trajectory(stepids=stepids, cells=cells, symbols=['H'], positions=positions, times=times)
             return instance
 
@@ -82,7 +80,6 @@ def generate_class_instance():
             return instance
 
         if data_class is orm.ProjectionData:
-
             my_real_hydrogen_dict = {
                 'angular_momentum': -3,
                 'diffusivity': None,
@@ -93,16 +90,16 @@ def generate_class_instance():
                 'spin': 0,
                 'spin_orientation': None,
                 'x_orientation': None,
-                'z_orientation': None
+                'z_orientation': None,
             }
             kpoints = orm.KpointsData()
             kpoints.set_cell([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-            kpoints.set_kpoints([[0., 0., 0.]])
+            kpoints.set_kpoints([[0.0, 0.0, 0.0]])
             bands = orm.BandsData()
             bands.set_kpointsdata(kpoints)
             bands.set_bands([[1.0]])
 
-            RealHydrogen = plugins.OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
+            RealHydrogen = plugins.OrbitalFactory('core.realhydrogen')  # noqa: N806
             orbital = RealHydrogen(**my_real_hydrogen_dict)
 
             instance = data_class()
@@ -111,6 +108,41 @@ def generate_class_instance():
                 orbital, list_of_pdos=numpy.asarray([1.0]), list_of_energy=numpy.asarray([1.0]), bands_check=False
             )
             return instance
+
+        if data_class is orm.AbstractCode:
+            instance = data_class(label='test_abstract_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
+            return instance
+
+        if data_class is orm.Code:
+            instance = data_class(label='test_code', remote_computer_exec=(aiida_localhost, '/bin/cat'))
+            return instance
+
+        if data_class is orm.InstalledCode:
+            instance = data_class(
+                label='test_installed_code',
+                computer=aiida_localhost,
+                filepath_executable='/bin/cat',
+            )
+            return instance
+
+        if data_class is orm.PortableCode:
+            (tmp_path / 'bash').touch()
+            filepath_executable = 'bash'
+            instance = data_class(
+                label='test_portable_code',
+                filepath_executable=filepath_executable,
+                filepath_files=tmp_path,
+            )
+            return instance
+
+        if data_class is orm.ContainerizedCode:
+            return orm.ContainerizedCode(
+                label='test_containerized_code',
+                computer=aiida_localhost,
+                image_name='image',
+                filepath_executable='bash',
+                engine_command='docker {image_name}',
+            )
 
         raise RuntimeError(
             'no instance generator implemented for class `{}`. If you have added a `_prepare_*` method '
@@ -150,6 +182,6 @@ def test_data_exporters(data_plugin, generate_class_instance):
     instance = generate_class_instance(data_plugin)
 
     for fileformat in export_formats:
-        content, dictionary = instance._exportcontent(fileformat)  # pylint: disable=protected-access
+        content, dictionary = instance._exportcontent(fileformat)
         assert isinstance(content, bytes)
         assert isinstance(dictionary, dict)

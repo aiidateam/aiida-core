@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,7 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test archive file migration from export version 0.4 to 0.5"""
-from aiida.storage.sqlite_zip.migrations.legacy import migrate_v4_to_v5  # type: ignore
+
+from aiida.storage.sqlite_zip.migrations.legacy import migrate_v4_to_v5  # type: ignore[attr-defined]
 
 
 def test_migrate_external(migrate_from_func):
@@ -23,14 +23,14 @@ def test_migrate_external(migrate_from_func):
         for computer in data['export_data']['Computer'].values():
             assert change not in computer, f"'{change}' unexpectedly found for {computer}"
         # metadata.json
-        assert change not in metadata['all_fields_info']['Computer'], (
-            f"'{change}' unexpectedly found in metadata.json for Computer"
-        )
+        assert (
+            change not in metadata['all_fields_info']['Computer']
+        ), f"'{change}' unexpectedly found in metadata.json for Computer"
     for change in removed_node_attrs:
         # data.json
         for node in data['export_data']['Node'].values():
             assert change not in node, f"'{change}' unexpectedly found for {node}"
         # metadata.json
-        assert change not in metadata['all_fields_info']['Node'], (
-            f"'{change}' unexpectedly found in metadata.json for Node"
-        )
+        assert (
+            change not in metadata['all_fields_info']['Node']
+        ), f"'{change}' unexpectedly found in metadata.json for Node"

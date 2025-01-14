@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,17 +7,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for ``verdi setup``."""
+
 import os
 import tempfile
 import uuid
 
-from pgtest.pgtest import PGTest
 import pytest
+from pgtest.pgtest import PGTest
 
 from aiida import orm
 from aiida.cmdline.commands import cmd_setup
 from aiida.manage import configuration
 from aiida.manage.external.postgres import Postgres
+
+pytestmark = pytest.mark.requires_psql
 
 
 @pytest.fixture(scope='class')
@@ -33,12 +35,25 @@ class TestVerdiSetup:
     """Tests for `verdi setup` and `verdi quicksetup`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, pg_test_cluster, empty_config, run_cli_command):  # pylint: disable=redefined-outer-name,unused-argument
+    def init_profile(self, pg_test_cluster, empty_config, run_cli_command):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.storage_backend_name = 'core.psql_dos'
         self.pg_test = pg_test_cluster
         self.cli_runner = run_cli_command
+
+    def test_setup_deprecation(self):
+        """Checks if a deprecation warning is printed in stdout and stderr."""
+        # Checks if the deprecation warning is present when invoking the help page
+        result = self.cli_runner(cmd_setup.setup, ['--help'])
+        assert 'Deprecated:' in result.output
+        assert 'Deprecated:' in result.stderr
+
+        # Checks if the deprecation warning is present when invoking the command
+        # Runs setup in interactive mode and sends Ctrl+D (\x04) as input so we exit the prompts.
+        # This way we can check if the deprecation warning was printed with the first prompt.
+        result = self.cli_runner(cmd_setup.setup, user_input='\x04', use_subprocess=True, raises=True)
+        assert 'Deprecated:' in result.output
+        assert 'Deprecated:' in result.stderr
 
     def test_help(self):
         """Check that the `--help` option is eager, is not overruled and will properly display the help message.
@@ -49,7 +64,7 @@ class TestVerdiSetup:
         self.cli_runner(cmd_setup.setup, ['--help'])
         self.cli_runner(cmd_setup.quicksetup, ['--help'])
 
-    def test_quicksetup(self):
+    def test_quicksetup(self, tmp_path):
         """Test `verdi quicksetup`."""
         profile_name = 'testing'
         user_email = 'some@email.com'
@@ -58,9 +73,23 @@ class TestVerdiSetup:
         user_institution = 'ECMA'
 
         options = [
-            '--non-interactive', '--profile', profile_name, '--email', user_email, '--first-name', user_first_name,
-            '--last-name', user_last_name, '--institution', user_institution, '--db-port', self.pg_test.dsn['port'],
-            '--db-backend', self.storage_backend_name
+            '--non-interactive',
+            '--profile',
+            profile_name,
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--repository',
+            str(tmp_path),
         ]
 
         self.cli_runner(cmd_setup.quicksetup, options, use_subprocess=False)
@@ -83,7 +112,31 @@ class TestVerdiSetup:
         backend = profile.storage_cls(profile)
         assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid
 
-    def test_quicksetup_from_config_file(self):
+    def test_quicksetup_default_user(self, tmp_path):
+        """Test `verdi quicksetup` and ensure that user details (apart from the email) are optional."""
+        profile_name = 'testing-default-user-details'
+        user_email = 'some@email.com'
+
+        options = [
+            '--non-interactive',
+            '--profile',
+            profile_name,
+            '--email',
+            user_email,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--repository',
+            str(tmp_path),
+        ]
+
+        self.cli_runner(cmd_setup.quicksetup, options, use_subprocess=False)
+
+        config = configuration.get_config()
+        assert profile_name in config.profile_names
+
+    def test_quicksetup_from_config_file(self, tmp_path):
         """Test `verdi quicksetup` from configuration file."""
         with tempfile.NamedTemporaryFile('w') as handle:
             handle.write(
@@ -94,12 +147,13 @@ last_name: Talirz
 institution: EPFL
 db_backend: {self.storage_backend_name}
 db_port: {self.pg_test.dsn['port']}
-email: 123@234.de"""
+email: 123@234.de
+repository: {tmp_path}"""
             )
             handle.flush()
             self.cli_runner(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)], use_subprocess=False)
 
-    def test_quicksetup_autofill_on_early_exit(self):
+    def test_quicksetup_autofill_on_early_exit(self, tmp_path):
         """Test `verdi quicksetup` stores user information even if command fails."""
         config = configuration.get_config()
         assert config.get_option('autofill.user.email', scope=None) is None
@@ -115,9 +169,21 @@ email: 123@234.de"""
         # The incorrect port will cause the command to fail, but the user information should have been stored on the
         # configuration such that the user won't have to retype it but can use the pre-stored defaults.
         options = [
-            '--non-interactive', '--profile', 'testing', '--email', user_email, '--first-name', user_first_name,
-            '--last-name', user_last_name, '--institution', user_institution, '--db-port',
-            self.pg_test.dsn['port'] + 100
+            '--non-interactive',
+            '--profile',
+            'testing',
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-port',
+            self.pg_test.dsn['port'] + 100,
+            '--repository',
+            str(tmp_path),
         ]
 
         self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
@@ -136,9 +202,19 @@ email: 123@234.de"""
         user_institution = 'ECMA'
 
         options = [
-            '--non-interactive', '--profile', profile_name, '--email', user_email, '--first-name', user_first_name,
-            '--last-name', user_last_name, '--institution', user_institution, '--db-port',
-            self.pg_test.dsn['port'] + 100
+            '--non-interactive',
+            '--profile',
+            profile_name,
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-port',
+            self.pg_test.dsn['port'] + 100,
         ]
 
         self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
@@ -149,7 +225,7 @@ email: 123@234.de"""
         postgres.determine_setup()
         db_name = 'aiida_test_setup'
         db_user = 'aiida_test_setup'
-        db_pass = 'aiida_test_setup'
+        db_pass = '@aiida_test_setup'
         postgres.create_dbuser(db_user, db_pass)
         postgres.create_db(db_user, db_name)
 
@@ -163,9 +239,27 @@ email: 123@234.de"""
         # defaults, callbacks and or contextual defaults that might depend on it, but should not fail if they are parsed
         # before the profile option is parsed.
         options = [
-            '--non-interactive', '--email', user_email, '--first-name', user_first_name, '--last-name', user_last_name,
-            '--institution', user_institution, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
-            '--db-port', self.pg_test.dsn['port'], '--db-backend', self.storage_backend_name, '--profile', profile_name
+            '--non-interactive',
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-name',
+            db_name,
+            '--db-username',
+            db_user,
+            '--db-password',
+            db_pass,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--profile',
+            profile_name,
         ]
 
         self.cli_runner(cmd_setup.setup, options, use_subprocess=False)
@@ -202,11 +296,35 @@ email: 123@234.de"""
         postgres.create_db(db_user, db_name)
 
         profile_name = 'profile-copy'
-        profile_uuid = str(uuid.uuid4)
+        user_email = 'some@email.com'
+        user_first_name = 'John'
+        user_last_name = 'Smith'
+        user_institution = 'ECMA'
+        profile_uuid = str(uuid.uuid4())
         options = [
-            '--non-interactive', '--profile', profile_name, '--profile-uuid', profile_uuid, '--db-backend',
-            self.storage_backend_name, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
-            '--db-port', self.pg_test.dsn['port']
+            '--non-interactive',
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-name',
+            db_name,
+            '--db-username',
+            db_user,
+            '--db-password',
+            db_pass,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--profile',
+            profile_name,
+            '--profile-uuid',
+            profile_uuid,
         ]
 
         self.cli_runner(cmd_setup.setup, options, use_subprocess=False)
@@ -215,4 +333,4 @@ email: 123@234.de"""
         assert profile_name in config.profile_names
 
         profile = config.get_profile(profile_name)
-        profile.uuid = profile_uuid
+        assert profile.uuid == profile_uuid

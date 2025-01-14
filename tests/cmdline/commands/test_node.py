@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,16 +7,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for verdi node"""
+
+import datetime
 import errno
 import gzip
 import io
 import os
+import warnings
 
 import pytest
 
 from aiida import orm
 from aiida.cmdline.commands import cmd_node
 from aiida.cmdline.utils.echo import ExitCode
+from aiida.common import timezone
 
 
 def get_result_lines(result):
@@ -30,7 +33,6 @@ class TestVerdiNode:
     @pytest.fixture(autouse=True)
     def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init,invalid-name
         node = orm.Data()
 
         self.ATTR_KEY_ONE = 'a'
@@ -240,8 +242,7 @@ class TestVerdiNode:
 
 
 def delete_temporary_file(filepath):
-    """
-    Attempt to delete a file, given an absolute path. If the deletion fails because the file does not exist
+    """Attempt to delete a file, given an absolute path. If the deletion fails because the file does not exist
     the exception will be caught and passed. Any other exceptions will raise.
 
     :param filepath: the absolute file path
@@ -259,25 +260,12 @@ class TestVerdiGraph:
     """Tests for the ``verdi node graph`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, run_cli_command, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, run_cli_command, chdir_tmp_path):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
-        from aiida.orm import Data
-
-        self.node = Data().store()
-
-        # some of the export tests write in the current directory,
-        # make sure it is writeable and we don't pollute the current one
-        self.old_cwd = os.getcwd()
-        self.cwd = str(tmp_path.absolute())
-        os.chdir(self.cwd)
-        yield
-        os.chdir(self.old_cwd)
-        os.rmdir(self.cwd)
+        self.node = orm.Data().store()
 
     def test_generate_graph(self, run_cli_command):
-        """
-        Test that the default graph can be generated
+        """Test that the default graph can be generated
         The command should run without error and should produce the .dot file
         """
         # Get a PK of a node which exists
@@ -290,9 +278,16 @@ class TestVerdiGraph:
         finally:
             delete_temporary_file(filename)
 
+    def test_multiple_nodes(self, run_cli_command):
+        """Test multiple root nodes."""
+        node = orm.Data().store()
+        options = [str(self.node.pk), str(node.pk)]
+        result = run_cli_command(cmd_node.graph_generate, options)
+        assert 'Success: Output written to' in result.output
+        assert os.path.isfile(f'{self.node.pk}.{node.pk}.dot.pdf')
+
     def test_catch_bad_pk(self, run_cli_command):
-        """
-        Test that an invalid root_node pk (non-numeric, negative, or decimal),
+        """Test that an invalid root_node pk (non-numeric, negative, or decimal),
         or non-existent pk will produce an error
         """
         from aiida.common.exceptions import NotExistent
@@ -319,7 +314,7 @@ class TestVerdiGraph:
             pass
         #  Make sure verdi graph rejects this non-existant pk
         try:
-            filename = f'{str(root_node)}.dot.pdf'
+            filename = f'{root_node!s}.dot.pdf'
             options = [str(root_node)]
             run_cli_command(cmd_node.graph_generate, options, raises=True)
             assert not os.path.isfile(filename)
@@ -362,9 +357,7 @@ class TestVerdiGraph:
                     delete_temporary_file(filename)
 
     def test_check_io_flags(self, run_cli_command):
-        """
-        Test the input and output flags work.
-        """
+        """Test the input and output flags work."""
         root_node = str(self.node.pk)
         filename = f'{root_node}.dot.pdf'
 
@@ -377,13 +370,10 @@ class TestVerdiGraph:
                 delete_temporary_file(filename)
 
     def test_output_format(self, run_cli_command):
-        """
-        Test that the output file format can be specified
-        """
+        """Test that the output file format can be specified"""
         root_node = str(self.node.pk)
 
         for option in ['-f', '--output-format']:
-
             # Test different formats. Could exhaustively test the formats
             # supported on a given OS (printed by '$ dot -T?') but here
             # we just use the built-ins dot and canon as a minimal check that
@@ -398,14 +388,12 @@ class TestVerdiGraph:
                     delete_temporary_file(filename)
 
     def test_node_id_label_format(self, run_cli_command):
-        """
-        Test that the node id label format can be specified
-        """
+        """Test that the node id label format can be specified"""
         root_node = str(self.node.pk)
         filename = f'{root_node}.dot.pdf'
 
         for id_label_type in ['uuid', 'pk', 'label']:
-            options = ['--identifier', id_label_type, root_node]
+            options = ['--identifier', id_label_type, '--', root_node]
             try:
                 run_cli_command(cmd_node.graph_generate, options)
                 assert os.path.isfile(filename)
@@ -414,12 +402,14 @@ class TestVerdiGraph:
 
     @pytest.mark.parametrize('output_file', ('without_extension', 'without_extension.pdf'))
     def test_output_file(self, run_cli_command, output_file):
-        """Test that the output file can be specified through an argument."""
-        try:
-            run_cli_command(cmd_node.graph_generate, [str(self.node.pk), output_file])
-            assert os.path.isfile(output_file)
-        finally:
-            delete_temporary_file(output_file)
+        """Test that the output file can be specified through ``-O/--output-file``."""
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            try:
+                run_cli_command(cmd_node.graph_generate, [str(self.node.pk), '--output-file', output_file])
+                assert os.path.isfile(output_file)
+            finally:
+                delete_temporary_file(output_file)
 
 
 COMMENT = 'Well I never...'
@@ -429,9 +419,8 @@ class TestVerdiUserCommand:
     """Tests for the ``verdi node comment`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, run_cli_command):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init,invalid-name
         self.node = orm.Data().store()
 
     def test_comment_show_simple(self, run_cli_command):
@@ -472,13 +461,13 @@ class TestVerdiUserCommand:
 
 
 @pytest.fixture(scope='class')
-def create_nodes(aiida_profile_clean_class):  # pylint: disable=unused-argument
+def create_nodes(aiida_profile_clean_class):
     return [
         orm.Data().store(),
         orm.Bool(True).store(),
         orm.Bool(False).store(),
         orm.Float(1.0).store(),
-        orm.Int(1).store()
+        orm.Int(1).store(),
     ]
 
 
@@ -555,7 +544,6 @@ class TestVerdiRehash:
 
     def test_rehash_invalid_entry_point(self, run_cli_command):
         """Passing an invalid entry point should exit with non-zero status."""
-
         # Incorrect entry point group
         options = ['-f', '-e', 'data:core.structure']
         run_cli_command(cmd_node.rehash, options, raises=True)
@@ -570,18 +558,18 @@ class TestVerdiRehash:
 
 
 @pytest.mark.parametrize(
-    'options', (
+    'options',
+    (
         ['--verbosity', 'info'],
         ['--verbosity', 'info', '--force'],
         ['--create-forward'],
         ['--call-calc-forward'],
         ['--call-work-forward'],
         ['--force'],
-    )
+    ),
 )
 def test_node_delete_basics(run_cli_command, options):
-    """
-    Testing the correct translation for the `--force` and `--verbosity` options.
+    """Testing the correct translation for the `--force` and `--verbosity` options.
     This just checks that the calls do not except and that in all cases with the
     force flag there is no messages.
     """
@@ -602,3 +590,46 @@ def test_node_delete_basics(run_cli_command, options):
 def test_node_delete_missing_pk(run_cli_command):
     """Check that no exception is raised when a non-existent pk is given (just warns)."""
     run_cli_command(cmd_node.node_delete, ['999'])
+
+
+@pytest.fixture(scope='class')
+def create_nodes_verdi_node_list(aiida_profile_clean_class):
+    return (
+        orm.Data().store(),
+        orm.Int(0).store(),
+        orm.Int(1).store(),
+        orm.Int(2).store(),
+        orm.ArrayData().store(),
+        orm.KpointsData().store(),
+        orm.WorkflowNode(ctime=timezone.now() - datetime.timedelta(days=3)).store(),
+    )
+
+
+@pytest.mark.usefixtures('create_nodes_verdi_node_list')
+class TestNodeList:
+    """Tests for the ``verdi node rehash`` command."""
+
+    @pytest.mark.parametrize(
+        'options, expected_nodes',
+        (
+            ([], [6, 0, 1, 2, 3, 4, 5]),
+            (['-e', 'core.int'], [1, 2, 3]),
+            (['-e', 'core.int', '--limit', '1'], [1]),
+            (['-e', 'core.int', '--order-direction', 'desc'], [3, 2, 1]),
+            (['-e', 'core.int', '--order-by', 'id'], [1, 2, 3]),
+            (['-e', 'core.array', '--no-subclassing'], [4]),
+            (['-e', 'core.int', '-P', 'uuid'], [1, 2, 3]),
+            (['-p', '1'], [0, 1, 2, 3, 4, 5]),
+        ),
+    )
+    def test_node_list(self, run_cli_command, options, expected_nodes):
+        """Test the ``verdi node list`` command."""
+        nodes = orm.QueryBuilder().append(orm.Node).order_by({orm.Node: ['id']}).all(flat=True)
+
+        if set(['-P', 'uuid']).issubset(set(options)):
+            expected_projections = [nodes[index].uuid for index in expected_nodes]
+        else:
+            expected_projections = [str(nodes[index].pk) for index in expected_nodes]
+
+        result = run_cli_command(cmd_node.node_list, ['--project', 'id', '--raw'] + options)
+        assert result.output.strip() == '\n'.join(expected_projections)

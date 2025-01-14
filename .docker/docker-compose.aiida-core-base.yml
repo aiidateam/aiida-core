@@ -1,0 +1,50 @@
+version: '3.4'
+
+services:
+
+  database:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+        # volumes:
+        #     - aiida-postgres-db:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD, pg_isready, -U, postgres]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  messaging:
+    image: rabbitmq:3.8.14-management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+        # volumes:
+        #     - aiida-rmq-data:/var/lib/rabbitmq/
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, check_running]
+      interval: 30s
+      timeout: 30s
+      retries: 10
+
+  aiida:
+    image: ${REGISTRY:-}${AIIDA_CORE_BASE_IMAGE:-aiidateam/aiida-core-base}${TAG:-}
+    environment:
+      AIIDA_POSTGRES_HOSTNAME: database
+      AIIDA_BROKER_HOST: messaging
+      RMQHOST: messaging
+      TZ: Europe/Zurich
+      SETUP_DEFAULT_AIIDA_PROFILE: 'true'
+        # volumes:
+        #     - aiida-home-folder:/home/aiida
+    depends_on:
+      database:
+        condition: service_healthy
+      messaging:
+        condition: service_healthy
+
+#volumes:
+#    aiida-postgres-db:
+#    aiida-rmq-data:
+#    aiida-home-folder:

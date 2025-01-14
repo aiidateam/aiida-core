@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.calculations.importers.arithmetic.add` module."""
+
 from aiida.calculations.importers.arithmetic.add import ArithmeticAddCalculationImporter
 from aiida.orm import Int, RemoteData
 

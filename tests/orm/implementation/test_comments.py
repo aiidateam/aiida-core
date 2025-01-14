@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the BackendComment and BackendCommentCollection classes."""
+
 from datetime import datetime
 from uuid import UUID, uuid4
 
@@ -21,9 +21,8 @@ class TestBackendComment:
     """Test BackendComment."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost, backend):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, backend):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.backend = backend
         self.computer = aiida_localhost.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
         self.user = backend.users.create(email=uuid4().hex).store()
@@ -90,8 +89,7 @@ class TestBackendComment:
         assert comment.mtime > comment_mtime
 
     def test_creation_with_time(self):
-        """
-        Test creation of a BackendComment when passing the mtime and the ctime. The passed ctime and mtime
+        """Test creation of a BackendComment when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
         ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, timezone.utc)
@@ -148,10 +146,10 @@ class TestBackendComment:
         # Pass empty filter to delete_many, making sure ValidationError is raised
         with pytest.raises(exceptions.ValidationError):
             self.backend.comments.delete_many({})
-        assert len(orm.Comment.collection.all()) == \
-            count, \
-            'No Comments should have been deleted. There should still be {} Comment(s), ' \
+        assert len(orm.Comment.collection.all()) == count, (
+            'No Comments should have been deleted. There should still be {} Comment(s), '
             'however {} Comment(s) was/were found.'.format(count, len(orm.Comment.collection.all()))
+        )
 
     def test_delete_many_ids(self):
         """Test `delete_many` method filtering on both `id` and `uuid`"""
@@ -165,9 +163,9 @@ class TestBackendComment:
 
         # Make sure they exist
         count_comments_found = orm.QueryBuilder().append(orm.Comment, filters={'uuid': {'in': comment_uuids}}).count()
-        assert count_comments_found == \
-            len(comment_uuids), \
-            f'There should be {len(comment_uuids)} Comments, instead {count_comments_found} Comment(s) was/were found'
+        assert count_comments_found == len(
+            comment_uuids
+        ), f'There should be {len(comment_uuids)} Comments, instead {count_comments_found} Comment(s) was/were found'
 
         # Delete last two comments (comment2, comment3)
         filters = {'or': [{'id': comment2.id}, {'uuid': str(comment3.uuid)}]}
@@ -194,9 +192,9 @@ class TestBackendComment:
 
         # Make sure they exist
         count_comments_found = orm.QueryBuilder().append(orm.Comment, filters={'uuid': {'in': comment_uuids}}).count()
-        assert count_comments_found == \
-            len(comment_uuids), \
-            f'There should be {len(comment_uuids)} Comments, instead {count_comments_found} Comment(s) was/were found'
+        assert count_comments_found == len(
+            comment_uuids
+        ), f'There should be {len(comment_uuids)} Comments, instead {count_comments_found} Comment(s) was/were found'
 
         # Delete comments for self.node
         filters = {'dbnode_id': self.node.id}
@@ -207,7 +205,6 @@ class TestBackendComment:
         found_comments_uuid = [_[0] for _ in builder]
         assert [comment_uuids[0]] == found_comments_uuid
 
-    # pylint: disable=too-many-locals
     def test_delete_many_ctime_mtime(self):
         """Test `delete_many` method filtering on `ctime` and `mtime`"""
         from datetime import timedelta
@@ -325,9 +322,7 @@ class TestBackendComment:
         # delete_many should return a list that *only* includes the existing Comment
         filters = {'id': {'in': [id_, comment_id]}}
         deleted_entities = self.backend.comments.delete_many(filters=filters)
-        assert [comment_id] == \
-                         deleted_entities, \
-                         f'Only Comment id {comment_id} should be returned from delete_many'
+        assert [comment_id] == deleted_entities, f'Only Comment id {comment_id} should be returned from delete_many'
 
         # Make sure the existing Comment was deleted
         builder = orm.QueryBuilder().append(orm.Comment, filters={'uuid': comment_uuid})
@@ -348,10 +343,10 @@ class TestBackendComment:
         filters = {'dbnode_id': id_}
         self.backend.comments.delete_many(filters=filters)
         comment_count_after = orm.QueryBuilder().append(orm.Comment).count()
-        assert comment_count_after == \
-            comment_count_before, \
-            'The number of comments changed after performing `delete_many`, ' \
+        assert comment_count_after == comment_count_before, (
+            'The number of comments changed after performing `delete_many`, '
             "while filtering for a non-existing 'dbnode_id'"
+        )
 
     def test_delete_many_same_twice(self):
         """Test no exception is raised when entity is filtered by both `id` and `uuid`"""

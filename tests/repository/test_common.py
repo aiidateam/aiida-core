@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name
 """Tests for the :mod:`aiida.repository.common` module."""
+
 import pytest
 
 from aiida.repository import File, FileType
@@ -85,7 +84,7 @@ def test_serialize():
             'empty': {},
             'file.txt': {
                 'k': 'abcdef',
-            }
+            },
         }
     }
 
@@ -106,7 +105,7 @@ def test_eq():
     file_object = File()
 
     # Identity operation
-    assert file_object == file_object  # pylint: disable=comparison-with-itself
+    assert file_object == file_object  # noqa: PLR0124
 
     # Identical default copy
     assert file_object == File()

@@ -3,13 +3,16 @@ name: Performance benchmarks
 on:
   push:
     branches: [main]
-    paths-ignore: ['docs/**']
+    paths-ignore: [docs/**]
+  pull_request:
+    branches-ignore: [gh-pages]
+    paths: [.github/workflows/benchmark*]
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
     # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
 
@@ -23,14 +26,14 @@ jobs:
       matrix:
         os: [ubuntu-22.04]
         postgres: ['12.14']
-        rabbitmq: ['3.8.14-management']
+        rabbitmq: [3.8.14-management]
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
 
     services:
       postgres:
-        image: "postgres:${{ matrix.postgres }}"
+        image: postgres:${{ matrix.postgres }}
         env:
           POSTGRES_DB: test_aiida
           POSTGRES_PASSWORD: ''
@@ -41,46 +44,37 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5432:5432
+        - 5432:5432
       rabbitmq:
-        image: "rabbitmq:${{ matrix.rabbitmq }}"
+        image: rabbitmq:${{ matrix.rabbitmq }}
         ports:
-          - 5672:5672
+        - 5672:5672
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - uses: actions/checkout@v4
+
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.10'
-
-    - name: Upgrade pip
-      run: |
-        pip install --upgrade pip
-        pip --version
-
-    - name: Install python dependencies
-      run: |
-        pip install -r requirements/requirements-py-3.10.txt
-        pip install --no-deps -e .
-        pip freeze
+        from-lock: 'true'
 
     - name: Run benchmarks
-      run: pytest --benchmark-only --benchmark-json benchmark.json
+      run: uv run pytest --db-backend psql --benchmark-only --benchmark-json benchmark.json tests/
 
     - name: Store benchmark result
       uses: aiidateam/github-action-benchmark@v3
       with:
-        benchmark-data-dir-path: "dev/bench/${{ matrix.os }}/psql_dos"
-        name: "pytest-benchmarks:${{ matrix.os }},psql_dos"
-        metadata: "postgres:${{ matrix.postgres }}, rabbitmq:${{ matrix.rabbitmq }}"
+        benchmark-data-dir-path: dev/bench/${{ matrix.os }}/psql_dos
+        name: pytest-benchmarks:${{ matrix.os }},psql_dos
+        metadata: postgres:${{ matrix.postgres }}, rabbitmq:${{ matrix.rabbitmq }}
         output-file-path: benchmark.json
         render-json-path: .github/workflows/benchmark-config.json
-        commit-msg-append: "[ci skip]"
+        commit-msg-append: '[ci skip]'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
         # Show alert with commit comment on detecting possible performance regression
-        alert-threshold: '200%'
+        alert-threshold: 200%
         comment-on-alert: true
         fail-on-alert: false
-        alert-comment-cc-users: '@chrisjsewell,@giovannipizzi'
+        alert-comment-cc-users: '@giovannipizzi,@agoscinski,@GeigerJ2,@khsrali,@unkcpz'

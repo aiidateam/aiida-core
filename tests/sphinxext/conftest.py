@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,12 +7,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Pytest fixtures for AiiDA sphinx extension tests."""
+
 import pathlib
 import shutil
 import sys
 
 import pytest
-from sphinx.testing.path import path as sphinx_path
 from sphinx.testing.util import SphinxTestApp
 
 SRC_DIR = pathlib.Path(__file__).parent / 'sources'
@@ -30,7 +29,8 @@ class SphinxBuild:
     def build(self, assert_pass=True):
         """Build sphinx app.
 
-        :param assert_pass: if True, assert that no warnings are raised during build"""
+        :param assert_pass: if True, assert that no warnings are raised during build
+        """
         try:
             sys.path.append(str(WORKCHAIN_DIR.absolute()))
             self.app.build()
@@ -42,11 +42,11 @@ class SphinxBuild:
 
     @property
     def status(self):
-        return self.app._status.getvalue()  # pylint: disable=protected-access
+        return self.app._status.getvalue()
 
     @property
     def warnings(self):
-        return self.app._warning.getvalue()  # pylint: disable=protected-access
+        return self.app._warning.getvalue()
 
     @property
     def outdir(self):
@@ -69,7 +69,7 @@ def sphinx_build_factory(make_app, tmp_path):
         filepath_source = SRC_DIR / src_folder
         filepath_target = tmp_path / src_folder
         shutil.copytree(filepath_source, filepath_target)
-        app = make_app(srcdir=sphinx_path(filepath_target.absolute()), **kwargs)
+        app = make_app(srcdir=filepath_target.absolute(), **kwargs)
         return SphinxBuild(app, filepath_target)
 
     yield _func

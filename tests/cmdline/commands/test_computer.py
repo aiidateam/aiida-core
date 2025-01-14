@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,31 +6,35 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument,invalid-name
 """Tests for the 'verdi computer' command."""
-from collections import OrderedDict
+
 import os
+import pathlib
 import tempfile
 import textwrap
+from collections import OrderedDict
 
 import pytest
+import yaml
 
 from aiida import orm
 from aiida.cmdline.commands.cmd_computer import (
     computer_configure,
     computer_delete,
     computer_duplicate,
+    computer_export_config,
+    computer_export_setup,
     computer_list,
     computer_relabel,
     computer_setup,
     computer_show,
     computer_test,
 )
+from aiida.cmdline.utils.echo import ExitCode
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):
-    """
-    Return a OrderedDict with the key-value pairs for the command line.
+    """Return a OrderedDict with the key-value pairs for the command line.
 
     I use an ordered dict because for changing entries it's easier
     to have keys (so, a dict) but the commands might require a specific order,
@@ -69,8 +72,7 @@ def generate_setup_options_dict(replace_args=None, non_interactive=True):
 
 
 def generate_setup_options(ordereddict):
-    """
-    Given an (ordered) dict, returns a list of options
+    """Given an (ordered) dict, returns a list of options
 
     Note that at this moment the implementation only supports long options
     (i.e. --option=value) and not short ones (-o value).
@@ -89,8 +91,7 @@ def generate_setup_options(ordereddict):
 
 
 def generate_setup_options_interactive(ordereddict):
-    """
-    Given an (ordered) dict, returns a list of options
+    """Given an (ordered) dict, returns a list of options
 
     Note that at this moment the implementation only supports long options
     (i.e. --option=value) and not short ones (-o value).
@@ -116,13 +117,13 @@ def test_help(run_cli_command):
 def test_reachable():
     """Test if the verdi computer setup is reachable."""
     import subprocess as sp
+
     output = sp.check_output(['verdi', 'computer', 'setup', '--help'])
     assert b'Usage:' in output
 
 
 def test_mixed(run_cli_command):
-    """
-    Test verdi computer setup in mixed mode.
+    """Test verdi computer setup in mixed mode.
 
     Some parts are given interactively and some non-interactively.
     """
@@ -171,9 +172,7 @@ def test_mixed(run_cli_command):
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
 def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor):
-    """
-    Main test to check if the non-interactive command works
-    """
+    """Main test to check if the non-interactive command works"""
     options_dict = generate_setup_options_dict()
     options = generate_setup_options(options_dict)
 
@@ -200,9 +199,7 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
 
 
 def test_noninteractive_optional_default_mpiprocs(run_cli_command):
-    """
-    Check that if is ok not to specify mpiprocs-per-machine
-    """
+    """Check that if is ok not to specify mpiprocs-per-machine"""
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs'})
     options_dict.pop('mpiprocs-per-machine')
     options = generate_setup_options(options_dict)
@@ -214,9 +211,7 @@ def test_noninteractive_optional_default_mpiprocs(run_cli_command):
 
 
 def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
-    """
-    Check that if is the specified value is zero, it means unspecified
-    """
+    """Check that if is the specified value is zero, it means unspecified"""
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_2'})
     options_dict['mpiprocs-per-machine'] = 0
     options = generate_setup_options(options_dict)
@@ -228,9 +223,7 @@ def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
 
 
 def test_noninteractive_optional_default_mpiprocs_3(run_cli_command):
-    """
-    Check that it fails for a negative number of mpiprocs
-    """
+    """Check that it fails for a negative number of mpiprocs"""
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_3'})
     options_dict['mpiprocs-per-machine'] = -1
     options = generate_setup_options(options_dict)
@@ -239,9 +232,7 @@ def test_noninteractive_optional_default_mpiprocs_3(run_cli_command):
 
 
 def test_noninteractive_optional_default_memory(run_cli_command):
-    """
-    Check that if is ok not to specify default-memory-per-machine
-    """
+    """Check that if is ok not to specify default-memory-per-machine"""
     options_dict = generate_setup_options_dict({'label': 'computer_default_mem'})
     options_dict.pop('default-memory-per-machine')
     options = generate_setup_options(options_dict)
@@ -253,9 +244,7 @@ def test_noninteractive_optional_default_memory(run_cli_command):
 
 
 def test_noninteractive_optional_default_memory_invalid(run_cli_command):
-    """
-    Check that it fails for a negative number of default_memory.
-    """
+    """Check that it fails for a negative number of default_memory."""
     options_dict = generate_setup_options_dict({'label': 'computer_default_memory_3'})
     options_dict['default-memory-per-machine'] = -1
     options = generate_setup_options(options_dict)
@@ -264,9 +253,7 @@ def test_noninteractive_optional_default_memory_invalid(run_cli_command):
 
 
 def test_noninteractive_wrong_transport_fail(run_cli_command):
-    """
-    Check that if fails as expected for an unknown transport
-    """
+    """Check that if fails as expected for an unknown transport"""
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['transport'] = 'unknown_transport'
     options = generate_setup_options(options_dict)
@@ -275,9 +262,7 @@ def test_noninteractive_wrong_transport_fail(run_cli_command):
 
 
 def test_noninteractive_wrong_scheduler_fail(run_cli_command):
-    """
-    Check that if fails as expected for an unknown transport
-    """
+    """Check that if fails as expected for an unknown transport"""
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['scheduler'] = 'unknown_scheduler'
     options = generate_setup_options(options_dict)
@@ -286,9 +271,7 @@ def test_noninteractive_wrong_scheduler_fail(run_cli_command):
 
 
 def test_noninteractive_invalid_shebang_fail(run_cli_command):
-    """
-    Check that if fails as expected for an unknown transport
-    """
+    """Check that if fails as expected for an unknown transport"""
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['shebang'] = '/bin/bash'  # Missing #! in front
     options = generate_setup_options(options_dict)
@@ -297,9 +280,7 @@ def test_noninteractive_invalid_shebang_fail(run_cli_command):
 
 
 def test_noninteractive_invalid_mpirun_fail(run_cli_command):
-    """
-    Check that if fails as expected for an unknown transport
-    """
+    """Check that if fails as expected for an unknown transport"""
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['mpirun-command'] = 'mpirun -np {unknown_key}'
     options = generate_setup_options(options_dict)
@@ -312,12 +293,14 @@ def test_noninteractive_from_config(run_cli_command):
     label = 'noninteractive_config'
 
     with tempfile.NamedTemporaryFile('w') as handle:
-        handle.write(f"""---
+        handle.write(
+            f"""---
 label: {label}
 hostname: myhost
 transport: core.local
 scheduler: core.direct
-""")
+"""
+        )
         handle.flush()
 
         options = ['--non-interactive', '--config', os.path.realpath(handle.name)]
@@ -330,10 +313,10 @@ class TestVerdiComputerConfigure:
     """Test the ``verdi computer configure`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, run_cli_command):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         from aiida.orm.utils.builders.computer import ComputerBuilder
+
         self.cli_runner = run_cli_command
         self.user = orm.User.collection.get_default()
         self.comp_builder = ComputerBuilder(label='test_comp_setup')
@@ -358,14 +341,14 @@ class TestVerdiComputerConfigure:
     def test_reachable(self):
         """Test reachability of top level and sub commands."""
         import subprocess as sp
+
         sp.check_output(['verdi', 'computer', 'configure', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'core.local', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'core.ssh', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'show', '--help'])
 
     def test_local_ni_empty(self):
-        """
-        Test verdi computer configure core.local <comp>
+        """Test verdi computer configure core.local <comp>
 
         Test twice, with comp setup for local or ssh.
 
@@ -408,8 +391,7 @@ class TestVerdiComputerConfigure:
         assert new_auth_params['use_login_shell'] is False
 
     def test_ssh_interactive(self):
-        """
-        Check that the interactive prompt is accepting the correct values.
+        """Check that the interactive prompt is accepting the correct values.
 
         Actually, even passing a shorter set of options should work:
         ``verdi computer configure ssh`` is able to provide sensible default
@@ -428,11 +410,7 @@ class TestVerdiComputerConfigure:
         # I just pass the first four arguments:
         # the username, the port, look_for_keys, and the key_filename
         # This testing also checks that an empty key_filename is ok
-        command_input = ('{remote_username}\n{port}\n{look_for_keys}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n').format(
-            remote_username=remote_username,
-            port=port,
-            look_for_keys='yes' if look_for_keys else 'no',
-        )
+        command_input = f"{remote_username}\n{port}\n{'yes' if look_for_keys else 'no'}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
 
         result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input=command_input)
         assert comp.is_configured, result.output
@@ -471,8 +449,7 @@ class TestVerdiComputerConfigure:
         assert computer.get_configuration()['use_login_shell'] == use_login_shell
 
     def test_ssh_ni_empty(self):
-        """
-        Test verdi computer configure core.ssh <comp>
+        """Test verdi computer configure core.ssh <comp>
 
         Test twice, with comp setup for ssh or local.
 
@@ -540,6 +517,168 @@ class TestVerdiComputerConfigure:
         assert '--username=' in result.output
         assert result_cur.output == result.output
 
+    @pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
+    def test_computer_export_setup(self, tmp_path, file_regression, sort_option):
+        """Test if `verdi computer export setup` command works"""
+        self.comp_builder.label = f'test_computer_export_setup{sort_option}'
+        # Label needs to be unique during parametrization
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        exported_setup_filename = tmp_path / 'computer-setup.yaml'
+
+        # Successfull write behavior
+        result = self.cli_runner(computer_export_setup, [comp.label, exported_setup_filename, sort_option])
+        assert str(exported_setup_filename) in result.output, 'Filename should be in terminal output but was not found.'
+        assert exported_setup_filename.exists(), f"'{exported_setup_filename}' was not created during export."
+
+        # file regresssion check
+        content = exported_setup_filename.read_text()
+        file_regression.check(content, extension='.yaml')
+
+        # verifying correctness by comparing internal and loaded yaml object
+        configure_setup_data = yaml.safe_load(exported_setup_filename.read_text())
+        assert configure_setup_data == self.comp_builder.get_computer_spec(
+            comp
+        ), 'Internal computer configuration does not agree with exported one.'
+
+    def test_computer_export_setup_overwrite(self, tmp_path):
+        """Test if overwriting behavior of `verdi computer export setup` command works as expected"""
+
+        self.comp_builder.label = 'test_computer_export_setup'
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        exported_setup_filename = tmp_path / 'computer-setup.yaml'
+        # Check that export fails if the file already exists
+        exported_setup_filename.touch()
+        result = self.cli_runner(computer_export_setup, [comp.label, exported_setup_filename], raises=True)
+        # assert 'already exists, use `--overwrite`' in result.output
+
+        # Create new instance and check that change is reflected in new YAML file output
+        self.comp_builder.label = 'test_computer_export_setup_local'
+        self.comp_builder.transport = 'core.local'
+        comp_local = self.comp_builder.new()
+        comp_local.store()
+        result = self.cli_runner(computer_export_setup, [comp_local.label, exported_setup_filename, '--overwrite'])
+        content = exported_setup_filename.read_text()
+        assert 'core.local' in content
+
+        # we create a directory so we raise an error when exporting with the same name
+        already_existing_directory = tmp_path / 'tmp_dir'
+        already_existing_directory.mkdir()
+        result = self.cli_runner(computer_export_setup, [comp.label, already_existing_directory], raises=True)
+        assert f'A directory with the name `{already_existing_directory}` already exists.' in result.output
+
+    @pytest.mark.usefixtures('chdir_tmp_path')
+    def test_computer_export_setup_default_filename(self):
+        """Test that default filename is as expected when not specified for `verdi computer export setup`."""
+        comp_label = 'test_computer_export_setup_default'
+        self.comp_builder.label = comp_label
+        # Label needs to be unique during parametrization
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        exported_setup_filename = f'{comp_label}-setup.yaml'
+
+        self.cli_runner(computer_export_setup, [comp.label])
+        assert pathlib.Path(exported_setup_filename).is_file()
+
+    def test_computer_export_config(self, tmp_path):
+        """Test if 'verdi computer export config' command works"""
+        self.comp_builder.label = 'test_computer_export_config'
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        exported_config_filename = tmp_path / 'computer-configure.yaml'
+
+        # We have not configured the computer yet so it should exit with an critical error
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
+        assert result.exit_code == ExitCode.CRITICAL
+
+        comp.configure(safe_interval=0.0)
+        comp.configure(username='aiida')
+
+        # Write sorted output file
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename])
+        assert 'Success' in result.output, 'Command should have run successfull.'
+        assert (
+            str(exported_config_filename) in result.output
+        ), 'Filename should be in terminal output but was not found.'
+        assert exported_config_filename.exists(), f"'{exported_config_filename}' was not created during export."
+
+        content = exported_config_filename.read_text()
+        assert content.startswith('safe_interval: 0.0')
+
+        # verifying correctness by comparing internal and loaded yaml object
+        configure_config_data = yaml.safe_load(exported_config_filename.read_text())
+        assert (
+            configure_config_data == comp.get_configuration()
+        ), 'Internal computer configuration does not agree with exported one.'
+
+        # Check that unsorted output file creation works as expected
+        exported_config_filename.unlink()
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename, '--no-sort'])
+        assert 'Success' in result.output, 'Command should have run successfull.'
+        assert (
+            str(exported_config_filename) in result.output
+        ), 'Filename should be in terminal output but was not found.'
+        assert exported_config_filename.exists(), f"'{exported_config_filename}' was not created during export."
+
+        # Check contents
+        content = exported_config_filename.read_text()
+        assert 'username: aiida' in content, 'username not in output YAML'
+        assert 'safe_interval: 0.0' in content, 'safe_interval not in output YAML'
+
+    def test_computer_export_config_overwrite(self, tmp_path):
+        """Test if overwrite behavior of `verdi computer export config` command works"""
+        self.comp_builder.label = 'test_computer_export_config_overwrite'
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+        comp.configure(safe_interval=0.0)
+
+        exported_config_filename = tmp_path / 'computer-configure.yaml'
+
+        # Create directory with the same name and check that command fails
+        exported_config_filename.mkdir()
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
+        assert f'A directory with the name `{exported_config_filename}` already exists' in result.output
+        exported_config_filename.rmdir()
+
+        # Check that export fails if the file already exists
+        exported_config_filename.touch()
+        result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename], raises=True)
+        assert 'already exists, use `--overwrite`' in result.output
+
+        # Create new instance and check that change is reflected in overwritten YAML output file
+        self.comp_builder.label = 'test_computer_export_config_0'
+        comp_mod = self.comp_builder.new()
+        comp_mod.store()
+        comp_mod.configure(safe_interval=1.0)
+        self.cli_runner(computer_export_config, [comp_mod.label, exported_config_filename, '--overwrite'])
+        content = exported_config_filename.read_text()
+        assert 'safe_interval: 1.0' in content
+
+    @pytest.mark.usefixtures('chdir_tmp_path')
+    def test_computer_export_config_default_filename(self):
+        """Test that default filename is as expected when not specified for `verdi computer export config`."""
+        comp_label = 'test_computer_export_config_default'
+        self.comp_builder.label = comp_label
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+        comp.configure(safe_interval=0.0)
+
+        exported_config_filename = f'{comp_label}-config.yaml'
+
+        self.cli_runner(computer_export_config, [comp.label])
+        assert pathlib.Path(exported_config_filename).is_file()
+
 
 class TestVerdiComputerCommands:
     """Testing verdi computer commands.
@@ -548,9 +687,8 @@ class TestVerdiComputerCommands:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_computer, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_computer, run_cli_command):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer_name = 'comp_cli_test_computer'
         self.comp = aiida_computer(label=self.computer_name)
         self.comp.set_default_mpiprocs_per_machine(1)
@@ -564,8 +702,7 @@ class TestVerdiComputerCommands:
         self.cli_runner = run_cli_command
 
     def test_computer_test(self):
-        """
-        Test if the 'verdi computer test' command works
+        """Test if the 'verdi computer test' command works
 
         It should work as it is a local connection
         """
@@ -576,9 +713,7 @@ class TestVerdiComputerCommands:
         self.cli_runner(computer_test, ['comp_cli_test_computer'])
 
     def test_computer_list(self):
-        """
-        Test if 'verdi computer list' command works
-        """
+        """Test if 'verdi computer list' command works"""
         # Check the vanilla command works
         result = self.cli_runner(computer_list, [])
         # Something should be printed to stdout
@@ -591,9 +726,7 @@ class TestVerdiComputerCommands:
             assert result.output is not None
 
     def test_computer_show(self):
-        """
-        Test if 'verdi computer show' command works
-        """
+        """Test if 'verdi computer show' command works"""
         # See if we can display info about the test computer.
         result = self.cli_runner(computer_show, ['comp_cli_test_computer'])
         # Something should be printed to stdout
@@ -603,9 +736,7 @@ class TestVerdiComputerCommands:
         result = self.cli_runner(computer_show, 'non_existent_computer_name', raises=True)
 
     def test_computer_relabel(self):
-        """
-        Test if 'verdi computer relabel' command works
-        """
+        """Test if 'verdi computer relabel' command works"""
         from aiida.common.exceptions import NotExistent
 
         # See if the command complains about not getting an invalid computer
@@ -642,10 +773,52 @@ class TestVerdiComputerCommands:
         # The new label should be available
         orm.Computer.collection.get(label='comp_cli_test_computer')
 
+    def test_computer_delete_with_nodes(self):
+        """check if 'verdi computer delete' works when there are associated nodes"""
+        from aiida.common.exceptions import NotExistent
+
+        label = 'computer_69'
+        compute_temp = orm.Computer(
+            label=label,
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida',
+        )
+        compute_temp.store()
+        compute_temp.configure(safe_interval=0)
+
+        c_label = 'code_69'
+        orm.InstalledCode(
+            label=c_label,
+            default_calc_job_plugin='core.arithmetic.add',
+            computer=compute_temp,
+            filepath_executable='/remote/abs/path',
+        ).store()
+
+        false_user_input = 'y'  # most common mistake
+        user_input = 'yes'
+
+        # Abort in case of wrong input
+        self.cli_runner(computer_delete, [label], user_input=false_user_input, raises=True)
+        orm.load_code(c_label)
+
+        # Safety check in case of --dry-run
+        options = [label, '--dry-run']
+        self.cli_runner(computer_delete, options)
+        orm.load_code(c_label)
+
+        # A successul delete, including all associated nodes
+        self.cli_runner(computer_delete, [label], user_input=user_input)
+
+        with pytest.raises(NotExistent):
+            orm.Computer.collection.get(label=label)
+
+        with pytest.raises(NotExistent):
+            orm.load_code(c_label)
+
     def test_computer_delete(self):
-        """
-        Test if 'verdi computer delete' command works
-        """
+        """Test if 'verdi computer delete' command works"""
         from aiida.common.exceptions import NotExistent
 
         # Setup a computer to delete during the test
@@ -655,17 +828,18 @@ class TestVerdiComputerCommands:
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
-            workdir='/tmp/aiida'
+            workdir='/tmp/aiida',
         ).store()
         # and configure it
         options = ['core.local', label, '--non-interactive', '--safe-interval', '0']
         self.cli_runner(computer_configure, options)
 
         # See if the command complains about not getting an invalid computer
-        self.cli_runner(computer_delete, ['computer_that_does_not_exist'], raises=True)
+        user_input = 'yes'
+        self.cli_runner(computer_delete, ['computer_that_does_not_exist'], raises=True, user_input=user_input)
 
         # Delete a computer name successully.
-        self.cli_runner(computer_delete, [label])
+        self.cli_runner(computer_delete, [label], user_input=user_input)
         # Check that the computer really was deleted
         with pytest.raises(NotExistent):
             orm.Computer.collection.get(label=label)
@@ -788,7 +962,7 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
 
     aiida_localhost.configure()
 
-    def time_use_login_shell(authinfo, auth_params, use_login_shell, iterations) -> float:  # pylint: disable=unused-argument
+    def time_use_login_shell(authinfo, auth_params, use_login_shell, iterations) -> float:
         if use_login_shell:
             return 0.21
         return 0.10
@@ -798,3 +972,17 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
     result = run_cli_command(computer_test, [aiida_localhost.label], use_subprocess=False)
     assert 'Success: all 6 tests succeeded' in result.output
     assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output
+
+
+def test_computer_ssh_auto(run_cli_command, aiida_computer):
+    """Test setup of computer with ``core.ssh_auto`` entry point.
+
+    The configure step should only require the common shared options ``safe_interval`` and ``use_login_shell``.
+    """
+    computer = aiida_computer(transport_type='core.ssh_auto').store()
+    assert not computer.is_configured
+
+    # It is important that no other options (except for `--safe-interval`) have to be specified for this transport type.
+    options = ['core.ssh_auto', computer.uuid, '--non-interactive', '--safe-interval', '0']
+    run_cli_command(computer_configure, options, use_subprocess=False)
+    assert computer.is_configured

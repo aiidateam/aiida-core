@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,7 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test using the archive backend directly."""
-# pylint: disable=redefined-outer-name
+
 import pytest
 
 from aiida import orm

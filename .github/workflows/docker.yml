@@ -1,0 +1,89 @@
+name: Docker Images
+
+# This workflow needs permissions to publish images to ghcr.io,
+# so it does not work for forks. Therefore, we only trigger it
+# on pushes to aiidateam/aiida-core repo.
+on:
+  push:
+    branches:
+    - '*'
+    tags:
+    - v*
+    paths-ignore:
+    - '**.md'
+    - '**.txt'
+    - docs/**
+    - tests/**
+  workflow_dispatch:
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 1
+
+jobs:
+  # We build only amd64 first to catch failures faster.
+  build-amd64:
+    if: ${{ github.repository == 'aiidateam/aiida-core' }}
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      runsOn: ubuntu-22.04
+      platforms: linux/amd64
+
+  test-amd64:
+    needs: build-amd64
+    uses: ./.github/workflows/docker-test.yml
+    strategy:
+      matrix:
+        target: [aiida-core-base, aiida-core-with-services, aiida-core-dev]
+      fail-fast: false
+    with:
+      runsOn: ubuntu-22.04
+      images: ${{ needs.build-amd64.outputs.images }}
+      target: ${{ matrix.target }}
+
+  build:
+    needs: test-amd64
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      runsOn: ubuntu-22.04
+      platforms: linux/amd64,linux/arm64
+
+  publish-ghcr:
+    needs: [build, test-amd64]
+    uses: ./.github/workflows/docker-publish.yml
+    secrets: inherit
+    with:
+      runsOn: ubuntu-22.04
+      images: ${{ needs.build.outputs.images }}
+      registry: ghcr.io
+
+  # IMPORTANT: To save arm64 runners resources,
+  # we run the test only when pushing to main.
+  # We also only test the aiida-core-dev image.
+  test-arm64:
+    needs: build
+    if: >-
+      github.repository == 'aiidateam/aiida-core'
+      && (github.ref_type == 'tag' || github.ref_name == 'main')
+    uses: ./.github/workflows/docker-test.yml
+    with:
+      runsOn: buildjet-4vcpu-ubuntu-2204-arm
+      images: ${{ needs.build.outputs.images }}
+      target: aiida-core-dev
+
+  publish-dockerhub:
+    if: >-
+      github.repository == 'aiidateam/aiida-core'
+      && (github.ref_type == 'tag' || github.ref_name == 'main')
+    needs: [build, test-amd64, test-arm64, publish-ghcr]
+    uses: ./.github/workflows/docker-publish.yml
+    secrets: inherit
+    with:
+      runsOn: ubuntu-22.04
+      images: ${{ needs.build.outputs.images }}
+      registry: docker.io

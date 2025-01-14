@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,7 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Tests 61fc0913fae9 -> d254fdfed416"""
+
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
@@ -20,8 +21,8 @@ def test_parameter_data_to_dict(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@61fc0913fae9')  # 61fc0913fae9_remove_node_prefix
 
     # setup the database
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net', is_superuser=True)
         session.add(user)
@@ -38,7 +39,7 @@ def test_parameter_data_to_dict(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@d254fdfed416')  # d254fdfed416_rename_parameter_data_to_dict
 
     # perform some checks
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         node = session.query(DbNode).filter(DbNode.id == node_id).one()
         assert node.type == 'data.dict.Dict.'

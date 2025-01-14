@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,29 +6,32 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods,redefined-outer-name,too-many-lines
 """Test for the `CalcJob` process sub class."""
-from copy import deepcopy
-from functools import partial
+
 import io
 import json
 import os
 import pathlib
 import tempfile
-from unittest.mock import patch
 import uuid
+from copy import deepcopy
+from functools import partial
+from unittest.mock import patch
 
 import pytest
 
 from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
+from aiida.common.datastructures import FileCopyOperation
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
 from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult
 from aiida.engine.processes.ports import PortNamespace
-from aiida.plugins import CalculationFactory
+from aiida.engine.utils import instantiate_process
+from aiida.plugins import CalculationFactory, ParserFactory
 
-ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
+ArithmeticAddParser = ParserFactory('core.arithmetic.add')
 
 
 def raise_exception(exception, *args, **kwargs):
@@ -41,15 +43,15 @@ def raise_exception(exception, *args, **kwargs):
 
 
 @pytest.fixture
-def get_calcjob_builder(aiida_local_code_factory):
+def get_calcjob_builder(aiida_code_installed):
     """Return a builder for the ``ArithmeticAddCalculation`` that is ready to go."""
 
     def _factory(**kwargs):
-        code = aiida_local_code_factory('core.arithmetic.add', 'bash')
+        code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='bash')
         builder = code.get_builder()
         builder.x = orm.Int(1)
         builder.y = orm.Int(1)
-        builder._update(**kwargs)  # pylint: disable=protected-access
+        builder._update(**kwargs)
         return builder
 
     return _factory
@@ -159,32 +161,41 @@ class MultiCodesCalcJob(CalcJob):
 
 
 @pytest.mark.parametrize(
-    'code_key, with_mpi_code, with_mpi_option, expected', (
-        ('code_info_with_mpi_none', None, True, 3),
-        ('code_info_with_mpi_none', None, False, 0),
-        ('code_info_with_mpi_none', None, None, 0),
-        ('code_info_with_mpi_none', True, True, 3),
-        ('code_info_with_mpi_none', True, False, None),
-        ('code_info_with_mpi_none', False, True, None),
-        ('code_info_with_mpi_none', False, False, 0),
-        ('code_info_with_mpi_true', None, True, 3),
-        ('code_info_with_mpi_true', None, False, None),
-        ('code_info_with_mpi_true', None, None, 3),
-        ('code_info_with_mpi_true', True, True, 3),
-        ('code_info_with_mpi_true', True, False, None),
-        ('code_info_with_mpi_true', False, True, None),
-        ('code_info_with_mpi_true', False, False, None),
-        ('code_info_with_mpi_false', None, True, None),
-        ('code_info_with_mpi_false', None, False, 0),
-        ('code_info_with_mpi_false', None, None, 0),
-        ('code_info_with_mpi_false', True, True, None),
-        ('code_info_with_mpi_false', True, False, None),
-        ('code_info_with_mpi_false', False, True, None),
-        ('code_info_with_mpi_false', False, False, 0),
-    )
+    'code_key, with_mpi_code, with_mpi_option, with_mpi_option_default, expected',
+    (
+        ('code_info_with_mpi_none', None, True, True, 3),
+        ('code_info_with_mpi_none', None, False, True, 0),
+        ('code_info_with_mpi_none', None, None, False, 0),
+        ('code_info_with_mpi_none', None, None, True, 3),
+        ('code_info_with_mpi_none', True, True, True, 3),
+        ('code_info_with_mpi_none', True, False, True, None),
+        ('code_info_with_mpi_none', False, True, True, None),
+        ('code_info_with_mpi_none', False, False, True, 0),
+        ('code_info_with_mpi_true', None, True, True, 3),
+        ('code_info_with_mpi_true', None, False, True, None),
+        ('code_info_with_mpi_true', None, None, True, 3),
+        ('code_info_with_mpi_true', True, True, True, 3),
+        ('code_info_with_mpi_true', True, False, True, None),
+        ('code_info_with_mpi_true', False, True, True, None),
+        ('code_info_with_mpi_true', False, False, True, None),
+        ('code_info_with_mpi_false', None, True, True, None),
+        ('code_info_with_mpi_false', None, False, True, 0),
+        ('code_info_with_mpi_false', None, None, True, 0),
+        ('code_info_with_mpi_false', True, True, True, None),
+        ('code_info_with_mpi_false', True, False, True, None),
+        ('code_info_with_mpi_false', False, True, True, None),
+        ('code_info_with_mpi_false', False, False, True, 0),
+    ),
 )
 def test_multi_codes_with_mpi(
-    aiida_local_code_factory, fixture_sandbox, manager, code_key, with_mpi_code, with_mpi_option, expected
+    aiida_code_installed,
+    fixture_sandbox,
+    manager,
+    code_key,
+    with_mpi_code,
+    with_mpi_option,
+    with_mpi_option_default,
+    expected,
 ):
     """Test the functionality that controls whether the calculation is to be run with MPI.
 
@@ -199,24 +210,32 @@ def test_multi_codes_with_mpi(
     from aiida.engine.utils import instantiate_process
 
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
-        code_key: aiida_local_code_factory(
-            'core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4()), with_mpi=with_mpi_code
+        'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'),
+        code_key: aiida_code_installed(
+            default_calc_job_plugin='core.arithmetic.add',
+            filepath_executable='/bin/bash',
+            label=str(uuid.uuid4()),
+            with_mpi=with_mpi_code,
         ),
         'metadata': {
             'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                },
+                'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1},
             }
-        }
+        },
     }
+
+    class SubMultiCodesCalcJob(MultiCodesCalcJob):
+        """Subclass to override the default for the ``withmpi`` option."""
+
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.inputs['metadata']['options']['withmpi'].default = with_mpi_option_default
 
     if with_mpi_option is not None:
         inputs['metadata']['options']['withmpi'] = with_mpi_option
 
-    process = instantiate_process(manager.get_runner(), MultiCodesCalcJob, **inputs)
+    process = instantiate_process(manager.get_runner(), SubMultiCodesCalcJob, **inputs)
 
     if expected is None:
         with pytest.raises(RuntimeError, match=r'Inconsistent requirements as to whether'):
@@ -234,26 +253,21 @@ def test_multi_codes_with_mpi(
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('parallel_run', [True, False])
-def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, parallel_run):
-    """test codes_run_mode set in CalcJob"""
+def test_multi_codes_run_parallel(aiida_code_installed, file_regression, parallel_run):
+    """Test codes_run_mode set in CalcJob"""
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
-        'code_info_with_mpi_none': aiida_local_code_factory(
-            'core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4())
+        'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'),
+        'code_info_with_mpi_none': aiida_code_installed(
+            default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash', label=str(uuid.uuid4())
         ),
-        'code_info_with_mpi_false': aiida_local_code_factory(
-            'core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4()), with_mpi=False
+        'code_info_with_mpi_false': aiida_code_installed(
+            default_calc_job_plugin='core.arithmetic.add',
+            filepath_executable='/bin/bash',
+            label=str(uuid.uuid4()),
+            with_mpi=False,
         ),
         'parallel_run': orm.Bool(parallel_run),
-        'metadata': {
-            'dry_run': True,
-            'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                }
-            }
-        }
+        'metadata': {'dry_run': True, 'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}},
     }
 
     _, node = launch.run_get_node(MultiCodesCalcJob, **inputs)
@@ -268,23 +282,24 @@ def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, par
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('computer_use_double_quotes', [True, False])
-def test_computer_double_quotes(aiida_computer, aiida_local_code_factory, file_regression, computer_use_double_quotes):
-    """test that bash script quote escape behaviour can be controlled"""
-    computer = aiida_computer(label=f'test-code-computer-{computer_use_double_quotes}')
+def test_computer_double_quotes(
+    aiida_computer_local, aiida_code_installed, file_regression, computer_use_double_quotes
+):
+    """Test that bash script quote escape behaviour can be controlled"""
+    computer = aiida_computer_local(label=f'test-code-computer-{computer_use_double_quotes}')
     computer.set_use_double_quotes(computer_use_double_quotes)
 
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer),
+        'code': aiida_code_installed(
+            default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash', computer=computer
+        ),
         'metadata': {
             'dry_run': True,
             'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                },
+                'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1},
                 'withmpi': True,
-            }
-        }
+            },
+        },
     }
 
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
@@ -300,7 +315,7 @@ def test_computer_double_quotes(aiida_computer, aiida_local_code_factory, file_r
 @pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('code_use_double_quotes', [True, False])
 def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_quotes):
-    """test that bash script quote escape behaviour can be controlled"""
+    """Test that bash script quote escape behaviour can be controlled"""
     code = orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash')
     code.use_double_quotes = code_use_double_quotes
     inputs = {
@@ -308,13 +323,10 @@ def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_qu
         'metadata': {
             'dry_run': True,
             'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                },
+                'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1},
                 'withmpi': True,
-            }
-        }
+            },
+        },
     }
 
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
@@ -345,13 +357,10 @@ def test_containerized_code(file_regression, aiida_localhost):
         'metadata': {
             'dry_run': True,
             'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                },
+                'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1},
                 'withmpi': False,
-            }
-        }
+            },
+        },
     }
 
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
@@ -382,13 +391,10 @@ def test_containerized_code_wrap_cmdline_params(file_regression, aiida_localhost
         'metadata': {
             'dry_run': True,
             'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                },
+                'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1},
                 'withmpi': False,
-            }
-        }
+            },
+        },
     }
 
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
@@ -418,13 +424,10 @@ def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
         'metadata': {
             'dry_run': True,
             'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                },
+                'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1},
                 'withmpi': True,
-            }
-        }
+            },
+        },
     }
 
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
@@ -438,7 +441,7 @@ def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('chdir_tmp_path')
 def test_portable_code(tmp_path, aiida_localhost):
-    """test run container code"""
+    """Test run container code"""
     (tmp_path / 'bash').write_bytes(b'bash implementation')
     subdir = tmp_path / 'sub'
     subdir.mkdir()
@@ -461,7 +464,7 @@ def test_portable_code(tmp_path, aiida_localhost):
             'computer': aiida_localhost,
             'dry_run': True,
             'options': {},
-        }
+        },
     }
 
     _, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
@@ -486,9 +489,8 @@ class TestCalcJob:
     """Test for the `CalcJob` process sub class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, tmp_path):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         (tmp_path / 'bash').write_bytes(b'bash implementation')
 
         assert Process.current() is None
@@ -520,7 +522,32 @@ class TestCalcJob:
         """Test that :meth:`aiida.orm.CalcJobNode.get_hash` returns the same hash as what is stored in the extras."""
         builder = get_calcjob_builder()
         _, node = launch.run_get_node(builder)
-        assert node.base.extras.get(node.base.caching._HASH_EXTRA_KEY) == node.get_hash()  # pylint: disable=protected-access
+        assert node.base.extras.get(node.base.caching._HASH_EXTRA_KEY) == node.base.caching.get_hash()
+
+    def test_get_objects_attributes(self, get_calcjob_builder):
+        """Test that :meth:`aiida.orm.CalcJobNode._get_objects_to_hash` returns the expected objects."""
+        builder = get_calcjob_builder()
+        _, node = launch.run_get_node(builder)
+        objects = node.base.caching.get_objects_to_hash()
+
+        assert 'version' not in objects
+        assert 'version' not in objects['attributes']
+
+    def test_compute_hash_version_independent(self, get_calcjob_builder, monkeypatch, manager):
+        """Test that :meth:`aiida.orm.CalcJobNode.compute_hash` is independent of the version of ``aiida-core``."""
+        import aiida
+
+        _, node_a = launch.run_get_node(get_calcjob_builder())
+
+        monkeypatch.setattr(aiida, '__version__', '0.0.0')
+
+        # The global runner uses an instance of the ``PluginVersionProvider`` that caches versions so need to reset it
+        manager.reset_runner()
+
+        _, node_b = launch.run_get_node(get_calcjob_builder())
+        assert node_b.base.attributes.get('version')['core'] == '0.0.0'
+        assert node_b.base.caching.compute_hash() == node_a.base.caching.compute_hash()
+        assert node_b.base.caching.get_hash() == node_a.base.caching.get_hash()
 
     def test_process_status(self):
         """Test that the process status is properly reset if calculation ends successfully."""
@@ -635,7 +662,7 @@ class TestCalcJob:
 
         process = ArithmeticAddCalculation(inputs=inputs)
         assert process.node.is_stored
-        assert process.node.computer.uuid == self.computer.uuid  # pylint: disable=no-member
+        assert process.node.computer.uuid == self.computer.uuid
 
     def test_local_code_no_computer(self):
         """Test launching a `CalcJob` with a local code *without* explicitly defining a computer, which should raise."""
@@ -754,15 +781,7 @@ class TestCalcJob:
                 'base_b_two': file_two,
             },
             'settings': orm.Dict(dict={'provenance_exclude_list': ['base/a/sub/one']}),
-            'metadata': {
-                'dry_run': True,
-                'options': {
-                    'resources': {
-                        'num_machines': 1,
-                        'num_mpiprocs_per_machine': 1
-                    }
-                }
-            }
+            'metadata': {'dry_run': True, 'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}},
         }
 
         # We perform a `dry_run` because the calculation cannot actually run, however, the contents will still be
@@ -806,20 +825,19 @@ class TestCalcJob:
 
 
 @pytest.fixture
-def generate_process(aiida_local_code_factory):
+def generate_process(aiida_code_installed):
     """Instantiate a process with default inputs and return the `Process` instance."""
     from aiida.engine.utils import instantiate_process
     from aiida.manage import get_manager
 
     def _generate_process(inputs=None):
-
         base_inputs = {
-            'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+            'code': aiida_code_installed(
+                default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'
+            ),
             'x': orm.Int(1),
             'y': orm.Int(2),
-            'metadata': {
-                'options': {}
-            }
+            'metadata': {'options': {}},
         }
 
         if inputs is not None:
@@ -861,7 +879,7 @@ def test_parse_insufficient_data(generate_process):
     expected_logs = [
         'could not parse scheduler output: the `detailed_job_info` attribute is missing',
         f'could not parse scheduler output: the `{filename_stderr}` file is missing',
-        f'could not parse scheduler output: the `{filename_stdout}` file is missing'
+        f'could not parse scheduler output: the `{filename_stdout}` file is missing',
     ]
 
     for log in expected_logs:
@@ -959,22 +977,25 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.parametrize(('exit_status_scheduler', 'exit_status_retrieved', 'final'), (
-    (None, None, 0),
-    (100, None, 100),
-    (None, 400, 400),
-    (100, 400, 400),
-    (100, 0, 0),
-))
+@pytest.mark.parametrize(
+    ('exit_status_scheduler', 'exit_status_retrieved', 'final'),
+    (
+        (None, None, 0),
+        (100, None, 100),
+        (None, 400, 400),
+        (100, 400, 400),
+        (100, 0, 0),
+    ),
+)
 def test_parse_exit_code_priority(
     exit_status_scheduler,
     exit_status_retrieved,
     final,
     generate_calc_job,
     fixture_sandbox,
-    aiida_local_code_factory,
+    aiida_code_installed,
     monkeypatch,
-):  # pylint: disable=too-many-arguments
+):
     """Test the logic around exit codes in the `CalcJob.parse` method.
 
     The `parse` method will first call the `Scheduler.parse_output` method, which if implemented by the relevant
@@ -1012,7 +1033,7 @@ def test_parse_exit_code_priority(
     monkeypatch.setattr(CalcJob, 'parse_retrieved_output', parse_retrieved_output)
 
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash'),
         'x': Int(1),
         'y': Int(2),
     }
@@ -1067,35 +1088,21 @@ def test_additional_retrieve_list(generate_process, fixture_sandbox):
         process = generate_process({'metadata': {'options': {'additional_retrieve_list': ['/abs/path']}}})
 
 
-@pytest.mark.parametrize(('stash_options', 'expected'), (
-    ({
-        'target_base': None
-    }, '`metadata.options.stash.target_base` should be'),
-    ({
-        'target_base': 'relative/path'
-    }, '`metadata.options.stash.target_base` should be'),
-    ({
-        'target_base': '/path'
-    }, '`metadata.options.stash.source_list` should be'),
-    ({
-        'target_base': '/path',
-        'source_list': ['/abspath']
-    }, '`metadata.options.stash.source_list` should be'),
-    ({
-        'target_base': '/path',
-        'source_list': ['rel/path'],
-        'mode': 'test'
-    }, '`metadata.options.stash.mode` should be'),
-    ({
-        'target_base': '/path',
-        'source_list': ['rel/path']
-    }, None),
-    ({
-        'target_base': '/path',
-        'source_list': ['rel/path'],
-        'mode': StashMode.COPY.value
-    }, None),
-))
+@pytest.mark.parametrize(
+    ('stash_options', 'expected'),
+    (
+        ({'target_base': None}, '`metadata.options.stash.target_base` should be'),
+        ({'target_base': 'relative/path'}, '`metadata.options.stash.target_base` should be'),
+        ({'target_base': '/path'}, '`metadata.options.stash.source_list` should be'),
+        ({'target_base': '/path', 'source_list': ['/abspath']}, '`metadata.options.stash.source_list` should be'),
+        (
+            {'target_base': '/path', 'source_list': ['rel/path'], 'mode': 'test'},
+            '`metadata.options.stash.mode` should be',
+        ),
+        ({'target_base': '/path', 'source_list': ['rel/path']}, None),
+        ({'target_base': '/path', 'source_list': ['rel/path'], 'mode': StashMode.COPY.value}, None),
+    ),
+)
 def test_validate_stash_options(stash_options, expected):
     """Test the ``validate_stash_options`` function."""
     if expected is None:
@@ -1115,7 +1122,7 @@ def test_validate_monitors_non_existent_entry_point():
     """Test the ``validate_monitors`` function for invalid entry point."""
     monitors = {'monitor': orm.Dict({'entry_point': 'not_existant_entry_point'})}
     result = validate_monitors(monitors, None)
-    assert 'Entry point \'not_existant_entry_point\' not found in group' in result
+    assert "Entry point 'not_existant_entry_point' not found in group" in result
 
 
 def test_validate_monitors_invalid_signature(monkeypatch):
@@ -1126,10 +1133,10 @@ def test_validate_monitors_invalid_signature(monkeypatch):
     """
     from aiida.engine.processes.calcjobs.monitors import CalcJobMonitor
 
-    def monitor_invalid_signature(**kwargs):  # pylint: disable=unused-argument
+    def monitor_invalid_signature(**kwargs):
         """Monitor with invalid signature"""
 
-    def load_entry_point(*args, **kwargs):  # pylint: disable=unused-argument,invalid-name
+    def load_entry_point(*args, **kwargs):
         return monitor_invalid_signature
 
     monkeypatch.setattr(CalcJobMonitor, 'load_entry_point', load_entry_point)
@@ -1149,13 +1156,14 @@ def test_validate_monitors_unsupported_kwargs():
 def test_monitor_version(get_calcjob_builder):
     """Test that the version of the package of the monitors are added as attributes on the node."""
     from aiida import __version__
+
     builder = get_calcjob_builder()
     builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill'})}
     _, node = launch.run_get_node(builder)
     assert node.base.attributes.get('version')['monitors'] == {'monitor': __version__}
 
 
-def monitor_skip_parse(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_skip_parse(node, transport, **kwargs):
     """Kill the job and skip the parsing of retrieved output files."""
     return CalcJobMonitorResult(message='skip parsing', parse=False)
 
@@ -1175,7 +1183,7 @@ def test_monitor_result_parse(get_calcjob_builder, entry_points):
     assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
 
 
-def monitor_skip_retrieve(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_skip_retrieve(node, transport, **kwargs):
     """Kill the job and skip the retrieval and parsing of retrieved output files."""
     return CalcJobMonitorResult(message='skip retrieval', retrieve=False, parse=False)
 
@@ -1195,7 +1203,7 @@ def test_monitor_result_retrieve(get_calcjob_builder, entry_points):
     assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
 
 
-def monitor_override_exit_code(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_override_exit_code(node, transport, **kwargs):
     """Kill the job and do not override the exit code of the parser."""
     return CalcJobMonitorResult(message='do not override exit code', override_exit_code=False)
 
@@ -1215,7 +1223,7 @@ def test_monitor_result_override_exit_code(get_calcjob_builder, entry_points):
     assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
 
 
-def monitor_disable_all(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_disable_all(node, transport, **kwargs):
     """Monitor that will disable all monitors."""
     return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_ALL, message='Disable all monitors.')
 
@@ -1233,20 +1241,14 @@ def test_monitor_result_action_disable_all(get_calcjob_builder, entry_points):
     # Set priority to ensure that ``disable_all`` is run first. If the code works properly, it will be called first,
     # and so the ``always_kill`` monitor will never be called. This should cause the calculation to finish nominally.
     builder.monitors = {
-        'disable_all': orm.Dict({
-            'entry_point': 'core.disable_all',
-            'priority': 100
-        }),
-        'always_kill': orm.Dict({
-            'entry_point': 'core.always_kill',
-            'priority': 0
-        }),
+        'disable_all': orm.Dict({'entry_point': 'core.disable_all', 'priority': 100}),
+        'always_kill': orm.Dict({'entry_point': 'core.always_kill', 'priority': 0}),
     }
     _, node = launch.run_get_node(builder)
     assert node.is_finished_ok
 
 
-def monitor_disable_self(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_disable_self(node, transport, **kwargs):
     """Monitor that will disable itself."""
     return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_SELF, message='Disable self.')
 
@@ -1272,15 +1274,15 @@ def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, c
 
 
 def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
-    """Test that a job is terminated if ``Scheduler.submit_from_script`` returns an exit code.
+    """Test that a job is terminated if ``Scheduler.submit_job`` returns an exit code.
 
     To simulate this situation we monkeypatch ``DirectScheduler._parse_submit_output`` because that is the method that
-    is called internally by ``Scheduler.submit_from_script`` and it returns its result, and the ``DirectScheduler`` is
+    is called internally by ``Scheduler.submit_job`` and it returns its result, and the ``DirectScheduler`` is
     the plugin that is used by the localhost computer used in the inputs for this calcjob.
     """
     from aiida.schedulers.plugins.direct import DirectScheduler
 
-    def _parse_submit_output(self, *args):  # pylint: disable=unused-argument
+    def _parse_submit_output(self, *args):
         return ExitCode(418)
 
     monkeypatch.setattr(DirectScheduler, '_parse_submit_output', _parse_submit_output)
@@ -1291,6 +1293,7 @@ def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
     assert node.exit_status == 418
 
 
+@pytest.mark.requires_rmq
 def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_and_await):
     """Test that a job can be restarted when it is launched and the daemon is restarted.
 
@@ -1315,7 +1318,6 @@ def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_a
     timeout = 10
 
     while node.process_state not in [plumpy.ProcessState.FINISHED, plumpy.ProcessState.EXCEPTED]:
-
         if node.is_excepted:
             raise AssertionError(f'The process excepted: {node.exception}')
 
@@ -1330,22 +1332,20 @@ class TestImport:
     """Test the functionality to import existing calculations completed outside of AiiDA."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost, aiida_local_code_factory):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, aiida_code_installed):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
         self.inputs = {
-            'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer=aiida_localhost),
+            'code': aiida_code_installed(
+                default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash', computer=aiida_localhost
+            ),
             'x': orm.Int(1),
             'y': orm.Int(2),
             'metadata': {
                 'options': {
-                    'resources': {
-                        'num_machines': 1,
-                        'num_mpiprocs_per_machine': 1
-                    },
+                    'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1},
                 }
-            }
+            },
         }
 
     def test_import_from_valid(self, tmp_path):
@@ -1406,7 +1406,8 @@ class TestImport:
         """Test the import of a successfully completed `ArithmeticAddCalculation`
 
         The only difference of this test with `test_import_from_valid` is that here the name of the output file
-        of the completed calculation differs from the default written by the calculation job class."""
+        of the completed calculation differs from the default written by the calculation job class.
+        """
         expected_sum = (self.inputs['x'] + self.inputs['y']).value
 
         output_filename = 'non_standard.out'
@@ -1434,3 +1435,80 @@ class TestImport:
         assert 'sum' in results
         assert isinstance(results['sum'], orm.Int)
         assert results['sum'].value == expected_sum
+
+
+@pytest.fixture
+def arithmetic_add_inputs(aiida_localhost):
+    return {
+        'x': orm.Int(1),
+        'y': orm.Int(2),
+        'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
+    }
+
+
+class FileCopyOperationOrderInvalid(CalcJob):
+    """`Test the ``CalcInfo.file_copy_order`` attribute."""
+
+    def prepare_for_submission(self, _):
+        from aiida.common.datastructures import CalcInfo, CodeInfo
+
+        code_info = CodeInfo()
+        code_info.code_uuid = self.inputs.code.uuid
+        calc_info = CalcInfo()
+        calc_info.codes_info = [code_info]
+        calc_info.file_copy_operation_order = [
+            FileCopyOperation.REMOTE,
+            'sandbox',
+        ]
+        return calc_info
+
+
+def test_file_copy_operation_order_default(fixture_sandbox, arithmetic_add_inputs, runner):
+    """Test the ``CalcInfo.file_copy_operation_order`` is set by default."""
+    process = instantiate_process(runner, ArithmeticAddCalculation, **arithmetic_add_inputs)
+    calc_info = process.presubmit(fixture_sandbox)
+    assert calc_info.file_copy_operation_order == [
+        FileCopyOperation.SANDBOX,
+        FileCopyOperation.LOCAL,
+        FileCopyOperation.REMOTE,
+    ]
+
+
+def test_file_copy_operation_order_invalid(fixture_sandbox, runner, aiida_code_installed):
+    """Test the ``CalcInfo.file_copy_operation_order`` is causes exception if set to invalid type."""
+    from aiida.engine.utils import instantiate_process
+
+    inputs = {
+        'code': aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/true'),
+        'metadata': {'options': {'resources': {'num_machines': 1}}},
+    }
+    process = instantiate_process(runner, FileCopyOperationOrderInvalid, **inputs)
+    with pytest.raises(exceptions.PluginInternalError, match=r'calc_info.file_copy_operation_order is not a list .*'):
+        process.presubmit(fixture_sandbox)
+
+
+def test_cache_version_attribute(arithmetic_add_inputs, monkeypatch):
+    """Test that the ``CalcJob.CACHE_VERSION`` and ``Parser.CACHE_VERSION`` attributes can be used to control hashes.
+
+    If the implementation of a ``CalcJob`` or ``Parser`` plugin changes significantly, a plugin developer can change
+    the ``CACHE_VERSION`` attribute to cause the hash to be changed, ensuring old completed instances of the class no
+    longer to be valid cache sources.
+    """
+    _, node_a = launch.run_get_node(ArithmeticAddCalculation, arithmetic_add_inputs)
+
+    monkeypatch.setattr(ArithmeticAddCalculation, 'CACHE_VERSION', 1)
+
+    _, node_b = launch.run_get_node(ArithmeticAddCalculation, arithmetic_add_inputs)
+    assert node_b.base.attributes.get(ArithmeticAddCalculation.KEY_CACHE_VERSION) == {'calc_job': 1}
+    assert node_a.base.caching.get_hash() != node_b.base.caching.get_hash()
+    assert not node_b.base.caching.is_created_from_cache
+
+    monkeypatch.setattr(ArithmeticAddParser, 'CACHE_VERSION', 2)
+
+    _, node_c = launch.run_get_node(ArithmeticAddCalculation, arithmetic_add_inputs)
+    assert node_c.base.attributes.get(ArithmeticAddCalculation.KEY_CACHE_VERSION) == {
+        'calc_job': 1,
+        'parser': 2,
+    }
+    assert node_b.base.caching.get_hash() != node_c.base.caching.get_hash()
+    assert not node_c.base.caching.is_created_from_cache

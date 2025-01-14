@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the export and import routines"""
+
 import numpy as np
 
 from aiida import orm
@@ -15,8 +15,7 @@ from aiida.tools.archive import create_archive, import_archive
 
 
 def test_simple_import(aiida_profile_clean, tmp_path):
-    """
-    This is a very simple test which checks that an archive file with nodes
+    """This is a very simple test which checks that an archive file with nodes
     that are not associated to a computer is imported correctly. In Django
     when such nodes are exported, there is an empty set for computers
     in the archive file. In SQLA there is such a set only when a computer is
@@ -26,18 +25,8 @@ def test_simple_import(aiida_profile_clean, tmp_path):
     """
     parameters = orm.Dict(
         dict={
-            'Pr': {
-                'cutoff': 50.0,
-                'pseudo_type': 'Wentzcovitch',
-                'dual': 8,
-                'cutoff_units': 'Ry'
-            },
-            'Ru': {
-                'cutoff': 40.0,
-                'pseudo_type': 'SG15',
-                'dual': 4,
-                'cutoff_units': 'Ry'
-            },
+            'Pr': {'cutoff': 50.0, 'pseudo_type': 'Wentzcovitch', 'dual': 8, 'cutoff_units': 'Ry'},
+            'Ru': {'cutoff': 40.0, 'pseudo_type': 'SG15', 'dual': 4, 'cutoff_units': 'Ry'},
         }
     ).store()
 
@@ -50,7 +39,7 @@ def test_simple_import(aiida_profile_clean, tmp_path):
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
 
     # Clean the database and verify there are no nodes left
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     assert orm.QueryBuilder().append(orm.Node).count() == 0
 
     # After importing we should have the original number of nodes again
@@ -59,27 +48,22 @@ def test_simple_import(aiida_profile_clean, tmp_path):
 
 
 def test_cycle_structure_data(aiida_profile_clean, aiida_localhost, tmp_path):
-    """
-    Create an export with some orm.CalculationNode and Data nodes and import it after having
+    """Create an export with some orm.CalculationNode and Data nodes and import it after having
     cleaned the database. Verify that the nodes and their attributes are restored
     properly after importing the created export archive
     """
     from aiida.common.links import LinkType
 
     test_label = 'Test structure'
-    test_cell = [[8.34, 0.0, 0.0], [0.298041701839357, 8.53479766274308, 0.0],
-                 [0.842650688117053, 0.47118495164127, 10.6965192730702]]
-    test_kinds = [{
-        'symbols': ['Fe'],
-        'weights': [1.0],
-        'mass': 55.845,
-        'name': 'Fe'
-    }, {
-        'symbols': ['S'],
-        'weights': [1.0],
-        'mass': 32.065,
-        'name': 'S'
-    }]
+    test_cell = [
+        [8.34, 0.0, 0.0],
+        [0.298041701839357, 8.53479766274308, 0.0],
+        [0.842650688117053, 0.47118495164127, 10.6965192730702],
+    ]
+    test_kinds = [
+        {'symbols': ['Fe'], 'weights': [1.0], 'mass': 55.845, 'name': 'Fe'},
+        {'symbols': ['S'], 'weights': [1.0], 'mass': 32.065, 'name': 'S'},
+    ]
 
     structure = orm.StructureData(cell=test_cell)
     structure.append_atom(symbols=['Fe'], position=[0, 0, 0])
@@ -111,7 +95,7 @@ def test_cycle_structure_data(aiida_profile_clean, aiida_localhost, tmp_path):
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
 
     # Clean the database and verify there are no nodes left
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     assert orm.QueryBuilder().append(orm.Node).count() == 0
 
     # After importing we should have the original number of nodes again
@@ -129,7 +113,7 @@ def test_cycle_structure_data(aiida_profile_clean, aiida_localhost, tmp_path):
     for [structure] in builder.iterall():
         assert structure.label == test_label
         # Check that they are almost the same, within numerical precision
-        assert np.abs(np.array(structure.cell) - np.array(test_cell)).max() < 1.e-12
+        assert np.abs(np.array(structure.cell) - np.array(test_cell)).max() < 1.0e-12
 
     builder = orm.QueryBuilder().append(orm.StructureData, project=['attributes.kinds'])
     for [kinds] in builder.iterall():
@@ -172,7 +156,7 @@ def test_import_checkpoints(aiida_profile_clean, tmp_path):
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
 
     # Clean the database and verify there are no nodes left
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
     assert orm.QueryBuilder().append(orm.Node).count() == 0
 
     import_archive(archive_path)

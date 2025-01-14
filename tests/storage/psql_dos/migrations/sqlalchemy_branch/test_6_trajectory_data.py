@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 # mypy: disable_error_code=var-annotated
 """Tests 37f3d4882837 -> ce56d84bcc35"""
+
 import numpy as np
 import pytest
 
@@ -53,13 +54,17 @@ def test_trajectory_data(perform_migrations: PsqlDosMigrator):
     # setup the database
     stepids = np.array([60, 70])
     times = stepids * 0.01
-    positions = np.array([[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]],
-                          [[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]]])
-    velocities = np.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
-                           [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]]])
-    cells = np.array([[[2., 0., 0.], [0., 2., 0.], [0., 0., 2.]], [[3., 0., 0.], [0., 3., 0.], [0., 0., 3.]]])
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    positions = np.array(
+        [[[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]]]
+    )
+    velocities = np.array(
+        [[[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]]]
+    )
+    cells = np.array(
+        [[[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]], [[3.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 3.0]]]
+    )
+    DbNode = perform_migrations.get_current_table('db_dbnode')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net', is_superuser=True)
         session.add(user)
@@ -85,12 +90,12 @@ def test_trajectory_data(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@ce56d84bcc35')  # ce56d84bcc35_delete_trajectory_symbols_array
 
     # perform some checks
-    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         node = session.query(DbNode).filter(DbNode.uuid == node_uuid).one()
 
         assert node.attributes['symbols'] == ['H', 'O', 'C']
         assert get_node_array(node, repo_path, 'velocities').tolist() == velocities.tolist()
         assert get_node_array(node, repo_path, 'positions').tolist() == positions.tolist()
-        with pytest.raises(IOError):
+        with pytest.raises(OSError):
             get_node_array(node, repo_path, 'symbols')

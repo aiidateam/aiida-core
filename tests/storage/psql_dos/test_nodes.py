@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Tests for nodes, attributes and links."""
+
 import pytest
 
 from aiida import orm
@@ -19,9 +18,8 @@ class TestNodeBasicSQLA:
     """These tests check the basic features of nodes(setting of attributes, copying of files, ...)."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, backend):  # pylint: disable=unused-argument
+    def init_profile(self, backend):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.backend = backend
 
     def test_load_nodes(self):
@@ -72,8 +70,7 @@ class TestNodeBasicSQLA:
             session.rollback()
 
     def test_multiple_node_creation(self):
-        """
-        This test checks that a node is not added automatically to the session
+        """This test checks that a node is not added automatically to the session
         (and subsequently committed) when a user is in the session.
         It tests the fix for the issue #234
         """

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi archive`."""
+
 import shutil
 import uuid
 import zipfile
@@ -35,6 +35,14 @@ def test_create_force(run_cli_command, tmp_path):
     tmp_path.joinpath('existing').touch()
     options = ['--force', tmp_path.joinpath('existing')]
     run_cli_command(cmd_archive.create, options)
+
+
+def test_create_file_nested_directory(run_cli_command, tmp_path):
+    """Test that output files that contains nested directories are created automatically."""
+    filepath = tmp_path / 'some' / 'sub' / 'directory' / 'output.aiida'
+    options = [str(filepath)]
+    run_cli_command(cmd_archive.create, options)
+    assert filepath.exists()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

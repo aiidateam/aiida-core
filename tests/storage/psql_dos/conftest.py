@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Configuration file for pytest tests."""
-from aiida.manage.tests import get_test_backend_name
+"""Skip this test module unless the storage backend of the test profile matches ``core.psql_dos``."""
 
-if get_test_backend_name() != 'core.psql_dos':
-    collect_ignore_glob = ['*']  # pylint: disable=invalid-name
+import os
+
+from aiida.common.exceptions import MissingConfigurationError
+from aiida.manage.configuration import get_config
+
+STORAGE_BACKEND_ENTRY_POINT = None
+try:
+    if test_profile := os.environ.get('AIIDA_TEST_PROFILE'):
+        STORAGE_BACKEND_ENTRY_POINT = get_config().get_profile(test_profile).storage_backend
+except MissingConfigurationError as e:
+    raise ValueError(f"Could not parse configuration of AiiDA test profile '{test_profile}'") from e
+
+if STORAGE_BACKEND_ENTRY_POINT is not None and STORAGE_BACKEND_ENTRY_POINT != 'core.psql_dos':
+    collect_ignore_glob = ['*']

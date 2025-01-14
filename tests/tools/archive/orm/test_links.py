@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm links tests for the export and import routines"""
+
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
@@ -30,20 +30,23 @@ def test_links_to_unknown_nodes(tmp_path, aiida_profile):
     # note, because we enforce foreign keys, this would fail anyway in the archive creation
     with ArchiveFormatSqlZip().open(filename, 'a', _enforce_foreign_keys=False) as archive:
         archive.bulk_insert(
-            EntityTypes.LINK, [{
-                'id': 1,
-                'input_id': 99999,
-                'output_id': node.pk,
-                'label': 'parent',
-                'type': LinkType.CREATE.value,
-            }]
+            EntityTypes.LINK,
+            [
+                {
+                    'id': 1,
+                    'input_id': 99999,
+                    'output_id': node.pk,
+                    'label': 'parent',
+                    'type': LinkType.CREATE.value,
+                }
+            ],
         )
 
     # the link should now be in the archive
     with ArchiveFormatSqlZip().open(filename, 'r') as archive:
         assert archive.querybuilder().append(entity_type='link').count() == 1
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     # since the query builder only looks for links between known nodes,
     # this should not import the erroneous link
@@ -54,8 +57,7 @@ def test_links_to_unknown_nodes(tmp_path, aiida_profile):
 
 
 def test_input_and_create_links(tmp_path, aiida_profile):
-    """
-    Simple test that will verify that INPUT and CREATE links are properly exported and
+    """Simple test that will verify that INPUT and CREATE links are properly exported and
     correctly recreated upon import.
     """
     node_work = orm.CalculationNode()
@@ -72,7 +74,7 @@ def test_input_and_create_links(tmp_path, aiida_profile):
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([node_output], filename=export_file)
 
-    aiida_profile.clear_profile()
+    aiida_profile.reset_storage()
 
     import_archive(export_file)
     import_links = get_all_node_links()
@@ -83,9 +85,8 @@ def test_input_and_create_links(tmp_path, aiida_profile):
     assert set(export_set) == set(import_set)
 
 
-def construct_complex_graph(aiida_localhost_factory, export_combination=0, work_nodes=None, calc_nodes=None):  # pylint: disable=too-many-statements
-    """
-    This method creates a "complex" graph with all available link types:
+def construct_complex_graph(aiida_localhost_factory, export_combination=0, work_nodes=None, calc_nodes=None):
+    """This method creates a "complex" graph with all available link types:
     INPUT_WORK, INPUT_CALC, CALL_WORK, CALL_CALC, CREATE, and RETURN
     and returns the nodes of the graph. It also returns various combinations
     of nodes that need to be extracted but also the final expected set of nodes
@@ -123,7 +124,7 @@ def construct_complex_graph(aiida_localhost_factory, export_combination=0, work_
         'WorkChainNode': orm.WorkChainNode,
         'WorkFunctionNode': orm.WorkFunctionNode,
         'CalculationNode': orm.CalculationNode,
-        'CalcFunctionNode': orm.CalcFunctionNode
+        'CalcFunctionNode': orm.CalcFunctionNode,
     }
 
     # Node creation
@@ -201,22 +202,24 @@ def construct_complex_graph(aiida_localhost_factory, export_combination=0, work_
     # Create various combinations of nodes that should be exported
     # and the final set of nodes that are exported in each case, following
     # predecessor(INPUT, CREATE)/successor(CALL, RETURN, CREATE) links.
-    export_list = [(work1, [data1, data2, data3, data4, calc1, work1, work2]),
-                   (work2, [data1, data3, data4, calc1, work2, work1, data2]),
-                   (data3, [data1, data3, data4, calc1, work2, work1, data2]),
-                   (data4, [data1, data3, data4, calc1, work2, work1, data2]),
-                   (data5, [data1, data3, data4, data5, data6, calc1, calc2, work2, work1, data2]),
-                   (data6, [data1, data3, data4, data5, data6, calc1, calc2, work2, work1, data2]),
-                   (calc1, [data1, data3, data4, calc1, work2, work1, data2]),
-                   (calc2, [data1, data3, data4, data5, data6, calc1, calc2, work2, work1, data2]), (data1, [data1]),
-                   (data2, [data2])]
+    export_list = [
+        (work1, [data1, data2, data3, data4, calc1, work1, work2]),
+        (work2, [data1, data3, data4, calc1, work2, work1, data2]),
+        (data3, [data1, data3, data4, calc1, work2, work1, data2]),
+        (data4, [data1, data3, data4, calc1, work2, work1, data2]),
+        (data5, [data1, data3, data4, data5, data6, calc1, calc2, work2, work1, data2]),
+        (data6, [data1, data3, data4, data5, data6, calc1, calc2, work2, work1, data2]),
+        (calc1, [data1, data3, data4, calc1, work2, work1, data2]),
+        (calc2, [data1, data3, data4, data5, data6, calc1, calc2, work2, work1, data2]),
+        (data1, [data1]),
+        (data2, [data2]),
+    ]
 
     return graph_nodes, export_list[export_combination]
 
 
 def test_complex_workflow_graph_links(aiida_profile_clean, tmp_path, aiida_localhost_factory):
-    """
-    This test checks that all the needed links are correctly exported and
+    """This test checks that all the needed links are correctly exported and
     imported. More precisely, it checks that INPUT, CREATE, RETURN and CALL
     links connecting Data nodes, CalcJobNodes and WorkCalculations are
     exported and imported correctly.
@@ -233,18 +236,22 @@ def test_complex_workflow_graph_links(aiida_profile_clean, tmp_path, aiida_local
         edge_filters={
             'type': {
                 'in': (
-                    LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value, LinkType.CREATE.value, LinkType.RETURN.value,
-                    LinkType.CALL_CALC.value, LinkType.CALL_WORK.value
+                    LinkType.INPUT_CALC.value,
+                    LinkType.INPUT_WORK.value,
+                    LinkType.CREATE.value,
+                    LinkType.RETURN.value,
+                    LinkType.CALL_CALC.value,
+                    LinkType.CALL_WORK.value,
                 )
             }
-        }
+        },
     )
     export_links = builder.all()
 
     export_file = tmp_path.joinpath('export.aiida')
     create_archive(graph_nodes, filename=export_file)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     import_archive(export_file)
     import_links = get_all_node_links()
@@ -258,7 +265,6 @@ def test_complex_workflow_graph_links(aiida_profile_clean, tmp_path, aiida_local
 def test_complex_workflow_graph_export_sets(aiida_profile, tmp_path, aiida_localhost_factory):
     """Test ex-/import of individual nodes in complex graph"""
     for export_conf in range(0, 9):
-
         _, (export_node, export_target) = construct_complex_graph(aiida_localhost_factory, export_conf)
         export_target_uuids = set(_.uuid for _ in export_target)
 
@@ -266,7 +272,7 @@ def test_complex_workflow_graph_export_sets(aiida_profile, tmp_path, aiida_local
         create_archive([export_node], filename=export_file, overwrite=True)
         export_node_str = str(export_node)
 
-        aiida_profile.clear_profile()
+        aiida_profile.reset_storage()
 
         import_archive(export_file)
 
@@ -275,28 +281,44 @@ def test_complex_workflow_graph_export_sets(aiida_profile, tmp_path, aiida_local
         builder.append(orm.Node, project='uuid')
         imported_node_uuids = set(_[0] for _ in builder.all())
 
-        assert export_target_uuids == imported_node_uuids, \
-            'Problem in comparison of export node: ' + export_node_str + '\n' + 'Expected set: ' + \
-            str(export_target_uuids) + '\n' + 'Imported set: ' + str(imported_node_uuids) + '\n' + 'Difference: ' + \
-            str(export_target_uuids.symmetric_difference(imported_node_uuids))
+        assert export_target_uuids == imported_node_uuids, (
+            'Problem in comparison of export node: '
+            + export_node_str
+            + '\n'
+            + 'Expected set: '
+            + str(export_target_uuids)
+            + '\n'
+            + 'Imported set: '
+            + str(imported_node_uuids)
+            + '\n'
+            + 'Difference: '
+            + str(export_target_uuids.symmetric_difference(imported_node_uuids))
+        )
 
 
 def test_high_level_workflow_links(aiida_profile, tmp_path, aiida_localhost_factory):
-    """
-    This test checks that all the needed links are correctly exported and imported.
+    """This test checks that all the needed links are correctly exported and imported.
     INPUT_CALC, INPUT_WORK, CALL_CALC, CALL_WORK, CREATE, and RETURN
     links connecting Data nodes and high-level Calculation and Workflow nodes:
     CalcJobNode, CalcFunctionNode, WorkChainNode, WorkFunctionNode
     """
-    high_level_calc_nodes = [['CalcJobNode', 'CalcJobNode'], ['CalcJobNode', 'CalcFunctionNode'],
-                             ['CalcFunctionNode', 'CalcJobNode'], ['CalcFunctionNode', 'CalcFunctionNode']]
+    high_level_calc_nodes = [
+        ['CalcJobNode', 'CalcJobNode'],
+        ['CalcJobNode', 'CalcFunctionNode'],
+        ['CalcFunctionNode', 'CalcJobNode'],
+        ['CalcFunctionNode', 'CalcFunctionNode'],
+    ]
 
-    high_level_work_nodes = [['WorkChainNode', 'WorkChainNode'], ['WorkChainNode', 'WorkFunctionNode'],
-                             ['WorkFunctionNode', 'WorkChainNode'], ['WorkFunctionNode', 'WorkFunctionNode']]
+    high_level_work_nodes = [
+        ['WorkChainNode', 'WorkChainNode'],
+        ['WorkChainNode', 'WorkFunctionNode'],
+        ['WorkFunctionNode', 'WorkChainNode'],
+        ['WorkFunctionNode', 'WorkFunctionNode'],
+    ]
 
     for calcs in high_level_calc_nodes:
         for works in high_level_work_nodes:
-            aiida_profile.clear_profile()
+            aiida_profile.reset_storage()
 
             graph_nodes, _ = construct_complex_graph(aiida_localhost_factory, calc_nodes=calcs, work_nodes=works)
 
@@ -310,11 +332,15 @@ def test_high_level_workflow_links(aiida_profile, tmp_path, aiida_localhost_fact
                 edge_filters={
                     'type': {
                         'in': (
-                            LinkType.INPUT_CALC.value, LinkType.INPUT_WORK.value, LinkType.CREATE.value,
-                            LinkType.RETURN.value, LinkType.CALL_CALC.value, LinkType.CALL_WORK.value
+                            LinkType.INPUT_CALC.value,
+                            LinkType.INPUT_WORK.value,
+                            LinkType.CREATE.value,
+                            LinkType.RETURN.value,
+                            LinkType.CALL_CALC.value,
+                            LinkType.CALL_WORK.value,
                         )
                     }
-                }
+                },
             )
 
             assert builder.count() == 13, f'Failed with c1={calcs[0]}, c2={calcs[1]}, w1={works[0]}, w2={works[1]}'
@@ -324,7 +350,7 @@ def test_high_level_workflow_links(aiida_profile, tmp_path, aiida_localhost_fact
             export_file = tmp_path.joinpath('export.aiida')
             create_archive(graph_nodes, filename=export_file, overwrite=True)
 
-            aiida_profile.clear_profile()
+            aiida_profile.reset_storage()
 
             import_archive(export_file)
             import_links = get_all_node_links()
@@ -332,9 +358,9 @@ def test_high_level_workflow_links(aiida_profile, tmp_path, aiida_localhost_fact
             export_set = [tuple(_) for _ in export_links]
             import_set = [tuple(_) for _ in import_links]
 
-            assert set(export_set) == \
-                set(import_set), \
-                f'Failed with c1={calcs[0]}, c2={calcs[1]}, w1={works[0]}, w2={works[1]}'
+            assert set(export_set) == set(
+                import_set
+            ), f'Failed with c1={calcs[0]}, c2={calcs[1]}, w1={works[0]}, w2={works[1]}'
 
 
 def prepare_link_flags_export(nodes_to_export, test_data):
@@ -366,16 +392,16 @@ def link_flags_import_helper(test_data, reset_db):
         for node_type, node_cls in nodes_util.items():
             if node_type in expected_nodes:
                 builder = orm.QueryBuilder().append(node_cls, project='uuid')
-                assert builder.count() == \
-                    len(expected_nodes[node_type]), \
-                    'Expected {} {} node(s), but got {}. Test: "{}"'.format(
-                        len(expected_nodes[node_type]), node_type, builder.count(), test
-                    )
+                assert builder.count() == len(
+                    expected_nodes[node_type]
+                ), 'Expected {} {} node(s), but got {}. Test: "{}"'.format(
+                    len(expected_nodes[node_type]), node_type, builder.count(), test
+                )
                 for node_uuid in builder.iterall():
                     assert node_uuid[0] in expected_nodes[node_type], f'Failed for test: "{test}"'
 
 
-def link_flags_export_helper(name, all_nodes, tmp_path, nodes_to_export, flags, expected_nodes):  # pylint: disable=too-many-arguments
+def link_flags_export_helper(name, all_nodes, tmp_path, nodes_to_export, flags, expected_nodes):
     """Helper function"""
     (calc_flag, work_flag) = flags
     (export_types, nodes_to_export) = nodes_to_export
@@ -383,7 +409,7 @@ def link_flags_export_helper(name, all_nodes, tmp_path, nodes_to_export, flags, 
 
     export_nodes_uuid = {_: set() for _ in export_types}
     for node in nodes_to_export:
-        for node_type in export_nodes_uuid:
+        for node_type in export_nodes_uuid:  # noqa: PLC0206
             if node.startswith(node_type):
                 export_nodes_uuid[node_type].update({all_nodes[node]['uuid']})
     nodes_to_export = ([all_nodes[_]['node'] for _ in nodes_to_export], export_nodes_uuid)
@@ -392,36 +418,32 @@ def link_flags_export_helper(name, all_nodes, tmp_path, nodes_to_export, flags, 
     for expected_node_list in expected_nodes_temp:
         expected_nodes_uuid = {_: set() for _ in expected_types}
         for node in expected_node_list:
-            for node_type in expected_nodes_uuid:
+            for node_type in expected_nodes_uuid:  # noqa: PLC0206
                 if node.startswith(node_type):
                     expected_nodes_uuid[node_type].update({all_nodes[node]['uuid']})
         expected_nodes.append(expected_nodes_uuid)
 
     ret = {
         f'{name}_follow_none': (
-            tmp_path.joinpath(f'{name}_none.aiida'), {
-                calc_flag: False,
-                work_flag: False
-            }, expected_nodes[0]
+            tmp_path.joinpath(f'{name}_none.aiida'),
+            {calc_flag: False, work_flag: False},
+            expected_nodes[0],
         ),
         f'{name}_follow_only_calc': (
-            tmp_path.joinpath(f'{name}_calc.aiida'), {
-                calc_flag: True,
-                work_flag: False
-            }, expected_nodes[1]
+            tmp_path.joinpath(f'{name}_calc.aiida'),
+            {calc_flag: True, work_flag: False},
+            expected_nodes[1],
         ),
         f'{name}_follow_only_work': (
-            tmp_path.joinpath(f'{name}_work.aiida'), {
-                calc_flag: False,
-                work_flag: True
-            }, expected_nodes[2]
+            tmp_path.joinpath(f'{name}_work.aiida'),
+            {calc_flag: False, work_flag: True},
+            expected_nodes[2],
         ),
         f'{name}_follow_only_all': (
-            tmp_path.joinpath(f'{name}_all.aiida'), {
-                calc_flag: True,
-                work_flag: True
-            }, expected_nodes[3]
-        )
+            tmp_path.joinpath(f'{name}_all.aiida'),
+            {calc_flag: True, work_flag: True},
+            expected_nodes[3],
+        ),
     }
 
     prepare_link_flags_export(nodes_to_export, ret)
@@ -469,13 +491,31 @@ def test_link_flags(aiida_profile, tmp_path, aiida_localhost_factory):
             ['data', 'calc', 'work'],
             [
                 [],  # calc: False, work: False (DEFAULT)
-                ['calc1', 'data3', 'data4', 'calc2', 'data5', 'data6', 'work2', 'work1',
-                 'data2'],  # calc: True, work: False
+                [
+                    'calc1',
+                    'data3',
+                    'data4',
+                    'calc2',
+                    'data5',
+                    'data6',
+                    'work2',
+                    'work1',
+                    'data2',
+                ],  # calc: True, work: False
                 ['work1', 'data2', 'work2', 'calc1', 'data3', 'data4'],  # calc: False, work: True
-                ['work1', 'data2', 'work2', 'calc1', 'data3', 'data4', 'calc2', 'data5',
-                 'data6']  # calc: True, work: True
-            ]
-        )
+                [
+                    'work1',
+                    'data2',
+                    'work2',
+                    'calc1',
+                    'data3',
+                    'data4',
+                    'calc2',
+                    'data5',
+                    'data6',
+                ],  # calc: True, work: True
+            ],
+        ),
     )
 
     # create/return links - backward
@@ -489,12 +529,20 @@ def test_link_flags(aiida_profile, tmp_path, aiida_localhost_factory):
             ['data', 'calc', 'work'],
             [
                 [],  # create: False, return: False
-                ['calc1', 'data3', 'data1', 'calc2', 'data6', 'work2', 'work1',
-                 'data2'],  # create: True, return: False (DEFAULT)
+                [
+                    'calc1',
+                    'data3',
+                    'data1',
+                    'calc2',
+                    'data6',
+                    'work2',
+                    'work1',
+                    'data2',
+                ],  # create: True, return: False (DEFAULT)
                 ['work2', 'data1', 'calc1', 'data3', 'work1', 'data2'],  # create: False, return: True
-                ['calc1', 'data3', 'data1', 'work2', 'calc2', 'data6', 'work1', 'data2']  # create: True, return: True
-            ]
-        )
+                ['calc1', 'data3', 'data1', 'work2', 'calc2', 'data6', 'work1', 'data2'],  # create: True, return: True
+            ],
+        ),
     )
 
     # call links - backward (Exporting calc1)
@@ -512,9 +560,9 @@ def test_link_flags(aiida_profile, tmp_path, aiida_localhost_factory):
                 ['data1', 'data3', 'data4'],  # calc: False, work: False
                 ['data1', 'data3', 'data4', 'work2'],  # calc: True, work: False
                 ['data1', 'data3', 'data4'],  # calc: False, work: True
-                ['data1', 'data3', 'data4', 'work2', 'work1', 'data2']  # calc: True, work: True (DEFAULT)
-            ]
-        )
+                ['data1', 'data3', 'data4', 'work2', 'work1', 'data2'],  # calc: True, work: True (DEFAULT)
+            ],
+        ),
     )
 
     # call links - backward (Exporting work2)
@@ -531,20 +579,19 @@ def test_link_flags(aiida_profile, tmp_path, aiida_localhost_factory):
                 ['data1', 'calc1', 'data3', 'data4'],  # calc: False, work: False
                 ['data1', 'calc1', 'data3', 'data4'],  # calc: True, work: False
                 ['data1', 'calc1', 'data3', 'data4', 'work1', 'data2'],  # calc: False, work: True
-                ['data1', 'calc1', 'data3', 'data4', 'work1', 'data2']  # calc: True, work: True (DEFAULT)
-            ]
-        )
+                ['data1', 'calc1', 'data3', 'data4', 'work1', 'data2'],  # calc: True, work: True (DEFAULT)
+            ],
+        ),
     )
 
-    link_flags_import_helper(input_links_forward, aiida_profile.clear_profile)
-    link_flags_import_helper(create_return_links_backward, aiida_profile.clear_profile)
-    link_flags_import_helper(call_links_backward_calc1, aiida_profile.clear_profile)
-    link_flags_import_helper(call_links_backward_work2, aiida_profile.clear_profile)
+    link_flags_import_helper(input_links_forward, aiida_profile.reset_storage)
+    link_flags_import_helper(create_return_links_backward, aiida_profile.reset_storage)
+    link_flags_import_helper(call_links_backward_calc1, aiida_profile.reset_storage)
+    link_flags_import_helper(call_links_backward_work2, aiida_profile.reset_storage)
 
 
 def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):
-    """
-    This test checks that double return links to a node can be exported
+    """This test checks that double return links to a node can be exported
     and imported without problems,
     """
     work1 = orm.WorkflowNode()
@@ -568,7 +615,7 @@ def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([data_out, work1, work2, data_in], filename=export_file)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     import_archive(export_file)
 
@@ -583,7 +630,7 @@ def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):
     assert len(links_in_db) == links_count  # After import
 
 
-def test_multiple_post_return_links(tmp_path, aiida_profile_clean):  # pylint: disable=too-many-locals
+def test_multiple_post_return_links(tmp_path, aiida_profile_clean):
     """Check extra RETURN links can be added to existing Nodes, when label is not unique"""
     data = orm.Int(1).store()
     calc = orm.CalculationNode().store()
@@ -607,7 +654,7 @@ def test_multiple_post_return_links(tmp_path, aiida_profile_clean):  # pylint: d
     create_archive([data], filename=data_provenance, return_backward=False)
     create_archive([data], filename=all_provenance, return_backward=True)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile_clean.reset_storage()
 
     # import data provenance
     import_archive(data_provenance)
@@ -621,10 +668,10 @@ def test_multiple_post_return_links(tmp_path, aiida_profile_clean):  # pylint: d
         assert node[0] in [data_uuid, calc_uuid]
 
     links = get_all_node_links()
-    assert len(links) == \
-        1, \
-        'Only a single Link (from Calc. to Data) is expected, ' \
+    assert len(links) == 1, (
+        'Only a single Link (from Calc. to Data) is expected, '
         'instead {} were found (in, out, label, type): {}'.format(len(links), links)
+    )
     for from_uuid, to_uuid, found_label, found_type in links:
         assert from_uuid == calc_uuid
         assert to_uuid == data_uuid
@@ -643,7 +690,7 @@ def test_multiple_post_return_links(tmp_path, aiida_profile_clean):  # pylint: d
         assert node[0] in [data_uuid, calc_uuid, work_uuid]
 
     links = get_all_node_links()
-    assert len(links) == \
-        2, \
-        f'Exactly two Links are expected, instead {len(links)} were found (in, out, label, type): {links}'
+    assert (
+        len(links) == 2
+    ), f'Exactly two Links are expected, instead {len(links)} were found (in, out, label, type): {links}'
     assert sorted(links) == sorted(before_links)

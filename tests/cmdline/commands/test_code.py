@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -7,8 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument,redefined-outer-name
 """Tests for the 'verdi code' command."""
+
 import io
 import os
 import pathlib
@@ -46,6 +45,21 @@ def code(aiida_localhost):
 def test_help(run_cli_command):
     """Test the help message."""
     run_cli_command(cmd_code.setup_code, ['--help'])
+
+
+def test_code_setup_deprecation(run_cli_command):
+    """Checks if a deprecation warning is printed in stdout and stderr."""
+    # Checks if the deprecation warning is present when invoking the help page
+    result = run_cli_command(cmd_code.setup_code, ['--help'])
+    assert 'Deprecated:' in result.output
+    assert 'Deprecated:' in result.stderr
+
+    # Checks if the deprecation warning is present when invoking the command
+    # Runs setup in interactive mode and sends Ctrl+D (\x04) as input so we exit the prompts.
+    # This way we can check if the deprecated message was printed with the first prompt.
+    result = run_cli_command(cmd_code.setup_code, user_input='\x04', use_subprocess=True, raises=True)
+    assert 'Deprecated:' in result.output
+    assert 'Deprecated:' in result.stderr
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -169,8 +183,13 @@ def test_noninteractive_upload(run_cli_command, non_interactive_editor):
     """Test non-interactive code setup."""
     label = 'noninteractive_upload'
     options = [
-        '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
-        '--store-in-db', f'--code-folder={os.path.dirname(__file__)}', f'--code-rel-path={os.path.basename(__file__)}'
+        '--non-interactive',
+        f'--label={label}',
+        '--description=description',
+        '--input-plugin=core.arithmetic.add',
+        '--store-in-db',
+        f'--code-folder={os.path.dirname(__file__)}',
+        f'--code-rel-path={os.path.basename(__file__)}',
     ]
     run_cli_command(cmd_code.setup_code, options)
     assert isinstance(load_code(label), PortableCode)
@@ -207,11 +226,13 @@ def test_mixed(run_cli_command, aiida_localhost, non_interactive_editor):
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
-def test_code_duplicate_interactive(run_cli_command, aiida_local_code_factory, non_interactive_editor):
+def test_code_duplicate_interactive(run_cli_command, aiida_code_installed, non_interactive_editor):
     """Test code duplication interactive."""
     label = 'code_duplicate_interactive'
     user_input = f'\n\n{label}\n\n\n\n'
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code')
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/cat', description='code'
+    )
     run_cli_command(cmd_code.code_duplicate, [str(code.pk)], user_input=user_input)
 
     duplicate = load_code(label)
@@ -222,14 +243,16 @@ def test_code_duplicate_interactive(run_cli_command, aiida_local_code_factory, n
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
-def test_code_duplicate_ignore(run_cli_command, aiida_local_code_factory, non_interactive_editor):
+def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_interactive_editor):
     """Providing "!" to description should lead to empty description.
 
     Regression test for: https://github.com/aiidateam/aiida-core/issues/3770
     """
     label = 'code_duplicate_interactive'
     user_input = f'\n\n{label}\n!\n\n\n'
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code')
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/cat', label='code'
+    )
     run_cli_command(cmd_code.code_duplicate, [str(code.pk)], user_input=user_input)
 
     duplicate = load_code(label)
@@ -237,17 +260,23 @@ def test_code_duplicate_ignore(run_cli_command, aiida_local_code_factory, non_in
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_code_export(run_cli_command, aiida_local_code_factory, tmp_path, file_regression):
+@pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
+def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort_option):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code', prepend_text=prepend_text)
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        label='code',
+        prepend_text=prepend_text,
+    )
     filepath = tmp_path / 'code.yml'
-    options = [str(code.pk), str(filepath)]
-    run_cli_command(cmd_code.export, options)
 
+    options = [str(code.pk), str(filepath), sort_option]
+    result = run_cli_command(cmd_code.export, options)
+    assert str(filepath) in result.output, 'Filename should be in terminal output but was not found.'
     # file regression check
-    with open(filepath, 'r', encoding='utf-8') as fhandle:
-        content = fhandle.read()
+    content = filepath.read_text()
     file_regression.check(content, extension='.yml')
 
     # round trip test by create code from the config file
@@ -259,6 +288,65 @@ def test_code_export(run_cli_command, aiida_local_code_factory, tmp_path, file_r
     new_code = load_code(new_label)
     assert code.base.attributes.all == new_code.base.attributes.all
     assert isinstance(new_code, InstalledCode)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_code_export_overwrite(run_cli_command, aiida_code_installed, tmp_path):
+    prepend_text = 'module load something\n    some command'
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        label='code',
+        prepend_text=prepend_text,
+    )
+    filepath = tmp_path / 'code.yml'
+
+    options = [str(code.pk), str(filepath)]
+
+    # Create directory with the same name and check that command fails
+    filepath.mkdir()
+    result = run_cli_command(cmd_code.export, options, raises=True)
+    assert f'A directory with the name `{filepath}` already exists' in result.output
+    filepath.rmdir()
+
+    # Export fails if file already exists and overwrite set to False
+    filepath.touch()
+    result = run_cli_command(cmd_code.export, options, raises=True)
+    assert f'File `{filepath}` already exists' in result.output
+
+    # Check that overwrite actually overwrites the exported Code config with the new data
+    code_echo = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/echo',
+        # Need to set different label, therefore manually specify the same output filename
+        label='code_echo',
+        prepend_text=prepend_text,
+    )
+
+    options = [str(code_echo.pk), str(filepath), '--overwrite']
+    run_cli_command(cmd_code.export, options)
+
+    content = filepath.read_text()
+    assert '/bin/echo' in content
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_code_export_default_filename(run_cli_command, aiida_code_installed):
+    """Test default filename being created if no argument passed."""
+
+    prepend_text = 'module load something\n    some command'
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        label='code',
+        prepend_text=prepend_text,
+    )
+
+    options = [str(code.pk)]
+    run_cli_command(cmd_code.export, options)
+
+    assert pathlib.Path('code@localhost.yaml').is_file()
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
@@ -287,8 +375,9 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
     from urllib import request
 
     monkeypatch.setattr(
-        request, 'urlopen',
-        lambda *args, **kwargs: config_file_template.format(label=label, computer=aiida_localhost.label)
+        request,
+        'urlopen',
+        lambda *args, **kwargs: config_file_template.format(label=label, computer=aiida_localhost.label),
     )
 
     config_file_template = textwrap.dedent(
@@ -308,28 +397,38 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
 
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
 def test_code_setup_remote_duplicate_full_label_interactive(
-    run_cli_command, aiida_local_code_factory, aiida_localhost, non_interactive_editor
+    run_cli_command, aiida_code_installed, aiida_localhost, non_interactive_editor
 ):
     """Test ``verdi code setup`` for a remote code in interactive mode specifying an existing full label."""
     label = 'some-label'
-    aiida_local_code_factory('core.arithmetic.add', '/bin/cat', computer=aiida_localhost, label=label)
+    aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        computer=aiida_localhost,
+        label=label,
+    )
     assert isinstance(load_code(label), InstalledCode)
 
     label_unique = 'label-unique'
-    user_input = '\n'.join([
-        'yes', aiida_localhost.label, label, label_unique, 'd', 'core.arithmetic.add', '/bin/bash', 'y'
-    ])
+    user_input = '\n'.join(
+        ['yes', aiida_localhost.label, label, label_unique, 'd', 'core.arithmetic.add', '/bin/bash', 'y']
+    )
     run_cli_command(cmd_code.setup_code, user_input=user_input)
     assert isinstance(load_code(label_unique), InstalledCode)
 
 
 @pytest.mark.parametrize('label_first', (True, False))
 def test_code_setup_remote_duplicate_full_label_non_interactive(
-    run_cli_command, aiida_local_code_factory, aiida_localhost, label_first
+    run_cli_command, aiida_code_installed, aiida_localhost, label_first
 ):
     """Test ``verdi code setup`` for a remote code in non-interactive mode specifying an existing full label."""
     label = f'some-label-{label_first}'
-    aiida_local_code_factory('core.arithmetic.add', '/bin/cat', computer=aiida_localhost, label=label)
+    aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        computer=aiida_localhost,
+        label=label,
+    )
     assert isinstance(load_code(label), InstalledCode)
 
     options = ['-n', '-D', 'd', '-P', 'core.arithmetic.add', '--on-computer', '--remote-abs-path=/remote/abs/path']
@@ -345,9 +444,7 @@ def test_code_setup_remote_duplicate_full_label_non_interactive(
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_code_setup_local_duplicate_full_label_interactive(
-    run_cli_command, aiida_local_code_factory, aiida_localhost, non_interactive_editor, tmp_path
-):
+def test_code_setup_local_duplicate_full_label_interactive(run_cli_command, non_interactive_editor, tmp_path):
     """Test ``verdi code setup`` for a local code in interactive mode specifying an existing full label."""
     filepath = tmp_path / 'bash'
     filepath.write_text('fake bash')
@@ -365,20 +462,29 @@ def test_code_setup_local_duplicate_full_label_interactive(
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_code_setup_local_duplicate_full_label_non_interactive(
-    run_cli_command, aiida_local_code_factory, aiida_localhost
-):
+def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command, tmp_path):
     """Test ``verdi code setup`` for a local code in non-interactive mode specifying an existing full label."""
     label = 'some-label'
-    code = PortableCode(filepath_executable='bash', filepath_files=pathlib.Path('/bin/bash'))
+    tmp_bin_dir = tmp_path / 'bin'
+    tmp_bin_dir.mkdir()
+    (tmp_bin_dir / 'bash').touch()
+    code = PortableCode(filepath_executable='bash', filepath_files=tmp_bin_dir)
     code.label = label
     code.base.repository.put_object_from_filelike(io.BytesIO(b''), 'bash')
     code.store()
     assert isinstance(load_code(label), PortableCode)
 
     options = [
-        '-n', '-D', 'd', '-P', 'core.arithmetic.add', '--store-in-db', '--code-folder=/bin', '--code-rel-path=bash',
-        '--label', label
+        '-n',
+        '-D',
+        'd',
+        '-P',
+        'core.arithmetic.add',
+        '--store-in-db',
+        f'--code-folder={tmp_bin_dir}',
+        '--code-rel-path=bash',
+        '--label',
+        label,
     ]
 
     result = run_cli_command(cmd_code.setup_code, options, raises=True)
@@ -428,7 +534,7 @@ def test_code_test(run_cli_command):
 
 
 @pytest.fixture
-def command_options(request, aiida_localhost, tmp_path):
+def command_options(request, aiida_localhost, tmp_path, bash_path):
     """Return tuple of list of options and entry point."""
     options = [request.param, '-n', '--label', str(uuid.uuid4())]
 
@@ -443,22 +549,31 @@ def command_options(request, aiida_localhost, tmp_path):
     if 'containerized' in request.param:
         engine_command = 'singularity exec --bind $PWD:$PWD {image_name}'
         image_name = 'ubuntu'
-        options.extend([
-            '--computer',
-            str(aiida_localhost.pk), '--filepath-executable', '/usr/bin/bash', '--engine-command', engine_command,
-            '--image-name', image_name
-        ])
+        options.extend(
+            [
+                '--computer',
+                str(aiida_localhost.pk),
+                '--filepath-executable',
+                str(bash_path.absolute()),
+                '--engine-command',
+                engine_command,
+                '--image-name',
+                image_name,
+            ]
+        )
 
     return options, request.param
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize(
-    'command_options', (
+    'command_options',
+    (
         'core.code.installed',
         'core.code.portable',
         'core.code.containerized',
-    ), indirect=True
+    ),
+    indirect=True,
 )
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
 def test_code_create(run_cli_command, command_options, non_interactive_editor):

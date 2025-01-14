@@ -95,7 +95,6 @@ repos:
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|
-        src/aiida/orm/implementation/storage_backend.py|
         src/aiida/orm/nodes/data/array/bands.py|
         src/aiida/orm/nodes/data/array/trajectory.py|
         src/aiida/orm/nodes/data/cif.py|

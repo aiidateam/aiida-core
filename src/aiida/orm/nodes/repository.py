@@ -237,12 +237,12 @@ class NodeRepository:
         return self._repository.get_object(path)
 
     @t.overload
-    def get_object_content(self, path: str, mode: t.Literal['r']) -> str: ...
+    def get_object_content(self, path: FilePath, mode: t.Literal['r']) -> str: ...
 
     @t.overload
-    def get_object_content(self, path: str, mode: t.Literal['rb']) -> bytes: ...
+    def get_object_content(self, path: FilePath, mode: t.Literal['rb']) -> bytes: ...
 
-    def get_object_content(self, path: str, mode: t.Literal['r', 'rb'] = 'r') -> str | bytes:
+    def get_object_content(self, path: FilePath, mode: t.Literal['r', 'rb'] = 'r') -> str | bytes:
         """Return the content of a object identified by key.
 
         :param path: the relative path of the object within the repository.

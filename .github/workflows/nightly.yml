@@ -70,12 +70,11 @@ jobs:
         from-lock: 'true'
 
     - name: Setup environment
-      # NOTE: virtual env in .venv created by uv in previous step
-      run: source .venv/bin/activate && .github/workflows/setup.sh
+      run: .github/workflows/setup.sh
 
     - name: Run tests
       id: tests
-      run: source .venv/bin/activate && .github/workflows/tests_nightly.sh
+      run: .github/workflows/tests_nightly.sh
 
     - name: Slack notification
       # Always run this step (otherwise it would be skipped if any of the previous steps fail) but only if the

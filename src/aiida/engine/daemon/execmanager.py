@@ -488,13 +488,9 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
 
 
-<<<<<<< HEAD:aiida/engine/daemon/execmanager.py
-async def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str) -> None:
-=======
-def retrieve_calculation(
+async def retrieve_calculation(
     calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str
 ) -> FolderData | None:
->>>>>>> main:src/aiida/engine/daemon/execmanager.py
     """Retrieve all the files of a completed job calculation using the given transport.
 
     If the job defined anything in the `retrieve_temporary_list`, those entries will be stored in the
@@ -591,17 +587,12 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
             )
 
 
-<<<<<<< HEAD:aiida/engine/daemon/execmanager.py
+
 async def retrieve_files_from_list(
-    calculation: CalcJobNode, transport: Transport, folder: str, retrieve_list: List[Union[str, Tuple[str, str, int],
-                                                                                           list]]
-=======
-def retrieve_files_from_list(
     calculation: CalcJobNode,
     transport: Transport,
     folder: str,
     retrieve_list: List[Union[str, Tuple[str, str, int], list]],
->>>>>>> main:src/aiida/engine/daemon/execmanager.py
 ) -> None:
     """Retrieve all the files in the retrieve_list from the remote into the
     local folder instance through the transport. The entries in the retrieve_list

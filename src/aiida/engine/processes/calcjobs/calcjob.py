@@ -643,14 +643,8 @@ class CalcJob(Process):
         with LocalTransport() as transport:
             with SubmitTestFolder() as folder:
                 calc_info = self.presubmit(folder)
-<<<<<<< HEAD:aiida/engine/processes/calcjobs/calcjob.py
-                transport.chdir(folder.abspath)
                 await upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
-                self.node.dry_run_info = {  # type: ignore
-=======
-                upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
                 self.node.dry_run_info = {  # type: ignore[attr-defined]
->>>>>>> main:src/aiida/engine/processes/calcjobs/calcjob.py
                     'folder': folder.abspath,
                     'script_filename': self.node.get_option('submit_script_filename'),
                 }

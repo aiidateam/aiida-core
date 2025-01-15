@@ -295,6 +295,7 @@ async def task_retrieve_job(
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
     authinfo = node.get_authinfo()
+
     async def do_retrieve():
         with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
@@ -321,6 +322,7 @@ async def task_retrieve_job(
             if retrieved is not None:
                 process.out(node.link_label_retrieved, retrieved)
             return retrieved
+
     try:
         logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)

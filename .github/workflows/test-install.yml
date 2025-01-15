@@ -26,7 +26,7 @@ jobs:
     # Note: The specification is also validated by the pre-commit hook.
 
     if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
 
     steps:
@@ -56,7 +56,7 @@ jobs:
 
     needs: [validate-dependency-specification]
     if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
 
     steps:
@@ -76,7 +76,7 @@ jobs:
   install-with-pip:
 
     if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     strategy:
@@ -107,7 +107,7 @@ jobs:
     # Verify that we can install AiiDA with conda.
 
     if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
 
     strategy:
@@ -159,7 +159,7 @@ jobs:
   tests:
 
     needs: [install-with-pip]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     strategy:

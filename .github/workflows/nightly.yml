@@ -75,7 +75,7 @@ jobs:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
       run: |
-        pytest --db-backend psql -m nightly tests/ 
+        pytest --db-backend psql -m nightly tests/
 
     - name: Run daemon nightly tests
       id: daemon-tests

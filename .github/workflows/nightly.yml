@@ -1,25 +1,24 @@
-name: nightly-test
+name: nightly
 
 on:
-  # schedule:
-  # - cron: 0 0 * * *        # Run every day at midnight
-  push:
-  # pull_request:
-    # paths:
-    # - .github/workflows/nightly.yml
-    # - .github/workflows/setup.sh
-    # - .github/system_tests/test_daemon.py
-    # - .molecule/default/files/**
-    # - aiida/storage/psql_dos/migrations/**
-    # - tests/storage/psql_dos/migrations/**
-  # workflow_dispatch:
+  schedule:
+  - cron: 0 0 * * *        # Run every day at midnight
+  pull_request:
+    paths:
+    - .github/workflows/nightly.yml
+    - .github/workflows/setup.sh
+    - .github/system_tests/test_daemon.py
+    - .molecule/default/files/**
+    - aiida/storage/psql_dos/migrations/**
+    - tests/storage/psql_dos/migrations/**
+  workflow_dispatch:
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
-# concurrency:
-#     # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
-#   group: ${{ github.workflow }}-${{ github.ref }}
-#   cancel-in-progress: true
-#
+concurrency:
+    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   FORCE_COLOR: 1
 
@@ -27,7 +26,7 @@ jobs:
 
   nightly-tests:
 
-    # if: github.repository == 'aiidateam/aiida-core'      # Prevent running the builds on forks as well
+    if: github.repository == 'aiidateam/aiida-core'      # Prevent running the builds on forks as well
     runs-on: ubuntu-24.04
 
     services:

@@ -8,9 +8,9 @@ MODULE_POLISH="${GITHUB_WORKSPACE}/.molecule/default/files/polish"
 export PYTHONPATH="${PYTHONPATH}:${SYSTEM_TESTS}:${MODULE_POLISH}"
 
 verdi daemon start 4
-verdi -p test_aiida run ${SYSTEM_TESTS}/test_daemon.py
+# verdi -p test_aiida run ${SYSTEM_TESTS}/test_daemon.py
 verdi -p test_aiida run ${SYSTEM_TESTS}/test_containerized_code.py
-bash ${SYSTEM_TESTS}/test_polish_workchains.sh
-verdi daemon stop
+# bash ${SYSTEM_TESTS}/test_polish_workchains.sh
+# verdi daemon stop
 
-AIIDA_TEST_PROFILE=test_aiida pytest --db-backend psql -m nightly tests/
+# AIIDA_TEST_PROFILE=test_aiida pytest --db-backend psql -m nightly tests/

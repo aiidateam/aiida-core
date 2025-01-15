@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
@@ -8,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Transport tasks for calculation jobs."""
+
 from __future__ import annotations
 
 import asyncio
@@ -48,10 +48,10 @@ KILL_COMMAND = 'kill'
 RETRY_INTERVAL_OPTION = 'transport.task_retry_initial_interval'
 MAX_ATTEMPTS_OPTION = 'transport.task_maximum_attempts'
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
-class PreSubmitException(Exception):
+class PreSubmitException(Exception):  # noqa: N818
     """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
 
 
@@ -89,10 +89,12 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
                 # Any exception thrown in `presubmit` call is not transient so we circumvent the exponential backoff
                 try:
                     calc_info = process.presubmit(folder)
-                except Exception as exception:  # pylint: disable=broad-except
+                except Exception as exception:
                     raise PreSubmitException('exception occurred in presubmit call') from exception
                 else:
-                    await execmanager.upload_calculation(node, transport, calc_info, folder)
+                    remote_folder = await execmanager.upload_calculation(node, transport, calc_info, folder)
+                    if remote_folder is not None:
+                        process.out('remote_folder', remote_folder)
                     skip_submit = calc_info.skip_submit or False
 
             return skip_submit
@@ -105,7 +107,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
         )
     except PreSubmitException:
         raise
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):  # pylint: disable=try-except-raise
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'uploading CalcJob<{node.pk}> failed')
@@ -151,7 +153,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
         result = await exponential_backoff_retry(
             do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):  # pylint: disable=try-except-raise
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'submitting CalcJob<{node.pk}> failed')
@@ -209,7 +211,7 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
         job_done = await exponential_backoff_retry(
             do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):  # pylint: disable=try-except-raise
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'updating CalcJob<{node.pk}> failed')
@@ -249,10 +251,8 @@ async def task_monitor_job(
     authinfo = node.get_authinfo()
 
     async def do_monitor():
-
         with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
-            transport.chdir(node.get_remote_workdir())
             return monitors.process(node, transport)
 
     try:
@@ -261,7 +261,7 @@ async def task_monitor_job(
         monitor_result = await exponential_backoff_retry(
             do_monitor, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):  # pylint: disable=try-except-raise
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'monitoring CalcJob<{node.pk}> failed')
@@ -272,36 +272,32 @@ async def task_monitor_job(
 
 
 async def task_retrieve_job(
-    node: CalcJobNode, transport_queue: TransportQueue, retrieved_temporary_folder: str,
-    cancellable: InterruptableFuture
+    process: 'CalcJob',
+    transport_queue: TransportQueue,
+    retrieved_temporary_folder: str,
+    cancellable: InterruptableFuture,
 ):
     """Transport task that will attempt to retrieve all files of a completed job calculation.
-
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
     retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
     If all retries fail, the task will raise a TransportTaskException
-
-    :param node: the node that represents the job calculation
+    :param process: the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
     :param retrieved_temporary_folder: the absolute path to a directory to store files
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
-
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
+    node = process.node
     if node.get_state() == CalcJobState.PARSING:
         logger.warning(f'CalcJob<{node.pk}> already marked as PARSING, skipping task_retrieve_job')
         return
-
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
-
     authinfo = node.get_authinfo()
-
     async def do_retrieve():
         with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
-
             # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
             # still set the attribute but set it to `None`. This way we can distinguish calculation jobs for which the
             # accounting was called but could not be set.
@@ -310,25 +306,28 @@ async def task_retrieve_job(
 
             if node.get_job_id() is None:
                 logger.warning(f'there is no job id for CalcJobNoe<{node.pk}>: skipping `get_detailed_job_info`')
-                return await execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
-
-            try:
-                detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
-            except FeatureNotAvailable:
-                logger.info(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
-                node.set_detailed_job_info(None)
+                retrieved = await execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
             else:
-                node.set_detailed_job_info(detailed_job_info)
+                try:
+                    detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
+                except FeatureNotAvailable:
+                    logger.info(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
+                    node.set_detailed_job_info(None)
+                else:
+                    node.set_detailed_job_info(detailed_job_info)
 
-            return await execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
+                retrieved = await execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
 
+            if retrieved is not None:
+                process.out(node.link_label_retrieved, retrieved)
+            return retrieved
     try:
         logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
         result = await exponential_backoff_retry(
             do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):  # pylint: disable=try-except-raise
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'retrieving CalcJob<{node.pk}> failed')
@@ -367,7 +366,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
             transport = await cancellable.with_interrupt(request)
 
             logger.info(f'stashing calculation<{node.pk}>')
-            return execmanager.stash_calculation(node, transport)
+            return await execmanager.stash_calculation(node, transport)
 
     try:
         await exponential_backoff_retry(
@@ -375,7 +374,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
             initial_interval,
             max_attempts,
             logger=node.logger,
-            ignore_exceptions=plumpy.process_states.Interruption
+            ignore_exceptions=plumpy.process_states.Interruption,
         )
     except plumpy.process_states.Interruption:
         raise
@@ -439,11 +438,9 @@ class Waiting(plumpy.process_states.Waiting):
         process: 'CalcJob',
         done_callback: Optional[Callable[..., Any]],
         msg: Optional[str] = None,
-        data: Optional[Any] = None
+        data: Optional[Any] = None,
     ):
-        """
-        :param process: The process this state belongs to
-        """
+        """:param process: The process this state belongs to"""
         super().__init__(process, done_callback, msg, data)
         self._task: InterruptableFuture | None = None
         self._killing: plumpy.futures.Future | None = None
@@ -473,9 +470,7 @@ class Waiting(plumpy.process_states.Waiting):
 
     @property
     def process(self) -> 'CalcJob':
-        """
-        :return: The process
-        """
+        """:return: The process"""
         return self.state_machine  # type: ignore[return-value]
 
     def load_instance_state(self, saved_state, load_context):
@@ -483,9 +478,8 @@ class Waiting(plumpy.process_states.Waiting):
         self._task = None
         self._killing = None
 
-    async def execute(self) -> plumpy.process_states.State:  # type: ignore[override] # pylint: disable=invalid-overridden-method
+    async def execute(self) -> plumpy.process_states.State:  # type: ignore[override]
         """Override the execute coroutine of the base `Waiting` state."""
-        # pylint: disable=too-many-branches,too-many-statements,too-many-nested-blocks
         node = self.process.node
         transport_queue = self.process.runner.transport
         result: plumpy.process_states.State = self
@@ -494,7 +488,6 @@ class Waiting(plumpy.process_states.Waiting):
         node.set_process_status(process_status)
 
         try:
-
             if self._command == UPLOAD_COMMAND:
                 skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)
                 if skip_submit:
@@ -506,7 +499,7 @@ class Waiting(plumpy.process_states.Waiting):
                 result = await self._launch_task(task_submit_job, node, transport_queue)
 
                 if isinstance(result, ExitCode):
-                    # The scheduler plugin returned an exit code from ``Scheduler.submit_from_script`` indicating the
+                    # The scheduler plugin returned an exit code from ``Scheduler.submit_job`` indicating the
                     # job submission failed due to a non-transient problem and the job should be terminated.
                     return self.create_state(ProcessState.RUNNING, self.process.terminate, result)
 
@@ -529,9 +522,7 @@ class Waiting(plumpy.process_states.Waiting):
 
                     if monitor_result and not monitor_result.retrieve:
                         exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=monitor_result.message)
-                        return self.create_state(
-                            ProcessState.RUNNING, self.process.terminate, exit_code
-                        )  # type: ignore[return-value]
+                        return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)  # type: ignore[return-value]
 
                 result = self.stash(monitor_result=monitor_result)
 
@@ -542,7 +533,7 @@ class Waiting(plumpy.process_states.Waiting):
 
             elif self._command == RETRIEVE_COMMAND:
                 temp_folder = tempfile.mkdtemp()
-                await self._launch_task(task_retrieve_job, node, transport_queue, temp_folder)
+                await self._launch_task(task_retrieve_job, self.process, transport_queue, temp_folder)
 
                 if not self._monitor_result:
                     result = self.parse(temp_folder)
@@ -591,6 +582,11 @@ class Waiting(plumpy.process_states.Waiting):
             return None
 
         monitor_result = await self._launch_task(task_monitor_job, node, transport_queue, monitors=monitors)
+
+        if monitor_result and monitor_result.outputs:
+            for label, output in monitor_result.outputs.items():
+                self.process.out(label, output)
+            self.process.update_outputs()
 
         if monitor_result and monitor_result.action == CalcJobMonitorAction.DISABLE_SELF:
             monitors.monitors[monitor_result.key].disabled = True

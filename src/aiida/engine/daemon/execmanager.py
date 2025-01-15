@@ -206,15 +206,15 @@ async def upload_calculation(
 
     for file_copy_operation in file_copy_operation_order:
         if file_copy_operation is FileCopyOperation.LOCAL:
-            _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir=workdir)
+            await _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir=workdir)
         elif file_copy_operation is FileCopyOperation.REMOTE:
             if not dry_run:
-                _copy_remote_files(
+                await _copy_remote_files(
                     logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir=workdir
                 )
         elif file_copy_operation is FileCopyOperation.SANDBOX:
             if not dry_run:
-                _copy_sandbox_files(logger, node, transport, folder, workdir=workdir)
+                await _copy_sandbox_files(logger, node, transport, folder, workdir=workdir)
         else:
             raise RuntimeError(f'file copy operation {file_copy_operation} is not yet implemented.')
 
@@ -279,7 +279,7 @@ async def upload_calculation(
     return None
 
 
-def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir: Path):
+async def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir: Path):
     """Perform the copy instructions of the ``remote_copy_list`` and ``remote_symlink_list``."""
     for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
         if remote_computer_uuid == computer.uuid:
@@ -328,7 +328,7 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
             )
 
 
-def _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir: Path):
+async def _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir: Path):
     """Perform the copy instructions of the ``local_copy_list``."""
     for uuid, filename, target in local_copy_list:
         logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
@@ -386,7 +386,7 @@ def _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir:
                 transport.put(str(filepath_target), str(workdir.joinpath(target)))
 
 
-def _copy_sandbox_files(logger, node, transport, folder, workdir: Path):
+async def _copy_sandbox_files(logger, node, transport, folder, workdir: Path):
     """Copy the contents of the sandbox folder to the working directory."""
     for filename in folder.get_content_list():
         logger.debug(f'[submission of calculation {node.pk}] copying file/folder {filename}...')
@@ -423,7 +423,7 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | 
     return result
 
 
-def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     """Stash files from the working directory of a completed calculation to a permanent remote folder.
 
     After a calculation has been completed, optionally stash files from the work directory to a storage location on the
@@ -585,7 +585,6 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
             EXEC_LOGGER.warning(
                 'scheduler.kill_job() failed but job<{%s}> no longer seems to be running regardless', job_id
             )
-
 
 
 async def retrieve_files_from_list(

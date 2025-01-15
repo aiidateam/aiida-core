@@ -28,7 +28,7 @@ jobs:
   nightly-tests:
 
     # if: github.repository == 'aiidateam/aiida-core'      # Prevent running the builds on forks as well
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       postgres:
@@ -73,12 +73,13 @@ jobs:
     - name: Setup environment
       run: .github/workflows/setup.sh
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-
-    - name: Run tests
+    - name: Run pytest nigthly tests
       id: tests
       run: .github/workflows/tests_nightly.sh
+
+    - name: Run daemon nightly tests
+      id: tests
+      run: source .venv/bin/activate && .github/workflows/daemon_tests.sh
 
     - name: Slack notification
       # Always run this step (otherwise it would be skipped if any of the previous steps fail) but only if the

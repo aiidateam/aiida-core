@@ -19,11 +19,8 @@ def test_add_singularity():
     builder.y = orm.Int(6)
     builder.metadata.options.resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
 
-    print('Running containerized code')
     results, node = run_get_node(builder)
 
-    print(f'{results=}')
-    print(f'{node=}')
     assert node.is_finished_ok
     assert 'sum' in results
     assert 'remote_folder' in results

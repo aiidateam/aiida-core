@@ -34,7 +34,7 @@ dependencies = [
   'importlib-metadata~=6.0',
   'numpy~=1.21',
   'paramiko~=3.0',
-  'plumpy~=0.22.3',
+  'plumpy~=0.24.0',
   'pgsu~=0.3.0',
   'psutil~=5.6',
   'psycopg[binary]~=3.0',
@@ -387,6 +387,7 @@ minversion = '7.0'
 testpaths = [
   'tests'
 ]
+timeout = 240
 xfail_strict = true
 
 [tool.ruff]
@@ -509,3 +510,6 @@ passenv =
     AIIDA_TEST_WORKERS
 commands = molecule {posargs:test}
 """
+
+[tool.uv]
+required-version = ">=0.5.20"

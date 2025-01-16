@@ -329,7 +329,7 @@ class Process(PlumpyProcess):
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
-    def kill(self, msg: Union[str, None] = None) -> Union[bool, plumpy.futures.Future]:
+    def kill(self, msg_text: str | None = None) -> Union[bool, plumpy.futures.Future]:
         """Kill the process and all the children calculations it called
 
         :param msg: message
@@ -338,7 +338,7 @@ class Process(PlumpyProcess):
 
         had_been_terminated = self.has_terminated()
 
-        result = super().kill(msg)
+        result = super().kill(msg_text)
 
         # Only kill children if we could be killed ourselves
         if result is not False and not had_been_terminated:
@@ -348,7 +348,7 @@ class Process(PlumpyProcess):
                     self.logger.info('no controller available to kill child<%s>', child.pk)
                     continue
                 try:
-                    result = self.runner.controller.kill_process(child.pk, f'Killed by parent<{self.node.pk}>')
+                    result = self.runner.controller.kill_process(child.pk, msg_text=f'Killed by parent<{self.node.pk}>')
                     result = asyncio.wrap_future(result)  # type: ignore[arg-type]
                     if asyncio.isfuture(result):
                         killing.append(result)

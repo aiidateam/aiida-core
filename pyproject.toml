@@ -510,3 +510,6 @@ passenv =
     AIIDA_TEST_WORKERS
 commands = molecule {posargs:test}
 """
+
+[tool.uv]
+required-version = ">=0.5.20"

@@ -183,6 +183,7 @@ def aiida_computer_ssh(aiida_computer, ssh_key) -> t.Callable[[], 'Computer']:
             computer.configure(
                 key_filename=str(ssh_key),
                 key_policy='AutoAddPolicy',
+                safe_interval=1.0,
             )
 
         return computer

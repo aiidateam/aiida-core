@@ -189,8 +189,8 @@ repos:
 
   - id: check-uv-lock
     name: Check uv lockfile up to date
-    # NOTE: This will not automatically update the lockfile
-    entry: uv lock --check
+    entry: bash -c 'uv lock --check || uv lock'
+    skip: false
     language: system
     pass_filenames: false
     files: >-

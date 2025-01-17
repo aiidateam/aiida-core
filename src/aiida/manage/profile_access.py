@@ -10,8 +10,8 @@
 
 import contextlib
 import os
-import typing
 import shutil
+import typing
 from pathlib import Path
 
 import psutil

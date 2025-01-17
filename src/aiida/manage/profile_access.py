@@ -11,6 +11,7 @@
 import contextlib
 import os
 import typing
+import shutil
 from pathlib import Path
 
 import psutil
@@ -76,7 +77,7 @@ class ProfileAccessManager:
             # it will read the incomplete command, won't be able to correctly compare it with its running
             # process, and will conclude the record is old and clean it up.
             filepath_tmp.write_text(str(self.process.cmdline()))
-            os.rename(filepath_tmp, filepath_pid)
+            shutil.move(filepath_tmp, filepath_pid)
 
             # Check again in case a lock was created in the time between the first check and creating the
             # access record file.

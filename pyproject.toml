@@ -516,4 +516,6 @@ commands = molecule {posargs:test}
 """
 
 [tool.uv]
-required-version = ">=0.5.20"
+# NOTE: When you bump the minimum uv version, you also need
+# to bump it in .pre-commit-config.yaml and .github/actions/install-aiida-core/action.yml
+required-version = ">=0.5.21"

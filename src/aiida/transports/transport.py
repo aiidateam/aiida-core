@@ -13,9 +13,10 @@ import fnmatch
 import os
 import re
 import sys
-import chardet
 from collections import OrderedDict
 from pathlib import Path
+
+import chardet
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
@@ -430,7 +431,7 @@ class Transport(abc.ABC):
             command=command, stdin=stdin, workdir=workdir, **kwargs
         )
         # Return the decoded strings
-        if sys.platform == "win32":
+        if sys.platform == 'win32':
             outenc = chardet.detect(stdout_bytes)['encoding']
             errenc = chardet.detect(stderr_bytes)['encoding']
             if outenc is None:

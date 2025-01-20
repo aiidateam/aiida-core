@@ -13,9 +13,9 @@ import errno
 import glob
 import io
 import os
-import sys
 import shutil
 import subprocess
+import sys
 
 from aiida.transports import cli as transport_cli
 from aiida.transports.transport import Transport, TransportInternalError
@@ -735,7 +735,7 @@ class LocalTransport(Transport):
         else:
             cwd = self.getcwd()
 
-        if sys.platform == "win32":
+        if sys.platform == 'win32':
             shell = False
         else:
             shell = True

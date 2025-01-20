@@ -13,6 +13,7 @@ import errno
 import glob
 import io
 import os
+import sys
 import shutil
 import subprocess
 
@@ -734,9 +735,14 @@ class LocalTransport(Transport):
         else:
             cwd = self.getcwd()
 
+        if sys.platform == "win32":
+            shell = False
+        else:
+            shell = True
+
         with subprocess.Popen(
             command,
-            shell=True,
+            shell=shell,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

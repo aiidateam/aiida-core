@@ -22,7 +22,7 @@ from .data import Data
 
 __all__ = ('SinglefileData',)
 
-FilePath = t.Union[str, pathlib.PurePosixPath]
+FilePath = t.Union[str, pathlib.PurePath]
 
 
 class SinglefileData(Data):

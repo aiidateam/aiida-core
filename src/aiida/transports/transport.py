@@ -433,9 +433,9 @@ class Transport(abc.ABC):
         if sys.platform == "win32":
             outenc = chardet.detect(stdout_bytes)['encoding']
             errenc = chardet.detect(stderr_bytes)['encoding']
-            if outenc == None:
+            if outenc is None:
                 outenc = 'utf-8'
-            if errenc == None:
+            if errenc is None:
                 errenc = 'utf-8'
             return (retval, stdout_bytes.decode(outenc), stderr_bytes.decode(errenc))
         else:

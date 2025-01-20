@@ -47,7 +47,8 @@ def _get_cif_ase_inline(struct, parameters):
     kwargs = {}
     if parameters is not None:
         kwargs = parameters.get_dict()
-    cif = CifData(ase=struct.get_ase(**kwargs))
+    ase_structure = struct.get_ase(**kwargs) if isinstance(struct, LegacyStructureData) else struct.to_ase(**kwargs)
+    cif = CifData(ase=ase_structure)
     formula = struct.get_formula(mode='hill', separator=' ')
     for i in cif.values.keys():
         cif.values[i]['_symmetry_space_group_name_H-M'] = 'P 1'

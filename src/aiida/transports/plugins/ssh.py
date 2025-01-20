@@ -21,7 +21,7 @@ from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
 from aiida.common.warnings import warn_deprecation
 
-from ..transport import BlockingTransport, TransportInternalError, TransportPath, path_to_str
+from ..transport import BlockingTransport, TransportInternalError, TransportPath
 
 __all__ = ('SshTransport', 'convert_to_bool', 'parse_sshconfig')
 
@@ -601,7 +601,7 @@ class SshTransport(BlockingTransport):
         )
         from paramiko.sftp import SFTPError
 
-        path = path_to_str(path)
+        path = str(path)
         old_path = self.sftp.getcwd()
         if path is not None:
             try:
@@ -630,7 +630,7 @@ class SshTransport(BlockingTransport):
 
     def normalize(self, path: TransportPath = '.'):
         """Returns the normalized path (removing double slashes, etc...)"""
-        path = path_to_str(path)
+        path = str(path)
 
         return self.sftp.normalize(path)
 
@@ -647,7 +647,7 @@ class SshTransport(BlockingTransport):
         :return: a `paramiko.sftp_attr.SFTPAttributes` object containing
             attributes about the given file.
         """
-        path = path_to_str(path)
+        path = str(path)
 
         return self.sftp.stat(path)
 
@@ -661,7 +661,7 @@ class SshTransport(BlockingTransport):
         :return: a `paramiko.sftp_attr.SFTPAttributes` object containing
             attributes about the given file.
         """
-        path = path_to_str(path)
+        path = str(path)
 
         return self.sftp.lstat(path)
 
@@ -696,7 +696,7 @@ class SshTransport(BlockingTransport):
 
         :raise OSError: If the directory already exists.
         """
-        path = path_to_str(path)
+        path = str(path)
 
         # check to avoid creation of empty dirs
         path = os.path.normpath(path)
@@ -728,7 +728,7 @@ class SshTransport(BlockingTransport):
 
         :raise OSError: If the directory already exists.
         """
-        path = path_to_str(path)
+        path = str(path)
 
         if ignore_existing and self.isdir(path):
             return
@@ -757,7 +757,7 @@ class SshTransport(BlockingTransport):
 
         :raise OSError: if the rm execution failed.
         """
-        path = path_to_str(path)
+        path = str(path)
         # Assuming linux rm command!
 
         rm_exe = 'rm'
@@ -779,7 +779,7 @@ class SshTransport(BlockingTransport):
 
     def rmdir(self, path: TransportPath):
         """Remove the folder named 'path' if empty."""
-        path = path_to_str(path)
+        path = str(path)
         self.sftp.rmdir(path)
 
     def chown(self, path: TransportPath, uid, gid):
@@ -795,11 +795,11 @@ class SshTransport(BlockingTransport):
         """
         # Return False on empty string (paramiko would map this to the local
         # folder instead)
-        path = path_to_str(path)
+        path = str(path)
 
         if not path:
             return False
-        path = path_to_str(path)
+        path = str(path)
         try:
             return S_ISDIR(self.stat(path).st_mode)
         except OSError as exc:
@@ -814,7 +814,7 @@ class SshTransport(BlockingTransport):
         :param path: path to file
         :param mode: new permission bits (integer)
         """
-        path = path_to_str(path)
+        path = str(path)
 
         if not path:
             raise OSError('Input path is an empty argument.')
@@ -825,7 +825,7 @@ class SshTransport(BlockingTransport):
         """Used by makedirs. Takes path
         and returns a list deconcatenating the path
         """
-        path = path_to_str(path)
+        path = str(path)
         parts = []
         while True:
             newpath, tail = os.path.split(path)
@@ -861,8 +861,8 @@ class SshTransport(BlockingTransport):
         :raise ValueError: if local path is invalid
         :raise OSError: if the localpath does not exist
         """
-        localpath = path_to_str(localpath)
-        remotepath = path_to_str(remotepath)
+        localpath = str(localpath)
+        remotepath = str(remotepath)
 
         if not dereference:
             raise NotImplementedError
@@ -933,8 +933,8 @@ class SshTransport(BlockingTransport):
         :raise OSError: if the localpath does not exist,
                     or unintentionally overwriting
         """
-        localpath = path_to_str(localpath)
-        remotepath = path_to_str(remotepath)
+        localpath = str(localpath)
+        remotepath = str(remotepath)
 
         if not dereference:
             raise NotImplementedError
@@ -973,8 +973,8 @@ class SshTransport(BlockingTransport):
         .. note:: setting dereference equal to True could cause infinite loops.
               see os.walk() documentation
         """
-        localpath = path_to_str(localpath)
-        remotepath = path_to_str(remotepath)
+        localpath = str(localpath)
+        remotepath = str(remotepath)
 
         if not dereference:
             raise NotImplementedError
@@ -1044,8 +1044,8 @@ class SshTransport(BlockingTransport):
         :raise ValueError: if local path is invalid
         :raise OSError: if the remotepath is not found
         """
-        remotepath = path_to_str(remotepath)
-        localpath = path_to_str(localpath)
+        remotepath = str(remotepath)
+        localpath = str(localpath)
 
         if not dereference:
             raise NotImplementedError
@@ -1112,8 +1112,8 @@ class SshTransport(BlockingTransport):
         :raise ValueError: if local path is invalid
         :raise OSError: if unintentionally overwriting
         """
-        remotepath = path_to_str(remotepath)
-        localpath = path_to_str(localpath)
+        remotepath = str(remotepath)
+        localpath = str(localpath)
 
         if not os.path.isabs(localpath):
             raise ValueError('localpath must be an absolute path')
@@ -1156,8 +1156,8 @@ class SshTransport(BlockingTransport):
         :raise OSError: if the remotepath is not found
         :raise OSError: if unintentionally overwriting
         """
-        remotepath = path_to_str(remotepath)
-        localpath = path_to_str(localpath)
+        remotepath = str(remotepath)
+        localpath = str(localpath)
         if not dereference:
             raise NotImplementedError
 
@@ -1198,7 +1198,7 @@ class SshTransport(BlockingTransport):
         """Returns the object Fileattribute, specified in aiida.transports
         Receives in input the path of a given file.
         """
-        path = path_to_str(path)
+        path = str(path)
         from aiida.transports.util import FileAttribute
 
         paramiko_attr = self.lstat(path)
@@ -1210,14 +1210,14 @@ class SshTransport(BlockingTransport):
         return aiida_attr
 
     def copyfile(self, remotesource: TransportPath, remotedestination: TransportPath, dereference: bool = False):
-        remotesource = path_to_str(remotesource)
-        remotedestination = path_to_str(remotedestination)
+        remotesource = str(remotesource)
+        remotedestination = str(remotedestination)
 
         return self.copy(remotesource, remotedestination, dereference)
 
     def copytree(self, remotesource: TransportPath, remotedestination: TransportPath, dereference: bool = False):
-        remotesource = path_to_str(remotesource)
-        remotedestination = path_to_str(remotedestination)
+        remotesource = str(remotesource)
+        remotedestination = str(remotedestination)
 
         return self.copy(remotesource, remotedestination, dereference, recursive=True)
 
@@ -1244,8 +1244,8 @@ class SshTransport(BlockingTransport):
 
         .. note:: setting dereference equal to True could cause infinite loops.
         """
-        remotesource = path_to_str(remotesource)
-        remotedestination = path_to_str(remotedestination)
+        remotesource = str(remotesource)
+        remotedestination = str(remotedestination)
 
         # In the majority of cases, we should deal with linux cp commands
         cp_flags = '-f'
@@ -1335,7 +1335,7 @@ class SshTransport(BlockingTransport):
         :param pattern: returns the list of files matching pattern.
                              Unix only. (Use to emulate ``ls *`` for example)
         """
-        path = path_to_str(path)
+        path = str(path)
 
         if path.startswith('/'):
             abs_dir = path
@@ -1352,7 +1352,7 @@ class SshTransport(BlockingTransport):
 
     def remove(self, path: TransportPath):
         """Remove a single file at 'path'"""
-        path = path_to_str(path)
+        path = str(path)
         return self.sftp.remove(path)
 
     def rename(self, oldpath: TransportPath, newpath: TransportPath):
@@ -1369,8 +1369,8 @@ class SshTransport(BlockingTransport):
         if not newpath:
             raise ValueError(f'Destination {newpath} is not a valid path')
 
-        oldpath = path_to_str(oldpath)
-        newpath = path_to_str(newpath)
+        oldpath = str(oldpath)
+        newpath = str(newpath)
 
         if not self.isfile(oldpath):
             if not self.isdir(oldpath):
@@ -1394,7 +1394,7 @@ class SshTransport(BlockingTransport):
         if not path:
             return False
 
-        path = path_to_str(path)
+        path = str(path)
         try:
             self.logger.debug(
                 f"stat for path '{path}' ('{self.normalize(path)}'): {self.stat(path)} [{self.stat(path).st_mode}]"
@@ -1476,7 +1476,7 @@ class SshTransport(BlockingTransport):
         import time
 
         if workdir:
-            workdir = path_to_str(workdir)
+            workdir = str(workdir)
 
         ssh_stdin, stdout, stderr, channel = self._exec_command_internal(
             command, combine_stderr, bufsize=bufsize, workdir=workdir
@@ -1575,7 +1575,7 @@ class SshTransport(BlockingTransport):
         """Specific gotocomputer string to connect to a given remote computer via
         ssh and directly go to the calculation folder.
         """
-        remotedir = path_to_str(remotedir)
+        remotedir = str(remotedir)
 
         further_params = []
         if 'username' in self._connect_args:
@@ -1605,8 +1605,8 @@ class SshTransport(BlockingTransport):
         :param source: source of link
         :param dest: link to create
         """
-        source = path_to_str(source)
-        dest = path_to_str(dest)
+        source = str(source)
+        dest = str(dest)
         self.sftp.symlink(source, dest)
 
     def symlink(self, remotesource: TransportPath, remotedestination: TransportPath):
@@ -1616,8 +1616,8 @@ class SshTransport(BlockingTransport):
         :param remotesource: remote source. Can contain a pattern.
         :param remotedestination: remote destination
         """
-        remotesource = path_to_str(remotesource)
-        remotedestination = path_to_str(remotedestination)
+        remotesource = str(remotesource)
+        remotedestination = str(remotedestination)
         # paramiko gives some errors if path is starting with '.'
         source = os.path.normpath(remotesource)
         dest = os.path.normpath(remotedestination)
@@ -1639,7 +1639,7 @@ class SshTransport(BlockingTransport):
         """Check if path exists"""
         import errno
 
-        path = path_to_str(path)
+        path = str(path)
 
         try:
             self.stat(path)

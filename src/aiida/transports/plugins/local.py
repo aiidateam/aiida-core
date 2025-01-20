@@ -19,7 +19,7 @@ from typing import Optional
 
 from aiida.common.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
-from aiida.transports.transport import BlockingTransport, TransportInternalError, TransportPath, path_to_str
+from aiida.transports.transport import BlockingTransport, TransportInternalError, TransportPath
 
 
 # refactor or raise the limit: issue #1784
@@ -107,7 +107,7 @@ class LocalTransport(BlockingTransport):
             '`chdir()` is deprecated and will be removed in the next major version.',
             version=3,
         )
-        path = path_to_str(path)
+        path = str(path)
         new_path = os.path.join(self.curdir, path)
         if not os.path.isdir(new_path):
             raise OSError(f"'{new_path}' is not a valid directory")
@@ -117,14 +117,14 @@ class LocalTransport(BlockingTransport):
         self._internal_dir = os.path.normpath(new_path)
 
     def chown(self, path: TransportPath, uid, gid):
-        path = path_to_str(path)
+        path = str(path)
         os.chown(path, uid, gid)
 
     def normalize(self, path: TransportPath = '.'):
         """Normalizes path, eliminating double slashes, etc..
         :param path: path to normalize
         """
-        path = path_to_str(path)
+        path = str(path)
         return os.path.realpath(os.path.join(self.curdir, path))
 
     def getcwd(self):
@@ -138,7 +138,7 @@ class LocalTransport(BlockingTransport):
     @staticmethod
     def _os_path_split_asunder(path: TransportPath):
         """Used by makedirs, Takes path (a str) and returns a list deconcatenating the path."""
-        path = path_to_str(path)
+        path = str(path)
         parts = []
         while True:
             newpath, tail = os.path.split(path)
@@ -163,7 +163,7 @@ class LocalTransport(BlockingTransport):
 
         :raise OSError: If the directory already exists and is not ignore_existing
         """
-        path = path_to_str(path)
+        path = str(path)
         # check to avoid creation of empty dirs
         path = os.path.normpath(path)
 
@@ -188,7 +188,7 @@ class LocalTransport(BlockingTransport):
 
         :raise OSError: If the directory already exists.
         """
-        path = path_to_str(path)
+        path = str(path)
         if ignore_existing and self.isdir(path):
             return
 
@@ -198,14 +198,14 @@ class LocalTransport(BlockingTransport):
         """Removes a folder at location path.
         :param path: path to remove
         """
-        path = path_to_str(path)
+        path = str(path)
         os.rmdir(os.path.join(self.curdir, path))
 
     def isdir(self, path: TransportPath):
         """Checks if 'path' is a directory.
         :return: a boolean
         """
-        path = path_to_str(path)
+        path = str(path)
         if not path:
             return False
 
@@ -218,7 +218,7 @@ class LocalTransport(BlockingTransport):
 
         :raise OSError: if path does not exist.
         """
-        path = path_to_str(path)
+        path = str(path)
         if not path:
             raise OSError('Directory not given in input')
         real_path = os.path.join(self.curdir, path)
@@ -243,8 +243,8 @@ class LocalTransport(BlockingTransport):
         :raise OSError: if remotepath is not valid
         :raise ValueError: if localpath is not valid
         """
-        localpath = path_to_str(localpath)
-        remotepath = path_to_str(remotepath)
+        localpath = str(localpath)
+        remotepath = str(remotepath)
         from aiida.common.warnings import warn_deprecation
 
         if 'ignore_noexisting' in kwargs:
@@ -324,8 +324,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if localpath is not valid
         :raise OSError: if localpath does not exist
         """
-        localpath = path_to_str(localpath)
-        remotepath = path_to_str(remotepath)
+        localpath = str(localpath)
+        remotepath = str(remotepath)
 
         overwrite = kwargs.get('overwrite', args[0] if args else True)
         if not remotepath:
@@ -360,8 +360,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if localpath is not valid
         :raise OSError: if localpath does not exist
         """
-        localpath = path_to_str(localpath)
-        remotepath = path_to_str(remotepath)
+        localpath = str(localpath)
+        remotepath = str(remotepath)
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         if not remotepath:
@@ -392,7 +392,7 @@ class LocalTransport(BlockingTransport):
 
         :param path: a string to path
         """
-        path = path_to_str(path)
+        path = str(path)
         the_path = os.path.join(self.curdir, path)
         try:
             shutil.rmtree(the_path)
@@ -421,8 +421,8 @@ class LocalTransport(BlockingTransport):
         :raise OSError: if 'remote' remotepath is not valid
         :raise ValueError: if 'local' localpath is not valid
         """
-        remotepath = path_to_str(remotepath)
-        localpath = path_to_str(localpath)
+        remotepath = str(remotepath)
+        localpath = str(localpath)
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         ignore_nonexisting = kwargs.get('ignore_nonexisting', args[2] if len(args) > 2 else False)
@@ -487,8 +487,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if 'local' localpath is not valid
         :raise OSError: if unintentionally overwriting
         """
-        remotepath = path_to_str(remotepath)
-        localpath = path_to_str(localpath)
+        remotepath = str(remotepath)
+        localpath = str(localpath)
 
         if not os.path.isabs(localpath):
             raise ValueError('localpath must be an absolute path')
@@ -521,8 +521,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if 'local' localpath is not valid
         :raise OSError: if unintentionally overwriting
         """
-        remotepath = path_to_str(remotepath)
-        localpath = path_to_str(localpath)
+        remotepath = str(remotepath)
+        localpath = str(localpath)
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
         if not remotepath:
@@ -562,8 +562,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if 'remote' remotesource or remotedestinationis not valid
         :raise OSError: if remotesource does not exist
         """
-        remotesource = path_to_str(remotesource)
-        remotedestination = path_to_str(remotedestination)
+        remotesource = str(remotesource)
+        remotedestination = str(remotedestination)
         if not remotesource:
             raise ValueError('Input remotesource to copy must be a non empty object')
         if not remotedestination:
@@ -622,8 +622,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if 'remote' remotesource or remotedestination is not valid
         :raise OSError: if remotesource does not exist
         """
-        remotesource = path_to_str(remotesource)
-        remotedestination = path_to_str(remotedestination)
+        remotesource = str(remotesource)
+        remotedestination = str(remotedestination)
         if not remotesource:
             raise ValueError('Input remotesource to copyfile must be a non empty object')
         if not remotedestination:
@@ -650,8 +650,8 @@ class LocalTransport(BlockingTransport):
         :raise ValueError: if 'remote' remotesource or remotedestination is not valid
         :raise OSError: if remotesource does not exist
         """
-        remotesource = path_to_str(remotesource)
-        remotedestination = path_to_str(remotedestination)
+        remotesource = str(remotesource)
+        remotedestination = str(remotedestination)
         if not remotesource:
             raise ValueError('Input remotesource to copytree must be a non empty object')
         if not remotedestination:
@@ -672,7 +672,7 @@ class LocalTransport(BlockingTransport):
         as specified in aiida.transports.
         :param path: the path of the given file.
         """
-        path = path_to_str(path)
+        path = str(path)
         from aiida.transports.util import FileAttribute
 
         os_attr = os.lstat(os.path.join(self.curdir, path))
@@ -687,7 +687,7 @@ class LocalTransport(BlockingTransport):
         """Act on the local folder, for the rest, same as listdir."""
         import re
 
-        path = path_to_str(path)
+        path = str(path)
 
         if not pattern:
             return os.listdir(path)
@@ -708,7 +708,7 @@ class LocalTransport(BlockingTransport):
         :param pattern: if set, returns the list of files matching pattern.
                      Unix only. (Use to emulate ls * for example)
         """
-        path = path_to_str(path)
+        path = str(path)
         the_path = os.path.join(self.curdir, path).strip()
         if not pattern:
             try:
@@ -727,14 +727,14 @@ class LocalTransport(BlockingTransport):
 
     def remove(self, path: TransportPath):
         """Removes a file at position path."""
-        path = path_to_str(path)
+        path = str(path)
         os.remove(os.path.join(self.curdir, path))
 
     def isfile(self, path: TransportPath):
         """Checks if object at path is a file.
         Returns a boolean.
         """
-        path = path_to_str(path)
+        path = str(path)
         if not path:
             return False
         return os.path.isfile(os.path.join(self.curdir, path))
@@ -766,7 +766,7 @@ class LocalTransport(BlockingTransport):
         from aiida.common.escaping import escape_for_bash
 
         if workdir:
-            workdir = path_to_str(workdir)
+            workdir = str(workdir)
         # Note: The outer shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
         bash_commmand = f'{self._bash_command_str}-c '
@@ -801,7 +801,7 @@ class LocalTransport(BlockingTransport):
             are both bytes and the return_value is an int.
         """
         if workdir:
-            workdir = path_to_str(workdir)
+            workdir = str(workdir)
         with self._exec_command_internal(command, workdir) as process:
             if stdin is not None:
                 # Implicitly assume that the desired encoding is 'utf-8' if I receive a string.
@@ -855,7 +855,7 @@ class LocalTransport(BlockingTransport):
 
         :param str remotedir: the full path of the remote directory
         """
-        remotedir = path_to_str(remotedir)
+        remotedir = str(remotedir)
         connect_string = self._gotocomputer_string(remotedir)
         cmd = f'bash -c {connect_string}'
         return cmd
@@ -869,8 +869,8 @@ class LocalTransport(BlockingTransport):
         :raises OSError: if src/dst is not found
         :raises ValueError: if src/dst is not a valid string
         """
-        oldpath = path_to_str(oldpath)
-        newpath = path_to_str(newpath)
+        oldpath = str(oldpath)
+        newpath = str(newpath)
         if not oldpath:
             raise ValueError(f'Source {oldpath} is not a valid string')
         if not newpath:
@@ -889,8 +889,8 @@ class LocalTransport(BlockingTransport):
         :param remotesource: remote source. Can contain a pattern.
         :param remotedestination: remote destination
         """
-        remotesource = os.path.normpath(path_to_str(remotesource))
-        remotedestination = os.path.normpath(path_to_str(remotedestination))
+        remotesource = os.path.normpath(str(remotesource))
+        remotedestination = os.path.normpath(str(remotedestination))
 
         if self.has_magic(remotesource):
             if self.has_magic(remotedestination):
@@ -911,7 +911,7 @@ class LocalTransport(BlockingTransport):
 
     def path_exists(self, path: TransportPath):
         """Check if path exists"""
-        path = path_to_str(path)
+        path = str(path)
         return os.path.exists(os.path.join(self.curdir, path))
 
 

@@ -43,12 +43,6 @@ def validate_positive_number(ctx, param, value):
     return value
 
 
-def path_to_str(path: TransportPath) -> str:
-    """Convert an instance of TransportPath = Union[str, Path, PurePosixPath] instance to a string."""
-    # We could check if the path is a Path or PurePosixPath instance, but it's too much overhead.
-    return str(path)
-
-
 class Transport(abc.ABC):
     """Abstract class for a generic blocking transport.
     A plugin inhereting from this class should implement the blocking methods, only."""
@@ -268,7 +262,7 @@ class Transport(abc.ABC):
         return self._safe_open_interval
 
     def has_magic(self, string: TransportPath):
-        string = path_to_str(string)
+        string = str(string)
         """Return True if the given string contains any special shell characters."""
         return self._MAGIC_CHECK.search(string) is not None
 
@@ -655,7 +649,7 @@ class Transport(abc.ABC):
             (if the file is a folder, a directory, ...). 'attributes' behaves as the output of
             transport.get_attribute(); isdir is a boolean indicating if the object is a directory or not.
         """
-        path = path_to_str(path)
+        path = str(path)
         retlist = []
         if path.startswith('/'):
             cwd = Path(path).resolve().as_posix()
@@ -871,7 +865,7 @@ class Transport(abc.ABC):
 
         :return: a list of paths matching the pattern.
         """
-        pathname = path_to_str(pathname)
+        pathname = str(pathname)
         if not pathname.startswith('/'):
             warn_deprecation(
                 'Using relative paths across transport in `glob` is deprecated '

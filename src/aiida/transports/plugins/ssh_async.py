@@ -26,7 +26,6 @@ from aiida.transports.transport import (
     Transport,
     TransportInternalError,
     TransportPath,
-    path_to_str,
     validate_positive_number,
 )
 
@@ -217,8 +216,8 @@ class AsyncSshTransport(AsyncTransport):
         :raise ValueError: if local path is invalid
         :raise OSError: if the remotepath is not found
         """
-        remotepath = path_to_str(remotepath)
-        localpath = path_to_str(localpath)
+        remotepath = str(remotepath)
+        localpath = str(localpath)
 
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
@@ -296,8 +295,8 @@ class AsyncSshTransport(AsyncTransport):
         :raise ValueError: if local path is invalid
         :raise OSError: if unintentionally overwriting
         """
-        remotepath = path_to_str(remotepath)
-        localpath = path_to_str(localpath)
+        remotepath = str(remotepath)
+        localpath = str(localpath)
 
         if not os.path.isabs(localpath):
             raise ValueError('localpath must be an absolute path')
@@ -349,8 +348,8 @@ class AsyncSshTransport(AsyncTransport):
         :raise OSError: if the remotepath is not found
         :raise OSError: if unintentionally overwriting
         """
-        remotepath = path_to_str(remotepath)
-        localpath = path_to_str(localpath)
+        remotepath = str(remotepath)
+        localpath = str(localpath)
 
         if not remotepath:
             raise OSError('Remotepath must be a non empty string')
@@ -424,8 +423,8 @@ class AsyncSshTransport(AsyncTransport):
         :raise ValueError: if local path is invalid
         :raise OSError: if the localpath does not exist
         """
-        localpath = path_to_str(localpath)
-        remotepath = path_to_str(remotepath)
+        localpath = str(localpath)
+        remotepath = str(remotepath)
 
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
@@ -504,8 +503,8 @@ class AsyncSshTransport(AsyncTransport):
         :raise OSError: if the localpath does not exist,
                     or unintentionally overwriting
         """
-        localpath = path_to_str(localpath)
-        remotepath = path_to_str(remotepath)
+        localpath = str(localpath)
+        remotepath = str(remotepath)
 
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
@@ -557,8 +556,8 @@ class AsyncSshTransport(AsyncTransport):
         :raise OSError: if the localpath does not exist, or trying to overwrite
         :raise OSError: if remotepath is invalid
         """
-        localpath = path_to_str(localpath)
-        remotepath = path_to_str(remotepath)
+        localpath = str(localpath)
+        remotepath = str(remotepath)
 
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
@@ -626,8 +625,8 @@ class AsyncSshTransport(AsyncTransport):
         :raises: OSError, src does not exist or if the copy execution failed.
         """
 
-        remotesource = path_to_str(remotesource)
-        remotedestination = path_to_str(remotedestination)
+        remotesource = str(remotesource)
+        remotedestination = str(remotedestination)
         if self.has_magic(remotedestination):
             raise ValueError('Pathname patterns are not allowed in the destination')
 
@@ -802,7 +801,7 @@ class AsyncSshTransport(AsyncTransport):
         """
 
         if workdir:
-            workdir = path_to_str(workdir)
+            workdir = str(workdir)
             command = f'cd {workdir} && ( {command} )'
 
         bash_commmand = self._bash_command_str + '-c '
@@ -836,7 +835,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :return: object FixedFieldsAttributeDict
         """
-        path = path_to_str(path)
+        path = str(path)
         from aiida.transports.util import FileAttribute
 
         asyncssh_attr = await self._sftp.lstat(path)
@@ -873,7 +872,7 @@ class AsyncSshTransport(AsyncTransport):
         if not path:
             return False
 
-        path = path_to_str(path)
+        path = str(path)
 
         return await self._sftp.isdir(path)
 
@@ -891,7 +890,7 @@ class AsyncSshTransport(AsyncTransport):
         if not path:
             return False
 
-        path = path_to_str(path)
+        path = str(path)
 
         return await self._sftp.isfile(path)
 
@@ -908,7 +907,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :return: a list of strings
         """
-        path = path_to_str(path)
+        path = str(path)
         if not pattern:
             list_ = list(await self._sftp.listdir(path))
         else:
@@ -948,7 +947,7 @@ class AsyncSshTransport(AsyncTransport):
             (if the file is a folder, a directory, ...). 'attributes' behaves as the output of
             transport.get_attribute(); isdir is a boolean indicating if the object is a directory or not.
         """
-        path = path_to_str(path)
+        path = str(path)
         retlist = []
         listdir = await self.listdir_async(path, pattern)
         for file_name in listdir:
@@ -971,7 +970,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :raises: OSError, if directory at path already exists
         """
-        path = path_to_str(path)
+        path = str(path)
 
         try:
             await self._sftp.makedirs(path, exist_ok=ignore_existing)
@@ -994,7 +993,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :raises: OSError, if directory at path already exists
         """
-        path = path_to_str(path)
+        path = str(path)
 
         try:
             await self._sftp.mkdir(path)
@@ -1025,7 +1024,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :raise OSError: if the path is a directory
         """
-        path = path_to_str(path)
+        path = str(path)
         # TODO: check if asyncssh does return SFTPFileIsADirectory in this case
         # if that's the case, we can get rid of the isfile check
         if await self.isdir_async(path):
@@ -1046,8 +1045,8 @@ class AsyncSshTransport(AsyncTransport):
         :raises OSError: if oldpath/newpath is not found
         :raises ValueError: if oldpath/newpath is not a valid string
         """
-        oldpath = path_to_str(oldpath)
-        newpath = path_to_str(newpath)
+        oldpath = str(oldpath)
+        newpath = str(newpath)
         if not oldpath or not newpath:
             raise ValueError('oldpath and newpath must be non-empty strings')
 
@@ -1064,7 +1063,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
-        path = path_to_str(path)
+        path = str(path)
         try:
             await self._sftp.rmdir(path)
         except asyncssh.sftp.SFTPFailure:
@@ -1079,7 +1078,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :raises OSError: if the operation fails
         """
-        path = path_to_str(path)
+        path = str(path)
         try:
             await self._sftp.rmtree(path, ignore_errors=False)
         except asyncssh.Error as exc:
@@ -1092,7 +1091,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
-        path = path_to_str(path)
+        path = str(path)
         return await self._sftp.exists(path)
 
     async def whoami_async(self):
@@ -1126,8 +1125,8 @@ class AsyncSshTransport(AsyncTransport):
 
         :raises ValueError: if remotedestination has patterns
         """
-        remotesource = path_to_str(remotesource)
-        remotedestination = path_to_str(remotedestination)
+        remotesource = str(remotesource)
+        remotedestination = str(remotedestination)
 
         if self.has_magic(remotesource):
             if self.has_magic(remotedestination):
@@ -1155,7 +1154,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :return: a list of paths matching the pattern.
         """
-        pathname = path_to_str(pathname)
+        pathname = str(pathname)
         return await self._sftp.glob(pathname)
 
     async def chmod_async(self, path: TransportPath, mode: int, follow_symlinks: bool = True):
@@ -1171,7 +1170,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :raises OSError: if the path is empty
         """
-        path = path_to_str(path)
+        path = str(path)
         if not path:
             raise OSError('Input path is an empty argument.')
         try:
@@ -1192,7 +1191,7 @@ class AsyncSshTransport(AsyncTransport):
 
         :raises OSError: if the path is empty
         """
-        path = path_to_str(path)
+        path = str(path)
         if not path:
             raise OSError('Input path is an empty argument.')
         try:

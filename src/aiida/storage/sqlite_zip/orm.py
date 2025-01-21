@@ -285,6 +285,17 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             return case((type_filter, casted_entity.ilike(value, escape='\\')), else_=False)
 
         if operator == 'contains':
+            # If the operator is 'contains', we must mirror the behavior of the PostgreSQL
+            # backend, which returns NULL if `attr_key` doesn't exist. To achieve this,
+            # an additional CASE statement is added to directly return NULL in such cases.
+            #
+            # Instead of using `database_entity`, which would be interpreted as a 'null'
+            # string in SQL, this approach ensures a proper NULL value is returned when
+            # `attr_key` doesn't exist.
+            #
+            # Original implementation:
+            #   return func.json_contains(database_entity, json.dumps(value))
+
             return case(
                 (func.json_extract(column, '$.' + '.'.join(attr_key)).is_(null()), null()),
                 else_=func.json_contains(database_entity, json.dumps(value)),

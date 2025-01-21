@@ -1748,6 +1748,9 @@ class TestJsonFilters:
             ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': []}}, False),
             ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [114514]}}, True),
             ({'arr': [1, '2', None]}, {'attributes.arr': {'!contains': [1, 114514]}}, True),
+            # when attr_key does not exist, `contains`` returns `NULL`
+            ({'arr': [1, '2', None]}, {'attributes.x': {'!contains': []}}, False),
+            ({'arr': [1, '2', None]}, {'attributes.x': {'contains': []}}, False),
         ),
         ids=json.dumps,
     )
@@ -1759,6 +1762,29 @@ class TestJsonFilters:
     @pytest.mark.parametrize(
         'data,filters,is_match',
         (
+            # when attr_key does not exist, `contains`` returns `NULL`
+            (
+                {
+                    'dict': {
+                        'k1': 1,
+                        'k2': '2',
+                        'k3': None,
+                    }
+                },
+                {'attributes.foobar': {'!contains': {}}},
+                False,
+            ),
+            (
+                {
+                    'dict': {
+                        'k1': 1,
+                        'k2': '2',
+                        'k3': None,
+                    }
+                },
+                {'attributes.foobar': {'contains': {}}},
+                False,
+            ),
             # contains different types of values
             (
                 {

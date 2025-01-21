@@ -19,7 +19,7 @@ from typing import Any, List, Optional, Tuple, Union
 
 from sqlalchemy import JSON, case, func, select
 from sqlalchemy.orm.util import AliasedClass
-from sqlalchemy.sql import ColumnElement
+from sqlalchemy.sql import ColumnElement, null
 
 from aiida.common.lang import type_check
 from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities, groups, logs, nodes, users, utils
@@ -285,7 +285,10 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             return case((type_filter, casted_entity.ilike(value, escape='\\')), else_=False)
 
         if operator == 'contains':
-            return func.json_contains(database_entity, json.dumps(value))
+            return case(
+                (func.json_extract(column, '$.' + '.'.join(attr_key)).is_(null()), null()),
+                else_=func.json_contains(database_entity, json.dumps(value)),
+            )
 
         if operator == 'has_key':
             return (

@@ -87,13 +87,6 @@ jobs:
         name: aiida-pytests-py3.9
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
-    
-
-    - name: upterm
-      uses: lhotari/action-upterm@v1
-      if: ${{ failure() }}
-      with:
-        wait-timeout-minutes: 60
 
   tests-presto:
 
@@ -117,7 +110,7 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0
-      run: uv run pytest -m 'presto' tests/
+      run: uv run pytest -n auto -m 'presto' tests/
 
 
   verdi:

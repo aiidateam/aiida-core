@@ -149,6 +149,11 @@ class TestGroups:
         group.add_nodes(node_01)
         assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
+        # Try to add nothing: there should be no problem
+        group.add_nodes([])
+        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+
+
     def test_remove_nodes(self):
         """Test node removal."""
         node_01 = orm.Data().store()
@@ -176,6 +181,11 @@ class TestGroups:
         nodes.remove(node_02)
         group.remove_nodes([node_01, node_02])
         assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+
+        # Try to remove nothing: there should be no problem
+        group.remove_nodes([])
+        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+
 
     def test_clear(self):
         """Test the `clear` method to remove all nodes."""

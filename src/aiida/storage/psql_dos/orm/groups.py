@@ -185,6 +185,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
             for node in nodes:
                 check_node(node)
                 ins_dict.append({'dbnode_id': node.id, 'dbgroup_id': self.id})
+            if len(ins_dict) == 0:
+                return
 
             table = self.GROUP_NODE_CLASS.__table__
             ins = insert(table).values(ins_dict)

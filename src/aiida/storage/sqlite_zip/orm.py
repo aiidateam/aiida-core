@@ -19,7 +19,7 @@ from typing import Any, List, Optional, Tuple, Union
 
 from sqlalchemy import JSON, case, func, select
 from sqlalchemy.orm.util import AliasedClass
-from sqlalchemy.sql import ColumnElement
+from sqlalchemy.sql import ColumnElement, null
 
 from aiida.common.lang import type_check
 from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities, groups, logs, nodes, users, utils
@@ -285,8 +285,21 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             return case((type_filter, casted_entity.ilike(value, escape='\\')), else_=False)
 
         if operator == 'contains':
-            # to-do, see: https://github.com/sqlalchemy/sqlalchemy/discussions/7836
-            raise NotImplementedError('The operator `contains` is not implemented for SQLite-based storage plugins.')
+            # If the operator is 'contains', we must mirror the behavior of the PostgreSQL
+            # backend, which returns NULL if `attr_key` doesn't exist. To achieve this,
+            # an additional CASE statement is added to directly return NULL in such cases.
+            #
+            # Instead of using `database_entity`, which would be interpreted as a 'null'
+            # string in SQL, this approach ensures a proper NULL value is returned when
+            # `attr_key` doesn't exist.
+            #
+            # Original implementation:
+            #   return func.json_contains(database_entity, json.dumps(value))
+
+            return case(
+                (func.json_extract(column, '$.' + '.'.join(attr_key)).is_(null()), null()),
+                else_=func.json_contains(database_entity, json.dumps(value)),
+            )
 
         if operator == 'has_key':
             return (

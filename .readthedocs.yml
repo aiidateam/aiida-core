@@ -17,8 +17,8 @@ build:
     # https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-uv
     pre_create_environment:
     - asdf plugin add uv
-    - asdf install uv 0.5.21
-    - asdf global uv 0.5.21
+    - asdf install uv 0.5.22
+    - asdf global uv 0.5.22
     create_environment:
     - uv venv
     install:

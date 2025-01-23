@@ -951,3 +951,87 @@ def cat_path() -> Path:
     run_process = subprocess.run(['which', 'cat'], capture_output=True, check=True)
     path = run_process.stdout.decode('utf-8').strip()
     return Path(path)
+
+
+@pytest.fixture
+def generate_calculation_node_io(generate_calculation_node, tmp_path):
+    def _generate_calculation_node_io(entry_point: str | None = None, attach_outputs: bool = True):
+        import io
+
+        import numpy as np
+
+        from aiida.orm import ArrayData, FolderData, SinglefileData
+
+        filename = 'file.txt'
+        filecontent = 'a'
+        singlefiledata_linklabel = 'singlefile'
+        folderdata_linklabel = 'folderdata'
+        folderdata_relpath = Path('relative_path')
+        arraydata_linklabel = 'arraydata'
+
+        singlefiledata_input = SinglefileData.from_string(content=filecontent, filename=filename)
+        # ? Use instance for folderdata
+        folderdata = FolderData()
+        folderdata.put_object_from_filelike(handle=io.StringIO(filecontent), path=str(folderdata_relpath / filename))  # type: ignore[arg-type]
+        arraydata_input = ArrayData(arrays=np.ones(3))
+
+        # Create calculation inputs, outputs
+        calculation_node_inputs = {
+            singlefiledata_linklabel: singlefiledata_input,
+            folderdata_linklabel: folderdata,
+            arraydata_linklabel: arraydata_input,
+        }
+
+        singlefiledata_output = singlefiledata_input.clone()
+        folderdata_output = folderdata.clone()
+
+        if attach_outputs:
+            calculation_outputs = {
+                folderdata_linklabel: folderdata_output,
+                singlefiledata_linklabel: singlefiledata_output,
+            }
+        else:
+            calculation_outputs = None
+
+        # Actually write repository file and then read it in when generating calculation_node
+        (tmp_path / filename).write_text(filecontent)
+
+        calculation_node = generate_calculation_node(
+            repository=tmp_path,
+            inputs=calculation_node_inputs,
+            outputs=calculation_outputs,
+            entry_point=entry_point,
+        )
+        return calculation_node
+
+    return _generate_calculation_node_io
+
+
+@pytest.fixture
+def generate_workchain_node_io():
+    def _generate_workchain_node_io(cj_nodes, store_all: bool = True):
+        """Generate an instance of a `WorkChain` that contains a sub-`WorkChain` and a `Calculation` with file io."""
+        from aiida.orm import WorkflowNode
+
+        wc_node = WorkflowNode()
+        wc_node_sub = WorkflowNode()
+
+        # Add sub-workchain that calls a calculation
+        wc_node_sub.base.links.add_incoming(wc_node, link_type=LinkType.CALL_WORK, link_label='sub_workflow')
+        for cj_node in cj_nodes:
+            cj_node.base.links.add_incoming(wc_node_sub, link_type=LinkType.CALL_CALC, link_label='calculation')
+
+        # Set process_state so that tests don't throw exception for build_call_graph of README generation
+        [cj_node.set_process_state('finished') for cj_node in cj_nodes]
+        wc_node.set_process_state('finished')
+        wc_node_sub.set_process_state('finished')
+
+        # Need to store so that outputs are being dumped
+        if store_all:
+            wc_node.store()
+            wc_node_sub.store()
+            [cj_node.store() for cj_node in cj_nodes]
+
+        return wc_node
+
+    return _generate_workchain_node_io

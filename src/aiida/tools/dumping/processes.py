@@ -58,7 +58,6 @@ class ProcessDumper:
         overwrite: bool = False,
         incremental: bool = True,
         flat: bool = False,
-        calculations_hidden: bool = True,
         include_inputs: bool = True,
         include_outputs: bool = False,
         include_attributes: bool = True,
@@ -66,7 +65,7 @@ class ProcessDumper:
         rich_options: str = '',
         rich_config_file: Path | None = None,
         rich_dump_all: bool = True,
-        data_dumper: DataDumper | None = DataDumper(),
+        data_dumper: DataDumper = DataDumper(),
         dump_unsealed: bool = False,
         **kwargs,
     ) -> None:
@@ -86,8 +85,6 @@ class ProcessDumper:
         self.kwargs = kwargs
         self.dump_unsealed = dump_unsealed
 
-        self.hidden_aiida_path = dump_parent_path / '.aiida-raw-data'
-
     @staticmethod
     def _generate_default_dump_path(process_node: ProcessNode, prefix: str = 'dump') -> Path:
         """Simple helper function to generate the default parent-dumping directory if none given.
@@ -99,13 +96,21 @@ class ProcessDumper:
         :return: The absolute default parent dump path.
         """
 
-        pk = process_node.pk
-        # TODO: Use UUID[:8] here
+        entities_to_dump = []
+
+        if prefix:
+            # No '' and None
+            entities_to_dump += [prefix]
+
         try:
-            return Path(f'{prefix}-{process_node.process_label}-{pk}')
+            entities_to_dump += [process_node.process_label]
         except AttributeError:
             # This case came up during testing, not sure how relevant it actually is
-            return Path(f'{prefix}-{process_node.process_type}-{pk}')
+            entities_to_dump += [process_node.process_type]
+
+        entities_to_dump += [str(process_node.pk)]
+
+        return Path('-'.join(entities_to_dump))
 
     @staticmethod
     def _generate_readme(process_node: ProcessNode, output_path: Path) -> None:
@@ -171,7 +176,7 @@ class ProcessDumper:
         (output_path / 'README.md').write_text(_readme_string)
 
     @staticmethod
-    def _generate_child_node_label(index: int, link_triple: LinkTriple) -> str:
+    def _generate_child_node_label(index: int, link_triple: LinkTriple, append_pk: bool = True) -> str:
         """Small helper function to generate and clean directory label for child nodes during recursion.
 
         :param index: Index assigned to step at current level of recursion.
@@ -193,6 +198,9 @@ class ProcessDumper:
             process_type = node.process_type
             if process_type is not None and process_type != link_label:
                 label_list += [process_type]
+
+        if append_pk:
+            label_list += [str(node.pk)]
 
         node_label = '-'.join(label_list)
         # `CALL-` as part of the link labels also for MultiplyAddWorkChain -> Seems general enough, so remove
@@ -260,7 +268,7 @@ class ProcessDumper:
         output_path: Path,
         io_dump_paths: List[str | Path] | None = None,
         link_calculations: bool = False,
-        link_calculations_dir: str | None = None,
+        link_calculations_dir: Path | None = None,
     ) -> None:
         """Recursive function to traverse a `WorkflowNode` and dump its `CalculationNode` s.
 
@@ -302,7 +310,10 @@ class ProcessDumper:
                     )
                 else:
                     try:
-                        os.symlink(link_calculations_dir / child_node.uuid, child_output_path)
+                        calculation_dump_path = link_calculations_dir / ProcessDumper._generate_default_dump_path(
+                            process_node=child_node, prefix=''
+                        )
+                        os.symlink(calculation_dump_path, child_output_path)
                     except FileExistsError:
                         pass
 
@@ -354,22 +365,19 @@ class ProcessDumper:
                     output_path=output_path / io_dump_mapping.inputs, link_triples=input_links
                 )
 
-
             if self.data_dumper.also_rich:
                 rich_data_output_path = output_path / io_dump_mapping.inputs
-            #     if not self.data_dumper.data_hidden:
-            #         rich_data_output_path = output_path / io_dump_mapping.inputs
-            #     else:
-            #         # TODO: Currently, when dumping only one selected workflow, if rich dumping is activated, but
-            #         # TODO: `data-hidden` is set, no data nodes were actually being dumped
-            #         # TODO: With the current implementation below, they are dumped, but not in the same structure as for the
-            #         # TODO: `dump_rich_core` function. Quick fix for now
-            #         pass
+                #     if not self.data_dumper.data_hidden:
+                #         rich_data_output_path = output_path / io_dump_mapping.inputs
+                #     else:
+                #         # TODO: Currently, when dumping only one selected workflow, if rich dumping is activated, but
+                #         # TODO: `data-hidden` is set, no data nodes were actually being dumped
+                #         # TODO: With the current implementation below, they are dumped, but not in the same structure as for the
+                #         # TODO: `dump_rich_core` function. Quick fix for now
+                #         pass
 
                 # Only dump the rich data output files in the process directories if data_hidden is False
-                self._dump_calculation_io_files_rich(
-                    output_path=rich_data_output_path, link_triples=input_links
-                )
+                self._dump_calculation_io_files_rich(output_path=rich_data_output_path, link_triples=input_links)
         # Dump the node_outputs apart from `retrieved`
         if self.include_outputs:
             output_links = list(calculation_node.base.links.get_outgoing(link_type=LinkType.CREATE))

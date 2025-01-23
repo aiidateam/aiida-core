@@ -6,7 +6,6 @@ organize_by_groups: true
 dump_processes: true
 only_top_level_workflows: true
 dump_data: true
-calculations_hidden: true
 data_hidden: true
 also_raw: false
 also_rich: true

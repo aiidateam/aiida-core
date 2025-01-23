@@ -558,7 +558,7 @@ def process_repair(manager, broker, dry_run):
             echo.echo_report(f'Revived process `{pid}`')
 
 
-@verdi_process.command("dump")
+@verdi_process.command('dump')
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
@@ -613,30 +613,30 @@ def process_dump(
     node data for further inspection.
     """
 
+    from aiida.tools.archive.exceptions import ExportValidationError
     from aiida.tools.dumping.data import DataDumper
     from aiida.tools.dumping.processes import ProcessDumper
-    from aiida.tools.archive.exceptions import ExportValidationError
 
     # from aiida.tools.dumping.utils import validate_rich_options
     from aiida.tools.dumping.rich import rich_from_cli
 
     processdumper_kwargs = {
-        "include_inputs": include_inputs,
-        "include_outputs": include_outputs,
-        "include_attributes": include_attributes,
-        "include_extras": include_extras,
-        "flat": flat,
-        "dump_unsealed": dump_unsealed,
-        "incremental": incremental,
+        'include_inputs': include_inputs,
+        'include_outputs': include_outputs,
+        'include_attributes': include_attributes,
+        'include_extras': include_extras,
+        'flat': flat,
+        'dump_unsealed': dump_unsealed,
+        'incremental': incremental,
     }
 
     rich_kwargs = {
-        "rich_dump_all": rich_dump_all,
+        'rich_dump_all': rich_dump_all,
     }
 
     datadumper_kwargs = {
-        "also_raw": also_raw,
-        "also_rich": also_rich,
+        'also_raw': also_raw,
+        'also_rich': also_rich,
     }
 
     # if also_rich:
@@ -672,15 +672,13 @@ def process_dump(
             output_path=path,
         )
         echo.echo_success(
-            f"Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`."
+            f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.'
         )
     except FileExistsError:
         echo.echo_critical(
-            "Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually."
+            'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
         )
     except ExportValidationError as e:
-        echo.echo_critical(f"{e!s}")
+        echo.echo_critical(f'{e!s}')
     except Exception as e:
-        echo.echo_critical(
-            f"Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s})."
-        )
+        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')

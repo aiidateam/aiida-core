@@ -974,38 +974,22 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
     assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output
 
 
-def test_computer_ssh_auto(run_cli_command, aiida_computer):
-    """Test setup of computer with ``core.ssh_auto`` entry point.
+# comment on 'core.ssh_async':
+# It is important that 'ssh localhost' is functional in your test environment.
+# It should connect without asking for a password.
+# comment on 'core.ssh_auto':
+# It is important that no other options (except for `--safe-interval`) have to be specified for this transport type.
+@pytest.mark.parametrize(
+    'transport_type, config', [('core.ssh_auto', []), ('core.ssh_async', ['--machine-or-host', 'localhost'])]
+)
+def test_computer_setup_with_various_transport(run_cli_command, aiida_computer, transport_type, config):
+    """Test setup of computer with ``core.ssh_auto`` and ``core.ssh_async`` entry points.
 
-    The configure step should only require the common shared options ``safe_interval`` and ``use_login_shell``.
+    pass any config option the setup needs in the parameter section``.
     """
-    computer = aiida_computer(transport_type='core.ssh_auto').store()
+    computer = aiida_computer(transport_type=transport_type).store()
     assert not computer.is_configured
 
-    # It is important that no other options (except for `--safe-interval`) have to be specified for this transport type.
-    options = ['core.ssh_auto', computer.uuid, '--non-interactive', '--safe-interval', '0']
-    run_cli_command(computer_configure, options, use_subprocess=False)
-    assert computer.is_configured
-
-
-def test_computer_ssh_async(run_cli_command, aiida_computer):
-    """Test setup of computer with ``core.ssh_async`` entry point.
-
-    The configure step should only require the common shared options ``safe_interval`` and ``use_login_shell``.
-    """
-    computer = aiida_computer(transport_type='core.ssh_async').store()
-    assert not computer.is_configured
-
-    # It is important that 'ssh localhost' is functional in your test environment.
-    # It should connect without asking for a password.
-    options = [
-        'core.ssh_async',
-        computer.uuid,
-        '--non-interactive',
-        '--safe-interval',
-        '0',
-        '--machine-or-host',
-        'localhost',
-    ]
+    options = [transport_type, computer.uuid] + config
     run_cli_command(computer_configure, options, use_subprocess=False)
     assert computer.is_configured

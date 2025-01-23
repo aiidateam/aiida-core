@@ -9,6 +9,7 @@
 """Plugin for transport over SSH asynchronously."""
 
 ## TODO: put & get methods could be simplified with the asyncssh.sftp.mget() & put() method or sftp.glob()
+## https://github.com/aiidateam/aiida-core/issues/6719
 import asyncio
 import glob
 import os
@@ -113,7 +114,7 @@ class AsyncSshTransport(AsyncTransport):
         # Originally set as 'Hostname' during `verdi computer setup`
         # and is passed as `machine=computer.hostname` in the codebase
         # unfortunately, name of hostname and machine are used interchangeably in the aiida-core codebase
-        # TODO: open an issue to unify the naming
+        # TODO: an issue is open: https://github.com/aiidateam/aiida-core/issues/6726
         return computer.hostname
 
     def __init__(self, *args, **kwargs):
@@ -175,9 +176,6 @@ class AsyncSshTransport(AsyncTransport):
         await self._conn.wait_closed()
         self._is_open = False
 
-    def chown(self, path, uid, gid):
-        raise NotImplementedError
-
     def __str__(self):
         return f"{'OPEN' if self._is_open else 'CLOSED'} [AsyncSshTransport]"
 
@@ -222,8 +220,6 @@ class AsyncSshTransport(AsyncTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        ## TODO: this whole glob part can be simplified via the asyncssh glob
-        ## or by using the asyncssh.sftp.mget() method
         if self.has_magic(remotepath):
             if self.has_magic(localpath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
@@ -429,7 +425,6 @@ class AsyncSshTransport(AsyncTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        # TODO: this whole glob part can be simplified via the asyncssh glob
         if self.has_magic(localpath):
             if self.has_magic(remotepath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
@@ -1027,6 +1022,7 @@ class AsyncSshTransport(AsyncTransport):
         path = str(path)
         # TODO: check if asyncssh does return SFTPFileIsADirectory in this case
         # if that's the case, we can get rid of the isfile check
+        # https://github.com/aiidateam/aiida-core/issues/6719
         if await self.isdir_async(path):
             raise OSError(f'The path {path} is a directory')
         else:

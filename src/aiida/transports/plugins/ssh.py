@@ -231,10 +231,6 @@ class SshTransport(BlockingTransport):
     # if too large commands are sent, clogging the outputs or logs
     _MAX_EXEC_COMMAND_LOG_SIZE = None
 
-    # NOTE: all the methods that start with _get_ are class methods that
-    # return a suggestion for the specific field. They are being used in
-    # a function called transport_option_default in transports/cli.py,
-    # during an interactive `verdi computer configure` command.
     @classmethod
     def _get_username_suggestion_string(cls, computer):
         """Return a suggestion for the specific field."""
@@ -596,7 +592,7 @@ class SshTransport(BlockingTransport):
         happens and the cwd is unchanged.
         """
         warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version.',
+            '`chdir()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
             version=3,
         )
         from paramiko.sftp import SFTPError
@@ -676,7 +672,7 @@ class SshTransport(BlockingTransport):
         so this should never happen within this class.
         """
         warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version.',
+            '`chdir()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
             version=3,
         )
         return self.sftp.getcwd()
@@ -1378,6 +1374,7 @@ class SshTransport(BlockingTransport):
         # TODO: this seems to be a bug (?)
         # why to raise an OSError if the newpath does not exist?
         # ofcourse newpath shouldn't exist, that's why we are renaming it!
+        # issue opened here: https://github.com/aiidateam/aiida-core/issues/6725
         if not self.isfile(newpath):
             if not self.isdir(newpath):
                 raise OSError(f'Destination {newpath} does not exist')

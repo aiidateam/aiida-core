@@ -44,8 +44,16 @@ def validate_positive_number(ctx, param, value):
 
 
 class Transport(abc.ABC):
-    """Abstract class for a generic blocking transport.
-    A plugin inhereting from this class should implement the blocking methods, only."""
+    """Abstract class for a generic transport.
+    A plugin inheriting from this class should implement all the abstract methods.
+    In case your plugin is strictly asynchronous (blocking), you may want to inherit
+      from `AsyncTransport` (BlockingTransport) for easier adoption.
+
+    .. note:: All the methods that start with ``_get_`` are class methods that
+        return a suggestion for the specific field. They are being used in
+        a function called ``transport_option_default`` in ``transports/cli.py``,
+        during an interactive ``verdi computer configure`` command.
+    """
 
     # This will be used for ``Computer.get_minimum_job_poll_interval``
     DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10
@@ -1582,6 +1590,9 @@ class AsyncTransport(Transport):
 
     def chmod(self, *args, **kwargs):
         return self.run_command_blocking(self.chmod_async, *args, **kwargs)
+
+    def chown(self, path, uid, gid):
+        return self.run_command_blocking(self.chown_async, path, uid, gid)
 
     def copy(self, *args, **kwargs):
         return self.run_command_blocking(self.copy_async, *args, **kwargs)

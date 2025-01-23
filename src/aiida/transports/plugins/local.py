@@ -104,7 +104,7 @@ class LocalTransport(BlockingTransport):
         :raise OSError: if the directory does not have read attributes.
         """
         warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version.',
+            '`chdir()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
             version=3,
         )
         path = str(path)

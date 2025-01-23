@@ -524,7 +524,7 @@ class CalcJob(Process):
         super().on_terminated()
 
     @override
-    def run(self) -> Union[plumpy.process_states.Stop, int, plumpy.process_states.Wait]:
+    async def run(self) -> Union[plumpy.process_states.Stop, int, plumpy.process_states.Wait]:
         """Run the calculation job.
 
         This means invoking the `presubmit` and storing the temporary folder in the node's repository. Then we move the
@@ -535,11 +535,11 @@ class CalcJob(Process):
 
         """
         if self.inputs.metadata.dry_run:
-            self._perform_dry_run()
+            await self._perform_dry_run()
             return plumpy.process_states.Stop(None, True)
 
         if 'remote_folder' in self.inputs:
-            exit_code = self._perform_import()
+            exit_code = await self._perform_import()
             return exit_code
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process
@@ -627,7 +627,7 @@ class CalcJob(Process):
         if not self.node.computer:
             self.node.computer = self.inputs.code.computer
 
-    def _perform_dry_run(self):
+    async def _perform_dry_run(self):
         """Perform a dry run.
 
         Instead of performing the normal sequence of steps, just the `presubmit` is called, which will call the method
@@ -643,13 +643,13 @@ class CalcJob(Process):
         with LocalTransport() as transport:
             with SubmitTestFolder() as folder:
                 calc_info = self.presubmit(folder)
-                upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
+                await upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
                 self.node.dry_run_info = {  # type: ignore[attr-defined]
                     'folder': folder.abspath,
                     'script_filename': self.node.get_option('submit_script_filename'),
                 }
 
-    def _perform_import(self):
+    async def _perform_import(self):
         """Perform the import of an already completed calculation.
 
         The inputs contained a `RemoteData` under the key `remote_folder` signalling that this is not supposed to be run
@@ -669,7 +669,7 @@ class CalcJob(Process):
                 with SandboxFolder(filepath_sandbox) as retrieved_temporary_folder:
                     self.presubmit(folder)
                     self.node.set_remote_workdir(self.inputs.remote_folder.get_remote_path())
-                    retrieved = retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
+                    retrieved = await retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
                     if retrieved is not None:
                         self.out(self.node.link_label_retrieved, retrieved)
                         self.update_outputs()

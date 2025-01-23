@@ -404,6 +404,7 @@ def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workcha
 
     process_dumper = ProcessDumper(include_attributes=False, include_extras=False)
 
+    (tmp_path / node_metadata_file).unlink()
     process_dumper._dump_node_yaml(process_node=wc_node, output_path=tmp_path)
 
     # Open the dumped YAML file and read its contents

@@ -19,6 +19,7 @@ from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
+from aiida.tools.dumping import CollectionDumper, DataDumper, ProcessDumper
 
 
 @verdi.group('profile')
@@ -269,3 +270,284 @@ def profile_delete(force, delete_data, profiles):
 
         get_config().delete_profile(profile.name, delete_storage=delete_data)
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
+
+
+# ? Specify groups via giving the groups, or just enabling "groups" and then all are dumped?
+# ? Provide some mechanism to allow for both, e.g. if no argument is provided, all groups are dumped
+@verdi_profile.command('mirror')
+@options.PATH()
+@options.OVERWRITE()
+@options.INCREMENTAL()
+@options.ORGANIZE_BY_GROUPS()
+@options.DRY_RUN()
+@options.DUMP_PROCESSES()
+@options.ONLY_TOP_LEVEL_WORKFLOWS()
+@options.DUMP_DATA()
+@options.DEDUPLICATE()
+@options.DATA_HIDDEN()
+@options.ALSO_RAW()
+@options.ALSO_RICH()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+@options.RICH_SPEC()
+@options.RICH_DUMP_ALL()
+@options.DUMP_CONFIG_FILE()
+@options.NODES()
+@options.GROUPS()
+@click.pass_context
+def storage_mirror(
+    ctx,
+    path,
+    overwrite,
+    incremental,
+    organize_by_groups,
+    dry_run,
+    dump_processes,
+    only_top_level_workflows,
+    dump_data,
+    deduplicate,
+    data_hidden,
+    also_raw,
+    also_rich,
+    include_inputs,
+    include_outputs,
+    include_attributes,
+    include_extras,
+    flat,
+    rich_spec,
+    rich_dump_all,
+    dump_config_file,
+    nodes,
+    groups,
+):
+    """Dump all data in an AiiDA profile's storage to disk."""
+
+
+    from aiida import orm
+    from aiida.tools.dumping.parser import DumpConfigParser
+    from aiida.tools.dumping.rich import (
+        DEFAULT_CORE_EXPORT_MAPPING,
+        rich_from_cli,
+        rich_from_config,
+    )
+    from aiida.tools.dumping.utils import prepare_dump_path
+
+    profile = ctx.obj['profile']
+
+    # from aiida.manage.manager import get_manager
+
+    # manager = get_manager()
+    # storage = manager.get_profile_storage()
+
+    # with spinner():
+    #     data = storage.get_info(detailed=True)
+
+    # echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
+
+    # print(f"Profile name: {profile_name}")
+
+    # # TODO: export computers alone, and groups
+    # t1 = time.time()
+    # qb = orm.QueryBuilder().append(orm.Node, tag='node', project=['uuid'])
+    # all_uuids = qb.all(flat=True)
+    # print(f"All UUIDs retrieved in {time.time() - t1:6.3f} s.")
+
+    # t1 = time.time()
+    # with open('all-source-uuids.json', 'w') as fhandle:
+    #     json.dump({'profile_name': profile_name, 'uuids': all_uuids}, fhandle)
+    # print(f"{len(all_uuids)} UUIDs written in {time.time() - t1:6.3f} s.")
+
+    if nodes and groups:
+        echo.echo_critical('`nodes` and `groups` specified. Set only one.')
+    # if all_entries and groups:
+    #     echo.echo_critical('`all_entries` and `groups` specified. Set only one.')
+
+    if dump_config_file is None:
+        general_kwargs = {
+            'path': path,
+            'overwrite': overwrite,
+            'incremental': incremental,
+            'dry_run': dry_run,
+        }
+
+        processdumper_kwargs = {
+            'include_inputs': include_inputs,
+            'include_outputs': include_outputs,
+            'include_attributes': include_attributes,
+            'include_extras': include_extras,
+            'flat': flat,
+            # "calculations_hidden": calculations_hidden
+        }
+
+        datadumper_kwargs = {
+            'also_raw': also_raw,
+            'also_rich': also_rich,
+            'data_hidden': data_hidden,
+        }
+
+        collection_kwargs = {
+            'should_dump_processes': dump_processes,
+            'should_dump_data': dump_data,
+            'only_top_level_workflows': only_top_level_workflows,
+        }
+
+        rich_kwargs = {
+            'rich_dump_all': rich_dump_all,
+        }
+
+        if rich_spec is not None:
+            rich_spec_dict = rich_from_cli(rich_spec=rich_spec, **rich_kwargs)
+        else:
+            rich_spec_dict = DEFAULT_CORE_EXPORT_MAPPING
+
+    # TODO: Also allow for mixing. Currently one can _only_ specify either the config file, or the arguments on the
+    # TODO: command line
+    else:
+        kwarg_dicts_from_config = DumpConfigParser.parse_config_file(dump_config_file)
+
+        general_kwargs = kwarg_dicts_from_config['general_kwargs']
+        processdumper_kwargs = kwarg_dicts_from_config['processdumper_kwargs']
+        datadumper_kwargs = kwarg_dicts_from_config['datadumper_kwargs']
+        collection_kwargs = kwarg_dicts_from_config['collection_kwargs']
+        rich_kwargs = kwarg_dicts_from_config['rich_kwargs']
+
+        rich_spec_dict = rich_from_config(kwarg_dicts_from_config['rich_spec'], **rich_kwargs)
+
+    # Obtain these specifically for easy access and modifications
+    path = general_kwargs['path']
+    overwrite = general_kwargs['overwrite']
+    dry_run = general_kwargs['dry_run']
+    incremental = general_kwargs['incremental']
+
+    if not overwrite and incremental:
+        echo.echo_report('Overwrite set to false, but incremental dumping selected. Will keep existing directories.')
+
+    if not str(path).endswith(profile.name):
+        path /= profile.name
+
+    # TODO: Implement proper dry-run feature
+    dry_run_message = f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\n"
+    dry_run_message += 'Only directories will be created.'
+
+    if dry_run or (not collection_kwargs['should_dump_processes'] and not collection_kwargs['should_dump_data']):
+        echo.echo_report(dry_run_message)
+        return
+
+    else:
+        echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
+
+    SAFEGUARD_FILE = '.verdi_storage_dump'  # noqa: N806
+
+    try:
+        prepare_dump_path(
+            path_to_validate=path,
+            overwrite=overwrite,
+            incremental=incremental,
+            safeguard_file=SAFEGUARD_FILE,
+        )
+    except FileExistsError as exc:
+        echo.echo_critical(str(exc))
+
+    (path / SAFEGUARD_FILE).touch()
+
+    data_dumper = DataDumper(
+        dump_parent_path=path,
+        overwrite=overwrite,
+        incremental=incremental,
+        rich_spec_dict=rich_spec_dict,
+        **datadumper_kwargs,
+    )
+    # dumper_pretty_print(data_dumper)
+
+    process_dumper = ProcessDumper(
+        dump_parent_path=path,
+        overwrite=overwrite,
+        incremental=incremental,
+        data_dumper=data_dumper,
+        **processdumper_kwargs,
+    )
+    # dumper_pretty_print(process_dumper)
+
+    from aiida.tools.dumping.incremental import DumpNodeCollector
+
+    dumpnodecollector = DumpNodeCollector(dump_parent_path=path)
+
+    dumpnodecollector.update_uuids_before_dump()
+    dumpnodecollector.create_organized_uuid_dicts()
+    # dumpnodecollector.populate_uuid_dict()
+
+    # raise SystemExit()
+
+    # TODO: Possibly implement specifying specific computers
+    # TODO: Although, users could just specify the relevant nodes
+    # TODO: Also add option to specify node types via entry points
+
+    # === Dump the data that is not associated with any group ===
+    if not groups:
+        collection_dumper = CollectionDumper(
+            dump_parent_path=path,
+            output_path=path,
+            overwrite=overwrite,
+            incremental=incremental,
+            nodes=nodes,
+            **collection_kwargs,
+            **rich_kwargs,
+            data_dumper=data_dumper,
+            process_dumper=process_dumper,
+            deduplicate=deduplicate,
+        )
+        collection_dumper.create_entity_counter()
+        # dumper_pretty_print(collection_dumper, include_private_and_dunder=False)
+
+        if dump_processes and collection_dumper._should_dump_processes():
+            echo.echo_report(f'Dumping processes not in any group for profile `{profile.name}`...')
+            collection_dumper.dump_processes()
+        if dump_data:
+            if not also_rich and not also_raw:
+                echo.echo_critical('`--dump-data was given, but neither --also-raw or --also-rich specified.')
+            echo.echo_report(f'Dumping data not in any group for profile {profile.name}...')
+
+            collection_dumper.dump_data_rich()
+        # collection_dumper.dump_plugin_data()
+
+    # === Dump data per-group if Groups exist in profile or are selected ===
+    # TODO: Invert default behavior here, as I typically want to dump all entries
+    # TODO: Possibly define a new click option instead
+    # all_entries = not all_entries
+    if not groups:  # and all_entries:
+        groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
+
+    if groups is not None and not nodes:
+        for group in groups:
+            if organize_by_groups:
+                group_subdir = Path(*group.type_string.split('.'))
+                group_path = path / 'groups' / group_subdir / group.label
+            else:
+                group_path = path
+
+            collection_dumper = CollectionDumper(
+                dump_parent_path=path,
+                output_path=group_path,
+                overwrite=overwrite,
+                incremental=incremental,
+                group=group,
+                **collection_kwargs,
+                **rich_kwargs,
+                process_dumper=process_dumper,
+                data_dumper=data_dumper,
+            )
+            collection_dumper.create_entity_counter()
+            if dump_processes:
+                # The additional `_should_dump_processes` check here ensures that no reporting like
+                # "Dumping processes for group `SSSP/1.3/PBE/efficiency`" is printed for groups that
+                # don't contain processes
+                if collection_dumper._should_dump_processes():
+                    echo.echo_report(f'Dumping processes for group `{group.label}`...')
+                    collection_dumper.dump_processes()
+            if dump_data:
+                echo.echo_report(f'Dumping data for group `{group.label}`...')
+                collection_dumper.dump_data_rich()
+                # collection_dumper.dump_plugin_data()

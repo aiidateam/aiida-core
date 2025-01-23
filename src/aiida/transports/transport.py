@@ -47,7 +47,7 @@ class Transport(abc.ABC):
     """Abstract class for a generic transport.
     A plugin inheriting from this class should implement all the abstract methods.
     In case your plugin is strictly asynchronous (blocking), you may want to inherit
-      from `AsyncTransport` (BlockingTransport) for easier adoption.
+    from `AsyncTransport` (BlockingTransport) for easier adoption.
 
     ..note::
 

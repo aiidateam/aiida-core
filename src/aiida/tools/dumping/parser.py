@@ -25,13 +25,11 @@ class DumpConfigParser:
             'include_attributes': config.get('include_attributes', True),
             'include_extras': config.get('include_extras', False),
             'flat': config.get('flat', False),
-            'calculations_hidden': config.get('calculations_hidden', True),
         }
 
         datadumper_kwargs = {
             'also_raw': config.get('also_raw', False),
             'also_rich': config.get('also_rich', True),
-            'data_hidden': config.get('data_hidden', True),
         }
 
         collection_kwargs = {

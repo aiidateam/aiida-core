@@ -398,6 +398,7 @@ Below is a list with all available subcommands.
       configure-rabbitmq  Configure RabbitMQ for a profile.
       delete              Delete one or more profiles.
       list                Display a list of all available profiles.
+      mirror              Dump all data in an AiiDA profile's storage to disk.
       set-default         Set a profile as the default profile.
       setdefault          (Deprecated) Set a profile as the default profile.
       setup               Set up a new profile.

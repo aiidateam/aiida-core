@@ -14,6 +14,9 @@ import logging
 import shutil
 from pathlib import Path
 
+from rich.console import Console
+from rich.table import Table
+
 __all__ = ['prepare_dump_path']
 
 logger = logging.getLogger(__name__)
@@ -73,3 +76,94 @@ def prepare_dump_path(
     # Create directory if it doesn't exist or was removed
     path_to_validate.mkdir(exist_ok=True, parents=True)
     (path_to_validate / safeguard_file).touch()
+
+
+def get_nodes_from_db(qb_instance, qb_filters: t.List | None = None, flat=False):
+    # Computers cannot be associated via `with_group`
+    # for qb_filter in qb_filters:
+    #     qb.add_filter(**qb_filter)
+
+    return_iterable = qb_instance.iterall() if qb_instance.count() > 10 ^ 3 else qb_instance.all()
+
+    # Manual flattening as `iterall` doesn't have `flat` option unlike `all`
+    if flat:
+        return_iterable = [_[0] for _ in return_iterable]
+
+    return return_iterable
+
+
+# def validate_rich_options(rich_options, rich_config_file):
+#     if rich_options is not None and rich_config_file is not None:
+#         raise ValueError('Specify rich options either via CLI or config file, not both.')
+
+#     else:
+#         logger.report('Neither `--rich-options` nor `--rich-config` set, using defaults.')
+
+
+@staticmethod
+def dumper_pretty_print(dumper_instance, include_private_and_dunder: bool = False):
+    console = Console()
+    table = Table(title=f'Attributes and Methods of {dumper_instance.__class__.__name__}')
+
+    # Adding columns to the table
+    table.add_column('Name', justify='left')
+    table.add_column('Type', justify='left')
+    table.add_column('Value', justify='left')
+
+    # Lists to store attributes and methods
+    entries = []
+
+    # Iterate over the class attributes and methods
+    for attr_name in dir(dumper_instance):
+        # Exclude private attributes and dunder methods
+        attr_value = getattr(dumper_instance, attr_name)
+        entry_type = 'Attribute' if not callable(attr_value) else 'Method'
+
+        if attr_name.startswith('_'):
+            if include_private_and_dunder:
+                entries.append((attr_name, entry_type, str(attr_value)))
+            else:
+                pass
+        else:
+            entries.append((attr_name, entry_type, str(attr_value)))
+
+    # Sort entries: attributes first, then methods
+    entries.sort(key=lambda x: (x[1] == 'Method', x[0]))
+
+    # Add sorted entries to the table
+    for name, entry_type, value in entries:
+        table.add_row(name, entry_type, value)
+
+    # Print the formatted table
+    console.print(table)
+
+
+# def check_storage_size_user():
+#     from aiida.manage.manager import get_manager
+
+#     manager = get_manager()
+#     storage = manager.get_profile_storage()
+
+#     data = storage.get_info(detailed=True)
+#     repository_data = data['repository']['Size (MB)']
+#     total_size_gb = sum(repository_data.values()) / 1024
+#     if total_size_gb > 10:
+#         user_input = (
+#             input('Repository size larger than 10gb. Do you still want to dump the profile data? (y/N): ')
+#             .strip()
+#             .lower()
+#         )
+
+#         if user_input != 'y':
+#             sys.exit()
+
+
+def sanitize_file_extension(filename: str | Path):
+    if isinstance(filename, Path):
+        filename = str(filename)
+    if filename.endswith('.mpl_pdf'):
+        filename = filename.replace('.mpl_pdf', '.pdf')
+    if filename.endswith('.mpl_png'):
+        filename = filename.replace('.mpl_png', '.png')
+
+    return Path(filename)

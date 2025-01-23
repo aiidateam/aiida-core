@@ -49,7 +49,9 @@ class Transport(abc.ABC):
     In case your plugin is strictly asynchronous (blocking), you may want to inherit
       from `AsyncTransport` (BlockingTransport) for easier adoption.
 
-    .. note:: All the methods that start with ``_get_`` are class methods that
+    ..note::
+
+        All the methods that start with ``_get_`` are class methods that
         return a suggestion for the specific field. They are being used in
         a function called ``transport_option_default`` in ``transports/cli.py``,
         during an interactive ``verdi computer configure`` command.

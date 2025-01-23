@@ -31,6 +31,7 @@ from aiida.orm.implementation import BackendEntity
 from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.sqlite_zip import models, orm
+from aiida.storage.sqlite_zip.backend import validate_sqlite_version
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 
 from ..migrations import TEMPLATE_INVALID_SCHEMA_VERSION
@@ -226,6 +227,7 @@ class SqliteDosStorage(PsqlDosBackend):
 
     @classmethod
     def initialise(cls, profile: Profile, reset: bool = False) -> bool:
+        validate_sqlite_version()
         filepath = Path(profile.storage_config['filepath'])
 
         try:
@@ -241,6 +243,10 @@ class SqliteDosStorage(PsqlDosBackend):
             )
 
         return super().initialise(profile, reset)
+
+    def __init__(self, profile: Profile) -> None:
+        validate_sqlite_version()
+        super().__init__(profile)
 
     def __str__(self) -> str:
         state = 'closed' if self.is_closed else 'open'

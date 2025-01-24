@@ -21,7 +21,7 @@ jobs:
   tests:
 
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 180
 
     strategy:
       fail-fast: false
@@ -68,11 +68,11 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     # uncomment for debug purposes
-    - name: Setup upterm session
-      env:
-        AIIDA_TEST_PROFILE: test_aiida
-        AIIDA_WARN_v3: 1
-      uses: lhotari/action-upterm@v1
+    #- name: Setup upterm session
+    #  env:
+    #    AIIDA_TEST_PROFILE: test_aiida
+    #    AIIDA_WARN_v3: 1
+    #  uses: lhotari/action-upterm@v1
 
     - name: Setup environment
       run: .github/workflows/setup.sh

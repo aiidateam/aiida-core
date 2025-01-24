@@ -496,6 +496,7 @@ class SshTransport(BlockingTransport):
             connection_arguments['sock'] = self._proxy
 
         try:
+            connection_arguments['banner_timeout'] = 200
             self._client.connect(self._machine, **connection_arguments)
         except Exception as exc:
             self.logger.error(

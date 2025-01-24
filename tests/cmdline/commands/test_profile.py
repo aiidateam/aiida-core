@@ -164,6 +164,32 @@ def test_delete_force(run_cli_command, mock_profiles, pg_test_cluster):
 
 
 @pytest.mark.parametrize('entry_point', ('core.sqlite_dos', 'core.sqlite_zip'))
+def test_setup_with_validating_sqlite_version(run_cli_command, isolated_config, tmp_path, entry_point, monkeypatch):
+    """Test the ``verdi profile setup`` command.
+    Same as `test_setup`, here we test the functionality to check sqlite versions, before setting up profiles.
+    """
+
+    if entry_point == 'core.sqlite_zip':
+        tmp_path = tmp_path / 'archive.aiida'
+        create_archive([], filename=tmp_path)
+
+    profile_name = 'temp-profile'
+    options = [entry_point, '-n', '--profile-name', profile_name, '--email', 'email@host', '--filepath', str(tmp_path)]
+
+    # Should raise if installed version is lower than the supported one.
+    monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '100.0.0')
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False, raises=True)
+    assert 'Storage backend requires sqlite 100.0.0 or higher. But you have' in result.stderr
+    assert profile_name not in isolated_config.profile_names
+
+    # Should not raise if installed version is higher than the supported one.
+    monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '0.0.0')
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    assert profile_name in isolated_config.profile_names
+    assert f'Created new profile `{profile_name}`.' in result.output
+
+
+@pytest.mark.parametrize('entry_point', ('core.sqlite_dos', 'core.sqlite_zip'))
 def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point):
     """Test the ``verdi profile delete`` command with the ``--delete-storage`` option."""
     profile_name = 'temp-profile'

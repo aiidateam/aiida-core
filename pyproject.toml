@@ -20,6 +20,7 @@ classifiers = [
 dependencies = [
   'alembic~=1.2',
   'archive-path~=0.4.2',
+  "asyncssh~=2.19.0",
   'circus~=0.18.0',
   'click-spinner~=0.1.8',
   'click~=8.1',
@@ -176,6 +177,7 @@ requires-python = '>=3.9'
 [project.entry-points.'aiida.transports']
 'core.local' = 'aiida.transports.plugins.local:LocalTransport'
 'core.ssh' = 'aiida.transports.plugins.ssh:SshTransport'
+'core.ssh_async' = 'aiida.transports.plugins.ssh_async:AsyncSshTransport'
 'core.ssh_auto' = 'aiida.transports.plugins.ssh_auto:SshAutoTransport'
 
 [project.entry-points.'aiida.workflows']
@@ -309,6 +311,7 @@ module = 'tests.*'
 ignore_missing_imports = true
 module = [
   'ase.*',
+  'asyncssh.*',
   'bpython.*',
   'bs4.*',
   'CifFile.*',
@@ -389,6 +392,7 @@ testpaths = [
   'tests'
 ]
 timeout = 240
+timeout_method = "thread"
 xfail_strict = true
 
 [tool.ruff]

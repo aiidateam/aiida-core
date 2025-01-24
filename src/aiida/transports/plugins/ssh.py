@@ -388,7 +388,6 @@ class SshTransport(BlockingTransport):
         self._client = paramiko.SSHClient()
         self._load_system_host_keys = kwargs.pop('load_system_host_keys', False)
         if self._load_system_host_keys:
-            breakpoint()
             self._client.load_system_host_keys()
 
         self._missing_key_policy = kwargs.pop('key_policy', 'RejectPolicy')  # This is paramiko default

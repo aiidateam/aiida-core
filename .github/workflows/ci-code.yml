@@ -68,13 +68,6 @@ jobs:
     - name: Setup environment
       run: .github/workflows/setup.sh
 
-    # uncomment for debug purposes
-    - name: Setup upterm session
-      env:
-        AIIDA_TEST_PROFILE: test_aiida
-        AIIDA_WARN_v3: 1
-      uses: lhotari/action-upterm@v1
-
     - name: Run test suite
       env:
         AIIDA_TEST_PROFILE: test_aiida
@@ -101,20 +94,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install graphviz
-      run: sudo apt update && sudo apt install graphviz
+    #- name: Install graphviz
+    #  run: sudo apt update && sudo apt install graphviz
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.11'
 
-    - name: Setup SSH on localhost
-      run: .github/workflows/setup_ssh.sh
-
-    # uncomment for debug purposes
-    #- name: Setup upterm session
-    #  uses: lhotari/action-upterm@v1
+    #- name: Setup SSH on localhost
+    #  run: .github/workflows/setup_ssh.sh
 
     - name: Run test suite
       env:

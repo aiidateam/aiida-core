@@ -67,15 +67,15 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Setup environment
-      run: .github/workflows/setup.sh
-
     # uncomment for debug purposes
     - name: Setup upterm session
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
       uses: lhotari/action-upterm@v1
+
+    - name: Setup environment
+      run: .github/workflows/setup.sh
 
     - name: Run test suite
       env:

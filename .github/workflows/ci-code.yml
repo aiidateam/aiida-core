@@ -20,17 +20,22 @@ jobs:
 
   tests:
 
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 45
 
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-24.04]
         python-version: ['3.9', '3.12']
         database-backend: [psql]
         include:
-        - python-version: '3.9'
-          database-backend: sqlite
+          - os: ubuntu-24.04
+            python-version: '3.9'
+            database-backend: sqlite
+          - os: windows-latest
+            python-version: '3.9'
+            database-backend: sqlite
 
     services:
       postgres:
@@ -70,6 +75,13 @@ jobs:
     - name: Setup environment
       run: .github/workflows/setup.sh
 
+    # uncomment for debug purposes
+    - name: Setup upterm session
+      env:
+        AIIDA_TEST_PROFILE: test_aiida
+        AIIDA_WARN_v3: 1
+      uses: lhotari/action-upterm@v1
+
     - name: Run test suite
       env:
         AIIDA_TEST_PROFILE: test_aiida
@@ -106,6 +118,10 @@ jobs:
 
     - name: Setup SSH on localhost
       run: .github/workflows/setup_ssh.sh
+
+    # uncomment for debug purposes
+    #- name: Setup upterm session
+    #  uses: lhotari/action-upterm@v1
 
     - name: Run test suite
       env:

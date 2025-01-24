@@ -71,11 +71,11 @@ jobs:
       run: .github/workflows/setup.sh
 
     # uncomment for debug purposes
-    #- name: Setup upterm session
-    #  env:
-    #    AIIDA_TEST_PROFILE: test_aiida
-    #    AIIDA_WARN_v3: 1
-    #  uses: lhotari/action-upterm@v1
+    - name: Setup upterm session
+      env:
+        AIIDA_TEST_PROFILE: test_aiida
+        AIIDA_WARN_v3: 1
+      uses: lhotari/action-upterm@v1
 
     - name: Run test suite
       env:

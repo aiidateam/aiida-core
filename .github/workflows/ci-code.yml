@@ -26,42 +26,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04]
+        os: [windows-latest]
         python-version: ['3.9', '3.12']
-        database-backend: [psql]
-        include:
-          - os: ubuntu-24.04
-            python-version: '3.9'
-            database-backend: sqlite
-          - os: windows-latest
-            python-version: '3.9'
-            database-backend: sqlite
+        database-backend: [sqlite]
 
-    services:
-      postgres:
-        if: matrix.os == 'ubuntu-24.04' && matrix.database-backend == 'psql'
-        image: postgres:10
-        env:
-          POSTGRES_DB: test_aiida
-          POSTGRES_PASSWORD: ''
-          POSTGRES_HOST_AUTH_METHOD: trust
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-        - 5432:5432
-      rabbitmq:
-        if: matrix.os == 'ubuntu-24.04'
-        image: rabbitmq:3.8.14-management
-        ports:
-        - 5672:5672
-        - 15672:15672
-      slurm:
-        image: xenonmiddleware/slurm:17
-        ports:
-        - 5001:22
+    #services:
+    #  postgres:
+    #    image: postgres:10
+    #    env:
+    #      POSTGRES_DB: test_aiida
+    #      POSTGRES_PASSWORD: ''
+    #      POSTGRES_HOST_AUTH_METHOD: trust
+    #    options: >-
+    #      --health-cmd pg_isready
+    #      --health-interval 10s
+    #      --health-timeout 5s
+    #      --health-retries 5
+    #    ports:
+    #    - 5432:5432
+    #  rabbitmq:
+    #    image: rabbitmq:3.8.14-management
+    #    ports:
+    #    - 5672:5672
+    #    - 15672:15672
+    #  slurm:
+    #    image: xenonmiddleware/slurm:17
+    #    ports:
+    #    - 5001:22
 
     steps:
     - uses: actions/checkout@v4

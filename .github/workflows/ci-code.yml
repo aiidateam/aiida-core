@@ -39,6 +39,7 @@ jobs:
 
     services:
       postgres:
+        if: matrix.os == 'ubuntu-24.04' && matrix.database-backend == 'psql'
         image: postgres:10
         env:
           POSTGRES_DB: test_aiida
@@ -52,6 +53,7 @@ jobs:
         ports:
         - 5432:5432
       rabbitmq:
+        if: matrix.os == 'ubuntu-24.04'
         image: rabbitmq:3.8.14-management
         ports:
         - 5672:5672

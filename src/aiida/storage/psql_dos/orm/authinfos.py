@@ -23,7 +23,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
     USER_CLASS = users.SqlaUser
     COMPUTER_CLASS = computers.SqlaComputer
 
-    def __init__(self, backend, computer, user):
+    def __init__(self, backend, computer, user, enabled, auth_params, metadata):
         """Construct a new instance.
 
         :param computer: a :class:`aiida.orm.implementation.computers.BackendComputer` instance
@@ -34,7 +34,14 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         type_check(user, self.USER_CLASS)
         type_check(computer, self.COMPUTER_CLASS)
         self._model = utils.ModelWrapper(
-            self.MODEL_CLASS(dbcomputer=computer.bare_model, aiidauser=user.bare_model), backend
+            self.MODEL_CLASS(
+                dbcomputer=computer.bare_model,
+                aiidauser=user.bare_model,
+                enabled=enabled,
+                auth_params=auth_params,
+                metadata=metadata,
+            ),
+            backend,
         )
 
     @property

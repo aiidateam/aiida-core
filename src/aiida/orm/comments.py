@@ -18,7 +18,7 @@ from .fields import add_field
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
-    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation import BackendComment, BackendNode, StorageBackend  # noqa: F401
 
 __all__ = ('Comment',)
 
@@ -146,7 +146,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         return self._backend_entity.set_mtime(value)
 
     @property
-    def node(self) -> 'Node':
+    def node(self) -> 'BackendNode':
         return self._backend_entity.node
 
     @property
@@ -154,7 +154,8 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         return entities.from_backend_entity(users.User, self._backend_entity.user)
 
     def set_user(self, value: 'User') -> None:
-        self._backend_entity.user = value.backend_entity
+        # ignoring mypy error: Property "user" defined in "BackendComment" is read-only
+        self._backend_entity.user = value.backend_entity  # type: ignore[misc]
 
     @property
     def content(self) -> str:

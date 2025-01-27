@@ -10,10 +10,9 @@
 
 from __future__ import annotations
 
-import os
-from collections import defaultdict
 import itertools as it
 import logging
+import os
 from pathlib import Path
 
 from aiida import orm
@@ -36,7 +35,7 @@ class GroupDumper:
         group: orm.Group | str | None = None,
         deduplicate: bool = True,
         output_path: str | Path | None = None,
-        global_log_dict: dict[str, Path] | None = None
+        global_log_dict: dict[str, Path] | None = None,
     ):
         self.deduplicate = deduplicate
 
@@ -60,11 +59,9 @@ class GroupDumper:
         self.log_dict = {}
 
     def _should_dump_processes(self) -> bool:
-
         return len([node for node in self.nodes if isinstance(node, orm.ProcessNode)]) > 0
 
     def _get_nodes(self):
-
         # Get all nodes that are in the group
         if self.group is not None:
             nodes = list(self.group.nodes)
@@ -97,7 +94,6 @@ class GroupDumper:
         return nodes
 
     def _get_processes(self):
-
         nodes = self.nodes
         workflows = [node for node in nodes if isinstance(node, orm.WorkflowNode)]
 
@@ -121,15 +117,14 @@ class GroupDumper:
         self.log_dict = {
             'calculations': {},
             # dict.fromkeys([c.uuid for c in self.calculations], None),
-            'workflows': dict.fromkeys([w.uuid for w in workflows], None)
+            'workflows': dict.fromkeys([w.uuid for w in workflows], None),
         }
 
     def _dump_processes(self):
-
         self._get_processes()
 
         if len(self.workflows) + len(self.calculations) == 0:
-            logger.report("No workflows or calculations to dump in group.")
+            logger.report('No workflows or calculations to dump in group.')
             return
 
         self.output_path.mkdir(exist_ok=True, parents=True)
@@ -138,14 +133,13 @@ class GroupDumper:
         self._dump_workflows()
 
     def _dump_calculations(self):
-
         calculations_path = self.output_path / 'calculations'
 
         for calculation in self.calculations:
             calculation_dumper = self.process_dumper
 
-            calculation_dump_path = (
-                calculations_path / calculation_dumper._generate_default_dump_path(process_node=calculation, prefix='')
+            calculation_dump_path = calculations_path / calculation_dumper._generate_default_dump_path(
+                process_node=calculation, prefix=''
             )
 
             if calculation.caller is None:
@@ -160,16 +154,15 @@ class GroupDumper:
         workflow_path.mkdir(exist_ok=True, parents=True)
 
         for workflow in self.workflows:
-
             workflow_dumper = self.process_dumper
 
-            workflow_dump_path = (
-                workflow_path / workflow_dumper._generate_default_dump_path(process_node=workflow, prefix=None)
+            workflow_dump_path = workflow_path / workflow_dumper._generate_default_dump_path(
+                process_node=workflow, prefix=None
             )
 
-            if self.deduplicate and workflow.uuid in self.global_log_dict["workflows"].keys():
+            if self.deduplicate and workflow.uuid in self.global_log_dict['workflows'].keys():
                 os.symlink(
-                    src=self.global_log_dict["workflows"][workflow.uuid],
+                    src=self.global_log_dict['workflows'][workflow.uuid],
                     dst=workflow_dump_path,
                 )
             else:

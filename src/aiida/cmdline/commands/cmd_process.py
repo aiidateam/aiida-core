@@ -614,11 +614,7 @@ def process_dump(
     """
 
     from aiida.tools.archive.exceptions import ExportValidationError
-    from aiida.tools.dumping.data import DataDumper
-    from aiida.tools.dumping.processes import ProcessDumper
-
-    # from aiida.tools.dumping.utils import validate_rich_options
-    from aiida.tools.dumping.rich import rich_from_cli
+    from aiida.tools.dumping.process import ProcessDumper
 
     processdumper_kwargs = {
         'include_inputs': include_inputs,
@@ -630,40 +626,9 @@ def process_dump(
         'incremental': incremental,
     }
 
-    rich_kwargs = {
-        'rich_dump_all': rich_dump_all,
-    }
-
-    datadumper_kwargs = {
-        'also_raw': also_raw,
-        'also_rich': also_rich,
-    }
-
-    # if also_rich:
-    #     try:
-    #         validate_rich_options(
-    #             rich_options=rich_options, rich_config_file=rich_config_file
-    #         )
-    #     except ValueError as exc:
-    #         echo.echo_critical(f"{exc!s}")
-
-    if rich_spec is not None:
-        rich_spec_dict = rich_from_cli(rich_spec=rich_spec, **rich_kwargs)
-    else:
-        rich_spec_dict = {}
-
-    data_dumper = DataDumper(
-        overwrite=overwrite,
-        rich_spec_dict=rich_spec_dict,
-        **datadumper_kwargs,
-        **rich_kwargs,
-    )
-
     process_dumper = ProcessDumper(
         overwrite=overwrite,
         **processdumper_kwargs,
-        **rich_kwargs,
-        data_dumper=data_dumper,
     )
 
     try:

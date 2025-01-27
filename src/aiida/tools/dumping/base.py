@@ -6,12 +6,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Modules related to the dumping of AiiDA data."""
 
-from .base import BaseDumper
-from .profile import ProfileDumper
-from .group import GroupDumper
-from .process import ProcessDumper
-# from .collection import CollectionDumper
+from pathlib import Path
+from datetime import datetime
 
-__all__ = ('BaseDumper', 'ProfileDumper', 'GroupDumper', 'ProcessDumper')  #, 'CollectionDumper')
+
+class BaseDumper:
+    def __init__(
+        self,
+        dump_parent_path: Path = Path.cwd(),
+        overwrite: bool = False,
+        incremental: bool = True,
+        last_dump_time: datetime | None = None,
+    ):
+        self.dump_parent_path = dump_parent_path
+        self.overwrite = overwrite
+        self.incremental = incremental
+        self.last_dump_time = last_dump_time

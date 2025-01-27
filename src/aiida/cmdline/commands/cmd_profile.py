@@ -19,7 +19,7 @@ from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
-from aiida.tools.dumping import CollectionDumper, DataDumper, ProcessDumper
+from aiida.tools.dumping import GroupDumper, ProfileDumper, ProcessDumper
 
 
 @verdi.group('profile')
@@ -272,29 +272,20 @@ def profile_delete(force, delete_data, profiles):
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
 
 
-# ? Specify groups via giving the groups, or just enabling "groups" and then all are dumped?
-# ? Provide some mechanism to allow for both, e.g. if no argument is provided, all groups are dumped
 @verdi_profile.command('mirror')
 @options.PATH()
 @options.OVERWRITE()
 # @options.INCREMENTAL()
 @options.DUMP_PROCESSES()
-@options.DUMP_DATA()
 @options.DEDUPLICATE()
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
 @options.FLAT()
-@options.ALSO_RAW()
-@options.ALSO_RICH()
-@options.RICH_SPEC()
-@options.RICH_DUMP_ALL()
 @options.DUMP_CONFIG_FILE()
-@options.NODES()
 @options.GROUPS()
 @options.ORGANIZE_BY_GROUPS()
-@options.ONLY_TOP_LEVEL_WORKFLOWS()
 @options.DRY_RUN()
 @click.pass_context
 def profile_mirror(
@@ -304,94 +295,41 @@ def profile_mirror(
     organize_by_groups,
     dry_run,
     dump_processes,
-    only_top_level_workflows,
-    dump_data,
     deduplicate,
-    also_raw,
-    also_rich,
     include_inputs,
     include_outputs,
     include_attributes,
     include_extras,
     flat,
-    rich_spec,
-    rich_dump_all,
     dump_config_file,
-    nodes,
     groups,
 ):
     """Dump all data in an AiiDA profile's storage to disk."""
 
     from pathlib import Path
+    from datetime import datetime
 
     from aiida import orm
     from aiida.tools.dumping.parser import DumpConfigParser
-    from aiida.tools.dumping.rich import (
-        DEFAULT_CORE_EXPORT_MAPPING,
-        rich_from_cli,
-        rich_from_config,
-    )
     from aiida.tools.dumping.utils import prepare_dump_path
+    from aiida.tools.dumping.base import BaseDumper
 
     profile = ctx.obj['profile']
 
-    if nodes and groups:
-        echo.echo_critical('`nodes` and `groups` specified. Set only one.')
+    # if nodes and groups:
+    #     echo.echo_critical('`nodes` and `groups` specified. Set only one.')
 
-    if dump_config_file is None:
-        general_kwargs = {
-            'path': path,
-            'overwrite': overwrite,
-            # 'incremental': incremental,
-            'dry_run': dry_run,
-        }
+    # if dump_config_file is None:
 
-        processdumper_kwargs = {
-            'include_inputs': include_inputs,
-            'include_outputs': include_outputs,
-            'include_attributes': include_attributes,
-            'include_extras': include_extras,
-            'flat': flat,
-        }
+    # # TODO: Also allow for mixing. Currently one can _only_ specify either the config file, or the arguments on the
+    # # TODO: command line
+    # else:
+    #     kwarg_dicts_from_config = DumpConfigParser.parse_config_file(dump_config_file)
 
-        datadumper_kwargs = {
-            'also_raw': also_raw,
-            'also_rich': also_rich,
-        }
+    #     general_kwargs = kwarg_dicts_from_config['general_kwargs']
+    #     processdumper_kwargs = kwarg_dicts_from_config['processdumper_kwargs']
+    #     datadumper_kwargs = kwarg_dicts_from_config['datadumper_kwargs']
 
-        collection_kwargs = {
-            'should_dump_processes': dump_processes,
-            'should_dump_data': dump_data,
-            'only_top_level_workflows': only_top_level_workflows,
-            'organize_by_groups': organize_by_groups,
-        }
-
-        rich_kwargs = {
-            'rich_dump_all': rich_dump_all,
-        }
-
-        if rich_spec is not None:
-            rich_spec_dict = rich_from_cli(rich_spec=rich_spec, **rich_kwargs)
-        else:
-            rich_spec_dict = DEFAULT_CORE_EXPORT_MAPPING
-
-    # TODO: Also allow for mixing. Currently one can _only_ specify either the config file, or the arguments on the
-    # TODO: command line
-    else:
-        kwarg_dicts_from_config = DumpConfigParser.parse_config_file(dump_config_file)
-
-        general_kwargs = kwarg_dicts_from_config['general_kwargs']
-        processdumper_kwargs = kwarg_dicts_from_config['processdumper_kwargs']
-        datadumper_kwargs = kwarg_dicts_from_config['datadumper_kwargs']
-        collection_kwargs = kwarg_dicts_from_config['collection_kwargs']
-        rich_kwargs = kwarg_dicts_from_config['rich_kwargs']
-
-        rich_spec_dict = rich_from_config(kwarg_dicts_from_config['rich_spec'], **rich_kwargs)
-
-    # Obtain these specifically for easy access and modifications
-    path = general_kwargs['path']
-    overwrite = general_kwargs['overwrite']
-    dry_run = general_kwargs['dry_run']
     incremental = not overwrite
 
     if path is None:
@@ -401,14 +339,15 @@ def profile_mirror(
     dry_run_message = f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\n"
     dry_run_message += 'Only directories will be created.'
 
-    if dry_run or (not collection_kwargs['should_dump_processes'] and not collection_kwargs['should_dump_data']):
+    if dry_run:
         echo.echo_report(dry_run_message)
         return
 
     else:
         echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
 
-    SAFEGUARD_FILE = '.verdi_profile_mirror'  # noqa: N806
+    SAFEGUARD_FILE: str = '.verdi_profile_mirror'
+    safeguard_file_path: Path = path / SAFEGUARD_FILE
 
     try:
         prepare_dump_path(
@@ -420,88 +359,41 @@ def profile_mirror(
     except FileExistsError as exc:
         echo.echo_critical(str(exc))
 
-    (path / SAFEGUARD_FILE).touch()
+    try:
+        with safeguard_file_path.open("r") as fhandle:
+            last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()
+    except IndexError:
+        last_dump_time = None
 
-    data_dumper = DataDumper(
+    base_dumper = BaseDumper(
         dump_parent_path=path,
         overwrite=overwrite,
         incremental=incremental,
-        rich_spec_dict=rich_spec_dict,
-        **datadumper_kwargs,
+        last_dump_time=last_dump_time,
     )
-    # dumper_pretty_print(data_dumper)
 
     process_dumper = ProcessDumper(
-        dump_parent_path=path,
-        overwrite=overwrite,
-        incremental=incremental,
-        data_dumper=data_dumper,
-        **processdumper_kwargs,
+        base=base_dumper,
+        include_inputs= include_inputs,
+        include_outputs= include_outputs,
+        include_attributes= include_attributes,
+        include_extras=include_extras,
+        flat=flat,
     )
-    # dumper_pretty_print(process_dumper)
 
-    # TODO: Possibly implement specifying specific computers
-    # TODO: Although, users could just specify the relevant nodes
-    # TODO: Also add option to specify node types via entry points
-    # TODO: Use `batch_iter` from aiida.tools.archive.common
+    profile_dumper = ProfileDumper(
+        base_dumper=base_dumper,
+        process_dumper=process_dumper,
+        groups=groups,
+        organize_by_groups=organize_by_groups,
+        deduplicate=deduplicate,
+        profile=profile,
+        dump_processes=dump_processes,
+    )
 
-    # === Dump the data that is not associated with any group ===
-    if not groups:
-        collection_dumper = CollectionDumper(
-            dump_parent_path=path,
-            overwrite=overwrite,
-            incremental=incremental,
-            nodes=nodes,
-            **collection_kwargs,
-            **rich_kwargs,
-            data_dumper=data_dumper,
-            process_dumper=process_dumper,
-            deduplicate=deduplicate,
-        )
-        collection_dumper.create_entity_counter()
-        # dumper_pretty_print(collection_dumper, include_private_and_dunder=False)
+    profile_dumper.dump()
 
-        if dump_processes and collection_dumper._should_dump_processes():
-            echo.echo_report(f'Dumping processes not in any group for profile `{profile.name}`...')
-            collection_dumper.dump_processes()
-
-        if dump_data:
-            if not also_rich and not also_raw:
-                echo.echo_critical('`--dump-data was given, but neither --also-raw or --also-rich specified.')
-            echo.echo_report(f'Dumping data not in any group for profile {profile.name}...')
-
-            # collection_dumper.dump_data_rich()
-
-    # === Dump data per-group if Groups exist in profile or are selected ===
-    # TODO: Invert default behavior here, as I typically want to dump all entries
-    # TODO: Possibly define a new click option instead
-    # all_entries = not all_entries
-    if not groups:  # and all_entries:
-        groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
-
-    if groups:
-        if not nodes:
-            for group in groups:
-                collection_dumper = CollectionDumper(
-                    dump_parent_path=path,
-                    overwrite=overwrite,
-                    incremental=incremental,
-                    group=group,
-                    **collection_kwargs,
-                    **rich_kwargs,
-                    process_dumper=process_dumper,
-                    data_dumper=data_dumper,
-                    deduplicate=deduplicate,
-                )
-
-                collection_dumper.create_entity_counter()
-                if dump_processes:
-                    # The additional `_should_dump_processes` check here ensures that no reporting like
-                    # "Dumping processes for group `SSSP/1.3/PBE/efficiency`" is printed for groups that
-                    # don't contain processes
-                    if collection_dumper._should_dump_processes():
-                        echo.echo_report(f'Dumping processes for group `{group.label}`...')
-                        collection_dumper.dump_processes()
-                if dump_data:
-                    echo.echo_report(f'Dumping data for group `{group.label}`...')
-                    collection_dumper.dump_data_rich()
+    # Append the current time to the file
+    last_dump_time = datetime.now().astimezone().isoformat()
+    with safeguard_file_path.open("a") as fhandle:
+        fhandle.write(f"Last profile mirror time: {last_dump_time}\n")

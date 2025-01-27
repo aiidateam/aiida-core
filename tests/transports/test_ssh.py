@@ -8,36 +8,31 @@
 ###########################################################################
 """Test :mod:`aiida.transports.plugins.ssh`."""
 
-import logging
 
-import paramiko
-import pytest
 
 from aiida.transports.plugins.ssh import SshTransport
-from aiida.transports.transport import TransportInternalError
 
-
-#def test_closed_connection_ssh():
+# def test_closed_connection_ssh():
 #    """Test calling command on a closed connection."""
 #    with pytest.raises(TransportInternalError):
 #        transport = SshTransport(machine='localhost')
 #        transport._exec_command_internal('ls')
 #
 #
-#def test_closed_connection_sftp():
+# def test_closed_connection_sftp():
 #    """Test calling sftp command on a closed connection."""
 #    with pytest.raises(TransportInternalError):
 #        transport = SshTransport(machine='localhost')
 #        transport.listdir()
 #
 #
-#def test_auto_add_policy():
+# def test_auto_add_policy():
 #    """Test the auto add policy."""
 #    with SshTransport(machine='localhost', timeout=30, load_system_host_keys=True, key_policy='AutoAddPolicy'):
 #        pass
 #
 #
-#def test_proxy_jump():
+# def test_proxy_jump():
 #    """Test the connection with a proxy jump or several"""
 #    with SshTransport(
 #        machine='localhost', proxy_jump='localhost', timeout=30, load_system_host_keys=True, key_policy='AutoAddPolicy'
@@ -55,7 +50,7 @@ from aiida.transports.transport import TransportInternalError
 #        pass
 #
 #
-#def test_proxy_jump_invalid():
+# def test_proxy_jump_invalid():
 #    """Test proper error reporting when invalid host as a proxy"""
 #    # import is also that when Python is running with debug warnings `-Wd`
 #    # no unclosed files are reported.
@@ -80,9 +75,11 @@ def test_proxy_command():
         key_policy='AutoAddPolicy',
     ):
         pass
+
+
 #
 #
-#def test_no_host_key():
+# def test_no_host_key():
 #    """Test if there is no host key."""
 #    # Disable logging to avoid output during test
 #    logging.disable(logging.ERROR)
@@ -95,7 +92,7 @@ def test_proxy_command():
 #    logging.disable(logging.NOTSET)
 #
 #
-#def test_gotocomputer():
+# def test_gotocomputer():
 #    """Test gotocomputer"""
 #    with SshTransport(
 #        machine='localhost',
@@ -114,7 +111,7 @@ def test_proxy_command():
 #        assert cmd_str == expected_str
 #
 #
-#def test_gotocomputer_proxyjump():
+# def test_gotocomputer_proxyjump():
 #    """Test gotocomputer"""
 #    with SshTransport(
 #        machine='localhost',

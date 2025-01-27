@@ -14,18 +14,17 @@ import itertools as it
 import logging
 from collections import Counter
 from pathlib import Path
-from datetime import datetime
 
 from aiida import orm
-from aiida.tools.dumping.process import ProcessDumper
 from aiida.tools.dumping.base import BaseDumper
+from aiida.tools.dumping.process import ProcessDumper
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_PROCESSES_TO_DUMP = [orm.CalculationNode, orm.WorkflowNode]
 # DEFAULT_DATA_TO_DUMP = [orm.StructureData, orm.Code, orm.Computer, orm.BandsData, orm.UpfData]
 # DEFAULT_COLLECTIONS_TO_DUMP ??
-DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP # + DEFAULT_DATA_TO_DUMP
+DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP  # + DEFAULT_DATA_TO_DUMP
 
 
 # ! This class is instantiated once for every group, or once for the full profile
@@ -36,7 +35,7 @@ class GroupDumper:
         process_dumper: ProcessDumper | None = None,
         group: orm.Group | str | None = None,
         deduplicate: bool = True,
-        output_path: str | Path | None = None
+        output_path: str | Path | None = None,
     ):
         self.deduplicate = deduplicate
 
@@ -53,7 +52,7 @@ class GroupDumper:
 
         if process_dumper is None:
             process_dumper = ProcessDumper()
-        self.process_dumper: ProcessDumper  = process_dumper
+        self.process_dumper: ProcessDumper = process_dumper
 
         if not hasattr(self, 'entity_counter'):
             self.create_entity_counter()
@@ -121,7 +120,6 @@ class GroupDumper:
         return nodes
 
     def _should_dump_processes(self) -> bool:
-
         if not hasattr(self, 'group_nodes'):
             self.get_group_nodes()
 

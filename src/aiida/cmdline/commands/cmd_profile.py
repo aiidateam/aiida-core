@@ -19,7 +19,7 @@ from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
-from aiida.tools.dumping import GroupDumper, ProfileDumper, ProcessDumper
+from aiida.tools.dumping import ProcessDumper, ProfileDumper
 
 
 @verdi.group('profile')
@@ -306,13 +306,11 @@ def profile_mirror(
 ):
     """Dump all data in an AiiDA profile's storage to disk."""
 
-    from pathlib import Path
     from datetime import datetime
+    from pathlib import Path
 
-    from aiida import orm
-    from aiida.tools.dumping.parser import DumpConfigParser
-    from aiida.tools.dumping.utils import prepare_dump_path
     from aiida.tools.dumping.base import BaseDumper
+    from aiida.tools.dumping.utils import prepare_dump_path
 
     profile = ctx.obj['profile']
 
@@ -360,7 +358,7 @@ def profile_mirror(
         echo.echo_critical(str(exc))
 
     try:
-        with safeguard_file_path.open("r") as fhandle:
+        with safeguard_file_path.open('r') as fhandle:
             last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()
     except IndexError:
         last_dump_time = None
@@ -374,9 +372,9 @@ def profile_mirror(
 
     process_dumper = ProcessDumper(
         base=base_dumper,
-        include_inputs= include_inputs,
-        include_outputs= include_outputs,
-        include_attributes= include_attributes,
+        include_inputs=include_inputs,
+        include_outputs=include_outputs,
+        include_attributes=include_attributes,
         include_extras=include_extras,
         flat=flat,
     )
@@ -395,5 +393,5 @@ def profile_mirror(
 
     # Append the current time to the file
     last_dump_time = datetime.now().astimezone().isoformat()
-    with safeguard_file_path.open("a") as fhandle:
-        fhandle.write(f"Last profile mirror time: {last_dump_time}\n")
+    with safeguard_file_path.open('a') as fhandle:
+        fhandle.write(f'Last profile mirror time: {last_dump_time}\n')

@@ -12,11 +12,9 @@
 from __future__ import annotations
 
 import logging
-import itertools as it
-from rich.pretty import pprint
-from pathlib import Path
 
-from collections import Counter
+from rich.pretty import pprint
+
 from aiida import orm
 from aiida.manage.configuration.profile import Profile
 from aiida.tools.dumping.base import BaseDumper
@@ -52,7 +50,7 @@ class ProfileDumper:
         self.process_dumper: ProcessDumper = process_dumper
 
         # self.log_dict: dict[dict[str, Path]] = {}
-        self.log_dict= {'calculations': {}, 'workflows': {}}
+        self.log_dict = {'calculations': {}, 'workflows': {}}
 
     def dump(self):
         if not self.groups:
@@ -111,4 +109,3 @@ class ProfileDumper:
 
                 pprint(group_dumper.log_dict)
                 pprint(self.log_dict)
-

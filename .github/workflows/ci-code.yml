@@ -77,6 +77,14 @@ jobs:
     - name: Setup environment
       run: .github/workflows/setup.sh
 
+    - name: ulimit
+      run: |
+        ulimit -n
+
+    - name: ulimit set
+      run: |
+        ulimit -n 4096
+
     - name: Run test suite
       env:
         AIIDA_TEST_PROFILE: test_aiida

@@ -80,10 +80,6 @@ def test_proxy_command():
         process = psutil.Process(os.getpid())
         return process.open_files()
 
-    open_fds = list_open_fds()
-    msg = f"Number of open file descriptor: {len(open_fds)}\n\n\n {open_fds}"
-    raise ValueError(msg)
-
     try:
         with SshTransport(
             machine='localhost',

@@ -72,8 +72,10 @@ def test_proxy_jump_invalid():
 
 def test_proxy_command():
     """Test the connection with a proxy command"""
-    import psutil
     import os
+
+    import psutil
+
     def list_open_fds():
         process = psutil.Process(os.getpid())
         return process.open_files()
@@ -86,13 +88,12 @@ def test_proxy_command():
             load_system_host_keys=True,
             key_policy='AutoAddPolicy',
         ):
-            raise ValueError("")
+            raise ValueError('')
             pass
     except Exception as e:
         open_fds = list_open_fds()
-        msg = f"Number of open file descriptor: {len(open_fds)}\n\n\n {open_fds}"
+        msg = f'Number of open file descriptor: {len(open_fds)}\n\n\n {open_fds}'
         raise ValueError(msg) from e
-
 
 
 def test_no_host_key():

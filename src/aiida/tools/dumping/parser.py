@@ -35,7 +35,6 @@ class DumpConfigParser:
         collection_kwargs = {
             'should_dump_processes': config.get('dump_processes', True),
             'should_dump_data': config.get('dump_data', True),
-            'only_top_level_workflows': config.get('only_top_level_workflows', True),
         }
 
         rich_kwargs = {

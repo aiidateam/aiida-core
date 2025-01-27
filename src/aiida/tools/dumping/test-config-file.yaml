@@ -4,7 +4,6 @@ incremental: true
 dry_run: false
 organize_by_groups: true
 dump_processes: true
-only_top_level_workflows: true
 dump_data: true
 data_hidden: true
 also_raw: false

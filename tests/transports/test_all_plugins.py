@@ -12,8 +12,6 @@ Plugin specific tests will be written in the corresponding test file.
 """
 
 
-
-
 # TODO : test for copy with pattern
 # TODO : test for copy with/without patterns, overwriting folder
 # TODO : test for exotic cases of copy with source = destination

@@ -8,8 +8,6 @@
 ###########################################################################
 """Test :mod:`aiida.transports.plugins.ssh`."""
 
-
-
 from aiida.transports.plugins.ssh import SshTransport
 
 # def test_closed_connection_ssh():

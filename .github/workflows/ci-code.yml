@@ -81,10 +81,6 @@ jobs:
       run: |
         ulimit -n
 
-    - name: ulimit set
-      run: |
-        ulimit -n 4096
-
     - name: Run test suite
       env:
         AIIDA_TEST_PROFILE: test_aiida

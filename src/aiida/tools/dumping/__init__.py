@@ -9,9 +9,10 @@
 """Modules related to the dumping of AiiDA data."""
 
 from .base import BaseDumper
-from .profile import ProfileDumper
 from .group import GroupDumper
 from .process import ProcessDumper
+from .profile import ProfileDumper
+
 # from .collection import CollectionDumper
 
-__all__ = ('BaseDumper', 'ProfileDumper', 'GroupDumper', 'ProcessDumper')  #, 'CollectionDumper')
+__all__ = ('BaseDumper', 'GroupDumper', 'ProcessDumper', 'ProfileDumper')  # , 'CollectionDumper')

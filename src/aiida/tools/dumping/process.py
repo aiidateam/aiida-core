@@ -31,9 +31,9 @@ from typing import List
 
 import yaml
 
+from aiida import orm
 from aiida.common import LinkType
 from aiida.common.exceptions import NotExistentAttributeError
-from aiida import orm
 from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.dumping.base import BaseDumper
@@ -216,7 +216,9 @@ class ProcessDumper:
         if output_path is None:
             output_path = self._generate_default_dump_path(process_node=process_node)
 
-        prepare_dump_path(path_to_validate=output_path, overwrite=self.base.overwrite, incremental=self.base.incremental)
+        prepare_dump_path(
+            path_to_validate=output_path, overwrite=self.base.overwrite, incremental=self.base.incremental
+        )
 
         if isinstance(process_node, orm.CalculationNode):
             self._dump_calculation(
@@ -251,7 +253,9 @@ class ProcessDumper:
         :param io_dump_paths: Custom subdirectories for `CalculationNode` s, defaults to None
         """
 
-        prepare_dump_path(path_to_validate=output_path, overwrite=self.base.overwrite, incremental=self.base.incremental)
+        prepare_dump_path(
+            path_to_validate=output_path, overwrite=self.base.overwrite, incremental=self.base.incremental
+        )
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
         called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
@@ -305,7 +309,9 @@ class ProcessDumper:
             Default: ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         """
 
-        prepare_dump_path(path_to_validate=output_path, overwrite=self.base.overwrite, incremental=self.base.incremental)
+        prepare_dump_path(
+            path_to_validate=output_path, overwrite=self.base.overwrite, incremental=self.base.incremental
+        )
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 
         io_dump_mapping = self._generate_calculation_io_mapping(io_dump_paths=io_dump_paths)

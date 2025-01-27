@@ -10,16 +10,17 @@
 # TODO: Use `batch_iter` from aiida.tools.archive.common
 
 from __future__ import annotations
-from pathlib import Path
+
 import logging
+
 from aiida import orm
-from aiida.cmdline.params.options.main import ORGANIZE_BY_GROUPS
-from aiida.tools.dumping.base import BaseDumper
-from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.group import GroupDumper
 from aiida.manage.configuration.profile import Profile
+from aiida.tools.dumping.base import BaseDumper
+from aiida.tools.dumping.group import GroupDumper
+from aiida.tools.dumping.process import ProcessDumper
 
 logger = logging.getLogger(__name__)
+
 
 class ProfileDumper:
     def __init__(
@@ -29,7 +30,7 @@ class ProfileDumper:
         process_dumper: ProcessDumper | None = None,
         organize_by_groups: bool = True,
         deduplicate: bool = True,
-        groups: list[str | orm.Group]  | None = None,
+        groups: list[str | orm.Group] | None = None,
         dump_processes: bool = True,
     ):
         self.organize_by_groups = organize_by_groups
@@ -43,27 +44,23 @@ class ProfileDumper:
 
         if process_dumper is None:
             process_dumper = ProcessDumper()
-        self.process_dumper: ProcessDumper  = process_dumper
+        self.process_dumper: ProcessDumper = process_dumper
 
         if not groups:
             groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
         self.groups = groups
 
-
     def dump(self):
-        
         self._dump_processes_not_in_any_group()
         self._dump_processes_per_group()
 
-    
     def _dump_processes_not_in_any_group(self):
-
         # === Dump the data that is not associated with any group ===
         if self.organize_by_groups:
             output_path = self.base_dumper.dump_parent_path / 'no-group'
         else:
             output_path = self.base_dumper.dump_parent_path
-            
+
         no_group_dumper = GroupDumper(
             base_dumper=self.base_dumper,
             process_dumper=self.process_dumper,
@@ -71,9 +68,8 @@ class ProfileDumper:
             deduplicate=self.deduplicate,
             output_path=output_path,
         )
-        
+
         if self.dump_processes and no_group_dumper._should_dump_processes():
-            
             logger.report(f'Dumping processes not in any group for profile `{self.profile.name}`...')
 
             no_group_dumper._dump_processes()
@@ -82,7 +78,6 @@ class ProfileDumper:
         # === Dump data per-group if Groups exist in profile or are selected ===
 
         for group in self.groups:
- 
             if self.organize_by_groups:
                 output_path = self.base_dumper.dump_parent_path / group.label
             else:

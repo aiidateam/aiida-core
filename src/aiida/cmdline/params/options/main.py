@@ -90,7 +90,6 @@ __all__ = (
     'NODES',
     'NON_INTERACTIVE',
     'OLDER_THAN',
-    'ONLY_TOP_LEVEL_WORKFLOWS',
     'ORDER_BY',
     'ORDER_DIRECTION',
     'ORGANIZE_BY_GROUPS',
@@ -914,15 +913,6 @@ FLAT = OverridableOption(
     is_flag=True,
     default=False,
     help='Dump files in a flat directory for every step of a workflow.',
-)
-
-ONLY_TOP_LEVEL_WORKFLOWS = OverridableOption(
-    '--only-top-level-workflows/--no-only-top-level-workflows',
-    is_flag=True,
-    default=True,
-    type=bool,
-    show_default=True,
-    help='Dump only the top-level workflows in their own dedicated directories.',
 )
 
 INCREMENTAL = OverridableOption(

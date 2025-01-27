@@ -14,63 +14,46 @@ import itertools as it
 import logging
 from collections import Counter
 from pathlib import Path
+from datetime import datetime
 
 from aiida import orm
-from aiida.tools.dumping.data import DataDumper
-from aiida.tools.dumping.processes import ProcessDumper
+from aiida.tools.dumping.process import ProcessDumper
+from aiida.tools.dumping.base import BaseDumper
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_PROCESSES_TO_DUMP = [orm.CalculationNode, orm.WorkflowNode]
-DEFAULT_DATA_TO_DUMP = [orm.StructureData, orm.Code, orm.Computer, orm.BandsData, orm.UpfData]
+# DEFAULT_DATA_TO_DUMP = [orm.StructureData, orm.Code, orm.Computer, orm.BandsData, orm.UpfData]
 # DEFAULT_COLLECTIONS_TO_DUMP ??
-DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP + DEFAULT_DATA_TO_DUMP
+DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP # + DEFAULT_DATA_TO_DUMP
 
 
 # ! This class is instantiated once for every group, or once for the full profile
-class CollectionDumper:
+class GroupDumper:
     def __init__(
         self,
-        dump_parent_path: Path = Path().cwd(),
-        nodes: set = {},
-        group: orm.Group | str | None = None,
-        overwrite: bool = False,
-        incremental: bool = True,
-        should_dump_processes: bool = False,
-        should_dump_data: bool = False,
-        only_top_level_workflows: bool = True,
-        rich_dump_all: bool = True,
-        deduplicate: bool = True,
-        organize_by_groups: bool = True,
+        base_dumper: BaseDumper | None = None,
         process_dumper: ProcessDumper | None = None,
-        data_dumper: DataDumper | None = None,
+        group: orm.Group | str | None = None,
+        deduplicate: bool = True,
+        output_path: str | Path | None = None
     ):
-        self.dump_parent_path = dump_parent_path
-        self.overwrite = overwrite
-        self.incremental = incremental
-        self.should_dump_processes = should_dump_processes
-        self.should_dump_data = should_dump_data
-        self.only_top_level_workflows = only_top_level_workflows
-        self.nodes = nodes
         self.deduplicate = deduplicate
-
-        self.process_dumper = process_dumper
-        self.data_dumper = data_dumper
 
         # Allow passing of group via label
         if isinstance(group, str):
             group = orm.Group.get(group)
 
         self.group = group
+        self.output_path = output_path
 
-        if organize_by_groups:
-            if group is not None:
-                group_subdir = Path(*group.type_string.split('.'))
-                self.output_path = self.dump_parent_path / 'groups' / group_subdir / self.group.label
-            else:
-                self.output_path = self.dump_parent_path / 'no-group'
-        else:
-            self.output_path = self.dump_parent_path
+        if base_dumper is None:
+            base_dumper = BaseDumper()
+        self.base_dumper: BaseDumper = base_dumper
+
+        if process_dumper is None:
+            process_dumper = ProcessDumper()
+        self.process_dumper: ProcessDumper  = process_dumper
 
         if not hasattr(self, 'entity_counter'):
             self.create_entity_counter()
@@ -81,8 +64,8 @@ class CollectionDumper:
             # If the group only has one WorkChain assigned to it, this will only return a count of 1 for the
             # WorkChainNode, nothing more, that is, it doesn't work recursively.
             nodes = self.group.nodes
-        elif self.nodes is not None:
-            nodes = self.nodes
+        # elif self.nodes is not None:
+        #     nodes = self.nodes
         else:
             nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
 
@@ -96,9 +79,9 @@ class CollectionDumper:
 
         return entity_counter
 
-    def get_collection_nodes(self):
-        if self.nodes:
-            self.collection_nodes = self.nodes
+    def get_group_nodes(self):
+        # if self.nodes:
+        #     self.collection_nodes = self.nodes
 
         # if hasattr(self, 'collection_nodes'):
         #     return self.collection_nodes
@@ -129,27 +112,20 @@ class CollectionDumper:
             nodes = [profile_node for profile_node in profile_nodes if profile_node not in nodes_in_groups]
             nodes = [orm.load_node(node) for node in nodes]
 
+        if self.base_dumper.last_dump_time is not None:
+            # breakpoint()
+            nodes = [node for node in nodes if node.mtime > self.base_dumper.last_dump_time]
+
         self.collection_nodes = nodes
 
         return nodes
 
     def _should_dump_processes(self) -> bool:
-        if not self.nodes:
-            return (
-                sum(
-                    self.entity_counter.get(orm_process_class, 0)
-                    for orm_process_class in [
-                        orm.CalcJobNode,
-                        orm.CalcFunctionNode,
-                        orm.WorkChainNode,
-                        orm.WorkFunctionNode,
-                        orm.ProcessNode,
-                    ]
-                )
-                > 0
-            )
-        else:
-            return len([node for node in self.nodes if isinstance(node, orm.ProcessNode)]) > 0
+
+        if not hasattr(self, 'group_nodes'):
+            self.get_group_nodes()
+
+        return len([node for node in self.collection_nodes if isinstance(node, orm.ProcessNode)]) > 0
 
     def _dump_calculations(self, calculations):
         for calculation in calculations:
@@ -186,11 +162,11 @@ class CollectionDumper:
                 link_calculations_dir=self.output_path / 'calculations',
             )
 
-    def dump_processes(self):
-        nodes = self.get_collection_nodes()
+    def _dump_processes(self):
+        nodes = self.get_group_nodes()
         workflows = [node for node in nodes if isinstance(node, orm.WorkflowNode)]
 
-        if self.only_top_level_workflows:
+        if self.deduplicate:
             workflows = [workflow for workflow in workflows if workflow.caller is None]
 
         # Also need to obtain sub-calculations that were called by workflows of the group
@@ -210,70 +186,3 @@ class CollectionDumper:
 
         self._dump_calculations(calculations=calculations)
         self._dump_workflows(workflows=workflows)
-
-    # TODO: Add `dump_data_raw` here, as well
-    # def dump_data_rich(self):
-    #     nodes = self.get_collection_nodes()
-    #     nodes = [node for node in nodes if isinstance(node, (orm.Data, orm.Computer))]
-    #     # Here, when providing logic to set the exporters and fileformat via the rich-options, don't have to filter
-    #     # anymore for `core`
-    #     nodes = [node for node in nodes if node.entry_point.name.startswith('core')]
-    #     if len(nodes) == 0:
-    #         return
-
-    #     self.output_path.mkdir(exist_ok=True, parents=True)
-    #     data_dumper = self.data_dumper
-
-    #     for data_node in nodes:
-    #         node_entry_point_name = data_node.entry_point.name
-
-    #         # Get the fileformat and exporter for the data node
-    #         try:
-    #             fileformat = data_dumper.rich_spec_dict[node_entry_point_name]['export_format']
-    #             exporter = data_dumper.rich_spec_dict[node_entry_point_name]['exporter']
-
-    #         # If options for the rich dumping are specified and not all the other defaults are being used
-    #         # Some entry_points might not be inside the `rich_spec_dict`
-    #         except KeyError:
-    #             continue
-
-    #         except:
-    #             # Raise all exceptions here during development
-    #             raise
-
-    #         # Don't go further if no importer implemented for a data type anyway
-    #         if exporter is None:
-    #             continue
-
-    #         try:
-    #             # Generate a nice filename and sanitize it
-    #             nice_output_path = self.output_path / 'data' / data_node.__class__.__name__.lower()
-    #             nice_fname = data_dumper.generate_output_fname_rich(data_node=data_node, fileformat=fileformat).replace(
-    #                 '__', '_'
-    #             )
-    #             nice_fname = sanitize_file_extension(nice_fname)
-
-    #             if data_dumper.data_hidden:
-    #                 # Define paths for hidden dump and linking
-    #                 hidden_output_path = self.hidden_aiida_path / 'data' / data_node.__class__.__name__.lower()
-    #                 uuid_fname = sanitize_file_extension(f'{data_node.uuid}.{fileformat}')
-
-    #                 # Dump the data in the hidden directory
-    #                 data_dumper.dump_core_data_node_rich(data_node, hidden_output_path, uuid_fname)
-
-    #                 # Link the hidden file to the expected output path
-    #                 (nice_output_path / nice_fname).parent.mkdir(exist_ok=True, parents=True)
-    #                 os.symlink(hidden_output_path / uuid_fname, nice_output_path / nice_fname)
-
-    #             else:
-    #                 # Dump the data in the non-hidden directory
-    #                 data_dumper.dump_core_data_node_rich(data_node, nice_output_path, nice_fname)
-
-    #         except TypeError:
-    #             # Handle case when no exporter is implemented for a given data_node type
-    #             raise
-    #         except OSError:
-    #             # A Data node, e.g. a Code might already be existent, so don't worry about this exception
-    #             continue
-    #         except Exception:
-    #             raise

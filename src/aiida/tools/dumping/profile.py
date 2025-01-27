@@ -12,7 +12,11 @@
 from __future__ import annotations
 
 import logging
+import itertools as it
+from rich.pretty import pprint
+from pathlib import Path
 
+from collections import Counter
 from aiida import orm
 from aiida.manage.configuration.profile import Profile
 from aiida.tools.dumping.base import BaseDumper
@@ -37,6 +41,7 @@ class ProfileDumper:
         self.deduplicate = deduplicate
         self.profile = profile
         self.dump_processes = dump_processes
+        self.groups = groups
 
         if base_dumper is None:
             base_dumper = BaseDumper()
@@ -46,12 +51,14 @@ class ProfileDumper:
             process_dumper = ProcessDumper()
         self.process_dumper: ProcessDumper = process_dumper
 
-        if not groups:
-            groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
-        self.groups = groups
+        # self.log_dict: dict[dict[str, Path]] = {}
+        self.log_dict= {'calculations': {}, 'workflows': {}}
 
     def dump(self):
-        self._dump_processes_not_in_any_group()
+        if not self.groups:
+            self._dump_processes_not_in_any_group()
+            self.groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
+
         self._dump_processes_per_group()
 
     def _dump_processes_not_in_any_group(self):
@@ -67,12 +74,15 @@ class ProfileDumper:
             group=None,
             deduplicate=self.deduplicate,
             output_path=output_path,
+            global_log_dict=self.log_dict,
         )
 
         if self.dump_processes and no_group_dumper._should_dump_processes():
             logger.report(f'Dumping processes not in any group for profile `{self.profile.name}`...')
 
             no_group_dumper._dump_processes()
+
+            self.log_dict.update(no_group_dumper.log_dict)
 
     def _dump_processes_per_group(self):
         # === Dump data per-group if Groups exist in profile or are selected ===
@@ -89,9 +99,16 @@ class ProfileDumper:
                 group=group,
                 deduplicate=self.deduplicate,
                 output_path=output_path,
+                global_log_dict=self.log_dict,
             )
 
             if self.dump_processes and group_dumper._should_dump_processes():
                 logger.report(f'Dumping processes in group {group.label} for profile `{self.profile.name}`...')
 
                 group_dumper._dump_processes()
+                for entity in ['calculations', 'workflows']:
+                    self.log_dict[entity].update(group_dumper.log_dict[entity])
+
+                pprint(group_dumper.log_dict)
+                pprint(self.log_dict)
+

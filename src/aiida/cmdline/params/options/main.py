@@ -27,8 +27,6 @@ __all__ = (
     'ALL',
     'ALL_STATES',
     'ALL_USERS',
-    'ALSO_RAW',
-    'ALSO_RICH',
     'APPEND_TEXT',
     'ARCHIVE_FORMAT',
     'BROKER_HOST',
@@ -46,7 +44,6 @@ __all__ = (
     'COMPUTERS',
     'CONFIG_FILE',
     'DATA',
-    'DATA_HIDDEN',
     'DATUM',
     'DB_BACKEND',
     'DB_ENGINE',
@@ -62,7 +59,6 @@ __all__ = (
     'DICT_KEYS',
     'DRY_RUN',
     'DUMP_CONFIG_FILE',
-    'DUMP_DATA',
     'DUMP_PROCESSES',
     'EXIT_STATUS',
     'EXPORT_FORMAT',
@@ -108,8 +104,6 @@ __all__ = (
     'PROJECT',
     'RAW',
     'REPOSITORY_PATH',
-    'RICH_DUMP_ALL',
-    'RICH_SPEC',
     'SCHEDULER',
     'SILENT',
     'SORT',
@@ -801,7 +795,7 @@ SORT = OverridableOption(
 DEDUPLICATE = OverridableOption(
     '--deduplicate/--no-deduplicate',
     is_flag=True,
-    default=False,
+    default=True,
     show_default=True,
     help='',
 )
@@ -814,60 +808,11 @@ DUMP_PROCESSES = OverridableOption(
     help='Dump process data.',
 )
 
-DUMP_DATA = OverridableOption(
-    '--dump-data/--no-dump-data',
-    is_flag=True,
-    default=False,
-    type=bool,
-    show_default=True,
-    help='Dump data nodes in a dedicated directory.',
-)
-
-DATA_HIDDEN = OverridableOption(
-    '--data-hidden/--data-non-hidden',
-    is_flag=True,
-    default=True,
-    show_default=True,
-    help='Dump all `orm.Data` in the hidden directory and link to there.',
-)
-
-ALSO_RAW = OverridableOption(
-    '--also-raw/--no-also-raw',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Dump the `attributes` of all nodes related to the Process.',
-)
-
-ALSO_RICH = OverridableOption(
-    '--also-rich/--no-also-rich',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Dump also nicely prepared outputs, e.g. CIF for structures or PDF image for bands.',
-)
-
-RICH_SPEC = OverridableOption(
-    '--rich-spec',
-    default=None,
-    type=str,
-    help='Specifications for rich data dumping.',
-)
-
 DUMP_CONFIG_FILE = OverridableOption(
     '--dump-config-file',
     default=None,
     type=types.FileOrUrl(),
     help='Provide dumping options via a config file in YAML format.',
-)
-
-RICH_DUMP_ALL = OverridableOption(
-    '--rich-dump-all/--no-rich-dump-all',
-    default=True,
-    is_flag=True,
-    type=bool,
-    show_default=True,
-    help='If a rich specification is provided, this triggers if all other Data nodes should also be dumped or not.',
 )
 
 ORGANIZE_BY_GROUPS = OverridableOption(

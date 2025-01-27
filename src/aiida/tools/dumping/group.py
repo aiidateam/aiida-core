@@ -10,9 +10,10 @@
 
 from __future__ import annotations
 
+import os
+from collections import defaultdict
 import itertools as it
 import logging
-from collections import Counter
 from pathlib import Path
 
 from aiida import orm
@@ -27,7 +28,6 @@ DEFAULT_PROCESSES_TO_DUMP = [orm.CalculationNode, orm.WorkflowNode]
 DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP  # + DEFAULT_DATA_TO_DUMP
 
 
-# ! This class is instantiated once for every group, or once for the full profile
 class GroupDumper:
     def __init__(
         self,
@@ -36,6 +36,7 @@ class GroupDumper:
         group: orm.Group | str | None = None,
         deduplicate: bool = True,
         output_path: str | Path | None = None,
+        global_log_dict: dict[str, Path] | None = None
     ):
         self.deduplicate = deduplicate
 
@@ -45,6 +46,7 @@ class GroupDumper:
 
         self.group = group
         self.output_path = output_path
+        self.global_log_dict = global_log_dict
 
         if base_dumper is None:
             base_dumper = BaseDumper()
@@ -54,36 +56,14 @@ class GroupDumper:
             process_dumper = ProcessDumper()
         self.process_dumper: ProcessDumper = process_dumper
 
-        if not hasattr(self, 'entity_counter'):
-            self.create_entity_counter()
+        self.nodes = self._get_nodes()
+        self.log_dict = {}
 
-    def create_entity_counter(self) -> Counter:
-        entity_counter = Counter()
-        if self.group is not None:
-            # If the group only has one WorkChain assigned to it, this will only return a count of 1 for the
-            # WorkChainNode, nothing more, that is, it doesn't work recursively.
-            nodes = self.group.nodes
-        # elif self.nodes is not None:
-        #     nodes = self.nodes
-        else:
-            nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
+    def _should_dump_processes(self) -> bool:
 
-        # Iterate over all the entities in the group
-        for node in nodes:
-            # Count the type string of each entity
-            entity_counter[node.__class__] += 1
+        return len([node for node in self.nodes if isinstance(node, orm.ProcessNode)]) > 0
 
-        # Convert the Counter to a dictionary (optional)
-        self.entity_counter = entity_counter
-
-        return entity_counter
-
-    def get_group_nodes(self):
-        # if self.nodes:
-        #     self.collection_nodes = self.nodes
-
-        # if hasattr(self, 'collection_nodes'):
-        #     return self.collection_nodes
+    def _get_nodes(self):
 
         # Get all nodes that are in the group
         if self.group is not None:
@@ -92,7 +72,7 @@ class GroupDumper:
         # Get all nodes that are _not_ in any group
         else:
             groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
-            nodes_in_groups = [node.pk for group in groups for node in group.nodes]
+            nodes_in_groups = [node.uuid for group in groups for node in group.nodes]
             # Need to expand here also with the called_descendants of `WorkflowNodes`, otherwise the called
             # `CalculationNode`s for `WorkflowNode`s that are part of a group are dumped twice
             sub_nodes_in_groups = list(
@@ -104,66 +84,24 @@ class GroupDumper:
                     ]
                 )
             )
-            sub_nodes_in_groups = [node.pk for node in sub_nodes_in_groups]
+            sub_nodes_in_groups = [node.uuid for node in sub_nodes_in_groups]
             nodes_in_groups = nodes_in_groups + sub_nodes_in_groups
 
-            profile_nodes = orm.QueryBuilder().append(orm.Node, project=['pk']).all(flat=True)
+            profile_nodes = orm.QueryBuilder().append(orm.Node, project=['uuid']).all(flat=True)
             nodes = [profile_node for profile_node in profile_nodes if profile_node not in nodes_in_groups]
             nodes = [orm.load_node(node) for node in nodes]
 
         if self.base_dumper.last_dump_time is not None:
-            # breakpoint()
             nodes = [node for node in nodes if node.mtime > self.base_dumper.last_dump_time]
-
-        self.collection_nodes = nodes
 
         return nodes
 
-    def _should_dump_processes(self) -> bool:
-        if not hasattr(self, 'group_nodes'):
-            self.get_group_nodes()
+    def _get_processes(self):
 
-        return len([node for node in self.collection_nodes if isinstance(node, orm.ProcessNode)]) > 0
-
-    def _dump_calculations(self, calculations):
-        for calculation in calculations:
-            calculation_dumper = self.process_dumper
-
-            calculation_dump_path = (
-                self.output_path
-                / 'calculations'
-                / calculation_dumper._generate_default_dump_path(process_node=calculation, prefix='')
-            )
-
-            if calculation.caller is None or (calculation.caller is not None and self.deduplicate):
-                calculation_dumper._dump_calculation(calculation_node=calculation, output_path=calculation_dump_path)
-
-    def _dump_workflows(self, workflows):
-        # workflow_nodes = get_nodes_from_db(aiida_node_type=orm.WorkflowNode, with_group=self.group, flat=True)
-        for workflow in workflows:
-            # if workflow.pk == 47:
-            #     breakpoint()
-
-            workflow_dumper = self.process_dumper
-
-            # TODO: If the GroupDumper is called from somewhere else outside, prefix the path with `groups/core` etc
-            workflow_dump_path = (
-                self.output_path
-                / 'workflows'
-                / workflow_dumper._generate_default_dump_path(process_node=workflow, prefix=None)
-            )
-            # logger.report(f'WORKFLOW_DUMP_PATH: {workflow_dump_path}')
-            workflow_dumper._dump_workflow(
-                workflow_node=workflow,
-                output_path=workflow_dump_path,
-                link_calculations=self.deduplicate,
-                link_calculations_dir=self.output_path / 'calculations',
-            )
-
-    def _dump_processes(self):
-        nodes = self.get_group_nodes()
+        nodes = self.nodes
         workflows = [node for node in nodes if isinstance(node, orm.WorkflowNode)]
 
+        # Make sure that only top-level workflows are dumped in their own directories when de-duplcation is enabled
         if self.deduplicate:
             workflows = [workflow for workflow in workflows if workflow.caller is None]
 
@@ -177,10 +115,69 @@ class GroupDumper:
 
         calculations = set([node for node in nodes if isinstance(node, orm.CalculationNode)] + called_calculations)
 
-        if len(workflows) + len(calculations) == 0:
+        self.calculations = calculations
+        self.workflows = workflows
+
+        self.log_dict = {
+            'calculations': {},
+            # dict.fromkeys([c.uuid for c in self.calculations], None),
+            'workflows': dict.fromkeys([w.uuid for w in workflows], None)
+        }
+
+    def _dump_processes(self):
+
+        self._get_processes()
+
+        if len(self.workflows) + len(self.calculations) == 0:
+            logger.report("No workflows or calculations to dump in group.")
             return
 
         self.output_path.mkdir(exist_ok=True, parents=True)
 
-        self._dump_calculations(calculations=calculations)
-        self._dump_workflows(workflows=workflows)
+        self._dump_calculations()
+        self._dump_workflows()
+
+    def _dump_calculations(self):
+
+        calculations_path = self.output_path / 'calculations'
+
+        for calculation in self.calculations:
+            calculation_dumper = self.process_dumper
+
+            calculation_dump_path = (
+                calculations_path / calculation_dumper._generate_default_dump_path(process_node=calculation, prefix='')
+            )
+
+            if calculation.caller is None:
+                # or (calculation.caller is not None and not self.deduplicate):
+                calculation_dumper._dump_calculation(calculation_node=calculation, output_path=calculation_dump_path)
+
+                self.log_dict['calculations'][calculation.uuid] = calculation_dump_path
+
+    def _dump_workflows(self):
+        # workflow_nodes = get_nodes_from_db(aiida_node_type=orm.WorkflowNode, with_group=self.group, flat=True)
+        workflow_path = self.output_path / 'workflows'
+        workflow_path.mkdir(exist_ok=True, parents=True)
+
+        for workflow in self.workflows:
+
+            workflow_dumper = self.process_dumper
+
+            workflow_dump_path = (
+                workflow_path / workflow_dumper._generate_default_dump_path(process_node=workflow, prefix=None)
+            )
+
+            if self.deduplicate and workflow.uuid in self.global_log_dict["workflows"].keys():
+                os.symlink(
+                    src=self.global_log_dict["workflows"][workflow.uuid],
+                    dst=workflow_dump_path,
+                )
+            else:
+                workflow_dumper._dump_workflow(
+                    workflow_node=workflow,
+                    output_path=workflow_dump_path,
+                    # link_calculations=not self.deduplicate,
+                    # link_calculations_dir=self.output_path / 'calculations',
+                )
+
+                self.log_dict['workflows'][workflow.uuid] = workflow_dump_path

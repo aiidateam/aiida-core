@@ -567,10 +567,6 @@ def process_repair(manager, broker, dry_run):
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
-@options.ALSO_RAW()
-@options.ALSO_RICH()
-@options.RICH_SPEC()
-@options.RICH_DUMP_ALL()
 @click.option(
     '--dump-unsealed',
     is_flag=True,
@@ -592,10 +588,6 @@ def process_dump(
     include_extras,
     dump_unsealed,
     incremental,
-    also_raw,
-    also_rich,
-    rich_spec,
-    rich_dump_all,
 ) -> None:
     """Dump process input and output files to disk.
 

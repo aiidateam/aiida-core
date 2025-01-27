@@ -7,8 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 
 class BaseDumper:

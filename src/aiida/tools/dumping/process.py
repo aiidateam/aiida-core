@@ -245,6 +245,7 @@ class ProcessDumper:
         io_dump_paths: List[str | Path] | None = None,
         link_calculations: bool = False,
         link_calculations_dir: Path | None = None,
+        workflow_symlink: Path | None = None,
     ) -> None:
         """Recursive function to traverse a `WorkflowNode` and dump its `CalculationNode` s.
 
@@ -254,7 +255,9 @@ class ProcessDumper:
         """
 
         prepare_dump_path(
-            path_to_validate=output_path, overwrite=self.base.overwrite, incremental=self.base.incremental
+            path_to_validate=output_path,
+            overwrite=self.base.overwrite,
+            incremental=self.base.incremental,
         )
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 

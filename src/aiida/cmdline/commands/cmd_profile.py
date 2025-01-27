@@ -314,20 +314,6 @@ def profile_mirror(
 
     profile = ctx.obj['profile']
 
-    # if nodes and groups:
-    #     echo.echo_critical('`nodes` and `groups` specified. Set only one.')
-
-    # if dump_config_file is None:
-
-    # # TODO: Also allow for mixing. Currently one can _only_ specify either the config file, or the arguments on the
-    # # TODO: command line
-    # else:
-    #     kwarg_dicts_from_config = DumpConfigParser.parse_config_file(dump_config_file)
-
-    #     general_kwargs = kwarg_dicts_from_config['general_kwargs']
-    #     processdumper_kwargs = kwarg_dicts_from_config['processdumper_kwargs']
-    #     datadumper_kwargs = kwarg_dicts_from_config['datadumper_kwargs']
-
     incremental = not overwrite
 
     if path is None:

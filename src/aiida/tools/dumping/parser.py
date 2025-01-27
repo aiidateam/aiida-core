@@ -27,10 +27,10 @@ class DumpConfigParser:
             'flat': config.get('flat', False),
         }
 
-        datadumper_kwargs = {
-            'also_raw': config.get('also_raw', False),
-            'also_rich': config.get('also_rich', True),
-        }
+        # datadumper_kwargs = {
+        #     'also_raw': config.get('also_raw', False),
+        #     'also_rich': config.get('also_rich', True),
+        # }
 
         collection_kwargs = {
             'should_dump_processes': config.get('dump_processes', True),

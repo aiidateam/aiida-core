@@ -88,7 +88,6 @@ def test_proxy_command():
             load_system_host_keys=True,
             key_policy='AutoAddPolicy',
         ):
-            raise ValueError('')
             pass
     except Exception as e:
         open_fds = list_open_fds()

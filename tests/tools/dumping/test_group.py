@@ -10,7 +10,6 @@
 
 # TODO: Test that de-duplication also works for calculations
 
-
 import pytest
 
 from aiida import orm

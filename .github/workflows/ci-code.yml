@@ -79,7 +79,7 @@ jobs:
 
     - name: ulimit
       run: |
-        ulimit -n
+        ulimit -a
 
     - name: Run test suite
       env:

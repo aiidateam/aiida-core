@@ -286,12 +286,13 @@ class ProcessDumper:
         if self.include_inputs:
             input_links = calculation_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
             all_input_nodes = input_links.all_nodes()
-            all_have_repositories = all([hasattr(p.base, 'repository') for p in all_input_nodes])
+            all_have_repositories = all([hasattr(node.base, 'repository') for node in all_input_nodes])
             if all_have_repositories:
-                non_empty_repository = any([len(n.base.repository.list_objects()) > 0 for n in all_input_nodes])
+                non_empty_repository = any([len(node.base.repository.list_objects()) > 0 for node in all_input_nodes])
                 if non_empty_repository:
                     self._dump_calculation_io(
-                        parent_path=output_path / io_dump_mapping.inputs, link_triples=input_links
+                        parent_path=output_path / io_dump_mapping.inputs,
+                        link_triples=input_links,
                     )
 
         # Dump the node_outputs apart from `retrieved`

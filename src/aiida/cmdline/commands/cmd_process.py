@@ -606,21 +606,23 @@ def process_dump(
     """
 
     from aiida.tools.archive.exceptions import ExportValidationError
+    from aiida.tools.dumping.base import BaseDumper
     from aiida.tools.dumping.process import ProcessDumper
 
-    processdumper_kwargs = {
-        'include_inputs': include_inputs,
-        'include_outputs': include_outputs,
-        'include_attributes': include_attributes,
-        'include_extras': include_extras,
-        'flat': flat,
-        'dump_unsealed': dump_unsealed,
-        'incremental': incremental,
-    }
+    base_dumper = BaseDumper(
+        dump_parent_path=path,
+        overwrite=overwrite,
+        incremental=incremental,
+    )
 
     process_dumper = ProcessDumper(
-        overwrite=overwrite,
-        **processdumper_kwargs,
+        base_dumper=base_dumper,
+        include_inputs=include_inputs,
+        include_outputs=include_outputs,
+        include_attributes=include_attributes,
+        include_extras=include_extras,
+        flat=flat,
+        dump_unsealed=dump_unsealed,
     )
 
     try:

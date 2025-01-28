@@ -14,12 +14,12 @@ from pathlib import Path
 class BaseDumper:
     def __init__(
         self,
-        dump_parent_path: Path = Path.cwd(),
+        dump_parent_path: Path | None = None,
         overwrite: bool = False,
         incremental: bool = True,
         last_dump_time: datetime | None = None,
     ):
-        self.dump_parent_path = dump_parent_path
+        self.dump_parent_path = dump_parent_path or Path.cwd()
         self.overwrite = overwrite
         self.incremental = incremental
         self.last_dump_time = last_dump_time

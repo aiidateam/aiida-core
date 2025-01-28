@@ -867,10 +867,3 @@ INCREMENTAL = OverridableOption(
     show_default=True,
     help="Incremental dumping of data to disk. Doesn't require using overwrite to clean previous directories.",
 )
-
-RICH_OPTIONS = OverridableOption(
-    '--rich-options',
-    default=None,
-    type=str,
-    help='Specifications for rich data dumping.',
-)

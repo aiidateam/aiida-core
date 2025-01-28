@@ -10,16 +10,14 @@
 
 from __future__ import annotations
 
-import logging
 import shutil
 from pathlib import Path
 
-from rich.console import Console
-from rich.table import Table
+from aiida.common.log import AIIDA_LOGGER
 
 __all__ = ['prepare_dump_path']
 
-logger = logging.getLogger(__name__)
+logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 
 def prepare_dump_path(
@@ -41,10 +39,12 @@ def prepare_dump_path(
     :raises FileNotFoundError: If no `safeguard_file` is found."""
 
     if overwrite and incremental:
-        raise ValueError('Both overwrite and incremental set to True. Only specify one.')
+        msg = 'Both overwrite and incremental set to True. Only specify one.'
+        raise ValueError(msg)
 
     if path_to_validate.is_file():
-        raise FileExistsError(f'A file at the given path `{path_to_validate}` already exists.')
+        msg = f'A file at the given path `{path_to_validate}` already exists.'
+        raise FileExistsError(msg)
 
     # Handle existing directory
     if path_to_validate.is_dir():
@@ -53,89 +53,69 @@ def prepare_dump_path(
         # Case 1: Non-empty directory and overwrite is False
         if not is_empty and not overwrite:
             if incremental:
-                logger.info('Incremental dumping selected. Will keep directory.')
+                msg = f'Incremental dumping selected. Will update directory `{path_to_validate}` with new data.'
+                logger.report(msg)
             else:
-                raise FileExistsError(
-                    f'Path `{path_to_validate}` already exists, and neither overwrite nor incremental is enabled.'
-                )
+                msg = f'Path `{path_to_validate}` already exists, and neither overwrite nor incremental is enabled.'
+                raise FileExistsError(msg)
 
         # Case 2: Non-empty directory, overwrite is True
         if not is_empty and overwrite:
             safeguard_exists = (path_to_validate / safeguard_file).is_file()
 
             if safeguard_exists:
-                logger.info(f'Overwriting directory `{path_to_validate}`.')
+                msg = f'Overwriting directory `{path_to_validate}`.'
+                logger.report(msg)
                 shutil.rmtree(path_to_validate)
 
             else:
-                raise FileNotFoundError(
-                    f'Path `{path_to_validate}` exists without safeguard file '
-                    f'`{safeguard_file}`. Not removing because path might be a directory not created by AiiDA.'
+                msg = (
+                    f'Path `{path_to_validate}` exists without safeguard file `{safeguard_file}`. '
+                    f'Not removing because path might be a directory not created by AiiDA.'
                 )
+                raise FileNotFoundError(msg)
 
     # Create directory if it doesn't exist or was removed
     path_to_validate.mkdir(exist_ok=True, parents=True)
     (path_to_validate / safeguard_file).touch()
 
 
-def get_nodes_from_db(qb_instance, qb_filters: t.List | None = None, flat=False):
-    # Computers cannot be associated via `with_group`
-    # for qb_filter in qb_filters:
-    #     qb.add_filter(**qb_filter)
+# @staticmethod
+# def dumper_pretty_print(dumper_instance, include_private_and_dunder: bool = False):
+#     console = Console()
+#     table = Table(title=f'Attributes and Methods of {dumper_instance.__class__.__name__}')
 
-    return_iterable = qb_instance.iterall() if qb_instance.count() > 10 ^ 3 else qb_instance.all()
+#     # Adding columns to the table
+#     table.add_column('Name', justify='left')
+#     table.add_column('Type', justify='left')
+#     table.add_column('Value', justify='left')
 
-    # Manual flattening as `iterall` doesn't have `flat` option unlike `all`
-    if flat:
-        return_iterable = [_[0] for _ in return_iterable]
+#     # Lists to store attributes and methods
+#     entries = []
 
-    return return_iterable
+#     # Iterate over the class attributes and methods
+#     for attr_name in dir(dumper_instance):
+#         # Exclude private attributes and dunder methods
+#         attr_value = getattr(dumper_instance, attr_name)
+#         entry_type = 'Attribute' if not callable(attr_value) else 'Method'
 
+#         if attr_name.startswith('_'):
+#             if include_private_and_dunder:
+#                 entries.append((attr_name, entry_type, str(attr_value)))
+#             else:
+#                 pass
+#         else:
+#             entries.append((attr_name, entry_type, str(attr_value)))
 
-# def validate_rich_options(rich_options, rich_config_file):
-#     if rich_options is not None and rich_config_file is not None:
-#         raise ValueError('Specify rich options either via CLI or config file, not both.')
+#     # Sort entries: attributes first, then methods
+#     entries.sort(key=lambda x: (x[1] == 'Method', x[0]))
 
-#     else:
-#         logger.report('Neither `--rich-options` nor `--rich-config` set, using defaults.')
+#     # Add sorted entries to the table
+#     for name, entry_type, value in entries:
+#         table.add_row(name, entry_type, value)
 
-
-@staticmethod
-def dumper_pretty_print(dumper_instance, include_private_and_dunder: bool = False):
-    console = Console()
-    table = Table(title=f'Attributes and Methods of {dumper_instance.__class__.__name__}')
-
-    # Adding columns to the table
-    table.add_column('Name', justify='left')
-    table.add_column('Type', justify='left')
-    table.add_column('Value', justify='left')
-
-    # Lists to store attributes and methods
-    entries = []
-
-    # Iterate over the class attributes and methods
-    for attr_name in dir(dumper_instance):
-        # Exclude private attributes and dunder methods
-        attr_value = getattr(dumper_instance, attr_name)
-        entry_type = 'Attribute' if not callable(attr_value) else 'Method'
-
-        if attr_name.startswith('_'):
-            if include_private_and_dunder:
-                entries.append((attr_name, entry_type, str(attr_value)))
-            else:
-                pass
-        else:
-            entries.append((attr_name, entry_type, str(attr_value)))
-
-    # Sort entries: attributes first, then methods
-    entries.sort(key=lambda x: (x[1] == 'Method', x[0]))
-
-    # Add sorted entries to the table
-    for name, entry_type, value in entries:
-        table.add_row(name, entry_type, value)
-
-    # Print the formatted table
-    console.print(table)
+#     # Print the formatted table
+#     console.print(table)
 
 
 # def check_storage_size_user():

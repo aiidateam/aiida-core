@@ -59,9 +59,7 @@ class ProcessDumper:
         self.flat = flat
         self.dump_unsealed = dump_unsealed
 
-        if base_dumper is None:
-            base_dumper = BaseDumper()
-        self.base_dumper: BaseDumper = base_dumper
+        self.base_dumper = base_dumper or BaseDumper()
 
     @staticmethod
     def _generate_default_dump_path(

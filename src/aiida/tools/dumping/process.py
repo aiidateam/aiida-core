@@ -27,7 +27,6 @@ import logging
 import os
 from pathlib import Path
 from types import SimpleNamespace
-from typing import List
 
 import yaml
 
@@ -45,24 +44,29 @@ logger = logging.getLogger(__name__)
 class ProcessDumper:
     def __init__(
         self,
-        base: BaseDumper = BaseDumper(),
-        flat: bool = False,
+        base_dumper: BaseDumper | None = None,
         include_inputs: bool = True,
         include_outputs: bool = False,
         include_attributes: bool = True,
         include_extras: bool = True,
+        flat: bool = False,
         dump_unsealed: bool = False,
     ) -> None:
-        self.flat = flat
-        self.base = base
         self.include_inputs = include_inputs
         self.include_outputs = include_outputs
         self.include_attributes = include_attributes
         self.include_extras = include_extras
+        self.flat = flat
         self.dump_unsealed = dump_unsealed
 
+        if base_dumper is None:
+            base_dumper = BaseDumper()
+        self.base_dumper: BaseDumper = base_dumper
+
     @staticmethod
-    def _generate_default_dump_path(process_node: orm.ProcessNode, prefix: str = 'dump') -> Path:
+    def _generate_default_dump_path(
+        process_node: orm.ProcessNode, prefix: str | None = 'dump', append_pk: bool = True
+    ) -> Path:
         """Simple helper function to generate the default parent-dumping directory if none given.
 
         This function is not called for the recursive sub-calls of `_dump_calculation` as it just creates the default
@@ -74,17 +78,20 @@ class ProcessDumper:
 
         entities_to_dump = []
 
-        if prefix:
-            # No '' and None
+        # No '' and None
+        if prefix is not None:
             entities_to_dump += [prefix]
 
         try:
-            entities_to_dump += [process_node.process_label]
+            if process_node.process_label is not None:
+                entities_to_dump.append(process_node.process_label)
         except AttributeError:
             # This case came up during testing, not sure how relevant it actually is
-            entities_to_dump += [process_node.process_type]
+            if process_node.process_type is not None:
+                entities_to_dump.append(process_node.process_type)
 
-        entities_to_dump += [str(process_node.pk)]
+        if append_pk:
+            entities_to_dump += [str(process_node.pk)]
 
         return Path('-'.join(entities_to_dump))
 
@@ -187,7 +194,7 @@ class ProcessDumper:
         self,
         process_node: orm.ProcessNode,
         output_path: Path | None,
-        io_dump_paths: List[str | Path] | None = None,
+        io_dump_paths: list[str | Path] | None = None,
     ) -> Path:
         """Dumps all data involved in a `ProcessNode`, including its outgoing links.
 
@@ -217,7 +224,7 @@ class ProcessDumper:
             output_path = self._generate_default_dump_path(process_node=process_node)
 
         prepare_dump_path(
-            path_to_validate=output_path, overwrite=self.base.overwrite, incremental=self.base.incremental
+            path_to_validate=output_path, overwrite=self.base_dumper.overwrite, incremental=self.base_dumper.incremental
         )
 
         if isinstance(process_node, orm.CalculationNode):
@@ -242,7 +249,7 @@ class ProcessDumper:
         self,
         workflow_node: orm.WorkflowNode,
         output_path: Path,
-        io_dump_paths: List[str | Path] | None = None,
+        io_dump_paths: list[str | Path] | None = None,
         link_calculations: bool = False,
         link_calculations_dir: Path | None = None,
         workflow_symlink: Path | None = None,
@@ -256,8 +263,8 @@ class ProcessDumper:
 
         prepare_dump_path(
             path_to_validate=output_path,
-            overwrite=self.base.overwrite,
-            incremental=self.base.incremental,
+            overwrite=self.base_dumper.overwrite,
+            incremental=self.base_dumper.incremental,
         )
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
@@ -289,11 +296,11 @@ class ProcessDumper:
                         output_path=child_output_path,
                         io_dump_paths=io_dump_paths,
                     )
-                else:
+                elif link_calculations_dir is not None:
+                    calculation_dump_path = link_calculations_dir / ProcessDumper._generate_default_dump_path(
+                        process_node=child_node, prefix=''
+                    )
                     try:
-                        calculation_dump_path = link_calculations_dir / ProcessDumper._generate_default_dump_path(
-                            process_node=child_node, prefix=''
-                        )
                         os.symlink(calculation_dump_path, child_output_path)
                     except FileExistsError:
                         pass
@@ -302,7 +309,7 @@ class ProcessDumper:
         self,
         calculation_node: orm.CalculationNode,
         output_path: Path,
-        io_dump_paths: List[str | Path] | None = None,
+        io_dump_paths: list[str | Path] | None = None,
     ) -> None:
         """Dump the contents of a `CalculationNode` to a specified output path.
 
@@ -313,7 +320,7 @@ class ProcessDumper:
         """
 
         prepare_dump_path(
-            path_to_validate=output_path, overwrite=self.base.overwrite, incremental=self.base.incremental
+            path_to_validate=output_path, overwrite=self.base_dumper.overwrite, incremental=self.base_dumper.incremental
         )
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 
@@ -350,12 +357,12 @@ class ProcessDumper:
     def _dump_calculation_io_files(
         self,
         parent_path: Path,
-        link_triples: orm.LinkManager | List[orm.LinkTriple],
+        link_triples: orm.LinkManager | list[orm.LinkTriple],
     ):
         """Small helper function to dump linked input/output nodes of a `orm.CalculationNode`.
 
         :param parent_path: Parent directory for dumping the linked node contents.
-        :param link_triples: List of link triples.
+        :param link_triples: list of link triples.
         """
 
         for link_triple in link_triples:
@@ -369,7 +376,7 @@ class ProcessDumper:
 
             link_triple.node.base.repository.copy_tree(linked_node_path.resolve())
 
-    def _generate_calculation_io_mapping(self, io_dump_paths: List[str | Path] | None = None) -> SimpleNamespace:
+    def _generate_calculation_io_mapping(self, io_dump_paths: list[str | Path] | None = None) -> SimpleNamespace:
         """Helper function to generate mapping for entities dumped for each `CalculationNode`.
 
         This is to avoid exposing AiiDA terminology, like `repository` to the user, while keeping track of which
@@ -380,8 +387,8 @@ class ProcessDumper:
         :return: SimpleNamespace mapping.
         """
 
-        aiida_entities_to_dump = ['repository', 'retrieved', 'inputs', 'outputs']
-        default_calculation_io_dump_paths = ['inputs', 'outputs', 'node_inputs', 'node_outputs']
+        aiida_entities_to_dump: list[str] = ['repository', 'retrieved', 'inputs', 'outputs']
+        default_calculation_io_dump_paths: list[str | Path] = ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         if self.flat and io_dump_paths is None:
             logger.info(
                 'Flat set to True and no `io_dump_paths`. Dumping in a flat directory, files might be overwritten.'
@@ -390,21 +397,22 @@ class ProcessDumper:
 
             return SimpleNamespace(**dict(zip(aiida_entities_to_dump, empty_calculation_io_dump_paths)))
 
-        elif not self.flat and io_dump_paths is None:
+        if not self.flat and io_dump_paths is None:
             logger.info(
                 'Flat set to False but no `io_dump_paths` provided. '
                 + f'Will use the defaults {default_calculation_io_dump_paths}.'
             )
-            return SimpleNamespace(**dict(zip(aiida_entities_to_dump, default_calculation_io_dump_paths)))
+            io_dump_paths = default_calculation_io_dump_paths
 
         elif self.flat:
             logger.info('Flat set to True but `io_dump_paths` provided. These will be used, but `inputs` not nested.')
-            return SimpleNamespace(**dict(zip(aiida_entities_to_dump, io_dump_paths)))
         else:
             logger.info(
                 'Flat set to False but no `io_dump_paths` provided. These will be used, but `node_inputs` flattened.'
             )
-            return SimpleNamespace(**dict(zip(aiida_entities_to_dump, io_dump_paths)))  # type: ignore[arg-type]
+
+        assert io_dump_paths is not None
+        return SimpleNamespace(**dict(zip(aiida_entities_to_dump, io_dump_paths)))
 
     def _dump_node_yaml(
         self,

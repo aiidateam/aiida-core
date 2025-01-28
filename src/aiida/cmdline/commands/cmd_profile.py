@@ -330,7 +330,7 @@ def profile_mirror(
     else:
         echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
 
-    SAFEGUARD_FILE: str = '.verdi_profile_mirror'
+    SAFEGUARD_FILE: str = '.verdi_profile_mirror'  # noqa: N806
     safeguard_file_path: Path = path / SAFEGUARD_FILE
 
     try:
@@ -357,7 +357,7 @@ def profile_mirror(
     )
 
     process_dumper = ProcessDumper(
-        base=base_dumper,
+        base_dumper=base_dumper,
         include_inputs=include_inputs,
         include_outputs=include_outputs,
         include_attributes=include_attributes,
@@ -378,6 +378,6 @@ def profile_mirror(
     profile_dumper.dump()
 
     # Append the current time to the file
-    last_dump_time = datetime.now().astimezone().isoformat()
+    last_dump_time = datetime.now().astimezone()
     with safeguard_file_path.open('a') as fhandle:
-        fhandle.write(f'Last profile mirror time: {last_dump_time}\n')
+        fhandle.write(f'Last profile mirror time: {last_dump_time.isoformat()}\n')

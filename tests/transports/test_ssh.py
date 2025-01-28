@@ -72,27 +72,14 @@ def test_proxy_jump_invalid():
 
 def test_proxy_command():
     """Test the connection with a proxy command"""
-    import os
-
-    import psutil
-
-    def list_open_fds():
-        process = psutil.Process(os.getpid())
-        return process.open_files()
-
-    try:
-        with SshTransport(
-            machine='localhost',
-            proxy_command='ssh -W localhost:22 localhost',
-            timeout=120,
-            load_system_host_keys=True,
-            key_policy='AutoAddPolicy',
-        ):
-            pass
-    except Exception as e:
-        open_fds = list_open_fds()
-        msg = f'Number of open file descriptor: {len(open_fds)}\n\n\n {open_fds}'
-        raise ValueError(msg) from e
+    with SshTransport(
+        machine='localhost',
+        proxy_command='ssh -W localhost:22 localhost',
+        timeout=120,
+        load_system_host_keys=True,
+        key_policy='AutoAddPolicy',
+    ):
+        pass
 
 
 def test_no_host_key():

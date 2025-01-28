@@ -46,6 +46,32 @@ class TestDbBackend(Enum):
     PSQL = 'psql'
 
 
+@pytest.fixture(scope='module', autouse=True)
+def log_module_open_fds(request):
+    import psutil, os
+    def list_open_fds():
+        process = psutil.Process(os.getpid())
+        return process.open_files()
+    open_fds = list_open_fds()
+    test_name = request.node.name
+
+    msg = f'{test_name} open fds: {len(open_fds)}\n'
+    with (Path.cwd() / "module_open_fds.log").open("a") as file_handler:
+        file_handler.write(msg)
+
+@pytest.fixture(scope='function', autouse=True)
+def log_function_open_fds(request):
+    import psutil, os
+    def list_open_fds():
+        process = psutil.Process(os.getpid())
+        return process.open_files()
+    open_fds = list_open_fds()
+    test_name = request.node.name
+
+    msg = f'{test_name} open fds: {len(open_fds)}\n'
+    with (Path.cwd() / "function_open_fds.log").open("a") as file_handler:
+        file_handler.write(msg)
+
 def pytest_collection_modifyitems(items, config):
     """Automatically generate markers for certain tests.
 

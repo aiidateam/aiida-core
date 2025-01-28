@@ -22,12 +22,6 @@ from aiida.tools.dumping.process import ProcessDumper
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
-DEFAULT_PROCESSES_TO_DUMP = [orm.CalculationNode, orm.WorkflowNode]
-# DEFAULT_DATA_TO_DUMP = [orm.StructureData, orm.Code, orm.Computer, orm.BandsData, orm.UpfData]
-# DEFAULT_COLLECTIONS_TO_DUMP ??
-DEFAULT_ENTITIES_TO_DUMP = DEFAULT_PROCESSES_TO_DUMP  # + DEFAULT_DATA_TO_DUMP
-
-
 class GroupDumper:
     def __init__(
         self,
@@ -114,10 +108,6 @@ class GroupDumper:
         self.calculations = calculations
         self.workflows = workflows
 
-    def dump(self):
-        self.output_path.mkdir(exist_ok=True, parents=True)
-        self._dump_processes()
-
     def _dump_processes(self):
         self._get_processes()
 
@@ -178,3 +168,7 @@ class GroupDumper:
                 dumped_workflows[workflow.uuid] = workflow_dump_path
 
         self.dump_logger.update_workflows(dumped_workflows)
+
+    def dump(self):
+        self.output_path.mkdir(exist_ok=True, parents=True)
+        self._dump_processes()

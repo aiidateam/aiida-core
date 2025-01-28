@@ -22,6 +22,7 @@ from aiida.tools.dumping.process import ProcessDumper
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
+
 class GroupDumper:
     def __init__(
         self,

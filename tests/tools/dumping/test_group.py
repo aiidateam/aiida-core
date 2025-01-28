@@ -10,8 +10,9 @@
 
 # TODO: Test that de-duplication also works for calculations
 
+
 import pytest
-from pathlib import Path
+
 from aiida import orm
 
 
@@ -50,7 +51,6 @@ def setup_profile_groups(generate_calculation_node_add, generate_workchain_multi
 
 
 class TestGroupDumper:
-
     def test_should_dump_processes(self):
         print(orm.QueryBuilder().append(orm.Group).all(flat=True))
         assert False

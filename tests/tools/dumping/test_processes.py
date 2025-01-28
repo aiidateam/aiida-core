@@ -203,6 +203,9 @@ def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
     assert all([input_file.is_file() for input_file in input_files])
     assert all([output_file.is_file() for output_file in output_files])
 
+    missing_dir = dump_parent_path / node_inputs_relpath
+    assert not missing_dir.exists()
+
     # Flat dumping
     dump_parent_path = tmp_path / 'wc-dump-test-multiply-add-flat'
     process_dumper = ProcessDumper(flat=True)
@@ -327,6 +330,9 @@ def test_dump_calculation_add(tmp_path, generate_calculation_node_add):
 
     assert all([input_file.is_file() for input_file in input_files])
     assert all([output_file.is_file() for output_file in output_files])
+
+    missing_dir = dump_parent_path / node_inputs_relpath
+    assert not missing_dir.exists()
 
 
 # Tests for helper methods

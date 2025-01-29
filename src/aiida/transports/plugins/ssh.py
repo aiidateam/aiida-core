@@ -1371,19 +1371,9 @@ class SshTransport(BlockingTransport):
         if not self.isfile(oldpath):
             if not self.isdir(oldpath):
                 raise OSError(f'Source {oldpath} does not exist')
-<<<<<<< HEAD
-        # TODO: this seems to be a bug (?)
-        # why to raise an OSError if the newpath does not exist?
-        # ofcourse newpath shouldn't exist, that's why we are renaming it!
-        # issue opened here: https://github.com/aiidateam/aiida-core/issues/6725
 
-        if self.isfile(newpath) or self.isdir(newpath):
-            raise OSError(f'Destination {newpath} already exist')
-=======
-            
         if self.path_exists(newpath):
             raise OSError(f"Destination {newpath} already exist")
->>>>>>> 5ecb0476b (Appling review on issue #6735)
 
         return self.sftp.rename(oldpath, newpath)
 

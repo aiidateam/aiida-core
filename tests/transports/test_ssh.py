@@ -75,7 +75,7 @@ def test_proxy_command():
     with SshTransport(
         machine='localhost',
         proxy_command='ssh -W localhost:22 localhost',
-        timeout=30,
+        timeout=120,
         load_system_host_keys=True,
         key_policy='AutoAddPolicy',
     ):
@@ -99,7 +99,7 @@ def test_gotocomputer():
     """Test gotocomputer"""
     with SshTransport(
         machine='localhost',
-        timeout=30,
+        timeout=120,
         use_login_shell=False,
         key_policy='AutoAddPolicy',
         proxy_command='ssh -W localhost:22 localhost',

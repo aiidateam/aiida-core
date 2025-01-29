@@ -51,6 +51,8 @@ ALEMBIC_REL_PATH = 'migrations'
 
 REPOSITORY_UUID_KEY = 'repository|uuid'
 
+_CONTAINERS = {}
+
 
 class PsqlDosMigrator:
     """Class for validating and migrating `psql_dos` storage instances.
@@ -179,7 +181,12 @@ class PsqlDosMigrator:
 
         from .backend import get_filepath_container
 
-        return Container(get_filepath_container(self.profile))
+        # TODO need upddate for each profile
+        breakpoint()
+        global _CONTAINER
+        if _CONTAINERS.get(self.profile, None) is None:
+            _CONTAINERS[self.profile] = Container(get_filepath_container(self.profile))
+        return _CONTAINERS[self.profile]
 
     def get_repository_uuid(self) -> str:
         """Return the UUID of the repository.
@@ -206,6 +213,7 @@ class PsqlDosMigrator:
             tests having run.
         :returns: ``True`` if the storage was initialised by the function call, ``False`` if it was already initialised.
         """
+        breakpoint()
         if reset:
             self.reset_repository()
             self.reset_database()

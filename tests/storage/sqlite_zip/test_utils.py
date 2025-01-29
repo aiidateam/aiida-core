@@ -122,6 +122,7 @@ class TestCustomFunction:
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_json_contains(self, lhs, rhs, is_match):
         """Test QueryBuilder filter `contains` for JSON array fields"""
+
         lhs_json = json.dumps(lhs)
         rhs_json = json.dumps(rhs)
         assert is_match == _contains(lhs, rhs)

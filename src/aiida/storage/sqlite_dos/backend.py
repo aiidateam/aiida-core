@@ -54,6 +54,7 @@ FILENAME_CONTAINER = 'container'
 ALEMBIC_REL_PATH = 'migrations'
 
 REPOSITORY_UUID_KEY = 'repository|uuid'
+_CONTAINERS = {}
 
 
 class SqliteDosMigrator(PsqlDosMigrator):
@@ -84,8 +85,12 @@ class SqliteDosMigrator(PsqlDosMigrator):
 
         :returns: The disk-object store container configured for the repository path of the current profile.
         """
-        filepath_container = Path(self.profile.storage_config['filepath']) / FILENAME_CONTAINER
-        return Container(str(filepath_container))
+        # TODO also is in the migrator, wtf?
+        global _CONTAINERS
+        if _CONTAINERS.get(self.profile, None) is None:
+            filepath_container = Path(self.profile.storage_config['filepath']) / FILENAME_CONTAINER
+            _CONTAINERS[self.profile] = Container(str(filepath_container))
+        return _CONTAINERS[self.profile]
 
     def initialise_database(self) -> None:
         """Initialise the database.

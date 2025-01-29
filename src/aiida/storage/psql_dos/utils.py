@@ -50,8 +50,10 @@ def create_sqlalchemy_engine(config: PsqlConfig):
         port=config['database_port'],
         name=config['database_name'],
     )
+    from sqlalchemy.pool import NullPool
     return create_engine(
         engine_url,
+        poolclass=NullPool,
         json_serializer=json.dumps,
         json_deserializer=json.loads,
         **config.get('engine_kwargs', {}),

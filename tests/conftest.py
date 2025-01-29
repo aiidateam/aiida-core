@@ -69,7 +69,14 @@ def log_function_open_fds(request):
     test_name = request.node.name
 
     msg = f'{test_name} open fds: {len(open_fds)}\n'
-    with (Path.cwd() / "function_open_fds.log").open("a") as file_handler:
+    with (Path.cwd() / "before_function_open_fds.log").open("a") as file_handler:
+        file_handler.write(msg)
+    yield None
+    open_fds = list_open_fds()
+    test_name = request.node.name
+
+    msg = f'{test_name} open fds: {len(open_fds)}\n'
+    with (Path.cwd() / "after_function_open_fds.log").open("a") as file_handler:
         file_handler.write(msg)
 
 def pytest_collection_modifyitems(items, config):

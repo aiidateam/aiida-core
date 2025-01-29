@@ -1380,7 +1380,7 @@ class SshTransport(BlockingTransport):
         if self.isfile(newpath) or self.isdir(newpath):
             raise OSError(f'Destination {newpath} already exist')
 =======
-            
+
         if self.path_exists(newpath):
             raise OSError(f"Destination {newpath} already exist")
 >>>>>>> 5ecb0476b (Appling review on issue #6735)

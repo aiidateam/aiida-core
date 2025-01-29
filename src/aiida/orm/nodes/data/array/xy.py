@@ -179,5 +179,5 @@ class XyData(ArrayData):
                 y_arrays.append((y_name, y_arrays))
             except (KeyError, AttributeError):
                 raise NotExistent(f'Could not retrieve array associated with y array {y_name}')
-            
+
         return list(zip(y_names, y_arrays, y_units))

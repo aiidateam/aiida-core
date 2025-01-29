@@ -56,6 +56,7 @@ ALEMBIC_REL_PATH = 'migrations'
 REPOSITORY_UUID_KEY = 'repository|uuid'
 _CONTAINERS = {}
 
+
 class SqliteDosMigrator(PsqlDosMigrator):
     """Class for validating and migrating `sqlite_dos` storage instances.
 

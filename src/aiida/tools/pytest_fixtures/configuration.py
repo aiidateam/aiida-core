@@ -209,31 +209,35 @@ def aiida_profile_clean(aiida_profile):
 
     :returns :class:`~aiida.manage.configuration.profile.Profile`: The loaded temporary profile.
     """
-    from pprint import pprint
-    import psutil, os
+    import os
+
+    import psutil
+
     def list_open_fds():
         process = psutil.Process(os.getpid())
         return process.open_files()
-    #import tracemalloc
-    #tracemalloc.start()
+
+    # import tracemalloc
+    # tracemalloc.start()
     ## ... start your application ...
 
-    #snapshot1 = tracemalloc.take_snapshot()
+    # snapshot1 = tracemalloc.take_snapshot()
     ## ... call the function leaking memory ...
-    #for _ in range(100):
+    # for _ in range(100):
     #    aiida_profile.reset_storage()
     breakpoint()
     aiida_profile.reset_storage()
     breakpoint()
-    #yield aiida_profile
+    # yield aiida_profile
 
-    #snapshot2 = tracemalloc.take_snapshot()
+    # snapshot2 = tracemalloc.take_snapshot()
 
-    #top_stats = snapshot2.compare_to(snapshot1, 'lineno')
+    # top_stats = snapshot2.compare_to(snapshot1, 'lineno')
 
-    #print("[ Top 10 differences ]")
-    #for stat in top_stats[:10]:
+    # print("[ Top 10 differences ]")
+    # for stat in top_stats[:10]:
     #    print(stat)
+
 
 @pytest.fixture(scope='class')
 def aiida_profile_clean_class(aiida_profile):

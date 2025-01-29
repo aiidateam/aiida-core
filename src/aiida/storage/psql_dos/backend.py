@@ -182,26 +182,31 @@ class PsqlDosBackend(StorageBackend):
         return self._session_factory()
 
     def close(self) -> None:
-        from pprint import pprint
-        import psutil, os
+        import os
+
+        import psutil
+
         # does not create a ref
         from sqlalchemy.orm.session import _sessions
+
         # this seems to make the gc active to delte sessnios, wtf?
         list(_sessions.values())
+
         def list_open_fds():
             process = psutil.Process(os.getpid())
             return process.open_files()
+
         breakpoint()
-        #sessions = [sess for sess in _sessions.values()]
-        #if self._session_factory is None:
+        # sessions = [sess for sess in _sessions.values()]
+        # if self._session_factory is None:
         #    return  # the instance is already closed, and so this is a no-op
         ## close the connection
 
         ## somehow this closes it but it should be equivalent to
-        #engines = []
-        #for sess in sessions:
+        # engines = []
+        # for sess in sessions:
         #    engines.append(sess.bind)
-        #for sess in sessions:
+        # for sess in sessions:
         #    #sess.flush()
         #    #sess.expunge_all()
         #    sess.close()
@@ -209,34 +214,32 @@ class PsqlDosBackend(StorageBackend):
         # somehow it is important to close the session before the engine is first time disposed
         engine = self._session_factory.bind
         from sqlalchemy.orm.session import close_all_sessions
+
         close_all_sessions()
 
-
         self._session_factory.expunge_all()
-        #gc.collect()
-        #self._session_factory.session_factory.close_all()
-        #gc.collect()
-        #self._session_factory.remove()
-        #gc.collect()
+        # gc.collect()
+        # self._session_factory.session_factory.close_all()
+        # gc.collect()
+        # self._session_factory.remove()
+        # gc.collect()
         self._session_factory.close()
-        #gc.collect()
-        #self._session_factory.close_all()
-        #gc.collect()
+        # gc.collect()
+        # self._session_factory.close_all()
+        # gc.collect()
         self._session_factory = None
 
-
-        #for engine in engines:
+        # for engine in engines:
         #    engine.dispose()
         if engine is not None:
             engine.dispose()  # type: ignore[union-attr]
 
-
         # Without this, sqlalchemy keeps a weakref to a session
         # in sqlalchemy.orm.session._sessions
         gc.collect()
-        #from aiida.manage import get_manager
-        #get_manager().reset_profile_storage()
-        #with self.migrator_context(self._profile) as migrator:
+        # from aiida.manage import get_manager
+        # get_manager().reset_profile_storage()
+        # with self.migrator_context(self._profile) as migrator:
         #    migrator.get_container().close()
         breakpoint()
 

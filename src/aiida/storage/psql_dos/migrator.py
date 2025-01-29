@@ -53,6 +53,7 @@ REPOSITORY_UUID_KEY = 'repository|uuid'
 
 _CONTAINERS = {}
 
+
 class PsqlDosMigrator:
     """Class for validating and migrating `psql_dos` storage instances.
 
@@ -179,6 +180,7 @@ class PsqlDosMigrator:
         from disk_objectstore import Container
 
         from .backend import get_filepath_container
+
         # TODO need upddate for each profile
         breakpoint()
         global _CONTAINER

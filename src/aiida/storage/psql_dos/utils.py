@@ -51,6 +51,7 @@ def create_sqlalchemy_engine(config: PsqlConfig):
         name=config['database_name'],
     )
     from sqlalchemy.pool import NullPool
+
     return create_engine(
         engine_url,
         poolclass=NullPool,

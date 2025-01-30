@@ -453,7 +453,8 @@ class CalcJobNode(CalculationNode):
     def get_transport(self) -> 'Transport':
         """Return the transport for this calculation.
 
-        :return: `Transport` configured with the `AuthInfo` associated to the computer of this node
+        :return: Transport configured
+            with the `AuthInfo` associated to the computer of this node
         """
         return self.get_authinfo().get_transport()
 

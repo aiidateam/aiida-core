@@ -85,7 +85,7 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         name: aiida-pytests-py3.9
-        file: ./coverage.xml
+        files: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
   tests-presto:

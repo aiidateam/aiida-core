@@ -192,6 +192,38 @@ def aiida_computer_ssh(aiida_computer, ssh_key) -> t.Callable[[], 'Computer']:
 
 
 @pytest.fixture
+def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], 'Computer']:
+    """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh_async`` transport.
+
+    Usage::
+
+        def test(aiida_computer_ssh):
+            computer = aiida_computer_ssh(label='some-label', configure=True)
+            assert computer.transport_type == 'core.ssh_async'
+            assert computer.is_configured
+
+    The factory has the following signature:
+
+    :param label: The computer label. If not specified, a random UUID4 is used.
+    :param configure: Boolean, if ``True``, ensures the computer is configured, otherwise the computer is returned
+        as is. Note that if a computer with the given label already exists and it was configured before, the
+        computer will not be "un-"configured. If an unconfigured computer is absolutely required, make sure to first
+        delete the existing computer or specify another label.
+    :return: A stored computer instance.
+    """
+
+    def factory(label: str | None = None, configure: bool = True) -> 'Computer':
+        computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh_async')
+
+        if configure:
+            computer.configure()
+
+        return computer
+
+    return factory
+
+
+@pytest.fixture
 def aiida_localhost(aiida_computer_local) -> 'Computer':
     """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.local`` transport.
 

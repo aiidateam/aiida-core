@@ -86,3 +86,24 @@ def copy_from_remote_to_remote(transportsource, transportdestination, remotesour
     .. note:: it uses the method transportsource.copy_from_remote_to_remote
     """
     transportsource.copy_from_remote_to_remote(transportdestination, remotesource, remotedestination, **kwargs)
+
+
+async def copy_from_remote_to_remote_async(
+    transportsource, transportdestination, remotesource, remotedestination, **kwargs
+):
+    """Copy files or folders from a remote computer to another remote computer.
+    Note: To have a proper async performance,
+    both transports should be instance `core.async_ssh`.
+    Even if either or both are not async, the function will work,
+    but the performance might be lower than the sync version.
+
+    :param transportsource: transport to be used for the source computer
+    :param transportdestination: transport to be used for the destination computer
+    :param str remotesource: path to the remote source directory / file
+    :param str remotedestination: path to the remote destination directory / file
+    :param kwargs: keyword parameters passed to the final put,
+        except for 'dereference' that is passed to the initial get
+
+    .. note:: it uses the method transportsource.copy_from_remote_to_remote
+    """
+    await transportsource.copy_from_remote_to_remote(transportdestination, remotesource, remotedestination, **kwargs)

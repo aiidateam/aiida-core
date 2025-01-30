@@ -11,7 +11,7 @@
 import json
 from typing import TypedDict
 
-from sqlalchemy import event
+from sqlalchemy import text
 
 
 class PsqlConfig(TypedDict, total=False):
@@ -67,8 +67,9 @@ $$;
 """.strip()
 
 
-def register_jsonb_patch_function(conn, *args, **kwargs):
-    conn.execute(JSONB_PATCH_FUNCTION)
+def register_jsonb_patch_function(engine):
+    with engine.connect() as conn:
+        conn.execute(text(JSONB_PATCH_FUNCTION))
 
 
 def create_sqlalchemy_engine(config: PsqlConfig):
@@ -102,7 +103,7 @@ def create_sqlalchemy_engine(config: PsqlConfig):
         json_deserializer=json.loads,
         **config.get('engine_kwargs', {}),
     )
-    event.listen(engine, 'connect', register_jsonb_patch_function)
+    register_jsonb_patch_function(engine)
     return engine
 
 

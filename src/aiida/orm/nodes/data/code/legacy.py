@@ -123,7 +123,7 @@ class Code(AbstractCode):
         type_check(computer, orm.Computer)
         return computer.pk == self.get_remote_computer().pk
 
-    def get_executable(self) -> pathlib.PurePosixPath:
+    def get_executable(self) -> pathlib.PurePath:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
@@ -133,7 +133,7 @@ class Code(AbstractCode):
         else:
             exec_path = self.get_remote_exec_path()
 
-        return pathlib.PurePosixPath(exec_path)
+        return pathlib.PurePath(exec_path)
 
     def hide(self):
         """Hide the code (prevents from showing it in the verdi code list)"""

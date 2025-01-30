@@ -170,7 +170,7 @@ class InstalledCode(Code):
         type_check(computer, Computer)
         return computer.pk == self.computer.pk
 
-    def get_executable(self) -> pathlib.PurePosixPath:
+    def get_executable(self) -> pathlib.PurePath:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
@@ -207,12 +207,12 @@ class InstalledCode(Code):
         return f'{self.label}@{self.computer.label}'
 
     @property
-    def filepath_executable(self) -> pathlib.PurePosixPath:
+    def filepath_executable(self) -> pathlib.PurePath:
         """Return the absolute filepath of the executable that this code represents.
 
         :return: The absolute filepath of the executable.
         """
-        return pathlib.PurePosixPath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
+        return pathlib.PurePath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
 
     @filepath_executable.setter
     def filepath_executable(self, value: str) -> None:

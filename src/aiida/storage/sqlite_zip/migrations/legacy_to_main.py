@@ -13,7 +13,7 @@ import tarfile
 from contextlib import contextmanager
 from datetime import datetime
 from hashlib import sha256
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePath
 from typing import Any, Callable, ContextManager, Dict, Iterator, List, Optional, Tuple, Union
 
 from archive_path import ZipPath
@@ -96,7 +96,7 @@ def perform_v1_migration(
                 if len(parts) < 6 or parts[0] != 'nodes' or parts[4] not in ('raw_input', 'path'):
                     continue
                 uuid = ''.join(parts[1:4])
-                posix_rel = PurePosixPath(*parts[5:])
+                posix_rel = PurePath(*parts[5:])
                 hashkey = None
                 if subpath.is_file():
                     with subpath.open('rb') as handle:
@@ -270,7 +270,7 @@ def _create_repo_metadata(paths: List[Tuple[str, Optional[str]]]) -> Dict[str, A
     """
     top_level = File()
     for _path, hashkey in paths:
-        path = PurePosixPath(_path)
+        path = PurePath(_path)
         if hashkey is None:
             _create_directory(top_level, path)
         else:
@@ -279,7 +279,7 @@ def _create_repo_metadata(paths: List[Tuple[str, Optional[str]]]) -> Dict[str, A
     return top_level.serialize()
 
 
-def _create_directory(top_level: File, path: PurePosixPath) -> File:
+def _create_directory(top_level: File, path: PurePath) -> File:
     """Create a new directory with the given path.
 
     :param path: the relative path of the directory.

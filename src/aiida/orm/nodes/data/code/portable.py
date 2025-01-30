@@ -124,7 +124,7 @@ class PortableCode(Code):
         """
         return True
 
-    def get_executable(self) -> pathlib.PurePosixPath:
+    def get_executable(self) -> pathlib.PurePath:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
@@ -161,12 +161,12 @@ class PortableCode(Code):
         return self.label
 
     @property
-    def filepath_executable(self) -> pathlib.PurePosixPath:
+    def filepath_executable(self) -> pathlib.PurePath:
         """Return the relative filepath of the executable that this code represents.
 
         :return: The relative filepath of the executable.
         """
-        return pathlib.PurePosixPath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
+        return pathlib.PurePath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
 
     @filepath_executable.setter
     def filepath_executable(self, value: str) -> None:
@@ -176,7 +176,7 @@ class PortableCode(Code):
         """
         type_check(value, str)
 
-        if pathlib.PurePosixPath(value).is_absolute():
+        if pathlib.PurePath(value).is_absolute():
             raise ValueError('The `filepath_executable` should not be absolute.')
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)

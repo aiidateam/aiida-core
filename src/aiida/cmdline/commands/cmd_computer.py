@@ -136,12 +136,14 @@ def _computer_create_temp_file(transport, scheduler, authinfo, computer):
 
     transport.makedirs(workdir, ignore_existing=True)
 
-    with tempfile.NamedTemporaryFile(mode='w+') as tempf:
+    with tempfile.NamedTemporaryFile(mode='w+', delete=False) as tempf:
         fname = os.path.split(tempf.name)[1]
         remote_file_path = os.path.join(workdir, fname)
         tempf.write(file_content)
         tempf.flush()
+        tempf.close()
         transport.putfile(tempf.name, remote_file_path)
+        os.remove(tempf.name)
 
     if not transport.path_exists(remote_file_path):
         return False, f'failed to create the file `{remote_file_path}` on the remote'

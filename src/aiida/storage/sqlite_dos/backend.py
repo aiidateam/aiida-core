@@ -15,7 +15,7 @@ import pathlib
 from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
-from typing import TYPE_CHECKING, Optional, Generator
+from typing import TYPE_CHECKING, Generator, Optional
 from uuid import uuid4
 
 from alembic.config import Config
@@ -56,6 +56,7 @@ ALEMBIC_REL_PATH = 'migrations'
 
 REPOSITORY_UUID_KEY = 'repository|uuid'
 
+
 # PR COMMENT why is this not in the migrator.py?
 class SqliteDosMigrator(PsqlDosMigrator):
     """Class for validating and migrating `sqlite_dos` storage instances.
@@ -83,7 +84,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
     def get_container(self):
         # TODO do we need to deprecate it?
         raise NotImplementedError()
-    
+
     @contextlib.contextmanager
     def container_context(self) -> Generator['Container', None, None]:
         """Return the disk-object store container.
@@ -93,7 +94,6 @@ class SqliteDosMigrator(PsqlDosMigrator):
         filepath_container = Path(self.profile.storage_config['filepath']) / FILENAME_CONTAINER
         with Container(str(filepath_container)) as container:
             yield container
-
 
     def initialise_database(self) -> None:
         """Initialise the database.

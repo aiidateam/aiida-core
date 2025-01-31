@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import pathlib
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional, Generator
+from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, Optional
 
 from alembic.command import downgrade, upgrade
 from alembic.config import Config
@@ -185,7 +185,6 @@ class PsqlDosMigrator:
 
         from .backend import get_filepath_container
 
-
         with Container(get_filepath_container(self.profile)) as container:
             yield container
 
@@ -203,7 +202,9 @@ class PsqlDosMigrator:
         except Exception as exception:
             # PR COMMENT removed the printing of exception in message since we use from exception
             if container is None:
-                msg = f'During creation of the container context for the disk-objectstore the following error was raised'
+                msg = (
+                    'During creation of the container context for the disk-objectstore the following error was raised'
+                )
             else:
                 msg = f'During access of disk-objectstore {container} error was raised.'
 

@@ -6,18 +6,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the dumping of ProcessNode data to disk."""
+"""Tests for the dumping of process data to disk."""
 
 from __future__ import annotations
 
-import io
 import shutil
 from pathlib import Path
 
 import pytest
 
-from aiida.common.links import LinkType
-from aiida.tools.dumping.processes import ProcessDumper
+from aiida.tools.dumping.base import BaseDumper
+from aiida.tools.dumping.process import ProcessDumper
 
 # Non-AiiDA variables
 filename = 'file.txt'
@@ -38,84 +37,9 @@ arraydata_linklabel = 'arraydata'
 node_metadata_file = '.aiida_node_metadata.yaml'
 
 
-# Helper functions to generate the actual `WorkflowNode`s and `CalculationNode`s used for testing
-@pytest.fixture
-def generate_calculation_node_io(generate_calculation_node, tmp_path):
-    def _generate_calculation_node_io(entry_point: str | None = None, attach_outputs: bool = True):
-        import numpy as np
-
-        from aiida.orm import ArrayData, FolderData, SinglefileData
-
-        singlefiledata_input = SinglefileData.from_string(content=filecontent, filename=filename)
-        # ? Use instance for folderdata
-        folderdata = FolderData()
-        folderdata.put_object_from_filelike(handle=io.StringIO(filecontent), path=str(folderdata_relpath / filename))  # type: ignore[arg-type]
-        arraydata_input = ArrayData(arrays=np.ones(3))
-
-        # Create calculation inputs, outputs
-        calculation_node_inputs = {
-            singlefiledata_linklabel: singlefiledata_input,
-            folderdata_linklabel: folderdata,
-            arraydata_linklabel: arraydata_input,
-        }
-
-        singlefiledata_output = singlefiledata_input.clone()
-        folderdata_output = folderdata.clone()
-
-        if attach_outputs:
-            calculation_outputs = {
-                folderdata_linklabel: folderdata_output,
-                singlefiledata_linklabel: singlefiledata_output,
-            }
-        else:
-            calculation_outputs = None
-
-        # Actually write repository file and then read it in when generating calculation_node
-        (tmp_path / filename).write_text(filecontent)
-
-        calculation_node = generate_calculation_node(
-            repository=tmp_path,
-            inputs=calculation_node_inputs,
-            outputs=calculation_outputs,
-            entry_point=entry_point,
-        )
-        return calculation_node
-
-    return _generate_calculation_node_io
-
-
-@pytest.fixture
-def generate_workchain_node_io():
-    def _generate_workchain_node_io(cj_nodes, store_all: bool = True):
-        """Generate an instance of a `WorkChain` that contains a sub-`WorkChain` and a `Calculation` with file io."""
-        from aiida.orm import WorkflowNode
-
-        wc_node = WorkflowNode()
-        wc_node_sub = WorkflowNode()
-
-        # Add sub-workchain that calls a calculation
-        wc_node_sub.base.links.add_incoming(wc_node, link_type=LinkType.CALL_WORK, link_label='sub_workflow')
-        for cj_node in cj_nodes:
-            cj_node.base.links.add_incoming(wc_node_sub, link_type=LinkType.CALL_CALC, link_label='calculation')
-
-        # Set process_state so that tests don't throw exception for build_call_graph of README generation
-        [cj_node.set_process_state('finished') for cj_node in cj_nodes]
-        wc_node.set_process_state('finished')
-        wc_node_sub.set_process_state('finished')
-
-        # Need to store so that outputs are being dumped
-        if store_all:
-            wc_node.store()
-            wc_node_sub.store()
-            [cj_node.store() for cj_node in cj_nodes]
-
-        return wc_node
-
-    return _generate_workchain_node_io
-
-
 # Only test top-level actions, like path and README creation
 # Other things tested via `_dump_workflow` and `_dump_calculation`
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path):
     from aiida.tools.archive.exceptions import ExportValidationError
 
@@ -137,6 +61,7 @@ def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path
     assert return_path == dump_parent_path
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_dump_workflow(generate_calculation_node_io, generate_workchain_node_io, tmp_path):
     # Need to generate parent path for dumping, as I don't want the sub-workchains to be dumped directly into `tmp_path`
     dump_parent_path = tmp_path / 'wc-workflow_dump-test-io'
@@ -146,15 +71,16 @@ def test_dump_workflow(generate_calculation_node_io, generate_workchain_node_io,
     wc_node = generate_workchain_node_io(cj_nodes=cj_nodes)
     process_dumper._dump_workflow(workflow_node=wc_node, output_path=dump_parent_path)
 
-    input_path = '01-sub_workflow/01-calculation/inputs/file.txt'
-    singlefiledata_path = '01-sub_workflow/01-calculation/node_inputs/singlefile/file.txt'
-    folderdata_path = '01-sub_workflow/01-calculation/node_inputs/folderdata/relative_path/file.txt'
-    arraydata_path = '01-sub_workflow/01-calculation/node_inputs/arraydata/default.npy'
+    base_path = Path('01-sub_workflow-8/01-calculation-9')
+    input_path = base_path / 'inputs/file.txt'
+    singlefiledata_path = base_path / 'node_inputs/singlefile/file.txt'
+    folderdata_path = base_path / 'node_inputs/folderdata/relative_path/file.txt'
+    arraydata_path = base_path / 'node_inputs/arraydata/default.npy'
     node_metadata_paths = [
         node_metadata_file,
-        f'01-sub_workflow/{node_metadata_file}',
-        f'01-sub_workflow/01-calculation/{node_metadata_file}',
-        f'01-sub_workflow/02-calculation/{node_metadata_file}',
+        f'01-sub_workflow-8/{node_metadata_file}',
+        f'{base_path}/{node_metadata_file}',
+        f'01-sub_workflow-8/02-calculation-10/{node_metadata_file}',
     ]
 
     expected_files = [input_path, singlefiledata_path, folderdata_path, arraydata_path, *node_metadata_paths]
@@ -167,14 +93,14 @@ def test_dump_workflow(generate_calculation_node_io, generate_workchain_node_io,
     process_dumper = ProcessDumper(flat=True)
     process_dumper._dump_workflow(workflow_node=wc_node, output_path=dump_parent_path)
 
-    input_path = '01-sub_workflow/01-calculation/file.txt'
-    arraydata_path = '01-sub_workflow/01-calculation/default.npy'
-    folderdata_path = '01-sub_workflow/01-calculation/relative_path/file.txt'
+    input_path = base_path / 'file.txt'
+    arraydata_path = base_path / 'default.npy'
+    folderdata_path = base_path / 'relative_path/file.txt'
     node_metadata_paths = [
         node_metadata_file,
-        f'01-sub_workflow/{node_metadata_file}',
-        f'01-sub_workflow/01-calculation/{node_metadata_file}',
-        f'01-sub_workflow/02-calculation/{node_metadata_file}',
+        f'01-sub_workflow-8/{node_metadata_file}',
+        f'{base_path}/{node_metadata_file}',
+        f'01-sub_workflow-8/02-calculation-10/{node_metadata_file}',
     ]
 
     expected_files = [input_path, folderdata_path, arraydata_path, *node_metadata_paths]
@@ -183,21 +109,27 @@ def test_dump_workflow(generate_calculation_node_io, generate_workchain_node_io,
     assert all([expected_file.is_file() for expected_file in expected_files])
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
     dump_parent_path = tmp_path / 'wc-dump-test-multiply-add'
     process_dumper = ProcessDumper()
     wc_node = generate_workchain_multiply_add()
     process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
 
-    input_files = ['_aiidasubmit.sh', 'aiida.in', '.aiida/job_tmpl.json', '.aiida/calcinfo.json']
-    output_files = ['_scheduler-stderr.txt', '_scheduler-stdout.txt', 'aiida.out']
+    arithmetic_add_path = dump_parent_path / '02-ArithmeticAddCalculation-8'
+    multiply_path = dump_parent_path / '01-multiply-6'
+
     input_files = [
-        dump_parent_path / '02-ArithmeticAddCalculation' / inputs_relpath / input_file for input_file in input_files
+        '_aiidasubmit.sh',
+        'aiida.in',
+        '.aiida/job_tmpl.json',
+        '.aiida/calcinfo.json',
     ]
-    input_files += [dump_parent_path / '01-multiply' / inputs_relpath / 'source_file']
-    output_files = [
-        dump_parent_path / '02-ArithmeticAddCalculation' / outputs_relpath / output_file for output_file in output_files
-    ]
+    output_files = ['_scheduler-stderr.txt', '_scheduler-stdout.txt', 'aiida.out']
+
+    input_files = [arithmetic_add_path / inputs_relpath / input_file for input_file in input_files]
+    input_files += [multiply_path / inputs_relpath / 'source_file']
+    output_files = [arithmetic_add_path / outputs_relpath / output_file for output_file in output_files]
 
     # No node_inputs contained in MultiplyAddWorkChain
     assert all([input_file.is_file() for input_file in input_files])
@@ -208,7 +140,7 @@ def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
     process_dumper = ProcessDumper(flat=True)
     process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
 
-    multiply_file = dump_parent_path / '01-multiply' / 'source_file'
+    multiply_file = dump_parent_path / '01-multiply-6' / 'source_file'
     arithmetic_add_files = [
         '_aiidasubmit.sh',
         'aiida.in',
@@ -219,7 +151,7 @@ def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
         'aiida.out',
     ]
     arithmetic_add_files = [
-        dump_parent_path / '02-ArithmeticAddCalculation' / arithmetic_add_file
+        dump_parent_path / '02-ArithmeticAddCalculation-8' / arithmetic_add_file
         for arithmetic_add_file in arithmetic_add_files
     ]
 
@@ -280,7 +212,8 @@ def test_dump_calculation_flat(tmp_path, generate_calculation_node_io):
 def test_dump_calculation_overwr_incr(tmp_path, generate_calculation_node_io):
     """Tests the ProcessDumper for the overwrite and incremental option."""
     dump_parent_path = tmp_path / 'cj-dump-test-overwrite'
-    process_dumper = ProcessDumper(overwrite=False, incremental=False)
+    base_dumper = BaseDumper(overwrite=False, incremental=False)
+    process_dumper = ProcessDumper(base_dumper=base_dumper)
     calculation_node = generate_calculation_node_io()
     calculation_node.seal()
     # Create safeguard file to mock existing dump directory
@@ -290,7 +223,8 @@ def test_dump_calculation_overwr_incr(tmp_path, generate_calculation_node_io):
     with pytest.raises(FileExistsError):
         process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
     # With overwrite option true no error is raised and the dumping can run through.
-    process_dumper = ProcessDumper(overwrite=True, incremental=False)
+    base_dumper = BaseDumper(overwrite=True, incremental=False)
+    process_dumper = ProcessDumper(base_dumper=base_dumper)
     process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
     assert (dump_parent_path / inputs_relpath / filename).is_file()
 
@@ -299,7 +233,8 @@ def test_dump_calculation_overwr_incr(tmp_path, generate_calculation_node_io):
     # Incremental also does work
     dump_parent_path.mkdir()
     (dump_parent_path / '.aiida_node_metadata.yaml').touch()
-    process_dumper = ProcessDumper(overwrite=False, incremental=True)
+    base_dumper = BaseDumper(overwrite=False, incremental=True)
+    process_dumper = ProcessDumper(base_dumper=base_dumper)
     process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
     assert (dump_parent_path / inputs_relpath / filename).is_file()
 
@@ -313,6 +248,7 @@ def test_dump_calculation_no_inputs(tmp_path, generate_calculation_node_io):
     assert not (dump_parent_path / node_inputs_relpath).is_dir()
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_dump_calculation_add(tmp_path, generate_calculation_node_add):
     dump_parent_path = tmp_path / 'cj-dump-test-add'
 
@@ -392,6 +328,7 @@ def test_prepare_dump_path(tmp_path):
     assert test_file.is_file()
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_generate_default_dump_path(
     generate_calculation_node_add,
     generate_workchain_multiply_add,
@@ -421,6 +358,7 @@ def test_generate_calculation_io_mapping():
     assert calculation_io_mapping.outputs == 'node_outputs_'
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_generate_child_node_label(
     generate_workchain_multiply_add, generate_calculation_node_io, generate_workchain_node_io
 ):
@@ -442,7 +380,7 @@ def test_generate_child_node_label(
             for index, output_node in enumerate(output_triples)
         ]
     )
-    assert output_paths == ['00-sub_workflow', '01-calculation']
+    assert output_paths == ['00-sub_workflow-5', '01-calculation-6']
 
     # Check with multiply_add workchain node
     multiply_add_node = generate_workchain_multiply_add()
@@ -452,7 +390,8 @@ def test_generate_child_node_label(
     output_paths = sorted(
         [process_dumper._generate_child_node_label(_, output_node) for _, output_node in enumerate(output_triples)]
     )
-    assert output_paths == ['00-multiply', '01-ArithmeticAddCalculation', '02-result']
+    print(output_paths)
+    assert output_paths == ['00-multiply-12', '01-ArithmeticAddCalculation-14', '02-result-17']
 
 
 def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workchain_multiply_add):
@@ -482,6 +421,7 @@ def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workcha
 
     process_dumper = ProcessDumper(include_attributes=False, include_extras=False)
 
+    (tmp_path / node_metadata_file).unlink()
     process_dumper._dump_node_yaml(process_node=wc_node, output_path=tmp_path)
 
     # Open the dumped YAML file and read its contents

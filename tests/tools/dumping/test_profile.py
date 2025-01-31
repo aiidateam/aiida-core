@@ -6,13 +6,4 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Modules related to the dumping of AiiDA data."""
-
-from .base import BaseDumper
-from .collection import CollectionDumper
-from .process import ProcessDumper
-from .profile import ProfileDumper
-
-# from .collection import CollectionDumper
-
-__all__ = ('BaseDumper', 'CollectionDumper', 'ProcessDumper', 'ProfileDumper')  # , 'CollectionDumper')
+"""Tests for the dumping of profile data to disk."""

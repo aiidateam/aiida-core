@@ -562,38 +562,11 @@ def process_repair(manager, broker, dry_run):
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
-@click.option(
-    '--include-inputs/--exclude-inputs',
-    default=True,
-    show_default=True,
-    help='Include the linked input nodes of the `CalculationNode`(s).',
-)
-@click.option(
-    '--include-outputs/--exclude-outputs',
-    default=False,
-    show_default=True,
-    help='Include the linked output nodes of the `CalculationNode`(s).',
-)
-@click.option(
-    '--include-attributes/--exclude-attributes',
-    default=True,
-    show_default=True,
-    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-@click.option(
-    '--include-extras/--exclude-extras',
-    default=True,
-    show_default=True,
-    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-@click.option(
-    '-f',
-    '--flat',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Dump files in a flat directory for every step of the workflow.',
-)
+@options.FLAT()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
 @click.option(
     '--dump-unsealed',
     is_flag=True,
@@ -602,15 +575,17 @@ def process_repair(manager, broker, dry_run):
     help='Also allow the dumping of unsealed process nodes.',
 )
 @options.INCREMENTAL()
+# TODO: Also add CONFIG_FILE option here
+# TODO: Currently, setting rich options is not supported here directly
 def process_dump(
     process,
     path,
     overwrite,
+    flat,
     include_inputs,
     include_outputs,
     include_attributes,
     include_extras,
-    flat,
     dump_unsealed,
     incremental,
 ) -> None:
@@ -631,21 +606,33 @@ def process_dump(
     """
 
     from aiida.tools.archive.exceptions import ExportValidationError
-    from aiida.tools.dumping.processes import ProcessDumper
+    from aiida.tools.dumping.base import BaseDumper
+    from aiida.tools.dumping.process import ProcessDumper
+
+    base_dumper = BaseDumper(
+        dump_parent_path=path,
+        overwrite=overwrite,
+        incremental=incremental,
+    )
 
     process_dumper = ProcessDumper(
+        base_dumper=base_dumper,
         include_inputs=include_inputs,
         include_outputs=include_outputs,
         include_attributes=include_attributes,
         include_extras=include_extras,
-        overwrite=overwrite,
         flat=flat,
         dump_unsealed=dump_unsealed,
-        incremental=incremental,
     )
 
     try:
-        dump_path = process_dumper.dump(process_node=process, output_path=path)
+        dump_path = process_dumper.dump(
+            process_node=process,
+            output_path=path,
+        )
+        echo.echo_success(
+            f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.'
+        )
     except FileExistsError:
         echo.echo_critical(
             'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
@@ -654,5 +641,3 @@ def process_dump(
         echo.echo_critical(f'{e!s}')
     except Exception as e:
         echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')
-
-    echo.echo_success(f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.')

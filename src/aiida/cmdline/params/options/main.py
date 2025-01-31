@@ -53,13 +53,17 @@ __all__ = (
     'DB_PORT',
     'DB_USERNAME',
     'DEBUG',
+    'DEDUPLICATE',
     'DESCRIPTION',
     'DICT_FORMAT',
     'DICT_KEYS',
     'DRY_RUN',
+    'DUMP_CONFIG_FILE',
+    'DUMP_PROCESSES',
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
+    'FLAT',
     'FORCE',
     'FORMULA_MODE',
     'FREQUENCY',
@@ -68,6 +72,10 @@ __all__ = (
     'GROUP_CLEAR',
     'HOSTNAME',
     'IDENTIFIER',
+    'INCLUDE_ATTRIBUTES',
+    'INCLUDE_EXTRAS',
+    'INCLUDE_INPUTS',
+    'INCLUDE_OUTPUTS',
     'INCREMENTAL',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
@@ -80,6 +88,7 @@ __all__ = (
     'OLDER_THAN',
     'ORDER_BY',
     'ORDER_DIRECTION',
+    'ORGANIZE_BY_GROUPS',
     'OVERWRITE',
     'PAST_DAYS',
     'PATH',
@@ -781,6 +790,74 @@ SORT = OverridableOption(
     default=True,
     help='Sort the keys of the output YAML.',
     show_default=True,
+)
+
+DEDUPLICATE = OverridableOption(
+    '--deduplicate/--no-deduplicate',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='',
+)
+
+DUMP_PROCESSES = OverridableOption(
+    '--dump-processes/--no-dump-processes',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Dump process data.',
+)
+
+DUMP_CONFIG_FILE = OverridableOption(
+    '--dump-config-file',
+    default=None,
+    type=types.FileOrUrl(),
+    help='Provide dumping options via a config file in YAML format.',
+)
+
+ORGANIZE_BY_GROUPS = OverridableOption(
+    '--organize-by-groups/--no-organize-by-groups',
+    default=True,
+    is_flag=True,
+    type=bool,
+    show_default=True,
+    help='If the collection of nodes to be dumped is organized in groups, reproduce its hierarchy.',
+)
+
+INCLUDE_INPUTS = OverridableOption(
+    '--include-inputs/--exclude-inputs',
+    default=True,
+    show_default=True,
+    help='Include linked input nodes of `CalculationNode`(s).',
+)
+
+INCLUDE_OUTPUTS = OverridableOption(
+    '--include-outputs/--exclude-outputs',
+    default=False,
+    show_default=True,
+    help='Include linked output nodes of `CalculationNode`(s).',
+)
+
+INCLUDE_ATTRIBUTES = OverridableOption(
+    '--include-attributes/--exclude-attributes',
+    default=True,
+    show_default=True,
+    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+
+INCLUDE_EXTRAS = OverridableOption(
+    '--include-extras/--exclude-extras',
+    default=True,
+    show_default=True,
+    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+
+FLAT = OverridableOption(
+    '-f',
+    '--flat',
+    is_flag=True,
+    default=False,
+    help='Dump files in a flat directory for every step of a workflow.',
 )
 
 INCREMENTAL = OverridableOption(

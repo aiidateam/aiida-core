@@ -19,6 +19,7 @@ from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
+from aiida.tools.dumping import ProcessDumper, ProfileDumper
 
 
 @verdi.group('profile')
@@ -269,3 +270,114 @@ def profile_delete(force, delete_data, profiles):
 
         get_config().delete_profile(profile.name, delete_storage=delete_data)
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
+
+
+@verdi_profile.command('mirror')
+@options.PATH()
+@options.OVERWRITE()
+# @options.INCREMENTAL()
+@options.DUMP_PROCESSES()
+@options.DEDUPLICATE()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+@options.DUMP_CONFIG_FILE()
+@options.GROUPS()
+@options.ORGANIZE_BY_GROUPS()
+@options.DRY_RUN()
+@click.pass_context
+def profile_mirror(
+    ctx,
+    path,
+    overwrite,
+    organize_by_groups,
+    dry_run,
+    dump_processes,
+    deduplicate,
+    include_inputs,
+    include_outputs,
+    include_attributes,
+    include_extras,
+    flat,
+    dump_config_file,
+    groups,
+):
+    """Dump all data in an AiiDA profile's storage to disk."""
+
+    from datetime import datetime
+    from pathlib import Path
+
+    from aiida.tools.dumping.base import BaseDumper
+    from aiida.tools.dumping.utils import prepare_dump_path
+
+    profile = ctx.obj['profile']
+
+    incremental = not overwrite
+
+    if path is None:
+        path = Path.cwd() / f'{profile.name}-mirror'
+
+    # TODO: Implement proper dry-run feature
+    dry_run_message = f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\n"
+    dry_run_message += 'Only directories will be created.'
+
+    if dry_run:
+        echo.echo_report(dry_run_message)
+        return
+
+    else:
+        echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
+
+    SAFEGUARD_FILE: str = '.verdi_profile_mirror'  # noqa: N806
+    safeguard_file_path: Path = path / SAFEGUARD_FILE
+
+    try:
+        prepare_dump_path(
+            path_to_validate=path,
+            overwrite=overwrite,
+            incremental=incremental,
+            safeguard_file=SAFEGUARD_FILE,
+        )
+    except FileExistsError as exc:
+        echo.echo_critical(str(exc))
+
+    try:
+        with safeguard_file_path.open('r') as fhandle:
+            last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()
+    except IndexError:
+        last_dump_time = None
+
+    base_dumper = BaseDumper(
+        dump_parent_path=path,
+        overwrite=overwrite,
+        incremental=incremental,
+        last_dump_time=last_dump_time,
+    )
+
+    process_dumper = ProcessDumper(
+        base_dumper=base_dumper,
+        include_inputs=include_inputs,
+        include_outputs=include_outputs,
+        include_attributes=include_attributes,
+        include_extras=include_extras,
+        flat=flat,
+    )
+
+    profile_dumper = ProfileDumper(
+        base_dumper=base_dumper,
+        process_dumper=process_dumper,
+        groups=groups,
+        organize_by_groups=organize_by_groups,
+        deduplicate=deduplicate,
+        profile=profile,
+        dump_processes=dump_processes,
+    )
+
+    profile_dumper.dump()
+
+    # Append the current time to the file
+    last_dump_time = datetime.now().astimezone()
+    with safeguard_file_path.open('a') as fhandle:
+        fhandle.write(f'Last profile mirror time: {last_dump_time.isoformat()}\n')

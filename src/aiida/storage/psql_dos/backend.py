@@ -49,6 +49,7 @@ def get_filepath_container(profile: Profile) -> pathlib.Path:
     """Return the filepath of the disk-object store container."""
     from urllib.parse import urlparse
 
+    breakpoint()
     try:
         parts = urlparse(profile.storage_config['repository_uri'])
     except KeyError:

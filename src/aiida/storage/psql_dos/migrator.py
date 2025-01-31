@@ -180,7 +180,6 @@ class PsqlDosMigrator:
 
         :returns: The disk-object store container configured for the repository path of the current profile.
         """
-        breakpoint()
         from disk_objectstore import Container
 
         from .backend import get_filepath_container

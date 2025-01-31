@@ -64,7 +64,9 @@ class TestCollectionDumper:
         base_dumper = BaseDumper()
         process_dumper = ProcessDumper()
 
-        group_dumper = CollectionDumper(base_dumper=base_dumper, process_dumper=process_dumper, collection=no_process_group)
+        group_dumper = CollectionDumper(
+            base_dumper=base_dumper, process_dumper=process_dumper, collection=no_process_group
+        )
 
         assert group_dumper._should_dump_processes() is False
 

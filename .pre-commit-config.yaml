@@ -56,9 +56,9 @@ repos:
         environment.yml|
       )$
 
-  #- repo: file:///home/hollas/atmospec/uv-pre-commit
-- repo: https://github.com/danielhollas/uv-pre-commit
-  rev: uv-run
+- repo: file:///home/hollas/atmospec/uv-pre-commit
+  #- repo: https://github.com/danielhollas/uv-pre-commit
+  rev: c2c5e6a1c7d17dd3c237aae6557d15a142b89b8c
   hooks:
     # Check and update the uv lockfile
   - id: uv-lock

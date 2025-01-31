@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
-import itertools as it
 import os
+from functools import cached_property
 from pathlib import Path
 
 from aiida import orm
@@ -19,27 +19,31 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
+from aiida.tools.dumping.utils import filter_by_last_dump_time
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 
-class GroupDumper:
+class CollectionDumper:
     def __init__(
         self,
         base_dumper: BaseDumper | None = None,
         process_dumper: ProcessDumper | None = None,
         dump_logger: DumpLogger | None = None,
-        group: orm.Group | str | None = None,
+        collection: orm.Group | str | list[str] | None = None,
         deduplicate: bool = True,
         output_path: Path | str | None = None,
     ):
         self.deduplicate = deduplicate
 
-        # Allow passing of group via label
-        if isinstance(group, str):
-            group = orm.load_group(group)
+        # Pass the collection type. Could be Group or just list of nodes
+        if isinstance(collection, str):
+            try:
+                collection = orm.load_group(collection)
+            except:
+                raise
 
-        self.group = group
+        self.collection = collection
 
         self.base_dumper = base_dumper or BaseDumper()
         self.process_dumper = process_dumper or ProcessDumper()
@@ -49,44 +53,19 @@ class GroupDumper:
 
         self.output_path = Path(output_path or self.base_dumper.dump_parent_path)
 
-        self.nodes = self._get_nodes()
-
-    def _should_dump_processes(self) -> bool:
-        return len([node for node in self.nodes if isinstance(node, orm.ProcessNode)]) > 0
+    @cached_property
+    def nodes(self):
+        return self._get_nodes()
 
     def _get_nodes(self):
-        # Get all nodes that are in the group
-        if self.group is not None:
-            nodes = list(self.group.nodes)
+        if isinstance(self.collection, orm.Group):
+            nodes: list[str] = list(self.collection.nodes)
 
-        # Get all nodes that are _not_ in any group
-        else:
-            groups: list[orm.Group] = orm.QueryBuilder().append(orm.Group).all(flat=True)  # type: ignore[assignment]
-            nodes_in_groups = [node.uuid for group in groups for node in group.nodes]
+        return filter_by_last_dump_time(nodes=nodes, last_dump_time=self.base_dumper.last_dump_time)
 
-            # Need to expand here also with the called_descendants of `WorkflowNodes`, otherwise the called
-            # `CalculationNode`s for `WorkflowNode`s that are part of a group are dumped twice
-            # Get the called descendants of WorkflowNodes within the nodes_in_groups list
-            called_descendants_generator = (
-                orm.load_node(node).called_descendants
-                for node in nodes_in_groups
-                if isinstance(orm.load_node(node), orm.WorkflowNode)
-            )
-
-            # Flatten the list of called descendants
-            sub_nodes_in_groups = list(it.chain(*called_descendants_generator))
-
-            sub_nodes_in_groups = [node.uuid for node in sub_nodes_in_groups]
-            nodes_in_groups += sub_nodes_in_groups
-
-            profile_nodes = orm.QueryBuilder().append(orm.Node, project=['uuid']).all(flat=True)
-            nodes = [profile_node for profile_node in profile_nodes if profile_node not in nodes_in_groups]
-            nodes = [orm.load_node(node) for node in nodes]
-
-        if self.base_dumper.last_dump_time is not None:
-            nodes = [node for node in nodes if node.mtime > self.base_dumper.last_dump_time]
-
-        return nodes
+    def _should_dump_processes(self, nodes: list[orm.Node] | None = None) -> bool:
+        test_nodes = nodes or self.nodes
+        return len([node for node in test_nodes if isinstance(node, orm.ProcessNode)]) > 0
 
     def _get_processes(self):
         nodes = self.nodes

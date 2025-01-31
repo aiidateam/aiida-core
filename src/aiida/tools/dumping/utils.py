@@ -11,8 +11,10 @@
 from __future__ import annotations
 
 import shutil
+from datetime import datetime
 from pathlib import Path
 
+from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 
 __all__ = ['prepare_dump_path']
@@ -80,64 +82,6 @@ def prepare_dump_path(
     (path_to_validate / safeguard_file).touch()
 
 
-# @staticmethod
-# def dumper_pretty_print(dumper_instance, include_private_and_dunder: bool = False):
-#     console = Console()
-#     table = Table(title=f'Attributes and Methods of {dumper_instance.__class__.__name__}')
-
-#     # Adding columns to the table
-#     table.add_column('Name', justify='left')
-#     table.add_column('Type', justify='left')
-#     table.add_column('Value', justify='left')
-
-#     # Lists to store attributes and methods
-#     entries = []
-
-#     # Iterate over the class attributes and methods
-#     for attr_name in dir(dumper_instance):
-#         # Exclude private attributes and dunder methods
-#         attr_value = getattr(dumper_instance, attr_name)
-#         entry_type = 'Attribute' if not callable(attr_value) else 'Method'
-
-#         if attr_name.startswith('_'):
-#             if include_private_and_dunder:
-#                 entries.append((attr_name, entry_type, str(attr_value)))
-#             else:
-#                 pass
-#         else:
-#             entries.append((attr_name, entry_type, str(attr_value)))
-
-#     # Sort entries: attributes first, then methods
-#     entries.sort(key=lambda x: (x[1] == 'Method', x[0]))
-
-#     # Add sorted entries to the table
-#     for name, entry_type, value in entries:
-#         table.add_row(name, entry_type, value)
-
-#     # Print the formatted table
-#     console.print(table)
-
-
-# def check_storage_size_user():
-#     from aiida.manage.manager import get_manager
-
-#     manager = get_manager()
-#     storage = manager.get_profile_storage()
-
-#     data = storage.get_info(detailed=True)
-#     repository_data = data['repository']['Size (MB)']
-#     total_size_gb = sum(repository_data.values()) / 1024
-#     if total_size_gb > 10:
-#         user_input = (
-#             input('Repository size larger than 10gb. Do you still want to dump the profile data? (y/N): ')
-#             .strip()
-#             .lower()
-#         )
-
-#         if user_input != 'y':
-#             sys.exit()
-
-
 def sanitize_file_extension(filename: str | Path):
     if isinstance(filename, Path):
         filename = str(filename)
@@ -147,3 +91,11 @@ def sanitize_file_extension(filename: str | Path):
         filename = filename.replace('.mpl_png', '.png')
 
     return Path(filename)
+
+
+def filter_by_last_dump_time(nodes: list[str], last_dump_time: datetime | None = None) -> list[str]:
+    if last_dump_time is not None:
+        orm_nodes = [orm.load_node(node) for node in nodes]
+        return [node.uuid for node in orm_nodes if node.mtime > last_dump_time]
+    else:
+        return nodes

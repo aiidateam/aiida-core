@@ -56,11 +56,144 @@ repos:
         environment.yml|
       )$
 
-- repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.5.22
+  #- repo: file:///home/hollas/atmospec/uv-pre-commit
+- repo: https://github.com/danielhollas/uv-pre-commit
+  rev: uv-run
   hooks:
     # Check and update the uv lockfile
   - id: uv-lock
+  - id: uv-run
+    name: Update conda environment file
+    args: [./utils/dependency_management.py, generate-environment-yml]
+    files: >-
+      (?x)^(
+        pyproject.toml|
+        utils/dependency_management.py
+      )$
+  - id: uv-run
+    name: Validate environment.yml
+    args: [./utils/dependency_management.py, validate-environment-yml]
+    files: >-
+      (?x)^(
+        pyproject.toml|
+        utils/dependency_management.py|
+        environment.yml
+      )$
+  - id: uv-run
+    name: mypy type check
+    args: [mypy, --config-file=pyproject.toml]
+    pass_filenames: true
+    types: [python]
+    exclude: >-
+      (?x)^(
+        .github/.*|
+        .molecule/.*|
+        .docker/.*|
+        docs/.*|
+        utils/.*|
+        tests/.*|
+
+        src/aiida/calculations/arithmetic/add.py|
+        src/aiida/calculations/diff_tutorial/calculations.py|
+        src/aiida/calculations/templatereplacer.py|
+        src/aiida/calculations/transfer.py|
+        src/aiida/cmdline/commands/cmd_archive.py|
+        src/aiida/cmdline/commands/cmd_calcjob.py|
+        src/aiida/cmdline/commands/cmd_code.py|
+        src/aiida/cmdline/commands/cmd_computer.py|
+        src/aiida/cmdline/commands/cmd_data/cmd_list.py|
+        src/aiida/cmdline/commands/cmd_data/cmd_upf.py|
+        src/aiida/cmdline/commands/cmd_devel.py|
+        src/aiida/cmdline/commands/cmd_group.py|
+        src/aiida/cmdline/commands/cmd_node.py|
+        src/aiida/cmdline/commands/cmd_shell.py|
+        src/aiida/cmdline/commands/cmd_storage.py|
+        src/aiida/cmdline/params/options/commands/setup.py|
+        src/aiida/cmdline/params/options/interactive.py|
+        src/aiida/cmdline/params/options/main.py|
+        src/aiida/cmdline/params/options/multivalue.py|
+        src/aiida/cmdline/params/types/group.py|
+        src/aiida/cmdline/utils/ascii_vis.py|
+        src/aiida/cmdline/utils/common.py|
+        src/aiida/cmdline/utils/echo.py|
+        src/aiida/common/extendeddicts.py|
+        src/aiida/common/utils.py|
+        src/aiida/engine/daemon/execmanager.py|
+        src/aiida/engine/processes/calcjobs/manager.py|
+        src/aiida/engine/processes/calcjobs/monitors.py|
+        src/aiida/engine/processes/calcjobs/tasks.py|
+        src/aiida/engine/processes/control.py|
+        src/aiida/engine/processes/ports.py|
+        src/aiida/manage/configuration/__init__.py|
+        src/aiida/manage/configuration/config.py|
+        src/aiida/manage/external/rmq/launcher.py|
+        src/aiida/manage/tests/main.py|
+        src/aiida/manage/tests/pytest_fixtures.py|
+        src/aiida/orm/comments.py|
+        src/aiida/orm/computers.py|
+        src/aiida/orm/implementation/storage_backend.py|
+        src/aiida/orm/nodes/comments.py|
+        src/aiida/orm/nodes/data/array/bands.py|
+        src/aiida/orm/nodes/data/array/trajectory.py|
+        src/aiida/orm/nodes/data/cif.py|
+        src/aiida/orm/nodes/data/remote/base.py|
+        src/aiida/orm/nodes/data/structure.py|
+        src/aiida/orm/nodes/data/upf.py|
+        src/aiida/orm/nodes/process/calculation/calcjob.py|
+        src/aiida/orm/nodes/process/process.py|
+        src/aiida/orm/utils/builders/code.py|
+        src/aiida/orm/utils/builders/computer.py|
+        src/aiida/orm/utils/calcjob.py|
+        src/aiida/orm/utils/node.py|
+        src/aiida/repository/backend/disk_object_store.py|
+        src/aiida/repository/backend/sandbox.py|
+        src/aiida/restapi/common/utils.py|
+        src/aiida/restapi/resources.py|
+        src/aiida/restapi/run_api.py|
+        src/aiida/restapi/translator/base.py|
+        src/aiida/restapi/translator/computer.py|
+        src/aiida/restapi/translator/group.py|
+        src/aiida/restapi/translator/nodes/.*|
+        src/aiida/restapi/translator/user.py|
+        src/aiida/schedulers/plugins/direct.py|
+        src/aiida/schedulers/plugins/lsf.py|
+        src/aiida/schedulers/plugins/pbsbaseclasses.py|
+        src/aiida/schedulers/plugins/sge.py|
+        src/aiida/schedulers/plugins/slurm.py|
+        src/aiida/storage/psql_dos/migrations/utils/integrity.py|
+        src/aiida/storage/psql_dos/migrations/utils/legacy_workflows.py|
+        src/aiida/storage/psql_dos/migrations/utils/migrate_repository.py|
+        src/aiida/storage/psql_dos/migrations/utils/parity.py|
+        src/aiida/storage/psql_dos/migrations/utils/reflect.py|
+        src/aiida/storage/psql_dos/migrations/utils/utils.py|
+        src/aiida/storage/psql_dos/migrations/versions/1de112340b16_django_parity_1.py|
+        src/aiida/storage/psql_dos/migrator.py|
+        src/aiida/storage/psql_dos/models/.*|
+        src/aiida/storage/psql_dos/orm/.*|
+        src/aiida/storage/sqlite_temp/backend.py|
+        src/aiida/storage/sqlite_zip/backend.py|
+        src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
+        src/aiida/storage/sqlite_zip/migrator.py|
+        src/aiida/storage/sqlite_zip/models.py|
+        src/aiida/storage/sqlite_zip/orm.py|
+        src/aiida/tools/data/array/kpoints/legacy.py|
+        src/aiida/tools/data/array/kpoints/seekpath.py|
+        src/aiida/tools/data/orbital/orbital.py|
+        src/aiida/tools/data/orbital/realhydrogen.py|
+        src/aiida/tools/dbimporters/plugins/.*|
+        src/aiida/tools/graph/age_entities.py|
+        src/aiida/tools/graph/age_rules.py|
+        src/aiida/tools/graph/deletions.py|
+        src/aiida/tools/graph/graph_traversers.py|
+        src/aiida/tools/groups/paths.py|
+        src/aiida/tools/query/calculation.py|
+        src/aiida/tools/query/mapping.py|
+        src/aiida/transports/cli.py|
+        src/aiida/transports/plugins/local.py|
+        src/aiida/transports/plugins/ssh.py|
+        src/aiida/workflows/arithmetic/multiply_add.py|
+      )$
+
 
 - repo: local
 

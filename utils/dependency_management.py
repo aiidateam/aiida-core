@@ -9,6 +9,21 @@
 ###########################################################################
 """Utility CLI to manage dependencies for aiida-core."""
 
+# To run this script, we recommend using uv that will
+# automatically install required dependencies based on specifications below. E.g.
+# `uv run dependency-management.py --help`
+#
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "click==7.1",
+#     "packaging==23.1",
+#     "pyyaml==6.0.1",
+#     "requests==2.25.1",
+#     "tomli==2.0.0",
+# ]
+# ///
+
 import os
 import re
 import subprocess
@@ -17,15 +32,11 @@ from collections import OrderedDict, defaultdict
 from pathlib import Path
 
 import click
-import requests
-import tomli
-import yaml
 from packaging.requirements import Requirement
-from packaging.version import parse
 
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
-SETUPTOOLS_CONDA_MAPPINGS = {
+PYPI_CONDA_MAPPINGS = {
     'graphviz': 'python-graphviz',
     'docstring-parser': 'docstring_parser',
 }
@@ -41,10 +52,17 @@ class DependencySpecificationError(click.ClickException):
 
 def _load_pyproject():
     """Load the setup configuration from the 'pyproject.toml' file."""
+    # TODO: Require tomli only for Python <3.11
+    # if sys.version < 3.11:
+    #    import tomli as tomllib
+    # else
+    #    import tomllib
+    import tomli as tomllib
+
     try:
         with open(ROOT / 'pyproject.toml', 'rb') as handle:
-            return tomli.load(handle)
-    except tomli.TOMLDecodeError as error:
+            return tomllib.load(handle)
+    except tomllib.TOMLDecodeError as error:
         raise DependencySpecificationError(f"Error while parsing 'pyproject.toml' file: {error}")
     except FileNotFoundError:
         raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
@@ -52,6 +70,8 @@ def _load_pyproject():
 
 def _load_environment_yml():
     """Load the conda environment specification from the 'environment.yml' file."""
+    import yaml
+
     try:
         with open(ROOT / 'environment.yml', encoding='utf8') as file:
             return yaml.load(file, Loader=yaml.SafeLoader)
@@ -67,7 +87,7 @@ def _setuptools_to_conda(req):
     In case that the same underlying dependency is listed under different names
     on PyPI and conda-forge.
     """
-    for pattern, replacement in SETUPTOOLS_CONDA_MAPPINGS.items():
+    for pattern, replacement in PYPI_CONDA_MAPPINGS.items():
         if re.match(pattern, str(req)):
             req = Requirement(re.sub(pattern, replacement, str(req)))
             break
@@ -117,6 +137,8 @@ def cli():
 @cli.command('generate-environment-yml')
 def generate_environment_yml():
     """Generate 'environment.yml' file."""
+    import yaml
+
     # needed for ordered dict, see https://stackoverflow.com/a/52621703
     yaml.add_representer(
         OrderedDict,
@@ -295,6 +317,9 @@ def identify_outdated(extras, pre_releases):
     This function can thus be used to identify dependencies where the
     specification must be loosened.
     """
+    import requests
+    from packaging.version import parse
+
     # Read the requirements from 'pyproject.toml''
     pyproject = _load_pyproject()
 

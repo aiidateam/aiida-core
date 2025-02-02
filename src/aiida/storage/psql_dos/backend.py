@@ -9,7 +9,6 @@
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 
 import functools
-import gc
 import pathlib
 from contextlib import contextmanager, nullcontext
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
@@ -187,8 +186,8 @@ class PsqlDosBackend(StorageBackend):
         # close the connection
 
         # PR QUESTION: can we have multiple sessons? Then we should close all of them
-        #from sqlalchemy.orm import close_all_sessions
-        #close_all_sessions()
+        # from sqlalchemy.orm import close_all_sessions
+        # close_all_sessions()
 
         engine = self._session_factory.bind
         self._session_factory.expunge_all()

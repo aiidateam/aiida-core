@@ -201,9 +201,7 @@ class PsqlDosMigrator:
         except Exception as exception:
             # PR COMMENT removed the printing of exception in message since we use from exception
             if container is None:
-                msg = (
-                    'During creation of the container context for the disk-objectstore the following error was raised'
-                )
+                msg = 'During creation of the container context for the disk-objectstore the following error was raised'
             else:
                 msg = f'During access of disk-objectstore {container} error was raised.'
 

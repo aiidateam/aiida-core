@@ -532,7 +532,7 @@ class Config:
             profile.storage_cls.initialise(profile)
         except Exception as exception:
             raise StorageMigrationError(
-                    f'During initialisation of storage backend. Please check above traceback for cause.'
+                    f'During initialisation of storage backend following excepion was raised: {exception}.\n Please check above for full traceback.'
                 )
         LOGGER.report('Storage initialisation completed.')
 

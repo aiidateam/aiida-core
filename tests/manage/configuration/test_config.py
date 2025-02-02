@@ -445,8 +445,8 @@ def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):
     config = config_with_profile
     profile_name = uuid.uuid4().hex
 
-    def raise_storage_migration_error(*args, **kwargs):
-        raise exceptions.StorageMigrationError()
+    def raise_storage_migration_error(*_, **__):
+        raise exceptions.StorageMigrationError("Monkey patchted error")
 
     monkeypatch.setattr(SqliteTempBackend, 'initialise', raise_storage_migration_error)
     entry_points.add(InvalidBaseStorage, 'aiida.storage:core.invalid_base')
@@ -460,7 +460,7 @@ def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):
     with pytest.raises(ValueError, match=r'The entry point `.*` could not be loaded'):
         config.create_profile(profile_name, 'core.non_existant', {})
 
-    with pytest.raises(exceptions.StorageMigrationError, match='Storage backend initialisation failed.*'):
+    with pytest.raises(exceptions.StorageMigrationError, match='During initialisation of storage backend. Please check above traceback for cause.*'):
         config.create_profile(profile_name, 'core.sqlite_temp', {})
 
 

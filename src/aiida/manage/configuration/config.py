@@ -526,15 +526,14 @@ class Config:
         )
 
         LOGGER.report('Initialising the storage backend.')
-        profile.storage_cls.initialise(profile)
         try:
+            # not sure if scope is good, at least put it in log
             #with contextlib.redirect_stdout(io.StringIO()):
-            #profile.storage_cls.initialise(profile)
-            pass
+            profile.storage_cls.initialise(profile)
         except Exception as exception:
             raise StorageMigrationError(
-                f'Storage backend initialisation failed, probably because the configuration is incorrect:\n{exception}'
-                ) from exception
+                    f'During initialisation of storage backend. Please check above traceback for cause.'
+                )
         LOGGER.report('Storage initialisation completed.')
 
         self.add_profile(profile)

@@ -186,16 +186,18 @@ class PsqlDosBackend(StorageBackend):
             return  # the instance is already closed, and so this is a no-op
         # close the connection
 
+        # PR QUESTION: can we have multiple sessons? Then we should close all of them
+        #from sqlalchemy.orm import close_all_sessions
+        #close_all_sessions()
+
         engine = self._session_factory.bind
-        if engine is not None:
-            engine.dispose()  # type: ignore[union-attr]
         self._session_factory.expunge_all()
         self._session_factory.close()
         self._session_factory = None
 
-        # Without this, sqlalchemy keeps a weakref to a session
-        # in sqlalchemy.orm.session._sessions
-        gc.collect()
+        # IMPORTANT: Dispose engine only after sessions have been closed
+        if engine is not None:
+            engine.dispose()  # type: ignore[union-attr]
 
     def _clear(self) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting

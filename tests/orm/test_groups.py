@@ -153,13 +153,23 @@ class TestGroups:
         group.add_nodes([])
         assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
+        nodes = [orm.Data().store().backend_entity for _ in range(100)]
+
+        # Add nodes to groups using different batch size. Check in the end the correct addition.
+        batch_sizes = (1, 3, 10, 1000)
+        for batch_size in batch_sizes:
+            group = orm.Group(label=f'test_batches_{batch_size!s}').store()
+            group.backend_entity.add_nodes(nodes, batch_size=batch_size)
+            assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+
     def test_remove_nodes(self):
         """Test node removal."""
         node_01 = orm.Data().store()
         node_02 = orm.Data().store()
         node_03 = orm.Data().store()
         node_04 = orm.Data().store()
-        nodes = [node_01, node_02, node_03]
+        node_05 = orm.Data().store()
+        nodes = [node_01, node_02, node_03, node_05]
         group = orm.Group(label=uuid.uuid4().hex).store()
 
         # Add initial nodes
@@ -179,6 +189,11 @@ class TestGroups:
         nodes.remove(node_01)
         nodes.remove(node_02)
         group.remove_nodes([node_01, node_02])
+        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
+
+        # Remove to empty
+        nodes.remove(node_05)
+        group.remove_nodes([node_05])
         assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
         # Try to remove nothing: there should be no problem

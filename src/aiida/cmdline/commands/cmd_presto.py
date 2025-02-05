@@ -100,7 +100,7 @@ def detect_postgres_config(
         'database_name': database_name,
         'database_username': database_username,
         'database_password': database_password,
-        'repository_uri': pathlib.Path(f'{aiida_config_folder / "repository" / profile_name}').as_uri()
+        'repository_uri': pathlib.Path(f'{aiida_config_folder / "repository" / profile_name}').as_uri(),
     }
 
 

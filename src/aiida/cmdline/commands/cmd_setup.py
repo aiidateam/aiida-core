@@ -9,6 +9,7 @@
 """The `verdi setup` and `verdi quicksetup` commands."""
 
 import click
+import pathlib
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
@@ -88,7 +89,7 @@ def setup(
             'database_name': db_name,
             'database_username': db_username,
             'database_password': db_password,
-            'repository_uri': Path(f'{repository}').as_uri(),
+            'repository_uri': pathlib.Path(f'{repository}').as_uri(),
         },
     )
     profile.set_process_controller(

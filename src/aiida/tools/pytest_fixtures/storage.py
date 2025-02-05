@@ -98,7 +98,7 @@ def config_psql_dos(
             database_username=database_username,
             database_password=database_password,
         )
-        storage_config['repository_uri'] = Path(f'{tmp_path_factory.mktemp("repository")}').as_uri()
+        storage_config['repository_uri'] = pathlib.Path(f'{tmp_path_factory.mktemp("repository")}').as_uri()
 
         return storage_config
 

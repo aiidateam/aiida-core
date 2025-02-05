@@ -19,8 +19,6 @@ build:
     - asdf plugin add uv
     - asdf install uv 0.5.28
     - asdf global uv 0.5.28
-    create_environment:
-    - uv venv $READTHEDOCS_VIRTUALENV_PATH
     install:
     - UV_PROJECT_ENVIRONMENT=$READTHEDOCS_VIRTUALENV_PATH uv sync --extra docs --extra tests --extra rest --extra atomic_tools
 

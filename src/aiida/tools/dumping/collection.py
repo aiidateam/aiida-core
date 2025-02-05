@@ -11,13 +11,14 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.base import BaseDumper
-from aiida.tools.dumping.logger import DumpLogger
+from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
 from aiida.tools.dumping.utils import filter_by_last_dump_time
 
@@ -47,28 +48,38 @@ class CollectionDumper:
 
         self.base_dumper = base_dumper or BaseDumper()
         self.process_dumper = process_dumper or ProcessDumper()
-        self.dump_logger = dump_logger or DumpLogger()
+        self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.base_dumper.dump_parent_path)
 
         # Properly set the `output_path` attribute
 
         self.output_path = Path(output_path or self.base_dumper.dump_parent_path)
 
     @cached_property
-    def nodes(self):
+    def nodes(self) -> list[str]:
         return self._get_nodes()
 
-    def _get_nodes(self):
+    def _get_nodes(self) -> list[str]:
+        nodes: list[str] | None = None
         if isinstance(self.collection, orm.Group):
-            nodes: list[str] = list(self.collection.nodes)
+            nodes = [n.uuid for n in list(self.collection.nodes)]
+        elif isinstance(self.collection, list) and len(self.collection) > 0:
+            if all(isinstance(n, str) for n in self.collection):
+                nodes = self.collection
+            else:
+                msg = 'A collection of nodes must be passed via their UUIDs.'
+                raise TypeError(msg)
+        else:
+            nodes = []
 
-        return filter_by_last_dump_time(nodes=nodes, last_dump_time=self.base_dumper.last_dump_time)
+        filtered_nodes = filter_by_last_dump_time(nodes=nodes, last_dump_time=self.base_dumper.last_dump_time)
+        return filtered_nodes
 
-    def _should_dump_processes(self, nodes: list[orm.Node] | None = None) -> bool:
+    def _should_dump_processes(self, nodes: list[str] | None = None) -> bool:
         test_nodes = nodes or self.nodes
-        return len([node for node in test_nodes if isinstance(node, orm.ProcessNode)]) > 0
+        return len([node for node in test_nodes if isinstance(orm.load_node(node), orm.ProcessNode)]) > 0
 
     def _get_processes(self):
-        nodes = self.nodes
+        nodes = [orm.load_node(n) for n in self.nodes]
         workflows = [node for node in nodes if isinstance(node, orm.WorkflowNode)]
 
         # Make sure that only top-level workflows are dumped in their own directories when de-duplcation is enabled
@@ -99,6 +110,8 @@ class CollectionDumper:
         self._dump_workflows()
 
     def _dump_calculations(self):
+        if len(self.calculations) == 0:
+            return
         calculations_path = self.output_path / 'calculations'
         dumped_calculations = {}
 
@@ -106,19 +119,22 @@ class CollectionDumper:
             calculation_dumper = self.process_dumper
 
             calculation_dump_path = calculations_path / calculation_dumper._generate_default_dump_path(
-                process_node=calculation, prefix=''
+                process_node=calculation, prefix=None
             )
 
             if calculation.caller is None:
-                # or (calculation.caller is not None and not self.deduplicate):
                 calculation_dumper._dump_calculation(calculation_node=calculation, output_path=calculation_dump_path)
 
-                dumped_calculations[calculation.uuid] = calculation_dump_path
+                dumped_calculations[calculation.uuid] = DumpLog(
+                    path=calculation_dump_path,
+                    time=datetime.now().astimezone(),
+                )
 
         self.dump_logger.update_calculations(dumped_calculations)
 
-    def _dump_workflows(self):
-        # workflow_nodes = get_nodes_from_db(aiida_node_type=orm.WorkflowNode, with_group=self.group, flat=True)
+    def _dump_workflows(self) -> None:
+        if len(self.workflows) == 0:
+            return
         workflow_path = self.output_path / 'workflows'
         workflow_path.mkdir(exist_ok=True, parents=True)
         dumped_workflows = {}
@@ -130,22 +146,23 @@ class CollectionDumper:
                 process_node=workflow, prefix=None
             )
 
-            logged_workflows = self.dump_logger.get_logs()['workflows']
+            logged_workflows = self.dump_logger.get_log()['workflows']
 
             if self.deduplicate and workflow.uuid in logged_workflows.keys():
                 os.symlink(
-                    src=logged_workflows[workflow.uuid],
+                    src=logged_workflows[workflow.uuid].path,
                     dst=workflow_dump_path,
                 )
             else:
                 workflow_dumper._dump_workflow(
                     workflow_node=workflow,
                     output_path=workflow_dump_path,
-                    # link_calculations=not self.deduplicate,
-                    # link_calculations_dir=self.output_path / 'calculations',
                 )
 
-                dumped_workflows[workflow.uuid] = workflow_dump_path
+                dumped_workflows[workflow.uuid] = DumpLog(
+                    path=workflow_dump_path,
+                    time=datetime.now().astimezone(),
+                )
 
         self.dump_logger.update_workflows(dumped_workflows)
 

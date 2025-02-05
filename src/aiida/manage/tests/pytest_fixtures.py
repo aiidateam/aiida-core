@@ -225,7 +225,7 @@ def config_psql_dos(
             'storage': {
                 'backend': 'core.psql_dos',
                 'config': {
-                    'repository_uri': f'file://{tmp_path_factory.mktemp("repository")}',
+                    'repository_uri': Path(f'{tmp_path_factory.mktemp("repository")}').as_uri(),
                 },
             }
         }

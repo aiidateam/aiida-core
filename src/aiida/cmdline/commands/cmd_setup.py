@@ -88,7 +88,7 @@ def setup(
             'database_name': db_name,
             'database_username': db_username,
             'database_password': db_password,
-            'repository_uri': f'file://{repository}',
+            'repository_uri': Path(f'{repository}').as_uri(),
         },
     )
     profile.set_process_controller(

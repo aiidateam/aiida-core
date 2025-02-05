@@ -20,6 +20,7 @@ from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
 from aiida.tools.dumping import ProcessDumper, ProfileDumper
+from aiida.tools.dumping.logger import DumpLogger
 
 
 @verdi.group('profile')
@@ -306,6 +307,7 @@ def profile_mirror(
 ):
     """Dump all data in an AiiDA profile's storage to disk."""
 
+    import json
     from datetime import datetime
     from pathlib import Path
 
@@ -318,17 +320,6 @@ def profile_mirror(
 
     if path is None:
         path = Path.cwd() / f'{profile.name}-mirror'
-
-    # TODO: Implement proper dry-run feature
-    dry_run_message = f"Dry run for dumping of profile `{profile.name}`'s data at path: `{path}`.\n"
-    dry_run_message += 'Only directories will be created.'
-
-    if dry_run:
-        echo.echo_report(dry_run_message)
-        return
-
-    else:
-        echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
 
     SAFEGUARD_FILE: str = '.verdi_profile_mirror'  # noqa: N806
     safeguard_file_path: Path = path / SAFEGUARD_FILE
@@ -349,6 +340,24 @@ def profile_mirror(
     except IndexError:
         last_dump_time = None
 
+    if dry_run:
+        node_counts = ProfileDumper._get_number_of_nodes_to_dump(last_dump_time)
+        node_counts_str = ' & '.join(f'{count} {node_type}' for node_type, count in node_counts.items())
+        dry_run_message = f'Dry run for mirroring of profile `{profile.name}`: {node_counts_str} to dump.\n'
+        echo.echo_report(dry_run_message)
+        return
+
+    echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
+
+    if incremental:
+        msg = 'Incremental dumping selected. Will update directory.'
+        echo.echo_report(msg)
+
+    try:
+        dump_logger = DumpLogger.from_file(dump_parent_path=path)
+    except (json.JSONDecodeError, OSError):
+        dump_logger = DumpLogger(dump_parent_path=path)
+
     base_dumper = BaseDumper(
         dump_parent_path=path,
         overwrite=overwrite,
@@ -368,6 +377,7 @@ def profile_mirror(
     profile_dumper = ProfileDumper(
         base_dumper=base_dumper,
         process_dumper=process_dumper,
+        dump_logger=dump_logger,
         groups=groups,
         organize_by_groups=organize_by_groups,
         deduplicate=deduplicate,
@@ -381,3 +391,7 @@ def profile_mirror(
     last_dump_time = datetime.now().astimezone()
     with safeguard_file_path.open('a') as fhandle:
         fhandle.write(f'Last profile mirror time: {last_dump_time.isoformat()}\n')
+
+    dump_logger.save_log()
+
+    echo.echo_report(f'Dumped {dump_logger.counter} new nodes.')

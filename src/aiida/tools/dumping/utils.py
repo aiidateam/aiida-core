@@ -54,10 +54,7 @@ def prepare_dump_path(
 
         # Case 1: Non-empty directory and overwrite is False
         if not is_empty and not overwrite:
-            if incremental:
-                msg = f'Incremental dumping selected. Will update directory `{path_to_validate}` with new data.'
-                logger.report(msg)
-            else:
+            if not incremental:
                 msg = f'Path `{path_to_validate}` already exists, and neither overwrite nor incremental is enabled.'
                 raise FileExistsError(msg)
 

@@ -45,7 +45,7 @@ class ProfileDumper:
 
         self.base_dumper = base_dumper or BaseDumper()
         self.process_dumper = process_dumper or ProcessDumper()
-        self.dump_logger = dump_logger or DumpLogger()
+        self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.base_dumper.dump_parent_path)
 
         # Load the profile
         if isinstance(profile, str):
@@ -145,3 +145,13 @@ class ProfileDumper:
         nodes = filter_by_last_dump_time(nodes=nodes, last_dump_time=self.base_dumper.last_dump_time)
 
         return nodes
+
+    @staticmethod
+    def _get_number_of_nodes_to_dump(last_dump_time) -> dict[str, int]:
+        result = {}
+        for node_type in (orm.CalculationNode, orm.WorkflowNode):
+            qb = orm.QueryBuilder().append(node_type, project=['uuid'])
+            nodes = cast(list[str], qb.all(flat=True))
+            nodes = filter_by_last_dump_time(nodes=nodes, last_dump_time=last_dump_time)
+            result[node_type.class_node_type.split('.')[-2] + 's'] = len(nodes)
+        return result

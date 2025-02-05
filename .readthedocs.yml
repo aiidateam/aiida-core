@@ -17,15 +17,17 @@ build:
     # https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-uv
     pre_create_environment:
     - asdf plugin add uv
-    - asdf install uv 0.5.22
-    - asdf global uv 0.5.22
+    - asdf install uv 0.5.28
+    - asdf global uv 0.5.28
     create_environment:
-    - uv venv
+    - uv venv $READTHEDOCS_VIRTUALENV_PATH
     install:
-    - uv sync --extra docs --extra tests --extra rest --extra atomic_tools
-    build:
-      html:
-      - uv run sphinx-build -T -W --keep-going -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
+    - UV_PROJECT_ENVIRONMENT=$READTHEDOCS_VIRTUALENV_PATH uv sync --extra docs --extra tests --extra rest --extra atomic_tools
+
+sphinx:
+  builder: html
+  fail_on_warning: true
+  configuration: docs/source/conf.py
 
 search:
   ranking:

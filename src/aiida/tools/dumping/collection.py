@@ -14,6 +14,7 @@ import os
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
+from typing import TYPE_CHECKING, TypeVar, cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -21,6 +22,12 @@ from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
 from aiida.tools.dumping.utils import filter_by_last_dump_time
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+T = TypeVar('T', bound='orm.ProcessNode')
+
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
@@ -33,11 +40,11 @@ class CollectionDumper:
         dump_logger: DumpLogger | None = None,
         collection: orm.Group | str | list[str] | None = None,
         deduplicate: bool = True,
-        output_path: Path | str | None = None,
+        output_path: Path | None = None,
     ):
         self.deduplicate = deduplicate
 
-        # Pass the collection type. Could be Group or just list of nodes
+        # Collection could be a Group or a list of nodes
         if isinstance(collection, str):
             try:
                 collection = orm.load_group(collection)
@@ -51,8 +58,10 @@ class CollectionDumper:
         self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.base_dumper.dump_parent_path)
 
         # Properly set the `output_path` attribute
-
-        self.output_path = Path(output_path or self.base_dumper.dump_parent_path)
+        if output_path is not None:
+            self.output_path = output_path
+        else:
+            self.output_path = Path.cwd()
 
     @cached_property
     def nodes(self) -> list[str]:
@@ -61,7 +70,7 @@ class CollectionDumper:
     def _get_nodes(self) -> list[str]:
         nodes: list[str] | None = None
         if isinstance(self.collection, orm.Group):
-            nodes = [n.uuid for n in list(self.collection.nodes)]
+            nodes = [n.uuid for n in self.collection.nodes]
         elif isinstance(self.collection, list) and len(self.collection) > 0:
             if all(isinstance(n, str) for n in self.collection):
                 nodes = self.collection
@@ -78,7 +87,7 @@ class CollectionDumper:
         test_nodes = nodes or self.nodes
         return len([node for node in test_nodes if isinstance(orm.load_node(node), orm.ProcessNode)]) > 0
 
-    def _get_processes(self):
+    def _get_processes(self) -> dict[str, Sequence[orm.ProcessNode]]:
         nodes = [orm.load_node(n) for n in self.nodes]
         workflows = [node for node in nodes if isinstance(node, orm.WorkflowNode)]
 
@@ -94,28 +103,20 @@ class CollectionDumper:
                 node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)
             ]
 
-        calculations = set([node for node in nodes if isinstance(node, orm.CalculationNode)] + called_calculations)
+        calculations = [node for node in nodes if isinstance(node, orm.CalculationNode)] + called_calculations
+        return {
+            'calculations': cast(Sequence[orm.ProcessNode], calculations),
+            'workflows': cast(Sequence[orm.ProcessNode], workflows),
+        }
+        # return {'calculations': calculations, 'workflows': workflows}
 
-        self.calculations = calculations
-        self.workflows = workflows
-
-    def _dump_processes(self):
-        self._get_processes()
-
-        if len(self.workflows) + len(self.calculations) == 0:
-            logger.report('No workflows or calculations to dump in group.')
-            return
-
-        self._dump_calculations()
-        self._dump_workflows()
-
-    def _dump_calculations(self):
-        if len(self.calculations) == 0:
+    def _dump_calculations(self, calculations: Sequence[orm.CalculationNode]) -> None:
+        if len(calculations) == 0:
             return
         calculations_path = self.output_path / 'calculations'
         dumped_calculations = {}
 
-        for calculation in self.calculations:
+        for calculation in calculations:
             calculation_dumper = self.process_dumper
 
             calculation_dump_path = calculations_path / calculation_dumper._generate_default_dump_path(
@@ -123,7 +124,9 @@ class CollectionDumper:
             )
 
             if calculation.caller is None:
-                calculation_dumper._dump_calculation(calculation_node=calculation, output_path=calculation_dump_path)
+                calculation_dumper._dump_calculation(
+                    calculation_node=cast(orm.CalculationNode, calculation), output_path=calculation_dump_path
+                )
 
                 dumped_calculations[calculation.uuid] = DumpLog(
                     path=calculation_dump_path,
@@ -132,14 +135,14 @@ class CollectionDumper:
 
         self.dump_logger.update_calculations(dumped_calculations)
 
-    def _dump_workflows(self) -> None:
-        if len(self.workflows) == 0:
+    def _dump_workflows(self, workflows: Sequence[orm.WorkflowNode]) -> None:
+        if len(workflows) == 0:
             return
         workflow_path = self.output_path / 'workflows'
         workflow_path.mkdir(exist_ok=True, parents=True)
         dumped_workflows = {}
 
-        for workflow in self.workflows:
+        for workflow in workflows:
             workflow_dumper = self.process_dumper
 
             workflow_dump_path = workflow_path / workflow_dumper._generate_default_dump_path(
@@ -148,14 +151,14 @@ class CollectionDumper:
 
             logged_workflows = self.dump_logger.get_log()['workflows']
 
-            if self.deduplicate and workflow.uuid in logged_workflows.keys():
+            if self.deduplicate and workflow in logged_workflows.keys():
                 os.symlink(
                     src=logged_workflows[workflow.uuid].path,
                     dst=workflow_dump_path,
                 )
             else:
                 workflow_dumper._dump_workflow(
-                    workflow_node=workflow,
+                    workflow_node=cast(orm.WorkflowNode, workflow),
                     output_path=workflow_dump_path,
                 )
 
@@ -166,6 +169,8 @@ class CollectionDumper:
 
         self.dump_logger.update_workflows(dumped_workflows)
 
-    def dump(self):
+    def dump(self) -> None:
         self.output_path.mkdir(exist_ok=True, parents=True)
-        self._dump_processes()
+        collection_processes = self._get_processes()
+        self._dump_calculations(calculations=collection_processes['calculations'])
+        self._dump_workflows(workflows=collection_processes['workflows'])

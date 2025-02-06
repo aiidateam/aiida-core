@@ -23,12 +23,12 @@ class DumpLogger:
 
     def __init__(
         self,
-        dump_parent_path: Path,
+        dump_parent_path: Path | None = None,
         calculations: DumpDict | None = None,
         workflows: DumpDict | None = None,
         counter: int = 0,
     ) -> None:
-        self.dump_parent_path = dump_parent_path
+        self.dump_parent_path = dump_parent_path or Path.cwd()
         self.calculations = calculations or {}
         self.workflows = workflows or {}
         self.counter = 0

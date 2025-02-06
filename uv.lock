@@ -28,6 +28,7 @@ source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "archive-path" },
+    { name = "asyncssh" },
     { name = "circus" },
     { name = "click" },
     { name = "click-spinner" },
@@ -168,6 +169,7 @@ requires-dist = [
     { name = "alembic", specifier = "~=1.2" },
     { name = "archive-path", specifier = "~=0.4.2" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.18" },
+    { name = "asyncssh", specifier = "~=2.19.0" },
     { name = "bpython", marker = "extra == 'bpython'", specifier = "~=0.18.0" },
     { name = "circus", specifier = "~=0.18.0" },
     { name = "click", specifier = "~=8.1" },
@@ -451,6 +453,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/80/e2/2b4651eff771f6fd900d233e175ddc5e2be502c7eb62c0c42f975c6d36cd/async-lru-2.0.4.tar.gz", hash = "sha256:b8a59a5df60805ff63220b2a0c5b5393da5521b113cd5465a44eb037d81a5627", size = 10019 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/9f/3c3503693386c4b0f245eaf5ca6198e3b28879ca0a40bde6b0e319793453/async_lru-2.0.4-py3-none-any.whl", hash = "sha256:ff02944ce3c288c5be660c42dbcca0742b32c3b279d6dceda655190240b99224", size = 6111 },
+]
+
+[[package]]
+name = "asyncssh"
+version = "2.19.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/75/85/c723aa7dd69570a31b6638c1405e659712f18f569f280da2da27989445d3/asyncssh-2.19.0.tar.gz", hash = "sha256:723dead4d068b558708dc66a4ca7e7a93a813aa9416036eccb9af4c03ae2cf30", size = 533702 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/95/8f/f0749af566fa39204f6380473e6f9632b804daeb0ecb24cc7de1fc9f2717/asyncssh-2.19.0-py3-none-any.whl", hash = "sha256:bb82ac30ff0cb4393fbaf1114e606ad7a4f13d6c4bdaed423c033ee26b455228", size = 372704 },
 ]
 
 [[package]]

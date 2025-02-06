@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from aiida import __version__
-from aiida.common.exceptions import ClosedStorage, CorruptStorage
+from aiida.common.exceptions import ClosedStorage, CorruptStorage, IncompatibleExternalDependencies
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
@@ -45,6 +45,21 @@ from .utils import (
 __all__ = ('SqliteZipBackend',)
 
 LOGGER = AIIDA_LOGGER.getChild(__file__)
+SUPPORTED_VERSION = '3.35.0'  # minimum supported version of sqlite
+
+
+def validate_sqlite_version():
+    import sqlite3
+
+    from packaging.version import parse
+
+    sqlite_installed_version = parse(sqlite3.sqlite_version)
+    if sqlite_installed_version < parse(SUPPORTED_VERSION):
+        message = (
+            f'Storage backend requires sqlite {parse(SUPPORTED_VERSION)} or higher.'
+            f' But you have {sqlite_installed_version} installed.'
+        )
+        raise IncompatibleExternalDependencies(message)
 
 
 class SqliteZipBackend(StorageBackend):
@@ -111,6 +126,7 @@ class SqliteZipBackend(StorageBackend):
             tests having run.
         :returns: ``True`` if the storage was initialised by the function call, ``False`` if it was already initialised.
         """
+        validate_sqlite_version()
         from archive_path import ZipPath
 
         filepath_archive = Path(profile.storage_config['filepath'])
@@ -168,6 +184,7 @@ class SqliteZipBackend(StorageBackend):
     def __init__(self, profile: Profile):
         from .migrator import validate_storage
 
+        validate_sqlite_version()
         super().__init__(profile)
         self._path = Path(profile.storage_config['filepath'])
         validate_storage(self._path)

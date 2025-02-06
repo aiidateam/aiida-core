@@ -88,8 +88,10 @@ class CollectionDumper:
         else:
             nodes = []
 
-        filtered_nodes = filter_by_last_dump_time(nodes=nodes, last_dump_time=self.base_dumper.last_dump_time)
-        return filtered_nodes
+        # TODO: Possibly have `last_dump_time` as attribute of CollectionDumper instead
+        # nodes = filter_by_last_dump_time(nodes=nodes, last_dump_time=self.last_dump_time)
+        nodes = filter_by_last_dump_time(nodes=nodes, last_dump_time=self.base_dumper.last_dump_time)
+        return nodes
 
     @cached_property
     def processes_to_dump(self) -> ProcessesToDump:

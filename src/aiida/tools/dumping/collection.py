@@ -184,7 +184,7 @@ class CollectionDumper:
         self.output_path.mkdir(exist_ok=True, parents=True)
         collection_processes: ProcessesToDump = self._get_processes_to_dump()
 
-        if len(collection_processes.calculations) > 1:
+        if len(collection_processes.calculations) > 0:
             self._dump_calculations(calculations=collection_processes.calculations)
-        if len(collection_processes.workflows) > 1:
+        if len(collection_processes.workflows) > 0:
             self._dump_workflows(workflows=collection_processes.workflows)

@@ -12,11 +12,14 @@
 # TODO: Test incremental dumping
 
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
 from aiida import orm
 from aiida.tools.dumping import CollectionDumper
+
+from .test_utils import compare_tree
 
 # Fixture that depends on generate_calculation_node_add_class
 # @pytest.fixture(scope="class")
@@ -146,21 +149,61 @@ class TestCollectionDumper:
         add_group: orm.Group = setup_add_group
         multiply_add_group: orm.Group = setup_multiply_add_group
 
-        add_group_path = tmp_path / 'add_group'
-        multiply_add_group_path = tmp_path / 'multiply_add_group'
+        add_group_path = Path('add_group')
+        multiply_add_group_path = Path('multiply_add_group')
 
-        add_dumper = CollectionDumper(collection=add_group, output_path=add_group_path)
-        multiply_add_dumper = CollectionDumper(collection=multiply_add_group, output_path=multiply_add_group_path)
+        add_dumper = CollectionDumper(collection=add_group, output_path=tmp_path / add_group_path)
+        multiply_add_dumper = CollectionDumper(
+            collection=multiply_add_group, output_path=tmp_path / multiply_add_group_path
+        )
 
         add_processes_to_dump = add_dumper._get_processes_to_dump()
 
         add_dumper._dump_calculations(add_processes_to_dump.calculations)
 
-        assert (add_group_path / 'calculations' / 'ArithmeticAddCalculation-4' / 'inputs' / 'aiida.in').exists()
+        expected_tree = {
+            'calculations': {
+                'ArithmeticAddCalculation-4': {
+                    'inputs': ['_aiidasubmit.sh', 'aiida.in'],
+                    'node_inputs': [],
+                    'outputs': ['_scheduler-stderr.txt', '_scheduler-stdout.txt', 'aiida.out'],
+                }
+            }
+        }
+
+        compare_tree(expected=expected_tree, base_path=tmp_path, relative_path=add_group_path)
 
         multiply_add_processes_to_dump = multiply_add_dumper._get_processes_to_dump()
 
+        # No calculations to dump when deduplication is enabled
         multiply_add_dumper._dump_calculations(multiply_add_processes_to_dump.calculations)
+        multiply_add_test_path: Path = multiply_add_group_path / 'calculations'
+
+        assert not multiply_add_test_path.exists()
+
+        multiply_add_dumper_no_dedup = CollectionDumper(
+            collection=multiply_add_group, output_path=multiply_add_group_path, deduplicate=False
+        )
+        multiply_add_processes_to_dump = multiply_add_dumper_no_dedup._get_processes_to_dump()
+
+        #  calculations to dump when deduplication is enabled
+        multiply_add_dumper_no_dedup._dump_calculations(multiply_add_processes_to_dump.calculations)
+
+        expected_tree_no_dedup = {
+            'calculations': {
+                'ArithmeticAddCalculation-15': {
+                    'inputs': ['_aiidasubmit.sh', 'aiida.in'],
+                    'node_inputs': [],
+                    'outputs': ['_scheduler-stderr.txt', '_scheduler-stdout.txt', 'aiida.out'],
+                },
+                'multiply-13': {
+                    'inputs': ['source_file'],
+                    'node_inputs': [],
+                },
+            }
+        }
+
+        compare_tree(expected=expected_tree_no_dedup, base_path=tmp_path, relative_path=multiply_add_group_path)
 
         pytest.set_trace()
 
@@ -169,50 +212,3 @@ class TestCollectionDumper:
 
     # def test_dump(self):
     #     pass
-
-
-#######3
-
-# def test_setup_profile(
-#     self,
-#     generate_calculation_node_add,
-#     generate_workchain_multiply_add,
-#     generate_calculation_node_io,
-#     generate_workchain_node_io,
-# ):
-#     # TODO: This is a hack... and not actually a real test
-#     # TODO: I'm using the `aiida_profile_clean_class` fiture to make sure I have a clean profile for this class
-#     # TODO: However, this method is not an actual test, but sets up the profile data how I want it for testing
-#     # TODO: Ideally, I'd create a class-scoped fixture that does the setup
-#     # TODO: Or define a `setup_class` method
-#     # TODO: However, as most of AiiDA's fixtures are function-scoped, I didn't manage to get any of these approaches
-#     # TODO: To work, due to pytest's ScopeMismatch exceptions
-
-# # Create nodes for profile storage
-# ## Not in any group
-# int_node = orm.Int(1).store()
-# _ = generate_calculation_node_add()
-# _ = generate_workchain_multiply_add()
-# ## For putting into groups
-# add_node = generate_calculation_node_add()
-# multiply_add_node = generate_workchain_multiply_add()
-
-# # Create the various groups
-# add_group, _ = orm.Group.collection.get_or_create(label='add')
-# multiply_add_group, _ = orm.Group.collection.get_or_create(label='multiply-add')
-# cj_dupl_group, _ = orm.Group.collection.get_or_create(label='cj-dupl')
-# wc_dupl_group, _ = orm.Group.collection.get_or_create(label='wc-dupl')
-# no_process_group, _ = orm.Group.collection.get_or_create(label='no-process')
-
-# # Populate groups
-# add_group.add_nodes([add_node])
-# multiply_add_group.add_nodes([multiply_add_node])
-# cj_dupl_group.add_nodes([add_node])
-# wc_dupl_group.add_nodes([multiply_add_node])
-# no_process_group.add_nodes([int_node])
-
-# self.add_group = add_group
-# self.multiply_add_group = multiply_add_group
-# self.cj_dupl_group = cj_dupl_group
-# self.wc_dupl_group = wc_dupl_group
-# self.no_process_group = no_process_group

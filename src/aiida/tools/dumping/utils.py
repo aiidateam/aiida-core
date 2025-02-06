@@ -63,7 +63,7 @@ def prepare_dump_path(
             safeguard_exists = (path_to_validate / safeguard_file).is_file()
 
             if safeguard_exists:
-                msg = f'Overwriting directory `{path_to_validate}`.'
+                msg = '`--overwrite` option selected. Will recreate directory.'
                 logger.report(msg)
                 shutil.rmtree(path_to_validate)
 

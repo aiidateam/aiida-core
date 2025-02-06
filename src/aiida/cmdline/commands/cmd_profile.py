@@ -19,8 +19,6 @@ from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
-from aiida.tools.dumping import ProcessDumper, ProfileDumper
-from aiida.tools.dumping.logger import DumpLogger
 
 
 @verdi.group('profile')
@@ -311,7 +309,9 @@ def profile_mirror(
     from datetime import datetime
     from pathlib import Path
 
+    from aiida.tools.dumping import ProcessDumper, ProfileDumper
     from aiida.tools.dumping.base import BaseDumper
+    from aiida.tools.dumping.logger import DumpLogger
     from aiida.tools.dumping.utils import prepare_dump_path
 
     profile = ctx.obj['profile']
@@ -320,6 +320,8 @@ def profile_mirror(
 
     if path is None:
         path = Path.cwd() / f'{profile.name}-mirror'
+
+    echo.echo_report(f'Mirroring data of profile `{profile.name}`at path: `{path}`.')
 
     SAFEGUARD_FILE: str = '.verdi_profile_mirror'  # noqa: N806
     safeguard_file_path: Path = path / SAFEGUARD_FILE
@@ -347,10 +349,8 @@ def profile_mirror(
         echo.echo_report(dry_run_message)
         return
 
-    echo.echo_report(f"Dumping of profile `{profile.name}`'s data at path: `{path}`.")
-
     if incremental:
-        msg = 'Incremental dumping selected. Will update directory.'
+        msg = 'Incremental mirroring selected. Will update directory.'
         echo.echo_report(msg)
 
     try:
@@ -392,6 +392,7 @@ def profile_mirror(
     with safeguard_file_path.open('a') as fhandle:
         fhandle.write(f'Last profile mirror time: {last_dump_time.isoformat()}\n')
 
+    # Write the logging json file to disk
     dump_logger.save_log()
 
-    echo.echo_report(f'Dumped {dump_logger.counter} new nodes.')
+    echo.echo_success(f'Dumped {dump_logger.counter} new nodes.')

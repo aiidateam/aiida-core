@@ -14,7 +14,7 @@ import os
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, NamedTuple, TypeVar
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -26,10 +26,17 @@ from aiida.tools.dumping.utils import filter_by_last_dump_time
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from aiida.tools.dumping.logger import DumpDict
+
 T = TypeVar('T', bound='orm.ProcessNode')
 
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
+
+
+class ProcessesToDump(NamedTuple):
+    calculations: Sequence[orm.CalculationNode]
+    workflows: Sequence[orm.WorkflowNode]
 
 
 class CollectionDumper:
@@ -41,6 +48,7 @@ class CollectionDumper:
         collection: orm.Group | str | list[str] | None = None,
         deduplicate: bool = True,
         output_path: Path | None = None,
+        processes_to_dump: ProcessesToDump | None = None,
     ):
         self.deduplicate = deduplicate
 
@@ -83,36 +91,41 @@ class CollectionDumper:
         filtered_nodes = filter_by_last_dump_time(nodes=nodes, last_dump_time=self.base_dumper.last_dump_time)
         return filtered_nodes
 
-    def _should_dump_processes(self, nodes: list[str] | None = None) -> bool:
-        test_nodes = nodes or self.nodes
-        return len([node for node in test_nodes if isinstance(orm.load_node(node), orm.ProcessNode)]) > 0
+    @cached_property
+    def processes_to_dump(self) -> ProcessesToDump:
+        return self._get_processes_to_dump()
 
-    def _get_processes(self) -> dict[str, Sequence[orm.ProcessNode]]:
+    def _get_processes_to_dump(self) -> ProcessesToDump:
         nodes = [orm.load_node(n) for n in self.nodes]
         workflows = [node for node in nodes if isinstance(node, orm.WorkflowNode)]
+        calculations = [node for node in nodes if isinstance(node, orm.CalculationNode)]
 
         # Make sure that only top-level workflows are dumped in their own directories when de-duplcation is enabled
         if self.deduplicate:
             workflows = [workflow for workflow in workflows if workflow.caller is None]
 
-        # Also need to obtain sub-calculations that were called by workflows of the group
-        # These are not contained in the group.nodes directly
-        called_calculations = []
-        for workflow in workflows:
-            called_calculations += [
-                node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)
-            ]
+        else:
+            # If no deduplication, also sub-calculations that were called by workflows of the group, and which are not
+            # contained in the group.nodes directly are being dumped explicitly
+            called_calculations = []
+            for workflow in workflows:
+                called_calculations += [
+                    node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)
+                ]
 
-        calculations = [node for node in nodes if isinstance(node, orm.CalculationNode)] + called_calculations
-        return {
-            'calculations': cast(Sequence[orm.ProcessNode], calculations),
-            'workflows': cast(Sequence[orm.ProcessNode], workflows),
-        }
-        # return {'calculations': calculations, 'workflows': workflows}
+            calculations += called_calculations
+
+        return ProcessesToDump(
+            calculations=calculations,
+            workflows=workflows,
+        )
+
+    def should_dump_processes(self) -> bool:
+        # if self.processes_to_dump is None:
+        #     self._get_processes_to_dump()
+        return (len(self.processes_to_dump.calculations) + len(self.processes_to_dump.workflows)) > 0
 
     def _dump_calculations(self, calculations: Sequence[orm.CalculationNode]) -> None:
-        if len(calculations) == 0:
-            return
         calculations_path = self.output_path / 'calculations'
         dumped_calculations = {}
 
@@ -123,34 +136,32 @@ class CollectionDumper:
                 process_node=calculation, prefix=None
             )
 
-            if calculation.caller is None:
-                calculation_dumper._dump_calculation(
-                    calculation_node=cast(orm.CalculationNode, calculation), output_path=calculation_dump_path
-                )
+            # This is handled in the get_processes method: `if calculation.caller is None:`
+            calculation_dumper._dump_calculation(calculation_node=calculation, output_path=calculation_dump_path)
 
-                dumped_calculations[calculation.uuid] = DumpLog(
-                    path=calculation_dump_path,
-                    time=datetime.now().astimezone(),
-                )
+            dumped_calculations[calculation.uuid] = DumpLog(
+                path=calculation_dump_path,
+                time=datetime.now().astimezone(),
+            )
 
-        self.dump_logger.update_calculations(dumped_calculations)
+        self.dump_logger.update_calculations(new_calculations=dumped_calculations)
 
     def _dump_workflows(self, workflows: Sequence[orm.WorkflowNode]) -> None:
-        if len(workflows) == 0:
-            return
-        workflow_path = self.output_path / 'workflows'
+        workflow_path: Path = self.output_path / 'workflows'
+        dumped_workflows: dict[str, DumpLog] = {}
+
         workflow_path.mkdir(exist_ok=True, parents=True)
-        dumped_workflows = {}
 
         for workflow in workflows:
-            workflow_dumper = self.process_dumper
+            workflow_dumper: ProcessDumper = self.process_dumper
 
-            workflow_dump_path = workflow_path / workflow_dumper._generate_default_dump_path(
+            workflow_dump_path: Path = workflow_path / workflow_dumper._generate_default_dump_path(
                 process_node=workflow, prefix=None
             )
 
-            logged_workflows = self.dump_logger.get_log()['workflows']
+            logged_workflows: DumpDict = self.dump_logger.get_log()['workflows']
 
+            # Symlink here, if deduplication enabled and workflow was already dumped
             if self.deduplicate and workflow in logged_workflows.keys():
                 os.symlink(
                     src=logged_workflows[workflow.uuid].path,
@@ -158,7 +169,7 @@ class CollectionDumper:
                 )
             else:
                 workflow_dumper._dump_workflow(
-                    workflow_node=cast(orm.WorkflowNode, workflow),
+                    workflow_node=workflow,
                     output_path=workflow_dump_path,
                 )
 
@@ -167,10 +178,13 @@ class CollectionDumper:
                     time=datetime.now().astimezone(),
                 )
 
-        self.dump_logger.update_workflows(dumped_workflows)
+        self.dump_logger.update_workflows(new_workflows=dumped_workflows)
 
     def dump(self) -> None:
         self.output_path.mkdir(exist_ok=True, parents=True)
-        collection_processes = self._get_processes()
-        self._dump_calculations(calculations=collection_processes['calculations'])
-        self._dump_workflows(workflows=collection_processes['workflows'])
+        collection_processes: ProcessesToDump = self._get_processes_to_dump()
+
+        if len(collection_processes.calculations) > 1:
+            self._dump_calculations(calculations=collection_processes.calculations)
+        if len(collection_processes.workflows) > 1:
+            self._dump_workflows(workflows=collection_processes.workflows)

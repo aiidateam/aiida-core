@@ -74,6 +74,9 @@ class ProfileDumper:
 
     def _dump_processes_not_in_any_group(self):
         # === Dump the data that is not associated with any group ===
+
+        # `dump_parent_path` is set in the `post_init` method of the `BaseDumper` dataclass
+        assert self.base_dumper.dump_parent_path is not None
         if self.organize_by_groups:
             output_path = self.base_dumper.dump_parent_path / 'no-group'
         else:
@@ -90,7 +93,7 @@ class ProfileDumper:
             output_path=output_path,
         )
 
-        if self.dump_processes and no_group_dumper._should_dump_processes():
+        if self.dump_processes and no_group_dumper.should_dump_processes():
             logger.report(f'Dumping processes not in any group for profile `{self.profile.name}`...')
 
             no_group_dumper.dump()
@@ -113,7 +116,7 @@ class ProfileDumper:
                 output_path=output_path,
             )
 
-            if self.dump_processes and group_dumper._should_dump_processes():
+            if self.dump_processes and group_dumper.should_dump_processes():
                 logger.report(f'Dumping processes in group {group.label} for profile `{self.profile.name}`...')
 
                 group_dumper.dump()

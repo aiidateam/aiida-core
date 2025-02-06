@@ -336,6 +336,8 @@ def profile_mirror(
     except FileExistsError as exc:
         echo.echo_critical(str(exc))
 
+    breakpoint()
+
     try:
         with safeguard_file_path.open('r') as fhandle:
             last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()

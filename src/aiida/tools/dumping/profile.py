@@ -101,9 +101,11 @@ class ProfileDumper:
     def _dump_processes_per_group(self, groups):
         # === Dump data per-group if Groups exist in profile or are selected ===
 
+        assert self.base_dumper.dump_parent_path is not None
+
         for group in groups:
             if self.organize_by_groups:
-                output_path = self.base_dumper.dump_parent_path / group.label
+                output_path = self.base_dumper.dump_parent_path / f"group-{group.label}"
             else:
                 output_path = self.base_dumper.dump_parent_path
 

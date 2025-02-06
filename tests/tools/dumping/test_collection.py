@@ -71,11 +71,11 @@ class TestCollectionDumper:
 
         collection_dumper = CollectionDumper(collection=no_process_group)
 
-        assert collection_dumper._should_dump_processes() is False
+        assert collection_dumper.should_dump_processes() is False
 
         collection_dumper = CollectionDumper(collection=add_group)
 
-        assert collection_dumper._should_dump_processes() is True
+        assert collection_dumper.should_dump_processes() is True
 
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_get_nodes(
@@ -118,7 +118,7 @@ class TestCollectionDumper:
             collection_dumper = CollectionDumper(collection=[1])
             collection_dumper._get_nodes()
 
-    def test_get_processes(self, setup_add_group, setup_multiply_add_group, duplicate_group):
+    def test_get_processes_to_dump(self, setup_add_group, setup_multiply_add_group, duplicate_group):
         add_group: orm.Group = setup_add_group
         multiply_add_group: orm.Group = setup_multiply_add_group
 
@@ -128,17 +128,17 @@ class TestCollectionDumper:
         add_dumper = CollectionDumper(collection=add_group)
         multiply_add_dumper = CollectionDumper(collection=multiply_add_group)
 
-        add_process_dict = add_dumper._get_processes()
-        assert len(add_process_dict['calculations']) == 1
-        assert add_process_dict['calculations'][0].uuid == add_nodes[0].uuid
-        assert len(add_process_dict['workflows']) == 0
+        add_process_to_dump = add_dumper._get_processes_to_dump()
+        assert len(add_process_to_dump.calculations) == 1
+        assert add_process_to_dump.calculations[0].uuid == add_nodes[0].uuid
+        assert len(add_process_to_dump.workflows) == 0
 
-        multiply_add_process_dict = multiply_add_dumper._get_processes()
+        multiply_add_processes_to_dump = multiply_add_dumper._get_processes_to_dump()
 
-        assert len(multiply_add_process_dict['calculations']) == 2
-        assert set(multiply_add_process_dict['calculations']) == set(multiply_add_nodes[0].called_descendants)
-        assert len(multiply_add_process_dict['workflows']) == 1
-        assert multiply_add_process_dict['calculations'][0].uuid == multiply_add_nodes[0].uuid
+        assert len(multiply_add_processes_to_dump.calculations) == 2
+        assert set(multiply_add_processes_to_dump.calculations) == set(multiply_add_nodes[0].called_descendants)
+        assert len(multiply_add_processes_to_dump.workflows) == 1
+        assert multiply_add_processes_to_dump.calculations[0].uuid == multiply_add_nodes[0].uuid
 
         # TODO: Test here also de-duplication with a Workflow with a sub-workflow
 
@@ -152,15 +152,15 @@ class TestCollectionDumper:
         add_dumper = CollectionDumper(collection=add_group, output_path=add_group_path)
         multiply_add_dumper = CollectionDumper(collection=multiply_add_group, output_path=multiply_add_group_path)
 
-        add_process_dict = add_dumper._get_processes()
+        add_processes_to_dump = add_dumper._get_processes_to_dump()
 
-        add_dumper._dump_calculations(add_process_dict['calculations'])
+        add_dumper._dump_calculations(add_processes_to_dump.calculations)
 
         assert (add_group_path / 'calculations' / 'ArithmeticAddCalculation-4' / 'inputs' / 'aiida.in').exists()
 
-        multiply_add_process_dict = multiply_add_dumper._get_processes()
+        multiply_add_processes_to_dump = multiply_add_dumper._get_processes_to_dump()
 
-        multiply_add_dumper._dump_calculations(multiply_add_process_dict['calculations'])
+        multiply_add_dumper._dump_calculations(multiply_add_processes_to_dump.calculations)
 
         pytest.set_trace()
 

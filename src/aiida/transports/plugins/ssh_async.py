@@ -220,8 +220,8 @@ class AsyncSshTransport(AsyncTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        if self.has_magic(remotepath):
-            if self.has_magic(localpath):
+        if self.contains_glob_wildcards(remotepath):
+            if self.contains_glob_wildcards(localpath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
             # use the self glob to analyze the path remotely
             to_copy_list = await self.glob_async(remotepath)
@@ -425,8 +425,8 @@ class AsyncSshTransport(AsyncTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        if self.has_magic(localpath):
-            if self.has_magic(remotepath):
+        if self.contains_glob_wildcards(localpath):
+            if self.contains_glob_wildcards(remotepath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
 
             # use the imported glob to analyze the path locally
@@ -622,7 +622,7 @@ class AsyncSshTransport(AsyncTransport):
 
         remotesource = str(remotesource)
         remotedestination = str(remotedestination)
-        if self.has_magic(remotedestination):
+        if self.contains_glob_wildcards(remotedestination):
             raise ValueError('Pathname patterns are not allowed in the destination')
 
         if not remotedestination:
@@ -637,7 +637,7 @@ class AsyncSshTransport(AsyncTransport):
         # See here: https://github.com/ronf/asyncssh/issues/724
         if self._sftp.supports_remote_copy:
             try:
-                if self.has_magic(remotesource):
+                if self.contains_glob_wildcards(remotesource):
                     await self._sftp.mcopy(
                         remotesource,
                         remotedestination,
@@ -701,7 +701,7 @@ class AsyncSshTransport(AsyncTransport):
                 # use -L; --dereference is not supported on mac
                 cp_flags += ' -L'
 
-            if self.has_magic(remotesource):
+            if self.contains_glob_wildcards(remotesource):
                 to_copy_list = await self.glob_async(remotesource)
 
                 if len(to_copy_list) > 1:
@@ -1124,8 +1124,8 @@ class AsyncSshTransport(AsyncTransport):
         remotesource = str(remotesource)
         remotedestination = str(remotedestination)
 
-        if self.has_magic(remotesource):
-            if self.has_magic(remotedestination):
+        if self.contains_glob_wildcards(remotesource):
+            if self.contains_glob_wildcards(remotedestination):
                 raise ValueError('`remotedestination` cannot have patterns')
 
             # find all files matching pattern

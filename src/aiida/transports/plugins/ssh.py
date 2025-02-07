@@ -866,8 +866,8 @@ class SshTransport(BlockingTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        if self.has_magic(localpath):
-            if self.has_magic(remotepath):
+        if self.contains_glob_wildcards(localpath):
+            if self.contains_glob_wildcards(remotepath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
 
             # use the imported glob to analyze the path locally
@@ -1049,8 +1049,8 @@ class SshTransport(BlockingTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        if self.has_magic(remotepath):
-            if self.has_magic(localpath):
+        if self.contains_glob_wildcards(remotepath):
+            if self.contains_glob_wildcards(localpath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
             # use the self glob to analyze the path remotely
             to_copy_list = self.glob(remotepath)
@@ -1268,10 +1268,10 @@ class SshTransport(BlockingTransport):
                 + f'Found instead {remotedestination} as remotedestination'
             )
 
-        if self.has_magic(remotedestination):
+        if self.contains_glob_wildcards(remotedestination):
             raise ValueError('Pathname patterns are not allowed in the destination')
 
-        if self.has_magic(remotesource):
+        if self.contains_glob_wildcards(remotesource):
             to_copy_list = self.glob(remotesource)
 
             if len(to_copy_list) > 1:
@@ -1619,8 +1619,8 @@ class SshTransport(BlockingTransport):
         source = os.path.normpath(remotesource)
         dest = os.path.normpath(remotedestination)
 
-        if self.has_magic(source):
-            if self.has_magic(dest):
+        if self.contains_glob_wildcards(source):
+            if self.contains_glob_wildcards(dest):
                 # if there are patterns in dest, I don't know which name to assign
                 raise ValueError('`remotedestination` cannot have patterns')
 

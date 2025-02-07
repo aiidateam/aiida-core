@@ -16,7 +16,7 @@ Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
 Detailed description:
 
 In the file aiida/transports/transport.py we include a modified copy of
-the glob, iglob, has_magic, glob1, and glob0 functions from glob module
+the glob, iglob, contains_glob_wildcards, glob1, and glob0 functions from glob module
 of Python v. 2.7.8.
 
 The modification include:
@@ -24,7 +24,7 @@ The modification include:
   Python's glob.iglob()
 * The iglob() function refers to our glob1() and glob0() functions rather
   than to Python's glob.iglob()
-* The has_magic() function has just be converted to a class method
+* The contains_glob_wildcards() function has just be converted to a class method
 * the glob1() function and glob0() functions use our own methods to list
   directories and files using the correct Transport plugin, rather than
   using directly the os module.

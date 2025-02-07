@@ -271,7 +271,7 @@ class Transport(abc.ABC):
         """
         return self._safe_open_interval
 
-    def has_magic(self, string: TransportPath):
+    def contains_glob_wildcards(self, string: TransportPath):
         string = str(string)
         """Return True if the given string contains any special shell characters."""
         return self._MAGIC_CHECK.search(string) is not None
@@ -891,7 +891,7 @@ class Transport(abc.ABC):
 
         :param pathname: the pathname pattern to match.
         """
-        if not self.has_magic(pathname):
+        if not self.contains_glob_wildcards(pathname):
             # if os.path.lexists(pathname): # ORIGINAL
             # our implementation
             if self.path_exists(pathname):
@@ -903,11 +903,11 @@ class Transport(abc.ABC):
             for name in self.glob1(self.getcwd(), basename):
                 yield name
             return
-        if self.has_magic(dirname):
+        if self.contains_glob_wildcards(dirname):
             dirs = self.iglob(dirname)
         else:
             dirs = [dirname]
-        if self.has_magic(basename):
+        if self.contains_glob_wildcards(basename):
             glob_in_dir = self.glob1
         else:
             glob_in_dir = self.glob0

@@ -265,8 +265,8 @@ class LocalTransport(BlockingTransport):
         if not os.path.isabs(localpath):
             raise ValueError('Source must be an absolute path')
 
-        if self.has_magic(localpath):
-            if self.has_magic(remotepath):
+        if self.contains_glob_wildcards(localpath):
+            if self.contains_glob_wildcards(remotepath):
                 raise ValueError('Pathname patterns are not allowed in the remotepath')
 
             to_copy_list = glob.glob(localpath)  # using local glob here
@@ -434,8 +434,8 @@ class LocalTransport(BlockingTransport):
         if not os.path.isabs(localpath):
             raise ValueError('Destination must be an absolute path')
 
-        if self.has_magic(remotepath):
-            if self.has_magic(localpath):
+        if self.contains_glob_wildcards(remotepath):
+            if self.contains_glob_wildcards(localpath):
                 raise ValueError('Pathname patterns are not allowed in the localpath')
             to_copy_list = self.glob(remotepath)
 
@@ -568,7 +568,7 @@ class LocalTransport(BlockingTransport):
             raise ValueError('Input remotesource to copy must be a non empty object')
         if not remotedestination:
             raise ValueError('Input remotedestination to copy must be a non empty object')
-        if not self.has_magic(remotesource):
+        if not self.contains_glob_wildcards(remotesource):
             if not os.path.exists(os.path.join(self.curdir, remotesource)):
                 raise FileNotFoundError('Source not found')
         if self.normalize(remotesource) == self.normalize(remotedestination):
@@ -581,8 +581,8 @@ class LocalTransport(BlockingTransport):
 
         the_destination = os.path.join(self.curdir, remotedestination)
 
-        if self.has_magic(remotesource):
-            if self.has_magic(remotedestination):
+        if self.contains_glob_wildcards(remotesource):
+            if self.contains_glob_wildcards(remotedestination):
                 raise ValueError('Pathname patterns are not allowed in the remotedestination')
 
             to_copy_list = self.glob(remotesource)
@@ -892,8 +892,8 @@ class LocalTransport(BlockingTransport):
         remotesource = os.path.normpath(str(remotesource))
         remotedestination = os.path.normpath(str(remotedestination))
 
-        if self.has_magic(remotesource):
-            if self.has_magic(remotedestination):
+        if self.contains_glob_wildcards(remotesource):
+            if self.contains_glob_wildcards(remotedestination):
                 # if there are patterns in dest, I don't know which name to assign
                 raise ValueError('Remotedestination cannot have patterns')
 

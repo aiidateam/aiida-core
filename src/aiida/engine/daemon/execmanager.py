@@ -459,7 +459,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     target_basepath = Path(stash_options['target_base']) / uuid[:2] / uuid[2:4] / uuid[4:]
 
     for source_filename in source_list:
-        if transport.has_magic(source_filename):
+        if transport.contains_glob_wildcards(source_filename):
             copy_instructions = []
             for globbed_filename in await transport.glob_async(source_basepath / source_filename):
                 target_filepath = target_basepath / Path(globbed_filename).relative_to(source_basepath)
@@ -620,7 +620,7 @@ async def retrieve_files_from_list(
         if isinstance(item, (list, tuple)):
             tmp_rname, tmp_lname, depth = item
             # if there are more than one file I do something differently
-            if transport.has_magic(tmp_rname):
+            if transport.contains_glob_wildcards(tmp_rname):
                 remote_names = await transport.glob_async(workdir.joinpath(tmp_rname))
                 local_names = []
                 for rem in remote_names:
@@ -643,7 +643,7 @@ async def retrieve_files_from_list(
         else:
             abs_item = item if item.startswith('/') else str(workdir.joinpath(item))
 
-            if transport.has_magic(abs_item):
+            if transport.contains_glob_wildcards(abs_item):
                 remote_names = await transport.glob_async(abs_item)
                 local_names = [os.path.split(rem)[1] for rem in remote_names]
             else:

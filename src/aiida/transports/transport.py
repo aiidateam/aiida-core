@@ -954,6 +954,50 @@ class Transport(abc.ABC):
             return [basename]
         return []
 
+    @abc.abstractmethod
+    def compress(
+        self,
+        format: str,
+        remotesources: Union[TransportPath, list[TransportPath]],
+        remotedestination: TransportPath,
+        root_dir: TransportPath,
+        overwrite: bool = True,
+        dereference: bool = False,
+    ):
+        """Compress a remote directory.
+
+        This method should be able to handle remotedir with glob patterns.
+
+        :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
+        :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress
+        :param remotedestination: path to the remote destination file (including file name).
+        :param root_dir: the path that compressed files will be relative to.
+        :param overwrite: if True, overwrite the file at remotedestination if it already exists.
+        :param dereference: if True, follow symbolic links.
+            Compress where they point to, instead of the links themselves.
+
+        :raises ValueError: if format is not supported
+        :raises OSError: if remotesource does not exist, or a matching file/folder cannot be found
+        :raises OSError: if remotedestination already exists and overwrite is False. Or if it is a directory.
+        :raises OSError: if cannot create remotedestination
+        :raises OSError: if root_dir is not a directory
+        """
+
+    @abc.abstractmethod
+    def extract(self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True):
+        """Extract a remote archive.
+
+        Does not accept glob patterns, --as it doesn't make much sense and we don't have a usecase for it.
+
+        :param remotesource: path to the remote archive to extract
+        :param remotedestination: path to the remote destination directory
+        :param overwrite: if True, overwrite the file at remotedestination if it already exists
+            (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+
+        :raises OSError: if the remotesource does not exist.
+        :raises OSError: if the extraction fails.
+        """
+
     ## aiida-core engine is ultimately moving towards async, so this is a step in that direction.
 
     @abc.abstractmethod
@@ -1405,6 +1449,52 @@ class Transport(abc.ABC):
         :return: a list of paths matching the pattern.
         """
 
+    @abc.abstractmethod
+    async def compress_async(
+        self,
+        format: str,
+        remotesources: Union[TransportPath, list[TransportPath]],
+        remotedestination: TransportPath,
+        root_dir: TransportPath,
+        overwrite: bool = True,
+        dereference: bool = False,
+    ):
+        """Compress a remote directory.
+
+        This method should be able to handle remotedir with glob patterns.
+
+        :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
+        :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress
+        :param remotedestination: path to the remote destination file (including file name).
+        :param root_dir: the path that compressed files will be relative to.
+        :param overwrite: if True, overwrite the file at remotedestination if it already exists.
+        :param dereference: if True, follow symbolic links.
+            Compress where they point to, instead of the links themselves.
+
+        :raises ValueError: if format is not supported
+        :raises OSError: if remotesource does not exist, or a matching file/folder cannot be found
+        :raises OSError: if remotedestination already exists and overwrite is False. Or if it is a directory.
+        :raises OSError: if cannot create remotedestination
+        :raises OSError: if root_dir is not a directory
+        """
+
+    @abc.abstractmethod
+    async def extract_async(
+        self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True
+    ):
+        """Extract a remote archive.
+
+        Does not accept glob patterns, --as it doesn't make much sense and we don't have a usecase for it.
+
+        :param remotesource: path to the remote archive to extract
+        :param remotedestination: path to the remote destination directory
+        :param overwrite: if True, overwrite the file at remotedestination if it already exists
+            (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+
+        :raises OSError: if the remotesource does not exist.
+        :raises OSError: if the extraction fails.
+        """
+
 
 class BlockingTransport(Transport):
     """Abstract class for a generic blocking transport.
@@ -1413,6 +1503,128 @@ class BlockingTransport(Transport):
     Here we overwrite the async counterparts of the methods.
     This is done by awaiting the sync methods.
     """
+
+    def compress(
+        self,
+        format: str,
+        remotesources: Union[TransportPath, list[TransportPath]],
+        remotedestination: TransportPath,
+        root_dir: TransportPath,
+        overwrite: bool = True,
+        dereference: bool = False,
+    ):
+        # The following implementation works for all blocking transoprt plugins
+        """Compress a remote directory.
+
+        This method should be able to handle remotedir with glob patterns.
+
+        :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
+        :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress
+        :param remotedestination: path to the remote destination file (including file name).
+        :param root_dir: the path that compressed files will be relative to.
+        :param overwrite: if True, overwrite the file at remotedestination if it already exists.
+        :param dereference: if True, follow symbolic links.
+            Compress where they point to, instead of the links themselves.
+
+        :raises ValueError: if format is not supported
+        :raises OSError: if remotesource does not exist, or a matching file/folder cannot be found
+        :raises OSError: if remotedestination already exists and overwrite is False. Or if it is a directory.
+        :raises OSError: if cannot create remotedestination
+        :raises OSError: if root_dir is not a directory
+        """
+        if not self.isdir(root_dir):
+            raise OSError(f'The relative root {root_dir} does not exist, or is not a directory.')
+
+        if self.isdir(remotedestination):
+            raise OSError(f'The remote destination {remotedestination} is a directory, should include a filename.')
+
+        if not overwrite and self.path_exists(remotedestination):
+            raise OSError(f'The remote destination {remotedestination} already exists.')
+
+        if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
+            raise ValueError(f'Unsupported compression format: {type}')
+
+        compression_flag = {
+            'tar': '',
+            'tar.gz': 'z',
+            'tar.bz2': 'j',
+            'tar.xz': 'J',
+        }[format]
+
+        if not isinstance(remotesources, list):
+            remotesources = [remotesources]
+
+        copy_list = []
+
+        for source in remotesources:
+            if self.has_magic(source):
+                copy_list = self.glob(source)
+                if not copy_list:
+                    raise OSError(
+                        f'Either the remote path {source} does not exist, or a matching file/folder not found.'
+                    )
+            else:
+                if not self.path_exists(source):
+                    raise OSError(f'The remote path {source} does not exist')
+
+                copy_list.append(source)
+
+        copy_items = ' '.join([str(Path(item).relative_to(root_dir)) for item in copy_list])
+        # note: order of the flags is important
+        tar_command = (
+            f"tar -c{compression_flag!s}{'h' if dereference else ''}f {remotedestination!s} -C {root_dir!s} "
+            + copy_items
+        )
+
+        retval, stdout, stderr = self.exec_command_wait(tar_command)
+
+        if retval == 0:
+            if stderr.strip():
+                self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
+        else:
+            self.logger.error(
+                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                    retval, stdout, stderr, tar_command
+                )
+            )
+            raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
+
+    def extract(self, remotesource, remotedestination, overwrite=True, *args, **kwargs):
+        # The following implementation works for all blocking transoprt plugins
+        """Extract a remote archive.
+
+        Does not accept glob patterns, --as it doesn't make much sense and we don't have a usecase for it.
+
+        :param remotesource: path to the remote archive to extract
+        :param remotedestination: path to the remote destination directory
+        :param overwrite: if True, overwrite the file at remotedestination if it already exists
+            (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+
+        :raises OSError: if the remotesource does not exist.
+        :raises OSError: if the extraction fails.
+        """
+        if not overwrite:
+            raise NotImplementedError('The overwrite=False is not implemented yet')
+
+        if not self.path_exists(remotesource):
+            raise OSError(f'The remote path {remotesource} does not exist')
+
+        self.makedirs(remotedestination, ignore_existing=True)
+
+        tar_command = f'tar -xf {remotesource!s} -C {remotedestination!s} '
+
+        retval, stdout, stderr = self.exec_command_wait(tar_command)
+
+        if retval == 0:
+            if stderr.strip():
+                self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
+        else:
+            self.logger.error(
+                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                    retval, stdout, stderr, tar_command
+                )
+            )
+            raise OSError(f'Error while extracting the tar archive. Exit code: {retval}')
 
     async def open_async(self):
         """Counterpart to open() that is async."""
@@ -1550,6 +1762,16 @@ class BlockingTransport(Transport):
         """Counterpart to glob() that is async."""
         return self.glob(pathname)
 
+    async def compress_async(
+        self, format, remotesources, remotedestination, root_dir, overwrite=True, dereference=False
+    ):
+        """Counterpart to compress() that is async."""
+        return self.compress(format, remotesources, remotedestination, root_dir, overwrite, dereference)
+
+    async def extract_async(self, remotesource, remotedestination, overwrite=True):
+        """Counterpart to extract() that is async."""
+        return self.extract(remotesource, remotedestination, overwrite)
+
 
 class AsyncTransport(Transport):
     """An abstract base class for asynchronous transports.
@@ -1661,6 +1883,12 @@ class AsyncTransport(Transport):
 
     def normalize(self, *args, **kwargs):
         return self.run_command_blocking(self.normalize_async, *args, **kwargs)
+
+    def extract(self, *args, **kwargs):
+        return self.run_command_blocking(self.extract_async, *args, **kwargs)
+
+    def compress(self, *args, **kwargs):
+        return self.run_command_blocking(self.compress_async, *args, **kwargs)
 
 
 class TransportInternalError(InternalError):

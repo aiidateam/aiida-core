@@ -880,7 +880,7 @@ class LocalTransport(BlockingTransport):
         # if not os.path.exists(newpath):
         #     raise OSError(f'Destination {newpath} does not exist')
 
-            # Ensure the destination folder exists
+        # Ensure the destination folder exists
         dest_dir = os.path.dirname(newpath)
         if dest_dir and not os.path.exists(dest_dir):
             raise OSError(f'Destination directory {dest_dir} does not exist')

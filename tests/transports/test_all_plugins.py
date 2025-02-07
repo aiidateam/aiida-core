@@ -1237,8 +1237,6 @@ def test_asynchronous_execution(custom_transport, tmp_path):
 def test_rename(custom_transport, tmp_path_remote):
     """Test the rename function of the transport plugin."""
     with custom_transport as transport:
-        if not transport.is_open:
-            transport.open()
         old_file = tmp_path_remote / 'oldfile.txt'
         new_file = tmp_path_remote / 'newfile.txt'
         another_file = tmp_path_remote / 'anotherfile.txt'
@@ -1257,13 +1255,5 @@ def test_rename(custom_transport, tmp_path_remote):
         assert new_file.exists()
 
         # Perform rename operation if new file already exists
-        try:
+        with pytest.raises(OSError):
             transport.rename(new_file, another_file)
-            print('Rename to existing file succeeded (no error).')
-        except OSError as e:
-            print(f'Rename failed as expected: {e}')
-        finally:
-            # Cleanup files manually
-            for file in tmp_path_remote.iterdir():
-                file.unlink()
-            tmp_path_remote.rmdir()  # Remove the directory if empty

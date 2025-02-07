@@ -1357,8 +1357,8 @@ class SshTransport(BlockingTransport):
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
 
-        :raises OSError: if oldpath is not found
-        :raises ValueError: if sroldpathc/newpath is not a valid path
+        :raises OSError: if oldpath is not found or newpath already exists
+        :raises ValueError: if oldpath/newpath is not a valid path
         """
         if not oldpath:
             raise ValueError(f'Source {oldpath} is not a valid path')

@@ -1371,10 +1371,10 @@ class SshTransport(BlockingTransport):
         """The code now checks if oldpath exists and raises an OSError if not. A check is added to ensure that newpath doesn't already exist (using FileExistsError), to avoid unintentional overwriting."""
 
         if not self.isfile(oldpath) and not self.isdir(oldpath):
-                raise OSError(f'Source {oldpath} does not exist')
+            raise OSError(f'Source {oldpath} does not exist')
 
         if self.isfile(newpath) or self.isdir(newpath):
-                raise FileExistsError(f'Destination {newpath}already exists')
+            raise FileExistsError(f'Destination {newpath}already exists')
 
         return self.sftp.rename(oldpath, newpath)
 

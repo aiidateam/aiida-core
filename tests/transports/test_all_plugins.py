@@ -1255,5 +1255,5 @@ def test_rename(custom_transport, tmp_path_remote):
         assert new_file.exists()
 
         # Perform rename operation if new file already exists
-        with pytest.raises(OSError, match = "already exist|destination exists"):
+        with pytest.raises(OSError, match='already exist|destination exists'):
             transport.rename(new_file, another_file)

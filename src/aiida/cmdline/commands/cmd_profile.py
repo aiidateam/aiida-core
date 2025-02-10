@@ -273,37 +273,57 @@ def profile_delete(force, delete_data, profiles):
 
 @verdi_profile.command('mirror')
 @options.PATH()
+@options.DRY_RUN()
 @options.OVERWRITE()
-# @options.INCREMENTAL()
 @options.DUMP_PROCESSES()
-@options.DEDUPLICATE()
+@options.GROUPS()
+@options.ORGANIZE_BY_GROUPS()
+# @options.DEDUPLICATE()
+# @click.option(
+#     '--check-dirs/--no-check-dirs',
+#     default=False,
+#     show_default=True,
+#     help='Check for existence of dump directories. Otherwise, incremental mirroring is only evaluated from the log.')
+@click.option(
+    '--symlink-duplicates/--no-symlink-duplicates',
+    default=True,
+    show_default=True,
+    help='Symlink data if the same node is contained in multiple groups.')
+@click.option(
+    '--delete-missing/--no-delete-missing',
+    default=False,
+    show_default=True,
+    help="If a previously dumped node is deleted from AiiDA's DB, also delete the corresponding dump directory.")
+@click.option(
+    '--extra-calc-dirs/--no-extra-calc-dirs',
+    default=False,
+    show_default=True,
+    help='If a top-level process calls sub-processes, create a designated directory only for the top-level process.')
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
 @options.FLAT()
-@options.DUMP_CONFIG_FILE()
-@options.GROUPS()
-@options.ORGANIZE_BY_GROUPS()
-@options.DRY_RUN()
 @click.pass_context
 def profile_mirror(
     ctx,
     path,
-    overwrite,
-    organize_by_groups,
     dry_run,
+    overwrite,
     dump_processes,
-    deduplicate,
+    groups,
+    organize_by_groups,
+    symlink_duplicates,
+    delete_missing,
+    extra_calc_dirs,
+    # check_dirs,
     include_inputs,
     include_outputs,
     include_attributes,
     include_extras,
     flat,
-    dump_config_file,
-    groups,
 ):
-    """Dump all data in an AiiDA profile's storage to disk."""
+    """Dump all data in an AiiDA profile's storage to disk in a human-readable directory tree."""
 
     import json
     from datetime import datetime
@@ -313,6 +333,7 @@ def profile_mirror(
     from aiida.tools.dumping.base import BaseDumper
     from aiida.tools.dumping.logger import DumpLogger
     from aiida.tools.dumping.utils import prepare_dump_path
+    from aiida.tools.dumping.config import ProfileDumpConfig
 
     profile = ctx.obj['profile']
 
@@ -321,7 +342,7 @@ def profile_mirror(
     if path is None:
         path = Path.cwd() / f'{profile.name}-mirror'
 
-    echo.echo_report(f'Mirroring data of profile `{profile.name}`at path: `{path}`.')
+    echo.echo_report(f'Mirroring data of profile `{profile.name}` at path: `{path}`.')
 
     SAFEGUARD_FILE: str = '.verdi_profile_mirror'  # noqa: N806
     safeguard_file_path: Path = path / SAFEGUARD_FILE
@@ -336,8 +357,6 @@ def profile_mirror(
     except FileExistsError as exc:
         echo.echo_critical(str(exc))
 
-    breakpoint()
-
     try:
         with safeguard_file_path.open('r') as fhandle:
             last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()
@@ -346,9 +365,10 @@ def profile_mirror(
 
     if dry_run:
         node_counts = ProfileDumper._get_number_of_nodes_to_dump(last_dump_time)
-        node_counts_str = ' & '.join(f'{count} {node_type}' for node_type, count in node_counts.items())
-        dry_run_message = f'Dry run for mirroring of profile `{profile.name}`: {node_counts_str} to dump.\n'
+        dry_run_message = f'Dry run for mirroring of profile `{profile.name}`. Would dump:'
         echo.echo_report(dry_run_message)
+        for count, node_type in node_counts.items():
+            echo.echo_report(f'{count}: {node_type}')
         return
 
     if incremental:
@@ -376,18 +396,25 @@ def profile_mirror(
         flat=flat,
     )
 
+    # breakpoint()
+    profile_dump_config = ProfileDumpConfig(
+        dump_processes=dump_processes,
+        symlink_duplicates=symlink_duplicates,
+        delete_missing=delete_missing,
+        extra_calc_dirs=extra_calc_dirs,
+        organize_by_groups=organize_by_groups,
+    )
+
     profile_dumper = ProfileDumper(
+        profile=profile,
+        profile_dump_config=profile_dump_config,
         base_dumper=base_dumper,
         process_dumper=process_dumper,
         dump_logger=dump_logger,
         groups=groups,
-        organize_by_groups=organize_by_groups,
-        deduplicate=deduplicate,
-        profile=profile,
-        dump_processes=dump_processes,
     )
 
-    profile_dumper.dump()
+    profile_dumper.dump_processes()
 
     # Append the current time to the file
     last_dump_time = datetime.now().astimezone()

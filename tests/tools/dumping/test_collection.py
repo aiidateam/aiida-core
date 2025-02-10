@@ -1,4 +1,3 @@
-###########################################################################
 # Copyright (c), The AiiDA team. All rights reserved.                     #
 # This file is part of the AiiDA code.                                    #
 #                                                                         #
@@ -17,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from aiida import orm
-from aiida.tools.dumping import CollectionDumper, collection
+from aiida.tools.dumping import CollectionDumper
 
 from .test_utils import compare_tree
 
@@ -28,7 +27,7 @@ from .test_utils import compare_tree
 #     generate_calculation_node_add_class()  # You can also do any additional setup here
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+# @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.fixture()
 def setup_no_process_group() -> orm.Group:
     no_process_group, _ = orm.Group.collection.get_or_create(label='no-process')
@@ -38,7 +37,7 @@ def setup_no_process_group() -> orm.Group:
     return no_process_group
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+# @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.fixture()
 def setup_add_group(generate_calculation_node_add) -> orm.Group:
     add_group, _ = orm.Group.collection.get_or_create(label='add')
@@ -48,7 +47,7 @@ def setup_add_group(generate_calculation_node_add) -> orm.Group:
     return add_group
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+# @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.fixture()
 def setup_multiply_add_group(generate_workchain_multiply_add) -> orm.Group:
     multiply_add_group, _ = orm.Group.collection.get_or_create(label='multiply-add')
@@ -58,7 +57,7 @@ def setup_multiply_add_group(generate_workchain_multiply_add) -> orm.Group:
     return multiply_add_group
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+# @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.fixture()
 def duplicate_group():
     def _duplicate_group(source_group: orm.Group, dest_group_label: str):
@@ -69,67 +68,68 @@ def duplicate_group():
     return _duplicate_group
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+# @pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestCollectionDumper:
-    def test_should_dump_processes(self, setup_no_process_group, setup_add_group):
-        """"""
-        no_process_group: orm.Group = setup_no_process_group
+    # @pytest.mark.usefixtures('aiida_profile_clean')
+    # def test_should_dump_processes(self, setup_no_process_group, setup_add_group):
+    #     """"""
+    #     no_process_group: orm.Group = setup_no_process_group
+    #     add_group: orm.Group = setup_add_group
+
+    #     collection_dumper = CollectionDumper(collection=no_process_group)
+
+    #     assert collection_dumper._should_dump_processes() is False
+
+    #     collection_dumper = CollectionDumper(collection=add_group)
+
+    #     assert collection_dumper._should_dump_processes() is True
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_resolve_collection_nodes(self, setup_add_group, generate_calculation_node_add):
         add_group: orm.Group = setup_add_group
+        add_nodes = add_group.nodes
 
-        collection_dumper = CollectionDumper(collection=no_process_group)
+        add_dumper = CollectionDumper(collection=add_group)
 
-        assert collection_dumper.should_dump_processes() is False
-
-        collection_dumper = CollectionDumper(collection=add_group)
-
-        assert collection_dumper.should_dump_processes() is True
-
-
-    def test_get_nodes_add_group(self, setup_add_group):
-
-        add_group: orm.Group = setup_add_group
-
-        collection_dumper = CollectionDumper(collection=add_group)
-
-        nodes = collection_dumper._get_nodes()
+        nodes = add_dumper._get_collection_nodes()
         assert len(nodes) == 1
-        # add_group: orm.Group = setup_add_group
+        assert isinstance(nodes[0], str)
+        assert nodes[0] == add_nodes[0].uuid
+        assert isinstance(orm.load_node(nodes[0]), orm.CalcJobNode)
 
-        # collection_dumper = CollectionDumper(collection=add_group)
-        # nodes = collection_dumper._get_nodes()
-        # group_node = orm.load_node(nodes[0])
-        # group_node_uuid = nodes[0]
+        # Now, add another CalcJobNode to the profile
+        # As not part of the group, should not be returned
+        # Also, last_dump_time is None here by default, so no filtering applied
+        # Still contains the previous node in the returned collection
+        cj_node1 = generate_calculation_node_add()
+        nodes = add_dumper._get_collection_nodes()
+        assert len(nodes) == 1
+        assert isinstance(nodes[0], str)
+        assert nodes[0] == add_nodes[0].uuid
+        assert isinstance(orm.load_node(nodes[0]), orm.CalcJobNode)
 
-        # assert len(nodes) == 1
-        # assert isinstance(nodes[0], str)
-        # assert isinstance(group_node, orm.CalcJobNode)
-        # assert nodes[0] == group_node_uuid
+        # Now, add the node to the group, should be captured by get_nodes
+        add_group.add_nodes([cj_node1])
+        nodes = add_dumper._get_collection_nodes()
+        assert len(nodes) == 2
+        assert set(nodes) == set([add_nodes[0].uuid, cj_node1.uuid])
 
-        # # Now, add another CalcJobNode to the profile
-        # # As not part of the group, should not be returned
-        # cj_node1 = generate_calculation_node_add()
-        # nodes = collection_dumper._get_nodes()
-        # assert len(nodes) == 1
+        # Filtering by time should work -> Now, only cj_node2 gets returned
+        add_dumper.base_dumper.last_dump_time = datetime.now().astimezone()
 
-        # # Now, add the node to the group, should be captured by get_nodes
-        # add_group.add_nodes([cj_node1])
-        # nodes = collection_dumper._get_nodes()
-        # assert len(nodes) == 2
+        cj_node2 = generate_calculation_node_add()
+        add_group.add_nodes([cj_node2])
 
-        # # Filtering by time should work
-        # collection_dumper.base_dumper.last_dump_time = datetime.now().astimezone()
+        nodes = add_dumper._get_collection_nodes()
+        assert len(nodes) == 1
+        assert nodes[0] == cj_node2.uuid
 
-        # cj_node2 = generate_calculation_node_add()
-        # add_group.add_nodes([cj_node2])
+        for invalid_collection in [{'foo': 'bar'}, [1.0, 1.1]]:
+            collection_dumper = CollectionDumper(collection=invalid_collection)
+            with pytest.raises(ValueError):
+                collection_dumper._get_collection_nodes()
 
-        # nodes = collection_dumper._get_nodes()
-        # assert len(nodes) == 1
-        # assert nodes[0] == cj_node2.uuid
-
-        # with pytest.raises(TypeError):
-        #     collection_dumper = CollectionDumper(collection=[1])
-        #     collection_dumper._get_nodes()
-
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_get_processes_to_dump(self, setup_add_group, setup_multiply_add_group, duplicate_group):
         add_group: orm.Group = setup_add_group
         multiply_add_group: orm.Group = setup_multiply_add_group
@@ -154,21 +154,15 @@ class TestCollectionDumper:
 
         # TODO: Test here also de-duplication with a Workflow with a sub-workflow
 
-    def test_dump_calculations(self, setup_add_group, setup_multiply_add_group, tmp_path):
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_dump_calculations_add(self, setup_add_group, tmp_path):
         add_group: orm.Group = setup_add_group
-        multiply_add_group: orm.Group = setup_multiply_add_group
+        add_group_label = add_group.label
+        add_group_path = tmp_path / add_group_label
 
-        add_group_path = Path('add_group')
-        multiply_add_group_path = Path('multiply_add_group')
+        add_dumper = CollectionDumper(collection=add_group, output_path=add_group_path)
 
-        add_dumper = CollectionDumper(collection=add_group, output_path=tmp_path / add_group_path)
-        multiply_add_dumper = CollectionDumper(
-            collection=multiply_add_group, output_path=tmp_path / multiply_add_group_path
-        )
-
-        add_processes_to_dump = add_dumper._get_processes_to_dump()
-
-        add_dumper._dump_calculations(add_processes_to_dump.calculations)
+        add_dumper._dump_calculations(add_dumper._get_processes_to_dump().calculations)
 
         expected_tree = {
             'calculations': {
@@ -182,39 +176,44 @@ class TestCollectionDumper:
 
         compare_tree(expected=expected_tree, base_path=tmp_path, relative_path=add_group_path)
 
-        multiply_add_processes_to_dump = multiply_add_dumper._get_processes_to_dump()
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_dump_calculations_multiply_add(self, setup_multiply_add_group, tmp_path):
+        multiply_add_group: orm.Group = setup_multiply_add_group
+        multiply_add_group_label = multiply_add_group.label
+        multiply_add_group_path = tmp_path / multiply_add_group_label
+
+        multiply_add_dumper = CollectionDumper(collection=multiply_add_group, output_path=multiply_add_group_path)
 
         # No calculations to dump when deduplication is enabled
-        multiply_add_dumper._dump_calculations(multiply_add_processes_to_dump.calculations)
-        multiply_add_test_path: Path = multiply_add_group_path / 'calculations'
+        multiply_add_dumper._dump_calculations(multiply_add_dumper._get_processes_to_dump().calculations)
+        assert not (multiply_add_group_path / 'calculations').exists()
 
-        assert not multiply_add_test_path.exists()
-
+        # Now, disable de-duplication -> Should dump calculations
         multiply_add_dumper_no_dedup = CollectionDumper(
             collection=multiply_add_group, output_path=multiply_add_group_path, deduplicate=False
         )
-        multiply_add_processes_to_dump = multiply_add_dumper_no_dedup._get_processes_to_dump()
 
-        #  calculations to dump when deduplication is enabled
-        multiply_add_dumper_no_dedup._dump_calculations(multiply_add_processes_to_dump.calculations)
+        multiply_add_dumper_no_dedup._dump_calculations(
+            multiply_add_dumper_no_dedup._get_processes_to_dump().calculations
+        )
 
         expected_tree_no_dedup = {
             'calculations': {
-                'ArithmeticAddCalculation-15': {
+                'ArithmeticAddCalculation-8': {
                     'inputs': ['_aiidasubmit.sh', 'aiida.in'],
                     'node_inputs': [],
                     'outputs': ['_scheduler-stderr.txt', '_scheduler-stdout.txt', 'aiida.out'],
                 },
-                'multiply-13': {
+                'multiply-6': {
                     'inputs': ['source_file'],
                     'node_inputs': [],
                 },
             }
         }
 
-        compare_tree(expected=expected_tree_no_dedup, base_path=tmp_path, relative_path=multiply_add_group_path)
+        compare_tree(expected=expected_tree_no_dedup, base_path=tmp_path, relative_path=Path(multiply_add_group_label))
 
-        pytest.set_trace()
+        # pytest.set_trace()
 
     # def test_dump_workflows(self):
     #     pass

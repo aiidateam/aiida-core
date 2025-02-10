@@ -14,9 +14,13 @@ from pathlib import Path
 
 @dataclass
 class BaseDumper:
+    """Container for shared arguments of all Dumper classes."""
+
     dump_parent_path: Path | None = None
     overwrite: bool = False
     incremental: bool = True
+    check_dirs: bool = False
+    # TODO: Make this a per-class attribute?
     last_dump_time: datetime | None = None
 
     def __post_init__(self):

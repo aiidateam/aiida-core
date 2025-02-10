@@ -85,7 +85,7 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         name: aiida-pytests-py3.9
-        file: ./coverage.xml
+        files: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
   tests-presto:
@@ -126,8 +126,6 @@ jobs:
       with:
         python-version: '3.12'
         from-lock: 'true'
-        # NOTE: The `verdi devel check-undesired-imports` fails if
-        # the 'tui' extra is installed.
         extras: ''
 
     - name: Run verdi tests

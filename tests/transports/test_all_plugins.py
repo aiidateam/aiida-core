@@ -1232,3 +1232,28 @@ def test_asynchronous_execution(custom_transport, tmp_path):
             except ProcessLookupError:
                 # If the process is already dead (or has never run), I just ignore the error
                 pass
+
+
+def test_rename(custom_transport, tmp_path_remote):
+    """Test the rename function of the transport plugin."""
+    with custom_transport as transport:
+        old_file = tmp_path_remote / 'oldfile.txt'
+        new_file = tmp_path_remote / 'newfile.txt'
+        another_file = tmp_path_remote / 'anotherfile.txt'
+
+        # Create a test file to rename
+        old_file.touch()
+        another_file.touch()
+        assert old_file.exists()
+        assert another_file.exists()
+
+        # Perform rename operation
+        transport.rename(old_file, new_file)
+
+        # Verify rename was successful
+        assert not old_file.exists()
+        assert new_file.exists()
+
+        # Perform rename operation if new file already exists
+        with pytest.raises(OSError, match='already exist|destination exists'):
+            transport.rename(new_file, another_file)

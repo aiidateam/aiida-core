@@ -18,8 +18,6 @@ from collections import OrderedDict
 from pathlib import Path, PurePosixPath
 from typing import Optional, Union
 
-import chardet
-
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
@@ -504,6 +502,7 @@ class Transport(abc.ABC):
         # Return the decoded strings
         if sys.platform == 'win32':
             import chardet
+
             outenc = chardet.detect(stdout_bytes)['encoding']
             errenc = chardet.detect(stderr_bytes)['encoding']
             if outenc is None:

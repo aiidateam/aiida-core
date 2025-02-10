@@ -503,6 +503,7 @@ class Transport(abc.ABC):
         )
         # Return the decoded strings
         if sys.platform == 'win32':
+            import chardet
             outenc = chardet.detect(stdout_bytes)['encoding']
             errenc = chardet.detect(stderr_bytes)['encoding']
             if outenc is None:

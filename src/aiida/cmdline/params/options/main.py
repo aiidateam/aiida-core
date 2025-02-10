@@ -53,12 +53,10 @@ __all__ = (
     'DB_PORT',
     'DB_USERNAME',
     'DEBUG',
-    'DEDUPLICATE',
     'DESCRIPTION',
     'DICT_FORMAT',
     'DICT_KEYS',
     'DRY_RUN',
-    'DUMP_CONFIG_FILE',
     'DUMP_PROCESSES',
     'EXIT_STATUS',
     'EXPORT_FORMAT',
@@ -792,13 +790,13 @@ SORT = OverridableOption(
     show_default=True,
 )
 
-DEDUPLICATE = OverridableOption(
-    '--deduplicate/--no-deduplicate',
-    is_flag=True,
-    default=True,
-    show_default=True,
-    help='',
-)
+# DEDUPLICATE = OverridableOption(
+#     '--deduplicate/--no-deduplicate',
+#     is_flag=True,
+#     default=True,
+#     show_default=True,
+#     help='',
+# )
 
 DUMP_PROCESSES = OverridableOption(
     '--dump-processes/--no-dump-processes',
@@ -806,13 +804,6 @@ DUMP_PROCESSES = OverridableOption(
     default=True,
     show_default=True,
     help='Dump process data.',
-)
-
-DUMP_CONFIG_FILE = OverridableOption(
-    '--dump-config-file',
-    default=None,
-    type=types.FileOrUrl(),
-    help='Provide dumping options via a config file in YAML format.',
 )
 
 ORGANIZE_BY_GROUPS = OverridableOption(

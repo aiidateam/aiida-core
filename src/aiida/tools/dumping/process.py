@@ -42,6 +42,8 @@ logger = logging.getLogger(__name__)
 
 
 class ProcessDumper:
+    """Class to handle dumping of an AiiDA process."""
+
     def __init__(
         self,
         base_dumper: BaseDumper | None = None,
@@ -52,6 +54,10 @@ class ProcessDumper:
         flat: bool = False,
         dump_unsealed: bool = False,
     ) -> None:
+        """Initialize the CollectionDumper.
+
+
+        """
         self.include_inputs = include_inputs
         self.include_outputs = include_outputs
         self.include_attributes = include_attributes
@@ -218,8 +224,7 @@ class ProcessDumper:
         # for key, value in kwargs.items():
         #     setattr(self, key, value)
 
-        if output_path is None:
-            output_path = self._generate_default_dump_path(process_node=process_node)
+        output_path = output_path or self._generate_default_dump_path(process_node=process_node)
 
         prepare_dump_path(
             path_to_validate=output_path, overwrite=self.base_dumper.overwrite, incremental=self.base_dumper.incremental

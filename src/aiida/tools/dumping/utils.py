@@ -13,6 +13,7 @@ from __future__ import annotations
 import shutil
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -40,6 +41,8 @@ def prepare_dump_path(
         `incremental` are enabled.
     :raises FileNotFoundError: If no `safeguard_file` is found."""
 
+    # TODO: Handle symlinks
+
     if overwrite and incremental:
         msg = 'Both overwrite and incremental set to True. Only specify one.'
         raise ValueError(msg)
@@ -63,9 +66,16 @@ def prepare_dump_path(
             safeguard_exists = (path_to_validate / safeguard_file).is_file()
 
             if safeguard_exists:
+                logger.report(path_to_validate)
+                # breakpoint()
                 msg = '`--overwrite` option selected. Will recreate directory.'
                 logger.report(msg)
-                shutil.rmtree(path_to_validate)
+                try:
+                    shutil.rmtree(path_to_validate)
+                except OSError:
+                    # `shutil.rmtree` fails for symbolic links with
+                    # OSError: Cannot call rmtree on a symbolic link
+                    _delete_dir_recursively(path_to_validate)
 
             else:
                 msg = (
@@ -79,20 +89,64 @@ def prepare_dump_path(
     (path_to_validate / safeguard_file).touch()
 
 
-def sanitize_file_extension(filename: str | Path):
-    if isinstance(filename, Path):
-        filename = str(filename)
-    if filename.endswith('.mpl_pdf'):
-        filename = filename.replace('.mpl_pdf', '.pdf')
-    if filename.endswith('.mpl_png'):
-        filename = filename.replace('.mpl_png', '.png')
+def _delete_dir_recursively(path):
+    """
+    Delete folder, sub-folders and files.
+    Implementation taken from: https://stackoverflow.com/a/70285390/9431838
+    """
+    for f in path.glob('**/*'):
+        if f.is_symlink():
+            f.unlink(missing_ok=True)  # missing_ok is added in python 3.8
+        elif f.is_file():
+            f.unlink()
+        elif f.is_dir():
+            try:
+                f.rmdir()  # delete empty sub-folder
+            except OSError:  # sub-folder is not empty
+                _delete_dir_recursively(f)  # recurse the current sub-folder
+            except Exception as exception:  # capture other exception
+                print(f'exception name: {exception.__class__.__name__}')
+                print(f'exception msg: {exception}')
 
-    return Path(filename)
+    try:
+        path.rmdir()  # time to delete an empty folder
+    except NotADirectoryError:
+        path.unlink()  # delete folder even if it is a symlink, linux
+    except Exception as exception:
+        print(f'exception name: {exception.__class__.__name__}')
+        print(f'exception msg: {exception}')
 
 
-def filter_by_last_dump_time(nodes: list[str], last_dump_time: datetime | None = None) -> list[str]:
-    if last_dump_time is not None:
-        orm_nodes = [orm.load_node(node) for node in nodes]
-        return [node.uuid for node in orm_nodes if node.mtime > last_dump_time]
-    else:
+def _get_filtered_nodes(nodes: list[str | int], last_dump_time: datetime, key: str = 'uuid') -> list[str | int]:
+    """Helper function to get ``orm.Node``s from the DB based on ``id``/``uuid`` and filter by ``mtime``.
+
+    :param nodes: Collection of node PKs or UUIDs
+    :param last_dump_time: Last time nodes were dumped to disk.
+    :param key: Identifier to obtain nodes with, either ``id`` or ``uuid``.
+    :return: List of nodes filtered by ``last_dump_time``.
+    """
+
+    qb = orm.QueryBuilder().append(orm.Node, filters={key: {'in': nodes}})
+    nodes_orm: list[orm.Node] = cast(list[orm.Node], qb.all(flat=True))
+    return [getattr(node, key) for node in nodes_orm if node.mtime > last_dump_time]
+
+
+def filter_by_last_dump_time(nodes: list[str | int], last_dump_time: datetime) -> list[str | int]:
+    """Filter a list of nodes by the last dump time of the corresponding dumper.
+
+    :param nodes: A list of node identifiers, which can be either UUIDs (str) or IDs (int).
+    :param last_dump_time: Only include nodes dumped after this timestamp.
+    :return: A list of node identifiers that have a dump time after the specified last_dump_time.
+    """
+
+    # TODO: Possibly directly use QueryBuilder filter. Though, `nodes` directly accessible from orm.Group.nodes
+
+    if not nodes or last_dump_time is None:
         return nodes
+
+    key = 'uuid' if isinstance(nodes[0], str) else 'id'
+    return _get_filtered_nodes(
+        nodes=nodes,
+        last_dump_time=last_dump_time,
+        key=key,
+    )

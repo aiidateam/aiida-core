@@ -519,7 +519,7 @@ class Repository:
                 dirpath.mkdir(parents=True, exist_ok=True)
 
                 with self.open(root / filename) as handle:
-                    # TODO: Possibly skip 
+                    # TODO: Possibly skip
                     filepath.write_bytes(handle.read())
 
     # these methods are not actually used in aiida-core, but are here for completeness

@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
 from datetime import datetime
 from pathlib import Path
@@ -20,11 +19,10 @@ from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.base import BaseDumper
+from aiida.tools.dumping.config import ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
 from aiida.tools.dumping.utils import filter_by_last_dump_time
-from aiida.tools.dumping.config import ProfileDumpConfig
-from typing import Literal
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -52,6 +50,7 @@ class ProcessesToDump(NamedTuple):
 #     delete_missing: bool = False
 #     extra_calc_dirs: bool = False
 #     organize_by_groups: bool = True
+
 
 class CollectionDumper:
     """Class to handle dumping of a collection of AiiDA ORM entities."""
@@ -193,7 +192,6 @@ class CollectionDumper:
         )
 
     def _dump_calculations(self, calculations: Sequence[orm.CalculationNode]) -> None:
-
         """Dump a collection of calculations.
 
         Deduplication is already handled in the ``get_processes`` method, where PKs/UUIDs are used, rather than AiiDA
@@ -234,9 +232,7 @@ class CollectionDumper:
         self.dump_logger.update_calculations(new_calculations=dumped_calculations)
 
     def _dump_workflows(self, workflows: Sequence[orm.WorkflowNode]) -> None:
-        """Dump a collection of workflows.
-
-        """
+        """Dump a collection of workflows."""
         workflow_path: Path = self.output_path / 'workflows'
         dumped_workflows: dict[str, DumpLog] = {}
 
@@ -293,82 +289,82 @@ class CollectionDumper:
                 # breakpoint()
                 self._dump_calculations(calculations=collection_processes.calculations)
 
+
 # TODO: See, if I can generalize the dump sub-methods
-    # def _dump_processes(
-    #     self,
-    #     # processes: Sequence[orm.CalculationNode | orm.WorkflowNode],
-    #     processes: Sequence[orm.CalculationNode] | Sequence[orm.WorkflowNode],
-    # ) -> None:
-    #     """Dump a collection of calculations or workflows.
+# def _dump_processes(
+#     self,
+#     # processes: Sequence[orm.CalculationNode | orm.WorkflowNode],
+#     processes: Sequence[orm.CalculationNode] | Sequence[orm.WorkflowNode],
+# ) -> None:
+#     """Dump a collection of calculations or workflows.
 
-    #     :param processes: Sequence of ``orm.CalculationNode``s or ``orm.WorkflowNode``s
-    #     :param process_type: Type of processes, either 'calculations' or 'workflows'
-    #     :return: None
-    #     """
+#     :param processes: Sequence of ``orm.CalculationNode``s or ``orm.WorkflowNode``s
+#     :param process_type: Type of processes, either 'calculations' or 'workflows'
+#     :return: None
+#     """
 
-    #     # From, e.g., 'aiida.workflows:core.arithmetic.multiply_add' to 'workflows
-    #     if isinstance(processes[0], orm.CalculationNode):
-    #         process_type_str = 'calculations'
-    #     elif isinstance(processes[0], orm.WorkflowNode):
-    #         process_type_str = 'workflows'
-    #     # else:
-    #         # breakpoint()
-    #     # process_type_str = processes[0].process_type.split(':')[0].split('.')[1]
-    #     process_type_path = self.output_path / process_type_str
-    #     process_type_path.mkdir(exist_ok=True, parents=True)
+#     # From, e.g., 'aiida.workflows:core.arithmetic.multiply_add' to 'workflows
+#     if isinstance(processes[0], orm.CalculationNode):
+#         process_type_str = 'calculations'
+#     elif isinstance(processes[0], orm.WorkflowNode):
+#         process_type_str = 'workflows'
+#     # else:
+#         # breakpoint()
+#     # process_type_str = processes[0].process_type.split(':')[0].split('.')[1]
+#     process_type_path = self.output_path / process_type_str
+#     process_type_path.mkdir(exist_ok=True, parents=True)
 
-    #     dumped_processes: dict[str, DumpLog] = {}
-    #     logged_processes: DumpDict = self.dump_logger.get_log()[process_type_str]
+#     dumped_processes: dict[str, DumpLog] = {}
+#     logged_processes: DumpDict = self.dump_logger.get_log()[process_type_str]
 
-    #     # breakpoint()
+#     # breakpoint()
 
-    #     for process in processes:
-    #         process_dumper = self.process_dumper
+#     for process in processes:
+#         process_dumper = self.process_dumper
 
-    #         process_dump_path = process_type_path / process_dumper._generate_default_dump_path(
-    #             process_node=process, prefix=None
-    #         )
+#         process_dump_path = process_type_path / process_dumper._generate_default_dump_path(
+#             process_node=process, prefix=None
+#         )
 
-    #         # Target directory already exists, skip this process
-    #         if process_dump_path.exists():
-    #             continue
+#         # Target directory already exists, skip this process
+#         if process_dump_path.exists():
+#             continue
 
-    #         else:
-    #             # Symlink here, if deduplication enabled and process was already dumped
-    #             # TODO: Possibly check dirs here
-    #             # TODO: Alternatively have method/endpoint to delete one calculation from the dumping
-    #             # TODO: Which would also update the log.
-    #             # Otherwise, one might delete a calculation, maybe because it was wrong, and then it won't be dumped
-    #             # anymore ever.
-    #             if self.deduplicate and process.uuid in logged_processes.keys():
-    #                 try:
-    #                     os.symlink(
-    #                         src=logged_processes[process.uuid].path,
-    #                         dst=process_dump_path,
-    #                     )
-    #                 except:
-    #                     # raise
-    #                     pass
-    #                     # breakpoint()
-    #             else:
-    #                 if process_type_str == 'calculations':
-    #                     process_dumper._dump_calculation(calculation_node=process, output_path=process_dump_path)
-    #                 elif process_type_str == 'workflows':
-    #                     process_dumper._dump_workflow(
-    #                         workflow_node=process,
-    #                         output_path=process_dump_path,
-    #                     )
+#         else:
+#             # Symlink here, if deduplication enabled and process was already dumped
+#             # TODO: Possibly check dirs here
+#             # TODO: Alternatively have method/endpoint to delete one calculation from the dumping
+#             # TODO: Which would also update the log.
+#             # Otherwise, one might delete a calculation, maybe because it was wrong, and then it won't be dumped
+#             # anymore ever.
+#             if self.deduplicate and process.uuid in logged_processes.keys():
+#                 try:
+#                     os.symlink(
+#                         src=logged_processes[process.uuid].path,
+#                         dst=process_dump_path,
+#                     )
+#                 except:
+#                     # raise
+#                     pass
+#                     # breakpoint()
+#             else:
+#                 if process_type_str == 'calculations':
+#                     process_dumper._dump_calculation(calculation_node=process, output_path=process_dump_path)
+#                 elif process_type_str == 'workflows':
+#                     process_dumper._dump_workflow(
+#                         workflow_node=process,
+#                         output_path=process_dump_path,
+#                     )
 
 
-    #             dumped_processes[process.uuid] = DumpLog(
-    #                 path=process_dump_path,
-    #                 time=datetime.now().astimezone(),
-    #             )
+#             dumped_processes[process.uuid] = DumpLog(
+#                 path=process_dump_path,
+#                 time=datetime.now().astimezone(),
+#             )
 
-    #     # breakpoint()
+#     # breakpoint()
 
-    #     if process_type_str == 'calculations':
-    #         self.dump_logger.update_calculations(new_calculations=dumped_processes)
-    #     elif process_type_str == 'workflows':
-    #         self.dump_logger.update_workflows(new_workflows=dumped_processes)
-
+#     if process_type_str == 'calculations':
+#         self.dump_logger.update_calculations(new_calculations=dumped_processes)
+#     elif process_type_str == 'workflows':
+#         self.dump_logger.update_workflows(new_workflows=dumped_processes)

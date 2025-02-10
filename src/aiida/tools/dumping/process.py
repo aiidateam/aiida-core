@@ -54,10 +54,7 @@ class ProcessDumper:
         flat: bool = False,
         dump_unsealed: bool = False,
     ) -> None:
-        """Initialize the CollectionDumper.
-
-
-        """
+        """Initialize the CollectionDumper."""
         self.include_inputs = include_inputs
         self.include_outputs = include_outputs
         self.include_attributes = include_attributes

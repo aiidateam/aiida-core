@@ -17,8 +17,6 @@ import sys
 from datetime import datetime
 from typing import Any, Dict
 from uuid import UUID
-from aiida.manage import get_manager, load_profile
-from aiida.manage.configuration.profile import Profile
 
 from .lang import classproperty
 

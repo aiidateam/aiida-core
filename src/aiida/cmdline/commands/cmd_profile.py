@@ -288,17 +288,20 @@ def profile_delete(force, delete_data, profiles):
     '--symlink-duplicates/--no-symlink-duplicates',
     default=True,
     show_default=True,
-    help='Symlink data if the same node is contained in multiple groups.')
+    help='Symlink data if the same node is contained in multiple groups.',
+)
 @click.option(
     '--delete-missing/--no-delete-missing',
     default=False,
     show_default=True,
-    help="If a previously dumped node is deleted from AiiDA's DB, also delete the corresponding dump directory.")
+    help="If a previously dumped node is deleted from AiiDA's DB, also delete the corresponding dump directory.",
+)
 @click.option(
     '--extra-calc-dirs/--no-extra-calc-dirs',
     default=False,
     show_default=True,
-    help='If a top-level process calls sub-processes, create a designated directory only for the top-level process.')
+    help='If a top-level process calls sub-processes, create a designated directory only for the top-level process.',
+)
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
@@ -331,9 +334,9 @@ def profile_mirror(
 
     from aiida.tools.dumping import ProcessDumper, ProfileDumper
     from aiida.tools.dumping.base import BaseDumper
+    from aiida.tools.dumping.config import ProfileDumpConfig
     from aiida.tools.dumping.logger import DumpLogger
     from aiida.tools.dumping.utils import prepare_dump_path
-    from aiida.tools.dumping.config import ProfileDumpConfig
 
     profile = ctx.obj['profile']
 

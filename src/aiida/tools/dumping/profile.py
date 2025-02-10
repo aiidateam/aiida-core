@@ -11,12 +11,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Sequence, cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
-from aiida.manage import get_manager, load_profile
+from aiida.manage import load_profile
 from aiida.manage.configuration.profile import Profile
 from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.collection import CollectionDumper

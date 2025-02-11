@@ -18,22 +18,19 @@ from typing import TYPE_CHECKING, NamedTuple
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.base import BaseDumper
-from aiida.tools.dumping.config import ProfileDumpConfig
+from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.utils import extend_calculations, filter_by_last_dump_time
+from aiida.tools.dumping.utils import NodeDumpMapper, extend_calculations, filter_by_last_dump_time
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from aiida.tools.dumping.logger import DumpDict
+    from collections.abc import Collection, Sequence
 
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 
-class ProcessesToDump(NamedTuple):
+class ProcessesDumpContainer(NamedTuple):
     calculations: Sequence[orm.CalculationNode]
     workflows: Sequence[orm.WorkflowNode]
 
@@ -43,23 +40,15 @@ class ProcessesToDump(NamedTuple):
         return len(self.calculations) == 0 and len(self.workflows) == 0
 
 
-# @dataclass
-# class CollectionDumpConfig:
-#     dump_processes: bool = True
-#     symlink_duplicates: bool = True
-#     delete_missing: bool = False
-#     extra_calc_dirs: bool = False
-#     organize_by_groups: bool = True
-
-
 class CollectionDumper:
     """Class to handle dumping of a collection of AiiDA ORM entities."""
 
     def __init__(
         self,
-        collection: orm.Group | str | Sequence[str] | Sequence[int],
+        # TODO: Refactor here to different arguments: Group, and collection_nodes
+        collection: orm.Group | str | Collection[str],
         profile_dump_config: ProfileDumpConfig | None = None,
-        base_dumper: BaseDumper | None = None,
+        base_dump_config: BaseDumpConfig | None = None,
         process_dumper: ProcessDumper | None = None,
         dump_logger: DumpLogger | None = None,
         output_path: Path | None = None,
@@ -67,7 +56,7 @@ class CollectionDumper:
         """Initialize the CollectionDumper.
 
         :param collection: The collection of AiiDA ORM entities to be dumped, either a group, group label, or list of
-        :param base_dumper: Base dumper instance or None (gets instantiated).
+        :param base_dump_config: Base dumper instance or None (gets instantiated).
         :param process_dumper: Process dumper instance or None (gets instantiated).
         :param dump_logger: Logger for the dumping (gets instantiated).
         :param output_path: The parent output path for dumping the collection nodes.
@@ -76,20 +65,20 @@ class CollectionDumper:
 
         self.collection = self._validate_collection(collection)
 
-        self.base_dumper = base_dumper or BaseDumper()
+        self.base_dump_config = base_dump_config or BaseDumpConfig()
         self.process_dumper = process_dumper or ProcessDumper()
-        self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.base_dumper.dump_parent_path)
+        self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.base_dump_config.dump_parent_path)
 
         self.output_path = output_path or Path.cwd()
 
         self.profile_dump_config = profile_dump_config or ProfileDumpConfig()
 
-        self._collection_nodes: Sequence[str] | Sequence[int] | None = None
-        self._processes_to_dump: ProcessesToDump | None = None
+        self._collection_nodes: Collection[str] | None = None
+        self._processes_to_dump: ProcessesDumpContainer | None = None
 
     def _validate_collection(
-        self, collection: orm.Group | str | Sequence[str] | Sequence[int]
-    ) -> orm.Group | Sequence[str] | Sequence[int]:
+        self, collection: orm.Group | str | Collection[str] | Collection[int]
+    ) -> orm.Group | Collection[str]:
         """Validate the given collection identifier.
 
         :param collection: The input collection to validate.
@@ -104,9 +93,23 @@ class CollectionDumper:
             except Exception as exc:
                 msg = f'Could not load group: {collection}.'
                 raise NotExistent(msg) from exc
-        if (isinstance(collection, list) and all(isinstance(n, (str, int)) for n in collection)) or isinstance(
-            collection, orm.Group
-        ):
+
+        elif isinstance(collection, orm.Group):
+            return collection
+
+        elif isinstance(collection, list):
+            if all(isinstance(n, str) for n in collection):
+                return collection
+
+            elif all(isinstance(n, int) for n in collection):
+                msg = 'Passing node collections via their PK not yet supported.'
+                raise ValueError(msg)
+
+            else:
+                msg = 'Mixing identifiers or passing other types not supported'
+                raise ValueError(msg)
+
+        elif isinstance(collection, list) and all(isinstance(n, int) for n in collection):
             return collection
 
         else:
@@ -114,7 +117,7 @@ class CollectionDumper:
             raise ValueError(msg)
 
     @property
-    def collection_nodes(self) -> Sequence[str] | Sequence[int]:
+    def collection_nodes(self) -> Collection[str]:
         """Return collection nodes.
 
         :return: List of collection node identifiers.
@@ -123,24 +126,26 @@ class CollectionDumper:
             self._collection_nodes = self._get_collection_nodes()
         return self._collection_nodes
 
-    def _get_collection_nodes(self) -> Sequence[str] | Sequence[int]:
-        """Retrieve the node ``PK``s/``UUID``s from the collection, filtered by the last dump time, if incremental
-        dumping is selected.
+    def _get_collection_nodes(self) -> Collection[str]:
+        """Retrieve the node UUIDs from the collection, filtered by the last dump time, if for incremental dumping.
 
-        :return: List of node identifiers.
+        :return: List of node UUIDs.
         """
         if not self.collection:
             return []
 
-        nodes = [n.uuid for n in self.collection.nodes] if isinstance(self.collection, orm.Group) else self.collection
+        if isinstance(self.collection, orm.Group):
+            nodes: Collection[str] = [n.uuid for n in self.collection.nodes]
+        else:
+            nodes = self.collection
 
-        if self.base_dumper.incremental and self.base_dumper.last_dump_time:
-            nodes = filter_by_last_dump_time(nodes, last_dump_time=self.base_dumper.last_dump_time)
+        if self.base_dump_config.incremental and self.base_dump_config.last_dump_time:
+            nodes = filter_by_last_dump_time(nodes, last_dump_time=self.base_dump_config.last_dump_time)
 
         return nodes
 
     @property
-    def processes_to_dump(self) -> ProcessesToDump:
+    def processes_to_dump(self) -> ProcessesDumpContainer:
         """Get the processes to dump from the collection of nodes.
 
         :return: Instance of the ``ProcessesToDump`` class containing the selected calculations and workflows.
@@ -149,7 +154,7 @@ class CollectionDumper:
             self._processes_to_dump = self._get_processes_to_dump()
         return self._processes_to_dump
 
-    def _get_processes_to_dump(self) -> ProcessesToDump:
+    def _get_processes_to_dump(self) -> ProcessesDumpContainer:
         """Retrieve the processeses from the collection nodes.
 
         If deduplication is selected, this method takes care of only dumping top-level workflows and only dump
@@ -158,8 +163,12 @@ class CollectionDumper:
         :return: Instance of the ``ProcessesToDump`` class containing the selected calculations and workflows.
         """
 
+        # Deduplication is already handled in the ``get_processes`` method, where PKs/UUIDs are used, rather than AiiDA
+        # ORM entities as here. Specifically, calculations that are part of a workflow are not dumpid in their own,
+        # dedicated directory if they are part of a workflow.
+
         if not self.collection_nodes:
-            return ProcessesToDump(calculations=[], workflows=[])
+            return ProcessesDumpContainer(calculations=[], workflows=[])
 
         # Better than: `nodes = [orm.load_node(n) for n in self.collection_nodes]`
         # As the list comprehension fetches each node from the DB individually
@@ -173,90 +182,62 @@ class CollectionDumper:
                 profile_dump_config=self.profile_dump_config, calculations=calculations, workflows=workflows
             )
 
-        return ProcessesToDump(
+        return ProcessesDumpContainer(
             calculations=calculations,
             workflows=workflows,
         )
 
-    def _dump_calculations(self, calculations: Sequence[orm.CalculationNode]) -> None:
-        """Dump a collection of calculations.
+    def _dump_processes(self, processes: Sequence[orm.CalculationNode] | Sequence[orm.WorkflowNode]) -> None:
+        """Dump a collection of processes."""
 
-        Deduplication is already handled in the ``get_processes`` method, where PKs/UUIDs are used, rather than AiiDA
-        ORM entities as here. Specifically, calculations that are part of a workflow are not dumpid in their own,
-        dedicated directory if they are part of a workflow.
+        if len(processes) == 0:
+            return
 
-        :param calculations: Sequence of ``orm.CalculationNode``s
-        :return: None
-        """
+        # TODO: Only allow for "pure" sequences of Calculation- or WorkflowNodes, or also mixed?
+        # TODO: If the latter possibly also have directory creation in the loop
+        sub_path = self.output_path / NodeDumpMapper.get_directory(node=processes[0])
+        sub_path.mkdir(exist_ok=True, parents=True)
 
-        calculations_path = self.output_path / 'calculations'
-        dumped_calculations: dict[str, DumpLog] = {}
+        logger_attr = NodeDumpMapper.get_logger_attr(node=processes[0])
+        # ! `getattr` gives a reference to the object, thus I can update the store directly
+        current_store = getattr(self.dump_logger.log, logger_attr)
 
-        logged_calculations: DumpDict = self.dump_logger.get_log()['calculations']
+        # breakpoint()
 
-        for calculation in calculations:
-            calculation_dumper = self.process_dumper
+        for process in processes:
+            process_dumper = self.process_dumper
 
-            calculation_dump_path = calculations_path / calculation_dumper._generate_default_dump_path(
-                process_node=calculation, prefix=None
-            )
+            process_dump_path = sub_path / process_dumper._generate_default_dump_path(process_node=process, prefix=None)
 
-            if self.profile_dump_config.symlink_duplicates and calculation.uuid in logged_calculations.keys():
-                calculation_dump_path.parent.mkdir(exist_ok=True, parents=True)
-                os.symlink(
-                    src=logged_calculations[calculation.uuid].path,
-                    dst=calculation_dump_path,
-                )
+            if self.profile_dump_config.symlink_duplicates and process.uuid in current_store.entries.keys():
+                if process_dump_path.exists():
+                    continue
+                else:
+                    process_dump_path.parent.mkdir(exist_ok=True, parents=True)
+                    # breakpoint()
+                    try:
+                        os.symlink(
+                            src=current_store.entries[process.uuid].path,
+                            dst=process_dump_path,
+                        )
+                        # TODO: If this works here, call `add_link` to the DumpLog to extend an existing DumpLog
+                    except FileExistsError:
+                        pass
 
-            # This is handled in the get_processes method: `if calculation.caller is None:`
             else:
                 # TODO: Don't update the logger with the UUID of a symlinked calculation as keys must be unique
                 # TODO: Possibly add another `symlink` attribute to `DumpLog` which can hold a list of symlinks
-                calculation_dumper._dump_calculation(calculation_node=calculation, output_path=calculation_dump_path)
+                # TODO: Ignore for now, as I would need to retrieve the list of links, append to it, and assign again
 
-                dumped_calculations[calculation.uuid] = DumpLog(
-                    path=calculation_dump_path,
-                    time=datetime.now().astimezone(),
-                )
+                # process_dumper._dump_calculation(calculation_node=process, output_path=process_dump_path)
+                # ! TODO: Add DumpLogger here, such that sub-calculations of workflows are also registered in the
+                # ! dumping, otherwise they end up duplicated, as the registration is done here in the for loop
+                process_dumper.dump(process_node=process, output_path=process_dump_path)
 
-        self.dump_logger.update_calculations(new_calculations=dumped_calculations)
-
-    def _dump_workflows(self, workflows: Sequence[orm.WorkflowNode]) -> None:
-        """Dump a collection of workflows."""
-        workflow_path: Path = self.output_path / 'workflows'
-        dumped_workflows: dict[str, DumpLog] = {}
-
-        workflow_path.mkdir(exist_ok=True, parents=True)
-
-        logged_workflows: DumpDict = self.dump_logger.get_log()['workflows']
-
-        for workflow in workflows:
-            workflow_dumper: ProcessDumper = self.process_dumper
-
-            workflow_dump_path: Path = workflow_path / workflow_dumper._generate_default_dump_path(
-                process_node=workflow, prefix=None
+            current_store.add_entry(
+                uuid=process.uuid,
+                entry=DumpLog(path=process_dump_path, time=datetime.now().astimezone()),
             )
-
-            # Symlink here, if deduplication enabled and workflow was already dumped
-            if self.profile_dump_config.symlink_duplicates and workflow.uuid in logged_workflows.keys():
-                workflow_dump_path.parent.mkdir(exist_ok=True, parents=True)
-
-                os.symlink(
-                    src=logged_workflows[workflow.uuid].path,
-                    dst=workflow_dump_path,
-                )
-            else:
-                workflow_dumper._dump_workflow(
-                    workflow_node=workflow,
-                    output_path=workflow_dump_path,
-                )
-
-            dumped_workflows[workflow.uuid] = DumpLog(
-                path=workflow_dump_path,
-                time=datetime.now().astimezone(),
-            )
-
-        self.dump_logger.update_workflows(new_workflows=dumped_workflows)
 
     def dump(self) -> None:
         """Top-level method that actually performs the dumping of the AiiDA data for the collection.
@@ -265,7 +246,7 @@ class CollectionDumper:
         """
 
         self.output_path.mkdir(exist_ok=True, parents=True)
-        collection_processes: ProcessesToDump = self._get_processes_to_dump()
+        collection_processes: ProcessesDumpContainer = self._get_processes_to_dump()
         # breakpoint()
 
         if not self.processes_to_dump.is_empty:
@@ -273,88 +254,6 @@ class CollectionDumper:
 
             # First, dump workflows, then calculations
             if len(collection_processes.workflows) > 0:
-                # breakpoint()
-                self._dump_workflows(workflows=collection_processes.workflows)
+                self._dump_processes(processes=collection_processes.workflows)
             if len(collection_processes.calculations) > 0:
-                # breakpoint()
-                self._dump_calculations(calculations=collection_processes.calculations)
-
-
-# TODO: See, if I can generalize the dump sub-methods
-# def _dump_processes(
-#     self,
-#     # processes: Sequence[orm.CalculationNode | orm.WorkflowNode],
-#     processes: Sequence[orm.CalculationNode] | Sequence[orm.WorkflowNode],
-# ) -> None:
-#     """Dump a collection of calculations or workflows.
-
-#     :param processes: Sequence of ``orm.CalculationNode``s or ``orm.WorkflowNode``s
-#     :param process_type: Type of processes, either 'calculations' or 'workflows'
-#     :return: None
-#     """
-
-#     # From, e.g., 'aiida.workflows:core.arithmetic.multiply_add' to 'workflows
-#     if isinstance(processes[0], orm.CalculationNode):
-#         process_type_str = 'calculations'
-#     elif isinstance(processes[0], orm.WorkflowNode):
-#         process_type_str = 'workflows'
-#     # else:
-#         # breakpoint()
-#     # process_type_str = processes[0].process_type.split(':')[0].split('.')[1]
-#     process_type_path = self.output_path / process_type_str
-#     process_type_path.mkdir(exist_ok=True, parents=True)
-
-#     dumped_processes: dict[str, DumpLog] = {}
-#     logged_processes: DumpDict = self.dump_logger.get_log()[process_type_str]
-
-#     # breakpoint()
-
-#     for process in processes:
-#         process_dumper = self.process_dumper
-
-#         process_dump_path = process_type_path / process_dumper._generate_default_dump_path(
-#             process_node=process, prefix=None
-#         )
-
-#         # Target directory already exists, skip this process
-#         if process_dump_path.exists():
-#             continue
-
-#         else:
-#             # Symlink here, if deduplication enabled and process was already dumped
-#             # TODO: Possibly check dirs here
-#             # TODO: Alternatively have method/endpoint to delete one calculation from the dumping
-#             # TODO: Which would also update the log.
-#             # Otherwise, one might delete a calculation, maybe because it was wrong, and then it won't be dumped
-#             # anymore ever.
-#             if self.deduplicate and process.uuid in logged_processes.keys():
-#                 try:
-#                     os.symlink(
-#                         src=logged_processes[process.uuid].path,
-#                         dst=process_dump_path,
-#                     )
-#                 except:
-#                     # raise
-#                     pass
-#                     # breakpoint()
-#             else:
-#                 if process_type_str == 'calculations':
-#                     process_dumper._dump_calculation(calculation_node=process, output_path=process_dump_path)
-#                 elif process_type_str == 'workflows':
-#                     process_dumper._dump_workflow(
-#                         workflow_node=process,
-#                         output_path=process_dump_path,
-#                     )
-
-
-#             dumped_processes[process.uuid] = DumpLog(
-#                 path=process_dump_path,
-#                 time=datetime.now().astimezone(),
-#             )
-
-#     # breakpoint()
-
-#     if process_type_str == 'calculations':
-#         self.dump_logger.update_calculations(new_calculations=dumped_processes)
-#     elif process_type_str == 'workflows':
-#         self.dump_logger.update_workflows(new_workflows=dumped_processes)
+                self._dump_processes(processes=collection_processes.calculations)

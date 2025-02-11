@@ -35,7 +35,7 @@ from aiida.common import LinkType
 from aiida.common.exceptions import NotExistentAttributeError
 from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
-from aiida.tools.dumping.base import BaseDumper
+from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
 from aiida.tools.dumping.utils import prepare_dump_path
 
 logger = logging.getLogger(__name__)
@@ -46,23 +46,20 @@ class ProcessDumper:
 
     def __init__(
         self,
-        base_dumper: BaseDumper | None = None,
-        include_inputs: bool = True,
-        include_outputs: bool = False,
-        include_attributes: bool = True,
-        include_extras: bool = True,
-        flat: bool = False,
-        dump_unsealed: bool = False,
+        base_dump_config: BaseDumpConfig | None = None,
+        process_dump_config: ProcessDumpConfig | None = None,
     ) -> None:
-        """Initialize the CollectionDumper."""
-        self.include_inputs = include_inputs
-        self.include_outputs = include_outputs
-        self.include_attributes = include_attributes
-        self.include_extras = include_extras
-        self.flat = flat
-        self.dump_unsealed = dump_unsealed
+        """Initialize the ProcessDumper."""
 
-        self.base_dumper = base_dumper or BaseDumper()
+        self.base_dump_config = base_dump_config or BaseDumpConfig()
+        self.process_dump_config = process_dump_config or ProcessDumpConfig()
+
+        self.include_inputs = self.process_dump_config.include_inputs
+        self.include_outputs = self.process_dump_config.include_outputs
+        self.include_attributes = self.process_dump_config.include_attributes
+        self.include_extras = self.process_dump_config.include_extras
+        self.flat = self.process_dump_config.flat
+        self.dump_unsealed = self.process_dump_config.dump_unsealed
 
     @staticmethod
     def _generate_default_dump_path(
@@ -224,7 +221,9 @@ class ProcessDumper:
         output_path = output_path or self._generate_default_dump_path(process_node=process_node)
 
         prepare_dump_path(
-            path_to_validate=output_path, overwrite=self.base_dumper.overwrite, incremental=self.base_dumper.incremental
+            path_to_validate=output_path,
+            overwrite=self.base_dump_config.overwrite,
+            incremental=self.base_dump_config.incremental,
         )
 
         if isinstance(process_node, orm.CalculationNode):
@@ -263,8 +262,8 @@ class ProcessDumper:
 
         prepare_dump_path(
             path_to_validate=output_path,
-            overwrite=self.base_dumper.overwrite,
-            incremental=self.base_dumper.incremental,
+            overwrite=self.base_dump_config.overwrite,
+            incremental=self.base_dump_config.incremental,
         )
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
@@ -320,7 +319,9 @@ class ProcessDumper:
         """
 
         prepare_dump_path(
-            path_to_validate=output_path, overwrite=self.base_dumper.overwrite, incremental=self.base_dumper.incremental
+            path_to_validate=output_path,
+            overwrite=self.base_dump_config.overwrite,
+            incremental=self.base_dump_config.incremental,
         )
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 

@@ -19,6 +19,7 @@ from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
+from aiida.tools.dumping.config import ProcessDumpConfig
 
 
 @verdi.group('profile')
@@ -333,8 +334,7 @@ def profile_mirror(
     from pathlib import Path
 
     from aiida.tools.dumping import ProcessDumper, ProfileDumper
-    from aiida.tools.dumping.base import BaseDumper
-    from aiida.tools.dumping.config import ProfileDumpConfig
+    from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
     from aiida.tools.dumping.logger import DumpLogger
     from aiida.tools.dumping.utils import prepare_dump_path
 
@@ -367,12 +367,12 @@ def profile_mirror(
         last_dump_time = None
 
     if dry_run:
-        node_counts = ProfileDumper._get_number_of_nodes_to_dump(last_dump_time)
+        # node_counts = ProfileDumper._get_number_of_nodes_to_dump(last_dump_time)
         dry_run_message = f'Dry run for mirroring of profile `{profile.name}`. Would dump:'
         echo.echo_report(dry_run_message)
-        for count, node_type in node_counts.items():
-            echo.echo_report(f'{count}: {node_type}')
-        return
+        # for count, node_type in node_counts.items():
+        #     echo.echo_report(f'{count}: {node_type}')
+        # return
 
     if incremental:
         msg = 'Incremental mirroring selected. Will update directory.'
@@ -383,15 +383,14 @@ def profile_mirror(
     except (json.JSONDecodeError, OSError):
         dump_logger = DumpLogger(dump_parent_path=path)
 
-    base_dumper = BaseDumper(
+    base_dump_config = BaseDumpConfig(
         dump_parent_path=path,
         overwrite=overwrite,
         incremental=incremental,
         last_dump_time=last_dump_time,
     )
 
-    process_dumper = ProcessDumper(
-        base_dumper=base_dumper,
+    process_dump_config = ProcessDumpConfig(
         include_inputs=include_inputs,
         include_outputs=include_outputs,
         include_attributes=include_attributes,
@@ -399,7 +398,11 @@ def profile_mirror(
         flat=flat,
     )
 
-    # breakpoint()
+    process_dumper = ProcessDumper(
+        base_dump_config=base_dump_config,
+        process_dump_config=process_dump_config,
+    )
+
     profile_dump_config = ProfileDumpConfig(
         dump_processes=dump_processes,
         symlink_duplicates=symlink_duplicates,
@@ -411,17 +414,23 @@ def profile_mirror(
     profile_dumper = ProfileDumper(
         profile=profile,
         profile_dump_config=profile_dump_config,
-        base_dumper=base_dumper,
+        base_dump_config=base_dump_config,
         process_dumper=process_dumper,
         dump_logger=dump_logger,
         groups=groups,
     )
 
-    profile_dumper.dump_processes()
-    profile_dumper.delete_processes()
+    if len(profile_dumper.processes_to_dump) == 0:
+        echo.echo_success('No processes to dump.')
+    else:
+        profile_dumper.dump_processes()
+        echo.echo_success('Dumped XXX new nodes.')
 
     if delete_missing:
-        profile_dumper._get_processes_to_delete()
+        if len(profile_dumper.processes_to_delete) == 0:
+            echo.echo_success('No processes to delete.')
+        else:
+            profile_dumper.delete_processes()
 
     # Append the current time to the file
     last_dump_time = datetime.now().astimezone()
@@ -431,4 +440,4 @@ def profile_mirror(
     # Write the logging json file to disk
     dump_logger.save_log()
 
-    echo.echo_success(f'Dumped {dump_logger.counter} new nodes.')
+    # echo.echo_success(f'Dumped {dump_logger.counter} new nodes.')

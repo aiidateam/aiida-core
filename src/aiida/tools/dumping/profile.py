@@ -22,7 +22,7 @@ from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.config import ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.utils import filter_by_last_dump_time, _safe_delete
+from aiida.tools.dumping.utils import _safe_delete, filter_by_last_dump_time
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
@@ -193,14 +193,8 @@ class ProfileDumper:
         return self._processes_to_dump
 
     def _get_processes_to_dump(self) -> Sequence[str]:
-
-        process_qb = (
-            orm.QueryBuilder()
-            .append(
-                orm.ProcessNode,
-                project=['uuid'],
-                filters={'ctime': {'>': self.base_dumper.last_dump_time}}
-            )
+        process_qb = orm.QueryBuilder().append(
+            orm.ProcessNode, project=['uuid'], filters={'ctime': {'>': self.base_dumper.last_dump_time}}
         )
 
         profile_processes = cast(Sequence[str], process_qb.all(flat=True))
@@ -214,7 +208,6 @@ class ProfileDumper:
         return self._processes_to_delete
 
     def _get_processes_to_delete(self) -> Sequence[str]:
-
         dump_logger = self.dump_logger
         log = dump_logger.get_log()
         dumped_uuids = set(list(log['calculations'].keys()) + list(log['workflows'].keys()))
@@ -234,7 +227,6 @@ class ProfileDumper:
         return to_delete_uuids
 
     def _delete_missing_process_paths(self, to_delete_uuids):
-
         log = self.dump_logger.get_log()
         paths_to_delete = []
 
@@ -247,16 +239,11 @@ class ProfileDumper:
                 raise
 
         for path_to_delete in paths_to_delete:
-            _safe_delete(
-                path_to_validate=path_to_delete,
-                safeguard_file='.aiida_node_metadata.yaml',
-                verbose=False
-            )
+            _safe_delete(path_to_validate=path_to_delete, safeguard_file='.aiida_node_metadata.yaml', verbose=False)
 
         # breakpoint()
 
     def delete_processes(self):
-
         to_dump_processes = self.processes_to_dump
         to_delete_processes = self.processes_to_delete
 

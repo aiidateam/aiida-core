@@ -22,7 +22,7 @@ from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.utils import filter_by_last_dump_time
+from aiida.tools.dumping.utils import filter_by_last_dump_time, extend_calculations
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -119,7 +119,7 @@ class CollectionDumper:
 
         :return: List of collection node identifiers.
         """
-        if not self._collection_nodes:
+        if self._collection_nodes is None:
             self._collection_nodes = self._get_collection_nodes()
         return self._collection_nodes
 
@@ -165,26 +165,11 @@ class CollectionDumper:
         # As the list comprehension fetches each node from the DB individually
         nodes_orm = orm.QueryBuilder().append(orm.Node, filters={'uuid': {'in': self.collection_nodes}}).all(flat=True)
 
-        workflows = [node for node in nodes_orm if isinstance(node, orm.WorkflowNode)]
-        calculations = [node for node in nodes_orm if isinstance(node, orm.CalculationNode)]
+        workflows = [node for node in nodes_orm if isinstance(node, orm.WorkflowNode) and node.caller is None]
+        calculations = [node for node in nodes_orm if isinstance(node, orm.CalculationNode) and node.caller is None]
 
-        # Make sure that only top-level workflows and calculations are dumped
-        workflows = [workflow for workflow in workflows if workflow.caller is None]
-
-        # If sub-calculations that were called by workflows of the group, and which are not
-        # contained in the group.nodes directly are being dumped explicitly
-        # breakpoint()
         if self.profile_dump_config.extra_calc_dirs:
-            called_calculations = []
-            for workflow in workflows:
-                called_calculations += [
-                    node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)
-                ]
-
-            # Convert to set to avoid duplicates
-            calculations = list(set(calculations + called_calculations))
-        else:
-            calculations = [calculation for calculation in calculations if calculation.caller is None]
+            calculations = extend_calculations(profile_dump_config=self.profile_dump_config, calculations=calculations, workflows=workflows)
 
         return ProcessesToDump(
             calculations=calculations,
@@ -222,12 +207,15 @@ class CollectionDumper:
                 )
 
             # This is handled in the get_processes method: `if calculation.caller is None:`
-            calculation_dumper._dump_calculation(calculation_node=calculation, output_path=calculation_dump_path)
+            else:
+                # TODO: Don't update the logger with the UUID of a symlinked calculation as keys must be unique
+                # TODO: Possibly add another `symlink` attribute to `DumpLog` which can hold a list of symlinks
+                calculation_dumper._dump_calculation(calculation_node=calculation, output_path=calculation_dump_path)
 
-            dumped_calculations[calculation.uuid] = DumpLog(
-                path=calculation_dump_path,
-                time=datetime.now().astimezone(),
-            )
+                dumped_calculations[calculation.uuid] = DumpLog(
+                    path=calculation_dump_path,
+                    time=datetime.now().astimezone(),
+                )
 
         self.dump_logger.update_calculations(new_calculations=dumped_calculations)
 

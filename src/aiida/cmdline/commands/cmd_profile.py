@@ -418,6 +418,10 @@ def profile_mirror(
     )
 
     profile_dumper.dump_processes()
+    profile_dumper.delete_processes()
+
+    if delete_missing:
+        profile_dumper._get_processes_to_delete()
 
     # Append the current time to the file
     last_dump_time = datetime.now().astimezone()

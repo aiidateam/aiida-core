@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from aiida.tools.dumping.base import BaseDumper
+from aiida.tools.dumping.config import BaseDumpConfig
 from aiida.tools.dumping.process import ProcessDumper
 
 # Non-AiiDA variables
@@ -212,8 +212,8 @@ def test_dump_calculation_flat(tmp_path, generate_calculation_node_io):
 def test_dump_calculation_overwr_incr(tmp_path, generate_calculation_node_io):
     """Tests the ProcessDumper for the overwrite and incremental option."""
     dump_parent_path = tmp_path / 'cj-dump-test-overwrite'
-    base_dumper = BaseDumper(overwrite=False, incremental=False)
-    process_dumper = ProcessDumper(base_dumper=base_dumper)
+    base_dump_config = BaseDumpConfig(overwrite=False, incremental=False)
+    process_dumper = ProcessDumper(base_dump_config=base_dump_config)
     calculation_node = generate_calculation_node_io()
     calculation_node.seal()
     # Create safeguard file to mock existing dump directory
@@ -223,8 +223,8 @@ def test_dump_calculation_overwr_incr(tmp_path, generate_calculation_node_io):
     with pytest.raises(FileExistsError):
         process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
     # With overwrite option true no error is raised and the dumping can run through.
-    base_dumper = BaseDumper(overwrite=True, incremental=False)
-    process_dumper = ProcessDumper(base_dumper=base_dumper)
+    base_dump_config = BaseDumpConfig(overwrite=True, incremental=False)
+    process_dumper = ProcessDumper(base_dump_config=base_dump_config)
     process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
     assert (dump_parent_path / inputs_relpath / filename).is_file()
 
@@ -233,8 +233,8 @@ def test_dump_calculation_overwr_incr(tmp_path, generate_calculation_node_io):
     # Incremental also does work
     dump_parent_path.mkdir()
     (dump_parent_path / '.aiida_node_metadata.yaml').touch()
-    base_dumper = BaseDumper(overwrite=False, incremental=True)
-    process_dumper = ProcessDumper(base_dumper=base_dumper)
+    base_dump_config = BaseDumpConfig(overwrite=False, incremental=True)
+    process_dumper = ProcessDumper(base_dump_config=base_dump_config)
     process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
     assert (dump_parent_path / inputs_relpath / filename).is_file()
 

@@ -115,7 +115,7 @@ class TestCollectionDumper:
         assert set(nodes) == set([add_nodes[0].uuid, cj_node1.uuid])
 
         # Filtering by time should work -> Now, only cj_node2 gets returned
-        add_dumper.base_dumper.last_dump_time = datetime.now().astimezone()
+        add_dumper.base_dump_config.last_dump_time = datetime.now().astimezone()
 
         cj_node2 = generate_calculation_node_add()
         add_group.add_nodes([cj_node2])
@@ -162,7 +162,7 @@ class TestCollectionDumper:
 
         add_dumper = CollectionDumper(collection=add_group, output_path=add_group_path)
 
-        add_dumper._dump_calculations(add_dumper._get_processes_to_dump().calculations)
+        add_dumper._dump_processes(add_dumper._get_processes_to_dump().calculations)
 
         expected_tree = {
             'calculations': {
@@ -185,7 +185,7 @@ class TestCollectionDumper:
         multiply_add_dumper = CollectionDumper(collection=multiply_add_group, output_path=multiply_add_group_path)
 
         # No calculations to dump when deduplication is enabled
-        multiply_add_dumper._dump_calculations(multiply_add_dumper._get_processes_to_dump().calculations)
+        multiply_add_dumper._dump_processes(multiply_add_dumper._get_processes_to_dump().calculations)
         assert not (multiply_add_group_path / 'calculations').exists()
 
         # Now, disable de-duplication -> Should dump calculations
@@ -193,9 +193,7 @@ class TestCollectionDumper:
             collection=multiply_add_group, output_path=multiply_add_group_path, deduplicate=False
         )
 
-        multiply_add_dumper_no_dedup._dump_calculations(
-            multiply_add_dumper_no_dedup._get_processes_to_dump().calculations
-        )
+        multiply_add_dumper_no_dedup._dump_processes(multiply_add_dumper_no_dedup._get_processes_to_dump().calculations)
 
         expected_tree_no_dedup = {
             'calculations': {
@@ -249,7 +247,7 @@ class TestCollectionDumper:
     #     assert len(nodes) == 2
 
     #     # Filtering by time should work
-    #     collection_dumper.base_dumper.last_dump_time = datetime.now().astimezone()
+    #     collection_dumper.base_dump_config.last_dump_time = datetime.now().astimezone()
 
     #     cj_node2 = generate_calculation_node_add()
     #     add_group.add_nodes([cj_node2])

@@ -12,14 +12,48 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import cast
+from typing import Collection, cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 
-__all__ = ['prepare_dump_path']
+# TypeAlias not supported in Py 3.9
+# Collection[str] = Collection[str] | Collection[int] | None
+
+__all__ = ('NodeDumpMapper', 'prepare_dump_path')
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
+
+
+class NodeDumpMapper:
+    calculation_key: str = 'calculations'
+    workflow_key: str = 'workflows'
+
+    @classmethod
+    def get_directory(cls, node: orm.Node) -> Path:
+        # Check node type and map to the corresponding directory
+        if isinstance(node, orm.CalculationNode):
+            # This includes subclasses like orm.CalcFunctionNode and orm.CalcJobNode
+            return Path(cls.calculation_key)
+        elif isinstance(node, orm.WorkflowNode):
+            # This includes subclasses like orm.WorkFunctionNode and orm.WorkChainNode
+            return Path(cls.workflow_key)
+        else:
+            msg = f'Dumping not implemented yet for node type: {type(node)}'
+            raise NotImplementedError(msg)
+
+    @classmethod
+    def get_logger_attr(cls, node: orm.Node) -> str:
+        # Check node type and map to the corresponding directory
+        if isinstance(node, orm.CalculationNode):
+            # This includes subclasses like orm.CalcFunctionNode and orm.CalcJobNode
+            return cls.calculation_key
+        elif isinstance(node, orm.WorkflowNode):
+            # This includes subclasses like orm.WorkFunctionNode and orm.WorkChainNode
+            return cls.workflow_key
+        else:
+            msg = f'Dumping not implemented yet for node type: {type(node)}'
+            raise NotImplementedError(msg)
 
 
 def prepare_dump_path(
@@ -84,7 +118,7 @@ def _safe_delete(
     if not path_to_validate.exists():
         return
 
-    is_empty = any(path_to_validate.iterdir())
+    is_empty = not any(path_to_validate.iterdir())
     if is_empty:
         path_to_validate.rmdir()
         return
@@ -140,21 +174,7 @@ def _delete_dir_recursively(path):
         print(f'exception msg: {exception}')
 
 
-def _get_filtered_nodes(nodes: list[str | int], last_dump_time: datetime, key: str = 'uuid') -> list[str | int]:
-    """Helper function to get ``orm.Node``s from the DB based on ``id``/``uuid`` and filter by ``mtime``.
-
-    :param nodes: Collection of node PKs or UUIDs
-    :param last_dump_time: Last time nodes were dumped to disk.
-    :param key: Identifier to obtain nodes with, either ``id`` or ``uuid``.
-    :return: List of nodes filtered by ``last_dump_time``.
-    """
-
-    qb = orm.QueryBuilder().append(orm.Node, filters={key: {'in': nodes}})
-    nodes_orm: list[orm.Node] = cast(list[orm.Node], qb.all(flat=True))
-    return [getattr(node, key) for node in nodes_orm if node.mtime > last_dump_time]
-
-
-def filter_by_last_dump_time(nodes: list[str | int], last_dump_time: datetime) -> list[str | int]:
+def filter_by_last_dump_time(nodes: Collection[str], last_dump_time: datetime | None = None) -> Collection[str]:
     """Filter a list of nodes by the last dump time of the corresponding dumper.
 
     :param nodes: A list of node identifiers, which can be either UUIDs (str) or IDs (int).
@@ -163,16 +183,12 @@ def filter_by_last_dump_time(nodes: list[str | int], last_dump_time: datetime) -
     """
 
     # TODO: Possibly directly use QueryBuilder filter. Though, `nodes` directly accessible from orm.Group.nodes
-
     if not nodes or last_dump_time is None:
         return nodes
 
-    key = 'uuid' if isinstance(nodes[0], str) else 'id'
-    return _get_filtered_nodes(
-        nodes=nodes,
-        last_dump_time=last_dump_time,
-        key=key,
-    )
+    qb = orm.QueryBuilder().append(orm.Node, filters={'uuid': {'in': nodes}})
+    nodes_orm: list[orm.Node] = cast(list[orm.Node], qb.all(flat=True))
+    return [node.uuid for node in nodes_orm if node.mtime > last_dump_time]
 
 
 def extend_calculations(profile_dump_config, calculations, workflows):

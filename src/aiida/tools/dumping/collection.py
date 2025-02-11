@@ -22,7 +22,7 @@ from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.utils import filter_by_last_dump_time, extend_calculations
+from aiida.tools.dumping.utils import extend_calculations, filter_by_last_dump_time
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -169,7 +169,9 @@ class CollectionDumper:
         calculations = [node for node in nodes_orm if isinstance(node, orm.CalculationNode) and node.caller is None]
 
         if self.profile_dump_config.extra_calc_dirs:
-            calculations = extend_calculations(profile_dump_config=self.profile_dump_config, calculations=calculations, workflows=workflows)
+            calculations = extend_calculations(
+                profile_dump_config=self.profile_dump_config, calculations=calculations, workflows=workflows
+            )
 
         return ProcessesToDump(
             calculations=calculations,

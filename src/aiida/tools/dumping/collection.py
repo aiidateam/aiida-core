@@ -19,6 +19,7 @@ from typing import cast
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
+from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
@@ -32,18 +33,19 @@ from aiida.tools.dumping.utils import (
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 
-class CollectionDumper:
+class CollectionDumper(BaseDumper):
     """Class to handle dumping of a collection of AiiDA ORM entities."""
 
     def __init__(
         self,
         group: orm.Group | str | None = None,
         collection_nodes: Iterable[str] | None = None,
-        profile_dump_config: ProfileDumpConfig | None = None,
         base_dump_config: BaseDumpConfig | None = None,
+        # Need to pass that to have access to some of the top-level settings
+        profile_dump_config: ProfileDumpConfig | None = None,
         process_dumper: ProcessDumper | None = None,
         dump_logger: DumpLogger | None = None,
-        output_path: Path | None = None,
+        # `kwargs` here if I would like to overwrite some of the `base_dump_config` arguments
     ):
         """Initialize the CollectionDumper.
 
@@ -51,9 +53,12 @@ class CollectionDumper:
         :param base_dump_config: Base dumper instance or None (gets instantiated).
         :param process_dumper: Process dumper instance or None (gets instantiated).
         :param dump_logger: Logger for the dumping (gets instantiated).
-        :param output_path: The parent output path for dumping the collection nodes.
         :param processes_to_dump: Optional precomputed processes to dump.
         """
+
+        super().__init__(base_dump_config=base_dump_config, dump_logger=dump_logger)
+
+        # breakpoint()
 
         self._collection_nodes: Iterable[str] = []  # Explicit type annotation
 
@@ -74,13 +79,11 @@ class CollectionDumper:
             # msg = 'Either `group` or `collection_nodes` must be passed.'
             # raise Exception(msg)
 
-        self.base_dump_config = base_dump_config or BaseDumpConfig()
+        # self.base_dump_config = base_dump_config or BaseDumpConfig()
         self.profile_dump_config = profile_dump_config or ProfileDumpConfig()
 
         self.process_dumper = process_dumper or ProcessDumper()
-        self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.base_dump_config.dump_parent_path)
-
-        self.output_path = output_path or Path.cwd()
+        # self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.dump_parent_path)
 
         self._processes_to_dump: ProcessesDumpContainer | None = None
 
@@ -90,9 +93,9 @@ class CollectionDumper:
 
         :return: List of collection node identifiers.
         """
-        if self.base_dump_config.incremental and self.base_dump_config.last_dump_time:
+        if self.incremental and self.last_dump_time:
             self._collection_nodes = _filter_by_last_dump_time(
-                self._collection_nodes, last_dump_time=self.base_dump_config.last_dump_time
+                self._collection_nodes, last_dump_time=self.last_dump_time
             )
 
         return self._collection_nodes
@@ -160,7 +163,8 @@ class CollectionDumper:
 
         # TODO: Only allow for "pure" sequences of Calculation- or WorkflowNodes, or also mixed?
         # TODO: If the latter possibly also have directory creation in the loop
-        sub_path = self.output_path / NodeDumpMapper.get_directory(node=next(iter(processes)))
+        assert self.dump_parent_path is not None, "`dump_parent_path` must be set"
+        sub_path = self.dump_parent_path / NodeDumpMapper.get_directory(node=next(iter(processes)))
         sub_path.mkdir(exist_ok=True, parents=True)
 
         logger_attr = NodeDumpMapper.get_logger_attr(node=next(iter(processes)))
@@ -210,7 +214,8 @@ class CollectionDumper:
         :return: None
         """
 
-        self.output_path.mkdir(exist_ok=True, parents=True)
+        assert self.dump_parent_path is not None, "`dump_parent_path` must be set"
+        self.dump_parent_path.mkdir(exist_ok=True, parents=True)
         collection_processes: ProcessesDumpContainer = self._get_processes_to_dump()
         # breakpoint()
 

@@ -98,8 +98,15 @@ class DumpLogger:
     """Main logger class using dataclasses for better structure."""
 
     DUMP_LOG_FILE: str = '.dump_log.json'
+    _instance: 'DumpLogger | None' = None  # Class-level singleton instance
 
     # TODO: Possibly add `get_calculations` and `get_workflows` as convenience methods
+
+    def __new__(cls, *args, **kwargs):
+        """Override __new__ to ensure only one instance of DumpLogger."""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(
         self,
@@ -108,10 +115,17 @@ class DumpLogger:
         workflows: DumpLogStore | None = None,
         # counter: int = 0,
     ) -> None:
+        # Ensure __init__ is only called once
+        if hasattr(self, '_initialized') and self._initialized:
+            return  # Skip reinitialization
+
         self.dump_parent_path = dump_parent_path or Path.cwd()
         self.calculations = calculations or DumpLogStore()
         self.workflows = workflows or DumpLogStore()
         # self.counter = counter
+
+        # Mark the object as initialized
+        self._initialized = True
 
     @property
     def log_file_path(self) -> Path:

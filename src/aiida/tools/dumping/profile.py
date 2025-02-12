@@ -22,6 +22,7 @@ from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
+from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.utils import _filter_by_last_dump_time, _safe_delete_dir
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
@@ -31,14 +32,14 @@ logger = AIIDA_LOGGER.getChild('tools.dumping')
 # TODO: If a sub-workflow of another workflow is in its own group, this group is not created
 # TODO:
 
-class ProfileDumper:
+class ProfileDumper(BaseDumper):
     """Class to handle dumping of the data of an AiiDA profile."""
 
     def __init__(
         self,
         profile: str | Profile | None = None,
-        profile_dump_config: ProfileDumpConfig | None = None,
         base_dump_config: BaseDumpConfig | None = None,
+        profile_dump_config: ProfileDumpConfig | None = None,
         process_dumper: ProcessDumper | None = None,
         dump_logger: DumpLogger | None = None,
         groups: list[str] | list[orm.Group] | None = None,
@@ -53,11 +54,14 @@ class ProfileDumper:
         :param groups: Dump data only for selected groups.
         """
 
+        super().__init__(base_dump_config=base_dump_config, dump_logger=dump_logger)
+
         self.groups = groups
 
+        # ! Don't assign self.base_dump_config, as the values are unpacked in the super().__init__ call
         self.base_dump_config = base_dump_config or BaseDumpConfig()
         self.process_dumper = process_dumper or ProcessDumper()
-        self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.base_dump_config.dump_parent_path)
+        # self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.base_dump_config.dump_parent_path)
 
         self.profile_dump_config = profile_dump_config or ProfileDumpConfig()
 
@@ -72,22 +76,21 @@ class ProfileDumper:
         """Dump the profile's process data not contained in any group."""
 
         # `dump_parent_path` set to CWD in the `post_init` method of the `BaseDumper` dataclass if not given
-        assert self.base_dump_config.dump_parent_path is not None
+        assert self.dump_parent_path is not None
         if self.profile_dump_config.organize_by_groups:
-            output_path = self.base_dump_config.dump_parent_path / 'no-group'
+            output_path = self.dump_parent_path / 'no-group'
         else:
-            output_path = self.base_dump_config.dump_parent_path
+            output_path = self.dump_parent_path
 
         no_group_nodes = self._get_no_group_processes()
 
         no_group_dumper = CollectionDumper(
             group=None,
             collection_nodes=no_group_nodes,
-            profile_dump_config=self.profile_dump_config,
             base_dump_config=self.base_dump_config,
+            profile_dump_config=self.profile_dump_config,
             process_dumper=self.process_dumper,
             dump_logger=self.dump_logger,
-            output_path=output_path,
         )
 
         # Add additional check here to only issue the message when there are actual processes to dump for a group
@@ -101,13 +104,16 @@ class ProfileDumper:
     def _dump_processes_per_group(self, groups):
         # === Dump data per-group if Groups exist in profile or are selected ===
 
-        assert self.base_dump_config.dump_parent_path is not None
+        assert self.dump_parent_path is not None
 
         for group in groups:
             if self.profile_dump_config.organize_by_groups:
-                output_path = self.base_dump_config.dump_parent_path / f'group-{group.label}'
+                output_path = self.dump_parent_path / f'group-{group.label}'
             else:
-                output_path = self.base_dump_config.dump_parent_path
+                output_path = self.dump_parent_path
+
+            # TODO: Find a better solution for this...
+            self.base_dump_config.dump_parent_path = output_path
 
             group_dumper = CollectionDumper(
                 base_dump_config=self.base_dump_config,
@@ -115,7 +121,6 @@ class ProfileDumper:
                 process_dumper=self.process_dumper,
                 dump_logger=self.dump_logger,
                 group=group,
-                output_path=output_path,
             )
 
             # Add additional check here to only issue the message when there are actual processes to dump for a group
@@ -158,7 +163,7 @@ class ProfileDumper:
             profile_node for profile_node in profile_processes if profile_node not in nodes_in_groups
         ]
         process_nodes = _filter_by_last_dump_time(
-            nodes=process_nodes, last_dump_time=self.base_dump_config.last_dump_time
+            nodes=process_nodes, last_dump_time=self.last_dump_time
         )
 
         return process_nodes
@@ -186,9 +191,9 @@ class ProfileDumper:
         return self._processes_to_dump
 
     def _get_processes_to_dump(self) -> Iterable[str]:
-        if self.base_dump_config.last_dump_time is not None:
+        if self.last_dump_time is not None:
             process_qb = orm.QueryBuilder().append(
-                orm.ProcessNode, project=['uuid'], filters={'ctime': {'>': self.base_dump_config.last_dump_time}}
+                orm.ProcessNode, project=['uuid'], filters={'ctime': {'>': self.last_dump_time}}
             )
         else:
             process_qb = orm.QueryBuilder().append(orm.ProcessNode, project=['uuid'])

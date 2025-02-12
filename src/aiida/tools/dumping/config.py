@@ -47,5 +47,6 @@ class ProfileDumpConfig:
     dump_processes: bool = True
     symlink_duplicates: bool = True
     delete_missing: bool = False
-    extra_calc_dirs: bool = False
     organize_by_groups: bool = True
+    only_top_level_calcs: bool = True
+    only_top_level_workflows: bool = True

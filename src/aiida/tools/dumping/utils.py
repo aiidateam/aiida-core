@@ -209,7 +209,4 @@ def _extend_calculations(profile_dump_config, calculations, workflows):
     for workflow in workflows:
         called_calculations += [node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)]
 
-    # Convert to set to avoid duplicates
-    calculations = list(set(calculations + called_calculations))
-
-    return calculations
+    return called_calculations

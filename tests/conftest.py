@@ -933,8 +933,8 @@ def reset_log_level():
 
 
 @pytest.fixture
-def _generate_calculation_node_add(aiida_localhost):
-    def _generate_calculation_node_add():
+def _run_calculation_node_add(aiida_localhost):
+    def _run_calculation_node_add():
         from aiida.engine import run_get_node
         from aiida.orm import InstalledCode, Int
         from aiida.plugins import CalculationFactory
@@ -951,7 +951,7 @@ def _generate_calculation_node_add(aiida_localhost):
 
         return add_node
 
-    return _generate_calculation_node_add
+    return _run_calculation_node_add
 
 
 @pytest.fixture

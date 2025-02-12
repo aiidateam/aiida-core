@@ -313,11 +313,11 @@ def test_dump_calculation_no_inputs(tmp_path, generate_calculation_node_io):
     assert not (dump_parent_path / node_inputs_relpath).is_dir()
 
 
-def test_dump_calculation_add(tmp_path, generate_calculation_node_add):
+def test_dump_calculation_add(tmp_path, run_calculation_node_add):
     dump_parent_path = tmp_path / 'cj-dump-test-add'
 
     process_dumper = ProcessDumper()
-    calculation_node_add = generate_calculation_node_add()
+    calculation_node_add = run_calculation_node_add()
     process_dumper._dump_calculation(calculation_node=calculation_node_add, output_path=dump_parent_path)
 
     input_files = ['_aiidasubmit.sh', 'aiida.in', '.aiida/job_tmpl.json', '.aiida/calcinfo.json']
@@ -393,11 +393,11 @@ def test_prepare_dump_path(tmp_path):
 
 
 def test_generate_default_dump_path(
-    generate_calculation_node_add,
+    run_calculation_node_add,
     run_workchain_multiply_add,
 ):
     process_dumper = ProcessDumper()
-    add_node = generate_calculation_node_add()
+    add_node = run_calculation_node_add()
     multiply_add_node = run_workchain_multiply_add()
     add_path = process_dumper._generate_default_dump_path(process_node=add_node)
     multiply_add_path = process_dumper._generate_default_dump_path(process_node=multiply_add_node)

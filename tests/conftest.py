@@ -955,8 +955,8 @@ def _generate_calculation_node_add(aiida_localhost):
 
 
 @pytest.fixture
-def generate_workchain_multiply_add(aiida_localhost):
-    def _generate_workchain_multiply_add():
+def run_workchain_multiply_add(aiida_localhost):
+    def _run_workchain_multiply_add():
         from aiida.engine import run_get_node
         from aiida.orm import InstalledCode, Int
         from aiida.plugins import WorkflowFactory
@@ -974,7 +974,7 @@ def generate_workchain_multiply_add(aiida_localhost):
 
         return multiply_add_node
 
-    return _generate_workchain_multiply_add
+    return _run_workchain_multiply_add
 
 
 @pytest.fixture

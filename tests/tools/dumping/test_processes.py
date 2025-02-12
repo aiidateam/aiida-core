@@ -183,10 +183,10 @@ def test_dump_workflow(generate_calculation_node_io, generate_workchain_node_io,
     assert all([expected_file.is_file() for expected_file in expected_files])
 
 
-def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
+def test_dump_multiply_add(tmp_path, run_workchain_multiply_add):
     dump_parent_path = tmp_path / 'wc-dump-test-multiply-add'
     process_dumper = ProcessDumper()
-    wc_node = generate_workchain_multiply_add()
+    wc_node = run_workchain_multiply_add()
     process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
 
     input_files = ['_aiidasubmit.sh', 'aiida.in', '.aiida/job_tmpl.json', '.aiida/calcinfo.json']
@@ -394,11 +394,11 @@ def test_prepare_dump_path(tmp_path):
 
 def test_generate_default_dump_path(
     generate_calculation_node_add,
-    generate_workchain_multiply_add,
+    run_workchain_multiply_add,
 ):
     process_dumper = ProcessDumper()
     add_node = generate_calculation_node_add()
-    multiply_add_node = generate_workchain_multiply_add()
+    multiply_add_node = run_workchain_multiply_add()
     add_path = process_dumper._generate_default_dump_path(process_node=add_node)
     multiply_add_path = process_dumper._generate_default_dump_path(process_node=multiply_add_node)
 
@@ -422,7 +422,7 @@ def test_generate_calculation_io_mapping():
 
 
 def test_generate_child_node_label(
-    generate_workchain_multiply_add, generate_calculation_node_io, generate_workchain_node_io
+    run_workchain_multiply_add, generate_calculation_node_io, generate_workchain_node_io
 ):
     # Check with manually constructed, more complex workchain
     cj_node = generate_calculation_node_io(attach_outputs=False)
@@ -445,7 +445,7 @@ def test_generate_child_node_label(
     assert output_paths == ['00-sub_workflow', '01-calculation']
 
     # Check with multiply_add workchain node
-    multiply_add_node = generate_workchain_multiply_add()
+    multiply_add_node = run_workchain_multiply_add()
     output_triples = multiply_add_node.base.links.get_outgoing().all()
     # Sort by ctime here, not mtime, as I'm generating the WorkChain normally
     output_triples = sorted(output_triples, key=lambda link_triple: link_triple.node.ctime)
@@ -455,7 +455,7 @@ def test_generate_child_node_label(
     assert output_paths == ['00-multiply', '01-ArithmeticAddCalculation', '02-result']
 
 
-def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workchain_multiply_add):
+def test_dump_node_yaml(generate_calculation_node_io, tmp_path, run_workchain_multiply_add):
     process_dumper = ProcessDumper()
     cj_node = generate_calculation_node_io(attach_outputs=False)
     process_dumper._dump_node_yaml(process_node=cj_node, output_path=tmp_path)
@@ -463,7 +463,7 @@ def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workcha
     assert (tmp_path / node_metadata_file).is_file()
 
     # Test with multiply_add
-    wc_node = generate_workchain_multiply_add()
+    wc_node = run_workchain_multiply_add()
     process_dumper._dump_node_yaml(process_node=wc_node, output_path=tmp_path)
 
     assert (tmp_path / node_metadata_file).is_file()
@@ -497,8 +497,8 @@ def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workcha
     assert 'Node extras:' not in contents
 
 
-def test_generate_parent_readme(tmp_path, generate_workchain_multiply_add):
-    wc_node = generate_workchain_multiply_add()
+def test_generate_parent_readme(tmp_path, run_workchain_multiply_add):
+    wc_node = run_workchain_multiply_add()
     process_dumper = ProcessDumper()
 
     process_dumper._generate_readme(process_node=wc_node, output_path=tmp_path)

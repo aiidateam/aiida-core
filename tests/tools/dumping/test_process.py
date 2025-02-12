@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from aiida.tools.dumping.config import BaseDumpConfig
+from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
 from aiida.tools.dumping.process import ProcessDumper
 
 # Non-AiiDA variables
@@ -90,7 +90,8 @@ def test_dump_workflow(generate_calculation_node_io, generate_workchain_node_io,
 
     # Flat dumping
     dump_parent_path = tmp_path / 'wc-dump-test-io-flat'
-    process_dumper = ProcessDumper(flat=True)
+    process_dump_config = ProcessDumpConfig(flat=True)
+    process_dumper = ProcessDumper(process_dump_config=process_dump_config)
     process_dumper._dump_workflow(workflow_node=wc_node, output_path=dump_parent_path)
 
     input_path = base_path / 'file.txt'
@@ -137,7 +138,8 @@ def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
 
     # Flat dumping
     dump_parent_path = tmp_path / 'wc-dump-test-multiply-add-flat'
-    process_dumper = ProcessDumper(flat=True)
+    process_dump_config = ProcessDumpConfig(flat=True)
+    process_dumper = ProcessDumper(process_dump_config=process_dump_config)
     process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
 
     multiply_file = dump_parent_path / '01-multiply-6' / 'source_file'
@@ -165,7 +167,8 @@ def test_dump_calculation_node(tmp_path, generate_calculation_node_io):
 
     # Normal dumping -> node_inputs and not flat; no paths provided
     dump_parent_path = tmp_path / 'cj-dump-test-io'
-    process_dumper = ProcessDumper(include_outputs=True)
+    process_dump_config = ProcessDumpConfig(include_outputs=True)
+    process_dumper = ProcessDumper(process_dump_config=process_dump_config)
     calculation_node = generate_calculation_node_io()
     process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
 
@@ -194,7 +197,8 @@ def test_dump_calculation_flat(tmp_path, generate_calculation_node_io):
     # Flat dumping -> no paths provided -> Default paths should not be existent.
     # Internal FolderData structure retained.
     dump_parent_path = tmp_path / 'cj-dump-test-custom'
-    process_dumper = ProcessDumper(flat=True)
+    process_dump_config = ProcessDumpConfig(flat=True)
+    process_dumper = ProcessDumper(process_dump_config=process_dump_config)
     calculation_node = generate_calculation_node_io()
     process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
 
@@ -242,7 +246,8 @@ def test_dump_calculation_overwr_incr(tmp_path, generate_calculation_node_io):
 # With both inputs and outputs being dumped is the standard test case above, so only test without inputs here
 def test_dump_calculation_no_inputs(tmp_path, generate_calculation_node_io):
     dump_parent_path = tmp_path / 'cj-dump-test-noinputs'
-    process_dumper = ProcessDumper(include_inputs=False)
+    process_dump_config = ProcessDumpConfig(include_inputs=False)
+    process_dumper = ProcessDumper(process_dump_config=process_dump_config)
     calculation_node = generate_calculation_node_io()
     process_dumper._dump_calculation(calculation_node=calculation_node, output_path=dump_parent_path)
     assert not (dump_parent_path / node_inputs_relpath).is_dir()
@@ -356,7 +361,8 @@ def test_dump_node_yaml(generate_calculation_node_io, tmp_path, generate_workcha
     assert 'Node attributes:' in contents
     assert 'Node extras:' in contents
 
-    process_dumper = ProcessDumper(include_attributes=False, include_extras=False)
+    process_dump_config = ProcessDumpConfig(include_attributes=False, include_extras=False)
+    process_dumper = ProcessDumper(process_dump_config=process_dump_config)
 
     (tmp_path / node_metadata_file).unlink()
     process_dumper._dump_node_yaml(process_node=wc_node, output_path=tmp_path)

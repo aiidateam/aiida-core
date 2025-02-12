@@ -12,17 +12,27 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Collection, cast
+from typing import TYPE_CHECKING, Iterable, NamedTuple, cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 
-# TypeAlias not supported in Py 3.9
-# Collection[str] = Collection[str] | Collection[int] | None
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 __all__ = ('NodeDumpMapper', 'prepare_dump_path')
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
+
+
+class ProcessesDumpContainer(NamedTuple):
+    calculations: Sequence[orm.CalculationNode]
+    workflows: Sequence[orm.WorkflowNode]
+
+    @property
+    def is_empty(self) -> bool:
+        """Check if there are any processes to dump."""
+        return len(self.calculations) == 0 and len(self.workflows) == 0
 
 
 class NodeDumpMapper:
@@ -97,7 +107,7 @@ def prepare_dump_path(
 
         # Case 2: Non-empty directory, overwrite is True
         if not is_empty and overwrite:
-            _safe_delete(
+            _safe_delete_dir(
                 path_to_validate=path_to_validate,
                 safeguard_file=safeguard_file,
                 verbose=verbose,
@@ -108,7 +118,7 @@ def prepare_dump_path(
     (path_to_validate / safeguard_file).touch()
 
 
-def _safe_delete(
+def _safe_delete_dir(
     path_to_validate: Path,
     safeguard_file: str = '.aiida_node_metadata.yaml',
     verbose: bool = False,
@@ -131,12 +141,12 @@ def _safe_delete(
             msg = '`--overwrite` option selected. Will recreate directory.'
             logger.report(msg)
         try:
-            _delete_dir_recursively(path_to_validate)
+            _delete_dir_recursive(path_to_validate)
             # shutil.rmtree(path_to_validate)
         except OSError:
             # `shutil.rmtree` fails for symbolic links with
             # OSError: Cannot call rmtree on a symbolic link
-            _delete_dir_recursively(path_to_validate)
+            _delete_dir_recursive(path_to_validate)
 
     else:
         msg = (
@@ -146,7 +156,7 @@ def _safe_delete(
         raise FileNotFoundError(msg)
 
 
-def _delete_dir_recursively(path):
+def _delete_dir_recursive(path):
     """
     Delete folder, sub-folders and files.
     Implementation taken from: https://stackoverflow.com/a/70285390/9431838
@@ -160,7 +170,7 @@ def _delete_dir_recursively(path):
             try:
                 f.rmdir()  # delete empty sub-folder
             except OSError:  # sub-folder is not empty
-                _delete_dir_recursively(f)  # recurse the current sub-folder
+                _delete_dir_recursive(f)  # recurse the current sub-folder
             except Exception as exception:  # capture other exception
                 print(f'exception name: {exception.__class__.__name__}')
                 print(f'exception msg: {exception}')
@@ -174,7 +184,7 @@ def _delete_dir_recursively(path):
         print(f'exception msg: {exception}')
 
 
-def filter_by_last_dump_time(nodes: Collection[str], last_dump_time: datetime | None = None) -> Collection[str]:
+def _filter_by_last_dump_time(nodes: Iterable[str], last_dump_time: datetime | None = None) -> Iterable[str]:
     """Filter a list of nodes by the last dump time of the corresponding dumper.
 
     :param nodes: A list of node identifiers, which can be either UUIDs (str) or IDs (int).
@@ -191,7 +201,7 @@ def filter_by_last_dump_time(nodes: Collection[str], last_dump_time: datetime | 
     return [node.uuid for node in nodes_orm if node.mtime > last_dump_time]
 
 
-def extend_calculations(profile_dump_config, calculations, workflows):
+def _extend_calculations(profile_dump_config, calculations, workflows):
     # If sub-calculations that were called by workflows of the group, and which are not
     # contained in the group.nodes directly are being dumped explicitly
     # breakpoint()

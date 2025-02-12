@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, cast
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
@@ -21,23 +21,18 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.utils import NodeDumpMapper, extend_calculations, filter_by_last_dump_time
+from aiida.tools.dumping.utils import (
+    NodeDumpMapper,
+    ProcessesDumpContainer,
+    _extend_calculations,
+    _filter_by_last_dump_time,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Sequence
+    from collections.abc import Iterable
 
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
-
-
-class ProcessesDumpContainer(NamedTuple):
-    calculations: Sequence[orm.CalculationNode]
-    workflows: Sequence[orm.WorkflowNode]
-
-    @property
-    def is_empty(self) -> bool:
-        """Check if there are any processes to dump."""
-        return len(self.calculations) == 0 and len(self.workflows) == 0
 
 
 class CollectionDumper:
@@ -45,8 +40,8 @@ class CollectionDumper:
 
     def __init__(
         self,
-        # TODO: Refactor here to different arguments: Group, and collection_nodes
-        collection: orm.Group | str | Collection[str],
+        group: orm.Group | str | None = None,
+        collection_nodes: Iterable[str] | None = None,
         profile_dump_config: ProfileDumpConfig | None = None,
         base_dump_config: BaseDumpConfig | None = None,
         process_dumper: ProcessDumper | None = None,
@@ -55,7 +50,7 @@ class CollectionDumper:
     ):
         """Initialize the CollectionDumper.
 
-        :param collection: The collection of AiiDA ORM entities to be dumped, either a group, group label, or list of
+        :param group:
         :param base_dump_config: Base dumper instance or None (gets instantiated).
         :param process_dumper: Process dumper instance or None (gets instantiated).
         :param dump_logger: Logger for the dumping (gets instantiated).
@@ -63,86 +58,47 @@ class CollectionDumper:
         :param processes_to_dump: Optional precomputed processes to dump.
         """
 
-        self.collection = self._validate_collection(collection)
+        self._collection_nodes: Iterable[str] = []  # Explicit type annotation
+
+        if group is not None and collection_nodes is not None:
+            msg = 'Cannot provide both, group and a collection of nodes.'
+            raise Exception(msg)
+
+        elif group is not None:
+            self.group = _validate_group(group)
+            if self.group:
+                self._collection_nodes = [n.uuid for n in self.group.nodes]
+
+        elif collection_nodes is not None:
+            self._collection_nodes = _validate_collection_nodes(collection_nodes)
+
+        else:
+            self._collection_nodes = []
+            # msg = 'Either `group` or `collection_nodes` must be passed.'
+            # raise Exception(msg)
 
         self.base_dump_config = base_dump_config or BaseDumpConfig()
+        self.profile_dump_config = profile_dump_config or ProfileDumpConfig()
+
         self.process_dumper = process_dumper or ProcessDumper()
         self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.base_dump_config.dump_parent_path)
 
         self.output_path = output_path or Path.cwd()
 
-        self.profile_dump_config = profile_dump_config or ProfileDumpConfig()
-
-        self._collection_nodes: Collection[str] | None = None
         self._processes_to_dump: ProcessesDumpContainer | None = None
 
-    def _validate_collection(
-        self, collection: orm.Group | str | Collection[str] | Collection[int]
-    ) -> orm.Group | Collection[str]:
-        """Validate the given collection identifier.
-
-        :param collection: The input collection to validate.
-        :return: The validated collection.
-        :raises NotExistent: If no ``orm.Group`` can be loaded for a given label.
-        :raises ValueError: If no list of integers or strings to identify nodes is passed.
-        """
-
-        if isinstance(collection, str):
-            try:
-                return orm.load_group(collection)
-            except Exception as exc:
-                msg = f'Could not load group: {collection}.'
-                raise NotExistent(msg) from exc
-
-        elif isinstance(collection, orm.Group):
-            return collection
-
-        elif isinstance(collection, list):
-            if all(isinstance(n, str) for n in collection):
-                return collection
-
-            elif all(isinstance(n, int) for n in collection):
-                msg = 'Passing node collections via their PK not yet supported.'
-                raise ValueError(msg)
-
-            else:
-                msg = 'Mixing identifiers or passing other types not supported'
-                raise ValueError(msg)
-
-        elif isinstance(collection, list) and all(isinstance(n, int) for n in collection):
-            return collection
-
-        else:
-            msg = f'{collection} is an invalid collection.'
-            raise ValueError(msg)
-
     @property
-    def collection_nodes(self) -> Collection[str]:
+    def collection_nodes(self) -> Iterable[str]:
         """Return collection nodes.
 
         :return: List of collection node identifiers.
         """
-        if self._collection_nodes is None:
-            self._collection_nodes = self._get_collection_nodes()
-        return self._collection_nodes
-
-    def _get_collection_nodes(self) -> Collection[str]:
-        """Retrieve the node UUIDs from the collection, filtered by the last dump time, if for incremental dumping.
-
-        :return: List of node UUIDs.
-        """
-        if not self.collection:
-            return []
-
-        if isinstance(self.collection, orm.Group):
-            nodes: Collection[str] = [n.uuid for n in self.collection.nodes]
-        else:
-            nodes = self.collection
-
         if self.base_dump_config.incremental and self.base_dump_config.last_dump_time:
-            nodes = filter_by_last_dump_time(nodes, last_dump_time=self.base_dump_config.last_dump_time)
+            self._collection_nodes = _filter_by_last_dump_time(
+                self._collection_nodes, last_dump_time=self.base_dump_config.last_dump_time
+            )
 
-        return nodes
+        return self._collection_nodes
 
     @property
     def processes_to_dump(self) -> ProcessesDumpContainer:
@@ -178,7 +134,7 @@ class CollectionDumper:
         calculations = [node for node in nodes_orm if isinstance(node, orm.CalculationNode) and node.caller is None]
 
         if self.profile_dump_config.extra_calc_dirs:
-            calculations = extend_calculations(
+            calculations = _extend_calculations(
                 profile_dump_config=self.profile_dump_config, calculations=calculations, workflows=workflows
             )
 
@@ -187,18 +143,18 @@ class CollectionDumper:
             workflows=workflows,
         )
 
-    def _dump_processes(self, processes: Sequence[orm.CalculationNode] | Sequence[orm.WorkflowNode]) -> None:
+    def _dump_processes(self, processes: Iterable[orm.CalculationNode] | Iterable[orm.WorkflowNode]) -> None:
         """Dump a collection of processes."""
 
-        if len(processes) == 0:
+        if len(list(processes)) == 0:
             return
 
         # TODO: Only allow for "pure" sequences of Calculation- or WorkflowNodes, or also mixed?
         # TODO: If the latter possibly also have directory creation in the loop
-        sub_path = self.output_path / NodeDumpMapper.get_directory(node=processes[0])
+        sub_path = self.output_path / NodeDumpMapper.get_directory(node=next(iter(processes)))
         sub_path.mkdir(exist_ok=True, parents=True)
 
-        logger_attr = NodeDumpMapper.get_logger_attr(node=processes[0])
+        logger_attr = NodeDumpMapper.get_logger_attr(node=next(iter(processes)))
         # ! `getattr` gives a reference to the object, thus I can update the store directly
         current_store = getattr(self.dump_logger.log, logger_attr)
 
@@ -257,3 +213,40 @@ class CollectionDumper:
                 self._dump_processes(processes=collection_processes.workflows)
             if len(collection_processes.calculations) > 0:
                 self._dump_processes(processes=collection_processes.calculations)
+
+
+def _validate_group(group: orm.Group | str | None) -> orm.Group | None:
+    """Validate the given group identifier.
+
+    :param group: The group identifier to validate.
+    :return: Insance of ``orm.Group``.
+    :raises NotExistent: If no ``orm.Group`` can be loaded for a given label.
+    """
+
+    if group is None:
+        return group
+
+    if isinstance(group, str):
+        try:
+            return orm.load_group(group)
+        except NotExistent:
+            raise
+        except:
+            raise
+
+    elif isinstance(group, orm.Group):
+        return group
+
+
+def _validate_collection_nodes(collection_nodes) -> Iterable[str]:
+    if isinstance(collection_nodes, Iterable):
+        if any([not isinstance(n, str) for n in collection_nodes]):
+            msg = 'Currently, passing a collection of nodes is only supported via their UUID.'
+            raise TypeError(msg)
+    else:
+        msg = '`collection_nodes` must be an iterable.'
+        raise TypeError(msg)
+
+    collection_nodes = cast(Iterable[str], collection_nodes)
+
+    return collection_nodes

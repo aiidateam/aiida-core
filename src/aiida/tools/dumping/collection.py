@@ -13,7 +13,6 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable
 from datetime import datetime
-from pathlib import Path
 from typing import cast
 
 from aiida import orm
@@ -163,7 +162,7 @@ class CollectionDumper(BaseDumper):
 
         # TODO: Only allow for "pure" sequences of Calculation- or WorkflowNodes, or also mixed?
         # TODO: If the latter possibly also have directory creation in the loop
-        assert self.dump_parent_path is not None, "`dump_parent_path` must be set"
+        assert self.dump_parent_path is not None, '`dump_parent_path` must be set'
         sub_path = self.dump_parent_path / NodeDumpMapper.get_directory(node=next(iter(processes)))
         sub_path.mkdir(exist_ok=True, parents=True)
 
@@ -214,7 +213,7 @@ class CollectionDumper(BaseDumper):
         :return: None
         """
 
-        assert self.dump_parent_path is not None, "`dump_parent_path` must be set"
+        assert self.dump_parent_path is not None, '`dump_parent_path` must be set'
         self.dump_parent_path.mkdir(exist_ok=True, parents=True)
         collection_processes: ProcessesDumpContainer = self._get_processes_to_dump()
         # breakpoint()

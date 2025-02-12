@@ -25,6 +25,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -37,9 +38,8 @@ from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
-from aiida.tools.dumping.utils import prepare_dump_path
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
-from datetime import datetime
+from aiida.tools.dumping.utils import prepare_dump_path
 
 logger = logging.getLogger(__name__)
 
@@ -234,7 +234,6 @@ class ProcessDumper(BaseDumper):
         )
 
         if isinstance(process_node, orm.CalculationNode):
-
             # breakpoint()
 
             self._dump_calculation(

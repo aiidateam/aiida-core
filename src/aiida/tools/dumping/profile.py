@@ -18,11 +18,11 @@ from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import load_profile
 from aiida.manage.configuration.profile import Profile
+from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.utils import _filter_by_last_dump_time, _safe_delete_dir
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
@@ -31,6 +31,7 @@ logger = AIIDA_LOGGER.getChild('tools.dumping')
 # up. No new nodes to dump are obtained.
 # TODO: If a sub-workflow of another workflow is in its own group, this group is not created
 # TODO:
+
 
 class ProfileDumper(BaseDumper):
     """Class to handle dumping of the data of an AiiDA profile."""
@@ -162,9 +163,7 @@ class ProfileDumper(BaseDumper):
         process_nodes: Iterable[str] = [
             profile_node for profile_node in profile_processes if profile_node not in nodes_in_groups
         ]
-        process_nodes = _filter_by_last_dump_time(
-            nodes=process_nodes, last_dump_time=self.last_dump_time
-        )
+        process_nodes = _filter_by_last_dump_time(nodes=process_nodes, last_dump_time=self.last_dump_time)
 
         return process_nodes
 

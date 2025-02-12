@@ -7,8 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 from aiida.tools.dumping.config import BaseDumpConfig
 from aiida.tools.dumping.logger import DumpLogger
@@ -26,7 +26,6 @@ class BaseDumper:
         dump_logger: DumpLogger | None = None,
         base_dump_config: BaseDumpConfig | None = None,
     ):
-
         if base_dump_config:
             self.dump_parent_path = base_dump_config.dump_parent_path
             self.overwrite = base_dump_config.overwrite

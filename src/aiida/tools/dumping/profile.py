@@ -8,6 +8,7 @@
 ###########################################################################
 
 # TODO: Possibly use `batch_iter` from aiida.tools.archive.common
+# TODO: Add option to just print the resulting directory tree
 
 from __future__ import annotations
 
@@ -40,9 +41,9 @@ class ProfileDumper(BaseDumper):
         self,
         profile: str | Profile | None = None,
         base_dump_config: BaseDumpConfig | None = None,
+        dump_logger: DumpLogger | None = None,
         profile_dump_config: ProfileDumpConfig | None = None,
         process_dumper: ProcessDumper | None = None,
-        dump_logger: DumpLogger | None = None,
         groups: list[str] | list[orm.Group] | None = None,
     ):
         """Initialize the ProfileDumper.
@@ -58,13 +59,15 @@ class ProfileDumper(BaseDumper):
         super().__init__(base_dump_config=base_dump_config, dump_logger=dump_logger)
 
         self.groups = groups
-
-        # ! Don't assign self.base_dump_config, as the values are unpacked in the super().__init__ call
-        self.base_dump_config = base_dump_config or BaseDumpConfig()
         self.process_dumper = process_dumper or ProcessDumper()
-        # self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.base_dump_config.dump_parent_path)
-
         self.profile_dump_config = profile_dump_config or ProfileDumpConfig()
+
+        self.should_dump_processes = self.profile_dump_config.dump_processes
+        self.symlink_duplicates = self.profile_dump_config.symlink_duplicates
+        self.delete_missing = self.profile_dump_config.delete_missing
+        self.organize_by_groups = self.profile_dump_config.organize_by_groups
+        self.only_top_level_calcs = self.profile_dump_config.only_top_level_calcs
+        self.only_top_level_workflows = self.profile_dump_config.only_top_level_workflows
 
         if not isinstance(profile, Profile):
             profile = load_profile(profile=profile, allow_switch=True)
@@ -78,12 +81,14 @@ class ProfileDumper(BaseDumper):
 
         # `dump_parent_path` set to CWD in the `post_init` method of the `BaseDumper` dataclass if not given
         assert self.dump_parent_path is not None
-        if self.profile_dump_config.organize_by_groups:
+        if self.organize_by_groups:
             output_path = self.dump_parent_path / 'no-group'
         else:
             output_path = self.dump_parent_path
 
         no_group_nodes = self._get_no_group_processes()
+
+        self.base_dump_config.dump_parent_path = output_path
 
         no_group_dumper = CollectionDumper(
             group=None,
@@ -97,7 +102,7 @@ class ProfileDumper(BaseDumper):
         # Add additional check here to only issue the message when there are actual processes to dump for a group
         # This might not be the case for, e.g., pseudopotential groups, or if there are no new processes since the
         # last dumping
-        if self.profile_dump_config.dump_processes and not no_group_dumper.processes_to_dump.is_empty:
+        if self.should_dump_processes and not no_group_dumper.processes_to_dump.is_empty:
             logger.report(f'Dumping processes not in any group for profile `{self.profile.name}`...')
 
             no_group_dumper.dump()
@@ -108,7 +113,7 @@ class ProfileDumper(BaseDumper):
         assert self.dump_parent_path is not None
 
         for group in groups:
-            if self.profile_dump_config.organize_by_groups:
+            if self.organize_by_groups:
                 output_path = self.dump_parent_path / f'group-{group.label}'
             else:
                 output_path = self.dump_parent_path
@@ -128,7 +133,7 @@ class ProfileDumper(BaseDumper):
             # This might not be the case for, e.g., pseudopotential groups, or if there are no new processes since the
             # last dumping
             # breakpoint()
-            if self.profile_dump_config.dump_processes and not group_dumper.processes_to_dump.is_empty:
+            if self.should_dump_processes and not group_dumper.processes_to_dump.is_empty:
                 # breakpoint()
                 logger.report(f'Dumping processes in group {group.label} for profile `{self.profile.name}`...')
 
@@ -258,14 +263,3 @@ class ProfileDumper(BaseDumper):
 
         # TODO: Need to also delete entry from the log when I delete the dir
         # TODO: Add also logging for node/path deletion
-
-    # @staticmethod
-    # def _get_number_of_nodes_to_dump(last_dump_time) -> dict[str, int]:
-    #     # TODO: Change this method...
-    #     result = {}
-    #     for node_type in (orm.CalculationNode, orm.WorkflowNode):
-    #         qb = orm.QueryBuilder().append(node_type, project=['uuid'])
-    #         nodes = cast(Collection[str], qb.all(flat=True))
-    #         nodes = filter_by_last_dump_time(nodes=nodes, last_dump_time=last_dump_time)
-    #         result[node_type.class_node_type.split('.')[-2] + 's'] = len(nodes)
-    #     return result

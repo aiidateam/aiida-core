@@ -50,8 +50,8 @@ class ProcessDumper(BaseDumper):
     def __init__(
         self,
         base_dump_config: BaseDumpConfig | None = None,
-        process_dump_config: ProcessDumpConfig | None = None,
         dump_logger: DumpLogger | None = None,
+        process_dump_config: ProcessDumpConfig | None = None,
     ) -> None:
         """Initialize the ProcessDumper."""
 
@@ -100,8 +100,7 @@ class ProcessDumper(BaseDumper):
 
         return Path('-'.join(entities_to_dump))
 
-    @staticmethod
-    def _generate_readme(process_node: orm.ProcessNode, output_path: Path) -> None:
+    def _generate_readme(self, process_node: orm.ProcessNode) -> None:
         """Generate README.md file in main dumping directory.
 
         :param process_node: `CalculationNode` or `WorkflowNode`.
@@ -161,7 +160,7 @@ class ProcessDumper(BaseDumper):
         process_show = get_node_info(node=process_node)
         _readme_string += f'\n\n\nOutput of `verdi process show {pk}`:\n\n```shell\n{process_show}\n```'
 
-        (output_path / 'README.md').write_text(_readme_string)
+        (self.dump_parent_path / 'README.md').write_text(_readme_string)
 
     @staticmethod
     def _generate_child_node_label(index: int, link_triple: LinkTriple, append_pk: bool = True) -> str:
@@ -225,6 +224,7 @@ class ProcessDumper(BaseDumper):
         # for key, value in kwargs.items():
         #     setattr(self, key, value)
 
+        # TODO: Refactor here to also use `dump_parent_path`
         output_path = output_path or self._generate_default_dump_path(process_node=process_node)
 
         prepare_dump_path(
@@ -242,6 +242,7 @@ class ProcessDumper(BaseDumper):
                 io_dump_paths=io_dump_paths,
             )
 
+            # breakpoint()
             calculation_store = self.dump_logger.log.calculations
 
             self.dump_logger.add_entry(
@@ -257,13 +258,15 @@ class ProcessDumper(BaseDumper):
                 io_dump_paths=io_dump_paths,
             )
 
-        self._generate_readme(process_node=process_node, output_path=output_path)
+        self._generate_readme(process_node=process_node)
 
         return output_path
 
     def _dump_workflow(
         self,
         workflow_node: orm.WorkflowNode,
+        # TODO: Refactor this to child path, to always append to it?
+        # TODO: Or, re-assign it?
         output_path: Path,
         io_dump_paths: list[str | Path] | None = None,
         # TODO: See if this is even necessary here, or if this can be achieved outside?
@@ -305,6 +308,14 @@ class ProcessDumper(BaseDumper):
                     link_calculations_dir=link_calculations_dir,
                 )
 
+                workflow_store = self.dump_logger.log.workflows
+
+                self.dump_logger.add_entry(
+                    store=workflow_store,
+                    uuid=child_node.uuid,
+                    entry=DumpLog(path=child_output_path, time=datetime.now().astimezone()),
+                )
+
             # Once a `CalculationNode` as child reached, dump it
             elif isinstance(child_node, orm.CalculationNode):
                 if not link_calculations:
@@ -313,6 +324,16 @@ class ProcessDumper(BaseDumper):
                         output_path=child_output_path,
                         io_dump_paths=io_dump_paths,
                     )
+
+                    calculation_store = self.dump_logger.log.calculations
+
+                    # breakpoint()
+                    self.dump_logger.add_entry(
+                        store=calculation_store,
+                        uuid=child_node.uuid,
+                        entry=DumpLog(path=child_output_path, time=datetime.now().astimezone()),
+                    )
+
                 elif link_calculations_dir is not None:
                     calculation_dump_path = link_calculations_dir / ProcessDumper._generate_default_dump_path(
                         process_node=child_node, prefix=''

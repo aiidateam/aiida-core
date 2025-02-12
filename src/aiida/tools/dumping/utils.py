@@ -85,8 +85,6 @@ def prepare_dump_path(
         `incremental` are enabled.
     :raises FileNotFoundError: If no `safeguard_file` is found."""
 
-    # TODO: Handle symlinks
-
     if overwrite and incremental:
         msg = 'Both overwrite and incremental set to True. Only specify one.'
         raise ValueError(msg)

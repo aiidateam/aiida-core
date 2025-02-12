@@ -37,14 +37,13 @@ class CollectionDumper(BaseDumper):
 
     def __init__(
         self,
+        base_dump_config: BaseDumpConfig | None = None,
+        dump_logger: DumpLogger | None = None,
         group: orm.Group | str | None = None,
         collection_nodes: Iterable[str] | None = None,
-        base_dump_config: BaseDumpConfig | None = None,
         # Need to pass that to have access to some of the top-level settings
         profile_dump_config: ProfileDumpConfig | None = None,
         process_dumper: ProcessDumper | None = None,
-        dump_logger: DumpLogger | None = None,
-        # `kwargs` here if I would like to overwrite some of the `base_dump_config` arguments
     ):
         """Initialize the CollectionDumper.
 
@@ -56,8 +55,6 @@ class CollectionDumper(BaseDumper):
         """
 
         super().__init__(base_dump_config=base_dump_config, dump_logger=dump_logger)
-
-        # breakpoint()
 
         self._collection_nodes: Iterable[str] = []  # Explicit type annotation
 

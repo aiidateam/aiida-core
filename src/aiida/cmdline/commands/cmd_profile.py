@@ -373,14 +373,6 @@ def profile_mirror(
     except IndexError:
         last_dump_time = None
 
-    if dry_run:
-        # node_counts = ProfileDumper._get_number_of_nodes_to_dump(last_dump_time)
-        dry_run_message = f'Dry run for mirroring of profile `{profile.name}`. Would dump:'
-        echo.echo_report(dry_run_message)
-        # for count, node_type in node_counts.items():
-        #     echo.echo_report(f'{count}: {node_type}')
-        # return
-
     if incremental:
         msg = 'Incremental mirroring selected. Will update directory.'
         echo.echo_report(msg)
@@ -428,17 +420,27 @@ def profile_mirror(
         groups=groups,
     )
 
-    if len(profile_dumper.processes_to_dump) == 0:
+    num_processes_to_dump = len(profile_dumper.processes_to_dump)
+    num_processes_to_delete = len(profile_dumper.processes_to_delete)
+
+    if dry_run:
+        # node_counts = ProfileDumper._get_number_of_nodes_to_dump(last_dump_time)
+        dry_run_message = f'Dry run for mirroring of profile `{profile.name}`. Would dump: {num_processes_to_dump} new nodes and delete {num_processes_to_delete} previously dumped node directories.'
+        echo.echo_report(dry_run_message)
+        return
+
+    if  num_processes_to_dump == 0:
         echo.echo_success('No processes to dump.')
     else:
         profile_dumper.dump_processes()
-        echo.echo_success('Dumped XXX new nodes.')
+        echo.echo_success(f'Dumped {num_processes_to_dump} new nodes.')
 
     if delete_missing:
-        if len(profile_dumper.processes_to_delete) == 0:
+        if num_processes_to_delete == 0:
             echo.echo_success('No processes to delete.')
         else:
             profile_dumper.delete_processes()
+            echo.echo_success(f'Deleted {num_processes_to_delete} node directories.')
 
     # Append the current time to the file
     last_dump_time = datetime.now().astimezone()
@@ -448,4 +450,3 @@ def profile_mirror(
     # Write the logging json file to disk
     dump_logger.save_log()
 
-    # echo.echo_success(f'Dumped {dump_logger.counter} new nodes.')

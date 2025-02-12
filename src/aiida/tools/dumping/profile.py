@@ -26,6 +26,10 @@ from aiida.tools.dumping.utils import _filter_by_last_dump_time, _safe_delete_di
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
+# TODO: If a Node is not created newly, but added to a newly created group, and the dumping is run, this is not picked
+# up. No new nodes to dump are obtained.
+# TODO: If a sub-workflow of another workflow is in its own group, this group is not created
+# TODO:
 
 class ProfileDumper:
     """Class to handle dumping of the data of an AiiDA profile."""

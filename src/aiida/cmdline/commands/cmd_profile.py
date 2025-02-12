@@ -298,8 +298,14 @@ def profile_delete(force, delete_data, profiles):
     help="If a previously dumped node is deleted from AiiDA's DB, also delete the corresponding dump directory.",
 )
 @click.option(
-    '--extra-calc-dirs/--no-extra-calc-dirs',
-    default=False,
+    '--only-top-level-calcs/--no-only-top-level-calcs',
+    default=True,
+    show_default=True,
+    help='Dump calculations in their own dedicated directories, not just as part of the dumped workflow.',
+)
+@click.option(
+    '--only-top-level-workflows/--no-only-top-level-workflows',
+    default=True,
     show_default=True,
     help='If a top-level process calls sub-processes, create a designated directory only for the top-level process.',
 )
@@ -319,7 +325,8 @@ def profile_mirror(
     organize_by_groups,
     symlink_duplicates,
     delete_missing,
-    extra_calc_dirs,
+    only_top_level_calcs,
+    only_top_level_workflows,
     # check_dirs,
     include_inputs,
     include_outputs,
@@ -407,8 +414,9 @@ def profile_mirror(
         dump_processes=dump_processes,
         symlink_duplicates=symlink_duplicates,
         delete_missing=delete_missing,
-        extra_calc_dirs=extra_calc_dirs,
         organize_by_groups=organize_by_groups,
+        only_top_level_calcs=only_top_level_calcs,
+        only_top_level_workflows=only_top_level_workflows,
     )
 
     profile_dumper = ProfileDumper(

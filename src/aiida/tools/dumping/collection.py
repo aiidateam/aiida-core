@@ -11,9 +11,10 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
@@ -27,10 +28,6 @@ from aiida.tools.dumping.utils import (
     _extend_calculations,
     _filter_by_last_dump_time,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
@@ -130,12 +127,24 @@ class CollectionDumper:
         # As the list comprehension fetches each node from the DB individually
         nodes_orm = orm.QueryBuilder().append(orm.Node, filters={'uuid': {'in': self.collection_nodes}}).all(flat=True)
 
-        workflows = [node for node in nodes_orm if isinstance(node, orm.WorkflowNode) and node.caller is None]
-        calculations = [node for node in nodes_orm if isinstance(node, orm.CalculationNode) and node.caller is None]
+        if self.profile_dump_config.only_top_level_workflows:
+            workflows = [node for node in nodes_orm if isinstance(node, orm.WorkflowNode) and node.caller is None]
+        else:
+            workflows = [node for node in nodes_orm if isinstance(node, orm.WorkflowNode)]
 
-        if self.profile_dump_config.extra_calc_dirs:
-            calculations = _extend_calculations(
-                profile_dump_config=self.profile_dump_config, calculations=calculations, workflows=workflows
+        if self.profile_dump_config.only_top_level_calcs:
+            calculations = [node for node in nodes_orm if isinstance(node, orm.CalculationNode) and node.caller is None]
+        else:
+            calculations = [node for node in nodes_orm if isinstance(node, orm.CalculationNode)]
+
+            # Convert to set to avoid duplicates
+            calculations = list(
+                set(
+                    calculations
+                    + _extend_calculations(
+                        profile_dump_config=self.profile_dump_config, calculations=calculations, workflows=workflows
+                    )
+                )
             )
 
         return ProcessesDumpContainer(
@@ -229,6 +238,7 @@ def _validate_group(group: orm.Group | str | None) -> orm.Group | None:
     if isinstance(group, str):
         try:
             return orm.load_group(group)
+        # `load_group` raises the corresponding errors
         except NotExistent:
             raise
         except:

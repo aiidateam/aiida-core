@@ -35,25 +35,32 @@ from aiida.common import LinkType
 from aiida.common.exceptions import NotExistentAttributeError
 from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
+from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
 from aiida.tools.dumping.utils import prepare_dump_path
+from aiida.tools.dumping.logger import DumpLog, DumpLogger
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 
-class ProcessDumper:
+class ProcessDumper(BaseDumper):
     """Class to handle dumping of an AiiDA process."""
 
     def __init__(
         self,
         base_dump_config: BaseDumpConfig | None = None,
         process_dump_config: ProcessDumpConfig | None = None,
+        dump_logger: DumpLogger | None = None,
     ) -> None:
         """Initialize the ProcessDumper."""
 
-        self.base_dump_config = base_dump_config or BaseDumpConfig()
+        # super().__init__(base_dump_config=base_dump_config, **kwargs)
+        super().__init__(base_dump_config=base_dump_config, dump_logger=dump_logger)
+
         self.process_dump_config = process_dump_config or ProcessDumpConfig()
 
+        # Unpack arguments for ProcessDumper for easier access
         self.include_inputs = self.process_dump_config.include_inputs
         self.include_outputs = self.process_dump_config.include_outputs
         self.include_attributes = self.process_dump_config.include_attributes
@@ -222,15 +229,26 @@ class ProcessDumper:
 
         prepare_dump_path(
             path_to_validate=output_path,
-            overwrite=self.base_dump_config.overwrite,
-            incremental=self.base_dump_config.incremental,
+            overwrite=self.overwrite,
+            incremental=self.incremental,
         )
 
         if isinstance(process_node, orm.CalculationNode):
+
+            # breakpoint()
+
             self._dump_calculation(
                 calculation_node=process_node,
                 output_path=output_path,
                 io_dump_paths=io_dump_paths,
+            )
+
+            calculation_store = self.dump_logger.log.calculations
+
+            self.dump_logger.add_entry(
+                store=calculation_store,
+                uuid=process_node.uuid,
+                entry=DumpLog(path=output_path, time=datetime.now().astimezone()),
             )
 
         elif isinstance(process_node, orm.WorkflowNode):
@@ -249,9 +267,10 @@ class ProcessDumper:
         workflow_node: orm.WorkflowNode,
         output_path: Path,
         io_dump_paths: list[str | Path] | None = None,
+        # TODO: See if this is even necessary here, or if this can be achieved outside?
+        # TODO: Do I even need that?
         link_calculations: bool = False,
         link_calculations_dir: Path | None = None,
-        workflow_symlink: Path | None = None,
     ) -> None:
         """Recursive function to traverse a `WorkflowNode` and dump its `CalculationNode` s.
 
@@ -262,8 +281,8 @@ class ProcessDumper:
 
         prepare_dump_path(
             path_to_validate=output_path,
-            overwrite=self.base_dump_config.overwrite,
-            incremental=self.base_dump_config.incremental,
+            overwrite=self.overwrite,
+            incremental=self.incremental,
         )
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
@@ -320,8 +339,8 @@ class ProcessDumper:
 
         prepare_dump_path(
             path_to_validate=output_path,
-            overwrite=self.base_dump_config.overwrite,
-            incremental=self.base_dump_config.incremental,
+            overwrite=self.overwrite,
+            incremental=self.incremental,
         )
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 

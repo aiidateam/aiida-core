@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection
+from collections.abc import Iterable
 from typing import cast
 
 from aiida import orm
@@ -22,7 +22,7 @@ from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.utils import _safe_delete, filter_by_last_dump_time
+from aiida.tools.dumping.utils import _filter_by_last_dump_time, _safe_delete_dir
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
@@ -37,7 +37,7 @@ class ProfileDumper:
         base_dump_config: BaseDumpConfig | None = None,
         process_dumper: ProcessDumper | None = None,
         dump_logger: DumpLogger | None = None,
-        groups: Collection[str] | Collection[orm.Group] | None = None,
+        groups: list[str] | list[orm.Group] | None = None,
     ):
         """Initialize the ProfileDumper.
 
@@ -61,8 +61,8 @@ class ProfileDumper:
             profile = load_profile(profile=profile, allow_switch=True)
         self.profile = profile
 
-        self._processes_to_dump: Collection[str] | None = None
-        self._processes_to_delete: Collection[str] | None = None
+        self._processes_to_dump: Iterable[str] | None = None
+        self._processes_to_delete: Iterable[str] | None = None
 
     def _dump_processes_not_in_any_group(self):
         """Dump the profile's process data not contained in any group."""
@@ -77,7 +77,8 @@ class ProfileDumper:
         no_group_nodes = self._get_no_group_processes()
 
         no_group_dumper = CollectionDumper(
-            collection=no_group_nodes,
+            group=None,
+            collection_nodes=no_group_nodes,
             profile_dump_config=self.profile_dump_config,
             base_dump_config=self.base_dump_config,
             process_dumper=self.process_dumper,
@@ -109,7 +110,7 @@ class ProfileDumper:
                 profile_dump_config=self.profile_dump_config,
                 process_dumper=self.process_dumper,
                 dump_logger=self.dump_logger,
-                collection=group,
+                group=group,
                 output_path=output_path,
             )
 
@@ -123,15 +124,15 @@ class ProfileDumper:
 
                 group_dumper.dump()
 
-    def _get_no_group_processes(self) -> Collection[str]:
+    def _get_no_group_processes(self) -> Iterable[str]:
         """Obtain nodes in the profile that are not part of any group.
 
         :return: List of UUIDs of selected nodes.
         """
 
-        profile_groups = cast(Collection[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
+        profile_groups = cast(list[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
         profile_processes = cast(
-            Collection[str], orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True)
+            Iterable[str], orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True)
         )
 
         nodes_in_groups: list[str] = [node.uuid for group in profile_groups for node in group.nodes]
@@ -149,10 +150,10 @@ class ProfileDumper:
 
         nodes_in_groups += sub_nodes_in_groups
 
-        process_nodes: Collection[str] = [
+        process_nodes: Iterable[str] = [
             profile_node for profile_node in profile_processes if profile_node not in nodes_in_groups
         ]
-        process_nodes = filter_by_last_dump_time(
+        process_nodes = _filter_by_last_dump_time(
             nodes=process_nodes, last_dump_time=self.base_dump_config.last_dump_time
         )
 
@@ -175,12 +176,12 @@ class ProfileDumper:
             self._dump_processes_per_group(groups=self.groups)
 
     @property
-    def processes_to_dump(self) -> Collection[str]:
+    def processes_to_dump(self) -> Iterable[str]:
         if self._processes_to_dump is None:
             self._processes_to_dump = self._get_processes_to_dump()
         return self._processes_to_dump
 
-    def _get_processes_to_dump(self) -> Collection[str]:
+    def _get_processes_to_dump(self) -> Iterable[str]:
         if self.base_dump_config.last_dump_time is not None:
             process_qb = orm.QueryBuilder().append(
                 orm.ProcessNode, project=['uuid'], filters={'ctime': {'>': self.base_dump_config.last_dump_time}}
@@ -188,17 +189,17 @@ class ProfileDumper:
         else:
             process_qb = orm.QueryBuilder().append(orm.ProcessNode, project=['uuid'])
 
-        profile_processes = cast(Collection[str], process_qb.all(flat=True))
+        profile_processes = cast(Iterable[str], process_qb.all(flat=True))
 
         return profile_processes
 
     @property
-    def processes_to_delete(self) -> Collection[str]:
+    def processes_to_delete(self) -> Iterable[str]:
         if self._processes_to_delete is None:
             self._processes_to_delete = self._get_processes_to_delete()
         return self._processes_to_delete
 
-    def _get_processes_to_delete(self) -> Collection[str]:
+    def _get_processes_to_delete(self) -> Iterable[str]:
         dump_logger = self.dump_logger
         log = dump_logger.log
 
@@ -211,7 +212,7 @@ class ProfileDumper:
         # TODO: But it is highly likely that the last dump command with deletion was run a while ago
         # TODO: So I cannot filter by last dump time, but should probably take the whole set
         profile_qb = orm.QueryBuilder().append(orm.ProcessNode)
-        profile_processes = set(cast(Collection[orm.ProcessNode], profile_qb.all(flat=True)))
+        profile_processes = set(cast(Iterable[orm.ProcessNode], profile_qb.all(flat=True)))
         profile_uuids = set([process.uuid for process in profile_processes if process.caller is None])
 
         to_delete_uuids = list(dumped_uuids - profile_uuids)
@@ -231,7 +232,7 @@ class ProfileDumper:
 
         try:
             path_to_delete = current_store.entries[to_delete_uuid].path
-            _safe_delete(path_to_validate=path_to_delete, safeguard_file='.aiida_node_metadata.yaml', verbose=False)
+            _safe_delete_dir(path_to_validate=path_to_delete, safeguard_file='.aiida_node_metadata.yaml', verbose=False)
             current_store.del_entry(uuid=to_delete_uuid)
         except:
             raise

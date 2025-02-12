@@ -18,6 +18,8 @@ import pytest
 from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
 from aiida.tools.dumping.process import ProcessDumper
 
+# TODO: Use `compare_tree` function here, as well
+
 # Non-AiiDA variables
 filename = 'file.txt'
 filecontent = 'a'

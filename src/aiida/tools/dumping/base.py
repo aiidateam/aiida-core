@@ -7,8 +7,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from datetime import datetime
-from pathlib import Path
 
 from aiida.tools.dumping.config import BaseDumpConfig
 from aiida.tools.dumping.logger import DumpLogger
@@ -22,7 +20,6 @@ class BaseDumper:
         base_dump_config: BaseDumpConfig | None = None,
         dump_logger: DumpLogger | None = None,
     ):
-
         self.base_dump_config = base_dump_config or BaseDumpConfig()
 
         # Unpack values for direct access

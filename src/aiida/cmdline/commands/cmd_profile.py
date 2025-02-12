@@ -429,7 +429,7 @@ def profile_mirror(
         echo.echo_report(dry_run_message)
         return
 
-    if  num_processes_to_dump == 0:
+    if num_processes_to_dump == 0:
         echo.echo_success('No processes to dump.')
     else:
         profile_dumper.dump_processes()
@@ -449,4 +449,3 @@ def profile_mirror(
 
     # Write the logging json file to disk
     dump_logger.save_log()
-

@@ -179,7 +179,7 @@ class XyData(ArrayData):
             y_units = self.base.attributes.get('y_units')
         except (KeyError, AttributeError):
             raise NotExistent('No y units has been set yet!')
-        
+
         y_arrays = [self.get_array(f'y_array_{i}') for i in range(len(y_names))]
         return list(zip(y_names, y_arrays, y_units))
 
@@ -189,4 +189,4 @@ class XyData(ArrayData):
         try:
             return self.base.attributes.get('y_names')
         except (KeyError, AttributeError):
-            raise NotExistent(f'No y names been set yet')
+            raise NotExistent('No y names been set yet')

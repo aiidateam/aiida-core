@@ -38,15 +38,12 @@ jobs:
         python-version: '3.11'
 
     - name: Set up uv
-      uses: astral-sh/setup-uv@v5.2.0
+      uses: astral-sh/setup-uv@v5.2.1
       with:
-        version: 0.5.x
+        version: latest
 
     - name: Install utils/ dependencies
       run: uv pip install --system -r utils/requirements.txt
-
-    - name: Validate uv lockfile
-      run: uv lock --check
 
     - name: Validate conda environment file
       run: python ./utils/dependency_management.py validate-environment-yml

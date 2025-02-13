@@ -62,17 +62,11 @@ jobs:
       images: ${{ needs.build.outputs.images }}
       registry: ghcr.io
 
-  # IMPORTANT: To save arm64 runners resources,
-  # we run the test only when pushing to main.
-  # We also only test the aiida-core-dev image.
   test-arm64:
     needs: build
-    if: >-
-      github.repository == 'aiidateam/aiida-core'
-      && (github.ref_type == 'tag' || github.ref_name == 'main')
     uses: ./.github/workflows/docker-test.yml
     with:
-      runsOn: buildjet-4vcpu-ubuntu-2204-arm
+      runsOn: ubuntu-22.04-arm
       images: ${{ needs.build.outputs.images }}
       target: aiida-core-dev
 

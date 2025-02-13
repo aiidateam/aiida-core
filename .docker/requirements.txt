@@ -1,4 +1,4 @@
 docker~=7.0.0
 pytest~=8.2.0
 requests~=2.32.0
-pytest-docker~=3.1.0
+pytest-docker~=3.2.0

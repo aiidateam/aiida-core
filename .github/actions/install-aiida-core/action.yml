@@ -31,9 +31,9 @@ runs:
       python-version: ${{ inputs.python-version }}
 
   - name: Set up uv
-    uses: astral-sh/setup-uv@v5.2.0
+    uses: astral-sh/setup-uv@v5.2.1
     with:
-      version: 0.5.x
+      version: 0.5.22
       python-version: ${{ inputs.python-version }}
 
   - name: Install dependencies from uv lock

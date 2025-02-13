@@ -200,6 +200,13 @@ class IncompatibleDatabaseSchema(ConfigurationError):  # noqa: N818
     """
 
 
+class IncompatibleExternalDependencies(ConfigurationError):  # noqa: N818
+    """Raised when incomptabale external depencies are found.
+
+    This could happen, when the dependency is not a python package and therefore not checked during installation.
+    """
+
+
 class IncompatibleStorageSchema(IncompatibleDatabaseSchema):
     """Raised when the storage schema is incompatible with that of the code."""
 

@@ -186,10 +186,6 @@ class XyData(ArrayData):
     def get_y_arraynames(self) -> list[str]:
         """Returns the user-provided names of the y-arrays."""
 
-        try:
-            y_names = self.base.attributes.get('y_names')
-            if y_names is None:
-                raise KeyError
-            return y_names
-        except (KeyError, AttributeError):
-            raise NotExistent(f'No y names been set yet!')
+        y_names = getattr(self.base.attributes, 'y_names', None)
+        if y_names is None:
+            raise NotExistent('No y names have been set yet!')

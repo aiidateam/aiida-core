@@ -9,6 +9,13 @@
 """This module defines the classes related to Xy data. That is data that contains
 collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
+
+Example:
+    xy = XyData()
+    xy.set_x(np.array([1, 2, 3]), 'x', 'unit_x')
+    xy.set_y([np.array([1, 2, 3]), np.array([4, 5, 6])], ['y', 'z'], ['unit_y', 'unit_z'])
+    print(xy.get_arraynames())  # ['x_array', 'y_array_0', 'y_array_1']
+    print(xy.get_y())           # [('y', array([1, 2, 3]), 'unit_y'), ('z', array([4, 5, 6]), 'unit_z')]
 """
 
 from __future__ import annotations
@@ -131,11 +138,11 @@ class XyData(ArrayData):
         except NotExistent as exc:
             raise ValueError('X array has not been set yet') from exc
         # validate each of the y_arrays
-        for y_array, y_name, y_unit in zip(y_array, y_names, y_units):
+        for num, (y_array, y_name, y_unit) in enumerate(zip(y_arrays, y_names, y_units)):
             self._arrayandname_validator(y_array, y_name, y_unit)
             if np.shape(y_array) != np.shape(x_array):
-                raise ValueError(f'y_array {y_name} does not have the same shape as the x_array!')
-            self.set_array(y_name, y_array)
+                raise ValueError(f'y_array {y_name} did not have the same shape has the x_array!')
+            self.set_array(f'y_array_{num}', y_array)
 
         # if the y_arrays pass the initial validation, sets each
         self.base.attributes.set('y_names', y_names)
@@ -172,12 +179,14 @@ class XyData(ArrayData):
             y_units = self.base.attributes.get('y_units')
         except (KeyError, AttributeError):
             raise NotExistent('No y units has been set yet!')
-        y_arrays = []
-        for y_name in y_names:
-            try:
-                y_array = self.get_array(y_name)
-                y_arrays.append((y_name, y_arrays))
-            except (KeyError, AttributeError):
-                raise NotExistent(f'Could not retrieve array associated with y array {y_name}')
-
+        
+        y_arrays = [self.get_array(f'y_array_{i}') for i in range(len(y_names))]
         return list(zip(y_names, y_arrays, y_units))
+
+    def get_y_arraynames(self) -> list[str]:
+        """Returns the user-provided names of the y-arrays."""
+
+        try:
+            return self.base.attributes.get('y_names')
+        except (KeyError, AttributeError):
+            raise NotExistent(f'No y names been set yet')

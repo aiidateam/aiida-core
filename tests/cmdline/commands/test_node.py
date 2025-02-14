@@ -570,6 +570,10 @@ class TestVerdiDelete:
         self.calcjob_nodes = []
         self.remote_nodes = []
         self.remote_folders = []
+        # We keep track of the PKs to verify deletion
+        self.workflow_pks = []
+        self.calcjob_pks = []
+        self.remote_pks = []
 
     @pytest.fixture()
     def setup_node_hierarchy(self, aiida_localhost, tmp_path):
@@ -598,6 +602,7 @@ class TestVerdiDelete:
                 workflow_node = WorkflowNode()
                 workflow_node.store()
                 self.workflow_nodes.append(workflow_node)
+                self.workflow_pks.append(workflow_node.pk)
 
                 for i in range(n_calcjobs):
                     calcjob_node = CalcJobNode(computer=aiida_localhost)
@@ -612,12 +617,14 @@ class TestVerdiDelete:
                     calcjob_node.set_option('output_filename', 'fileA.txt')
                     calcjob_node.store()
                     self.calcjob_nodes.append(calcjob_node)
+                    self.calcjob_pks.append(calcjob_node.pk)
 
                     for _ in range(n_remotes):
                         remote_node = RemoteData(remote_path=str(workdir), computer=aiida_localhost)
                         remote_node.base.links.add_incoming(calcjob_node, LinkType.CREATE, link_label='remote_folder')
                         remote_node.store()
                         self.remote_nodes.append(remote_node)
+                        self.remote_pks.append(remote_node.pk)
 
             # this is equal to (n_workflows + n_workflows * n_calcjobs + n_workflows * n_calcjobs * n_remotes)
             self.total_nodes = len(self.workflow_nodes) + len(self.calcjob_nodes) + len(self.remote_nodes)
@@ -628,24 +635,24 @@ class TestVerdiDelete:
         """Verify that the nodes and remote folders are deleted or not deleted."""
 
         if nodes_deleted:
-            for workflow_node in self.workflow_nodes:
-                with pytest.raises(Exception, match='deleted'):
-                    WorkflowNode.objects.get(pk=workflow_node.pk)
+            for workflow_pk in self.workflow_pks:
+                with pytest.raises(NotExistent):
+                    WorkflowNode.objects.get(pk=workflow_pk)
 
-            for calcjob_node in self.calcjob_nodes:
-                with pytest.raises(Exception, match='deleted'):
-                    CalcJobNode.objects.get(pk=calcjob_node.pk)
+            for calcjob_pk in self.calcjob_pks:
+                with pytest.raises(NotExistent):
+                    CalcJobNode.objects.get(pk=calcjob_pk)
 
-            for remote_node in self.remote_nodes:
-                with pytest.raises(Exception, match='deleted'):
-                    RemoteData.objects.get(pk=remote_node.pk)
+            for remote_pk in self.remote_pks:
+                with pytest.raises(NotExistent):
+                    RemoteData.objects.get(pk=remote_pk)
         else:
-            for workflow_node in self.workflow_nodes:
-                WorkflowNode.objects.get(pk=workflow_node.pk)
-            for calcjob_node in self.calcjob_nodes:
-                CalcJobNode.objects.get(pk=calcjob_node.pk)
-            for remote_node in self.remote_nodes:
-                RemoteData.objects.get(pk=remote_node.pk)
+            for workflow_pk in self.workflow_pks:
+                WorkflowNode.objects.get(pk=workflow_pk)
+            for calcjob_pk in self.calcjob_pks:
+                CalcJobNode.objects.get(pk=calcjob_pk)
+            for remote_pk in self.remote_pks:
+                RemoteData.objects.get(pk=remote_pk)
 
         for remote_folder in self.remote_folders:
             if folders_deleted:
@@ -803,6 +810,18 @@ class TestVerdiDelete:
     def test_node_delete_missing_pk(self, run_cli_command):
         """Check that no exception is raised when a non-existent pk is given (just warns)."""
         run_cli_command(cmd_node.node_delete, ['999'])
+
+    def test_node_delete_no_calcjob_to_cleandir(self, run_cli_command):
+        """Check that no exception is raised when a node is deleted with no calcjob to clean."""
+        node = orm.Data().store()
+        pk = node.pk
+        result = run_cli_command(cmd_node.node_delete, ['--clean-workdir', '--force', str(pk)])
+        assert '--clean-workdir ignored. No CalcJobNode associated with the given node, found.' in str(
+            result.stdout_bytes
+        )
+
+        with pytest.raises(NotExistent):
+            orm.load_node(pk)
 
 
 @pytest.fixture(scope='class')

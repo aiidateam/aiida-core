@@ -190,5 +190,6 @@ class XyData(ArrayData):
             y_names = self.base.attributes.get('y_names')
             if y_names is None:
                 raise KeyError
+            return y_names
         except (KeyError, AttributeError):
             raise NotExistent(f'No y names been set yet!')

@@ -446,18 +446,6 @@ def join_labels(labels, join_symbol='|', threshold=1.0e-6):
     return new_labels
 
 
-def strip_prefix(full_string, prefix):
-    """Strip the prefix from the given string and return it. If the prefix is not present
-    the original string will be returned unaltered
-
-    :param full_string: the string from which to remove the prefix
-    :param prefix: the prefix to remove
-    :return: the string with prefix removed
-    """
-    if full_string.startswith(prefix):
-        return full_string.rsplit(prefix)[1]
-
-    return full_string
 
 
 class Capturing:

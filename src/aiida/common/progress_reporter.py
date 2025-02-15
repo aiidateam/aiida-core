@@ -18,7 +18,7 @@ and indeed a valid implementation is::
 
 from functools import partial
 from types import TracebackType
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Optional, Type, Dict
 
 __all__ = (
     'TQDM_BAR_FORMAT',
@@ -56,6 +56,7 @@ class ProgressReporterAbstract:
         self._total = total
         self._desc = desc
         self._increment: int = 0
+        self._kwargs= kwargs
 
     @property
     def total(self) -> int:
@@ -109,6 +110,18 @@ class ProgressReporterAbstract:
         self._increment = 0
         if total is not None:
             self._total = total
+
+    @property
+    def kwargs(self) -> Dict[str, Any]:
+        """Return the additional keyword arguments."""
+        return self._kwargs
+        
+    def update_kwargs(self, **kwargs: Any) -> None:
+        """Update the keyword arguments.
+        
+        :param kwargs: New keyword arguments to update
+        """
+        self._kwargs.update(kwargs)
 
 
 class ProgressReporterNull(ProgressReporterAbstract):
@@ -177,7 +190,13 @@ def set_progress_bar_tqdm(bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Op
     """
     from tqdm import tqdm
 
-    set_progress_reporter(tqdm, bar_format=bar_format, leave=leave, **kwargs)
+    def tqdm_with_kwargs(*args: Any, **init_kwargs: Any) -> Any:
+
+        merged_kwargs = {**kwargs}
+        merged_kwargs.update(init_kwargs)
+        return tqdm(*args, **merged_kwargs)
+
+    set_progress_reporter(tqdm_with_kwargs, bar_format=bar_format, leave=leave)
 
 
 def create_callback(progress_reporter: ProgressReporterAbstract) -> Callable[[str, Any], None]:
@@ -186,8 +205,9 @@ def create_callback(progress_reporter: ProgressReporterAbstract) -> Callable[[st
     :returns: a callback to report on the process, ``callback(action, value)``,
         with the following callback signatures:
 
-        - ``callback('init', {'total': <int>, 'description': <str>})``,
-            to reset the progress with a new total iterations and description
+        - ``callback('init', {'total': <int>, 'description': <str>, **kwargs})``,
+            to reset the progress with a new total iterations, description and
+            additinal settings
         - ``callback('update', <int>)``,
             to update the progress by a certain number of iterations
 
@@ -195,9 +215,20 @@ def create_callback(progress_reporter: ProgressReporterAbstract) -> Callable[[st
 
     def _callback(action: str, value: Any):
         if action == 'init':
-            progress_reporter.reset(value['total'])
-            progress_reporter.set_description_str(value['description'])
+
+            total = value.pop('total', None)
+            description = value.pop('description', None)
+            
+            if total is not None:
+                progress_reporter.reset(total)
+                  
+            if description is not None:
+                progress_reporter.set_description_str(description)
+                
+            if value:
+                progress_reporter.update_kwargs(**value)
+                
         elif action == 'update':
             progress_reporter.update(value)
-
+            
     return _callback

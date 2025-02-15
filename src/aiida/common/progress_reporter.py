@@ -18,7 +18,7 @@ and indeed a valid implementation is::
 
 from functools import partial
 from types import TracebackType
-from typing import Any, Callable, Optional, Type, Dict
+from typing import Any, Callable, Dict, Optional, Type
 
 __all__ = (
     'TQDM_BAR_FORMAT',
@@ -56,7 +56,7 @@ class ProgressReporterAbstract:
         self._total = total
         self._desc = desc
         self._increment: int = 0
-        self._kwargs= kwargs
+        self._kwargs = kwargs
 
     @property
     def total(self) -> int:
@@ -115,10 +115,10 @@ class ProgressReporterAbstract:
     def kwargs(self) -> Dict[str, Any]:
         """Return the additional keyword arguments."""
         return self._kwargs
-        
+
     def update_kwargs(self, **kwargs: Any) -> None:
         """Update the keyword arguments.
-        
+
         :param kwargs: New keyword arguments to update
         """
         self._kwargs.update(kwargs)
@@ -191,7 +191,6 @@ def set_progress_bar_tqdm(bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Op
     from tqdm import tqdm
 
     def tqdm_with_kwargs(*args: Any, **init_kwargs: Any) -> Any:
-
         merged_kwargs = {**kwargs}
         merged_kwargs.update(init_kwargs)
         return tqdm(*args, **merged_kwargs)
@@ -215,20 +214,19 @@ def create_callback(progress_reporter: ProgressReporterAbstract) -> Callable[[st
 
     def _callback(action: str, value: Any):
         if action == 'init':
-
             total = value.pop('total', None)
             description = value.pop('description', None)
-            
+
             if total is not None:
                 progress_reporter.reset(total)
-                  
+
             if description is not None:
                 progress_reporter.set_description_str(description)
-                
+
             if value:
                 progress_reporter.update_kwargs(**value)
-                
+
         elif action == 'update':
             progress_reporter.update(value)
-            
+
     return _callback

@@ -42,7 +42,7 @@ jobs:
       if: ${{ inputs.platforms != 'linux/amd64' }}
       uses: docker/setup-qemu-action@v3
       with:
-          # Workaround for https://github.com/tonistiigi/binfmt/issues/215
+        # Workaround for https://github.com/tonistiigi/binfmt/issues/215
         image: tonistiigi/binfmt:qemu-v7.0.0-28
         cache-image: true
 

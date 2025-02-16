@@ -61,7 +61,7 @@ def load_node_class(type_string):
 
     if base_path.startswith('process'):
         entry_point_name = base_path.removeprefix('.nodes')
-        return load_entry_point('aiida.node', entry_point_name) 
+        return load_entry_point('aiida.node', entry_point_name)
 
     # At this point we really have an anomalous type string. At some point, storing nodes with unresolvable type strings
     # was allowed, for example by creating a sub class in a shell and then storing an instance. Attempting to load the

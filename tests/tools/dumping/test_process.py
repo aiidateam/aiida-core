@@ -53,10 +53,10 @@ def test_dump(generate_calculation_node_io, generate_workchain_node_io, tmp_path
 
     # Raises if ProcessNode not sealed
     with pytest.raises(ExportValidationError):
-        return_path = process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
+        return_path = process_dumper.dump(process_node=wc_node, custom_output_path=dump_parent_path)
 
     wc_node.seal()
-    return_path = process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
+    return_path = process_dumper.dump(process_node=wc_node, custom_output_path=dump_parent_path)
 
     assert dump_parent_path.is_dir()
     assert (dump_parent_path / 'README.md').is_file()
@@ -117,7 +117,7 @@ def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
     dump_parent_path = tmp_path / 'wc-dump-test-multiply-add'
     process_dumper = ProcessDumper()
     wc_node = generate_workchain_multiply_add()
-    process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
+    process_dumper.dump(process_node=wc_node, custom_output_path=dump_parent_path)
 
     arithmetic_add_path = dump_parent_path / '02-ArithmeticAddCalculation-8'
     multiply_path = dump_parent_path / '01-multiply-6'
@@ -142,7 +142,7 @@ def test_dump_multiply_add(tmp_path, generate_workchain_multiply_add):
     dump_parent_path = tmp_path / 'wc-dump-test-multiply-add-flat'
     process_dump_config = ProcessDumpConfig(flat=True)
     process_dumper = ProcessDumper(process_dump_config=process_dump_config)
-    process_dumper.dump(process_node=wc_node, output_path=dump_parent_path)
+    process_dumper.dump(process_node=wc_node, custom_output_path=dump_parent_path)
 
     multiply_file = dump_parent_path / '01-multiply-6' / 'source_file'
     arithmetic_add_files = [

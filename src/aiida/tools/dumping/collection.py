@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable
 from datetime import datetime
+from pathlib import Path
 from typing import cast
 
 from aiida import orm
@@ -159,7 +160,6 @@ class CollectionDumper(BaseDumper):
 
         # TODO: Only allow for "pure" sequences of Calculation- or WorkflowNodes, or also mixed?
         # TODO: If the latter possibly also have directory creation in the loop
-        assert self.dump_parent_path is not None, '`dump_parent_path` must be set'
         sub_path = self.dump_parent_path / NodeDumpMapper.get_directory(node=next(iter(processes)))
         sub_path.mkdir(exist_ok=True, parents=True)
 
@@ -204,20 +204,22 @@ class CollectionDumper(BaseDumper):
                 entry=DumpLog(path=process_dump_path, time=datetime.now().astimezone()),
             )
 
-    def dump(self) -> None:
+    def dump(self, output_path: Path | None = None) -> None:
         """Top-level method that actually performs the dumping of the AiiDA data for the collection.
 
         :return: None
         """
 
-        assert self.dump_parent_path is not None, '`dump_parent_path` must be set'
+        if not output_path:
+            output_path = self.dump_parent_path
+        if not output_path.is_absolute():
+            output_path /= self.dump_parent_path
+        self.dump_parent_path = output_path
+
         self.dump_parent_path.mkdir(exist_ok=True, parents=True)
         collection_processes: ProcessesDumpContainer = self._get_processes_to_dump()
-        # breakpoint()
 
         if not self.processes_to_dump.is_empty:
-            # self._dump_processes(processes=collection_processes)
-
             # First, dump workflows, then calculations
             if len(collection_processes.workflows) > 0:
                 self._dump_processes(processes=collection_processes.workflows)

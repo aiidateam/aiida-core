@@ -43,10 +43,10 @@ class ProcessDumper(BaseDumper):
     ) -> None:
         """Initialize the ProcessDumper."""
 
-        # super().__init__(base_dump_config=base_dump_config, **kwargs)
-        super().__init__(base_dump_config=base_dump_config, dump_logger=dump_logger)
-
         self.process_dump_config = process_dump_config or ProcessDumpConfig()
+        self.base_dump_config = base_dump_config or BaseDumpConfig()
+
+        super().__init__(base_dump_config=self.base_dump_config, dump_logger=dump_logger)
 
         # Unpack arguments for ProcessDumper for easier access
         self.include_inputs = self.process_dump_config.include_inputs
@@ -148,7 +148,6 @@ class ProcessDumper(BaseDumper):
         process_show = get_node_info(node=process_node)
         _readme_string += f'\n\n\nOutput of `verdi process show {pk}`:\n\n```shell\n{process_show}\n```'
 
-        assert self.dump_parent_path is not None, '`dump_parent_path` must be set.'
         (self.dump_parent_path / 'README.md').write_text(_readme_string)
 
     @staticmethod
@@ -186,7 +185,7 @@ class ProcessDumper(BaseDumper):
     def dump(
         self,
         process_node: orm.ProcessNode,
-        # output_path: Path | None,
+        output_path: Path | None = None,
         io_dump_paths: list[str | Path] | None = None,
     ) -> Path:
         """Dumps all data involved in a `ProcessNode`, including its outgoing links.
@@ -195,7 +194,7 @@ class ProcessDumper(BaseDumper):
         only actually created when a `CalculationNode` is reached.
 
         :param process_node: The parent `ProcessNode` node to be dumped.
-        :param output_path: The output path where the directory tree will be created.
+        :param output_path: Custom output path where the directory tree will be created.
         :param io_dump_paths: Subdirectories created for each `CalculationNode`.
             Default: ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         :raises: ExportValidationError if the node is not sealed and dump_unsealed is False.
@@ -214,22 +213,24 @@ class ProcessDumper(BaseDumper):
         #     setattr(self, key, value)
 
         # TODO: Refactor here to also use `dump_parent_path`
-        if not self.dump_parent_path:
-            self.dump_parent_path = self._generate_default_dump_path(process_node=process_node)
+        if not output_path:
+            output_path = self._generate_default_dump_path(process_node=process_node)
+        if not output_path.is_absolute():
+            output_path = self.dump_parent_path / output_path
 
         prepare_dump_path(
-            path_to_validate=self.dump_parent_path,
+            path_to_validate=output_path,
             overwrite=self.overwrite,
             incremental=self.incremental,
         )
 
-        breakpoint()
+        # breakpoint()
         if isinstance(process_node, orm.CalculationNode):
             # breakpoint()
 
             self._dump_calculation(
                 calculation_node=process_node,
-                output_path=self.dump_parent_path,
+                output_path=output_path,
                 io_dump_paths=io_dump_paths,
             )
 
@@ -318,7 +319,6 @@ class ProcessDumper(BaseDumper):
 
                     calculation_store = self.dump_logger.log.calculations
 
-                    # breakpoint()
                     self.dump_logger.add_entry(
                         store=calculation_store,
                         uuid=child_node.uuid,

@@ -7,7 +7,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -16,14 +18,10 @@ from pathlib import Path
 class BaseDumpConfig:
     """Container for shared arguments of all Dumper classes."""
 
-    dump_parent_path: Path | None = None
+    dump_parent_path: Path | None = field(default_factory=Path.cwd)
     overwrite: bool = False
     incremental: bool = True
     last_dump_time: datetime | None = None
-
-    def __post_init__(self):
-        if self.dump_parent_path is None:
-            self.dump_parent_path = Path.cwd()
 
 
 @dataclass

@@ -7,6 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
+from pathlib import Path
 
 from aiida.tools.dumping.config import BaseDumpConfig
 from aiida.tools.dumping.logger import DumpLogger
@@ -23,7 +24,7 @@ class BaseDumper:
         self.base_dump_config = base_dump_config or BaseDumpConfig()
 
         # Unpack values for direct access
-        self.dump_parent_path = self.base_dump_config.dump_parent_path
+        self.dump_parent_path = self.base_dump_config.dump_parent_path or Path.cwd()
         self.overwrite = self.base_dump_config.overwrite
         self.incremental = self.base_dump_config.incremental
         self.last_dump_time = self.base_dump_config.last_dump_time

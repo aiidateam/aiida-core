@@ -319,12 +319,19 @@ def group_delete(
 @with_dbenv()
 def group_relabel(group, label):
     """Change the label of a group."""
+    # TODO: Add a message here that if one has the profile mirrored, they should also run the command `verdi profile
+    # TODO: mirror relabel-group ` to update the mirrored profile.
     try:
         group.label = label
     except UniquenessError as exception:
         echo.echo_critical(str(exception))
     else:
         echo.echo_success(f"Label changed to '{label}'")
+        msg = (
+            'Note that if you are mirroring your profile data to disk, to reflect the relabeling of the group, '
+            'run the command: `verdi profile mirror --update-groups.'
+        )
+        echo.echo_report(msg)
 
 
 @verdi_group.command('description')

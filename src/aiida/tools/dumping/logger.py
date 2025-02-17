@@ -15,6 +15,9 @@ from typing import Collection
 
 from aiida.common.exceptions import NotExistent
 
+# TODO: Possibly mirror hierarchy of mirrored directory inside json file
+# TODO: Currently, json file has only top-level "groups", "workflows", and "calculations"
+
 
 @dataclass
 class DumpLog:
@@ -94,10 +97,12 @@ class DumpLogStoreCollection:
 
     calculations: DumpLogStore
     workflows: DumpLogStore
+    groups: DumpLogStore
+    # data: DumpLogStore
 
 
 class DumpLogger:
-    """Main logger class using dataclasses for better structure."""
+    """Main dumping logger singleton."""
 
     DUMP_LOG_FILE: str = '.dump_log.json'
     _instance: 'DumpLogger | None' = None  # Class-level singleton instance
@@ -116,7 +121,8 @@ class DumpLogger:
         dump_parent_path: Path | None = None,
         calculations: DumpLogStore | None = None,
         workflows: DumpLogStore | None = None,
-        # counter: int = 0,
+        groups: DumpLogStore | None = None,
+        # data: DumpLogStore | None = None,
     ) -> None:
         # Ensure __init__ is only called once
         if hasattr(self, '_initialized') and self._initialized:
@@ -125,7 +131,8 @@ class DumpLogger:
         self.dump_parent_path = dump_parent_path or Path.cwd()
         self.calculations = calculations or DumpLogStore()
         self.workflows = workflows or DumpLogStore()
-        # self.counter = counter
+        self.groups = groups or DumpLogStore()
+        # self.dat = data or DumpLogStore()
 
         # Mark the object as initialized
         self._initialized = True
@@ -144,7 +151,7 @@ class DumpLogger:
     @property
     def log(self) -> DumpLogStoreCollection:
         """Retrieve the current state of the log as a dataclass."""
-        return DumpLogStoreCollection(calculations=self.calculations, workflows=self.workflows)
+        return DumpLogStoreCollection(calculations=self.calculations, workflows=self.workflows, groups=self.groups)
 
     def save_log(self) -> None:
         """Save the log to a JSON file."""
@@ -152,12 +159,18 @@ class DumpLogger:
         def serialize_logs(container: DumpLogStore) -> dict:
             serialized = {}
             for uuid, entry in container.entries.items():
-                serialized[uuid] = {'path': str(entry.path), 'time': entry.time.isoformat()}
+                serialized[uuid] = {
+                    'path': str(entry.path),
+                    'time': entry.time.isoformat(),
+                    'links': [str(link) for link in entry.links],
+                }
             return serialized
 
         log_dict = {
             'calculations': serialize_logs(self.calculations),
             'workflows': serialize_logs(self.workflows),
+            'groups': serialize_logs(self.groups),
+            # 'data': serialize_logs(self.data),
         }
 
         with self.log_file_path.open('w', encoding='utf-8') as f:
@@ -185,12 +198,20 @@ class DumpLogger:
                 container = DumpLogStore()
                 for uuid, entry in category_data.items():
                     container.add_entry(
-                        uuid, DumpLog(path=Path(entry['path']), time=datetime.fromisoformat(entry['time']))
+                        uuid,
+                        DumpLog(
+                            path=Path(entry['path']),
+                            time=datetime.fromisoformat(entry['time']),
+                            links=[Path(p) for p in entry['links']],
+                        ),
                     )
+
                 return container
 
             instance.calculations = deserialize_logs(data['calculations'])
             instance.workflows = deserialize_logs(data['workflows'])
+            instance.groups = deserialize_logs(data['groups'])
+            # instance.data = deserialize_logs(data['data'])
 
         except (json.JSONDecodeError, OSError):
             raise
@@ -206,7 +227,7 @@ class DumpLogger:
             if uuid in store.entries:
                 return store
 
-        msg = f"No corresponding `DumpLogStore` found for UUID: `{uuid}`."
+        msg = f'No corresponding `DumpLogStore` found for UUID: `{uuid}`.'
         raise NotExistent(msg)
 
     def get_path_by_uuid(self, uuid: str) -> Path | None:
@@ -215,13 +236,17 @@ class DumpLogger:
 
         try:
             current_store = self.get_store_by_uuid(uuid=uuid)
-            path = current_store.entries[uuid].path
-            return path
         except NotExistent as exc:
             raise NotExistent(exc.args[0]) from exc
+        try:
+            path = current_store.entries[uuid].path
+            return path
         except KeyError as exc:
-            msg = f"UUID: `{uuid}` not contained in store `{current_store}`."
+            msg = f'UUID: `{uuid}` not contained in store `{current_store}`.'
             raise KeyError(msg) from exc
         except:
             # For debugging
+            import ipdb
+
+            ipdb.set_trace()
             raise

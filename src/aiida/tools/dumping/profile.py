@@ -12,8 +12,9 @@
 
 from __future__ import annotations
 
-from typing import cast
+from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -22,9 +23,9 @@ from aiida.manage.configuration.profile import Profile
 from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
-from aiida.tools.dumping.logger import DumpLogger
+from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.utils import filter_nodes_last_dump_time, load_given_group, safe_delete_dir, get_group_subpath
+from aiida.tools.dumping.utils import filter_nodes_last_dump_time, get_group_subpath, load_given_group, safe_delete_dir
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
@@ -54,7 +55,7 @@ class ProfileDumper(BaseDumper):
         super().__init__(base_dump_config=base_dump_config, dump_logger=dump_logger)
 
         if groups is not None:
-            self.groups = [load_given_group(g) for g in groups]
+            self.groups = [load_given_group(group=g) for g in groups]
         else:
             self.groups = []
 
@@ -75,6 +76,9 @@ class ProfileDumper(BaseDumper):
 
         self._processes_to_dump: list[str] | None = None
         self._processes_to_delete: list[str] | None = None
+
+        # self._groups_to_dump: list[str] | None = None
+        self._groups_to_delete: list[str] | None = None
 
     def _dump_processes_not_in_any_group(self) -> None:
         """Dump the profile's process data not contained in any group."""
@@ -105,6 +109,8 @@ class ProfileDumper(BaseDumper):
         :param groups: List of ``orm.Group`` entities.
         """
 
+        group_store = self.dump_logger.groups
+
         for group in groups:
             if self.organize_by_groups:
                 group_subpath = get_group_subpath(group=group)
@@ -124,6 +130,11 @@ class ProfileDumper(BaseDumper):
                 msg = f'Dumping processes in group {group.label} for profile `{self.profile.name}`...'
                 logger.report(msg)
                 group_dumper.dump(output_path=output_path)
+
+                group_store.add_entry(
+                    uuid=group.uuid,
+                    entry=DumpLog(path=output_path, time=datetime.now().astimezone()),
+                )
 
     def _get_no_group_processes(self) -> list[str]:
         """Obtain nodes in the profile that are not part of any group.
@@ -166,11 +177,11 @@ class ProfileDumper(BaseDumper):
 
             # Still, even without selecting groups, by default, all profile data should be dumped
             # Thus, we obtain all groups in the profile here
-            profile_groups = orm.QueryBuilder().append(orm.Group).all(flat=True)
+            profile_groups = cast(list[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
             self._dump_processes_per_group(groups=profile_groups)
 
         else:
-            self._dump_processes_per_group(groups=self.groups)
+            self._dump_processes_per_group(groups=[g for g in self.groups if g is not None])
 
     @property
     def processes_to_dump(self) -> list[str]:
@@ -191,6 +202,28 @@ class ProfileDumper(BaseDumper):
         return profile_processes
 
     @property
+    def groups_to_delete(self) -> list[str]:
+        if not self.delete_missing:
+            return []
+        if self._groups_to_delete is None:
+            self._groups_to_delete = self._get_groups_to_delete()
+        return self._groups_to_delete
+
+    def _get_groups_to_delete(self) -> list[str]:
+        breakpoint()
+        dump_logger = self.dump_logger
+        log = dump_logger.log
+
+        # Cannot use QB here because, when node deleted, it's not in the DB anymore
+        dumped_uuids = set(list(log.groups.entries.keys()))
+
+        profile_uuids = cast(set[str], set(orm.QueryBuilder().append(orm.Group, project=['uuid']).all(flat=True)))
+
+        to_delete_uuids = list(dumped_uuids - profile_uuids)
+
+        return to_delete_uuids
+
+    @property
     def processes_to_delete(self) -> list[str]:
         if not self.delete_missing:
             return []
@@ -205,23 +238,19 @@ class ProfileDumper(BaseDumper):
         # Cannot use QB here because, when node deleted, it's not in the DB anymore
         dumped_uuids = set(list(log.calculations.entries.keys()) + list(log.workflows.entries.keys()))
 
-        breakpoint()
-
-        # TODO: Possibly filter here since last dump time
-        # TODO: But it is highly likely that the last dump command with deletion was run a while ago
-        # TODO: So I cannot filter by last dump time, but should probably take the whole set
-        # TODO: Don't
-        profile_uuids = cast(
-            set[str], set(orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True))
-        )
+        # One could possibly filter here since last dump time, however
+        # it is highly likely that the last dump command with deletion was run a while ago
+        # So I cannot filter by last dump time, but should probably take the whole set
+        profile_uuids = cast(set[str], set(orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True)))
+        # Don't restrict here to only top-level processes, as all file paths, also for sub-processes are actually
+        # created and stored in the log
         # profile_uuids = set([process.uuid for process in profile_processes if process.caller is None])
-        # profile_uuids = set([process.uuid for process in profile_processes])
 
         to_delete_uuids = list(dumped_uuids - profile_uuids)
 
         return to_delete_uuids
 
-    def _delete_missing_node_dir(self, to_delete_uuid) -> None:
+    def _delete_missing_node_dir(self, to_delete_uuid: str) -> None:
         # TODO: Possibly make a delete method for the path and the log, and then call that in the loop
 
         dump_logger = self.dump_logger
@@ -234,15 +263,17 @@ class ProfileDumper(BaseDumper):
 
         # breakpoint()
         path_to_delete = dump_logger.get_path_by_uuid(uuid=to_delete_uuid)
-
-        try:
-            safe_delete_dir(path_to_validate=path_to_delete, safeguard_file='.aiida_node_metadata.yaml', verbose=False)
-            current_store.del_entry(uuid=to_delete_uuid)
-        except:
-            raise
+        if path_to_delete is not None:
+            try:
+                safe_delete_dir(
+                    path_to_validate=path_to_delete, safeguard_file='.aiida_node_metadata.yaml', verbose=False
+                )
+                current_store.del_entry(uuid=to_delete_uuid)
+            except:
+                raise
 
     def delete_processes(self):
-        to_dump_processes = self.processes_to_dump
+        # to_dump_processes = self.processes_to_dump
         to_delete_processes = self.processes_to_delete
 
         # print(f'TO_DUMP_PROCESSES: {to_dump_processes}')
@@ -252,5 +283,54 @@ class ProfileDumper(BaseDumper):
         for to_delete_uuid in to_delete_processes:
             self._delete_missing_node_dir(to_delete_uuid=to_delete_uuid)
 
-        # TODO: Need to also delete entry from the log when I delete the dir
-        # TODO: Add also logging for node/path deletion
+        # TODO: Add also logging for node/path deletion?
+
+    def delete_groups(self):
+        to_delete_groups = self.groups_to_delete
+        for to_delete_uuid in to_delete_groups:
+            self._delete_missing_node_dir(to_delete_uuid=to_delete_uuid)
+            # ! Problem: Don't have safeguard file in empty group directory
+
+    def update_groups(self) -> list[dict[str, Path]]:
+        dump_logger = self.dump_logger
+
+        # Order is the same as in the mirroring log file -> Not using a profile QB here
+        # Also, if the group is new (and contains new nodes), it will be dumped anyway
+        dumped_group_uuids = list(dump_logger.groups.entries.keys())
+
+        old_mapping: dict[str, Path] = dict(
+            zip(dumped_group_uuids, [p.path for p in dump_logger.groups.entries.values()])
+        )
+
+        new_mapping: dict[str, Path] = dict(
+            zip(
+                dumped_group_uuids,
+                [self.dump_parent_path / 'groups' / get_group_subpath(orm.load_group(g)) for g in dumped_group_uuids],
+            )
+        )
+
+        modified_paths: list[dict[str, Path]] = []
+
+        for uuid, old_path in old_mapping.items():
+            new_path = new_mapping.get(uuid)
+
+            if new_path and old_path != new_path:
+                # logger.report(f'Renaming {old_path} -> {new_path}')
+                old_path.rename(new_path)
+                try:
+                    dump_logger.groups.entries[uuid].path = new_path
+                except:
+                    # For debugging
+                    # import ipdb
+
+                    # ipdb.set_trace()
+                    raise
+
+                modified_paths.append(
+                    {
+                        'old': old_path,
+                        'new': new_path,
+                    }
+                )
+
+        return modified_paths

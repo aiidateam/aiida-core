@@ -977,7 +977,7 @@ class Transport(abc.ABC):
     ):
         """Compress a remote directory.
 
-        This method supports :param:`remotesources` with glob patterns.
+        This method supports `remotesources` with glob patterns.
 
         :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
         :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress
@@ -1472,7 +1472,7 @@ class Transport(abc.ABC):
     ):
         """Compress a remote directory.
 
-        This method supports :param:`remotesources` with glob patterns.
+        This method supports `remotesources` with glob patterns.
 
         :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
         :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress
@@ -1527,7 +1527,7 @@ class BlockingTransport(Transport):
         # The following implementation works for all blocking transoprt plugins
         """Compress a remote directory.
 
-        This method supports :param:`remotesources` with glob patterns.
+        This method supports `remotesources` with glob patterns.
 
         :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
         :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress

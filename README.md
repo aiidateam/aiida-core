@@ -1,61 +1,71 @@
-This directory contains the files involved in the calculation/workflow
-`ArithmeticAddCalculation <4>` run with AiiDA.
+# <img src="https://raw.githubusercontent.com/aiidateam/aiida-core/main/docs/source/images/aiida-logo.svg" alt="AiiDA" width="200"/>
 
-Child calculations/workflows (also called `CalcJob`s/`CalcFunction`s and `WorkChain`s/`WorkFunction`s in AiiDA
-jargon) run by the parent workflow are contained in the directory tree as sub-folders and are sorted by their
-creation time. The directory tree thus mirrors the logical execution of the workflow, which can also be queried
-by running `verdi process status 4` on the command line.
+AiiDA (www.aiida.net) is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.
 
-By default, input and output files of each calculation can be found in the corresponding "inputs" and "outputs"
-directories (the former also contains the hidden ".aiida" folder with machine-readable job execution settings).
-Additional input and output files (depending on the type of calculation) are placed in the "node_inputs" and
-"node_outputs", respectively.
-
-Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant
-AiiDA node data for further inspection.
+|    | |
+|-----|----------------------------------------------------------------------------|
+|Latest release| [![PyPI version](https://badge.fury.io/py/aiida-core.svg)](https://badge.fury.io/py/aiida-core) [![conda-forge](https://img.shields.io/conda/vn/conda-forge/aiida-core.svg?style=flat)](https://anaconda.org/conda-forge/aiida-core) [![PyPI pyversions](https://img.shields.io/pypi/pyversions/aiida-core.svg)](https://pypi.python.org/pypi/aiida-core/) |
+|Getting help| [![Docs status](https://readthedocs.org/projects/aiida-core/badge)](http://aiida-core.readthedocs.io/) [![Discourse status](https://img.shields.io/discourse/status?server=https%3A%2F%2Faiida.discourse.group%2F)](https://aiida.discourse.group/)
+|Build status| [![Build Status](https://github.com/aiidateam/aiida-core/actions/workflows/ci-code.yml/badge.svg)](https://github.com/aiidateam/aiida-core/actions) [![Coverage Status](https://codecov.io/gh/aiidateam/aiida-core/branch/main/graph/badge.svg)](https://codecov.io/gh/aiidateam/aiida-core) [Benchmarks](https://aiidateam.github.io/aiida-core/dev/bench/ubuntu-22.04/psql_dos/) |
+|Activity| [![PyPI-downloads](https://img.shields.io/pypi/dm/aiida-core.svg?style=flat)](https://pypistats.org/packages/aiida-core) [![Commit Activity](https://img.shields.io/github/commit-activity/m/aiidateam/aiida-core.svg)](https://github.com/aiidateam/aiida-core/pulse)
+|Community|  [![Discourse](https://img.shields.io/discourse/topics?server=https%3A%2F%2Faiida.discourse.group%2F&logo=discourse)](https://aiida.discourse.group/) [![Affiliated with NumFOCUS](https://img.shields.io/badge/NumFOCUS-affiliated%20project-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://numfocus.org/sponsored-projects/affiliated-projects) [![Twitter](https://img.shields.io/twitter/follow/aiidateam.svg?style=social&label=Follow)](https://twitter.com/aiidateam)
 
 
-Output of `verdi process status 4`:
+## Features
 
-```shell
-ArithmeticAddCalculation<4> Finished [0]
-```
+ -   **Workflows:** Write complex, auto-documenting workflows in
+     python, linked to arbitrary executables on local and remote
+     computers. The event-based workflow engine supports tens of
+     thousands of processes per hour with full checkpointing.
+ -   **Data provenance:** Automatically track inputs, outputs & metadata
+     of all calculations in a provenance graph for full
+     reproducibility. Perform fast queries on graphs containing
+     millions of nodes.
+ -   **HPC interface:** Move your calculations to a different computer
+     by changing one line of code. AiiDA is compatible with schedulers
+     like [SLURM](https://slurm.schedmd.com), [PBS
+     Pro](https://www.pbspro.org/),
+     [torque](http://www.adaptivecomputing.com/products/torque/),
+     [SGE](http://gridscheduler.sourceforge.net/) or
+     [LSF](https://www.ibm.com/support/knowledgecenter/SSETD4/product_welcome_platform_lsf.html)
+     out of the box.
+ -   **Plugin interface:** Extend AiiDA with [plugins](https://aiidateam.github.io/aiida-registry/) for new simulation codes (input generation & parsing), data types, schedulers, transport modes and more.
+ -   **Open Science:** Export subsets of your provenance graph and share them with peers or make them available online for everyone
+     on the [Materials Cloud](https://www.materialscloud.org).
+ -   **Open source:** AiiDA is released under the [MIT open source license](LICENSE.txt)
 
+## Installation
 
-Output of `verdi process report 4`:
+Please see AiiDA's [documentation](https://aiida-core.readthedocs.io/en/latest/).
 
-```shell
-*** 4: None
-*** (empty scheduler output file)
-*** (empty scheduler errors file)
-*** 0 LOG MESSAGES
-```
+## How to contribute [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) [![GitHub issues by-label](https://img.shields.io/github/issues/aiidateam/aiida-core/good%20first%20issue)](https://github.com/aiidateam/aiida-core/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
+The AiiDA team appreciates help from a wide range of different backgrounds.
+Small improvements of the documentation or minor bug fixes are always welcome.
 
-Output of `verdi process show 4`:
+Please see the [Contributor wiki](https://github.com/aiidateam/aiida-core/wiki) on how to get started.
 
-```shell
-Property     Value
------------  ------------------------------------
-type         ArithmeticAddCalculation
-state        Finished [0]
-pk           4
-uuid         59bd82f7-5740-40fe-b937-b9ada2d71209
-label
-description
-ctime        2024-11-04 14:49:21.356112+01:00
-mtime        2024-11-04 14:49:22.888647+01:00
-computer     [1] localhost
+## Frequently Asked Questions
 
-Inputs      PK  Type
---------  ----  -------------
-code         1  InstalledCode
-x            2  Int
-y            3  Int
+If you are experiencing problems with your AiiDA installation, please refer to the [FAQ page of the documentation](https://aiida-core.readthedocs.io/en/latest/howto/faq.html).
+For any other questions, discussion and requests for support, please visit the [Discourse server](https://aiida.discourse.group/).
 
-Outputs          PK  Type
--------------  ----  ----------
-remote_folder     5  RemoteData
-retrieved         6  FolderData
-sum               7  Int
-```
+## How to cite
+
+If you use AiiDA in your research, please consider citing the following publications:
+
+ * S. P. Huber *et al.*, *AiiDA 1.0, a scalable computational infrastructure for automated reproducible workflows and data provenance*, Scientific Data **7**, 300 (2020); DOI: [10.1038/s41597-020-00638-4](https://doi.org/10.1038/s41597-020-00638-4)
+ * M. Uhrin *et al.*, *Workflows in AiiDA: Engineering a high-throughput, event-based engine for robust and modular computational workflows*, Computational Materials Science **187**, 110086 (2021); DOI: [10.1016/j.commatsci.2020.110086](https://doi.org/10.1016/j.commatsci.2020.110086)
+
+If the ADES concepts are referenced, please also cite:
+
+* Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari,and Boris Kozinsky, *AiiDA: automated interactive infrastructure and database for computational science*, Computational Materials Science **111**, 218-230 (2016); DOI: [10.1016/j.commatsci.2015.09.013](https://doi.org/10.1016/j.commatsci.2015.09.013)
+
+## License
+
+AiiDA is distributed under the MIT open source license (see [`LICENSE.txt`](LICENSE.txt)).
+For a list of other open source components included in AiiDA, see [`open_source_licenses.txt`](open_source_licenses.txt).
+
+## Acknowledgements
+
+AiiDA is a [NumFOCUS Affiliated Project](https://www.numfocus.org) and supported by the [MARVEL National Centre of Competence in Research](http://www.marvel-nccr.ch), the [MaX European Centre of Excellence](http://www.max-centre.eu) and by a number of other supporting projects, partners and institutions, whose complete list is available on the [AiiDA website acknowledgements page](http://www.aiida.net/acknowledgements/).

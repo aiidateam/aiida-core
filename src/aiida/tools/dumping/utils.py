@@ -12,22 +12,25 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, NamedTuple, cast
+from typing import NamedTuple, cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-__all__ = ('NodeDumpMapper', 'prepare_dump_path')
+__all__ = (
+    'NodeDumpKeyMapper',
+    'ProcessesToDumpContainer',
+    'filter_nodes_last_dump_time',
+    'prepare_dump_path',
+    'safe_delete_dir',
+)
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 
-class ProcessesDumpContainer(NamedTuple):
-    calculations: Sequence[orm.CalculationNode]
-    workflows: Sequence[orm.WorkflowNode]
+class ProcessesToDumpContainer(NamedTuple):
+    calculations: list[orm.CalculationNode]
+    workflows: list[orm.WorkflowNode]
 
     @property
     def is_empty(self) -> bool:
@@ -35,31 +38,15 @@ class ProcessesDumpContainer(NamedTuple):
         return len(self.calculations) == 0 and len(self.workflows) == 0
 
 
-class NodeDumpMapper:
+class NodeDumpKeyMapper:
     calculation_key: str = 'calculations'
     workflow_key: str = 'workflows'
 
     @classmethod
-    def get_directory(cls, node: orm.Node) -> Path:
-        # Check node type and map to the corresponding directory
+    def get_key_from_node(cls, node: orm.Node) -> str:
         if isinstance(node, orm.CalculationNode):
-            # This includes subclasses like orm.CalcFunctionNode and orm.CalcJobNode
-            return Path(cls.calculation_key)
-        elif isinstance(node, orm.WorkflowNode):
-            # This includes subclasses like orm.WorkFunctionNode and orm.WorkChainNode
-            return Path(cls.workflow_key)
-        else:
-            msg = f'Dumping not implemented yet for node type: {type(node)}'
-            raise NotImplementedError(msg)
-
-    @classmethod
-    def get_logger_attr(cls, node: orm.Node) -> str:
-        # Check node type and map to the corresponding directory
-        if isinstance(node, orm.CalculationNode):
-            # This includes subclasses like orm.CalcFunctionNode and orm.CalcJobNode
             return cls.calculation_key
         elif isinstance(node, orm.WorkflowNode):
-            # This includes subclasses like orm.WorkFunctionNode and orm.WorkChainNode
             return cls.workflow_key
         else:
             msg = f'Dumping not implemented yet for node type: {type(node)}'
@@ -105,7 +92,7 @@ def prepare_dump_path(
 
         # Case 2: Non-empty directory, overwrite is True
         if not is_empty and overwrite:
-            _safe_delete_dir(
+            safe_delete_dir(
                 path_to_validate=path_to_validate,
                 safeguard_file=safeguard_file,
                 verbose=verbose,
@@ -116,7 +103,7 @@ def prepare_dump_path(
     (path_to_validate / safeguard_file).touch()
 
 
-def _safe_delete_dir(
+def safe_delete_dir(
     path_to_validate: Path,
     safeguard_file: str = '.aiida_node_metadata.yaml',
     verbose: bool = False,
@@ -182,7 +169,7 @@ def _delete_dir_recursive(path):
         print(f'exception msg: {exception}')
 
 
-def _filter_by_last_dump_time(nodes: list[str], last_dump_time: datetime | None = None) -> list[str]:
+def filter_nodes_last_dump_time(nodes: list[str], last_dump_time: datetime | None = None) -> list[str]:
     """Filter a list of nodes by the last dump time of the corresponding dumper.
 
     :param nodes: A list of node identifiers, which can be either UUIDs (str) or IDs (int).
@@ -197,14 +184,3 @@ def _filter_by_last_dump_time(nodes: list[str], last_dump_time: datetime | None 
     qb = orm.QueryBuilder().append(orm.Node, filters={'uuid': {'in': nodes}})
     nodes_orm: list[orm.Node] = cast(list[orm.Node], qb.all(flat=True))
     return [node.uuid for node in nodes_orm if node.mtime > last_dump_time]
-
-
-def _extend_calculations(profile_dump_config, calculations, workflows):
-    # If sub-calculations that were called by workflows of the group, and which are not
-    # contained in the group.nodes directly are being dumped explicitly
-    # breakpoint()
-    called_calculations = []
-    for workflow in workflows:
-        called_calculations += [node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)]
-
-    return called_calculations

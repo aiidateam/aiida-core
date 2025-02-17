@@ -12,7 +12,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import cast
 
 from aiida import orm
@@ -24,7 +23,7 @@ from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.utils import _filter_by_last_dump_time, _safe_delete_dir
+from aiida.tools.dumping.utils import filter_nodes_last_dump_time, safe_delete_dir
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
@@ -166,7 +165,7 @@ class ProfileDumper(BaseDumper):
         process_nodes: list[str] = [
             profile_node for profile_node in profile_processes if profile_node not in nodes_in_groups
         ]
-        process_nodes = _filter_by_last_dump_time(nodes=process_nodes, last_dump_time=self.last_dump_time)
+        process_nodes = filter_nodes_last_dump_time(nodes=process_nodes, last_dump_time=self.last_dump_time)
 
         return process_nodes
 
@@ -223,7 +222,7 @@ class ProfileDumper(BaseDumper):
         # TODO: But it is highly likely that the last dump command with deletion was run a while ago
         # TODO: So I cannot filter by last dump time, but should probably take the whole set
         profile_qb = orm.QueryBuilder().append(orm.ProcessNode)
-        profile_processes = set(cast(Iterable[orm.ProcessNode], profile_qb.all(flat=True)))
+        profile_processes = set(cast(list[orm.ProcessNode], profile_qb.all(flat=True)))
         profile_uuids = set([process.uuid for process in profile_processes if process.caller is None])
 
         to_delete_uuids = list(dumped_uuids - profile_uuids)
@@ -243,7 +242,7 @@ class ProfileDumper(BaseDumper):
 
         try:
             path_to_delete = current_store.entries[to_delete_uuid].path
-            _safe_delete_dir(path_to_validate=path_to_delete, safeguard_file='.aiida_node_metadata.yaml', verbose=False)
+            safe_delete_dir(path_to_validate=path_to_delete, safeguard_file='.aiida_node_metadata.yaml', verbose=False)
             current_store.del_entry(uuid=to_delete_uuid)
         except:
             raise

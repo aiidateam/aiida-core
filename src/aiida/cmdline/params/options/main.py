@@ -790,14 +790,6 @@ SORT = OverridableOption(
     show_default=True,
 )
 
-# DEDUPLICATE = OverridableOption(
-#     '--deduplicate/--no-deduplicate',
-#     is_flag=True,
-#     default=True,
-#     show_default=True,
-#     help='',
-# )
-
 DUMP_PROCESSES = OverridableOption(
     '--dump-processes/--no-dump-processes',
     is_flag=True,

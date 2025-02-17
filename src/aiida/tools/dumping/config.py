@@ -40,6 +40,7 @@ class ProcessDumpConfig:
 class ProfileDumpConfig:
     """Arguments for dumping profile data."""
 
+    # TODO: Possibly add profile as attribute here?
     dump_processes: bool = True
     symlink_duplicates: bool = True
     delete_missing: bool = False

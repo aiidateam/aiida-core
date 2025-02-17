@@ -29,5 +29,4 @@ class BaseDumper:
         self.incremental = self.base_dump_config.incremental
         self.last_dump_time = self.base_dump_config.last_dump_time
 
-        # Keep logger
         self.dump_logger = dump_logger or DumpLogger(dump_parent_path=self.dump_parent_path)

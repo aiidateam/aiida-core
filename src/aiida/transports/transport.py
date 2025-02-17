@@ -966,7 +966,7 @@ class Transport(abc.ABC):
     ):
         """Compress a remote directory.
 
-        This method should be able to handle remotedir with glob patterns.
+        This method supports :param:`remotesources` with glob patterns.
 
         :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
         :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress
@@ -987,7 +987,7 @@ class Transport(abc.ABC):
     def extract(self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True):
         """Extract a remote archive.
 
-        Does not accept glob patterns, --as it doesn't make much sense and we don't have a usecase for it.
+        Does not accept glob patterns, as it doesn't make much sense and we don't have a usecase for it.
 
         :param remotesource: path to the remote archive to extract
         :param remotedestination: path to the remote destination directory
@@ -1461,7 +1461,7 @@ class Transport(abc.ABC):
     ):
         """Compress a remote directory.
 
-        This method should be able to handle remotedir with glob patterns.
+        This method supports :param:`remotesources` with glob patterns.
 
         :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
         :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress
@@ -1484,7 +1484,7 @@ class Transport(abc.ABC):
     ):
         """Extract a remote archive.
 
-        Does not accept glob patterns, --as it doesn't make much sense and we don't have a usecase for it.
+        Does not accept glob patterns, as it doesn't make much sense and we don't have a usecase for it.
 
         :param remotesource: path to the remote archive to extract
         :param remotedestination: path to the remote destination directory
@@ -1516,7 +1516,7 @@ class BlockingTransport(Transport):
         # The following implementation works for all blocking transoprt plugins
         """Compress a remote directory.
 
-        This method should be able to handle remotedir with glob patterns.
+        This method supports :param:`remotesources` with glob patterns.
 
         :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
         :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress
@@ -1593,7 +1593,7 @@ class BlockingTransport(Transport):
         # The following implementation works for all blocking transoprt plugins
         """Extract a remote archive.
 
-        Does not accept glob patterns, --as it doesn't make much sense and we don't have a usecase for it.
+        Does not accept glob patterns, as it doesn't make much sense and we don't have a usecase for it.
 
         :param remotesource: path to the remote archive to extract
         :param remotedestination: path to the remote destination directory

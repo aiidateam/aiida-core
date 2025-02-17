@@ -775,7 +775,7 @@ class AsyncSshTransport(AsyncTransport):
     ):
         """Compress a remote directory.
 
-        This method should be able to handle remotedir with glob patterns.
+        This method supports :param:`remotesources` with glob patterns.
 
         :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
         :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress
@@ -854,7 +854,7 @@ class AsyncSshTransport(AsyncTransport):
     ):
         """Extract a remote archive.
 
-        Does not accept glob patterns, --as it doesn't make much sense and we don't have a usecase for it.
+        Does not accept glob patterns, as it doesn't make much sense and we don't have a usecase for it.
 
         :param remotesource: path to the remote archive to extract
         :param remotedestination: path to the remote destination directory

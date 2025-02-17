@@ -52,6 +52,7 @@ def test_constructor():
     assert numpy.array_equal(node.get_x()[1], x_array)
     assert numpy.array_equal(node.get_y()[0][1], y_array)
 
+
 def test_get_y_arraynames():
     """Test retrieving y array names."""
     x_array = numpy.array([1, 2])

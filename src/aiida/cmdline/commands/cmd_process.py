@@ -562,11 +562,11 @@ def process_repair(manager, broker, dry_run):
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
-@options.FLAT()
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
+@options.FLAT()
 @click.option(
     '--dump-unsealed',
     is_flag=True,
@@ -581,11 +581,11 @@ def process_dump(
     process,
     path,
     overwrite,
-    flat,
     include_inputs,
     include_outputs,
     include_attributes,
     include_extras,
+    flat,
     dump_unsealed,
     incremental,
 ) -> None:

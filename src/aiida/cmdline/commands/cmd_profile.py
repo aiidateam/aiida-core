@@ -279,12 +279,6 @@ def profile_delete(force, delete_data, profiles):
 @options.DUMP_PROCESSES()
 @options.GROUPS()
 @options.ORGANIZE_BY_GROUPS()
-# @options.DEDUPLICATE()
-# @click.option(
-#     '--check-dirs/--no-check-dirs',
-#     default=False,
-#     show_default=True,
-#     help='Check for existence of dump directories. Otherwise, incremental mirroring is only evaluated from the log.')
 @click.option(
     '--symlink-duplicates/--no-symlink-duplicates',
     default=True,
@@ -327,7 +321,6 @@ def profile_mirror(
     delete_missing,
     only_top_level_calcs,
     only_top_level_workflows,
-    # check_dirs,
     include_inputs,
     include_outputs,
     include_attributes,
@@ -347,6 +340,7 @@ def profile_mirror(
 
     profile = ctx.obj['profile']
 
+    # ? Does it even make sense to provide both options, as they are mutually exclusive?
     incremental = not overwrite
 
     if path is None:
@@ -367,21 +361,20 @@ def profile_mirror(
     except FileExistsError as exc:
         echo.echo_critical(str(exc))
 
+    # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
         with safeguard_file_path.open('r') as fhandle:
             last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()
     except IndexError:
         last_dump_time = None
 
-    if incremental:
-        msg = 'Incremental mirroring selected. Will update directory.'
-        echo.echo_report(msg)
-
+    # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
         dump_logger = DumpLogger.from_file(dump_parent_path=path)
     except (json.JSONDecodeError, OSError):
         dump_logger = DumpLogger(dump_parent_path=path)
 
+    # Create config options that hold the various settings for dumping data
     base_dump_config = BaseDumpConfig(
         dump_parent_path=path,
         overwrite=overwrite,
@@ -397,11 +390,6 @@ def profile_mirror(
         flat=flat,
     )
 
-    process_dumper = ProcessDumper(
-        base_dump_config=base_dump_config,
-        process_dump_config=process_dump_config,
-    )
-
     profile_dump_config = ProfileDumpConfig(
         dump_processes=dump_processes,
         symlink_duplicates=symlink_duplicates,
@@ -411,23 +399,40 @@ def profile_mirror(
         only_top_level_workflows=only_top_level_workflows,
     )
 
+    # Instantiate dumper classes (ProcessDumper passed as argument to ProfileDumper via composition)
+    process_dumper = ProcessDumper(
+        base_dump_config=base_dump_config,
+        process_dump_config=process_dump_config,
+    )
+
     profile_dumper = ProfileDumper(
+        base_dump_config=base_dump_config,
         profile=profile,
         profile_dump_config=profile_dump_config,
-        base_dump_config=base_dump_config,
         process_dumper=process_dumper,
         dump_logger=dump_logger,
         groups=groups,
     )
 
+    # Set the `last_dump_time` now, rather than after the dumping, as writing files to disk can take some time, and
+    # which processes should be dumped is evaluated beforehand (here)
+    last_dump_time = datetime.now().astimezone()
+
     num_processes_to_dump = len(profile_dumper.processes_to_dump)
     num_processes_to_delete = len(profile_dumper.processes_to_delete)
 
     if dry_run:
-        # node_counts = ProfileDumper._get_number_of_nodes_to_dump(last_dump_time)
-        dry_run_message = f'Dry run for mirroring of profile `{profile.name}`. Would dump: {num_processes_to_dump} new nodes and delete {num_processes_to_delete} previously dumped node directories.'
+        dry_run_message = (
+            f'Dry run for mirroring of profile `{profile.name}`. '
+            f'Would dump: {num_processes_to_dump} new nodes and delete '
+            f'{num_processes_to_delete} previously dumped node directories.'
+        )
         echo.echo_report(dry_run_message)
         return
+
+    if incremental:
+        msg = 'Incremental mirroring selected. Will update directory.'
+        echo.echo_report(msg)
 
     if num_processes_to_dump == 0:
         echo.echo_success('No processes to dump.')
@@ -442,8 +447,7 @@ def profile_mirror(
             profile_dumper.delete_processes()
             echo.echo_success(f'Deleted {num_processes_to_delete} node directories.')
 
-    # Append the current time to the file
-    last_dump_time = datetime.now().astimezone()
+    # Append the current dump time to dumping safeguard file
     with safeguard_file_path.open('a') as fhandle:
         fhandle.write(f'Last profile mirror time: {last_dump_time.isoformat()}\n')
 

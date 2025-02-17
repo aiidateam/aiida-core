@@ -22,9 +22,9 @@ __all__ = (
     'NodeDumpKeyMapper',
     'ProcessesToDumpContainer',
     'filter_nodes_last_dump_time',
+    'get_group_subpath',
     'prepare_dump_path',
     'safe_delete_dir',
-    'get_group_subpath',
 )
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
@@ -187,8 +187,8 @@ def filter_nodes_last_dump_time(nodes: list[str], last_dump_time: datetime | Non
     nodes_orm: list[orm.Node] = cast(list[orm.Node], qb.all(flat=True))
     return [node.uuid for node in nodes_orm if node.mtime > last_dump_time]
 
-def get_group_subpath(group: orm.Group) -> Path:
 
+def get_group_subpath(group: orm.Group) -> Path:
     group_entry_point = group.entry_point
     if group_entry_point is None:
         return Path(group.label)
@@ -202,6 +202,7 @@ def get_group_subpath(group: orm.Group) -> Path:
     group_subpath = Path(*group_entry_point_name.split('.'))
 
     return group_subpath / f'{group.label}'
+
 
 def load_given_group(group: orm.Group | str) -> orm.Group | None:
     """Validate the given group identifier.

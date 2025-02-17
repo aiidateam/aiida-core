@@ -15,7 +15,6 @@ from datetime import datetime
 from pathlib import Path
 
 from aiida import orm
-from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
@@ -176,7 +175,6 @@ class CollectionDumper(BaseDumper):
         process_dumper = self.process_dumper
 
         for process in processes:
-
             process_dump_path = sub_path / process_dumper._generate_default_dump_path(process_node=process, prefix=None)
 
             if self.profile_dump_config.symlink_duplicates and process.uuid in current_store.entries.keys():

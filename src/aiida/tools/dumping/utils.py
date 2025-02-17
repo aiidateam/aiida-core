@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import NamedTuple, cast
 
 from aiida import orm
+from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 
 __all__ = (
@@ -23,6 +24,7 @@ __all__ = (
     'filter_nodes_last_dump_time',
     'prepare_dump_path',
     'safe_delete_dir',
+    'get_group_subpath',
 )
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
@@ -184,3 +186,39 @@ def filter_nodes_last_dump_time(nodes: list[str], last_dump_time: datetime | Non
     qb = orm.QueryBuilder().append(orm.Node, filters={'uuid': {'in': nodes}})
     nodes_orm: list[orm.Node] = cast(list[orm.Node], qb.all(flat=True))
     return [node.uuid for node in nodes_orm if node.mtime > last_dump_time]
+
+def get_group_subpath(group: orm.Group) -> Path:
+
+    group_entry_point = group.entry_point
+    if group_entry_point is None:
+        return Path(group.label)
+
+    group_entry_point_name = group_entry_point.name
+    if group_entry_point_name == 'core':
+        return Path(f'{group.label}')
+    if group_entry_point_name == 'core.import':
+        return Path('import') / f'{group.label}'
+
+    group_subpath = Path(*group_entry_point_name.split('.'))
+
+    return group_subpath / f'{group.label}'
+
+def load_given_group(group: orm.Group | str) -> orm.Group | None:
+    """Validate the given group identifier.
+
+    :param group: The group identifier to validate.
+    :return: Insance of ``orm.Group``.
+    :raises NotExistent: If no ``orm.Group`` can be loaded for a given label.
+    """
+
+    if isinstance(group, str):
+        try:
+            return orm.load_group(group)
+        # `load_group` raises the corresponding errors
+        except NotExistent:
+            raise
+        except:
+            raise
+
+    elif isinstance(group, orm.Group):
+        return group

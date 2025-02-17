@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 from typing import cast
+from pathlib import Path
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -23,14 +24,9 @@ from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.utils import filter_nodes_last_dump_time, safe_delete_dir
+from aiida.tools.dumping.utils import filter_nodes_last_dump_time, load_given_group, safe_delete_dir, get_group_subpath
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
-
-# TODO: If a Node is not created newly, but added to a newly created group, and the dumping is run, this is not picked
-# up. No new nodes to dump are obtained.
-# TODO: If a sub-workflow of another workflow is in its own group, this group is not created
-# TODO:
 
 
 class ProfileDumper(BaseDumper):
@@ -57,10 +53,15 @@ class ProfileDumper(BaseDumper):
 
         super().__init__(base_dump_config=base_dump_config, dump_logger=dump_logger)
 
-        self.groups = groups
+        if groups is not None:
+            self.groups = [load_given_group(g) for g in groups]
+        else:
+            self.groups = []
+
         self.process_dumper = process_dumper or ProcessDumper()
         self.profile_dump_config = profile_dump_config or ProfileDumpConfig()
 
+        # Unpack arguments for easier access
         self.should_dump_processes = self.profile_dump_config.dump_processes
         self.symlink_duplicates = self.profile_dump_config.symlink_duplicates
         self.delete_missing = self.profile_dump_config.delete_missing
@@ -75,20 +76,15 @@ class ProfileDumper(BaseDumper):
         self._processes_to_dump: list[str] | None = None
         self._processes_to_delete: list[str] | None = None
 
-    def _dump_processes_not_in_any_group(self):
+    def _dump_processes_not_in_any_group(self) -> None:
         """Dump the profile's process data not contained in any group."""
 
-        # `dump_parent_path` set to CWD in the `post_init` method of the `BaseDumper` dataclass if not given
-        assert self.dump_parent_path is not None
         if self.organize_by_groups:
             output_path = self.dump_parent_path / 'no-group'
         else:
             output_path = self.dump_parent_path
 
         no_group_nodes = self._get_no_group_processes()
-
-        self.base_dump_config.dump_parent_path = output_path
-
         no_group_dumper = CollectionDumper(
             group=None,
             collection_nodes=no_group_nodes,
@@ -98,27 +94,23 @@ class ProfileDumper(BaseDumper):
             dump_logger=self.dump_logger,
         )
 
-        # Add additional check here to only issue the message when there are actual processes to dump for a group
-        # This might not be the case for, e.g., pseudopotential groups, or if there are no new processes since the
-        # last dumping
         if self.should_dump_processes and not no_group_dumper.processes_to_dump.is_empty:
-            logger.report(f'Dumping processes not in any group for profile `{self.profile.name}`...')
+            msg = f'Dumping processes not in any group for profile `{self.profile.name}`...'
+            logger.report(msg)
+            no_group_dumper.dump(output_path=output_path)
 
-            no_group_dumper.dump()
+    def _dump_processes_per_group(self, groups: list[orm.Group]) -> None:
+        """Iterate through a list of groups and dump the contained processes in their dedicated directories.
 
-    def _dump_processes_per_group(self, groups):
-        # === Dump data per-group if Groups exist in profile or are selected ===
-
-        assert self.dump_parent_path is not None
+        :param groups: List of ``orm.Group`` entities.
+        """
 
         for group in groups:
             if self.organize_by_groups:
-                output_path = self.dump_parent_path / f'group-{group.label}'
+                group_subpath = get_group_subpath(group=group)
+                output_path = self.dump_parent_path / 'groups' / group_subpath
             else:
                 output_path = self.dump_parent_path
-
-            # TODO: Find a better solution for this...
-            self.base_dump_config.dump_parent_path = output_path
 
             group_dumper = CollectionDumper(
                 base_dump_config=self.base_dump_config,
@@ -128,15 +120,10 @@ class ProfileDumper(BaseDumper):
                 group=group,
             )
 
-            # Add additional check here to only issue the message when there are actual processes to dump for a group
-            # This might not be the case for, e.g., pseudopotential groups, or if there are no new processes since the
-            # last dumping
-            # breakpoint()
             if self.should_dump_processes and not group_dumper.processes_to_dump.is_empty:
-                # breakpoint()
-                logger.report(f'Dumping processes in group {group.label} for profile `{self.profile.name}`...')
-
-                group_dumper.dump()
+                msg = f'Dumping processes in group {group.label} for profile `{self.profile.name}`...'
+                logger.report(msg)
+                group_dumper.dump(output_path=output_path)
 
     def _get_no_group_processes(self) -> list[str]:
         """Obtain nodes in the profile that are not part of any group.
@@ -205,6 +192,8 @@ class ProfileDumper(BaseDumper):
 
     @property
     def processes_to_delete(self) -> list[str]:
+        if not self.delete_missing:
+            return []
         if self._processes_to_delete is None:
             self._processes_to_delete = self._get_processes_to_delete()
         return self._processes_to_delete
@@ -213,35 +202,40 @@ class ProfileDumper(BaseDumper):
         dump_logger = self.dump_logger
         log = dump_logger.log
 
-        # breakpoint()
-        dumped_uuids = set(list(log.calculations.entries.keys()) + list(log.workflows.entries.keys()))
         # Cannot use QB here because, when node deleted, it's not in the DB anymore
-        # dumped_processes: set[str] = set(cast(list[str], dumped_qb.all(flat=True)))
+        dumped_uuids = set(list(log.calculations.entries.keys()) + list(log.workflows.entries.keys()))
+
+        breakpoint()
 
         # TODO: Possibly filter here since last dump time
         # TODO: But it is highly likely that the last dump command with deletion was run a while ago
         # TODO: So I cannot filter by last dump time, but should probably take the whole set
-        profile_qb = orm.QueryBuilder().append(orm.ProcessNode)
-        profile_processes = set(cast(list[orm.ProcessNode], profile_qb.all(flat=True)))
-        profile_uuids = set([process.uuid for process in profile_processes if process.caller is None])
+        # TODO: Don't
+        profile_uuids = cast(
+            set[str], set(orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True))
+        )
+        # profile_uuids = set([process.uuid for process in profile_processes if process.caller is None])
+        # profile_uuids = set([process.uuid for process in profile_processes])
 
         to_delete_uuids = list(dumped_uuids - profile_uuids)
 
         return to_delete_uuids
 
-    def _delete_missing_node(self, to_delete_uuid) -> None:
+    def _delete_missing_node_dir(self, to_delete_uuid) -> None:
         # TODO: Possibly make a delete method for the path and the log, and then call that in the loop
 
         dump_logger = self.dump_logger
-        current_store = dump_logger.find_store_by_uuid(uuid=to_delete_uuid)
+        current_store = dump_logger.get_store_by_uuid(uuid=to_delete_uuid)
         if not current_store:
             return
 
         # ! Cannot load the node via its UUID here and use the type to get the correct store, as the Node is deleted
         # ! from the DB. Should find a better solution
 
+        # breakpoint()
+        path_to_delete = dump_logger.get_path_by_uuid(uuid=to_delete_uuid)
+
         try:
-            path_to_delete = current_store.entries[to_delete_uuid].path
             safe_delete_dir(path_to_validate=path_to_delete, safeguard_file='.aiida_node_metadata.yaml', verbose=False)
             current_store.del_entry(uuid=to_delete_uuid)
         except:
@@ -251,12 +245,12 @@ class ProfileDumper(BaseDumper):
         to_dump_processes = self.processes_to_dump
         to_delete_processes = self.processes_to_delete
 
-        print(f'TO_DUMP_PROCESSES: {to_dump_processes}')
-        print(f'TO_DELETE_PROCESSES: {to_delete_processes}')
+        # print(f'TO_DUMP_PROCESSES: {to_dump_processes}')
+        # print(f'TO_DELETE_PROCESSES: {to_delete_processes}')
 
         # breakpoint()
         for to_delete_uuid in to_delete_processes:
-            self._delete_missing_node(to_delete_uuid=to_delete_uuid)
+            self._delete_missing_node_dir(to_delete_uuid=to_delete_uuid)
 
         # TODO: Need to also delete entry from the log when I delete the dir
         # TODO: Add also logging for node/path deletion

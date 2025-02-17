@@ -13,6 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Collection
 
+from aiida.common.exceptions import NotExistent
+
 
 @dataclass
 class DumpLog:
@@ -195,11 +197,31 @@ class DumpLogger:
 
         return instance
 
-    def find_store_by_uuid(self, uuid: str) -> DumpLogStore | None:
+    def get_store_by_uuid(self, uuid: str) -> DumpLogStore:
         """Find the store that contains the given UUID."""
         # Iterate over the fields of the DumpLogStoreCollection dataclass for generality
+        # TODO: Add error handling for wrong UUID
         for field_ in fields(self.log):
             store = getattr(self.log, field_.name)
             if uuid in store.entries:
                 return store
-        return None
+
+        msg = f"No corresponding `DumpLogStore` found for UUID: `{uuid}`."
+        raise NotExistent(msg)
+
+    def get_path_by_uuid(self, uuid: str) -> Path | None:
+        """Find the store that contains the given UUID."""
+        # Iterate over the fields of the DumpLogStoreCollection dataclass for generality
+
+        try:
+            current_store = self.get_store_by_uuid(uuid=uuid)
+            path = current_store.entries[uuid].path
+            return path
+        except NotExistent as exc:
+            raise NotExistent(exc.args[0]) from exc
+        except KeyError as exc:
+            msg = f"UUID: `{uuid}` not contained in store `{current_store}`."
+            raise KeyError(msg) from exc
+        except:
+            # For debugging
+            raise

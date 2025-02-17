@@ -25,6 +25,7 @@ from aiida.tools.dumping.utils import (
     NodeDumpKeyMapper,
     ProcessesToDumpContainer,
     filter_nodes_last_dump_time,
+    load_given_group,
 )
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
@@ -62,7 +63,7 @@ class CollectionDumper(BaseDumper):
             raise Exception(msg)
 
         elif group is not None:
-            self.group = _validate_group(group)
+            self.group = load_given_group(group)
             if self.group:
                 self._collection_nodes = [n.uuid for n in self.group.nodes]
 
@@ -85,9 +86,11 @@ class CollectionDumper(BaseDumper):
 
     @property
     def collection_nodes(self) -> list[str]:
-        """Return collection nodes.
+        """Property to hold the collection nodes.
 
-        :return: List of collection node identifiers.
+        Takes care of respecting the ``incremental`` attribute, and filtering by ``last_dump_time``.
+
+        :return: List of collection node UUIDs.
         """
         if self.incremental and self.last_dump_time:
             self._collection_nodes = filter_nodes_last_dump_time(
@@ -100,7 +103,9 @@ class CollectionDumper(BaseDumper):
     def processes_to_dump(self) -> ProcessesToDumpContainer:
         """Get the processes to dump from the collection of nodes.
 
-        :return: Instance of the ``ProcessesToDump`` class containing the selected calculations and workflows.
+        Only re-evaluates the processes, if not already set.
+
+        :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
         """
         if not self._processes_to_dump:
             self._processes_to_dump = self._get_processes_to_dump()
@@ -109,15 +114,12 @@ class CollectionDumper(BaseDumper):
     def _get_processes_to_dump(self) -> ProcessesToDumpContainer:
         """Retrieve the processeses from the collection nodes.
 
-        If deduplication is selected, this method takes care of only dumping top-level workflows and only dump
-        calculations in their own designated directories if they are not part of a workflow.
+        Depending on the attributes of the ``CollectionDumper``, this method takes care of only selecting top-level
+        workflows and calculations if they are not part of a workflow. This requires to use the actual ORM entities,
+        rather than UUIDs, as the ``.caller``s have to be checked. In addition, sub-calculations
 
-        :return: Instance of the ``ProcessesToDump`` class containing the selected calculations and workflows.
+        :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
         """
-
-        # Deduplication is already handled in the ``get_processes`` method, where PKs/UUIDs are used, rather than AiiDA
-        # ORM entities as here. Specifically, calculations that are part of a workflow are not dumpid in their own,
-        # dedicated directory if they are part of a workflow.
 
         if not self.collection_nodes:
             return ProcessesToDumpContainer(calculations=[], workflows=[])
@@ -136,8 +138,8 @@ class CollectionDumper(BaseDumper):
         else:
             calculations = [node for node in nodes_orm if isinstance(node, orm.CalculationNode)]
 
-            # Get sub-calculations that were called by workflows of the group, and which are not
-            # contained in the group.nodes directly
+            # Get sub-calculations that were called by workflows but which might themselves not be directly contained in
+            # the collection
             called_calculations = []
             for workflow in workflows:
                 called_calculations += [
@@ -147,13 +149,17 @@ class CollectionDumper(BaseDumper):
             # Convert to set to avoid duplicates
             calculations = list(set(calculations + called_calculations))
 
+        # Use this small helper class rather than returning a dictionary for access via dot-notation
         return ProcessesToDumpContainer(
             calculations=calculations,
             workflows=workflows,
         )
 
     def _dump_processes(self, processes: list[orm.CalculationNode] | list[orm.WorkflowNode]) -> None:
-        """Dump a collection of processes."""
+        """Dump a list of AiiDA calculations or workflows to disk.
+
+        :param processes: List of AiiDA calculations or workflows from the ``ProcessesToDumpContainer``.
+        """
 
         if len(list(processes)) == 0:
             return
@@ -164,13 +170,12 @@ class CollectionDumper(BaseDumper):
         sub_path.mkdir(exist_ok=True, parents=True)
 
         logger_attr = NodeDumpKeyMapper.get_key_from_node(node=next(iter(processes)))
-        # ! `getattr` gives a reference to the object, thus I can update the store directly
+        # ! `getattr` gives a reference to the actual object, thus I can update the store directly
         current_store = getattr(self.dump_logger.log, logger_attr)
 
-        # breakpoint()
+        process_dumper = self.process_dumper
 
         for process in processes:
-            process_dumper = self.process_dumper
 
             process_dump_path = sub_path / process_dumper._generate_default_dump_path(process_node=process, prefix=None)
 
@@ -225,24 +230,3 @@ class CollectionDumper(BaseDumper):
                 self._dump_processes(processes=collection_processes.workflows)
             if len(collection_processes.calculations) > 0:
                 self._dump_processes(processes=collection_processes.calculations)
-
-
-def _validate_group(group: orm.Group | str) -> orm.Group | None:
-    """Validate the given group identifier.
-
-    :param group: The group identifier to validate.
-    :return: Insance of ``orm.Group``.
-    :raises NotExistent: If no ``orm.Group`` can be loaded for a given label.
-    """
-
-    if isinstance(group, str):
-        try:
-            return orm.load_group(group)
-        # `load_group` raises the corresponding errors
-        except NotExistent:
-            raise
-        except:
-            raise
-
-    elif isinstance(group, orm.Group):
-        return group

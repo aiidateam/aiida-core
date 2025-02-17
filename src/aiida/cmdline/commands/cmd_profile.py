@@ -433,18 +433,26 @@ def profile_mirror(
     if incremental:
         msg = 'Incremental mirroring selected. Will update directory.'
         echo.echo_report(msg)
+    else:
+        msg = 'Overwriting selected. Will clean directory first.'
+        # TODO: Maybe add y/n confirmation here?
+        echo.echo_report(msg)
 
     if num_processes_to_dump == 0:
-        echo.echo_success('No processes to dump.')
+        msg = 'No processes to dump.'
+        echo.echo_success(msg)
     else:
         profile_dumper.dump_processes()
-        echo.echo_success(f'Dumped {num_processes_to_dump} new nodes.')
+        msg = f'Dumped {num_processes_to_dump} new nodes.'
+        echo.echo_success(msg)
 
     if delete_missing:
+        # breakpoint()
         if num_processes_to_delete == 0:
             echo.echo_success('No processes to delete.')
         else:
             profile_dumper.delete_processes()
+
             echo.echo_success(f'Deleted {num_processes_to_delete} node directories.')
 
     # Append the current dump time to dumping safeguard file

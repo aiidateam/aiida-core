@@ -48,7 +48,7 @@ class ProcessDumper(BaseDumper):
 
         super().__init__(base_dump_config=self.base_dump_config, dump_logger=dump_logger)
 
-        # Unpack arguments for ProcessDumper for easier access
+        # Unpack arguments for easier access
         self.include_inputs = self.process_dump_config.include_inputs
         self.include_outputs = self.process_dump_config.include_outputs
         self.include_attributes = self.process_dump_config.include_attributes

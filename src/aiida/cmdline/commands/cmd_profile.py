@@ -303,6 +303,14 @@ def profile_delete(force, delete_data, profiles):
     show_default=True,
     help='If a top-level process calls sub-processes, create a designated directory only for the top-level process.',
 )
+# TODO: Implement this...
+# TODO: Possibly
+@click.option(
+    '--update-groups/--no-update-groups',
+    default=False,
+    show_default=True,
+    help='Update directories if nodes have been added to other groups, or organized differently in terms of groups.',
+)
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
@@ -319,6 +327,7 @@ def profile_mirror(
     organize_by_groups,
     symlink_duplicates,
     delete_missing,
+    update_groups,
     only_top_level_calcs,
     only_top_level_workflows,
     include_inputs,
@@ -342,6 +351,11 @@ def profile_mirror(
 
     # ? Does it even make sense to provide both options, as they are mutually exclusive?
     incremental = not overwrite
+
+    if not organize_by_groups and update_groups:
+        # Add check outside in cmd_profile?
+        msg = '`--update-groups` selected, even though `--organize-by-groups` is set to False.'
+        echo.echo_critical(msg)
 
     if path is None:
         path = Path.cwd() / f'{profile.name}-mirror'
@@ -421,6 +435,9 @@ def profile_mirror(
     num_processes_to_dump = len(profile_dumper.processes_to_dump)
     num_processes_to_delete = len(profile_dumper.processes_to_delete)
 
+    # num_groups_to_dump = len(profile_dumper.groups_to_dump)
+    num_groups_to_delete = len(profile_dumper.groups_to_delete)
+
     if dry_run:
         dry_run_message = (
             f'Dry run for mirroring of profile `{profile.name}`. '
@@ -438,22 +455,34 @@ def profile_mirror(
         # TODO: Maybe add y/n confirmation here?
         echo.echo_report(msg)
 
-    if num_processes_to_dump == 0:
-        msg = 'No processes to dump.'
-        echo.echo_success(msg)
-    else:
-        profile_dumper.dump_processes()
-        msg = f'Dumped {num_processes_to_dump} new nodes.'
-        echo.echo_success(msg)
+    if dump_processes:
+        if num_processes_to_dump == 0:
+            msg = 'No processes to dump.'
+            echo.echo_success(msg)
+        else:
+            profile_dumper.dump_processes()
+            msg = f'Dumped {num_processes_to_dump} new nodes.'
+            echo.echo_success(msg)
 
     if delete_missing:
-        # breakpoint()
         if num_processes_to_delete == 0:
             echo.echo_success('No processes to delete.')
         else:
             profile_dumper.delete_processes()
-
             echo.echo_success(f'Deleted {num_processes_to_delete} node directories.')
+
+        if num_groups_to_delete == 0:
+            echo.echo_success('No groups to delete.')
+        else:
+            profile_dumper.delete_groups()
+            echo.echo_success(f'Deleted {num_groups_to_delete} group directories.')
+
+    if update_groups:
+        relabeled_paths = profile_dumper.update_groups()
+
+        msg = 'Mirrored directories and '
+        echo.echo_success(msg)
+        print(relabeled_paths)
 
     # Append the current dump time to dumping safeguard file
     with safeguard_file_path.open('a') as fhandle:

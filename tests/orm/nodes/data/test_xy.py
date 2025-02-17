@@ -51,3 +51,20 @@ def test_constructor():
     node = XyData(x_array, y_array, x_name='x_name', x_units='x_unit', y_names='y_name', y_units='y_units')
     assert numpy.array_equal(node.get_x()[1], x_array)
     assert numpy.array_equal(node.get_y()[0][1], y_array)
+
+def test_get_y_arraynames():
+    """Test retrieving y array names."""
+    x_array = numpy.array([1, 2])
+    y_array1 = numpy.array([3, 4])
+    y_array2 = numpy.array([5, 6])
+
+    node = XyData()
+    node.set_x(x_array, 'x_name', 'x_unit')
+    node.set_y([y_array1, y_array2], ['y_name1', 'y_name2'], ['y_unit1', 'y_unit2'])
+
+    y_names = node.get_y_arraynames()
+    assert y_names == ['y_name1', 'y_name2']
+
+    empty_node = XyData()
+    with pytest.raises(NotExistent):
+        empty_node.get_y_arraynames()

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, NamedTuple, cast
+from typing import TYPE_CHECKING, NamedTuple, cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -182,7 +182,7 @@ def _delete_dir_recursive(path):
         print(f'exception msg: {exception}')
 
 
-def _filter_by_last_dump_time(nodes: Iterable[str], last_dump_time: datetime | None = None) -> Iterable[str]:
+def _filter_by_last_dump_time(nodes: list[str], last_dump_time: datetime | None = None) -> list[str]:
     """Filter a list of nodes by the last dump time of the corresponding dumper.
 
     :param nodes: A list of node identifiers, which can be either UUIDs (str) or IDs (int).

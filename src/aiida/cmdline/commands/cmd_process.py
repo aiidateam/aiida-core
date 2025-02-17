@@ -631,7 +631,6 @@ def process_dump(
     try:
         dump_path = process_dumper.dump(
             process_node=process,
-            output_path=path,
         )
         echo.echo_success(
             f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.'

@@ -8,18 +8,6 @@
 ###########################################################################
 """Functionality for dumping of ProcessNodes."""
 
-# ? Possibly add dry_run option here
-# TODO: Add symlinking feature
-# -> This would be for calculations which are subprocesses of the workflow
-# -> But also PPs
-# -> Could define a symlink-mapping based on a dict in the form:
-# {
-# CalculationNode: <Path-to-calculations>,
-# PPs: <Path-to-PPs>
-# }
-# Based on this, I could check the linked directory for the entity based on its UUID
-# TODO: Or, could add a `programmatic` option that doesn't create the README.md, and does a few other things, as well
-
 from __future__ import annotations
 
 import contextlib
@@ -160,6 +148,7 @@ class ProcessDumper(BaseDumper):
         process_show = get_node_info(node=process_node)
         _readme_string += f'\n\n\nOutput of `verdi process show {pk}`:\n\n```shell\n{process_show}\n```'
 
+        assert self.dump_parent_path is not None, '`dump_parent_path` must be set.'
         (self.dump_parent_path / 'README.md').write_text(_readme_string)
 
     @staticmethod
@@ -197,7 +186,7 @@ class ProcessDumper(BaseDumper):
     def dump(
         self,
         process_node: orm.ProcessNode,
-        output_path: Path | None,
+        # output_path: Path | None,
         io_dump_paths: list[str | Path] | None = None,
     ) -> Path:
         """Dumps all data involved in a `ProcessNode`, including its outgoing links.
@@ -225,20 +214,22 @@ class ProcessDumper(BaseDumper):
         #     setattr(self, key, value)
 
         # TODO: Refactor here to also use `dump_parent_path`
-        output_path = output_path or self._generate_default_dump_path(process_node=process_node)
+        if not self.dump_parent_path:
+            self.dump_parent_path = self._generate_default_dump_path(process_node=process_node)
 
         prepare_dump_path(
-            path_to_validate=output_path,
+            path_to_validate=self.dump_parent_path,
             overwrite=self.overwrite,
             incremental=self.incremental,
         )
 
+        breakpoint()
         if isinstance(process_node, orm.CalculationNode):
             # breakpoint()
 
             self._dump_calculation(
                 calculation_node=process_node,
-                output_path=output_path,
+                output_path=self.dump_parent_path,
                 io_dump_paths=io_dump_paths,
             )
 

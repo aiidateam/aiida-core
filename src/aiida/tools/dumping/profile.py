@@ -73,8 +73,8 @@ class ProfileDumper(BaseDumper):
             profile = load_profile(profile=profile, allow_switch=True)
         self.profile = profile
 
-        self._processes_to_dump: Iterable[str] | None = None
-        self._processes_to_delete: Iterable[str] | None = None
+        self._processes_to_dump: list[str] | None = None
+        self._processes_to_delete: list[str] | None = None
 
     def _dump_processes_not_in_any_group(self):
         """Dump the profile's process data not contained in any group."""
@@ -139,16 +139,14 @@ class ProfileDumper(BaseDumper):
 
                 group_dumper.dump()
 
-    def _get_no_group_processes(self) -> Iterable[str]:
+    def _get_no_group_processes(self) -> list[str]:
         """Obtain nodes in the profile that are not part of any group.
 
         :return: List of UUIDs of selected nodes.
         """
 
         profile_groups = cast(list[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
-        profile_processes = cast(
-            Iterable[str], orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True)
-        )
+        profile_processes = cast(list[str], orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True))
 
         nodes_in_groups: list[str] = [node.uuid for group in profile_groups for node in group.nodes]
 
@@ -165,7 +163,7 @@ class ProfileDumper(BaseDumper):
 
         nodes_in_groups += sub_nodes_in_groups
 
-        process_nodes: Iterable[str] = [
+        process_nodes: list[str] = [
             profile_node for profile_node in profile_processes if profile_node not in nodes_in_groups
         ]
         process_nodes = _filter_by_last_dump_time(nodes=process_nodes, last_dump_time=self.last_dump_time)
@@ -189,12 +187,12 @@ class ProfileDumper(BaseDumper):
             self._dump_processes_per_group(groups=self.groups)
 
     @property
-    def processes_to_dump(self) -> Iterable[str]:
+    def processes_to_dump(self) -> list[str]:
         if self._processes_to_dump is None:
             self._processes_to_dump = self._get_processes_to_dump()
         return self._processes_to_dump
 
-    def _get_processes_to_dump(self) -> Iterable[str]:
+    def _get_processes_to_dump(self) -> list[str]:
         if self.last_dump_time is not None:
             process_qb = orm.QueryBuilder().append(
                 orm.ProcessNode, project=['uuid'], filters={'ctime': {'>': self.last_dump_time}}
@@ -202,17 +200,17 @@ class ProfileDumper(BaseDumper):
         else:
             process_qb = orm.QueryBuilder().append(orm.ProcessNode, project=['uuid'])
 
-        profile_processes = cast(Iterable[str], process_qb.all(flat=True))
+        profile_processes = cast(list[str], process_qb.all(flat=True))
 
         return profile_processes
 
     @property
-    def processes_to_delete(self) -> Iterable[str]:
+    def processes_to_delete(self) -> list[str]:
         if self._processes_to_delete is None:
             self._processes_to_delete = self._get_processes_to_delete()
         return self._processes_to_delete
 
-    def _get_processes_to_delete(self) -> Iterable[str]:
+    def _get_processes_to_delete(self) -> list[str]:
         dump_logger = self.dump_logger
         log = dump_logger.log
 

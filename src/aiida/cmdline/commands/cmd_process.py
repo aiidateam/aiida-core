@@ -605,10 +605,13 @@ def process_dump(
     node data for further inspection.
     """
 
+    from pathlib import Path
+
     from aiida.tools.archive.exceptions import ExportValidationError
     from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
     from aiida.tools.dumping.process import ProcessDumper
 
+    path = path or Path.cwd()
     base_dump_config = BaseDumpConfig(
         dump_parent_path=path,
         overwrite=overwrite,

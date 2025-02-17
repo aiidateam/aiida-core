@@ -334,7 +334,7 @@ def profile_mirror(
     include_extras,
     flat,
 ):
-    """Dump all data in an AiiDA profile's storage to disk in a human-readable directory tree."""
+    """Mirror all data in an AiiDA profile's storage to disk."""
 
     import json
     from datetime import datetime

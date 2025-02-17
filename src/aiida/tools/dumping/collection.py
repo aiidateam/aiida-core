@@ -40,7 +40,7 @@ class CollectionDumper(BaseDumper):
         base_dump_config: BaseDumpConfig | None = None,
         dump_logger: DumpLogger | None = None,
         group: orm.Group | str | None = None,
-        collection_nodes: Iterable[str] | None = None,
+        collection_nodes: list[str] | None = None,
         # Need to pass that to have access to some of the top-level settings
         profile_dump_config: ProfileDumpConfig | None = None,
         process_dumper: ProcessDumper | None = None,
@@ -56,7 +56,7 @@ class CollectionDumper(BaseDumper):
 
         super().__init__(base_dump_config=base_dump_config, dump_logger=dump_logger)
 
-        self._collection_nodes: Iterable[str] = []  # Explicit type annotation
+        self._collection_nodes: list[str] = []  # Explicit type annotation
 
         if group is not None and collection_nodes is not None:
             msg = 'Cannot provide both, group and a collection of nodes.'
@@ -84,7 +84,7 @@ class CollectionDumper(BaseDumper):
         self._processes_to_dump: ProcessesDumpContainer | None = None
 
     @property
-    def collection_nodes(self) -> Iterable[str]:
+    def collection_nodes(self) -> list[str]:
         """Return collection nodes.
 
         :return: List of collection node identifiers.
@@ -249,7 +249,7 @@ def _validate_group(group: orm.Group | str | None) -> orm.Group | None:
         return group
 
 
-def _validate_collection_nodes(collection_nodes) -> Iterable[str]:
+def _validate_collection_nodes(collection_nodes) -> list[str]:
     if isinstance(collection_nodes, Iterable):
         if any([not isinstance(n, str) for n in collection_nodes]):
             msg = 'Currently, passing a collection of nodes is only supported via their UUID.'
@@ -258,6 +258,6 @@ def _validate_collection_nodes(collection_nodes) -> Iterable[str]:
         msg = '`collection_nodes` must be an iterable.'
         raise TypeError(msg)
 
-    collection_nodes = cast(Iterable[str], collection_nodes)
+    collection_nodes = cast(list[str], collection_nodes)
 
     return collection_nodes

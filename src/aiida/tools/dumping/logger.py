@@ -99,6 +99,7 @@ class DumpLogger:
 
     DUMP_LOG_FILE: str = '.dump_log.json'
     _instance: 'DumpLogger | None' = None  # Class-level singleton instance
+    _initialized: bool = False  # Explicitly declare the attribute with a type
 
     # TODO: Possibly add `get_calculations` and `get_workflows` as convenience methods
 

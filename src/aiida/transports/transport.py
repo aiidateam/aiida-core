@@ -500,7 +500,18 @@ class Transport(abc.ABC):
             command=command, stdin=stdin, workdir=workdir, **kwargs
         )
         # Return the decoded strings
-        return (retval, stdout_bytes.decode(encoding), stderr_bytes.decode(encoding))
+        if sys.platform == 'win32':
+            import chardet
+
+            outenc = chardet.detect(stdout_bytes)['encoding']
+            errenc = chardet.detect(stderr_bytes)['encoding']
+            if outenc is None:
+                outenc = 'utf-8'
+            if errenc is None:
+                errenc = 'utf-8'
+            return (retval, stdout_bytes.decode(outenc), stderr_bytes.decode(errenc))
+        else:
+            return (retval, stdout_bytes.decode(encoding), stderr_bytes.decode(encoding))
 
     @abc.abstractmethod
     def get(self, remotepath: TransportPath, localpath: TransportPath, *args, **kwargs):

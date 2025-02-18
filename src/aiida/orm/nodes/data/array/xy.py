@@ -9,6 +9,13 @@
 """This module defines the classes related to Xy data. That is data that contains
 collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
+
+Example:
+    xy = XyData()
+    xy.set_x(np.array([1, 2, 3]), 'x', 'unit_x')
+    xy.set_y([np.array([1, 2, 3]), np.array([4, 5, 6])], ['y', 'z'], ['unit_y', 'unit_z'])
+    print(xy.get_arraynames())  # ['x_array', 'y_array_0', 'y_array_1']
+    print(xy.get_y())           # [('y', array([1, 2, 3]), 'unit_y'), ('z', array([4, 5, 6]), 'unit_z')]
 """
 
 from __future__ import annotations
@@ -172,10 +179,15 @@ class XyData(ArrayData):
             y_units = self.base.attributes.get('y_units')
         except (KeyError, AttributeError):
             raise NotExistent('No y units has been set yet!')
-        y_arrays = []
-        try:
-            for i in range(len(y_names)):
-                y_arrays += [self.get_array(f'y_array_{i}')]
-        except (KeyError, AttributeError):
-            raise NotExistent(f'Could not retrieve array associated with y array {y_names[i]}')
+
+        y_arrays = [self.get_array(f'y_array_{i}') for i in range(len(y_names))]
         return list(zip(y_names, y_arrays, y_units))
+
+    def get_y_arraynames(self) -> list[str]:
+        """Returns the user-provided names of the y-arrays."""
+
+        try:
+            y_names = self.base.attributes.get('y_names')
+        except (KeyError, AttributeError):
+            raise NotExistent('No y names have been set yet!')
+        return y_names

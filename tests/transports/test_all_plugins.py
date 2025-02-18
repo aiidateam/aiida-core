@@ -23,7 +23,7 @@ from pathlib import Path
 import psutil
 import pytest
 
-from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
+from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import Transport
 
 # TODO : test for copy with pattern
@@ -55,30 +55,83 @@ def tmp_path_local(tmp_path_factory):
 # Skip for any transport plugins that are locally installed but are not part of `aiida-core`
 @pytest.fixture(
     scope='function',
-    params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
+    params=[  # first argument specifies transport plugin name the second the, authentication method
+        ('core.local', None),
+        ('core.ssh', None),
+        ('core.ssh_async', 'key'),
+        ('core.ssh_async', 'password-passed'),  # covers the case where the password is passed to transport directly
+        ('core.ssh_async', 'password-from-keychain'),  # covers the case where the password is retrieved from keychain
+        ('core.ssh_auto', None),
+    ],
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
-    plugin = TransportFactory(request.param)
+    # we use the suffix to differentiate between different use cases
+    #
 
-    if request.param == 'core.ssh':
-        kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
-    elif request.param == 'core.ssh_auto':
-        kwargs = {'machine': 'localhost'}
-        # The transport config is store in a independent temporary path per test to not mix up
-        # with the files under operating.
-        filepath_config = tmp_path_factory.mktemp('transport') / 'config'
-        monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
-        if not filepath_config.exists():
-            filepath_config.write_text('Host localhost')
-    elif request.param == 'core.ssh_async':
-        kwargs = {
-            'machine': 'localhost',
-        }
-    else:
-        kwargs = {}
+    plugin_name, use_case = request.param
+    plugin = TransportFactory(plugin_name)
+    try:
+        if plugin_name == 'core.ssh':
+            kwargs = {
+                'machine': 'localhost',
+                'timeout': 30,
+                'load_system_host_keys': True,
+                'key_policy': 'AutoAddPolicy',
+            }
+        elif plugin_name == 'core.ssh_auto':
+            kwargs = {'machine': 'localhost'}
+            # The transport config is store in a independent temporary path per test to not mix up
+            # with the files under operating.
+            filepath_config = tmp_path_factory.mktemp('transport') / 'config'
+            monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
+            if not filepath_config.exists():
+                filepath_config.write_text('Host localhost')
+        elif plugin_name == 'core.ssh_async':
+            if use_case == 'key':
+                kwargs = {
+                    'machine': 'localhost',
+                }
+            elif use_case == 'password-passed':
+                kwargs = {
+                    'machine': 'localhost',
+                    'password': 'password',
+                }
+            elif use_case == 'password-from-keychain':
+                # we add the password to the keychain
+                # for the user this step is done by writing the AuthInfo into the database
+                from aiida.orm.authinfos import Password
+                from aiida.orm.computers import Computer
 
-    return plugin(**kwargs)
+                comp = Computer()
+                comp.password_manager.set('password')
+                kwargs = {
+                    'machine': 'localhost',
+                    'password': Password.OBFUSCATED,
+                    'computer': comp,
+                }
+        else:
+            kwargs = {}
+
+        transport_instance = plugin(**kwargs)
+
+        # enforces password authentication
+        if plugin_name == 'core.ssh_async':
+            if use_case in ['password-passed', 'password-from-keychain']:
+                from asyncssh import SSHClientConnectionOptions
+
+                transport_instance._ssh_cient_connection_options = SSHClientConnectionOptions(
+                    public_key_auth=False,
+                    preferred_auth='password',
+                    options=transport_instance._ssh_cient_connection_options,
+                )
+
+        yield transport_instance
+
+    finally:
+        if plugin_name == 'core.ssh_async':
+            if use_case == 'password-from-keychain':
+                comp.password_manager.delete()
 
 
 def test_is_open(custom_transport):

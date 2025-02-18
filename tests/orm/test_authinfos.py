@@ -45,6 +45,13 @@ class TestAuthinfo:
         """Test that deleting a computer also deletes the associated Authinfo."""
         pk = self.auth_info.pk
 
+        # Check setting password works properly
+        self.computer.password_manager.set('pw')
+        assert self.computer.password_manager.get() == 'pw'
+
         computers.Computer.collection.delete(self.computer.pk)
         with pytest.raises(exceptions.NotExistent):
             authinfos.AuthInfo.collection.delete(pk)
+
+        # Check password has been also deleted
+        assert self.computer.password_manager.get() is None

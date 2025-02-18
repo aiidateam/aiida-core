@@ -18,7 +18,7 @@ from typing import Optional, Union
 
 import asyncssh
 import click
-from asyncssh import SFTPFileAlreadyExists
+from asyncssh import SFTPFileAlreadyExists, SSHClientConnectionOptions
 
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import InvalidOperation
@@ -45,22 +45,6 @@ def validate_script(ctx, param, value: str):
     return value
 
 
-def validate_machine(ctx, param, value: str):
-    async def attempt_connection():
-        try:
-            await asyncssh.connect(value)
-        except Exception:
-            return False
-        return True
-
-    if not asyncio.run(attempt_connection()):
-        raise click.BadParameter("Couldn't connect! " 'Please make sure `ssh {value}` would work without password')
-    else:
-        click.echo(f'`ssh {value}` successful!')
-
-    return value
-
-
 class AsyncSshTransport(AsyncTransport):
     """Transport plugin via SSH, asynchronously."""
 
@@ -74,12 +58,22 @@ class AsyncSshTransport(AsyncTransport):
             'machine_or_host',
             {
                 'type': str,
-                'prompt': 'Machine(or host) name as in `ssh <your-host-name>` command.'
-                ' (It should be a password-less setup)',
-                'help': 'Password-less host-setup to connect, as in command `ssh <your-host-name>`. '
-                "You'll need to have a `Host <your-host-name>` entry defined in your `~/.ssh/config` file.",
+                'prompt': 'Host keyword as defined in your ssh config',
+                'help': 'Host setup taken from the ssh config to connect with command `ssh <HOST_KEYWORD>`. You need to'
+                'have a `Host <HOST_KEYWORD>` entry defined in your ssh config file (~/.ssh/config on Linux and'
+                ' macOS).',
                 'non_interactive_default': True,
-                'callback': validate_machine,
+            },
+        ),
+        (
+            'password',
+            {
+                'type': str,
+                'default': '',
+                'prompt': 'Password',
+                'hide_input': True,
+                'help': 'Login password for the remote machine.',
+                'non_interactive_default': True,
             },
         ),
         (
@@ -118,6 +112,8 @@ class AsyncSshTransport(AsyncTransport):
         return computer.hostname
 
     def __init__(self, *args, **kwargs):
+        from aiida.orm.authinfos import Password
+
         super().__init__(*args, **kwargs)
         # the machine is passed as `machine=computer.hostname` in the codebase
         # 'machine' is immutable.
@@ -130,6 +126,25 @@ class AsyncSshTransport(AsyncTransport):
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
 
+        options = {}
+        self._computer = kwargs.pop('computer', None)
+        self._password = kwargs.pop('password', None)
+
+        if self._password == Password.OBFUSCATED:
+            if self._computer is None:
+                raise ValueError(
+                    'No computer was passed to transport plugin, cannot retrieve password from secure storage.'
+                )
+            if (retrieved_password := self._computer.password_manager.get()) is None:
+                raise ValueError(
+                    f'No registered password has been found in secure storage for computer {self._computer}.'
+                )
+            options['password'] = retrieved_password
+        else:
+            # note that this also covers the cases when a not obfuscated password or no password is passed
+            options['password'] = self._password
+
+        self._ssh_cient_connection_options = SSHClientConnectionOptions(**options)
         self._concurrent_io = 0
 
     @property
@@ -157,7 +172,7 @@ class AsyncSshTransport(AsyncTransport):
         if self.script_before != 'None':
             os.system(f'{self.script_before}')
 
-        self._conn = await asyncssh.connect(self.machine)
+        self._conn = await asyncssh.connect(self.machine, options=self._ssh_cient_connection_options)
         self._sftp = await self._conn.start_sftp_client()
 
         self._is_open = True
@@ -1386,6 +1401,30 @@ class AsyncSshTransport(AsyncTransport):
 
         :type remotedir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
+        from aiida.orm.authinfos import Password
+
         connect_string = self._gotocomputer_string(remotedir)
+
         cmd = f'ssh -t {self.machine} {connect_string}'
+        # we only retrieve password if it was obfuscated, because we then know that it is present in the secure storage
+        # if the password was directly provided the user will be prompted to enter the password
+        if self._password == Password.OBFUSCATED:
+            import shutil
+
+            if shutil.which('sshpass'):
+                self.logger.info(
+                    'Command line tool sshpass to forward password to ssh command was not found. '
+                    'Continue with manual enter of password using prompt.'
+                )
+            else:
+                if self._computer is None:
+                    raise ValueError(
+                        'No computer was passed to transport plugin, cannot retrieve password from secure storage.'
+                    )
+                if self._computer.password_manager.get() is not None:
+                    raise ValueError(
+                        f'No registered password has been found in secure storage for computer {self._computer}.'
+                    )
+                cmd_stdout_password = self._computer.password_manager.get_cmd_stdout_password()
+                cmd = f'sshpass -p $({cmd_stdout_password}) {cmd}'
         return cmd

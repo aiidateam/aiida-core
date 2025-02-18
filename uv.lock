@@ -42,6 +42,7 @@ dependencies = [
     { name = "ipython", version = "8.31.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "jedi" },
     { name = "jinja2" },
+    { name = "keyringrs" },
     { name = "kiwipy", extra = ["rmq"] },
     { name = "numpy" },
     { name = "paramiko" },
@@ -192,6 +193,7 @@ requires-dist = [
     { name = "jinja2", specifier = "~=3.0" },
     { name = "jupyter", marker = "extra == 'notebook'", specifier = "~=1.0" },
     { name = "jupyter-client", marker = "extra == 'notebook'", specifier = "~=8.0" },
+    { name = "keyringrs", specifier = "~=0.1.0" },
     { name = "kiwipy", extras = ["rmq"], specifier = "~=0.8.4" },
     { name = "matplotlib", marker = "extra == 'atomic-tools'", specifier = "~=3.3,>=3.3.4" },
     { name = "mypy", marker = "extra == 'pre-commit'", specifier = "~=1.13.0" },
@@ -2047,6 +2049,28 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/59/73/fa26bbb747a9ea4fca6b01453aa22990d52ab62dd61384f1ac0dc9d4e7ba/jupyterlab_widgets-3.0.13.tar.gz", hash = "sha256:a2966d385328c1942b683a8cd96b89b8dd82c8b8f81dda902bb2bc06d46f5bed", size = 203556 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a9/93/858e87edc634d628e5d752ba944c2833133a28fa87bb093e6832ced36a3e/jupyterlab_widgets-3.0.13-py3-none-any.whl", hash = "sha256:e3cda2c233ce144192f1e29914ad522b2f4c40e77214b0cc97377ca3d323db54", size = 214392 },
+]
+
+[[package]]
+name = "keyringrs"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4d/42/8ba563e210bb1e9d2ed55106ea134c90257cbdb9a964036f16fac44ad714/keyringrs-0.1.0.tar.gz", hash = "sha256:7f9c17d1fe9d56d298323be6999e11b24ba2c1c545217404b4c66178d1bb82d9", size = 20979 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/23/d7/bdcaaa5a64ddf9c5636847134ac1cfed2552d136d1b85b81f2daebd422d9/keyringrs-0.1.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:0603a89d1a9775f9047c153646957f7630787013b97386edda0a2319466a7b2a", size = 248719 },
+    { url = "https://files.pythonhosted.org/packages/aa/f0/3144aa99bbf9232b22eb76bee1ba83df75685763386fccef3d1869e984e5/keyringrs-0.1.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:c2a39ee67f5d128ab565f092f3381ee19c782a2253deb539681b9ee4e6def86a", size = 243363 },
+    { url = "https://files.pythonhosted.org/packages/d5/ce/7692e930b3772d2edc23023b72ee80ed4990b51956c0900a62681fd54ea8/keyringrs-0.1.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:742afde3b509054346d48f0ba00086bccd62c1938bf5073da4f56f1c5a72a025", size = 271113 },
+    { url = "https://files.pythonhosted.org/packages/d7/4e/92178275561ffa546b67ec55725e6e743d4a7ea72f2eb926fe743059d14d/keyringrs-0.1.0-cp39-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:f8f1338d9e9af996b984f46c2fabeff2a8640c93585418f47de20ec98a4812be", size = 276461 },
+    { url = "https://files.pythonhosted.org/packages/90/0e/f3cb1f05b458549c68b913422e547c34e6624c5b2bc2369a131273fcbd8a/keyringrs-0.1.0-cp39-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:ef8ae408c917e12835337dceede39d2479268b6b1f520eaf94fa78d83e2d240a", size = 329143 },
+    { url = "https://files.pythonhosted.org/packages/6a/5b/f6635c794d9430038952dd290b2c156da4b8c59e3eda21a5351c7202c6ec/keyringrs-0.1.0-cp39-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:7b9cec4ec2326647163cf6433cfe6afeae72e0c1c7345755b6370c5979f6be0d", size = 312812 },
+    { url = "https://files.pythonhosted.org/packages/22/8f/a74ff9b693dfb6cf127f5dd33fdb04a7e0fe638c047d0d28c495895339b4/keyringrs-0.1.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8e6468d1e27796ab8f8d98448fef168156130e9369c7bbd5d0b21904140989af", size = 272162 },
+    { url = "https://files.pythonhosted.org/packages/ff/1d/fe8bda6d26e8ca951e6a70215969ac9b476d114270baf8979fa573c63b46/keyringrs-0.1.0-cp39-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:8f460e421bafc4ed4a7d2117cce4f7baaa5bd563a105d13243ad3a3077be0ad8", size = 287433 },
+    { url = "https://files.pythonhosted.org/packages/73/27/72a4f05965424b51b1b744ef69da4308d3f2abbdccb4a3206fa073a979bd/keyringrs-0.1.0-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:7350341f86cc3dd152078c210ca99f150bde03c535d07a46e754ecbba8607dfa", size = 445261 },
+    { url = "https://files.pythonhosted.org/packages/93/e5/65bf9aee9c8d431eb1eedd2d038b8a4b3f5299783a6b91f7669c09ffd016/keyringrs-0.1.0-cp39-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:2d3ff365953ecb33dac8acf070e463217d4fef9e07765ccc380d3bf4c4ebb3ec", size = 534908 },
+    { url = "https://files.pythonhosted.org/packages/a5/59/5764ec45f188a97ffc16175c2de57b4836c52014fd8aa06fd76acbd75b7a/keyringrs-0.1.0-cp39-abi3-musllinux_1_2_i686.whl", hash = "sha256:5a1f9cfabdc2db738b5b1ffbd22cfd333d9339d37d2b4c0288ae0acc8c9b4ec4", size = 463879 },
+    { url = "https://files.pythonhosted.org/packages/ef/12/57852b13d5075ce61e1278dbe6219df91473d3b5f9d977d48519bfc61ffd/keyringrs-0.1.0-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:34a6e02f9c152bbfed43a525b9e98c266408d08a7a4ce0f352492f5e20b49e79", size = 439295 },
+    { url = "https://files.pythonhosted.org/packages/59/42/d923be64876c88e68685c5ffe1ae4a0f74dbbd474d7868e0bd41ab133cce/keyringrs-0.1.0-cp39-abi3-win32.whl", hash = "sha256:eacdfac242b683b70af0c8a8a06d626a9bae7932c42f96128ad0ee03f6372c7f", size = 132169 },
+    { url = "https://files.pythonhosted.org/packages/c8/b1/8e9d61b425a089ded9da73cf163e78cc14f02ef9a2146f3bec59ce727843/keyringrs-0.1.0-cp39-abi3-win_amd64.whl", hash = "sha256:e77f53571763fb1d8331d2eec91635cd5b51cf7e22a51d79e9b898e8adfe45e2", size = 138890 },
 ]
 
 [[package]]

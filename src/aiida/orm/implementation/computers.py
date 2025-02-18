@@ -8,13 +8,22 @@
 ###########################################################################
 """Backend specific computer objects and methods"""
 
+from __future__ import annotations
+
 import abc
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Protocol
 
 from .entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendComputer', 'BackendComputerCollection')
+
+
+class HasUUID(Protocol):
+    @property
+    def uuid(self) -> str:
+        """A required UUID property."""
+        ...
 
 
 class BackendComputer(BackendEntity):
@@ -91,6 +100,69 @@ class BackendComputer(BackendEntity):
 
         :raises: ``InvalidOperation`` if the computer is not stored.
         """
+
+    class ComputerPasswordManager:
+        # To support both BackendComputer, DbComputer we only require uuid as typehint
+        # During the deletion of the computer from the database, the password is also deleted
+        # There we need to support a construction passing a DbComputer.
+        def __init__(self, computer: HasUUID):
+            self._computer = computer
+
+        def get(self) -> str | None:
+            """Retrieves the password associated with this computer from system's secure storage
+
+            :raises RuntimeError: If the keychain is not accessible.
+            """
+            from keyringrs import Entry
+
+            try:
+                return Entry('aiida', f'{self._computer.uuid}').get_password()
+            except RuntimeError as exc:
+                # error when no password for entry is available
+                if str(exc) == 'No matching entry found in secure storage':
+                    return None
+                raise
+
+        def set(self, password: str) -> None:
+            """Sets the entry with the uuid of the computer to system's secure storage with the `password`.
+
+            :raises RuntimeError: If the keychain is not accessible.
+            """
+            from keyringrs import Entry
+
+            Entry('aiida', f'{self._computer.uuid}').set_password(password)
+
+        def delete(self) -> None:
+            """Deletes the password associated with this computer from system's secure storage if available.
+
+            :raises RuntimeError: If the keychain is not accessible.
+            """
+            from keyringrs import Entry
+
+            try:
+                Entry('aiida', f'{self._computer.uuid}').delete_credential()
+            except RuntimeError as exc:
+                # error when no password for entry is available
+                if str(exc) == 'No matching entry found in secure storage':
+                    return None
+                raise
+
+        def get_cmd_stdout_password(self) -> str:
+            """Returns the command line command to retrieve the password to stdout.
+
+            This is needed for the gotocomputer commands."""
+
+            import sys
+
+            python_command = (
+                'from keyringrs import Entry;' f'print(Entry("aiida", "{self._computer.uuid}").get_password(), end="")'
+            )
+            return f"{sys.executable} -c '{python_command}'"
+
+    @property
+    def password_manager(self) -> ComputerPasswordManager:
+        """Returns the manager of the password associated to this computer stored in system's secure storage."""
+        return self.ComputerPasswordManager(self)
 
 
 class BackendComputerCollection(BackendCollection[BackendComputer]):

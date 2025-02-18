@@ -126,3 +126,11 @@ class SqlaComputerCollection(BackendComputerCollection):
             session.commit()
         except SQLAlchemyError as exc:
             raise exceptions.InvalidOperation(f'Unable to delete the requested computer: {exc}')
+
+        try:
+            # We delete the password from the secure storage if available. See BackendComputer
+            self.ENTITY_CLASS.ComputerPasswordManager(row).delete()
+        except Exception as exc:
+            raise exceptions.InvalidOperation(
+                f'Unable to delete the password associated to requested computer {row}: {exc}'
+            )

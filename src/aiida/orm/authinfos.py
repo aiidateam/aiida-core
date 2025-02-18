@@ -8,6 +8,7 @@
 ###########################################################################
 """Module for the `AuthInfo` ORM class."""
 
+import enum
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.common import exceptions
@@ -134,10 +135,22 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         return self._backend_entity.get_auth_params()
 
     def set_auth_params(self, auth_params: Dict[str, Any]) -> None:
-        """Set the dictionary of authentication parameters
+        """Set the dictionary of authentication parameters.
+
+        If password present in `auth_params`, it stores it in secure storage and obfuscates it.
 
         :param auth_params: a dictionary with authentication parameters
         """
+        import copy
+
+        auth_params = copy.deepcopy(auth_params)
+        # the default value for the password in CLI is the empty string
+        # which is covered by evaluating to False in the conditional statement
+        if password := auth_params.pop('password', None):
+            from aiida.orm.implementation.computers import Password
+
+            self.computer.password_manager.set(password)
+            auth_params['password'] = Password.OBFUSCATED
         self._backend_entity.set_auth_params(auth_params)
 
     def get_metadata(self) -> Dict[str, Any]:
@@ -176,4 +189,8 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         except exceptions.EntryPointError as exception:
             raise exceptions.ConfigurationError(f'transport type `{transport_type}` could not be loaded: {exception}')
 
-        return transport_class(machine=computer.hostname, **self.get_auth_params())
+        return transport_class(machine=computer.hostname, computer=self.computer, **self.get_auth_params())
+
+
+class Password(enum.Enum):
+    OBFUSCATED = 'OBFUSCATED'

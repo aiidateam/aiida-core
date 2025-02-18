@@ -764,7 +764,7 @@ class TestVerdiDelete:
             )
 
         elif options == ['--clean-workdir'] and user_input == 'y\nn':
-            # This is a special case, if the user's imagination came invented a "hacky" use with --clean-workdir
+            # This is a special case, the user's imagination may invent a "hacky" solution with --clean-workdir
             # To only delete the folders, but not the nodes.
             assert 'Aborted!' in str(result.stderr_bytes)
             # And later if decided to delete the nodes, as well, while the nodes are already deleted,

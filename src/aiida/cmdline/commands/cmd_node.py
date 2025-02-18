@@ -331,7 +331,7 @@ def extras(nodes, keys, fmt, identifier, raw):
 @click.option(
     '--clean-workdir',
     is_flag=True,
-    help='Also clean the remote work directory. (only applies to workflows and CalcJobNodes)',
+    help='Also clean the remote work directory, if applicable.',
 )
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
@@ -354,10 +354,22 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
         except ValueError:
             pks.append(NodeEntityLoader.load_entity(obj).pk)
 
+    def _dry_run_callback(pks):
+        if not pks or force:
+            return False
+        echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
+        echo.echo_info('The nodes with the following pks would be deleted: ' + ' '.join(map(str, pks)))
+        return not click.confirm('Shall I continue?', abort=True)
+
+    def _perform_delete():
+        _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        if was_deleted:
+            echo.echo_success('Finished deletion.')
+
     if clean_workdir:
         from aiida.manage import get_manager
-        from aiida.orm import AuthInfo, CalcJobNode, QueryBuilder, User, load_computer
-        from aiida.orm.utils.remote import get_calcjob_remote_paths
+        from aiida.orm import CalcJobNode, QueryBuilder
+        from aiida.orm.utils.remote import clean_mapping_remote_paths, get_calcjob_remote_paths
         from aiida.tools.graph.graph_traversers import get_nodes_delete
 
         backend = get_manager().get_backend()
@@ -372,58 +384,39 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
 
         if not calcjobs_pks:
             echo.echo_report('--clean-workdir ignored. No CalcJobNode associated with the given node, found.')
-        else:
-            path_mapping = get_calcjob_remote_paths(
-                calcjobs_pks,
-                only_not_cleaned=True,
+            _perform_delete()
+            return
+
+        path_mapping = get_calcjob_remote_paths(
+            calcjobs_pks,
+            only_not_cleaned=True,
+        )
+
+        if not path_mapping:
+            echo.echo_report('--clean-workdir ignored. CalcJobNode work directories are already cleaned.')
+            _perform_delete()
+            return
+
+        descendant_pks = [remote_folder.pk for paths in path_mapping.values() for remote_folder in paths]
+
+        if not force and not dry_run:
+            echo.echo_warning(
+                f'YOU ARE ABOUT TO CLEAN {len(descendant_pks)} REMOTE DIRECTORIES! ' 'THIS CANNOT BE UNDONE!'
             )
+            echo.echo_info(
+                'Remote directories of nodes with the following pks would be cleaned: '
+                + ' '.join(map(str, descendant_pks))
+            )
+            click.confirm('Shall I continue?', abort=True)
 
-            if not path_mapping:
-                echo.echo_report('--clean-workdir ignored. CalcJobNode work directories are already cleaned.')
-            else:
-                descendant_pks = [remote_folder.pk for paths in path_mapping.values() for remote_folder in paths]
+        if dry_run:
+            echo.echo_report(
+                'Remote folders of these node are marked for deletion: ' + ' '.join(map(str, descendant_pks))
+            )
+        else:
+            clean_mapping_remote_paths(path_mapping)
 
-                if not force and not dry_run:
-                    echo.echo_warning(
-                        f'YOU ARE ABOUT TO CLEAN {len(descendant_pks)} REMOTE DIRECTORIES! ' 'THIS CANNOT BE UNDONE!'
-                    )
-                    echo.echo_info(
-                        'Remote directories of nodes with the following pks would be cleaned: '
-                        + ' '.join(map(str, descendant_pks))
-                    )
-                    click.confirm('Shall I continue?', abort=True)
-
-                if dry_run:
-                    echo.echo_report(
-                        'Remote folders of these node are marked for deletion: ' + ' '.join(map(str, descendant_pks))
-                    )
-                else:
-                    user = User.collection.get_default()
-                    counter = 0
-                    for computer_uuid, paths in path_mapping.items():
-                        computer = load_computer(uuid=computer_uuid)
-                        transport = AuthInfo.collection.get(
-                            dbcomputer_id=computer.pk, aiidauser_id=user.pk
-                        ).get_transport()
-
-                        with transport:
-                            for remote_folder in paths:
-                                remote_folder._clean(transport=transport)
-                                counter += 1
-
-                    echo.echo_report(f'{counter} remote folders cleaned on {computer.label}')
-
-    def _dry_run_callback(pks):
-        if not pks or force:
-            return False
-        echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
-        echo.echo_info('The nodes with the following pks would be deleted: ' + ' '.join(map(str, pks)))
-        return not click.confirm('Shall I continue?', abort=True)
-
-    _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
-
-    if was_deleted:
-        echo.echo_success('Finished deletion.')
+    _perform_delete()
 
 
 @verdi_node.command('rehash')

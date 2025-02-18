@@ -192,7 +192,7 @@ class DirectScheduler(BashCliScheduler):
             directory.
             IMPORTANT: submit_script should be already escaped.
         """
-        submit_command = f'bash {submit_script} > /dev/null 2>&1 & echo $!'
+        submit_command = f'(bash {submit_script} > /dev/null 2>&1 & echo $!) &'
 
         self.logger.info(f'submitting with: {submit_command}')
 

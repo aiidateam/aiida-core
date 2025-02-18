@@ -8,6 +8,8 @@
 ###########################################################################
 """orm links tests for the export and import routines"""
 
+import pytest
+
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
@@ -15,7 +17,7 @@ from aiida.tools.archive import ArchiveFormatSqlZip, create_archive, import_arch
 from tests.tools.archive.utils import get_all_node_links
 
 
-def test_links_to_unknown_nodes(tmp_path, aiida_profile):
+def test_links_to_unknown_nodes(tmp_path, aiida_profile_clean):
     """Test importing of nodes, that have links to unknown nodes."""
     # store a node
     node = orm.Data()
@@ -46,7 +48,7 @@ def test_links_to_unknown_nodes(tmp_path, aiida_profile):
     with ArchiveFormatSqlZip().open(filename, 'r') as archive:
         assert archive.querybuilder().append(entity_type='link').count() == 1
 
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
 
     # since the query builder only looks for links between known nodes,
     # this should not import the erroneous link
@@ -262,7 +264,8 @@ def test_complex_workflow_graph_links(aiida_profile_clean, tmp_path, aiida_local
     assert set(export_set) == set(import_set)
 
 
-def test_complex_workflow_graph_export_sets(aiida_profile, tmp_path, aiida_localhost_factory):
+@pytest.mark.nightly
+def test_complex_workflow_graph_export_sets(aiida_profile_clean, tmp_path, aiida_localhost_factory):
     """Test ex-/import of individual nodes in complex graph"""
     for export_conf in range(0, 9):
         _, (export_node, export_target) = construct_complex_graph(aiida_localhost_factory, export_conf)
@@ -272,7 +275,7 @@ def test_complex_workflow_graph_export_sets(aiida_profile, tmp_path, aiida_local
         create_archive([export_node], filename=export_file, overwrite=True)
         export_node_str = str(export_node)
 
-        aiida_profile.reset_storage()
+        aiida_profile_clean.reset_storage()
 
         import_archive(export_file)
 
@@ -296,7 +299,8 @@ def test_complex_workflow_graph_export_sets(aiida_profile, tmp_path, aiida_local
         )
 
 
-def test_high_level_workflow_links(aiida_profile, tmp_path, aiida_localhost_factory):
+@pytest.mark.nightly
+def test_high_level_workflow_links(aiida_profile_clean, tmp_path, aiida_localhost_factory):
     """This test checks that all the needed links are correctly exported and imported.
     INPUT_CALC, INPUT_WORK, CALL_CALC, CALL_WORK, CREATE, and RETURN
     links connecting Data nodes and high-level Calculation and Workflow nodes:
@@ -318,7 +322,7 @@ def test_high_level_workflow_links(aiida_profile, tmp_path, aiida_localhost_fact
 
     for calcs in high_level_calc_nodes:
         for works in high_level_work_nodes:
-            aiida_profile.reset_storage()
+            aiida_profile_clean.reset_storage()
 
             graph_nodes, _ = construct_complex_graph(aiida_localhost_factory, calc_nodes=calcs, work_nodes=works)
 
@@ -350,7 +354,7 @@ def test_high_level_workflow_links(aiida_profile, tmp_path, aiida_localhost_fact
             export_file = tmp_path.joinpath('export.aiida')
             create_archive(graph_nodes, filename=export_file, overwrite=True)
 
-            aiida_profile.reset_storage()
+            aiida_profile_clean.reset_storage()
 
             import_archive(export_file)
             import_links = get_all_node_links()
@@ -450,7 +454,8 @@ def link_flags_export_helper(name, all_nodes, tmp_path, nodes_to_export, flags, 
     return ret
 
 
-def test_link_flags(aiida_profile, tmp_path, aiida_localhost_factory):
+@pytest.mark.nightly
+def test_link_flags(aiida_profile_clean, tmp_path, aiida_localhost_factory):
     """Verify all link follow flags are working as intended.
 
     Graph (from ``construct_complex_graph()``)::
@@ -584,10 +589,10 @@ def test_link_flags(aiida_profile, tmp_path, aiida_localhost_factory):
         ),
     )
 
-    link_flags_import_helper(input_links_forward, aiida_profile.reset_storage)
-    link_flags_import_helper(create_return_links_backward, aiida_profile.reset_storage)
-    link_flags_import_helper(call_links_backward_calc1, aiida_profile.reset_storage)
-    link_flags_import_helper(call_links_backward_work2, aiida_profile.reset_storage)
+    link_flags_import_helper(input_links_forward, aiida_profile_clean.reset_storage)
+    link_flags_import_helper(create_return_links_backward, aiida_profile_clean.reset_storage)
+    link_flags_import_helper(call_links_backward_calc1, aiida_profile_clean.reset_storage)
+    link_flags_import_helper(call_links_backward_work2, aiida_profile_clean.reset_storage)
 
 
 def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):

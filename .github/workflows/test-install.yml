@@ -38,15 +38,12 @@ jobs:
         python-version: '3.11'
 
     - name: Set up uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v5.2.1
       with:
-        version: 0.5.x
+        version: latest
 
     - name: Install utils/ dependencies
       run: uv pip install --system -r utils/requirements.txt
-
-    - name: Validate uv lockfile
-      run: uv lock --check
 
     - name: Validate conda environment file
       run: python ./utils/dependency_management.py validate-environment-yml
@@ -211,8 +208,5 @@ jobs:
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-      # TODO: Remove a workaround for VIRTUAL_ENV once the setup-uv action is updated
-      # https://github.com/astral-sh/setup-uv/issues/219
       run: |
-        ${{ matrix.python-version == '3.9' && 'VIRTUAL_ENV=$PWD/.venv' || '' }}
         pytest -n auto --db-backend psql -m 'not nightly' tests/

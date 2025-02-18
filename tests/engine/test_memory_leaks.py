@@ -65,7 +65,6 @@ def test_leak_local_calcjob(aiida_code_installed):
 
 
 @pytest.mark.skipif(sys.version_info >= (3, 12), reason='Garbage collecting hangs on Python 3.12')
-@pytest.mark.nightly
 @pytest.mark.usefixtures('aiida_profile', 'check_memory_leaks')
 def test_leak_ssh_calcjob(aiida_computer_ssh):
     """Test whether running a CalcJob over SSH leaks memory.

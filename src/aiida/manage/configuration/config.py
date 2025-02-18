@@ -20,6 +20,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -780,7 +781,8 @@ class Config:
                 os.umask(umask)
 
             handle.flush()
-            os.rename(handle.name, self.filepath)
+            handle.close()
+            shutil.move(handle.name, self.filepath)
 
     def filepaths(self, profile: Profile):
         """Return the filepaths used by a profile.

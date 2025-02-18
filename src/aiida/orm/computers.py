@@ -13,11 +13,11 @@ import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from aiida.common import exceptions
+from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 from aiida.plugins import SchedulerFactory, TransportFactory
 
 from . import entities, users
-from .fields import add_field
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
@@ -73,50 +73,14 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     _CLS_COLLECTION = ComputerCollection
 
-    __qb_fields__ = [
-        add_field(
-            'uuid',
-            dtype=str,
-            is_attribute=False,
-            doc='The UUID of the computer',
-        ),
-        add_field(
-            'label',
-            dtype=str,
-            is_attribute=False,
-            doc='Label for the computer',
-        ),
-        add_field(
-            'description',
-            dtype=str,
-            is_attribute=False,
-            doc='Description of the computer',
-        ),
-        add_field(
-            'hostname',
-            dtype=str,
-            is_attribute=False,
-            doc='Hostname of the computer',
-        ),
-        add_field(
-            'transport_type',
-            dtype=str,
-            is_attribute=False,
-            doc='Transport type of the computer',
-        ),
-        add_field(
-            'scheduler_type',
-            dtype=str,
-            is_attribute=False,
-            doc='Scheduler type of the computer',
-        ),
-        add_field(
-            'metadata',
-            dtype=Dict[str, Any],
-            is_attribute=False,
-            doc='Metadata of the computer',
-        ),
-    ]
+    class Model(entities.Entity.Model):
+        uuid: str = MetadataField(description='The UUID of the computer', is_attribute=False, exclude_to_orm=True)
+        label: str = MetadataField(description='Label for the computer', is_attribute=False)
+        description: str = MetadataField(description='Description of the computer', is_attribute=False)
+        hostname: str = MetadataField(description='Hostname of the computer', is_attribute=False)
+        transport_type: str = MetadataField(description='Transport type of the computer', is_attribute=False)
+        scheduler_type: str = MetadataField(description='Scheduler type of the computer', is_attribute=False)
+        metadata: Dict[str, Any] = MetadataField(description='Metadata of the computer', is_attribute=False)
 
     def __init__(
         self,
@@ -126,6 +90,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         transport_type: str = '',
         scheduler_type: str = '',
         workdir: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         backend: Optional['StorageBackend'] = None,
     ) -> None:
         """Construct a new computer."""
@@ -136,6 +101,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             description=description,
             transport_type=transport_type,
             scheduler_type=scheduler_type,
+            metadata=metadata,
         )
         super().__init__(model)
         if workdir is not None:

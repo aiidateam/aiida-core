@@ -84,7 +84,10 @@ class DaemonClient:
     """Client to interact with the daemon."""
 
     _DAEMON_NAME = 'aiida-{name}'
-    _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
+    if sys.platform == 'win32':
+        _ENDPOINT_PROTOCOL = ControllerProtocol.TCP
+    else:
+        _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
 
     def __init__(self, profile: Profile):
         """Construct an instance for a given profile.

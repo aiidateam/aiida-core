@@ -19,7 +19,6 @@ from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
-from aiida.tools.dumping.config import ProcessDumpConfig
 
 
 @verdi.group('profile')
@@ -279,38 +278,11 @@ def profile_delete(force, delete_data, profiles):
 @options.DUMP_PROCESSES()
 @options.GROUPS()
 @options.ORGANIZE_BY_GROUPS()
-@click.option(
-    '--symlink-duplicates/--no-symlink-duplicates',
-    default=True,
-    show_default=True,
-    help='Symlink data if the same node is contained in multiple groups.',
-)
-@click.option(
-    '--delete-missing/--no-delete-missing',
-    default=False,
-    show_default=True,
-    help="If a previously dumped node is deleted from AiiDA's DB, also delete the corresponding dump directory.",
-)
-@click.option(
-    '--only-top-level-calcs/--no-only-top-level-calcs',
-    default=True,
-    show_default=True,
-    help='Dump calculations in their own dedicated directories, not just as part of the dumped workflow.',
-)
-@click.option(
-    '--only-top-level-workflows/--no-only-top-level-workflows',
-    default=True,
-    show_default=True,
-    help='If a top-level process calls sub-processes, create a designated directory only for the top-level process.',
-)
-# TODO: Implement this...
-# TODO: Possibly
-@click.option(
-    '--update-groups/--no-update-groups',
-    default=False,
-    show_default=True,
-    help='Update directories if nodes have been added to other groups, or organized differently in terms of groups.',
-)
+@options.SYMLINK_DUPLICATES()
+@options.DELETE_MISSING()
+@options.ONLY_TOP_LEVEL_CALCS()
+@options.ONLY_TOP_LEVEL_WORKFLOWS()
+@options.UPDATE_GROUPS()
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()

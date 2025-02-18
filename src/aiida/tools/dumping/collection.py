@@ -228,3 +228,6 @@ class CollectionDumper(BaseDumper):
                 self._dump_processes(processes=collection_processes.workflows)
             if len(collection_processes.calculations) > 0:
                 self._dump_processes(processes=collection_processes.calculations)
+
+    # @property
+    # def processes_to_delete(self): ...

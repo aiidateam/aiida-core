@@ -53,6 +53,7 @@ __all__ = (
     'DB_PORT',
     'DB_USERNAME',
     'DEBUG',
+    'DELETE_MISSING',
     'DESCRIPTION',
     'DICT_FORMAT',
     'DICT_KEYS',
@@ -84,6 +85,8 @@ __all__ = (
     'NODES',
     'NON_INTERACTIVE',
     'OLDER_THAN',
+    'ONLY_TOP_LEVEL_CALCS',
+    'ONLY_TOP_LEVEL_WORKFLOWS',
     'ORDER_BY',
     'ORDER_DIRECTION',
     'ORGANIZE_BY_GROUPS',
@@ -105,11 +108,13 @@ __all__ = (
     'SCHEDULER',
     'SILENT',
     'SORT',
+    'SYMLINK_DUPLICATES',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
     'TRAVERSAL_RULE_HELP_STRING',
     'TYPE_STRING',
+    'UPDATE_GROUPS',
     'USER',
     'USER_EMAIL',
     'USER_FIRST_NAME',
@@ -849,4 +854,39 @@ INCREMENTAL = OverridableOption(
     default=True,
     show_default=True,
     help="Incremental dumping of data to disk. Doesn't require using overwrite to clean previous directories.",
+)
+
+SYMLINK_DUPLICATES = OverridableOption(
+    '--symlink-duplicates/--no-symlink-duplicates',
+    default=True,
+    show_default=True,
+    help='Symlink data if the same node is contained in multiple groups.',
+)
+
+DELETE_MISSING = OverridableOption(
+    '--delete-missing/--no-delete-missing',
+    default=False,
+    show_default=True,
+    help="If a previously dumped node is deleted from AiiDA's DB, also delete the corresponding dump directory.",
+)
+
+ONLY_TOP_LEVEL_CALCS = OverridableOption(
+    '--only-top-level-calcs/--no-only-top-level-calcs',
+    default=True,
+    show_default=True,
+    help='Dump calculations in their own dedicated directories, not just as part of the dumped workflow.',
+)
+
+ONLY_TOP_LEVEL_WORKFLOWS = OverridableOption(
+    '--only-top-level-workflows/--no-only-top-level-workflows',
+    default=True,
+    show_default=True,
+    help='If a top-level process calls sub-processes, create a designated directory only for the top-level process.',
+)
+
+UPDATE_GROUPS = OverridableOption(
+    '--update-groups/--no-update-groups',
+    default=False,
+    show_default=True,
+    help='Update directories if nodes have been added to other groups, or organized differently in terms of groups.',
 )

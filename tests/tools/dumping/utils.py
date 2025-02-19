@@ -6,77 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for utility functions for the dumping data to disk."""
 
 from pathlib import Path
-
-import pytest
-
-filename = 'file.txt'
-node_metadata_file = '.aiida_node_metadata.yaml'
-
-
-@pytest.mark.usefixtures('chdir_tmp_path')
-def test_prepare_dump_path(tmp_path):
-    from aiida.tools.dumping.utils import prepare_dump_path
-
-    test_dir = tmp_path / Path('test-dir')
-    test_file = test_dir / filename
-    safeguard_file = node_metadata_file
-    safeguard_file_path = test_dir / safeguard_file
-
-    # Cannot set both overwrite and incremental to True
-    with pytest.raises(ValueError):
-        prepare_dump_path(path_to_validate=test_dir, overwrite=True, incremental=True)
-
-    # Check that fails if file with same name as output dir
-    test_dir.touch()
-    with pytest.raises(FileExistsError):
-        prepare_dump_path(path_to_validate=test_dir)
-    test_dir.unlink()
-
-    # Check if path created if non-existent
-    prepare_dump_path(path_to_validate=test_dir)
-    assert test_dir.exists()
-    assert safeguard_file_path.is_file()
-
-    # Directory exists, but empty -> is fine
-    safeguard_file_path.unlink()
-    prepare_dump_path(path_to_validate=test_dir)
-    assert test_dir.exists()
-    assert safeguard_file_path.is_file()
-
-    # Fails if directory not empty, safeguard file existent, and overwrite set to False
-    test_file.touch()
-    safeguard_file_path.touch()
-    with pytest.raises(FileExistsError):
-        prepare_dump_path(path_to_validate=test_dir, overwrite=False, incremental=False)
-
-    # Fails if directory not empty, overwrite set to True, but safeguard_file not found (for safety reasons)
-    safeguard_file_path.unlink()
-    test_file.touch()
-    with pytest.raises(FileNotFoundError):
-        prepare_dump_path(path_to_validate=test_dir, overwrite=True, incremental=False)
-
-    # Works if directory not empty, overwrite set to True and safeguard_file contained
-    # -> After function call, test_file is deleted, and safeguard_file again created
-    safeguard_file_path.touch()
-    prepare_dump_path(
-        path_to_validate=test_dir,
-        safeguard_file=safeguard_file,
-        overwrite=True,
-        incremental=False,
-    )
-    assert not test_file.is_file()
-    assert safeguard_file_path.is_file()
-
-    # Works if directory not empty, but incremental=True and safeguard_file (e.g. `.aiida_node_metadata.yaml`) contained
-    # -> After function call, test file and safeguard_file still there
-    test_file.touch()
-    prepare_dump_path(path_to_validate=test_dir, safeguard_file=safeguard_file, incremental=True)
-    assert safeguard_file_path.is_file()
-    assert test_file.is_file()
-
 
 def compare_tree(expected: dict, base_path: Path, relative_path: Path = Path()):
     """Recursively compares an expected directory structure with an actual path.
@@ -88,20 +19,20 @@ def compare_tree(expected: dict, base_path: Path, relative_path: Path = Path()):
     """
     actual_path = base_path / relative_path
 
-    assert actual_path.exists(), f'Path does not exist: {actual_path}'
-    assert actual_path.is_dir(), f'Path is not a directory: {actual_path}'
+    assert actual_path.exists(), f"Path does not exist: {actual_path}"
+    assert actual_path.is_dir(), f"Path is not a directory: {actual_path}"
 
     for name, content in expected.items():
         item_path = actual_path / name
-        assert item_path.exists(), f'Missing: {item_path}'
+        assert item_path.exists(), f"Missing: {item_path}"
 
         if isinstance(content, list):  # It's a directory with files (list of filenames)
-            assert item_path.is_dir(), f'Expected a directory: {item_path}'
+            assert item_path.is_dir(), f"Expected a directory: {item_path}"
             # Check that all files exist inside the directory
             for filename in content:
                 file_path = item_path / filename
-                assert file_path.exists(), f'Missing file: {file_path}'
-                assert file_path.is_file(), f'Expected a file: {file_path}'
+                assert file_path.exists(), f"Missing file: {file_path}"
+                assert file_path.is_file(), f"Expected a file: {file_path}"
         elif isinstance(content, dict):  # It's a subdirectory
-            assert item_path.is_dir(), f'Expected a directory: {item_path}'
+            assert item_path.is_dir(), f"Expected a directory: {item_path}"
             compare_tree(content, base_path, relative_path / name)

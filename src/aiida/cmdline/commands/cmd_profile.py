@@ -319,7 +319,7 @@ def profile_mirror(
     from aiida.tools.dumping import ProcessDumper, ProfileDumper
     from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig, ProcessDumpConfig
     from aiida.tools.dumping.logger import DumpLogger
-    from aiida.tools.dumping.utils import prepare_dump_path, SafeguardFileMapping, resolve_path_argument_for_dumping
+    from aiida.tools.dumping.utils import prepare_dump_path, SafeguardFileMapping, resolve_click_path_argument_for_dumping
 
     profile = ctx.obj['profile']
 
@@ -328,23 +328,20 @@ def profile_mirror(
         msg = '`--update-groups` selected, even though `--organize-by-groups` is set to False.'
         echo.echo_critical(msg)
 
-
-    dump_paths = resolve_path_argument_for_dumping(path=path, entity=profile)
-    output_path = dump_paths.dump_parent_path / dump_paths.output_path
+    dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=profile)
+    output_path_absolute = dump_paths.output_path_absolute
     safeguard_file = SafeguardFileMapping.PROCESS.value
-    safeguard_file_path: Path = output_path / safeguard_file
+    safeguard_file_path: Path = output_path_absolute / safeguard_file
 
-    echo.echo_report(f'Mirroring data of profile `{profile.name}` at path: `{output_path}`.')
+    echo.echo_report(f'Mirroring data of profile `{profile.name}` at path: `{output_path_absolute.name}`.')
 
-    # import ipdb; ipdb.set_trace()
     try:
         prepare_dump_path(
-            path_to_validate=output_path,
+            path_to_validate=output_path_absolute,
             overwrite=overwrite,
             incremental=incremental,
             safeguard_file=safeguard_file,
-            verbose=False,
-            top_level=True,
+            top_level_caller=True,
         )
     except (FileExistsError, ValueError) as exc:
         echo.echo_critical(str(exc))
@@ -370,10 +367,8 @@ def profile_mirror(
 
     # Create config options that hold the various settings for dumping data
     base_dump_config = BaseDumpConfig(
-        dump_parent_path=path,
         overwrite=overwrite,
         incremental=incremental,
-        last_dump_time=last_dump_time,
     )
 
     process_dump_config = ProcessDumpConfig(
@@ -393,17 +388,13 @@ def profile_mirror(
         only_top_level_workflows=only_top_level_workflows,
     )
 
-    # Instantiate dumper classes (ProcessDumper passed as argument to ProfileDumper via composition)
-    process_dumper = ProcessDumper(
+    profile_dumper = ProfileDumper(
+        profile=profile,
+        dump_parent_path=dump_paths.dump_parent_path,
+        dump_sub_path=dump_paths.dump_sub_path,
         base_dump_config=base_dump_config,
         process_dump_config=process_dump_config,
-    )
-
-    profile_dumper = ProfileDumper(
-        base_dump_config=base_dump_config,
-        profile=profile,
         profile_dump_config=profile_dump_config,
-        process_dumper=process_dumper,
         dump_logger=dump_logger,
         groups=groups,
     )

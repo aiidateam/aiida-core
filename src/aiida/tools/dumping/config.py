@@ -16,12 +16,10 @@ from pathlib import Path
 
 @dataclass
 class BaseDumpConfig:
-    """Container for shared arguments of all Dumper classes."""
+    """Container for shared base arguments of all Dumper classes."""
 
-    dump_parent_path: Path | None = field(default_factory=Path.cwd)
     overwrite: bool = False
     incremental: bool = True
-    last_dump_time: datetime | None = None
 
 
 @dataclass
@@ -36,6 +34,7 @@ class ProcessDumpConfig:
     dump_unsealed: bool = False
 
 
+# TODO: Some of those are also needed for the CollectionDumper
 @dataclass
 class ProfileDumpConfig:
     """Arguments for dumping profile data."""

@@ -9,7 +9,7 @@
 """Functionality for dumping of a Collection of AiiDA ORM entities."""
 
 from __future__ import annotations
-import ipdb
+
 import os
 from datetime import datetime
 from pathlib import Path
@@ -26,8 +26,8 @@ from aiida.tools.dumping.utils import (
     ProcessContainer,
     delete_missing_node_dir,
     filter_nodes_last_dump_time,
+    generate_process_default_dump_path,
     load_given_group,
-    generate_process_default_dump_path
 )
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
@@ -192,7 +192,6 @@ class CollectionDumper(BaseDumper):
 
     # def _get_processes_to_delete(self) -> ProcessContainer:
     def _get_processes_to_delete(self) -> list[str]:
-
         dump_logger = self.dump_logger
         log = dump_logger.log
 
@@ -219,7 +218,6 @@ class CollectionDumper(BaseDumper):
         return to_delete_uuids
 
     def delete_processes(self):
-
         # print(f'TO_DUMP_PROCESSES: {to_dump_processes}')
         # print(f'TO_DELETE_PROCESSES: {to_delete_processes}')
 

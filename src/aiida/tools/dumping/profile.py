@@ -15,10 +15,10 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 from typing import cast
+
 import ipdb
 
 from aiida import orm
-from aiida.cmdline.commands.cmd_process import process_dump
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import load_profile
 from aiida.manage.configuration.profile import Profile
@@ -26,8 +26,12 @@ from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.collection import CollectionDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig, ProfileDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
-from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.utils import delete_missing_node_dir, filter_nodes_last_dump_time, get_group_subpath, load_given_group, safe_delete_dir, ProcessContainer
+from aiida.tools.dumping.utils import (
+    delete_missing_node_dir,
+    filter_nodes_last_dump_time,
+    get_group_subpath,
+    load_given_group,
+)
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
@@ -109,7 +113,7 @@ class ProfileDumper(BaseDumper):
         no_group_nodes = self._get_no_group_processes()
         no_group_dumper = CollectionDumper(
             dump_parent_path=self.dump_parent_path / self.dump_sub_path,
-            dump_sub_path = no_group_subpath,
+            dump_sub_path=no_group_subpath,
             group=None,
             collection_nodes=no_group_nodes,
             base_dump_config=self.base_dump_config,
@@ -137,12 +141,12 @@ class ProfileDumper(BaseDumper):
                 group_subpath = 'groups' / get_group_subpath(group=group)
             else:
                 group_subpath = Path('.')
-            
+
             group_output_path = self.dump_parent_path / self.dump_sub_path / group_subpath
 
             group_dumper = CollectionDumper(
                 dump_parent_path=self.dump_parent_path / self.dump_sub_path,
-                dump_sub_path = group_subpath,
+                dump_sub_path=group_subpath,
                 base_dump_config=self.base_dump_config,
                 process_dump_config=self.process_dump_config,
                 profile_dump_config=self.profile_dump_config,

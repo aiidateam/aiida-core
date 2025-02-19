@@ -642,7 +642,7 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
 
 
 @verdi_group.command('mirror')
-@arguments.GROUP() 
+@arguments.GROUP()
 @options.PATH()
 @options.DRY_RUN()
 @options.OVERWRITE()
@@ -685,19 +685,18 @@ def group_mirror(
     import json
     from datetime import datetime
     from pathlib import Path
-    import ipdb
 
     # Maybe point to actual modules here
-    from aiida.tools.dumping import ProcessDumper, CollectionDumper  # ProfileDumper
+    from aiida.tools.dumping import CollectionDumper  # ProfileDumper
     from aiida.tools.dumping.config import (
         BaseDumpConfig,
-        ProfileDumpConfig,
         ProcessDumpConfig,
+        ProfileDumpConfig,
     )
     from aiida.tools.dumping.logger import DumpLogger
     from aiida.tools.dumping.utils import (
-        prepare_dump_path,
         SafeguardFileMapping,
+        prepare_dump_path,
         resolve_click_path_argument_for_dumping,
     )
 
@@ -706,7 +705,6 @@ def group_mirror(
     # FIXME: If nodes not newly created since the last dumping, but only added to the group, those are not picked up
     # during the incremental mirroring
 
-    import ipdb
 
     # ipdb.set_trace()
     dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=group)
@@ -715,7 +713,7 @@ def group_mirror(
     safeguard_file = SafeguardFileMapping.GROUP.value
     safeguard_file_path: Path = output_path / safeguard_file
 
-    msg = f"Mirroring data of group `{group.label}` at path: `{output_path.name}`."
+    msg = f'Mirroring data of group `{group.label}` at path: `{output_path.name}`.'
     echo.echo_report(msg)
 
     try:
@@ -737,10 +735,8 @@ def group_mirror(
 
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
-        with safeguard_file_path.open("r") as fhandle:
-            last_dump_time = datetime.fromisoformat(
-                fhandle.readlines()[-1].strip().split()[-1]
-            ).astimezone()
+        with safeguard_file_path.open('r') as fhandle:
+            last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()
     except IndexError:
         last_dump_time = None
 
@@ -798,29 +794,29 @@ def group_mirror(
 
     if dry_run:
         dry_run_message = (
-            f"Dry run for mirroring of group `{group.label}`. "
-            f"Would dump: {num_processes_to_dump} new nodes and delete "
-            f"{num_processes_to_delete} previously dumped node directories."
+            f'Dry run for mirroring of group `{group.label}`. '
+            f'Would dump: {num_processes_to_dump} new nodes and delete '
+            f'{num_processes_to_delete} previously dumped node directories.'
         )
         echo.echo_report(dry_run_message)
         return
 
     if dump_processes:
         if num_processes_to_dump == 0:
-            msg = "No processes to dump."
+            msg = 'No processes to dump.'
             echo.echo_success(msg)
         else:
             group_dumper.dump(output_path=output_path)
-            msg = f"Dumped {len(group_dumper.processes_to_dump)} new nodes."
+            msg = f'Dumped {len(group_dumper.processes_to_dump)} new nodes.'
             echo.echo_success(msg)
 
     # ipdb.set_trace()
     if delete_missing:
         if num_processes_to_delete == 0:
-            echo.echo_success("No processes to delete.")
+            echo.echo_success('No processes to delete.')
         else:
             group_dumper.delete_processes()
-            echo.echo_success(f"Deleted {num_processes_to_delete} node directories.")
+            echo.echo_success(f'Deleted {num_processes_to_delete} node directories.')
 
     # if update_groups:
     #     relabeled_paths = profile_dumper.update_groups()
@@ -830,8 +826,8 @@ def group_mirror(
     #     print(relabeled_paths)
 
     # Append the current dump time to dumping safeguard file
-    with safeguard_file_path.open("a") as fhandle:
-        fhandle.write(f"Last profile mirror time: {last_dump_time.isoformat()}\n")
+    with safeguard_file_path.open('a') as fhandle:
+        fhandle.write(f'Last profile mirror time: {last_dump_time.isoformat()}\n')
 
     # Write the logging json file to disk
     # ipdb.set_trace()

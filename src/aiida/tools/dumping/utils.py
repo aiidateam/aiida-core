@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import traceback
 import ipdb
+from enum import Enum
 from datetime import datetime
 from pathlib import Path
 from typing import NamedTuple, cast
@@ -21,32 +22,41 @@ from aiida import orm
 from aiida.manage.configuration import Profile
 from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
+from aiida.tools.dumping.logger import DumpLogger
 
 __all__ = (
-    'NodeDumpKeyMapper',
-    'ProcessesToDumpContainer',
-    'filter_nodes_last_dump_time',
-    'get_group_subpath',
-    'prepare_dump_path',
-    'safe_delete_dir',
+    "NodeDumpKeyMapper",
+    "ProcessContainer",
+    "DumpPaths",
+    "SafeguardFileMapping",
+    "filter_nodes_last_dump_time",
+    "get_group_subpath",
+    "prepare_dump_path",
+    "safe_delete_dir",
 )
 
-logger = AIIDA_LOGGER.getChild('tools.dumping')
+logger = AIIDA_LOGGER.getChild("tools.dumping")
 
 
-class ProcessesToDumpContainer(NamedTuple):
+class ProcessContainer(NamedTuple):
     calculations: list[orm.CalculationNode]
     workflows: list[orm.WorkflowNode]
+    # ? Add groups here, as well?
+    # groups: list[orm.Group]
 
     @property
     def is_empty(self) -> bool:
         """Check if there are any processes to dump."""
         return len(self.calculations) == 0 and len(self.workflows) == 0
 
+    # @override -> only available in Py 3.12
+    def __len__(self) -> int:
+        return len(self.calculations) + len(self.workflows)
+
 
 class NodeDumpKeyMapper:
-    calculation_key: str = 'calculations'
-    workflow_key: str = 'workflows'
+    calculation_key: str = "calculations"
+    workflow_key: str = "workflows"
 
     @classmethod
     def get_key_from_node(cls, node: orm.Node) -> str:
@@ -55,22 +65,21 @@ class NodeDumpKeyMapper:
         elif isinstance(node, orm.WorkflowNode):
             return cls.workflow_key
         else:
-            msg = f'Dumping not implemented yet for node type: {type(node)}'
+            msg = f"Dumping not implemented yet for node type: {type(node)}"
             raise NotImplementedError(msg)
 
 
 @dataclass
 class DumpPaths:
     dump_parent_path: Path
-    output_path: Path
+    dump_sub_path: Path
+    output_path_absolute: Path
 
-    
-from enum import Enum
 
 class SafeguardFileMapping(Enum):
-    PROCESS = '.aiida_process_metadata'
-    GROUP = '.verdi_group_mirror'
-    PROFILE = '.verdi_profile_mirror'
+    PROCESS = ".aiida_process_metadata"
+    GROUP = ".verdi_group_mirror"
+    PROFILE = ".verdi_profile_mirror"
 
 
 def prepare_dump_path(
@@ -78,8 +87,7 @@ def prepare_dump_path(
     overwrite: bool,
     incremental: bool,
     safeguard_file: str,
-    verbose: bool = False,
-    top_level: bool = False,
+    top_level_caller: bool = False,
 ) -> None:
     """Create default dumping directory for a given process node and return it as absolute path.
 
@@ -96,13 +104,12 @@ def prepare_dump_path(
     # traceback.print_stack()
     # ipdb.set_trace()
 
-
     if path_to_validate.is_file():
-        msg = f'A file at the given path `{path_to_validate}` already exists.'
+        msg = f"A file at the given path `{path_to_validate}` already exists."
         raise FileExistsError(msg)
 
     if not path_to_validate.is_absolute():
-        msg = f'The path to validate must be an absolute path. Got `{path_to_validate}.'
+        msg = f"The path to validate must be an absolute path. Got `{path_to_validate}."
         raise ValueError(msg)
 
     # Disable this check as otherwise the user would always have to type:
@@ -117,27 +124,28 @@ def prepare_dump_path(
 
     # Additional logging for top-level directory
     # Don't want to repeat that for all sub-directories created during dumping
-    if top_level:
+    if top_level_caller:
         if incremental and not overwrite:
-            msg = 'Incremental mirroring selected. Will update directory.'
+            msg = "Incremental mirroring selected. Will update directory."
             logger.report(msg)
 
         if overwrite and not incremental:
-            msg = 'Overwriting selected. Will clean directory first.'
+            msg = "Overwriting selected. Will clean directory first."
             logger.report(msg)
 
         if overwrite and incremental:
-            msg = 'Overwriting selected. Will clean directory first (this takes precedence over `--incremental` option which is True by default).'
+            msg = "Overwriting selected. Will clean directory first (this takes precedence over `--incremental` option which is True by default)."
             logger.report(msg)
             incremental = False
 
     # Handle existing non-empty directory
     # ipdb.set_trace()
+
     if path_to_validate.is_dir() and any(path_to_validate.iterdir()):
 
         # Case 1: overwrite=False, incremental=False -> raise
         if not overwrite and not incremental:
-            msg = f'Path `{path_to_validate}` already exists, and neither overwrite nor incremental is enabled.'
+            msg = f"Path `{path_to_validate.name}` already exists, and neither overwrite nor incremental options are set to True."
             raise FileExistsError(msg)
 
         # Case 2: overwrite=True, incremental=False -> clean dir
@@ -145,7 +153,6 @@ def prepare_dump_path(
             safe_delete_dir(
                 path_to_validate=path_to_validate,
                 safeguard_file=safeguard_file,
-                verbose=verbose,
             )
 
     # Finally, (re-)create directory
@@ -156,10 +163,10 @@ def prepare_dump_path(
     if not path_to_safeguard_file.is_file():
         path_to_safeguard_file.touch()
 
+
 def safe_delete_dir(
     path_to_validate: Path,
-    safeguard_file: str = '.aiida_node_metadata.yaml',
-    verbose: bool = False,
+    safeguard_file: str,
 ) -> None:
     """Also deletes the top-level directory itself."""
 
@@ -174,10 +181,6 @@ def safe_delete_dir(
     safeguard_exists = (path_to_validate / safeguard_file).is_file()
 
     if safeguard_exists:
-        if verbose:
-            logger.report(str(path_to_validate))
-            msg = '`--overwrite` option selected. Will recreate directory.'
-            logger.report(msg)
         try:
             _delete_dir_recursive(path_to_validate)
             # shutil.rmtree(path_to_validate)
@@ -188,8 +191,8 @@ def safe_delete_dir(
 
     else:
         msg = (
-            f'Path `{path_to_validate}` exists without safeguard file `{safeguard_file}`. '
-            f'Not removing because path might be a directory not created by AiiDA.'
+            f"Path `{path_to_validate.name}` exists without safeguard file `{safeguard_file}`. "
+            f"Not removing because path might be a directory not created by AiiDA."
         )
         raise FileNotFoundError(msg)
 
@@ -199,7 +202,7 @@ def _delete_dir_recursive(path):
     Delete folder, sub-folders and files.
     Implementation taken from: https://stackoverflow.com/a/70285390/9431838
     """
-    for f in path.glob('**/*'):
+    for f in path.glob("**/*"):
         if f.is_symlink():
             f.unlink(missing_ok=True)  # missing_ok is added in python 3.8
         elif f.is_file():
@@ -210,19 +213,21 @@ def _delete_dir_recursive(path):
             except OSError:  # sub-folder is not empty
                 _delete_dir_recursive(f)  # recurse the current sub-folder
             except Exception as exception:  # capture other exception
-                print(f'exception name: {exception.__class__.__name__}')
-                print(f'exception msg: {exception}')
+                print(f"exception name: {exception.__class__.__name__}")
+                print(f"exception msg: {exception}")
 
     try:
         path.rmdir()  # time to delete an empty folder
     except NotADirectoryError:
         path.unlink()  # delete folder even if it is a symlink, linux
     except Exception as exception:
-        print(f'exception name: {exception.__class__.__name__}')
-        print(f'exception msg: {exception}')
+        print(f"exception name: {exception.__class__.__name__}")
+        print(f"exception msg: {exception}")
 
 
-def filter_nodes_last_dump_time(nodes: list[str], last_dump_time: datetime | None = None) -> list[str]:
+def filter_nodes_last_dump_time(
+    nodes: list[str], last_dump_time: datetime | None = None
+) -> list[str]:
     """Filter a list of nodes by the last dump time of the corresponding dumper.
 
     :param nodes: A list of node identifiers, which can be either UUIDs (str) or IDs (int).
@@ -234,7 +239,7 @@ def filter_nodes_last_dump_time(nodes: list[str], last_dump_time: datetime | Non
     if not nodes or last_dump_time is None:
         return nodes
 
-    qb = orm.QueryBuilder().append(orm.Node, filters={'uuid': {'in': nodes}})
+    qb = orm.QueryBuilder().append(orm.Node, filters={"uuid": {"in": nodes}})
     nodes_orm: list[orm.Node] = cast(list[orm.Node], qb.all(flat=True))
     return [node.uuid for node in nodes_orm if node.mtime > last_dump_time]
 
@@ -245,14 +250,14 @@ def get_group_subpath(group: orm.Group) -> Path:
         return Path(group.label)
 
     group_entry_point_name = group_entry_point.name
-    if group_entry_point_name == 'core':
-        return Path(f'{group.label}')
-    if group_entry_point_name == 'core.import':
-        return Path('import') / f'{group.label}'
+    if group_entry_point_name == "core":
+        return Path(f"{group.label}")
+    if group_entry_point_name == "core.import":
+        return Path("import") / f"{group.label}"
 
-    group_subpath = Path(*group_entry_point_name.split('.'))
+    group_subpath = Path(*group_entry_point_name.split("."))
 
-    return group_subpath / f'{group.label}'
+    return group_subpath / f"{group.label}"
 
 
 def load_given_group(group: orm.Group | str) -> orm.Group | None:
@@ -275,8 +280,9 @@ def load_given_group(group: orm.Group | str) -> orm.Group | None:
     elif isinstance(group, orm.Group):
         return group
 
+
 def generate_process_default_dump_path(
-    process_node: orm.ProcessNode, prefix: str | None = 'dump', append_pk: bool = True
+    process_node: orm.ProcessNode, prefix: str | None = "dump", append_pk: bool = True
 ) -> Path:
     """Simple helper function to generate the default parent-dumping directory if none given.
 
@@ -304,17 +310,20 @@ def generate_process_default_dump_path(
     if append_pk:
         entities_to_dump += [str(process_node.pk)]
 
-    return Path('-'.join(entities_to_dump))
+    return Path("-".join(entities_to_dump))
+
 
 def generate_profile_default_dump_path(profile: Profile) -> Path:
-    return (Path.cwd() / f'{profile.name}-mirror')
-
-def generate_group_default_dump_path() -> Path: ...
+    return Path(f"{profile.name}-mirror")
 
 
-# Mapping entity classes to their dump path generator functions
+def generate_group_default_dump_path(group: orm.Group) -> Path:
+    return Path(f"group-{group.label}-mirror")
 
-def resolve_path_argument_for_dumping(path: Path | None | str, entity: orm.ProcessNode | orm.Group | Profile) -> DumpPaths:
+
+def resolve_click_path_argument_for_dumping(
+    path: Path | None | str, entity: orm.ProcessNode | orm.Group | Profile
+) -> DumpPaths:
     ENTITY_DUMP_FUNCTIONS = {
         orm.ProcessNode: generate_process_default_dump_path,
         orm.Group: generate_group_default_dump_path,
@@ -326,16 +335,46 @@ def resolve_path_argument_for_dumping(path: Path | None | str, entity: orm.Proce
             if path:
                 path = Path(path)
                 if path.is_absolute():
-                    output_path = Path(path.name)
+                    dump_sub_path = Path(path.name)
                     dump_parent_path = path.parent
                 else:
-                    output_path = path
+                    dump_sub_path = path
                     dump_parent_path = Path.cwd()
             else:
-                output_path = dump_path_generator(entity)
+                dump_sub_path = dump_path_generator(entity)
                 dump_parent_path = Path.cwd()
-            
-            return DumpPaths(dump_parent_path=dump_parent_path, output_path=output_path)
 
-    supported_types = ', '.join(cls.__name__ for cls in ENTITY_DUMP_FUNCTIONS)
-    raise ValueError(f"Unsupported entity type '{type(entity).__name__}'. Supported types: {supported_types}.")
+            return DumpPaths(
+                dump_parent_path=dump_parent_path,
+                dump_sub_path=dump_sub_path,
+                output_path_absolute=dump_parent_path / dump_sub_path,
+            )
+
+    supported_types = ", ".join(cls.__name__ for cls in ENTITY_DUMP_FUNCTIONS)
+    raise ValueError(
+        f"Unsupported entity type '{type(entity).__name__}'. Supported types: {supported_types}."
+    )
+
+
+def delete_missing_node_dir(dump_logger: DumpLogger, to_delete_uuid: str) -> None:
+    # TODO: Possibly make a delete method for the path and the log, and then call that in the loop
+
+    current_store = dump_logger.get_store_by_uuid(uuid=to_delete_uuid)
+    if not current_store:
+        return
+
+    # ! Cannot load the node via its UUID here and use the type to get the correct store, as the Node is deleted
+    # ! from the DB. Should find a better solution
+
+    # breakpoint()
+    path_to_delete = dump_logger.get_path_by_uuid(uuid=to_delete_uuid)
+    if path_to_delete is not None:
+        try:
+            safe_delete_dir(
+                path_to_validate=path_to_delete,
+                safeguard_file=".aiida_node_metadata.yaml",
+                verbose=False,
+            )
+            current_store.del_entry(uuid=to_delete_uuid)
+        except:
+            raise

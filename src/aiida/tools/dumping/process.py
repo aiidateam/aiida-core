@@ -28,7 +28,7 @@ from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
-from aiida.tools.dumping.utils import prepare_dump_path, generate_process_default_dump_path, SafeguardFileMapping, resolve_path_argument_for_dumping
+from aiida.tools.dumping.utils import prepare_dump_path, generate_process_default_dump_path, SafeguardFileMapping
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +38,28 @@ class ProcessDumper(BaseDumper):
 
     def __init__(
         self,
+        dump_parent_path,
+        dump_sub_path,
+        last_dump_time,
+        # dump_parent_path: Path | None = None,
+        # output_path: Path | None = None,
+        # last_dump_time,
         base_dump_config: BaseDumpConfig | None = None,
         dump_logger: DumpLogger | None = None,
         process_dump_config: ProcessDumpConfig | None = None,
     ) -> None:
         """Initialize the ProcessDumper."""
 
-        self.process_dump_config = process_dump_config or ProcessDumpConfig()
-        self.base_dump_config = base_dump_config or BaseDumpConfig()
+        super().__init__(
+            dump_parent_path=dump_parent_path,
+            dump_sub_path=dump_sub_path,
+            last_dump_time=last_dump_time,
+            base_dump_config=base_dump_config,
+            dump_logger=dump_logger,
+        )
 
-        super().__init__(base_dump_config=self.base_dump_config, dump_logger=dump_logger)
+        self.base_dump_config = base_dump_config or BaseDumpConfig()
+        self.process_dump_config = process_dump_config or ProcessDumpConfig()
 
         # Unpack arguments for easier access
         self.include_inputs = self.process_dump_config.include_inputs
@@ -117,7 +129,7 @@ class ProcessDumper(BaseDumper):
         process_show = get_node_info(node=process_node)
         _readme_string += f'\n\n\nOutput of `verdi process show {pk}`:\n\n```shell\n{process_show}\n```'
 
-        (self.dump_parent_path / 'README.md').write_text(_readme_string)
+        (self.dump_parent_path / self.dump_sub_path / 'README.md').write_text(_readme_string)
 
     @staticmethod
     def _generate_child_node_label(index: int, link_triple: LinkTriple, append_pk: bool = True) -> str:
@@ -156,8 +168,7 @@ class ProcessDumper(BaseDumper):
         process_node: orm.ProcessNode,
         output_path: Path | None = None,
         io_dump_paths: list[str | Path] | None = None,
-        top_level: bool = False,
-    ) -> Path:
+    ) -> None:
         """Dumps all data involved in a `ProcessNode`, including its outgoing links.
 
         Note that if an outgoing link is a `WorkflowNode`, the function recursively calls itself, while files are
@@ -183,16 +194,15 @@ class ProcessDumper(BaseDumper):
         #     setattr(self, key, value)
 
         if not output_path:
-            dump_paths = resolve_path_argument_for_dumping(path=output_path, entity=process_node)
-            output_path = dump_paths.dump_parent_path / dump_paths.output_path
+            output_path = self.dump_parent_path / self.dump_sub_path
 
+        # ipdb.set_trace()
         prepare_dump_path(
             path_to_validate=output_path,
             overwrite=self.overwrite,
             incremental=self.incremental,
             safeguard_file=SafeguardFileMapping.PROCESS.value,
-            verbose=False,
-            top_level=top_level
+            top_level_caller=False
         )
 
         if isinstance(process_node, orm.CalculationNode):
@@ -220,14 +230,12 @@ class ProcessDumper(BaseDumper):
 
         self._generate_readme(process_node=process_node)
 
-        return output_path
-
     def _dump_workflow(
         self,
         workflow_node: orm.WorkflowNode,
+        output_path,
         # TODO: Refactor this to child path, to always append to it?
         # TODO: Or, re-assign it?
-        output_path: Path,
         io_dump_paths: list[str | Path] | None = None,
         # TODO: See if this is even necessary here, or if this can be achieved outside?
         # TODO: Do I even need that?
@@ -241,24 +249,23 @@ class ProcessDumper(BaseDumper):
         :param io_dump_paths: Custom subdirectories for `CalculationNode` s, defaults to None
         """
 
-        # ipdb.set_trace()
         if not output_path:
-            dump_paths = resolve_path_argument_for_dumping(path=output_path, entity=workflow_node)
-            output_path = dump_paths.dump_parent_path / dump_paths.output_path
+            output_path = (self.dump_parent_path / self.dump_sub_path)
 
         prepare_dump_path(
             path_to_validate=output_path,
             overwrite=self.overwrite,
             incremental=self.incremental,
             safeguard_file=SafeguardFileMapping.PROCESS.value,
-            verbose=False,
-            top_level=False
+            top_level_caller=False
         )
-        
+
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
         called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
         called_links = sorted(called_links, key=lambda link_triple: link_triple.node.ctime)
+
+        # ipdb.set_trace()
 
         for index, link_triple in enumerate(called_links, start=1):
             child_node = link_triple.node
@@ -331,8 +338,7 @@ class ProcessDumper(BaseDumper):
             overwrite=self.overwrite,
             incremental=self.incremental,
             safeguard_file=SafeguardFileMapping.PROCESS.value,
-            verbose=False,
-            top_level=False
+            top_level_caller=False
         )
 
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)

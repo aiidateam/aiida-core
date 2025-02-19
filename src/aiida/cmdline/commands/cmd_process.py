@@ -599,6 +599,7 @@ def process_dump(
     node data for further inspection.
     """
 
+    import ipdb
     from pathlib import Path
 
     from aiida.tools.archive.exceptions import ExportValidationError
@@ -606,28 +607,27 @@ def process_dump(
     from aiida.tools.dumping.process import ProcessDumper
     from aiida.tools.dumping.utils import (
         prepare_dump_path,
-        resolve_path_argument_for_dumping,
+        resolve_click_path_argument_for_dumping,
         SafeguardFileMapping,
     )
 
-    dump_paths = resolve_path_argument_for_dumping(path=path, entity=process)
-    output_path = dump_paths.dump_parent_path / dump_paths.output_path
+    dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=process)
+    output_path = dump_paths.dump_parent_path / dump_paths.dump_sub_path
     safeguard_file = SafeguardFileMapping.PROCESS.value
 
+    # ? This is also done inside the `dump` method
     try:
         prepare_dump_path(
             path_to_validate=output_path,
             overwrite=overwrite,
             incremental=incremental,
             safeguard_file=safeguard_file,
-            verbose=False,
-            top_level=True,
+            top_level_caller=True,
         )
     except (FileExistsError, ValueError) as exc:
         echo.echo_critical(str(exc))
 
     base_dump_config = BaseDumpConfig(
-        dump_parent_path=path,
         overwrite=overwrite,
         incremental=incremental,
     )
@@ -641,20 +641,24 @@ def process_dump(
     )
 
     process_dumper = ProcessDumper(
+        dump_parent_path=dump_paths.dump_parent_path,
+        dump_sub_path=dump_paths.dump_sub_path,
+        # TODO: last_dump_time currently 
+        last_dump_time=None,
+        # last_dump_time=last_dump_time,
         base_dump_config=base_dump_config,
         process_dump_config=process_dump_config,
     )
-
+    # ipdb.set_trace()
     try:
-        _ = process_dumper.dump(
-            process_node=process,
-        )
+        _ = process_dumper.dump(process_node=process)
         echo.echo_success(
-            f"Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{output_path}`."
+            f"Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{output_path.name}`."
         )
     except ExportValidationError as e:
         echo.echo_critical(f"{e!s}")
     except Exception as e:
+        raise
         echo.echo_critical(
             f"Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s})."
         )

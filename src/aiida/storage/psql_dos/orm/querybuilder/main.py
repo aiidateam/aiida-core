@@ -33,6 +33,7 @@ from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 from aiida.common.exceptions import NotExistent
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, QueryDictType
+from aiida.storage import psql_dos, sqlite_dos
 
 from .joiner import JoinReturn, SqlaJoiner
 
@@ -798,8 +799,26 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         total_query = session.query(self.Node)
         types_query = session.query(self.Node.node_type.label('typestring'), sa_func.count(self.Node.id))
+
+        backend_class = self._backend.__class__
+        date_format = '%Y-%m-%d'
+
+        if backend_class == sqlite_dos.backend.SqliteDosStorage:
+            cday = sa_func.strftime(date_format, sa_func.datetime(self.Node.ctime, 'localtime'))
+
+            def date_to_str(d):
+                return d
+
+        elif backend_class == psql_dos.backend.PsqlDosBackend:
+            cday = sa_func.date_trunc('day', self.Node.ctime)
+
+            def date_to_str(d):
+                return d.strftime(date_format)
+
+        else:
+            raise NotImplementedError(f'unsupported backend: {backend_class}')
         stat_query = session.query(
-            sa_func.date_trunc('day', self.Node.ctime).label('cday'),
+            cday.label('cday'),
             sa_func.count(self.Node.id),
         )
 
@@ -817,7 +836,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         # Nodes created per day
         stat = stat_query.group_by('cday').order_by('cday').all()
 
-        ctime_by_day = {_[0].strftime('%Y-%m-%d'): _[1] for _ in stat}
+        ctime_by_day = {date_to_str(entry[0]): entry[1] for entry in stat}
         retdict['ctime_by_day'] = ctime_by_day
 
         return retdict

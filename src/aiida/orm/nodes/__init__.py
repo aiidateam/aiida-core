@@ -50,6 +50,7 @@ __all__ = (
     'ProcessNode',
     'ProjectionData',
     'RemoteData',
+    'RemoteStashCompressedData',
     'RemoteStashData',
     'RemoteStashFolderData',
     'SinglefileData',

@@ -275,6 +275,7 @@ def profile_delete(force, delete_data, profiles):
 @options.PATH()
 @options.DRY_RUN()
 @options.OVERWRITE()
+@options.INCREMENTAL()
 @options.DUMP_PROCESSES()
 @options.GROUPS()
 @options.ORGANIZE_BY_GROUPS()
@@ -294,6 +295,7 @@ def profile_mirror(
     path,
     dry_run,
     overwrite,
+    incremental,
     dump_processes,
     groups,
     organize_by_groups,
@@ -315,38 +317,44 @@ def profile_mirror(
     from pathlib import Path
 
     from aiida.tools.dumping import ProcessDumper, ProfileDumper
-    from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig
+    from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig, ProcessDumpConfig
     from aiida.tools.dumping.logger import DumpLogger
-    from aiida.tools.dumping.utils import prepare_dump_path
+    from aiida.tools.dumping.utils import prepare_dump_path, SafeguardFileMapping, resolve_path_argument_for_dumping
 
     profile = ctx.obj['profile']
-
-    # ? Does it even make sense to provide both options, as they are mutually exclusive?
-    incremental = not overwrite
 
     if not organize_by_groups and update_groups:
         # Add check outside in cmd_profile?
         msg = '`--update-groups` selected, even though `--organize-by-groups` is set to False.'
         echo.echo_critical(msg)
 
-    if path is None:
-        path = Path.cwd() / f'{profile.name}-mirror'
 
-    echo.echo_report(f'Mirroring data of profile `{profile.name}` at path: `{path}`.')
+    dump_paths = resolve_path_argument_for_dumping(path=path, entity=profile)
+    output_path = dump_paths.dump_parent_path / dump_paths.output_path
+    safeguard_file = SafeguardFileMapping.PROCESS.value
+    safeguard_file_path: Path = output_path / safeguard_file
 
-    SAFEGUARD_FILE: str = '.verdi_profile_mirror'  # noqa: N806
-    safeguard_file_path: Path = path / SAFEGUARD_FILE
+    echo.echo_report(f'Mirroring data of profile `{profile.name}` at path: `{output_path}`.')
 
+    # import ipdb; ipdb.set_trace()
     try:
         prepare_dump_path(
-            path_to_validate=path,
+            path_to_validate=output_path,
             overwrite=overwrite,
             incremental=incremental,
-            safeguard_file=SAFEGUARD_FILE,
+            safeguard_file=safeguard_file,
+            verbose=False,
+            top_level=True,
         )
-    except FileExistsError as exc:
+    except (FileExistsError, ValueError) as exc:
         echo.echo_critical(str(exc))
-
+    
+    # The logging of this behavior is taken care of in `prepare_dump_path`
+    if overwrite and incremental:
+        incremental = False
+    
+    # ipdb.set_trace()
+    
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
         with safeguard_file_path.open('r') as fhandle:
@@ -419,14 +427,6 @@ def profile_mirror(
         echo.echo_report(dry_run_message)
         return
 
-    if incremental:
-        msg = 'Incremental mirroring selected. Will update directory.'
-        echo.echo_report(msg)
-    else:
-        msg = 'Overwriting selected. Will clean directory first.'
-        # TODO: Maybe add y/n confirmation here?
-        echo.echo_report(msg)
-
     if dump_processes:
         if num_processes_to_dump == 0:
             msg = 'No processes to dump.'
@@ -451,14 +451,14 @@ def profile_mirror(
 
     if update_groups:
         relabeled_paths = profile_dumper.update_groups()
-
-        msg = 'Mirrored directories and '
+        msg = 'Renamed group directories and updated the log file.'
         echo.echo_success(msg)
-        print(relabeled_paths)
+        # print(relabeled_paths)
 
     # Append the current dump time to dumping safeguard file
     with safeguard_file_path.open('a') as fhandle:
-        fhandle.write(f'Last profile mirror time: {last_dump_time.isoformat()}\n')
+        msg = f'Last profile mirror time: {last_dump_time.isoformat()}\n'
+        fhandle.write(msg)
 
     # Write the logging json file to disk
     dump_logger.save_log()

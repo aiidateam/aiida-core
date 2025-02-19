@@ -272,20 +272,6 @@ def test_dump_calculation_add(tmp_path, generate_calculation_node_add):
     assert all([output_file.is_file() for output_file in output_files])
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
-def test_generate_default_dump_path(
-    generate_calculation_node_add,
-    generate_workchain_multiply_add,
-):
-    process_dumper = ProcessDumper()
-    add_node = generate_calculation_node_add()
-    multiply_add_node = generate_workchain_multiply_add()
-    add_path = process_dumper._generate_default_dump_path(process_node=add_node)
-    multiply_add_path = process_dumper._generate_default_dump_path(process_node=multiply_add_node)
-
-    assert str(add_path) == f'dump-ArithmeticAddCalculation-{add_node.pk}'
-    assert str(multiply_add_path) == f'dump-MultiplyAddWorkChain-{multiply_add_node.pk}'
-
 
 def test_generate_calculation_io_mapping():
     process_dumper = ProcessDumper()

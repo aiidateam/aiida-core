@@ -59,6 +59,7 @@ __all__ = (
     'DICT_KEYS',
     'DRY_RUN',
     'DUMP_PROCESSES',
+    'DUMP_UNSEALED',
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
@@ -889,4 +890,12 @@ UPDATE_GROUPS = OverridableOption(
     default=False,
     show_default=True,
     help='Update directories if nodes have been added to other groups, or organized differently in terms of groups.',
+)
+
+DUMP_UNSEALED = OverridableOption(
+    '--dump-unsealed/--no-dump-unsealed',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Also allow the dumping of unsealed process nodes.',
 )

@@ -562,19 +562,13 @@ def process_repair(manager, broker, dry_run):
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
+@options.INCREMENTAL()
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
 @options.FLAT()
-@click.option(
-    '--dump-unsealed',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Also allow the dumping of unsealed process nodes.',
-)
-@options.INCREMENTAL()
+@options.DUMP_UNSEALED()
 # TODO: Also add CONFIG_FILE option here
 # TODO: Currently, setting rich options is not supported here directly
 def process_dump(
@@ -610,8 +604,28 @@ def process_dump(
     from aiida.tools.archive.exceptions import ExportValidationError
     from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
     from aiida.tools.dumping.process import ProcessDumper
+    from aiida.tools.dumping.utils import (
+        prepare_dump_path,
+        resolve_path_argument_for_dumping,
+        SafeguardFileMapping,
+    )
 
-    path = path or Path.cwd()
+    dump_paths = resolve_path_argument_for_dumping(path=path, entity=process)
+    output_path = dump_paths.dump_parent_path / dump_paths.output_path
+    safeguard_file = SafeguardFileMapping.PROCESS.value
+
+    try:
+        prepare_dump_path(
+            path_to_validate=output_path,
+            overwrite=overwrite,
+            incremental=incremental,
+            safeguard_file=safeguard_file,
+            verbose=False,
+            top_level=True,
+        )
+    except (FileExistsError, ValueError) as exc:
+        echo.echo_critical(str(exc))
+
     base_dump_config = BaseDumpConfig(
         dump_parent_path=path,
         overwrite=overwrite,
@@ -632,17 +646,15 @@ def process_dump(
     )
 
     try:
-        dump_path = process_dumper.dump(
+        _ = process_dumper.dump(
             process_node=process,
         )
         echo.echo_success(
-            f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.'
-        )
-    except FileExistsError:
-        echo.echo_critical(
-            'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
+            f"Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{output_path}`."
         )
     except ExportValidationError as e:
-        echo.echo_critical(f'{e!s}')
+        echo.echo_critical(f"{e!s}")
     except Exception as e:
-        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')
+        echo.echo_critical(
+            f"Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s})."
+        )

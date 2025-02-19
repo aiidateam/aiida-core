@@ -435,56 +435,109 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     :param transport: an already opened transport.
     """
     from aiida.common.datastructures import StashMode
-    from aiida.orm import RemoteStashFolderData
+    from aiida.orm import RemoteStashCompressedData, RemoteStashFolderData
 
     logger_extra = get_dblogger_extra(calculation)
 
     stash_options = calculation.get_option('stash')
-    stash_mode = stash_options.get('mode', StashMode.COPY.value)
+    stash_mode = stash_options.get('stash_mode')
     source_list = stash_options.get('source_list', [])
+    uuid = calculation.uuid
+    source_basepath = Path(calculation.get_remote_workdir())
 
     if not source_list:
         return
 
-    if stash_mode != StashMode.COPY.value:
-        EXEC_LOGGER.warning(f'stashing mode {stash_mode} is not implemented yet.')
+    if stash_mode not in [mode.value for mode in StashMode.__members__.values()]:
+        EXEC_LOGGER.warning(f'stashing mode {stash_mode} is not supported. Stashing skipped.')
         return
 
-    cls = RemoteStashFolderData
+    EXEC_LOGGER.debug(
+        f'stashing files with mode {stash_mode} for calculation<{calculation.pk}>: {source_list}', extra=logger_extra
+    )
 
-    EXEC_LOGGER.debug(f'stashing files for calculation<{calculation.pk}>: {source_list}', extra=logger_extra)
+    if stash_mode == StashMode.COPY.value:
+        target_basepath = Path(stash_options['target_base']) / uuid[:2] / uuid[2:4] / uuid[4:]
 
-    uuid = calculation.uuid
-    source_basepath = Path(calculation.get_remote_workdir())
-    target_basepath = Path(stash_options['target_base']) / uuid[:2] / uuid[2:4] / uuid[4:]
-
-    for source_filename in source_list:
-        if transport.has_magic(source_filename):
-            copy_instructions = []
-            for globbed_filename in await transport.glob_async(source_basepath / source_filename):
-                target_filepath = target_basepath / Path(globbed_filename).relative_to(source_basepath)
-                copy_instructions.append((globbed_filename, target_filepath))
-        else:
-            copy_instructions = [(source_basepath / source_filename, target_basepath / source_filename)]
-
-        for source_filepath, target_filepath in copy_instructions:
-            # If the source file is in a (nested) directory, create those directories first in the target directory
-            target_dirname = target_filepath.parent
-            await transport.makedirs_async(target_dirname, ignore_existing=True)
-
-            try:
-                await transport.copy_async(source_filepath, target_filepath)
-            except (OSError, ValueError) as exception:
-                EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+        for source_filename in source_list:
+            if transport.has_magic(source_filename):
+                copy_instructions = []
+                for globbed_filename in await transport.glob_async(source_basepath / source_filename):
+                    target_filepath = target_basepath / Path(globbed_filename).relative_to(source_basepath)
+                    copy_instructions.append((globbed_filename, target_filepath))
             else:
-                EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
+                copy_instructions = [(source_basepath / source_filename, target_basepath / source_filename)]
 
-    remote_stash = cls(
-        computer=calculation.computer,
-        target_basepath=str(target_basepath),
-        stash_mode=StashMode(stash_mode),
-        source_list=source_list,
-    ).store()
+            for source_filepath, target_filepath in copy_instructions:
+                # If the source file is in a (nested) directory, create those directories first in the target directory
+                target_dirname = target_filepath.parent
+                await transport.makedirs_async(target_dirname, ignore_existing=True)
+
+                try:
+                    await transport.copy_async(source_filepath, target_filepath)
+                except (OSError, ValueError) as exception:
+                    EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+                    # try to clean up in case of a failure
+                    await transport.rmtree_async(Path(stash_options['target_base']) / uuid[:2])
+                else:
+                    EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
+
+        remote_stash = RemoteStashFolderData(
+            computer=calculation.computer,
+            target_basepath=str(target_basepath),
+            stash_mode=StashMode(stash_mode),
+            source_list=source_list,
+        ).store()
+
+    elif stash_mode in [
+        StashMode.COMPRESS_TAR.value,
+        StashMode.COMPRESS_TARBZ2.value,
+        StashMode.COMPRESS_TARGZ.value,
+        StashMode.COMPRESS_TARXZ.value,
+    ]:
+        # stash_mode values are identical with compression_format in transport plugin:
+        # 'tar', 'tar.gz', 'tar.bz2', or 'tar.xz'
+        compression_format = stash_mode
+        file_name = stash_options.get('file_name', uuid)
+        dereference = stash_options.get('dereference', False)
+        target_basepath = Path(stash_options['target_base'])
+        authinfo = calculation.get_authinfo()
+        aiida_remote_base = authinfo.get_workdir().format(username=transport.whoami())
+
+        target_destination = str(target_basepath / file_name) + '.' + compression_format
+
+        remote_stash = RemoteStashCompressedData(
+            computer=calculation.computer,
+            target_basepath=target_destination,
+            stash_mode=StashMode(stash_mode),
+            source_list=source_list,
+            dereference=dereference,
+        )
+
+        source_list_abs = [source_basepath / source for source in source_list]
+
+        try:
+            await transport.compress_async(
+                format=compression_format,
+                remotesources=source_list_abs,
+                remotedestination=target_destination,
+                root_dir=aiida_remote_base,
+                overwrite=False,
+                dereference=dereference,
+            )
+        except (OSError, ValueError) as exception:
+            EXEC_LOGGER.warning(f'failed to stash {source_list} to {target_destination}: {exception}')
+            return
+            # note: if you raise here, you triger the exponential backoff
+            # and if you don't raise, it appears as successful in verdi process list: Finished [0]
+            # open an issue to fix this
+            # raise exceptions.RemoteOperationError(f'failed '
+            # 'to compress {source_list} to {target_destination}: {exception}')
+        else:
+            EXEC_LOGGER.debug(f'stashed {source_list} to {target_destination}')
+
+        remote_stash.store()
+
     remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
 
 

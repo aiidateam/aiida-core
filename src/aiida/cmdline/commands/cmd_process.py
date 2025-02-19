@@ -599,16 +599,14 @@ def process_dump(
     node data for further inspection.
     """
 
-    import ipdb
-    from pathlib import Path
 
     from aiida.tools.archive.exceptions import ExportValidationError
     from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
     from aiida.tools.dumping.process import ProcessDumper
     from aiida.tools.dumping.utils import (
+        SafeguardFileMapping,
         prepare_dump_path,
         resolve_click_path_argument_for_dumping,
-        SafeguardFileMapping,
     )
 
     dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=process)
@@ -643,7 +641,7 @@ def process_dump(
     process_dumper = ProcessDumper(
         dump_parent_path=dump_paths.dump_parent_path,
         dump_sub_path=dump_paths.dump_sub_path,
-        # TODO: last_dump_time currently 
+        # TODO: last_dump_time currently
         last_dump_time=None,
         # last_dump_time=last_dump_time,
         base_dump_config=base_dump_config,
@@ -653,12 +651,10 @@ def process_dump(
     try:
         _ = process_dumper.dump(process_node=process)
         echo.echo_success(
-            f"Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{output_path.name}`."
+            f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{output_path.name}`.'
         )
     except ExportValidationError as e:
-        echo.echo_critical(f"{e!s}")
+        echo.echo_critical(f'{e!s}')
     except Exception as e:
         raise
-        echo.echo_critical(
-            f"Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s})."
-        )
+        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')

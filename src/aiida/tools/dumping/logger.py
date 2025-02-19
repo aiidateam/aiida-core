@@ -7,12 +7,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 
-import ipdb
 import json
+from collections.abc import Collection
 from dataclasses import dataclass, field, fields
 from datetime import datetime
 from pathlib import Path
-from collections.abc import Collection
 
 from aiida.common.exceptions import NotExistent
 
@@ -116,14 +115,12 @@ class DumpLogger:
         groups: DumpLogStore | None = None,
         # data: DumpLogStore | None = None,
     ) -> None:
-
         self.dump_parent_path = dump_parent_path or Path.cwd()
         self.dump_sub_path = dump_sub_path or Path('.')
         self.calculations = calculations or DumpLogStore()
         self.workflows = workflows or DumpLogStore()
         self.groups = groups or DumpLogStore()
         # self.dat = data or DumpLogStore()
-
 
     @property
     def log_file_path(self) -> Path:

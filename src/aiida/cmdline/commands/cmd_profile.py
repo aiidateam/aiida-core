@@ -316,10 +316,14 @@ def profile_mirror(
     from datetime import datetime
     from pathlib import Path
 
-    from aiida.tools.dumping import ProcessDumper, ProfileDumper
-    from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig, ProcessDumpConfig
+    from aiida.tools.dumping import ProfileDumper
+    from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig, ProfileDumpConfig
     from aiida.tools.dumping.logger import DumpLogger
-    from aiida.tools.dumping.utils import prepare_dump_path, SafeguardFileMapping, resolve_click_path_argument_for_dumping
+    from aiida.tools.dumping.utils import (
+        SafeguardFileMapping,
+        prepare_dump_path,
+        resolve_click_path_argument_for_dumping,
+    )
 
     profile = ctx.obj['profile']
 
@@ -345,13 +349,13 @@ def profile_mirror(
         )
     except (FileExistsError, ValueError) as exc:
         echo.echo_critical(str(exc))
-    
+
     # The logging of this behavior is taken care of in `prepare_dump_path`
     if overwrite and incremental:
         incremental = False
-    
+
     # ipdb.set_trace()
-    
+
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
         with safeguard_file_path.open('r') as fhandle:

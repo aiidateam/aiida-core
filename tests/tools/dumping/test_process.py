@@ -272,7 +272,6 @@ def test_dump_calculation_add(tmp_path, generate_calculation_node_add):
     assert all([output_file.is_file() for output_file in output_files])
 
 
-
 def test_generate_calculation_io_mapping():
     process_dumper = ProcessDumper()
     calculation_io_mapping = process_dumper._generate_calculation_io_mapping()

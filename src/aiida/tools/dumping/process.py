@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import ipdb
 import contextlib
 import logging
 import os
@@ -28,7 +27,7 @@ from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
-from aiida.tools.dumping.utils import prepare_dump_path, generate_process_default_dump_path, SafeguardFileMapping
+from aiida.tools.dumping.utils import SafeguardFileMapping, generate_process_default_dump_path, prepare_dump_path
 
 logger = logging.getLogger(__name__)
 
@@ -202,11 +201,10 @@ class ProcessDumper(BaseDumper):
             overwrite=self.overwrite,
             incremental=self.incremental,
             safeguard_file=SafeguardFileMapping.PROCESS.value,
-            top_level_caller=False
+            top_level_caller=False,
         )
 
         if isinstance(process_node, orm.CalculationNode):
-
             self._dump_calculation(
                 calculation_node=process_node,
                 output_path=output_path,
@@ -250,14 +248,14 @@ class ProcessDumper(BaseDumper):
         """
 
         if not output_path:
-            output_path = (self.dump_parent_path / self.dump_sub_path)
+            output_path = self.dump_parent_path / self.dump_sub_path
 
         prepare_dump_path(
             path_to_validate=output_path,
             overwrite=self.overwrite,
             incremental=self.incremental,
             safeguard_file=SafeguardFileMapping.PROCESS.value,
-            top_level_caller=False
+            top_level_caller=False,
         )
 
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
@@ -338,7 +336,7 @@ class ProcessDumper(BaseDumper):
             overwrite=self.overwrite,
             incremental=self.incremental,
             safeguard_file=SafeguardFileMapping.PROCESS.value,
-            top_level_caller=False
+            top_level_caller=False,
         )
 
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)

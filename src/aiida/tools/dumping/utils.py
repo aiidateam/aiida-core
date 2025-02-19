@@ -10,11 +10,15 @@
 
 from __future__ import annotations
 
+import traceback
+import ipdb
 from datetime import datetime
 from pathlib import Path
 from typing import NamedTuple, cast
+from dataclasses import dataclass
 
 from aiida import orm
+from aiida.manage.configuration import Profile
 from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 
@@ -55,12 +59,27 @@ class NodeDumpKeyMapper:
             raise NotImplementedError(msg)
 
 
+@dataclass
+class DumpPaths:
+    dump_parent_path: Path
+    output_path: Path
+
+    
+from enum import Enum
+
+class SafeguardFileMapping(Enum):
+    PROCESS = '.aiida_process_metadata'
+    GROUP = '.verdi_group_mirror'
+    PROFILE = '.verdi_profile_mirror'
+
+
 def prepare_dump_path(
     path_to_validate: Path,
-    overwrite: bool = False,
-    incremental: bool = True,
-    safeguard_file: str = '.aiida_node_metadata.yaml',
+    overwrite: bool,
+    incremental: bool,
+    safeguard_file: str,
     verbose: bool = False,
+    top_level: bool = False,
 ) -> None:
     """Create default dumping directory for a given process node and return it as absolute path.
 
@@ -74,36 +93,68 @@ def prepare_dump_path(
         `incremental` are enabled.
     :raises FileNotFoundError: If no `safeguard_file` is found."""
 
-    if overwrite and incremental:
-        msg = 'Both overwrite and incremental set to True. Only specify one.'
-        raise ValueError(msg)
+    # traceback.print_stack()
+    # ipdb.set_trace()
+
 
     if path_to_validate.is_file():
         msg = f'A file at the given path `{path_to_validate}` already exists.'
         raise FileExistsError(msg)
 
-    # Handle existing directory
-    if path_to_validate.is_dir():
-        is_empty = not any(path_to_validate.iterdir())
+    if not path_to_validate.is_absolute():
+        msg = f'The path to validate must be an absolute path. Got `{path_to_validate}.'
+        raise ValueError(msg)
 
-        # Case 1: Non-empty directory and overwrite is False
-        if not is_empty and not overwrite:
-            if not incremental:
-                msg = f'Path `{path_to_validate}` already exists, and neither overwrite nor incremental is enabled.'
-                raise FileExistsError(msg)
+    # Disable this check as otherwise the user would always have to type:
+    # verdi <xyz> dump/mirror --overwrite/--no-incremental
+    # As incremental is the (most sensible) default
+    # Could also fix it with a click callback that automatically sets incremental to False if overwrite is True
+    # But this solution easier for now
 
-        # Case 2: Non-empty directory, overwrite is True
-        if not is_empty and overwrite:
+    # if overwrite and incremental:
+    #     msg = '`overwrite` and `incremental` cannot both be set to True.'
+    #     raise ValueError(msg)
+
+    # Additional logging for top-level directory
+    # Don't want to repeat that for all sub-directories created during dumping
+    if top_level:
+        if incremental and not overwrite:
+            msg = 'Incremental mirroring selected. Will update directory.'
+            logger.report(msg)
+
+        if overwrite and not incremental:
+            msg = 'Overwriting selected. Will clean directory first.'
+            logger.report(msg)
+
+        if overwrite and incremental:
+            msg = 'Overwriting selected. Will clean directory first (this takes precedence over `--incremental` option which is True by default).'
+            logger.report(msg)
+            incremental = False
+
+    # Handle existing non-empty directory
+    # ipdb.set_trace()
+    if path_to_validate.is_dir() and any(path_to_validate.iterdir()):
+
+        # Case 1: overwrite=False, incremental=False -> raise
+        if not overwrite and not incremental:
+            msg = f'Path `{path_to_validate}` already exists, and neither overwrite nor incremental is enabled.'
+            raise FileExistsError(msg)
+
+        # Case 2: overwrite=True, incremental=False -> clean dir
+        if overwrite:
             safe_delete_dir(
                 path_to_validate=path_to_validate,
                 safeguard_file=safeguard_file,
                 verbose=verbose,
             )
 
-    # Re-create directory, as both shutil.rmtree and `_delete_dir_recursively` delete the original dir
+    # Finally, (re-)create directory
+    # Both shutil.rmtree and `_delete_dir_recursively` delete the original dir
+    # If it already existed, e.g. in the `incremental` case, exist_ok=True
     path_to_validate.mkdir(exist_ok=True, parents=True)
-    (path_to_validate / safeguard_file).touch()
-
+    path_to_safeguard_file = path_to_validate / safeguard_file
+    if not path_to_safeguard_file.is_file():
+        path_to_safeguard_file.touch()
 
 def safe_delete_dir(
     path_to_validate: Path,
@@ -223,3 +274,68 @@ def load_given_group(group: orm.Group | str) -> orm.Group | None:
 
     elif isinstance(group, orm.Group):
         return group
+
+def generate_process_default_dump_path(
+    process_node: orm.ProcessNode, prefix: str | None = 'dump', append_pk: bool = True
+) -> Path:
+    """Simple helper function to generate the default parent-dumping directory if none given.
+
+    This function is not called for the recursive sub-calls of `_dump_calculation` as it just creates the default
+    parent folder for the dumping, if no name is given.
+
+    :param process_node: The `ProcessNode` for which the directory is created.
+    :return: The absolute default parent dump path.
+    """
+
+    entities_to_dump = []
+
+    # No '' and None
+    if prefix is not None:
+        entities_to_dump += [prefix]
+
+    try:
+        if process_node.process_label is not None:
+            entities_to_dump.append(process_node.process_label)
+    except AttributeError:
+        # This case came up during testing, not sure how relevant it actually is
+        if process_node.process_type is not None:
+            entities_to_dump.append(process_node.process_type)
+
+    if append_pk:
+        entities_to_dump += [str(process_node.pk)]
+
+    return Path('-'.join(entities_to_dump))
+
+def generate_profile_default_dump_path(profile: Profile) -> Path:
+    return (Path.cwd() / f'{profile.name}-mirror')
+
+def generate_group_default_dump_path() -> Path: ...
+
+
+# Mapping entity classes to their dump path generator functions
+
+def resolve_path_argument_for_dumping(path: Path | None | str, entity: orm.ProcessNode | orm.Group | Profile) -> DumpPaths:
+    ENTITY_DUMP_FUNCTIONS = {
+        orm.ProcessNode: generate_process_default_dump_path,
+        orm.Group: generate_group_default_dump_path,
+        Profile: generate_profile_default_dump_path,
+    }
+
+    for entity_class, dump_path_generator in ENTITY_DUMP_FUNCTIONS.items():
+        if isinstance(entity, entity_class):
+            if path:
+                path = Path(path)
+                if path.is_absolute():
+                    output_path = Path(path.name)
+                    dump_parent_path = path.parent
+                else:
+                    output_path = path
+                    dump_parent_path = Path.cwd()
+            else:
+                output_path = dump_path_generator(entity)
+                dump_parent_path = Path.cwd()
+            
+            return DumpPaths(dump_parent_path=dump_parent_path, output_path=output_path)
+
+    supported_types = ', '.join(cls.__name__ for cls in ENTITY_DUMP_FUNCTIONS)
+    raise ValueError(f"Unsupported entity type '{type(entity).__name__}'. Supported types: {supported_types}.")

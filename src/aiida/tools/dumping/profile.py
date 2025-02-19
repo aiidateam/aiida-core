@@ -127,7 +127,7 @@ class ProfileDumper(BaseDumper):
             )
 
             if self.should_dump_processes and not group_dumper.processes_to_dump.is_empty:
-                msg = f'Dumping processes in group {group.label} for profile `{self.profile.name}`...'
+                msg = f'Dumping processes in group `{group.label}` for profile `{self.profile.name}`...'
                 logger.report(msg)
                 group_dumper.dump(output_path=output_path)
 

@@ -645,6 +645,7 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
 @options.PATH()
 @options.DRY_RUN()
 @options.OVERWRITE()
+@options.INCREMENTAL()
 @options.DUMP_PROCESSES()
 # ? Could (should) use GROUP(S) argument here instead of option
 @options.SYMLINK_DUPLICATES()
@@ -664,6 +665,7 @@ def group_mirror(
     path,
     dry_run,
     overwrite,
+    incremental,
     dump_processes,
     # organize_by_groups,
     symlink_duplicates,
@@ -688,32 +690,24 @@ def group_mirror(
     from aiida.tools.dumping import ProcessDumper, CollectionDumper  # ProfileDumper
     from aiida.tools.dumping.config import BaseDumpConfig, ProfileDumpConfig, ProcessDumpConfig
     from aiida.tools.dumping.logger import DumpLogger
-    from aiida.tools.dumping.utils import prepare_dump_path
-
+    from aiida.tools.dumping.utils import prepare_dump_path, SafeguardFileMapping
 
     profile = ctx.obj['profile']
-
-    # ? Does it even make sense to provide both options, as they are mutually exclusive?
-    incremental = not overwrite
-
-    # if not groups:
-    #     msg = "One or multiple groups must be given."
-    #     raise ValueError(msg)
 
     if path is None:
         path = Path.cwd() / f'group-{group.label}-mirror'
 
     echo.echo_report(f'Mirroring data of group `{group.label}` at path: `{path}`.')
 
-    SAFEGUARD_FILE: str = '.verdi_group_mirror'  # noqa: N806
-    safeguard_file_path: Path = path / SAFEGUARD_FILE
+    safeguard_file: str = SafeguardFileMapping.GROUP.value
+    safeguard_file_path: Path = path / safeguard_file
 
     try:
         prepare_dump_path(
             path_to_validate=path,
             overwrite=overwrite,
             incremental=incremental,
-            safeguard_file=SAFEGUARD_FILE,
+            safeguard_file=safeguard_file,
         )
     except FileExistsError as exc:
         echo.echo_critical(str(exc))
@@ -793,13 +787,6 @@ def group_mirror(
         echo.echo_report(dry_run_message)
         return
 
-    if incremental:
-        msg = 'Incremental mirroring selected. Will update directory.'
-        echo.echo_report(msg)
-    else:
-        msg = 'Overwriting selected. Will clean directory first.'
-        # TODO: Maybe add y/n confirmation here?
-        echo.echo_report(msg)
 
     # if dump_processes:
     #     if num_processes_to_dump == 0:

@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import ipdb
 import contextlib
 import logging
 import os
@@ -27,7 +28,7 @@ from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
-from aiida.tools.dumping.utils import prepare_dump_path
+from aiida.tools.dumping.utils import prepare_dump_path, generate_process_default_dump_path, SafeguardFileMapping, resolve_path_argument_for_dumping
 
 logger = logging.getLogger(__name__)
 
@@ -55,38 +56,6 @@ class ProcessDumper(BaseDumper):
         self.include_extras = self.process_dump_config.include_extras
         self.flat = self.process_dump_config.flat
         self.dump_unsealed = self.process_dump_config.dump_unsealed
-
-    @staticmethod
-    def _generate_default_dump_path(
-        process_node: orm.ProcessNode, prefix: str | None = 'dump', append_pk: bool = True
-    ) -> Path:
-        """Simple helper function to generate the default parent-dumping directory if none given.
-
-        This function is not called for the recursive sub-calls of `_dump_calculation` as it just creates the default
-        parent folder for the dumping, if no name is given.
-
-        :param process_node: The `ProcessNode` for which the directory is created.
-        :return: The absolute default parent dump path.
-        """
-
-        entities_to_dump = []
-
-        # No '' and None
-        if prefix is not None:
-            entities_to_dump += [prefix]
-
-        try:
-            if process_node.process_label is not None:
-                entities_to_dump.append(process_node.process_label)
-        except AttributeError:
-            # This case came up during testing, not sure how relevant it actually is
-            if process_node.process_type is not None:
-                entities_to_dump.append(process_node.process_type)
-
-        if append_pk:
-            entities_to_dump += [str(process_node.pk)]
-
-        return Path('-'.join(entities_to_dump))
 
     def _generate_readme(self, process_node: orm.ProcessNode) -> None:
         """Generate README.md file in main dumping directory.
@@ -187,6 +156,7 @@ class ProcessDumper(BaseDumper):
         process_node: orm.ProcessNode,
         output_path: Path | None = None,
         io_dump_paths: list[str | Path] | None = None,
+        top_level: bool = False,
     ) -> Path:
         """Dumps all data involved in a `ProcessNode`, including its outgoing links.
 
@@ -202,7 +172,7 @@ class ProcessDumper(BaseDumper):
 
         if not process_node.is_sealed and not self.dump_unsealed:
             raise ExportValidationError(
-                f'Process `{process_node.pk} must be sealed before it can be dumped, or `dump_unsealed` set to True.'
+                f'Process `{process_node.pk} must be sealed before it can be dumped, or `--dump-unsealed` set to True.'
             )
 
         # This here is mainly for `include_attributes` and `include_extras`.
@@ -212,21 +182,20 @@ class ProcessDumper(BaseDumper):
         # for key, value in kwargs.items():
         #     setattr(self, key, value)
 
-        # TODO: Refactor here to also use `dump_parent_path`
         if not output_path:
-            output_path = self._generate_default_dump_path(process_node=process_node)
-        if not output_path.is_absolute():
-            output_path = self.dump_parent_path / output_path
+            dump_paths = resolve_path_argument_for_dumping(path=output_path, entity=process_node)
+            output_path = dump_paths.dump_parent_path / dump_paths.output_path
 
         prepare_dump_path(
             path_to_validate=output_path,
             overwrite=self.overwrite,
             incremental=self.incremental,
+            safeguard_file=SafeguardFileMapping.PROCESS.value,
+            verbose=False,
+            top_level=top_level
         )
 
-        # breakpoint()
         if isinstance(process_node, orm.CalculationNode):
-            # breakpoint()
 
             self._dump_calculation(
                 calculation_node=process_node,
@@ -234,7 +203,6 @@ class ProcessDumper(BaseDumper):
                 io_dump_paths=io_dump_paths,
             )
 
-            # breakpoint()
             calculation_store = self.dump_logger.log.calculations
 
             self.dump_logger.add_entry(
@@ -273,11 +241,20 @@ class ProcessDumper(BaseDumper):
         :param io_dump_paths: Custom subdirectories for `CalculationNode` s, defaults to None
         """
 
+        # ipdb.set_trace()
+        if not output_path:
+            dump_paths = resolve_path_argument_for_dumping(path=output_path, entity=workflow_node)
+            output_path = dump_paths.dump_parent_path / dump_paths.output_path
+
         prepare_dump_path(
             path_to_validate=output_path,
             overwrite=self.overwrite,
             incremental=self.incremental,
+            safeguard_file=SafeguardFileMapping.PROCESS.value,
+            verbose=False,
+            top_level=False
         )
+        
         self._dump_node_yaml(process_node=workflow_node, output_path=output_path)
 
         called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
@@ -326,7 +303,7 @@ class ProcessDumper(BaseDumper):
                     )
 
                 elif link_calculations_dir is not None:
-                    calculation_dump_path = link_calculations_dir / ProcessDumper._generate_default_dump_path(
+                    calculation_dump_path = link_calculations_dir / generate_process_default_dump_path(
                         process_node=child_node, prefix=''
                     )
                     try:
@@ -348,11 +325,16 @@ class ProcessDumper(BaseDumper):
             Default: ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         """
 
+        # ipdb.set_trace()
         prepare_dump_path(
             path_to_validate=output_path,
             overwrite=self.overwrite,
             incremental=self.incremental,
+            safeguard_file=SafeguardFileMapping.PROCESS.value,
+            verbose=False,
+            top_level=False
         )
+
         self._dump_node_yaml(process_node=calculation_node, output_path=output_path)
 
         io_dump_mapping = self._generate_calculation_io_mapping(io_dump_paths=io_dump_paths)

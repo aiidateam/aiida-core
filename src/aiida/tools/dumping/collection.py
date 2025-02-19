@@ -25,6 +25,7 @@ from aiida.tools.dumping.utils import (
     ProcessesToDumpContainer,
     filter_nodes_last_dump_time,
     load_given_group,
+    generate_process_default_dump_path
 )
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
@@ -175,7 +176,7 @@ class CollectionDumper(BaseDumper):
         process_dumper = self.process_dumper
 
         for process in processes:
-            process_dump_path = sub_path / process_dumper._generate_default_dump_path(process_node=process, prefix=None)
+            process_dump_path = sub_path / generate_process_default_dump_path(process_node=process, prefix=None)
 
             if self.profile_dump_config.symlink_duplicates and process.uuid in current_store.entries.keys():
                 if process_dump_path.exists():

@@ -6,11 +6,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Modules related to the dumping of AiiDA data."""
+"""Tests for the dumping of profile data to disk."""
 
-from .collection import CollectionDumper
-from .logger import DumpLogger
-from .process import ProcessDumper
-from .profile import ProfileDumper
 
-__all__ = ('CollectionDumper', 'DumpLogger', 'ProcessDumper', 'ProfileDumper')
+def test_delete_missing_group_nodes_retained(): ...
+
+
+def test_delete_missing_group_nodes_deleted(): ...

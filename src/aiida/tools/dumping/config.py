@@ -42,5 +42,6 @@ class ProfileDumpConfig:
     symlink_duplicates: bool = False
     delete_missing: bool = False
     organize_by_groups: bool = True
+    only_groups: bool = False
     only_top_level_calcs: bool = True
     only_top_level_workflows: bool = True

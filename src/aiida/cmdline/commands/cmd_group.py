@@ -682,6 +682,7 @@ def group_mirror(
 ):
     """Mirror data of group to disk."""
 
+    import ipdb
     import json
     from datetime import datetime
     from pathlib import Path
@@ -742,7 +743,7 @@ def group_mirror(
 
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
-        dump_logger = DumpLogger.from_file(dump_parent_path=output_path)
+        dump_logger = DumpLogger.from_file(dump_parent_path=dump_paths.dump_parent_path, dump_sub_path=dump_paths.dump_sub_path)
     except (json.JSONDecodeError, OSError):
         dump_logger = DumpLogger(
             dump_parent_path=dump_paths.dump_parent_path,
@@ -778,9 +779,10 @@ def group_mirror(
     # which processes should be dumped is evaluated beforehand (here)
     last_dump_time = datetime.now().astimezone()
 
+    # ipdb.set_trace()
     group_dumper = CollectionDumper(
         dump_parent_path=dump_paths.dump_parent_path,
-        output_path=dump_paths.dump_sub_path,
+        dump_sub_path=dump_paths.dump_sub_path,
         last_dump_time=last_dump_time,
         base_dump_config=base_dump_config,
         profile_dump_config=profile_dump_config,
@@ -806,7 +808,7 @@ def group_mirror(
             msg = 'No processes to dump.'
             echo.echo_success(msg)
         else:
-            group_dumper.dump(output_path=output_path)
+            group_dumper.dump()
             msg = f'Dumped {len(group_dumper.processes_to_dump)} new nodes.'
             echo.echo_success(msg)
 

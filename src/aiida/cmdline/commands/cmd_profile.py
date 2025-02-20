@@ -281,6 +281,7 @@ def profile_delete(force, delete_data, profiles):
 @options.ORGANIZE_BY_GROUPS()
 @options.SYMLINK_DUPLICATES()
 @options.DELETE_MISSING()
+@options.ONLY_GROUPS()
 @options.ONLY_TOP_LEVEL_CALCS()
 @options.ONLY_TOP_LEVEL_WORKFLOWS()
 @options.UPDATE_GROUPS()
@@ -302,6 +303,7 @@ def profile_mirror(
     symlink_duplicates,
     delete_missing,
     update_groups,
+    only_groups,
     only_top_level_calcs,
     only_top_level_workflows,
     include_inputs,
@@ -333,7 +335,7 @@ def profile_mirror(
         msg = '`--update-groups` selected, even though `--organize-by-groups` is set to False.'
         echo.echo_critical(msg)
 
-    ipdb.set_trace()
+    # ipdb.set_trace()
     dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=profile)
     output_path_absolute = dump_paths.output_path_absolute
     safeguard_file = SafeguardFileMapping.PROFILE.value
@@ -367,9 +369,14 @@ def profile_mirror(
 
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
-        dump_logger = DumpLogger.from_file(dump_parent_path=path)
+        dump_logger = DumpLogger.from_file(
+            dump_parent_path=dump_paths.dump_parent_path,
+            dump_sub_path=dump_paths.dump_sub_path)
     except (json.JSONDecodeError, OSError):
-        dump_logger = DumpLogger(dump_parent_path=path)
+        dump_logger = DumpLogger(
+            dump_parent_path=dump_paths.dump_parent_path,
+            dump_sub_path=dump_paths.dump_sub_path
+        )
 
     # Create config options that hold the various settings for dumping data
     base_dump_config = BaseDumpConfig(
@@ -390,6 +397,7 @@ def profile_mirror(
         symlink_duplicates=symlink_duplicates,
         delete_missing=delete_missing,
         organize_by_groups=organize_by_groups,
+        only_groups=only_groups,
         only_top_level_calcs=only_top_level_calcs,
         only_top_level_workflows=only_top_level_workflows,
     )

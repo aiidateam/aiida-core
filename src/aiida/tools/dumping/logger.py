@@ -168,9 +168,9 @@ class DumpLogger:
         self.save_log()
 
     @classmethod
-    def from_file(cls, dump_parent_path: Path) -> 'DumpLogger':
+    def from_file(cls, dump_parent_path: Path, dump_sub_path: Path) -> 'DumpLogger':
         """Alternative constructor to load from an existing JSON file."""
-        instance = cls(dump_parent_path=dump_parent_path)
+        instance = cls(dump_parent_path=dump_parent_path, dump_sub_path=dump_sub_path)
 
         if not instance.log_file_path.exists():
             return instance

@@ -86,6 +86,7 @@ __all__ = (
     'NODES',
     'NON_INTERACTIVE',
     'OLDER_THAN',
+    'ONLY_GROUPS',
     'ONLY_TOP_LEVEL_CALCS',
     'ONLY_TOP_LEVEL_WORKFLOWS',
     'ORDER_BY',
@@ -869,6 +870,13 @@ DELETE_MISSING = OverridableOption(
     default=False,
     show_default=True,
     help="If a previously dumped node is deleted from AiiDA's DB, also delete the corresponding dump directory.",
+)
+
+ONLY_GROUPS = OverridableOption(
+    '--only-groups/--no-only-groups',
+    default=False,
+    show_default=True,
+    help='Dump only data of nodes which are already organized in groups.',
 )
 
 ONLY_TOP_LEVEL_CALCS = OverridableOption(

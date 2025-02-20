@@ -12,6 +12,7 @@ import pytest
 
 from aiida.common import exceptions
 from aiida.orm import authinfos, computers
+from aiida.orm.implementation.authinfos import BackendAuthInfo
 
 
 class TestAuthinfo:
@@ -33,6 +34,9 @@ class TestAuthinfo:
     def test_delete_authinfo(self):
         """Test deleting a single AuthInfo."""
         pk = self.auth_info.pk
+        # Check setting password works properly
+        self.auth_info.secure_storage.set_password('pw')
+        assert self.auth_info.secure_storage.get_password() == 'pw'
 
         assert len(authinfos.AuthInfo.collection.all()) == 1
         authinfos.AuthInfo.collection.delete(pk)
@@ -41,17 +45,22 @@ class TestAuthinfo:
         with pytest.raises(exceptions.NotExistent):
             authinfos.AuthInfo.collection.delete(pk)
 
+        # Check password has been also deleted
+        # We have to create a new SecureStorage as auth_info is now invalid
+        assert BackendAuthInfo.SecureStorage(self.computer).get_password() is None
+
     def test_delete_computer(self):
         """Test that deleting a computer also deletes the associated Authinfo."""
         pk = self.auth_info.pk
 
         # Check setting password works properly
-        self.computer.password_manager.set('pw')
-        assert self.computer.password_manager.get() == 'pw'
+        self.auth_info.secure_storage.set_password('pw')
+        assert self.auth_info.secure_storage.get_password() == 'pw'
 
         computers.Computer.collection.delete(self.computer.pk)
         with pytest.raises(exceptions.NotExistent):
             authinfos.AuthInfo.collection.delete(pk)
 
         # Check password has been also deleted
-        assert self.computer.password_manager.get() is None
+        # We have to create a new SecureStorage as auth_info is now invalid
+        assert BackendAuthInfo.SecureStorage(self.computer).get_password() is None

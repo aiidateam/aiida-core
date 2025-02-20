@@ -14,7 +14,7 @@ import asyncio
 import glob
 import os
 from pathlib import Path, PurePath
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import asyncssh
 import click
@@ -29,6 +29,10 @@ from aiida.transports.transport import (
     TransportPath,
     validate_positive_number,
 )
+
+if TYPE_CHECKING:
+    from aiida.orm.authinfos import AuthInfo
+
 
 __all__ = ('AsyncSshTransport',)
 
@@ -111,10 +115,14 @@ class AsyncSshTransport(AsyncTransport):
         # TODO: an issue is open: https://github.com/aiidateam/aiida-core/issues/6726
         return computer.hostname
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, secure_storage: 'AuthInfo.SecureStorage', **kwargs):
         from aiida.orm.authinfos import Password
 
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            machine=kwargs.get('machine'),
+            safe_interval=kwargs.get('safe_interval'),
+            use_login_shell=kwargs.get('use_login_shell'),
+        )
         # the machine is passed as `machine=computer.hostname` in the codebase
         # 'machine' is immutable.
         # 'machine_or_host' is mutable, so it can be changed via command:
@@ -127,15 +135,11 @@ class AsyncSshTransport(AsyncTransport):
         self.script_before = kwargs.pop('script_before', 'None')
 
         options = {}
-        self._computer = kwargs.pop('computer', None)
+        self._secure_storage = secure_storage
         self._password = kwargs.pop('password', None)
 
         if self._password == Password.OBFUSCATED:
-            if self._computer is None:
-                raise ValueError(
-                    'No computer was passed to transport plugin, cannot retrieve password from secure storage.'
-                )
-            if (retrieved_password := self._computer.password_manager.get()) is None:
+            if (retrieved_password := self._secure_storage.get_password()) is None:
                 raise ValueError(
                     f'No registered password has been found in secure storage for computer {self._computer}.'
                 )
@@ -1417,14 +1421,10 @@ class AsyncSshTransport(AsyncTransport):
                     'Continue with manual enter of password using prompt.'
                 )
             else:
-                if self._computer is None:
-                    raise ValueError(
-                        'No computer was passed to transport plugin, cannot retrieve password from secure storage.'
-                    )
-                if self._computer.password_manager.get() is not None:
+                if self._secure_storage.get_password() is not None:
                     raise ValueError(
                         f'No registered password has been found in secure storage for computer {self._computer}.'
                     )
-                cmd_stdout_password = self._computer.password_manager.get_cmd_stdout_password()
+                cmd_stdout_password = self._secure_storage.get_cmd_stdout_password()
                 cmd = f'sshpass -p $({cmd_stdout_password}) {cmd}'
         return cmd

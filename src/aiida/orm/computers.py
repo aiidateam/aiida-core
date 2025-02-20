@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from aiida.common import exceptions
 from aiida.manage import get_manager
-from aiida.orm.implementation import BackendComputer
 from aiida.plugins import SchedulerFactory, TransportFactory
 
 from . import entities, users
@@ -711,7 +710,3 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             return {}
 
         return authinfo.get_auth_params()
-
-    @property
-    def password_manager(self) -> BackendComputer.ComputerPasswordManager:
-        return self._backend_entity.password_manager

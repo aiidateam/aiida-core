@@ -315,7 +315,6 @@ def profile_mirror(
     """Mirror all data in an AiiDA profile's storage to disk."""
 
     import json
-    import ipdb
     from datetime import datetime
     from pathlib import Path
 
@@ -334,7 +333,6 @@ def profile_mirror(
         # Add check outside in cmd_profile?
         msg = '`--update-groups` selected, even though `--organize-by-groups` is set to False.'
         echo.echo_critical(msg)
-
 
     dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=profile)
     output_path_absolute = dump_paths.output_path_absolute
@@ -358,27 +356,20 @@ def profile_mirror(
     if overwrite and incremental:
         incremental = False
 
-
-
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
         with safeguard_file_path.open('r') as fhandle:
             last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()
     except IndexError:
         last_dump_time = None
-    
-
 
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
         dump_logger = DumpLogger.from_file(
-            dump_parent_path=dump_paths.dump_parent_path,
-            dump_sub_path=dump_paths.dump_sub_path)
-    except (json.JSONDecodeError, OSError):
-        dump_logger = DumpLogger(
-            dump_parent_path=dump_paths.dump_parent_path,
-            dump_sub_path=dump_paths.dump_sub_path
+            dump_parent_path=dump_paths.dump_parent_path, dump_sub_path=dump_paths.dump_sub_path
         )
+    except (json.JSONDecodeError, OSError):
+        dump_logger = DumpLogger(dump_parent_path=dump_paths.dump_parent_path, dump_sub_path=dump_paths.dump_sub_path)
 
     # Create config options that hold the various settings for dumping data
     base_dump_config = BaseDumpConfig(

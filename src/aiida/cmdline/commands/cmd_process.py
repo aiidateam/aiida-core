@@ -599,7 +599,6 @@ def process_dump(
     node data for further inspection.
     """
 
-
     from aiida.tools.archive.exceptions import ExportValidationError
     from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
     from aiida.tools.dumping.process import ProcessDumper

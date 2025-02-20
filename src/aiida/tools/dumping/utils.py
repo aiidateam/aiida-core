@@ -101,7 +101,6 @@ def prepare_dump_path(
 
     # traceback.print_stack()
 
-
     if path_to_validate.is_file():
         msg = f'A file at the given path `{path_to_validate}` already exists.'
         raise FileExistsError(msg)
@@ -137,7 +136,6 @@ def prepare_dump_path(
             incremental = False
 
     # Handle existing non-empty directory
-
 
     if path_to_validate.is_dir() and any(path_to_validate.iterdir()):
         # Case 1: overwrite=False, incremental=False -> raise

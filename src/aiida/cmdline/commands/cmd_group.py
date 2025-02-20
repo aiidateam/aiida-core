@@ -682,7 +682,6 @@ def group_mirror(
 
     # FIXME: No actual data being mirrored here...?
 
-    import ipdb
     import json
     from datetime import datetime
     from pathlib import Path
@@ -705,8 +704,6 @@ def group_mirror(
 
     # FIXME: If nodes not newly created since the last dumping, but only added to the group, those are not picked up
     # during the incremental mirroring
-
-
 
     dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=group)
     output_path = dump_paths.dump_parent_path / dump_paths.dump_sub_path
@@ -732,8 +729,6 @@ def group_mirror(
     if overwrite and incremental:
         incremental = False
 
-
-
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
         with safeguard_file_path.open('r') as fhandle:
@@ -743,7 +738,9 @@ def group_mirror(
 
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
-        dump_logger = DumpLogger.from_file(dump_parent_path=dump_paths.dump_parent_path, dump_sub_path=dump_paths.dump_sub_path)
+        dump_logger = DumpLogger.from_file(
+            dump_parent_path=dump_paths.dump_parent_path, dump_sub_path=dump_paths.dump_sub_path
+        )
     except (json.JSONDecodeError, OSError):
         dump_logger = DumpLogger(
             dump_parent_path=dump_paths.dump_parent_path,
@@ -779,7 +776,6 @@ def group_mirror(
     # which processes should be dumped is evaluated beforehand (here)
     last_dump_time = datetime.now().astimezone()
 
-
     group_dumper = CollectionDumper(
         dump_parent_path=dump_paths.dump_parent_path,
         dump_sub_path=dump_paths.dump_sub_path,
@@ -811,7 +807,6 @@ def group_mirror(
         group_dumper.dump()
         msg = f'Dumped {len(group_dumper.processes_to_dump)} new nodes.'
         echo.echo_success(msg)
-
 
     if delete_missing:
         if num_processes_to_delete == 0:

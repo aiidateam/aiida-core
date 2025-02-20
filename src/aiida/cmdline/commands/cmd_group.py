@@ -319,8 +319,6 @@ def group_delete(
 @with_dbenv()
 def group_relabel(group, label):
     """Change the label of a group."""
-    # TODO: Add a message here that if one has the profile mirrored, they should also run the command `verdi profile
-    # TODO: mirror relabel-group ` to update the mirrored profile.
     try:
         group.label = label
     except UniquenessError as exception:
@@ -682,6 +680,8 @@ def group_mirror(
 ):
     """Mirror data of group to disk."""
 
+    # FIXME: No actual data being mirrored here...?
+
     import ipdb
     import json
     from datetime import datetime
@@ -707,10 +707,10 @@ def group_mirror(
     # during the incremental mirroring
 
 
-    # ipdb.set_trace()
+
     dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=group)
     output_path = dump_paths.dump_parent_path / dump_paths.dump_sub_path
-    # ipdb.set_trace()
+
     safeguard_file = SafeguardFileMapping.GROUP.value
     safeguard_file_path: Path = output_path / safeguard_file
 
@@ -732,7 +732,7 @@ def group_mirror(
     if overwrite and incremental:
         incremental = False
 
-    # ipdb.set_trace()
+
 
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
@@ -779,7 +779,7 @@ def group_mirror(
     # which processes should be dumped is evaluated beforehand (here)
     last_dump_time = datetime.now().astimezone()
 
-    # ipdb.set_trace()
+
     group_dumper = CollectionDumper(
         dump_parent_path=dump_paths.dump_parent_path,
         dump_sub_path=dump_paths.dump_sub_path,
@@ -804,15 +804,15 @@ def group_mirror(
         return
 
     if dump_processes:
-        if num_processes_to_dump == 0:
-            msg = 'No processes to dump.'
-            echo.echo_success(msg)
-        else:
-            group_dumper.dump()
-            msg = f'Dumped {len(group_dumper.processes_to_dump)} new nodes.'
-            echo.echo_success(msg)
+        # if num_processes_to_dump == 0:
+        #     msg = 'No processes to dump.'
+        #     echo.echo_success(msg)
+        # else:
+        group_dumper.dump()
+        msg = f'Dumped {len(group_dumper.processes_to_dump)} new nodes.'
+        echo.echo_success(msg)
 
-    # ipdb.set_trace()
+
     if delete_missing:
         if num_processes_to_delete == 0:
             echo.echo_success('No processes to delete.')
@@ -832,5 +832,5 @@ def group_mirror(
         fhandle.write(f'Last profile mirror time: {last_dump_time.isoformat()}\n')
 
     # Write the logging json file to disk
-    # ipdb.set_trace()
+
     dump_logger.save_log()

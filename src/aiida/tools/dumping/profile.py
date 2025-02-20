@@ -113,8 +113,6 @@ class ProfileDumper(BaseDumper):
         else:
             no_group_subpath = Path(".")
 
-        # ipdb.set_trace()
-
         no_group_output_path = (
             self.dump_parent_path / self.dump_sub_path / no_group_subpath
         )
@@ -147,7 +145,7 @@ class ProfileDumper(BaseDumper):
         """
 
         group_store = self.dump_logger.groups
-
+    
         for group in groups:
             if self.organize_by_groups:
                 group_subpath = "groups" / get_group_subpath(group=group)
@@ -163,7 +161,8 @@ class ProfileDumper(BaseDumper):
                 dump_logger=self.dump_logger,
                 group=group,
             )
-
+            ipdb.set_trace()
+        
             if (
                 self.should_dump_processes
                 and not group_dumper.processes_to_dump.is_empty
@@ -228,6 +227,7 @@ class ProfileDumper(BaseDumper):
         # If groups selected, however, this data should not also be dumped automatically
         # TODO: Maybe populate the `processes_to_dump` property here, even though I don't really need it, as I get the
         # TODO: nodes from the specified collection
+    
         if not self.groups:
             if not self.only_groups:
                 self._dump_processes_not_in_any_group()
@@ -251,6 +251,7 @@ class ProfileDumper(BaseDumper):
         return self._processes_to_dump
 
     def _get_processes_to_dump(self) -> list[str]:
+    
         if self.last_dump_time is not None:
             process_qb = orm.QueryBuilder().append(
                 orm.ProcessNode,
@@ -385,7 +386,6 @@ class ProfileDumper(BaseDumper):
                     # For debugging
                     # import ipdb
 
-                    # ipdb.set_trace()
                     raise
 
                 modified_paths.append(

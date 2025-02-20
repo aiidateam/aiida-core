@@ -195,7 +195,7 @@ class ProcessDumper(BaseDumper):
         if not output_path:
             output_path = self.dump_parent_path / self.dump_sub_path
 
-        # ipdb.set_trace()
+    
         prepare_dump_path(
             path_to_validate=output_path,
             overwrite=self.overwrite,
@@ -225,8 +225,6 @@ class ProcessDumper(BaseDumper):
                 output_path=output_path,
                 io_dump_paths=io_dump_paths,
             )
-
-        self._generate_readme(process_node=process_node)
 
     def _dump_workflow(
         self,
@@ -263,7 +261,7 @@ class ProcessDumper(BaseDumper):
         called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
         called_links = sorted(called_links, key=lambda link_triple: link_triple.node.ctime)
 
-        # ipdb.set_trace()
+    
 
         for index, link_triple in enumerate(called_links, start=1):
             child_node = link_triple.node
@@ -330,7 +328,7 @@ class ProcessDumper(BaseDumper):
             Default: ['inputs', 'outputs', 'node_inputs', 'node_outputs']
         """
 
-        # ipdb.set_trace()
+    
         prepare_dump_path(
             path_to_validate=output_path,
             overwrite=self.overwrite,

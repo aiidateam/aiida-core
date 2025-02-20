@@ -313,6 +313,7 @@ def profile_mirror(
     """Mirror all data in an AiiDA profile's storage to disk."""
 
     import json
+    import ipdb
     from datetime import datetime
     from pathlib import Path
 
@@ -332,9 +333,10 @@ def profile_mirror(
         msg = '`--update-groups` selected, even though `--organize-by-groups` is set to False.'
         echo.echo_critical(msg)
 
+    ipdb.set_trace()
     dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=profile)
     output_path_absolute = dump_paths.output_path_absolute
-    safeguard_file = SafeguardFileMapping.PROCESS.value
+    safeguard_file = SafeguardFileMapping.PROFILE.value
     safeguard_file_path: Path = output_path_absolute / safeguard_file
 
     echo.echo_report(f'Mirroring data of profile `{profile.name}` at path: `{output_path_absolute.name}`.')

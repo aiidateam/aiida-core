@@ -106,7 +106,7 @@ class ProfileDumper(BaseDumper):
         else:
             no_group_subpath = Path('.')
 
-        ipdb.set_trace()
+        # ipdb.set_trace()
 
         no_group_output_path = self.dump_parent_path / self.dump_sub_path / no_group_subpath
 

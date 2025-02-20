@@ -859,7 +859,7 @@ INCREMENTAL = OverridableOption(
 
 SYMLINK_DUPLICATES = OverridableOption(
     '--symlink-duplicates/--no-symlink-duplicates',
-    default=True,
+    default=False,
     show_default=True,
     help='Symlink data if the same node is contained in multiple groups.',
 )

@@ -311,12 +311,12 @@ def generate_process_default_dump_path(
     return Path('-'.join(entities_to_dump))
 
 
-def generate_profile_default_dump_path(profile: Profile) -> Path:
-    return Path(f'{profile.name}-mirror')
+def generate_profile_default_dump_path(profile: Profile, prefix: str = 'profile', appendix: str = 'mirror') -> Path:
+    return Path(f'{prefix}-{profile.name}-{appendix}')
 
 
-def generate_group_default_dump_path(group: orm.Group) -> Path:
-    return Path(f'group-{group.label}-mirror')
+def generate_group_default_dump_path(group: orm.Group, prefix: str = 'group', appendix: str = 'mirror') -> Path:
+    return Path(f'{prefix}-{group.label}-{appendix}')
 
 
 def resolve_click_path_argument_for_dumping(

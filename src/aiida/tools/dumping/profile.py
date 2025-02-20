@@ -106,7 +106,7 @@ class ProfileDumper(BaseDumper):
         else:
             no_group_subpath = Path('.')
 
-        # ipdb.set_trace()
+        ipdb.set_trace()
 
         no_group_output_path = self.dump_parent_path / self.dump_sub_path / no_group_subpath
 
@@ -125,7 +125,7 @@ class ProfileDumper(BaseDumper):
         if self.should_dump_processes and not no_group_dumper.processes_to_dump.is_empty:
             msg = f'Dumping processes not in any group for profile `{self.profile.name}`...'
             logger.report(msg)
-            no_group_dumper.dump(output_path=no_group_output_path)
+            no_group_dumper.dump()
             # TODO: Possibly add entry to logger
 
     def _dump_processes_per_group(self, groups: list[orm.Group]) -> None:
@@ -157,7 +157,7 @@ class ProfileDumper(BaseDumper):
             if self.should_dump_processes and not group_dumper.processes_to_dump.is_empty:
                 msg = f'Dumping processes in group `{group.label}` for profile `{self.profile.name}`...'
                 logger.report(msg)
-                group_dumper.dump(output_path=group_output_path)
+                group_dumper.dump()
 
                 group_store.add_entry(
                     uuid=group.uuid,

@@ -335,7 +335,7 @@ def profile_mirror(
         msg = '`--update-groups` selected, even though `--organize-by-groups` is set to False.'
         echo.echo_critical(msg)
 
-    # ipdb.set_trace()
+
     dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=profile)
     output_path_absolute = dump_paths.output_path_absolute
     safeguard_file = SafeguardFileMapping.PROFILE.value
@@ -358,7 +358,7 @@ def profile_mirror(
     if overwrite and incremental:
         incremental = False
 
-    # ipdb.set_trace()
+
 
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
@@ -366,6 +366,8 @@ def profile_mirror(
             last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()
     except IndexError:
         last_dump_time = None
+    
+
 
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
@@ -413,16 +415,13 @@ def profile_mirror(
         groups=groups,
     )
 
-    # Set the `last_dump_time` now, rather than after the dumping, as writing files to disk can take some time, and
-    # which processes should be dumped is evaluated beforehand (here)
-    last_dump_time = datetime.now().astimezone()
-
     num_processes_to_dump = len(profile_dumper.processes_to_dump)
     num_processes_to_delete = len(profile_dumper.processes_to_delete)
 
     # num_groups_to_dump = len(profile_dumper.groups_to_dump)
     num_groups_to_delete = len(profile_dumper.groups_to_delete)
 
+    # FIXME: This doesn't respect the -G --groups selection
     if dry_run:
         dry_run_message = (
             f'Dry run for mirroring of profile `{profile.name}`. '
@@ -461,6 +460,9 @@ def profile_mirror(
         # print(relabeled_paths)
 
     # Append the current dump time to dumping safeguard file
+    # Set the `last_dump_time` now after the dumping, as writing files to disk can take some time
+    last_dump_time = datetime.now().astimezone()
+
     with safeguard_file_path.open('a') as fhandle:
         msg = f'Last profile mirror time: {last_dump_time.isoformat()}\n'
         fhandle.write(msg)

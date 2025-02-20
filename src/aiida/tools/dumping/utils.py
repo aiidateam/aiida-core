@@ -100,7 +100,7 @@ def prepare_dump_path(
     :raises FileNotFoundError: If no `safeguard_file` is found."""
 
     # traceback.print_stack()
-    # ipdb.set_trace()
+
 
     if path_to_validate.is_file():
         msg = f'A file at the given path `{path_to_validate}` already exists.'
@@ -137,7 +137,7 @@ def prepare_dump_path(
             incremental = False
 
     # Handle existing non-empty directory
-    # ipdb.set_trace()
+
 
     if path_to_validate.is_dir() and any(path_to_validate.iterdir()):
         # Case 1: overwrite=False, incremental=False -> raise

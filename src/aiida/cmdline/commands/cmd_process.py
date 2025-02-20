@@ -647,9 +647,10 @@ def process_dump(
         base_dump_config=base_dump_config,
         process_dump_config=process_dump_config,
     )
-    # ipdb.set_trace()
+
     try:
         _ = process_dumper.dump(process_node=process)
+        _ = process_dumper._generate_readme(process_node=process)
         echo.echo_success(
             f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{output_path.name}`.'
         )

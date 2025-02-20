@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import ipdb
 import os
 from datetime import datetime
 from pathlib import Path
@@ -69,14 +70,15 @@ class CollectionDumper(BaseDumper):
 
         self._collection_nodes: list[str] = []  # Explicit type annotation
 
+        self._processes_to_dump: ProcessContainer | None = None
+        self._processes_to_delete: ProcessContainer | None = None
+
         if group is not None and collection_nodes is not None:
             msg = 'Cannot provide both, a group, and a collection of nodes.'
             raise Exception(msg)
 
         elif group is not None:
             self.group = load_given_group(group)
-            if self.group:
-                self._collection_nodes = [n.uuid for n in self.group.nodes]
 
         elif collection_nodes is not None:
             if any([not isinstance(n, str) for n in collection_nodes]):
@@ -98,11 +100,6 @@ class CollectionDumper(BaseDumper):
         self.only_top_level_calcs = self.profile_dump_config.only_top_level_calcs
         self.only_top_level_workflows = self.profile_dump_config.only_top_level_workflows
 
-        # self._processes_to_dump: ProcessContainer | None = None
-        # self._processes_to_delete: ProcessContainer | None = None
-
-        self._processes_to_dump: list[str] | None = None
-        self._processes_to_delete: list[str] | None = None
 
     @property
     def collection_nodes(self) -> list[str]:
@@ -112,12 +109,30 @@ class CollectionDumper(BaseDumper):
 
         :return: List of collection node UUIDs.
         """
-        if self.incremental and self.last_dump_time:
-            self._collection_nodes = filter_nodes_last_dump_time(
-                self._collection_nodes, last_dump_time=self.last_dump_time
-            )
-
+        # ipdb.set_trace()
+        if not self._collection_nodes:
+            self._collection_nodes = self._get_collection_nodes()
         return self._collection_nodes
+
+
+    def _get_collection_nodes(self) -> list[str]:
+    
+        # ipdb.set_trace()
+        if self.group:
+            return [n.uuid for n in self.group.nodes]
+
+        # if self.group:
+        #     qb = orm.QueryBuilder()
+        #     qb.append(orm.Group, filters={'uuid': self.group.uuid}, tag='group')
+        #     qb.append(orm.Node, with_group='group', project=['uuid'])
+        #     collection_uuids = cast(set[str], set(qb.all(flat=True)))
+
+        # TODO: Proper implementation here...
+        # if self.incremental and self.last_dump_time:
+        #     collection_nodes = filter_nodes_last_dump_time(
+        #         self._collection_nodes, last_dump_time=self.last_dump_time
+        #     )
+        
 
     @property
     def processes_to_dump(self) -> ProcessContainer:
@@ -141,7 +156,9 @@ class CollectionDumper(BaseDumper):
         :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
         """
 
+
         if not self.collection_nodes:
+            raise Exception("Debugging")
             return ProcessContainer(calculations=[], workflows=[])
 
         # Better than: `nodes = [orm.load_node(n) for n in self.collection_nodes]`
@@ -176,7 +193,7 @@ class CollectionDumper(BaseDumper):
         )
 
     @property
-    def processes_to_delete(self) -> list[str]:
+    def processes_to_delete(self) -> ProcessContainer:
         """Get the processes to dump from the collection of nodes.
 
         Only re-evaluates the processes, if not already set.
@@ -201,7 +218,7 @@ class CollectionDumper(BaseDumper):
         # One could possibly filter here since last dump time, however
         # it is highly likely that the last dump command with deletion was run a while ago
         # So I cannot filter by last dump time, but should probably take the whole set
-        # ipdb.set_trace()
+    
         if self.group:
             qb = orm.QueryBuilder()
             qb.append(orm.Group, filters={'uuid': self.group.uuid}, tag='group')
@@ -214,6 +231,9 @@ class CollectionDumper(BaseDumper):
         # created and stored in the log
         # profile_uuids = set([process.uuid for process in profile_processes if process.caller is None])
         to_delete_uuids = list(dumped_uuids - collection_uuids)
+
+        # TODO: Return ProcessContainer here -> For this, need to load ORM entities (again...) and
+        # categorize by workflow or calculation...
 
         return to_delete_uuids
 
@@ -237,7 +257,7 @@ class CollectionDumper(BaseDumper):
 
         # TODO: Only allow for "pure" sequences of Calculation- or WorkflowNodes, or also mixed?
         # TODO: If the latter possibly also have directory creation in the loop
-        # ipdb.set_trace()
+    
         sub_path = self.dump_parent_path / self.dump_sub_path / NodeDumpKeyMapper.get_key_from_node(node=processes[0])
         # sub_path = Path(NodeDumpKeyMapper.get_key_from_node(node=next(iter(processes))))
         sub_path.mkdir(exist_ok=True, parents=True)
@@ -281,7 +301,7 @@ class CollectionDumper(BaseDumper):
                 # process_dumper._dump_calculation(calculation_node=process, output_path=process_dump_path)
                 # ! TODO: Add DumpLogger here, such that sub-calculations of workflows are also registered in the
                 # ! dumping, otherwise they end up duplicated, as the registration is done here in the for loop
-                # ipdb.set_trace()
+            
                 process_dumper.dump(process_node=process, output_path=process_dump_path)
 
             current_store.add_entry(
@@ -295,6 +315,8 @@ class CollectionDumper(BaseDumper):
         :return: None
         """
 
+    
+
         if not output_path:
             output_path = self.dump_parent_path
         if not output_path.is_absolute():
@@ -302,7 +324,8 @@ class CollectionDumper(BaseDumper):
         self.dump_parent_path = output_path
 
         self.dump_parent_path.mkdir(exist_ok=True, parents=True)
-        collection_processes: ProcessContainer = self._get_processes_to_dump()
+        collection_nodes: list[str] = self.collection_nodes()
+        collection_processes: ProcessContainer = self.processes_to_dump()
 
         if not self.processes_to_dump.is_empty:
             # First, dump workflows, then calculations

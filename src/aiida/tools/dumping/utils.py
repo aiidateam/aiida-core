@@ -152,6 +152,9 @@ def prepare_dump_path(
                 safeguard_file=safeguard_file,
             )
 
+    # Check if path is symlink, otherwise `mkdir` fails
+    if path_to_validate.is_symlink():
+        return
     # Finally, (re-)create directory
     # Both shutil.rmtree and `_delete_dir_recursively` delete the original dir
     # If it already existed, e.g. in the `incremental` case, exist_ok=True

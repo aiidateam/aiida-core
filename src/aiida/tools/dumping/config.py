@@ -39,7 +39,7 @@ class ProfileDumpConfig:
 
     # TODO: Possibly add profile as attribute here?
     dump_processes: bool = True
-    symlink_duplicates: bool = True
+    symlink_duplicates: bool = False
     delete_missing: bool = False
     organize_by_groups: bool = True
     only_top_level_calcs: bool = True

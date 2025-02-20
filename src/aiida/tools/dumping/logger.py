@@ -231,5 +231,5 @@ class DumpLogger:
             raise KeyError(msg) from exc
         except:
             # For debugging
-        
+
             raise

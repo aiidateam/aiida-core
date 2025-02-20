@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import ipdb
 import os
 from datetime import datetime
 from pathlib import Path
@@ -26,7 +25,6 @@ from aiida.tools.dumping.utils import (
     NodeDumpKeyMapper,
     ProcessContainer,
     delete_missing_node_dir,
-    filter_nodes_last_dump_time,
     generate_process_default_dump_path,
     load_given_group,
 )
@@ -100,7 +98,6 @@ class CollectionDumper(BaseDumper):
         self.only_top_level_calcs = self.profile_dump_config.only_top_level_calcs
         self.only_top_level_workflows = self.profile_dump_config.only_top_level_workflows
 
-
     @property
     def collection_nodes(self) -> list[str]:
         """Property to hold the collection nodes.
@@ -114,9 +111,7 @@ class CollectionDumper(BaseDumper):
             self._collection_nodes = self._get_collection_nodes()
         return self._collection_nodes
 
-
     def _get_collection_nodes(self) -> list[str]:
-    
         # ipdb.set_trace()
         if self.group:
             return [n.uuid for n in self.group.nodes]
@@ -132,7 +127,6 @@ class CollectionDumper(BaseDumper):
         #     collection_nodes = filter_nodes_last_dump_time(
         #         self._collection_nodes, last_dump_time=self.last_dump_time
         #     )
-        
 
     @property
     def processes_to_dump(self) -> ProcessContainer:
@@ -156,9 +150,8 @@ class CollectionDumper(BaseDumper):
         :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
         """
 
-
         if not self.collection_nodes:
-            raise Exception("Debugging")
+            raise Exception('Debugging')
             return ProcessContainer(calculations=[], workflows=[])
 
         # Better than: `nodes = [orm.load_node(n) for n in self.collection_nodes]`
@@ -218,7 +211,7 @@ class CollectionDumper(BaseDumper):
         # One could possibly filter here since last dump time, however
         # it is highly likely that the last dump command with deletion was run a while ago
         # So I cannot filter by last dump time, but should probably take the whole set
-    
+
         if self.group:
             qb = orm.QueryBuilder()
             qb.append(orm.Group, filters={'uuid': self.group.uuid}, tag='group')
@@ -257,7 +250,7 @@ class CollectionDumper(BaseDumper):
 
         # TODO: Only allow for "pure" sequences of Calculation- or WorkflowNodes, or also mixed?
         # TODO: If the latter possibly also have directory creation in the loop
-    
+
         sub_path = self.dump_parent_path / self.dump_sub_path / NodeDumpKeyMapper.get_key_from_node(node=processes[0])
         # sub_path = Path(NodeDumpKeyMapper.get_key_from_node(node=next(iter(processes))))
         sub_path.mkdir(exist_ok=True, parents=True)
@@ -301,7 +294,7 @@ class CollectionDumper(BaseDumper):
                 # process_dumper._dump_calculation(calculation_node=process, output_path=process_dump_path)
                 # ! TODO: Add DumpLogger here, such that sub-calculations of workflows are also registered in the
                 # ! dumping, otherwise they end up duplicated, as the registration is done here in the for loop
-            
+
                 process_dumper.dump(process_node=process, output_path=process_dump_path)
 
             current_store.add_entry(
@@ -314,8 +307,6 @@ class CollectionDumper(BaseDumper):
 
         :return: None
         """
-
-    
 
         if not output_path:
             output_path = self.dump_parent_path

@@ -133,7 +133,10 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
 
         :return: a dictionary with authentication parameters
         """
-        return self._backend_entity.get_auth_params()
+        auth_params = self._backend_entity.get_auth_params()
+        if auth_params.get('password', None) == str(Password.OBFUSCATED):
+            auth_params['password'] = Password.OBFUSCATED
+        return auth_params
 
     def set_auth_params(self, auth_params: Dict[str, Any]) -> None:
         """Set the dictionary of authentication parameters.
@@ -148,8 +151,9 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         # the default value for the password in CLI is the empty string
         # which is covered by evaluating to False in the conditional statement
         if password := auth_params.pop('password', None):
-            self.computer.password_manager.set(password)
-            auth_params['password'] = Password.OBFUSCATED
+            self.secure_storage.set_password(password)
+            # we cannot store enum in database
+            auth_params['password'] = str(Password.OBFUSCATED)
         self._backend_entity.set_auth_params(auth_params)
 
     def get_metadata(self) -> Dict[str, Any]:

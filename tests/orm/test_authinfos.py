@@ -31,6 +31,14 @@ class TestAuthinfo:
         self.auth_info.set_auth_params(auth_params)
         assert self.auth_info.get_auth_params() == auth_params
 
+        try:
+            auth_params['password'] = 'pw'
+            self.auth_info.set_auth_params(auth_params)
+            assert self.auth_info.get_auth_params()['password'] == authinfos.Password.OBFUSCATED
+            assert self.auth_info.secure_storage.get_password() == 'pw'
+        finally:
+            self.auth_info.secure_storage.delete_password()
+
     def test_delete_authinfo(self):
         """Test deleting a single AuthInfo."""
         pk = self.auth_info.pk

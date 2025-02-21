@@ -107,6 +107,9 @@ jobs:
     - name: Setup SSH on localhost
       run: .github/workflows/setup_ssh.sh
 
+    - name: Setup upterm session
+      uses: lhotari/action-upterm@v1
+
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0

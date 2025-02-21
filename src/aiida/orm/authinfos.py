@@ -8,10 +8,12 @@
 ###########################################################################
 """Module for the `AuthInfo` ORM class."""
 
+import enum
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.common import exceptions
 from aiida.manage import get_manager
+from aiida.orm.implementation.authinfos import BackendAuthInfo
 from aiida.plugins import TransportFactory
 
 from . import entities, users
@@ -20,7 +22,6 @@ from .fields import add_field
 if TYPE_CHECKING:
     from aiida.orm import Computer, User
     from aiida.orm.implementation import StorageBackend
-    from aiida.orm.implementation.authinfos import BackendAuthInfo  # noqa: F401
     from aiida.transports import Transport
 
 __all__ = ('AuthInfo',)
@@ -80,6 +81,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     ]
 
     PROPERTY_WORKDIR = 'workdir'
+    SecureStorage = BackendAuthInfo.SecureStorage
 
     def __init__(self, computer: 'Computer', user: 'User', backend: Optional['StorageBackend'] = None) -> None:
         """Create an `AuthInfo` instance for the given computer and user.
@@ -131,13 +133,27 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
 
         :return: a dictionary with authentication parameters
         """
-        return self._backend_entity.get_auth_params()
+        auth_params = self._backend_entity.get_auth_params()
+        if auth_params.get('password', None) == str(Password.OBFUSCATED):
+            auth_params['password'] = Password.OBFUSCATED
+        return auth_params
 
     def set_auth_params(self, auth_params: Dict[str, Any]) -> None:
-        """Set the dictionary of authentication parameters
+        """Set the dictionary of authentication parameters.
+
+        If password present in `auth_params`, it stores it in secure storage and obfuscates it.
 
         :param auth_params: a dictionary with authentication parameters
         """
+        import copy
+
+        auth_params = copy.deepcopy(auth_params)
+        # the default value for the password in CLI is the empty string
+        # which is covered by evaluating to False in the conditional statement
+        if password := auth_params.pop('password', None):
+            self.secure_storage.set_password(password)
+            # we cannot store enum in database so we use name
+            auth_params['password'] = str(Password.OBFUSCATED)
         self._backend_entity.set_auth_params(auth_params)
 
     def get_metadata(self) -> Dict[str, Any]:
@@ -176,4 +192,13 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         except exceptions.EntryPointError as exception:
             raise exceptions.ConfigurationError(f'transport type `{transport_type}` could not be loaded: {exception}')
 
-        return transport_class(machine=computer.hostname, **self.get_auth_params())
+        return transport_class(machine=computer.hostname, secure_storage=self.secure_storage, **self.get_auth_params())
+
+    @property
+    def secure_storage(self) -> 'AuthInfo.SecureStorage':
+        """Returns the manager of the password associated to this computer stored in system's secure storage."""
+        return self.SecureStorage(self.computer)
+
+
+class Password(enum.Enum):
+    OBFUSCATED = 'OBFUSCATED'

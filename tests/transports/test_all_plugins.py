@@ -25,6 +25,7 @@ import pytest
 
 from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import Transport
+from aiida.transports.plugins.local import LocalTransport
 
 # TODO : test for copy with pattern
 # TODO : test for copy with/without patterns, overwriting folder
@@ -1529,3 +1530,11 @@ def test_extract(
     with pytest.raises(OSError, match='Error while extracting the tar archive.'):
         with custom_transport as transport:
             transport.extract(tmp_path_remote / archive_name, tmp_path_remote / 'extracted_1')
+
+
+def test_gotocomputer_command(custom_transport):
+    goto_computer_cmd = custom_transport.gotocomputer_command(Path("/path"))
+    if isinstance(custom_transport, LocalTransport):
+        assert "bash" in goto_computer_cmd
+    else:
+        assert "ssh" in goto_computer_cmd

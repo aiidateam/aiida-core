@@ -9,17 +9,19 @@
 """Module for the backend implementation of the `AuthInfo` ORM class."""
 
 import abc
-from typing import TYPE_CHECKING, Any, Dict, Union
+from typing import TYPE_CHECKING, Any, Dict, Protocol, Union
 
 from .entities import BackendCollection, BackendEntity
 
 if TYPE_CHECKING:
-    from aiida.storage.psql_dos.models.computer import DbComputer
-
     from .computers import BackendComputer
     from .users import BackendUser
 
 __all__ = ('BackendAuthInfo', 'BackendAuthInfoCollection')
+
+
+class HasUuid(Protocol):
+    def uuid(self) -> str: ...
 
 
 class BackendAuthInfo(BackendEntity):
@@ -88,18 +90,18 @@ class BackendAuthInfo(BackendEntity):
         # the service name used to store in the secure storage
         _SERVICE_NAME = 'aiida.core.authinfo'
 
-        def __init__(self, computer: Union['BackendComputer', 'DbComputer']):
-            self._computer = computer
+        def __init__(self, unique_obj: HasUuid):
+            self._unique_obj = unique_obj
 
         def get_password(self) -> Union[str, None]:
-            """Retrieves the password associated with this computer from system's secure storage
+            """Retrieves the password associated with this unique_obj from system's secure storage
 
             :raises RuntimeError: If the keychain is not accessible.
             """
             from keyringrs import Entry
 
             try:
-                return Entry(self._SERVICE_NAME, f'{self._computer.uuid}').get_password()
+                return Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').get_password()
             except RuntimeError as exc:
                 # error when no password for entry is available
                 if str(exc) == 'No matching entry found in secure storage':
@@ -107,23 +109,23 @@ class BackendAuthInfo(BackendEntity):
                 raise
 
         def set_password(self, password: str) -> None:
-            """Sets the entry with the uuid of the computer to system's secure storage with the `password`.
+            """Sets the entry with the uuid of the unique_obj to system's secure storage with the `password`.
 
             :raises RuntimeError: If the keychain is not accessible.
             """
             from keyringrs import Entry
 
-            Entry(self._SERVICE_NAME, f'{self._computer.uuid}').set_password(password)
+            Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').set_password(password)
 
         def delete_password(self) -> None:
-            """Deletes the password associated with this computer from system's secure storage if available.
+            """Deletes the password associated with this unique_obj from system's secure storage if available.
 
             :raises RuntimeError: If the keychain is not accessible.
             """
             from keyringrs import Entry
 
             try:
-                Entry(self._SERVICE_NAME, f'{self._computer.uuid}').delete_credential()
+                Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').delete_credential()
             except RuntimeError as exc:
                 # error when no password for entry is available
                 if str(exc) == 'No matching entry found in secure storage':
@@ -133,13 +135,13 @@ class BackendAuthInfo(BackendEntity):
         def get_cmd_stdout_password(self) -> str:
             """Returns the command line command to retrieve the password to stdout.
 
-            This is needed for the gotocomputer commands."""
+            This is needed for the gotounique_obj commands."""
 
             import sys
 
             python_command = (
                 'from keyringrs import Entry;'
-                f'print(Entry("{self._SERVICE_NAME}", "{self._computer.uuid}").get_password(), end="")'
+                f'print(Entry("{self._SERVICE_NAME}", "{self._unique_obj.uuid}").get_password(), end="")'
             )
             return f"{sys.executable} -c '{python_command}'"
 

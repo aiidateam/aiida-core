@@ -9,6 +9,7 @@
 """Module for the backend implementation of the `AuthInfo` ORM class."""
 
 import abc
+import sys
 from typing import TYPE_CHECKING, Any, Dict, Protocol, Union
 
 import keyring
@@ -128,8 +129,6 @@ class BackendAuthInfo(BackendEntity):
             """Returns the command line command to retrieve the password to stdout.
 
             This is needed for the gotounique_obj commands."""
-
-            import sys
 
             python_command = (
                 'from keyring import get_password;'

@@ -145,6 +145,7 @@ def test_retrieve_files_from_list(
         (['sub', None], {'b': 'file_b'}),
         ([None, 'target'], {'target': {'sub': {'b': 'file_b'}, 'a': 'file_a'}}),
         (['sub', 'target'], {'target': {'b': 'file_b'}}),
+        (['sub', 'target/another-sub'], {'target': {'another-sub': {'b': 'file_b'}}}),
     ),
 )
 def test_upload_local_copy_list(

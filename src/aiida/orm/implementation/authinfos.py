@@ -11,6 +11,8 @@
 import abc
 from typing import TYPE_CHECKING, Any, Dict, Protocol, Union
 
+import keyring
+
 from .entities import BackendCollection, BackendEntity
 
 if TYPE_CHECKING:
@@ -98,37 +100,27 @@ class BackendAuthInfo(BackendEntity):
 
             :raises RuntimeError: If the keychain is not accessible.
             """
-            from keyringrs import Entry
 
-            try:
-                return Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').get_password()
-            except RuntimeError as exc:
-                # error when no password for entry is available
-                if str(exc) == 'No matching entry found in secure storage':
-                    return None
-                raise
+            return keyring.get_password(self._SERVICE_NAME, f'{self._unique_obj.uuid}')
 
         def set_password(self, password: str) -> None:
             """Sets the entry with the uuid of the unique_obj to system's secure storage with the `password`.
 
             :raises RuntimeError: If the keychain is not accessible.
             """
-            from keyringrs import Entry
-
-            Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').set_password(password)
+            keyring.set_password(self._SERVICE_NAME, f'{self._unique_obj.uuid}', password)
 
         def delete_password(self) -> None:
             """Deletes the password associated with this unique_obj from system's secure storage if available.
 
             :raises RuntimeError: If the keychain is not accessible.
             """
-            from keyringrs import Entry
 
             try:
-                Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').delete_credential()
-            except RuntimeError as exc:
+                keyring.delete_password(self._SERVICE_NAME, f'{self._unique_obj.uuid}')
+            except keyring.errors.PasswordDeleteError as exc:
                 # error when no password for entry is available
-                if str(exc) == 'No matching entry found in secure storage':
+                if str(exc) == 'Item not found':
                     return None
                 raise
 
@@ -140,8 +132,8 @@ class BackendAuthInfo(BackendEntity):
             import sys
 
             python_command = (
-                'from keyringrs import Entry;'
-                f'print(Entry("{self._SERVICE_NAME}", "{self._unique_obj.uuid}").get_password(), end="")'
+                'from keyring import get_password;'
+                f'print(get_password("{self._SERVICE_NAME}", "{self._unique_obj.uuid}"), end="")'
             )
             return f"{sys.executable} -c '{python_command}'"
 

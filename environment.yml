@@ -39,4 +39,4 @@ dependencies:
 - wrapt~=1.11
 - chardet~=5.2.0  # [win]
 - pip:
-  - keyringrs~=0.3.0
+  - keyringrs~=0.1.0

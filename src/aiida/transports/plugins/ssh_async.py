@@ -37,6 +37,19 @@ if TYPE_CHECKING:
 __all__ = ('AsyncSshTransport',)
 
 
+def validate_os_supports_secure_storage(ctx, param, value: str):
+    if value:
+        import keyring
+
+        if isinstance(keyring.get_keyring(), keyring.backends.fail.Keyring):
+            raise OSError(
+                'Could not find secure storage on your system for storing the password. '
+                'Cannot use password authentication without secure storage. '
+                'Please refer to https://github.com/jaraco/keyring for supported secure storages.'
+            )
+    return value
+
+
 def validate_script(ctx, param, value: str):
     if value == 'None':
         return value
@@ -78,6 +91,7 @@ class AsyncSshTransport(AsyncTransport):
                 'hide_input': True,
                 'help': 'Login password for the remote machine.',
                 'non_interactive_default': True,
+                'callback': validate_os_supports_secure_storage,
             },
         ),
         (

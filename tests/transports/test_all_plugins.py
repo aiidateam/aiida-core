@@ -25,6 +25,7 @@ import pytest
 
 from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import Transport
+from aiida.transports.plugins import ssh_async
 from aiida.transports.plugins.local import LocalTransport
 
 # TODO : test for copy with pattern
@@ -1538,3 +1539,15 @@ def test_gotocomputer_command(custom_transport):
         assert 'bash' in goto_computer_cmd
     else:
         assert 'ssh' in goto_computer_cmd
+
+
+def test_validate_os_supports_secure_storage():
+    import keyring
+
+    old_keyring = keyring.get_keyring()
+    try:
+        keyring.set_keyring(keyring.backends.fail.Keyring())
+        with pytest.raises(OSError, match=r'.*Cannot use password authentication without secure storage.*'):
+            ssh_async.validate_os_supports_secure_storage(None, None, 'pw')
+    finally:
+        keyring.set_keyring(old_keyring)

@@ -1533,8 +1533,8 @@ def test_extract(
 
 
 def test_gotocomputer_command(custom_transport):
-    goto_computer_cmd = custom_transport.gotocomputer_command(Path("/path"))
+    goto_computer_cmd = custom_transport.gotocomputer_command(Path('/path'))
     if isinstance(custom_transport, LocalTransport):
-        assert "bash" in goto_computer_cmd
+        assert 'bash' in goto_computer_cmd
     else:
-        assert "ssh" in goto_computer_cmd
+        assert 'ssh' in goto_computer_cmd

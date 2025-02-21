@@ -152,7 +152,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         # which is covered by evaluating to False in the conditional statement
         if password := auth_params.pop('password', None):
             self.secure_storage.set_password(password)
-            # we cannot store enum in database
+            # we cannot store enum in database so we use name
             auth_params['password'] = str(Password.OBFUSCATED)
         self._backend_entity.set_auth_params(auth_params)
 

@@ -729,6 +729,12 @@ class SshTransport(BlockingTransport):
         if ignore_existing and self.isdir(path):
             return
 
+        # check and create the parent directories recursively
+        parent_path = os.path.dirname(path)
+
+        if not self.isdir(parent_path):
+            self.mkdir(parent_path, ignore_existing=True)
+
         try:
             self.sftp.mkdir(path)
         except OSError as exc:

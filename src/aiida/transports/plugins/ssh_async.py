@@ -13,6 +13,7 @@
 import asyncio
 import glob
 import os
+import platform
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, Optional, Union
 
@@ -35,6 +36,20 @@ if TYPE_CHECKING:
 
 
 __all__ = ('AsyncSshTransport',)
+
+
+def validate_os_supports_secure_storage(ctx, param, value: str):
+    if value:
+        if platform.system() == 'Linux':
+            # check if dbus is running
+            exit_code = os.system('systemctl status dbus > /dev/null 2>&1')
+            if exit_code:
+                raise OSError(
+                    'Password was provided but could not find running dbus service. AiiDA needs dbus to store your '
+                    'password securely. Please ensure that dbus is installed'
+                    " and running. You can check with 'systemctl status dbus'."
+                )
+    return value
 
 
 def validate_script(ctx, param, value: str):
@@ -78,6 +93,7 @@ class AsyncSshTransport(AsyncTransport):
                 'hide_input': True,
                 'help': 'Login password for the remote machine.',
                 'non_interactive_default': True,
+                'callback': validate_os_supports_secure_storage,
             },
         ),
         (

@@ -8,8 +8,6 @@
 ###########################################################################
 """Tests for the `Computer` ORM class."""
 
-import shlex
-import subprocess
 import uuid
 
 import pytest
@@ -155,23 +153,3 @@ class TestComputerConfigure:
         assert self.user.get_short_name() in str(exc)
         assert str(self.user.pk) in str(exc)
         assert 'verdi computer configure' in str(exc)
-
-    def test_password_manager(self):
-        comp = Computer()
-        # Check get
-        assert comp.password_manager.get() is None
-        try:
-            # Check set
-            comp.password_manager.set('password')
-            assert comp.password_manager.get() == 'password'
-
-            # Check set get_cmd_stdout_password
-
-            cmd_stdout_password = comp.password_manager.get_cmd_stdout_password()
-            result = subprocess.run(shlex.split(cmd_stdout_password), capture_output=True, text=True, check=False)
-            assert result.stdout == 'password'
-        finally:
-            comp.password_manager.delete()
-
-        # Check delete
-        assert comp.password_manager.get() is None

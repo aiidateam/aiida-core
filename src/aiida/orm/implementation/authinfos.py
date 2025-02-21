@@ -91,7 +91,7 @@ class BackendAuthInfo(BackendEntity):
         def __init__(self, computer: Union['BackendComputer', 'DbComputer']):
             self._computer = computer
 
-        def get_password(self) -> str | None:
+        def get_password(self) -> Union[str, None]:
             """Retrieves the password associated with this computer from system's secure storage
 
             :raises RuntimeError: If the keychain is not accessible.

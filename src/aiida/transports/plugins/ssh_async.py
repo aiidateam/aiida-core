@@ -14,7 +14,7 @@ import asyncio
 import glob
 import os
 from pathlib import Path, PurePath
-from typing import Optional
+from typing import Optional, Union
 
 import asyncssh
 import click
@@ -763,6 +763,129 @@ class AsyncSshTransport(AsyncTransport):
         :raises: OSError, src does not exist or if the copy execution failed.
         """
         return await self.copy_async(remotesource, remotedestination, dereference, recursive=True, preserve=preserve)
+
+    async def compress_async(
+        self,
+        format: str,
+        remotesources: Union[TransportPath, list[TransportPath]],
+        remotedestination: TransportPath,
+        root_dir: TransportPath,
+        overwrite: bool = True,
+        dereference: bool = False,
+    ):
+        """Compress a remote directory.
+
+        This method supports `remotesources` with glob patterns.
+
+        :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
+        :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress
+        :param remotedestination: path to the remote destination file (including file name).
+        :param root_dir: the path that compressed files will be relative to.
+        :param overwrite: if True, overwrite the file at remotedestination if it already exists.
+        :param dereference: if True, follow symbolic links.
+            Compress where they point to, instead of the links themselves.
+
+        :raises ValueError: if format is not supported
+        :raises OSError: if remotesource does not exist, or a matching file/folder cannot be found
+        :raises OSError: if remotedestination already exists and overwrite is False. Or if it is a directory.
+        :raises OSError: if cannot create remotedestination
+        :raises OSError: if root_dir is not a directory
+        """
+        if not await self.isdir_async(root_dir):
+            raise OSError(f'The relative root {root_dir} does not exist, or is not a directory.')
+
+        if await self.isdir_async(remotedestination):
+            raise OSError(f'The remote destination {remotedestination} is a directory, should include a filename.')
+
+        if not overwrite and await self.path_exists_async(remotedestination):
+            raise OSError(f'The remote destination {remotedestination} already exists.')
+
+        if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
+            raise ValueError(f'Unsupported compression format: {format}')
+
+        compression_flag = {
+            'tar': '',
+            'tar.gz': 'z',
+            'tar.bz2': 'j',
+            'tar.xz': 'J',
+        }[format]
+
+        if not isinstance(remotesources, list):
+            remotesources = [remotesources]
+
+        copy_list = []
+
+        for source in remotesources:
+            if self.has_magic(source):
+                try:
+                    copy_list += await self.glob_async(source)
+                except asyncssh.sftp.SFTPNoSuchFile:
+                    raise OSError(
+                        f'Either the remote path {source} does not exist, or a matching file/folder not found.'
+                    )
+            else:
+                if not await self.path_exists_async(source):
+                    raise OSError(f'The remote path {source} does not exist')
+
+                copy_list.append(source)
+
+        copy_items = ' '.join([str(Path(item).relative_to(root_dir)) for item in copy_list])
+        # note: order of the flags is important
+        tar_command = (
+            f"tar -c{compression_flag!s}{'h' if dereference else ''}f {remotedestination!s} -C {root_dir!s} "
+            + copy_items
+        )
+
+        retval, stdout, stderr = await self.exec_command_wait_async(tar_command)
+
+        if retval == 0:
+            if stderr.strip():
+                self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
+        else:
+            self.logger.error(
+                "Problem executing tar. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
+                    retval, stdout, stderr, tar_command
+                )
+            )
+            raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
+
+    async def extract_async(
+        self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True
+    ):
+        """Extract a remote archive.
+
+        Does not accept glob patterns, as it doesn't make much sense and we don't have a usecase for it.
+
+        :param remotesource: path to the remote archive to extract
+        :param remotedestination: path to the remote destination directory
+        :param overwrite: if True, overwrite the file at remotedestination if it already exists
+            (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+
+        :raises OSError: if the remotesource does not exist.
+        :raises OSError: if the extraction fails.
+        """
+        if not overwrite:
+            raise NotImplementedError('The overwrite=False is not implemented yet')
+
+        if not await self.path_exists_async(remotesource):
+            raise OSError(f'The remote path {remotesource} does not exist')
+
+        await self.makedirs_async(remotedestination, ignore_existing=True)
+
+        tar_command = f'tar -xf {remotesource!s} -C {remotedestination!s} '
+
+        retval, stdout, stderr = await self.exec_command_wait_async(tar_command)
+
+        if retval == 0:
+            if stderr.strip():
+                self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
+        else:
+            self.logger.error(
+                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                    retval, stdout, stderr, tar_command
+                )
+            )
+            raise OSError(f'Error while extracting the tar archive. Exit code: {retval}')
 
     async def exec_command_wait_async(
         self,

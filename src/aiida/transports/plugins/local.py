@@ -15,6 +15,7 @@ import io
 import os
 import shutil
 import subprocess
+import sys
 from typing import Optional
 
 from aiida.common.warnings import warn_deprecation
@@ -777,9 +778,14 @@ class LocalTransport(BlockingTransport):
         else:
             cwd = self.getcwd()
 
+        if sys.platform == 'win32':
+            shell = False
+        else:
+            shell = True
+
         with subprocess.Popen(
             command,
-            shell=True,
+            shell=shell,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

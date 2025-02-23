@@ -159,7 +159,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def get_executable(self) -> pathlib.PurePosixPath:
+    def get_executable(self) -> pathlib.PurePath:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.

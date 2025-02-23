@@ -211,6 +211,7 @@ class Profile:
         :return: absolute filepath of the profile's file repository
         """
         from urllib.parse import urlparse
+        from urllib.request import url2pathname
 
         from aiida.common.warnings import warn_deprecation
 
@@ -224,10 +225,10 @@ class Profile:
         if parts.scheme != 'file':
             raise exceptions.ConfigurationError('invalid repository protocol, only the local `file://` is supported')
 
-        if not os.path.isabs(parts.path):
+        if not os.path.isabs(url2pathname(parts.path)):
             raise exceptions.ConfigurationError('invalid repository URI: the path has to be absolute')
 
-        return pathlib.Path(os.path.expanduser(parts.path))
+        return pathlib.Path(os.path.expanduser(url2pathname(parts.path)))
 
     @property
     def filepaths(self):

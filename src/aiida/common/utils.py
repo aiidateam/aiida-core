@@ -446,8 +446,6 @@ def join_labels(labels, join_symbol='|', threshold=1.0e-6):
     return new_labels
 
 
-
-
 class Capturing:
     """This class captures stdout and returns it
     (as a list, split by lines).

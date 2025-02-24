@@ -125,6 +125,7 @@ def perform_v1_migration(
 
     return working / DB_FILENAME
 
+
 def _json_to_sqlite(
     outpath: Path, data: dict, node_repos: Dict[str, List[Tuple[str, Optional[str]]]], batch_size: int = 100
 ) -> None:

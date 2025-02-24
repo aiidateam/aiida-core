@@ -194,8 +194,7 @@ class CollectionDumper(BaseDumper):
         :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
         """
         if not self.delete_missing:
-            # return ProcessContainer(calculations=[], workflows=[])
-            return []
+            return ProcessContainer(calculations=[], workflows=[])
         if self._processes_to_delete is None:
             self._processes_to_delete = self._get_processes_to_delete()
         return self._processes_to_delete
@@ -315,8 +314,10 @@ class CollectionDumper(BaseDumper):
         self.dump_parent_path = output_path
 
         self.dump_parent_path.mkdir(exist_ok=True, parents=True)
-        collection_nodes: list[str] = self.collection_nodes()
-        collection_processes: ProcessContainer = self.processes_to_dump()
+        collection_nodes: list[str] = self.collection_nodes
+        collection_processes: ProcessContainer = self.processes_to_dump
+
+        # ipdb.set_trace()
 
         if not self.processes_to_dump.is_empty:
             # First, dump workflows, then calculations

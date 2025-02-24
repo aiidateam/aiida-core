@@ -78,7 +78,11 @@ def perform_v1_migration(
             temp_folder = working / 'temp_unpack'
             with tarfile.open(_inpath, 'r') as tar:
                 MIGRATE_LOGGER.report('Extracting tar archive...(may take a while)')
-                tar.extractall(temp_folder)
+                # https://docs.python.org/3/library/tarfile.html#supporting-older-python-versions
+                if hasattr(tarfile, 'data_filter'):
+                    tar.extractall(temp_folder, filter='data')
+                else:
+                    tar.extractall(temp_folder)
             yield temp_folder
             MIGRATE_LOGGER.report('Removing extracted tar archive...')
             shutil.rmtree(temp_folder)
@@ -120,7 +124,6 @@ def perform_v1_migration(
     update_metadata(metadata, LEGACY_TO_MAIN_REVISION)
 
     return working / DB_FILENAME
-
 
 def _json_to_sqlite(
     outpath: Path, data: dict, node_repos: Dict[str, List[Tuple[str, Optional[str]]]], batch_size: int = 100

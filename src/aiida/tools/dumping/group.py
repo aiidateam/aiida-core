@@ -10,10 +10,12 @@
 
 from __future__ import annotations
 
+import ipdb
 import os
 from datetime import datetime
 from pathlib import Path
 from typing import cast
+from functools import cached_property
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -27,12 +29,13 @@ from aiida.tools.dumping.utils import (
     delete_missing_node_dir,
     generate_process_default_dump_path,
     load_given_group,
+    do_filter_nodes
 )
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 
-class CollectionDumper(BaseDumper):
+class GroupDumper(BaseDumper):
     """Class to handle dumping of a collection of AiiDA ORM entities."""
 
     def __init__(
@@ -46,14 +49,12 @@ class CollectionDumper(BaseDumper):
         profile_dump_config: ProfileDumpConfig | None = None,
         dump_logger: DumpLogger | None = None,
         group: orm.Group | str | None = None,
-        collection_nodes: list[str] | None = None,
     ):
         """Initialize the CollectionDumper.
 
         :param base_dump_config: Base dumper instance or None (gets instantiated).
         :param dump_logger: Logger for the dumping (gets instantiated).
         :param group: AiiDA group of which the nodes should be dumped.
-        :param collection_nodes: List of AiiDA nodes that should be dumped, given by their UUIDs.
         :param process_dumper: Process dumper instance or None (gets instantiated).
         :param processes_to_dump: Optional precomputed processes to dump.
         """
@@ -66,24 +67,10 @@ class CollectionDumper(BaseDumper):
             base_dump_config=base_dump_config,
         )
 
-        self._collection_nodes: list[str] = []  # Explicit type annotation
-
-        self._processes_to_dump: ProcessContainer | None = None
-        self._processes_to_delete: ProcessContainer | None = None
-
-        if group is not None and collection_nodes is not None:
-            msg = 'Cannot provide both, a group, and a collection of nodes.'
-            raise Exception(msg)
-
-        elif group is not None:
+        self.group: orm.Group | None
+        if group is not None:
+            # This is only required to ensure we deal with `orm.Group` and not a `str`
             self.group = load_given_group(group)
-
-        elif collection_nodes is not None:
-            if any([not isinstance(n, str) for n in collection_nodes]):
-                msg = 'Currently, passing a collection of nodes is only supported via their UUID.'
-                raise TypeError(msg)
-            self._collection_nodes = collection_nodes
-
         else:
             self.group = None
 
@@ -97,38 +84,34 @@ class CollectionDumper(BaseDumper):
         self.organize_by_groups = self.profile_dump_config.organize_by_groups
         self.only_top_level_calcs = self.profile_dump_config.only_top_level_calcs
         self.only_top_level_workflows = self.profile_dump_config.only_top_level_workflows
+        self.filter_nodes_by_last_dump_time = self.profile_dump_config.filter_nodes_by_last_dump_time
 
-    @property
-    def collection_nodes(self) -> list[str]:
-        """Property to hold the collection nodes.
+        self.group_nodes: list[str] | None = None
+        self.processes_to_dump: ProcessContainer | None = None
+        self.processes_to_delete: ProcessContainer | None = None
 
-        Takes care of respecting the ``incremental`` attribute, and filtering by ``last_dump_time``.
+    @cached_property
+    def group_nodes(self) -> list[str]:
+        """Property to hold the nodes of the group.
 
         :return: List of collection node UUIDs.
         """
         # ipdb.set_trace()
-        if not self._collection_nodes:
-            self._collection_nodes = self._get_collection_nodes()
-        return self._collection_nodes
-
-    def _get_collection_nodes(self) -> list[str]:
-        # ipdb.set_trace()
         if self.group:
-            return [n.uuid for n in self.group.nodes]
+            nodes = self._get_group_nodes()
+        else:
+            nodes = self._get_no_group_nodes()
 
-        # if self.group:
-        #     qb = orm.QueryBuilder()
-        #     qb.append(orm.Group, filters={'uuid': self.group.uuid}, tag='group')
-        #     qb.append(orm.Node, with_group='group', project=['uuid'])
-        #     collection_uuids = cast(set[str], set(qb.all(flat=True)))
+        if self.filter_nodes_by_last_dump_time:
+            nodes = do_filter_nodes(nodes=nodes, last_dump_time=self.last_dump_time)
 
-        # TODO: Proper implementation here...
-        # if self.incremental and self.last_dump_time:
-        #     collection_nodes = filter_nodes_last_dump_time(
-        #         self._collection_nodes, last_dump_time=self.last_dump_time
-        #     )
+        return nodes
 
-    @property
+    def _get_group_nodes(self) -> list[str]:
+        assert self.group is not None, "`self.group` shouldn't be None at this stage."
+        return [n.uuid for n in self.group.nodes]
+
+    @cached_property
     def processes_to_dump(self) -> ProcessContainer:
         """Get the processes to dump from the collection of nodes.
 
@@ -136,9 +119,8 @@ class CollectionDumper(BaseDumper):
 
         :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
         """
-        if not self._processes_to_dump:
-            self._processes_to_dump = self._get_processes_to_dump()
-        return self._processes_to_dump
+
+        return self._get_processes_to_dump()
 
     def _get_processes_to_dump(self) -> ProcessContainer:
         """Retrieve the processeses from the collection nodes.
@@ -150,13 +132,14 @@ class CollectionDumper(BaseDumper):
         :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
         """
 
-        if not self.collection_nodes:
+        ipdb.set_trace()
+        if not self.group_nodes:
             raise Exception('Debugging')
             return ProcessContainer(calculations=[], workflows=[])
 
         # Better than: `nodes = [orm.load_node(n) for n in self.collection_nodes]`
         # As the list comprehension fetches each node from the DB individually
-        nodes_orm = orm.QueryBuilder().append(orm.Node, filters={'uuid': {'in': self.collection_nodes}}).all(flat=True)
+        nodes_orm = orm.QueryBuilder().append(orm.Node, filters={'uuid': {'in': self.group_nodes}}).all(flat=True)
 
         if self.profile_dump_config.only_top_level_workflows:
             workflows = [node for node in nodes_orm if isinstance(node, orm.WorkflowNode) and node.caller is None]
@@ -185,7 +168,7 @@ class CollectionDumper(BaseDumper):
             workflows=workflows,
         )
 
-    @property
+    @cached_property
     def processes_to_delete(self) -> ProcessContainer:
         """Get the processes to dump from the collection of nodes.
 
@@ -195,12 +178,9 @@ class CollectionDumper(BaseDumper):
         """
         if not self.delete_missing:
             return ProcessContainer(calculations=[], workflows=[])
-        if self._processes_to_delete is None:
-            self._processes_to_delete = self._get_processes_to_delete()
-        return self._processes_to_delete
+        return self._get_processes_to_delete()
 
-    # def _get_processes_to_delete(self) -> ProcessContainer:
-    def _get_processes_to_delete(self) -> list[str]:
+    def _get_processes_to_delete(self) -> ProcessContainer:
         dump_logger = self.dump_logger
         log = dump_logger.log
 
@@ -211,23 +191,97 @@ class CollectionDumper(BaseDumper):
         # it is highly likely that the last dump command with deletion was run a while ago
         # So I cannot filter by last dump time, but should probably take the whole set
 
-        if self.group:
-            qb = orm.QueryBuilder()
-            qb.append(orm.Group, filters={'uuid': self.group.uuid}, tag='group')
-            qb.append(orm.ProcessNode, with_group='group', project=['uuid'])
-            collection_uuids = cast(set[str], set(qb.all(flat=True)))
-        else:
-            collection_uuids = set(self.collection_nodes)
+        # This should not be needed anymore...
+        # if self.group:
+        #     qb = orm.QueryBuilder()
+        #     qb.append(orm.Group, filters={'uuid': self.group.uuid}, tag='group')
+        #     qb.append(orm.ProcessNode, with_group='group', project=['uuid'])
+        #     group_nodes = cast(set[str], set(qb.all(flat=True)))
+        # else:
+
+        assert self.group_nodes is not None
+        group_nodes = set(self.group_nodes)
 
         # Don't restrict here to only top-level processes, as all file paths, also for sub-processes are actually
         # created and stored in the log
         # profile_uuids = set([process.uuid for process in profile_processes if process.caller is None])
-        to_delete_uuids = list(dumped_uuids - collection_uuids)
+        to_delete_uuids = list(dumped_uuids - group_nodes)
 
         # TODO: Return ProcessContainer here -> For this, need to load ORM entities (again...) and
         # categorize by workflow or calculation...
+        # Re-use code from _get_processes_to_dump, move into function
+        # to_delete_orms =
 
         return to_delete_uuids
+
+    def _get_no_group_nodes(self) -> list[str]:
+        """Obtain nodes in the profile that are not part of any group.
+
+        :return: List of UUIDs of selected nodes.
+        """
+
+        profile_groups = cast(list[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
+        profile_nodes = cast(
+            list[str],
+            orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True),
+        )
+
+        nodes_in_groups: list[str] = [node.uuid for group in profile_groups for node in group.nodes]
+
+        # Need to expand here also with the called_descendants of `WorkflowNodes`, otherwise the called
+        # `CalculationNode`s for `WorkflowNode`s that are part of a group are dumped twice
+        # Get the called descendants of WorkflowNodes within the nodes_in_groups list
+        sub_nodes_in_groups: list[str] = [
+            node.uuid
+            for n in nodes_in_groups
+            # if isinstance((workflow_node := orm.load_node(n)), orm.WorkflowNode)
+            if isinstance((workflow_node := orm.load_node(n)), orm.ProcessNode)
+            for node in workflow_node.called_descendants
+        ]
+
+        nodes_in_groups += sub_nodes_in_groups
+
+        no_group_nodes: list[str] = [
+            profile_node for profile_node in profile_nodes if profile_node not in nodes_in_groups
+        ]
+        if self.filter_nodes_by_last_dump_time:
+            no_group_nodes = do_filter_nodes(nodes=no_group_nodes, last_dump_time=self.last_dump_time)
+
+        return no_group_nodes
+
+    # def _get_no_group_processes(self) -> list[str]:
+    #     """Obtain nodes in the profile that are not part of any group.
+
+    #     :return: List of UUIDs of selected nodes.
+    #     """
+
+    #     profile_groups = cast(list[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
+    #     profile_processes = cast(
+    #         list[str],
+    #         orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True),
+    #     )
+
+    #     nodes_in_groups: list[str] = [node.uuid for group in profile_groups for node in group.nodes]
+
+    #     # Need to expand here also with the called_descendants of `WorkflowNodes`, otherwise the called
+    #     # `CalculationNode`s for `WorkflowNode`s that are part of a group are dumped twice
+    #     # Get the called descendants of WorkflowNodes within the nodes_in_groups list
+    #     sub_nodes_in_groups: list[str] = [
+    #         node.uuid
+    #         for n in nodes_in_groups
+    #         # if isinstance((workflow_node := orm.load_node(n)), orm.WorkflowNode)
+    #         if isinstance((workflow_node := orm.load_node(n)), orm.ProcessNode)
+    #         for node in workflow_node.called_descendants
+    #     ]
+
+    #     nodes_in_groups += sub_nodes_in_groups
+
+    #     process_nodes: list[str] = [
+    #         profile_node for profile_node in profile_processes if profile_node not in nodes_in_groups
+    #     ]
+    #     process_nodes = filter_nodes_last_dump_time(nodes=process_nodes, last_dump_time=self.last_dump_time)
+
+    #     return process_nodes
 
     def delete_processes(self):
         # print(f'TO_DUMP_PROCESSES: {to_dump_processes}')
@@ -314,7 +368,7 @@ class CollectionDumper(BaseDumper):
         self.dump_parent_path = output_path
 
         self.dump_parent_path.mkdir(exist_ok=True, parents=True)
-        collection_nodes: list[str] = self.collection_nodes
+        group_nodes: list[str] = self.group_nodes
         collection_processes: ProcessContainer = self.processes_to_dump
 
         # ipdb.set_trace()

@@ -63,6 +63,7 @@ __all__ = (
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
+    'FILTER_BY_LAST_DUMP_TIME',
     'FLAT',
     'FORCE',
     'FORMULA_MODE',
@@ -906,4 +907,12 @@ DUMP_UNSEALED = OverridableOption(
     default=False,
     show_default=True,
     help='Also allow the dumping of unsealed process nodes.',
+)
+
+FILTER_BY_LAST_DUMP_TIME = OverridableOption(
+    '--filter-by-last-dump-time/--no-filter-by-last-dump-time',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Only select nodes whose `mtime` is after the last dump time.',
 )

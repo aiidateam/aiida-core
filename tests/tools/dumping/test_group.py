@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from aiida import orm
-from aiida.tools.dumping import CollectionDumper
+from aiida.tools.dumping import GroupDumper
 
 from .utils import compare_tree
 
@@ -89,9 +89,9 @@ class TestCollectionDumper:
         add_group: orm.Group = setup_add_group
         add_nodes = add_group.nodes
 
-        add_dumper = CollectionDumper(group=add_group)
+        add_dumper = GroupDumper(group=add_group)
 
-        nodes = add_dumper._get_collection_nodes()
+        nodes = add_dumper._get_group_nodes()
         assert len(nodes) == 1
         assert isinstance(nodes[0], str)
         assert nodes[0] == add_nodes[0].uuid
@@ -102,7 +102,7 @@ class TestCollectionDumper:
         # Also, last_dump_time is None here by default, so no filtering applied
         # Still contains the previous node in the returned collection
         cj_node1 = generate_calculation_node_add()
-        nodes = add_dumper._get_collection_nodes()
+        nodes = add_dumper._get_group_nodes()
         assert len(nodes) == 1
         assert isinstance(nodes[0], str)
         assert nodes[0] == add_nodes[0].uuid
@@ -110,7 +110,7 @@ class TestCollectionDumper:
 
         # Now, add the node to the group, should be captured by get_nodes
         add_group.add_nodes([cj_node1])
-        nodes = add_dumper._get_collection_nodes()
+        nodes = add_dumper._get_group_nodes()
         assert len(nodes) == 2
         assert set(nodes) == set([add_nodes[0].uuid, cj_node1.uuid])
 
@@ -120,14 +120,14 @@ class TestCollectionDumper:
         cj_node2 = generate_calculation_node_add()
         add_group.add_nodes([cj_node2])
 
-        nodes = add_dumper._get_collection_nodes()
+        nodes = add_dumper._get_group_nodes()
         assert len(nodes) == 1
         assert nodes[0] == cj_node2.uuid
 
         for invalid_collection in [{'foo': 'bar'}, [1.0, 1.1]]:
-            collection_dumper = CollectionDumper(group=invalid_collection)
+            collection_dumper = GroupDumper(group=invalid_collection)
             with pytest.raises(ValueError):
-                collection_dumper._get_collection_nodes()
+                collection_dumper._get_group_nodes()
 
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_get_processes_to_dump(self, setup_add_group, setup_multiply_add_group, duplicate_group):
@@ -137,8 +137,8 @@ class TestCollectionDumper:
         add_nodes = list(add_group.nodes)
         multiply_add_nodes = list(multiply_add_group.nodes)
 
-        add_dumper = CollectionDumper(group=add_group)
-        multiply_add_dumper = CollectionDumper(group=multiply_add_group)
+        add_dumper = GroupDumper(group=add_group)
+        multiply_add_dumper = GroupDumper(group=multiply_add_group)
 
         add_process_to_dump = add_dumper._get_processes_to_dump()
         assert len(add_process_to_dump.calculations) == 1
@@ -160,7 +160,7 @@ class TestCollectionDumper:
         add_group_label = add_group.label
         add_group_path = tmp_path / add_group_label
 
-        add_dumper = CollectionDumper(group=add_group, output_path=add_group_path)
+        add_dumper = GroupDumper(group=add_group, output_path=add_group_path)
 
         add_dumper._dump_processes(add_dumper._get_processes_to_dump().calculations)
 
@@ -182,14 +182,14 @@ class TestCollectionDumper:
         multiply_add_group_label = multiply_add_group.label
         multiply_add_group_path = tmp_path / multiply_add_group_label
 
-        multiply_add_dumper = CollectionDumper(group=multiply_add_group, output_path=multiply_add_group_path)
+        multiply_add_dumper = GroupDumper(group=multiply_add_group, output_path=multiply_add_group_path)
 
         # No calculations to dump when deduplication is enabled
         multiply_add_dumper._dump_processes(multiply_add_dumper._get_processes_to_dump().calculations)
         assert not (multiply_add_group_path / 'calculations').exists()
 
         # Now, disable de-duplication -> Should dump calculations
-        multiply_add_dumper_no_dedup = CollectionDumper(
+        multiply_add_dumper_no_dedup = GroupDumper(
             group=multiply_add_group, output_path=multiply_add_group_path, deduplicate=False
         )
 

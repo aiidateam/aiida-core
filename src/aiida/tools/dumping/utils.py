@@ -27,7 +27,7 @@ __all__ = (
     'NodeDumpKeyMapper',
     'ProcessContainer',
     'SafeguardFileMapping',
-    'filter_nodes_last_dump_time',
+    'do_filter_nodes',
     'get_group_subpath',
     'prepare_dump_path',
     'safe_delete_dir',
@@ -223,7 +223,7 @@ def _delete_dir_recursive(path):
         print(f'exception msg: {exception}')
 
 
-def filter_nodes_last_dump_time(nodes: list[str], last_dump_time: datetime | None = None) -> list[str]:
+def do_filter_nodes(nodes: list[str], last_dump_time: datetime | None = None) -> list[str]:
     """Filter a list of nodes by the last dump time of the corresponding dumper.
 
     :param nodes: A list of node identifiers, which can be either UUIDs (str) or IDs (int).
@@ -256,7 +256,7 @@ def get_group_subpath(group: orm.Group) -> Path:
     return group_subpath / f'{group.label}'
 
 
-def load_given_group(group: orm.Group | str) -> orm.Group | None:
+def load_given_group(group: orm.Group | str) -> orm.Group:
     """Validate the given group identifier.
 
     :param group: The group identifier to validate.

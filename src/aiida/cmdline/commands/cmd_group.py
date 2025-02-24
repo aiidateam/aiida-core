@@ -687,7 +687,7 @@ def group_mirror(
     from pathlib import Path
 
     # Maybe point to actual modules here
-    from aiida.tools.dumping import CollectionDumper  # ProfileDumper
+    from aiida.tools.dumping import GroupDumper  # ProfileDumper
     from aiida.tools.dumping.config import (
         BaseDumpConfig,
         ProcessDumpConfig,
@@ -776,7 +776,7 @@ def group_mirror(
     # which processes should be dumped is evaluated beforehand (here)
     last_dump_time = datetime.now().astimezone()
 
-    group_dumper = CollectionDumper(
+    group_dumper = GroupDumper(
         dump_parent_path=dump_paths.dump_parent_path,
         dump_sub_path=dump_paths.dump_sub_path,
         last_dump_time=last_dump_time,

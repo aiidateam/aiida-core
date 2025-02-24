@@ -11,6 +11,7 @@
 # TODO: Add option to just print the resulting directory tree
 
 from __future__ import annotations
+import ipdb
 
 from datetime import datetime
 from pathlib import Path
@@ -21,7 +22,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import load_profile
 from aiida.manage.configuration.profile import Profile
 from aiida.tools.dumping.base import BaseDumper
-from aiida.tools.dumping.collection import CollectionDumper
+from aiida.tools.dumping.group import GroupDumper
 from aiida.tools.dumping.config import (
     BaseDumpConfig,
     ProcessDumpConfig,
@@ -30,7 +31,7 @@ from aiida.tools.dumping.config import (
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.utils import (
     delete_missing_node_dir,
-    filter_nodes_last_dump_time,
+    do_filter_nodes,
     get_group_subpath,
     load_given_group,
 )
@@ -38,6 +39,7 @@ from aiida.tools.dumping.utils import (
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 # TODO: Use ProcessContainer rather than list[str]
+# NOTE: This class just orchestrates the group_dumpers, it doesn't "obtain" the nodes itself
 
 
 class ProfileDumper(BaseDumper):
@@ -111,17 +113,17 @@ class ProfileDumper(BaseDumper):
 
         no_group_output_path = self.dump_parent_path / self.dump_sub_path / no_group_subpath
 
-        no_group_nodes = self._get_no_group_processes()
-        no_group_dumper = CollectionDumper(
+        no_group_dumper = GroupDumper(
             dump_parent_path=self.dump_parent_path / self.dump_sub_path,
             dump_sub_path=no_group_subpath,
             group=None,
-            collection_nodes=no_group_nodes,
             base_dump_config=self.base_dump_config,
             process_dump_config=self.process_dump_config,
             profile_dump_config=self.profile_dump_config,
             dump_logger=self.dump_logger,
         )
+
+
 
         if self.should_dump_processes and not no_group_dumper.processes_to_dump.is_empty:
             msg = f'Dumping processes not in any group for profile `{self.profile.name}`...'
@@ -143,7 +145,7 @@ class ProfileDumper(BaseDumper):
             else:
                 group_subpath = Path('.')
 
-            group_dumper = CollectionDumper(
+            group_dumper = GroupDumper(
                 dump_parent_path=self.dump_parent_path / self.dump_sub_path,
                 dump_sub_path=group_subpath,
                 base_dump_config=self.base_dump_config,
@@ -169,40 +171,6 @@ class ProfileDumper(BaseDumper):
                         time=datetime.now().astimezone(),
                     ),
                 )
-
-    def _get_no_group_processes(self) -> list[str]:
-        """Obtain nodes in the profile that are not part of any group.
-
-        :return: List of UUIDs of selected nodes.
-        """
-
-        profile_groups = cast(list[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
-        profile_processes = cast(
-            list[str],
-            orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True),
-        )
-
-        nodes_in_groups: list[str] = [node.uuid for group in profile_groups for node in group.nodes]
-
-        # Need to expand here also with the called_descendants of `WorkflowNodes`, otherwise the called
-        # `CalculationNode`s for `WorkflowNode`s that are part of a group are dumped twice
-        # Get the called descendants of WorkflowNodes within the nodes_in_groups list
-        sub_nodes_in_groups: list[str] = [
-            node.uuid
-            for n in nodes_in_groups
-            # if isinstance((workflow_node := orm.load_node(n)), orm.WorkflowNode)
-            if isinstance((workflow_node := orm.load_node(n)), orm.ProcessNode)
-            for node in workflow_node.called_descendants
-        ]
-
-        nodes_in_groups += sub_nodes_in_groups
-
-        process_nodes: list[str] = [
-            profile_node for profile_node in profile_processes if profile_node not in nodes_in_groups
-        ]
-        process_nodes = filter_nodes_last_dump_time(nodes=process_nodes, last_dump_time=self.last_dump_time)
-
-        return process_nodes
 
     def dump_processes(self):
         # No groups selected, dump data which is not part of any group

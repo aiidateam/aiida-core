@@ -8,7 +8,6 @@
 ###########################################################################
 """Migration from the "legacy" JSON format, to an sqlite database, and node uuid based repository to hash based."""
 
-import sys
 import shutil
 import tarfile
 from contextlib import contextmanager
@@ -79,7 +78,7 @@ def perform_v1_migration(
             temp_folder = working / 'temp_unpack'
             with tarfile.open(_inpath, 'r') as tar:
                 MIGRATE_LOGGER.report('Extracting tar archive...(may take a while)')
-                if sys.version_info >= (3, 12):
+                if hasattr(tarfile, 'data_filter'):
                     tar.extractall(temp_folder, filter='data')
                 else:
                     tar.extractall(temp_folder)

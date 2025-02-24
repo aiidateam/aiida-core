@@ -16,8 +16,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import cast
 
-import ipdb
-
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import load_profile

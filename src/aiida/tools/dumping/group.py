@@ -10,12 +10,13 @@
 
 from __future__ import annotations
 
-import ipdb
 import os
 from datetime import datetime
+from functools import cached_property
 from pathlib import Path
 from typing import cast
-from functools import cached_property
+
+import ipdb
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -27,9 +28,9 @@ from aiida.tools.dumping.utils import (
     NodeDumpKeyMapper,
     ProcessContainer,
     delete_missing_node_dir,
+    do_filter_nodes,
     generate_process_default_dump_path,
     load_given_group,
-    do_filter_nodes
 )
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')

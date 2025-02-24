@@ -13,4 +13,4 @@ from .logger import DumpLogger
 from .process import ProcessDumper
 from .profile import ProfileDumper
 
-__all__ = ('GroupDumper', 'DumpLogger', 'ProcessDumper', 'ProfileDumper')
+__all__ = ('DumpLogger', 'GroupDumper', 'ProcessDumper', 'ProfileDumper')

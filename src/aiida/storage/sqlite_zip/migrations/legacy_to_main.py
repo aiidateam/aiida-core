@@ -9,6 +9,7 @@
 """Migration from the "legacy" JSON format, to an sqlite database, and node uuid based repository to hash based."""
 
 import shutil
+import sys
 import tarfile
 from contextlib import contextmanager
 from datetime import datetime

@@ -276,6 +276,7 @@ def profile_delete(force, delete_data, profiles):
 @options.DRY_RUN()
 @options.OVERWRITE()
 @options.INCREMENTAL()
+@options.FILTER_BY_LAST_DUMP_TIME()
 @options.DUMP_PROCESSES()
 @options.GROUPS()
 @options.ORGANIZE_BY_GROUPS()
@@ -297,6 +298,7 @@ def profile_mirror(
     dry_run,
     overwrite,
     incremental,
+    filter_by_last_dump_time,
     dump_processes,
     groups,
     organize_by_groups,

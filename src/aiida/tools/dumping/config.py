@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from aiida.tools.dumping.utils import do_filter_nodes
+
 
 @dataclass
 class BaseDumpConfig:
@@ -45,3 +47,4 @@ class ProfileDumpConfig:
     only_groups: bool = False
     only_top_level_calcs: bool = True
     only_top_level_workflows: bool = True
+    filter_nodes_by_last_dump_time: bool = True

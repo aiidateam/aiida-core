@@ -154,7 +154,9 @@ class ProfileDumper(BaseDumper):
                 dump_logger=self.dump_logger,
                 group=group,
             )
-            ipdb.set_trace()
+            # ipdb.set_trace()
+            # FIXME: Hack for now...
+            # self.processes
 
             if self.should_dump_processes and not group_dumper.processes_to_dump.is_empty:
                 msg = f'Dumping processes in group `{group.label}` for profile `{self.profile.name}`...'

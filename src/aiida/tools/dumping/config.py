@@ -11,8 +11,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from aiida.tools.dumping.utils import do_filter_nodes
-
 
 @dataclass
 class BaseDumpConfig:

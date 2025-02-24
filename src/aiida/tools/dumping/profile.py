@@ -11,7 +11,6 @@
 # TODO: Add option to just print the resulting directory tree
 
 from __future__ import annotations
-import ipdb
 
 from datetime import datetime
 from pathlib import Path
@@ -22,16 +21,15 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import load_profile
 from aiida.manage.configuration.profile import Profile
 from aiida.tools.dumping.base import BaseDumper
-from aiida.tools.dumping.group import GroupDumper
 from aiida.tools.dumping.config import (
     BaseDumpConfig,
     ProcessDumpConfig,
     ProfileDumpConfig,
 )
+from aiida.tools.dumping.group import GroupDumper
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.utils import (
     delete_missing_node_dir,
-    do_filter_nodes,
     get_group_subpath,
     load_given_group,
 )
@@ -122,8 +120,6 @@ class ProfileDumper(BaseDumper):
             profile_dump_config=self.profile_dump_config,
             dump_logger=self.dump_logger,
         )
-
-
 
         if self.should_dump_processes and not no_group_dumper.processes_to_dump.is_empty:
             msg = f'Dumping processes not in any group for profile `{self.profile.name}`...'

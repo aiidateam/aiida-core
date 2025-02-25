@@ -384,6 +384,7 @@ def profile_mirror(
     )
 
     process_dump_config = ProcessDumpConfig(
+    # process_dump_config.include_inputs = include_inputs
         include_inputs=include_inputs,
         include_outputs=include_outputs,
         include_attributes=include_attributes,

@@ -92,6 +92,7 @@ class ProfileDumper(BaseDumper):
         self.profile_dump_config = profile_dump_config or ProfileDumpConfig()
 
         # Construct `GroupDumpConfig` from options passed via `ProfileDumpConfig`
+        # The arguments of `GroupDumpConfig` are a subset of `ProfileDumpConfig`
         self.group_dump_config = GroupDumpConfig(
             **{
                 field.name: getattr(self.profile_dump_config, field.name)
@@ -158,7 +159,7 @@ class ProfileDumper(BaseDumper):
                 group=group,
             )
 
-            ipdb.set_trace()
+            # ipdb.set_trace()
 
             processes_to_dump = group_dumper.processes_to_dump
 

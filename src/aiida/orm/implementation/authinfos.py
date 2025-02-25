@@ -12,7 +12,7 @@ import abc
 import sys
 from typing import TYPE_CHECKING, Any, Dict, Protocol, Union
 
-import keyring
+import keyringrs
 
 from .entities import BackendCollection, BackendEntity
 
@@ -101,15 +101,17 @@ class BackendAuthInfo(BackendEntity):
 
             :raises RuntimeError: If the keychain is not accessible.
             """
-
-            return keyring.get_password(self._SERVICE_NAME, f'{self._unique_obj.uuid}')
+            try:
+                return keyringrs.Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').get_password()
+            except KeyError:
+                return None
 
         def set_password(self, password: str) -> None:
             """Sets the entry with the uuid of the unique_obj to system's secure storage with the `password`.
 
             :raises RuntimeError: If the keychain is not accessible.
             """
-            keyring.set_password(self._SERVICE_NAME, f'{self._unique_obj.uuid}', password)
+            keyringrs.Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').set_password(password)
 
         def delete_password(self) -> None:
             """Deletes the password associated with this unique_obj from system's secure storage if available.
@@ -118,12 +120,9 @@ class BackendAuthInfo(BackendEntity):
             """
 
             try:
-                keyring.delete_password(self._SERVICE_NAME, f'{self._unique_obj.uuid}')
-            except keyring.errors.PasswordDeleteError as exc:
-                # error when no password for entry is available
-                if str(exc) == 'Item not found':
-                    return None
-                raise
+                keyringrs.Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').delete_credential()
+            except KeyError:
+                return None
 
         def get_cmd_stdout_password(self) -> str:
             """Returns the command line command to retrieve the password to stdout.
@@ -131,8 +130,9 @@ class BackendAuthInfo(BackendEntity):
             This is needed for the gotounique_obj commands."""
 
             python_command = (
-                'from keyring import get_password;'
-                f'print(get_password("{self._SERVICE_NAME}", "{self._unique_obj.uuid}"), end="")'
+                'from keyringrs import Entry;'
+                f'entry = Entry("{self._SERVICE_NAME}", "{self._unique_obj.uuid}");'
+                'print(entry.get_password(), end="")'
             )
             return f"{sys.executable} -c '{python_command}'"
 

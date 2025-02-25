@@ -1541,13 +1541,13 @@ def test_gotocomputer_command(custom_transport):
         assert 'ssh' in goto_computer_cmd
 
 
-def test_validate_os_supports_secure_storage():
-    import keyring
+def test_validate_os_supports_secure_storage(monkeypatch):
+    import keyringrs
 
-    old_keyring = keyring.get_keyring()
-    try:
-        keyring.set_keyring(keyring.backends.fail.Keyring())
-        with pytest.raises(OSError, match=r'.*Cannot use password authentication without secure storage.*'):
-            ssh_async.validate_os_supports_secure_storage(None, None, 'pw')
-    finally:
-        keyring.set_keyring(old_keyring)
+    class FailingEntry:
+        def set_password(self, _: str):
+            raise RuntimeError('Could not access secure storage.')
+
+    monkeypatch.setattr(keyringrs, 'Entry', FailingEntry)
+    with pytest.raises(OSError, match=r'.*Cannot use password authentication without secure storage.*'):
+        ssh_async.validate_os_supports_secure_storage(None, None, 'pw')

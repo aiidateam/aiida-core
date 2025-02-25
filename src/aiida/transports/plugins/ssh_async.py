@@ -39,14 +39,17 @@ __all__ = ('AsyncSshTransport',)
 
 def validate_os_supports_secure_storage(ctx, param, value: str):
     if value:
-        import keyring
+        import keyringrs
 
-        if isinstance(keyring.get_keyring(), keyring.backends.fail.Keyring):
+        try:
+            entry = keyringrs.Entry('aiida.transports.ssh_async', 'VALIDATE_OS_SUPPORTS_SECURE_STORAGE')
+            entry.set_password('DUMMY')
+            entry.delete_credential()
+        except Exception as err:
             raise OSError(
-                'Could not find secure storage on your system for storing the password. '
-                'Cannot use password authentication without secure storage. '
-                'Please refer to https://github.com/jaraco/keyring for supported secure storages.'
-            )
+                'Could not access secure storage on your system for storing the password. '
+                'Cannot use password authentication without secure storage.'
+            ) from err
     return value
 
 

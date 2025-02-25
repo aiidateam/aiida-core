@@ -14,10 +14,9 @@ from __future__ import annotations
 
 import dataclasses
 from datetime import datetime
+from functools import cached_property
 from pathlib import Path
 from typing import cast
-import ipdb
-from functools import cached_property
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER

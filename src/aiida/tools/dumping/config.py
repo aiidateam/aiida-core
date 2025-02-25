@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+# TODO: Check if dataclasses are meant to
 
 @dataclass
 class BaseDumpConfig:

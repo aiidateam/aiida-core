@@ -33,7 +33,7 @@ from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 from aiida.common.exceptions import NotExistent
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, QueryDictType
-from aiida.storage import psql_dos, sqlite_dos
+from aiida.storage import psql_dos, sqlite_dos, sqlite_temp, sqlite_zip
 
 from .joiner import JoinReturn, SqlaJoiner
 
@@ -803,7 +803,11 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         backend_class = self._backend.__class__
         date_format = '%Y-%m-%d'
 
-        if backend_class == sqlite_dos.backend.SqliteDosStorage:
+        if backend_class in {
+            sqlite_dos.backend.SqliteDosStorage,
+            sqlite_zip.SqliteZipBackend,
+            sqlite_temp.SqliteTempBackend,
+        }:
             cday = sa_func.strftime(date_format, sa_func.datetime(self.Node.ctime, 'localtime'))
 
             def date_to_str(d):

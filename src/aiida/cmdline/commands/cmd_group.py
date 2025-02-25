@@ -645,6 +645,7 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
 @options.DRY_RUN()
 @options.OVERWRITE()
 @options.INCREMENTAL()
+@options.FILTER_BY_LAST_DUMP_TIME()
 @options.DUMP_PROCESSES()
 # ? Could (should) use GROUP(S) argument here instead of option
 @options.SYMLINK_DUPLICATES()
@@ -665,6 +666,7 @@ def group_mirror(
     dry_run,
     overwrite,
     incremental,
+    filter_by_last_dump_time,
     dump_processes,
     # organize_by_groups,
     symlink_duplicates,
@@ -691,7 +693,7 @@ def group_mirror(
     from aiida.tools.dumping.config import (
         BaseDumpConfig,
         ProcessDumpConfig,
-        ProfileDumpConfig,
+        GroupDumpConfig,
     )
     from aiida.tools.dumping.logger import DumpLogger
     from aiida.tools.dumping.utils import (
@@ -706,7 +708,7 @@ def group_mirror(
     # during the incremental mirroring
 
     dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=group)
-    output_path = dump_paths.dump_parent_path / dump_paths.dump_sub_path
+    output_path = dump_paths.parent / dump_paths.child
 
     safeguard_file = SafeguardFileMapping.GROUP.value
     safeguard_file_path: Path = output_path / safeguard_file
@@ -714,6 +716,7 @@ def group_mirror(
     msg = f'Mirroring data of group `{group.label}` at path: `{output_path.name}`.'
     echo.echo_report(msg)
 
+    # This cleans the entire dumping directory, including the log file
     try:
         prepare_dump_path(
             path_to_validate=output_path,
@@ -736,15 +739,20 @@ def group_mirror(
     except IndexError:
         last_dump_time = None
 
+
+    # Update the `last_dump_time` now, rather than after the dumping, as writing files to disk can take some time, and
+    # which processes should be dumped is evaluated beforehand (here)
+    current_dump_time = datetime.now().astimezone()
+
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
         dump_logger = DumpLogger.from_file(
-            dump_parent_path=dump_paths.dump_parent_path, dump_sub_path=dump_paths.dump_sub_path
+            dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child
         )
     except (json.JSONDecodeError, OSError):
         dump_logger = DumpLogger(
-            dump_parent_path=dump_paths.dump_parent_path,
-            dump_sub_path=dump_paths.dump_sub_path,
+            dump_parent_path=dump_paths.parent,
+            dump_sub_path=dump_paths.child,
         )
 
     # Create config options that hold the various settings for dumping data
@@ -763,25 +771,21 @@ def group_mirror(
 
     # These options here are all set to `ProfileDumpConfig`, even though, as evident, they also relate to the dumping of
     # just a single group
-    profile_dump_config = ProfileDumpConfig(
+    group_dump_config = GroupDumpConfig(
         dump_processes=dump_processes,
         symlink_duplicates=symlink_duplicates,
         delete_missing=delete_missing,
-        organize_by_groups=True,
         only_top_level_calcs=only_top_level_calcs,
         only_top_level_workflows=only_top_level_workflows,
+        filter_by_last_dump_time=filter_by_last_dump_time
     )
 
-    # Update the `last_dump_time` now, rather than after the dumping, as writing files to disk can take some time, and
-    # which processes should be dumped is evaluated beforehand (here)
-    last_dump_time = datetime.now().astimezone()
-
     group_dumper = GroupDumper(
-        dump_parent_path=dump_paths.dump_parent_path,
-        dump_sub_path=dump_paths.dump_sub_path,
+        dump_parent_path=dump_paths.parent,
+        dump_sub_path=dump_paths.child,
         last_dump_time=last_dump_time,
         base_dump_config=base_dump_config,
-        profile_dump_config=profile_dump_config,
+        group_dump_config=group_dump_config,
         process_dump_config=process_dump_config,
         dump_logger=dump_logger,
         group=group,
@@ -824,8 +828,7 @@ def group_mirror(
 
     # Append the current dump time to dumping safeguard file
     with safeguard_file_path.open('a') as fhandle:
-        fhandle.write(f'Last profile mirror time: {last_dump_time.isoformat()}\n')
+        fhandle.write(f'Last profile mirror time: {current_dump_time.isoformat()}\n')
 
     # Write the logging json file to disk
-
     dump_logger.save_log()

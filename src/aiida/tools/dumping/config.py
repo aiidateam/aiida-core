@@ -32,17 +32,24 @@ class ProcessDumpConfig:
     dump_unsealed: bool = False
 
 
-# TODO: Some of those are also needed for the CollectionDumper
 @dataclass
-class ProfileDumpConfig:
-    """Arguments for dumping profile data."""
-
-    # TODO: Possibly add profile as attribute here?
+class CollectionDumpConfig:
+    """Shared arguments for dumping of collections of nodes."""
     dump_processes: bool = True
     symlink_duplicates: bool = False
     delete_missing: bool = False
-    organize_by_groups: bool = True
-    only_groups: bool = False
     only_top_level_calcs: bool = True
     only_top_level_workflows: bool = True
-    filter_nodes_by_last_dump_time: bool = True
+    filter_by_last_dump_time: bool = True
+
+@dataclass
+class GroupDumpConfig(CollectionDumpConfig):
+    """Arguments for dumping group data."""
+    ...
+
+
+@dataclass
+class ProfileDumpConfig(CollectionDumpConfig):
+    """Arguments for dumping profile data."""
+    organize_by_groups: bool = True
+    only_groups: bool = False

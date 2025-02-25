@@ -337,7 +337,7 @@ def profile_mirror(
         echo.echo_critical(msg)
 
     dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=profile)
-    output_path_absolute = dump_paths.output_path_absolute
+    output_path_absolute = dump_paths.absolute
     safeguard_file = SafeguardFileMapping.PROFILE.value
     safeguard_file_path: Path = output_path_absolute / safeguard_file
 
@@ -368,10 +368,14 @@ def profile_mirror(
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
         dump_logger = DumpLogger.from_file(
-            dump_parent_path=dump_paths.dump_parent_path, dump_sub_path=dump_paths.dump_sub_path
+            dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child
         )
     except (json.JSONDecodeError, OSError):
-        dump_logger = DumpLogger(dump_parent_path=dump_paths.dump_parent_path, dump_sub_path=dump_paths.dump_sub_path)
+        dump_logger = DumpLogger(dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child)
+
+    # Append the current dump time to dumping safeguard file
+    # Set the `last_dump_time` now after the dumping, as writing files to disk can take some time
+    current_dump_time = datetime.now().astimezone()
 
     # Create config options that hold the various settings for dumping data
     base_dump_config = BaseDumpConfig(
@@ -399,12 +403,13 @@ def profile_mirror(
 
     profile_dumper = ProfileDumper(
         profile=profile,
-        dump_parent_path=dump_paths.dump_parent_path,
-        dump_sub_path=dump_paths.dump_sub_path,
+        dump_parent_path=dump_paths.parent,
+        dump_sub_path=dump_paths.child,
+        last_dump_time=last_dump_time,
+        dump_logger=dump_logger,
         base_dump_config=base_dump_config,
         process_dump_config=process_dump_config,
         profile_dump_config=profile_dump_config,
-        dump_logger=dump_logger,
         groups=groups,
     )
 
@@ -452,12 +457,8 @@ def profile_mirror(
         echo.echo_success(msg)
         # print(relabeled_paths)
 
-    # Append the current dump time to dumping safeguard file
-    # Set the `last_dump_time` now after the dumping, as writing files to disk can take some time
-    last_dump_time = datetime.now().astimezone()
-
     with safeguard_file_path.open('a') as fhandle:
-        msg = f'Last profile mirror time: {last_dump_time.isoformat()}\n'
+        msg = f'Last profile mirror time: {current_dump_time.isoformat()}\n'
         fhandle.write(msg)
 
     # Write the logging json file to disk

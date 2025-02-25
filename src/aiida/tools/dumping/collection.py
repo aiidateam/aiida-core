@@ -16,7 +16,8 @@ from functools import cached_property
 from pathlib import Path
 from typing import cast
 
-from aiida import orm
+from aiida import orm, load_profile
+from aiida.manage import Profile
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import BaseDumpConfig, GroupDumpConfig, ProcessDumpConfig
@@ -36,6 +37,10 @@ logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 class CollectionDumper:  # (BaseDumper):
     """Class to handle dumping of a collection of AiiDA ORM entities."""
+
+    @staticmethod
+    def resolve_identifier(identifier: orm.Group | Profile | str | None) -> orm.Group | Profile | None:
+        ...
 
     def __init__(
         self,
@@ -57,13 +62,13 @@ class CollectionDumper:  # (BaseDumper):
         :param processes_to_dump: Optional precomputed processes to dump.
         """
 
-        super().__init__(
-            dump_parent_path=dump_parent_path,
-            dump_sub_path=dump_sub_path,
-            last_dump_time=last_dump_time,
-            dump_logger=dump_logger,
-            base_dump_config=base_dump_config,
-        )
+        # super().__init__(
+        #     dump_parent_path=dump_parent_path,
+        #     dump_sub_path=dump_sub_path,
+        #     last_dump_time=last_dump_time,
+        #     dump_logger=dump_logger,
+        #     base_dump_config=base_dump_config,
+        # )
 
         self.group: orm.Group | None
 
@@ -73,16 +78,16 @@ class CollectionDumper:  # (BaseDumper):
         else:
             self.group = None
 
-        self.base_dump_config = base_dump_config or BaseDumpConfig()
-        self.process_dump_config = process_dump_config or ProcessDumpConfig()
-        self.group_dump_config = group_dump_config or GroupDumpConfig()
+        # self.base_dump_config = base_dump_config or BaseDumpConfig()
+        # self.process_dump_config = process_dump_config or ProcessDumpConfig()
+        # self.group_dump_config = group_dump_config or GroupDumpConfig()
 
-        self.should_dump_processes = self.group_dump_config.dump_processes
-        self.symlink_duplicates = self.group_dump_config.symlink_duplicates
-        self.delete_missing = self.group_dump_config.delete_missing
-        self.only_top_level_calcs = self.group_dump_config.only_top_level_calcs
-        self.only_top_level_workflows = self.group_dump_config.only_top_level_workflows
-        self.filter_nodes_by_last_dump_time = self.group_dump_config.filter_by_last_dump_time
+        # self.should_dump_processes = self.group_dump_config.dump_processes
+        # self.symlink_duplicates = self.group_dump_config.symlink_duplicates
+        # self.delete_missing = self.group_dump_config.delete_missing
+        # self.only_top_level_calcs = self.group_dump_config.only_top_level_calcs
+        # self.only_top_level_workflows = self.group_dump_config.only_top_level_workflows
+        # self.filter_nodes_by_last_dump_time = self.group_dump_config.filter_by_last_dump_time
 
         # ipdb.set_trace()
 

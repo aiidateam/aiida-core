@@ -25,7 +25,7 @@ from aiida.tools.dumping.logger import DumpLogger
 __all__ = (
     'DumpPaths',
     'NodeDumpKeyMapper',
-    'ProcessContainer',
+    'ProcessDumpContainer',
     'SafeguardFileMapping',
     'do_filter_nodes',
     'get_group_subpath',
@@ -36,7 +36,7 @@ __all__ = (
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 
-class ProcessContainer(NamedTuple):
+class ProcessDumpContainer(NamedTuple):
     calculations: list[orm.CalculationNode]
     workflows: list[orm.WorkflowNode]
     # ? Add groups here, as well?
@@ -69,15 +69,15 @@ class NodeDumpKeyMapper:
 
 @dataclass
 class DumpPaths:
-    dump_parent_path: Path
-    dump_sub_path: Path
-    output_path_absolute: Path
+    parent: Path
+    child: Path
+    absolute: Path
 
 
 class SafeguardFileMapping(Enum):
-    PROCESS = '.aiida_process_metadata'
-    GROUP = '.verdi_group_mirror'
-    PROFILE = '.verdi_profile_mirror'
+    PROCESS = '.aiida_process_safeguard'
+    GROUP = '.aiida_group_safeguard'
+    PROFILE = '.aiida_profile_safeguard'
 
 
 def prepare_dump_path(
@@ -314,7 +314,33 @@ def generate_profile_default_dump_path(profile: Profile, prefix: str = 'profile'
 
 
 def generate_group_default_dump_path(group: orm.Group, prefix: str = 'group', appendix: str = 'mirror') -> Path:
-    return Path(f'{prefix}-{group.label}-{appendix}')
+    # TODO: Or, make sure mirror not in the group name?
+    if 'group' in group.label:
+        if appendix == 'group' and prefix != 'group':
+            label_elements = [prefix, group.label]
+        elif prefix == 'group' and appendix != 'group':
+            label_elements = [group.label, appendix]
+        elif prefix == 'group' and appendix == 'group':
+            label_elements = [group.label]
+        else:
+            label_elements = [prefix, group.label, appendix]
+
+    elif 'mirror' in group.label:
+        if appendix == 'mirror' and prefix != 'mirror':
+            label_elements = [prefix, group.label]
+        elif prefix == 'mirror' and appendix != 'mirror':
+            label_elements = [group.label, appendix]
+        elif prefix == 'mirror' and appendix == 'mirror':
+            label_elements = [group.label]
+        else:
+            label_elements = [prefix, group.label, appendix]
+
+    else:
+        label_elements = [prefix, group.label, appendix]
+
+    return_str = '-'.join(label_elements)
+
+    return Path(return_str)
 
 
 def resolve_click_path_argument_for_dumping(
@@ -341,9 +367,9 @@ def resolve_click_path_argument_for_dumping(
                 dump_parent_path = Path.cwd()
 
             return DumpPaths(
-                dump_parent_path=dump_parent_path,
-                dump_sub_path=dump_sub_path,
-                output_path_absolute=dump_parent_path / dump_sub_path,
+                parent=dump_parent_path,
+                child=dump_sub_path,
+                absolute=dump_parent_path / dump_sub_path,
             )
 
     supported_types = ', '.join(cls.__name__ for cls in ENTITY_DUMP_FUNCTIONS)

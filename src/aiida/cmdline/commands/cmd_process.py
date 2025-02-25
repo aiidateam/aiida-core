@@ -609,7 +609,7 @@ def process_dump(
     )
 
     dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=process)
-    output_path = dump_paths.dump_parent_path / dump_paths.dump_sub_path
+    output_path = dump_paths.parent / dump_paths.child
     safeguard_file = SafeguardFileMapping.PROCESS.value
 
     # ? This is also done inside the `dump` method
@@ -638,8 +638,8 @@ def process_dump(
     )
 
     process_dumper = ProcessDumper(
-        dump_parent_path=dump_paths.dump_parent_path,
-        dump_sub_path=dump_paths.dump_sub_path,
+        dump_parent_path=dump_paths.parent,
+        dump_sub_path=dump_paths.child,
         # TODO: last_dump_time currently
         last_dump_time=None,
         # last_dump_time=last_dump_time,

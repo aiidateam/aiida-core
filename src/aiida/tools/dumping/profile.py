@@ -12,9 +12,12 @@
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import datetime
 from pathlib import Path
 from typing import cast
+import ipdb
+from functools import cached_property
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -23,12 +26,14 @@ from aiida.manage.configuration.profile import Profile
 from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import (
     BaseDumpConfig,
+    GroupDumpConfig,
     ProcessDumpConfig,
     ProfileDumpConfig,
 )
 from aiida.tools.dumping.group import GroupDumper
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.utils import (
+    ProcessDumpContainer,
     delete_missing_node_dir,
     get_group_subpath,
     load_given_group,
@@ -69,9 +74,13 @@ class ProfileDumper(BaseDumper):
             dump_parent_path=dump_parent_path,
             dump_sub_path=dump_sub_path,
             last_dump_time=last_dump_time,
-            base_dump_config=base_dump_config,
             dump_logger=dump_logger,
+            base_dump_config=base_dump_config,
         )
+
+        if not isinstance(profile, Profile):
+            profile: Profile = load_profile(profile=profile, allow_switch=True)
+        self.profile = profile
 
         if groups is not None:
             self.groups = [load_given_group(group=g) for g in groups]
@@ -82,6 +91,14 @@ class ProfileDumper(BaseDumper):
         self.process_dump_config = process_dump_config or ProcessDumpConfig()
         self.profile_dump_config = profile_dump_config or ProfileDumpConfig()
 
+        # Construct `GroupDumpConfig` from options passed via `ProfileDumpConfig`
+        self.group_dump_config = GroupDumpConfig(
+            **{
+                field.name: getattr(self.profile_dump_config, field.name)
+                for field in dataclasses.fields(class_or_instance=GroupDumpConfig)
+            }
+        )
+
         # Unpack arguments for easier access
         self.should_dump_processes = self.profile_dump_config.dump_processes
         self.symlink_duplicates = self.profile_dump_config.symlink_duplicates
@@ -91,16 +108,6 @@ class ProfileDumper(BaseDumper):
         self.only_top_level_calcs = self.profile_dump_config.only_top_level_calcs
         self.only_top_level_workflows = self.profile_dump_config.only_top_level_workflows
 
-        if not isinstance(profile, Profile):
-            profile = load_profile(profile=profile, allow_switch=True)
-        self.profile = profile
-
-        self._processes_to_dump: list[str] | None = None
-        self._processes_to_delete: list[str] | None = None
-
-        # self._groups_to_dump: list[str] | None = None
-        self._groups_to_delete: list[str] | None = None
-
     def _dump_processes_not_in_any_group(self) -> None:
         """Dump the profile's process data not contained in any group."""
 
@@ -109,19 +116,19 @@ class ProfileDumper(BaseDumper):
         else:
             no_group_subpath = Path('.')
 
-        no_group_output_path = self.dump_parent_path / self.dump_sub_path / no_group_subpath
-
         no_group_dumper = GroupDumper(
             dump_parent_path=self.dump_parent_path / self.dump_sub_path,
             dump_sub_path=no_group_subpath,
             group=None,
             base_dump_config=self.base_dump_config,
             process_dump_config=self.process_dump_config,
-            profile_dump_config=self.profile_dump_config,
+            group_dump_config=self.group_dump_config,
             dump_logger=self.dump_logger,
         )
 
-        if self.should_dump_processes and not no_group_dumper.processes_to_dump.is_empty:
+        processes_to_dump: ProcessDumpContainer = no_group_dumper.processes_to_dump
+
+        if self.should_dump_processes and not processes_to_dump.is_empty:
             msg = f'Dumping processes not in any group for profile `{self.profile.name}`...'
             logger.report(msg)
             no_group_dumper.dump()
@@ -146,15 +153,16 @@ class ProfileDumper(BaseDumper):
                 dump_sub_path=group_subpath,
                 base_dump_config=self.base_dump_config,
                 process_dump_config=self.process_dump_config,
-                profile_dump_config=self.profile_dump_config,
+                group_dump_config=self.group_dump_config,
                 dump_logger=self.dump_logger,
                 group=group,
             )
-            # ipdb.set_trace()
-            # FIXME: Hack for now...
-            # self.processes
 
-            if self.should_dump_processes and not group_dumper.processes_to_dump.is_empty:
+            ipdb.set_trace()
+
+            processes_to_dump = group_dumper.processes_to_dump
+
+            if self.should_dump_processes and not processes_to_dump.is_empty:
                 msg = f'Dumping processes in group `{group.label}` for profile `{self.profile.name}`...'
                 logger.report(msg)
                 group_dumper.dump()
@@ -174,23 +182,23 @@ class ProfileDumper(BaseDumper):
         # TODO: Maybe populate the `processes_to_dump` property here, even though I don't really need it, as I get the
         # TODO: nodes from the specified collection
 
+        # ipdb.set_trace()
         if not self.groups:
             if not self.only_groups:
                 self._dump_processes_not_in_any_group()
 
             # Still, even without selecting groups, by default, all profile data should be dumped
             # Thus, we obtain all groups in the profile here
-            profile_groups = cast(list[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
-            self._dump_processes_per_group(groups=profile_groups)
+            groups_to_dump = cast(list[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
 
         else:
-            self._dump_processes_per_group(groups=[g for g in self.groups if g is not None])
+            groups_to_dump = self.groups
 
-    @property
+        self._dump_processes_per_group(groups=groups_to_dump)
+
+    @cached_property
     def processes_to_dump(self) -> list[str]:
-        if self._processes_to_dump is None:
-            self._processes_to_dump = self._get_processes_to_dump()
-        return self._processes_to_dump
+        return self._get_processes_to_dump()
 
     def _get_processes_to_dump(self) -> list[str]:
         if self.last_dump_time is not None:
@@ -206,7 +214,7 @@ class ProfileDumper(BaseDumper):
 
         return profile_processes
 
-    @property
+    @cached_property
     def groups_to_delete(self) -> list[str]:
         if not self.delete_missing:
             return []
@@ -231,7 +239,7 @@ class ProfileDumper(BaseDumper):
 
         return to_delete_uuids
 
-    @property
+    @cached_property
     def processes_to_delete(self) -> list[str]:
         if not self.delete_missing:
             return []

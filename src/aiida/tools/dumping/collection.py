@@ -16,10 +16,9 @@ from functools import cached_property
 from pathlib import Path
 from typing import cast
 
-from aiida import orm, load_profile
-from aiida.manage import Profile
+from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.base import BaseDumper
+from aiida.manage import Profile
 from aiida.tools.dumping.config import BaseDumpConfig, GroupDumpConfig, ProcessDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
@@ -39,8 +38,7 @@ class CollectionDumper:  # (BaseDumper):
     """Class to handle dumping of a collection of AiiDA ORM entities."""
 
     @staticmethod
-    def resolve_identifier(identifier: orm.Group | Profile | str | None) -> orm.Group | Profile | None:
-        ...
+    def resolve_identifier(identifier: orm.Group | Profile | str | None) -> orm.Group | Profile | None: ...
 
     def __init__(
         self,

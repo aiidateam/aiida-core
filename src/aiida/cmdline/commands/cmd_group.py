@@ -692,8 +692,8 @@ def group_mirror(
     from aiida.tools.dumping import GroupDumper  # ProfileDumper
     from aiida.tools.dumping.config import (
         BaseDumpConfig,
-        ProcessDumpConfig,
         GroupDumpConfig,
+        ProcessDumpConfig,
     )
     from aiida.tools.dumping.logger import DumpLogger
     from aiida.tools.dumping.utils import (
@@ -739,16 +739,13 @@ def group_mirror(
     except IndexError:
         last_dump_time = None
 
-
     # Update the `last_dump_time` now, rather than after the dumping, as writing files to disk can take some time, and
     # which processes should be dumped is evaluated beforehand (here)
     current_dump_time = datetime.now().astimezone()
 
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
-        dump_logger = DumpLogger.from_file(
-            dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child
-        )
+        dump_logger = DumpLogger.from_file(dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child)
     except (json.JSONDecodeError, OSError):
         dump_logger = DumpLogger(
             dump_parent_path=dump_paths.parent,
@@ -777,7 +774,7 @@ def group_mirror(
         delete_missing=delete_missing,
         only_top_level_calcs=only_top_level_calcs,
         only_top_level_workflows=only_top_level_workflows,
-        filter_by_last_dump_time=filter_by_last_dump_time
+        filter_by_last_dump_time=filter_by_last_dump_time,
     )
 
     group_dumper = GroupDumper(

@@ -367,9 +367,7 @@ def profile_mirror(
 
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
     try:
-        dump_logger = DumpLogger.from_file(
-            dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child
-        )
+        dump_logger = DumpLogger.from_file(dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child)
     except (json.JSONDecodeError, OSError):
         dump_logger = DumpLogger(dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child)
 
@@ -384,7 +382,7 @@ def profile_mirror(
     )
 
     process_dump_config = ProcessDumpConfig(
-    # process_dump_config.include_inputs = include_inputs
+        # process_dump_config.include_inputs = include_inputs
         include_inputs=include_inputs,
         include_outputs=include_outputs,
         include_attributes=include_attributes,

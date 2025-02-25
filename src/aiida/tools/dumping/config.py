@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 # TODO: Check if dataclasses are meant to
 
+
 @dataclass
 class BaseDumpConfig:
     """Container for shared base arguments of all Dumper classes."""
@@ -36,6 +37,7 @@ class ProcessDumpConfig:
 @dataclass
 class CollectionDumpConfig:
     """Shared arguments for dumping of collections of nodes."""
+
     dump_processes: bool = True
     symlink_duplicates: bool = False
     delete_missing: bool = False
@@ -43,14 +45,17 @@ class CollectionDumpConfig:
     only_top_level_workflows: bool = True
     filter_by_last_dump_time: bool = True
 
+
 @dataclass
 class GroupDumpConfig(CollectionDumpConfig):
     """Arguments for dumping group data."""
+
     ...
 
 
 @dataclass
 class ProfileDumpConfig(CollectionDumpConfig):
     """Arguments for dumping profile data."""
+
     organize_by_groups: bool = True
     only_groups: bool = False

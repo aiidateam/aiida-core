@@ -16,12 +16,10 @@ from functools import cached_property
 from pathlib import Path
 from typing import cast
 
-import ipdb
-
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.base import BaseDumper
-from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig, GroupDumpConfig
+from aiida.tools.dumping.config import BaseDumpConfig, GroupDumpConfig, ProcessDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
 from aiida.tools.dumping.utils import (
@@ -103,7 +101,6 @@ class GroupDumper(BaseDumper):
         return nodes
 
     def _get_group_nodes(self) -> list[str]:
-
         assert self.group is not None, "`self.group` shouldn't be None at this stage."
         nodes = [n.uuid for n in self.group.nodes]
 
@@ -247,7 +244,6 @@ class GroupDumper(BaseDumper):
             no_group_nodes = do_filter_nodes(nodes=no_group_nodes, last_dump_time=self.last_dump_time)
 
         return no_group_nodes
-
 
     def delete_processes(self):
         # print(f'TO_DUMP_PROCESSES: {to_dump_processes}')

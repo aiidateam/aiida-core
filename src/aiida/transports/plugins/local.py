@@ -15,6 +15,7 @@ import io
 import os
 import shutil
 import subprocess
+import sys
 from typing import Optional
 
 from aiida.common.warnings import warn_deprecation
@@ -777,9 +778,14 @@ class LocalTransport(BlockingTransport):
         else:
             cwd = self.getcwd()
 
+        if sys.platform == 'win32':
+            shell = False
+        else:
+            shell = True
+
         with subprocess.Popen(
             command,
-            shell=True,
+            shell=shell,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -866,7 +872,7 @@ class LocalTransport(BlockingTransport):
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
 
-        :raises OSError: if src/dst is not found
+        :raises OSError: if oldpath is not found or newpath already exists
         :raises ValueError: if src/dst is not a valid string
         """
         oldpath = str(oldpath)
@@ -877,8 +883,8 @@ class LocalTransport(BlockingTransport):
             raise ValueError(f'Destination {newpath} is not a valid string')
         if not os.path.exists(oldpath):
             raise OSError(f'Source {oldpath} does not exist')
-        if not os.path.exists(newpath):
-            raise OSError(f'Destination {newpath} does not exist')
+        if os.path.exists(newpath):
+            raise OSError(f'Destination {newpath} already exists.')
 
         shutil.move(oldpath, newpath)
 

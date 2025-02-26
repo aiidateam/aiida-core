@@ -893,7 +893,6 @@ class CalcJob(Process):
                 )
 
             code.validate_working_directory(folder)
-
         calc_info = self.prepare_for_submission(folder)
         calc_info.uuid = str(self.node.uuid)
 

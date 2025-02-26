@@ -439,11 +439,19 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
 
     logger_extra = get_dblogger_extra(calculation)
 
+    if calculation.process_type == 'aiida.calculations:core.stash':
+        remote_node = load_node(calculation.inputs.source_node.pk)
+        uuid = calculation.inputs.source_node.uuid
+        source_basepath = Path(remote_node.get_remote_path())
+    else:
+        uuid = calculation.uuid
+        source_basepath = Path(calculation.get_remote_workdir())
+
     stash_options = calculation.get_option('stash')
     stash_mode = stash_options.get('stash_mode')
     source_list = stash_options.get('source_list', [])
-    uuid = calculation.uuid
-    source_basepath = Path(calculation.get_remote_workdir())
+    target_base = Path(stash_options['target_base'])
+    dereference = stash_options.get('dereference', False)
 
     if not source_list:
         return
@@ -457,7 +465,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     )
 
     if stash_mode == StashMode.COPY.value:
-        target_basepath = Path(stash_options['target_base']) / uuid[:2] / uuid[2:4] / uuid[4:]
+        target_basepath = target_base / uuid[:2] / uuid[2:4] / uuid[4:]
 
         for source_filename in source_list:
             if transport.has_magic(source_filename):
@@ -478,7 +486,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                 except (OSError, ValueError) as exception:
                     EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
                     # try to clean up in case of a failure
-                    await transport.rmtree_async(Path(stash_options['target_base']) / uuid[:2])
+                    await transport.rmtree_async(target_base / uuid[:2])
                 else:
                     EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
 
@@ -499,12 +507,10 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
         # 'tar', 'tar.gz', 'tar.bz2', or 'tar.xz'
         compression_format = stash_mode
         file_name = stash_options.get('file_name', uuid)
-        dereference = stash_options.get('dereference', False)
-        target_basepath = Path(stash_options['target_base'])
         authinfo = calculation.get_authinfo()
         aiida_remote_base = authinfo.get_workdir().format(username=transport.whoami())
 
-        target_destination = str(target_basepath / file_name) + '.' + compression_format
+        target_destination = str(target_base / file_name) + '.' + compression_format
 
         remote_stash = RemoteStashCompressedData(
             computer=calculation.computer,
@@ -528,7 +534,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
         except (OSError, ValueError) as exception:
             EXEC_LOGGER.warning(f'failed to stash {source_list} to {target_destination}: {exception}')
             return
-            # note: if you raise here, you triger the exponential backoff
+            # note: if you raise here, you trigger the exponential backoff
             # and if you don't raise, it appears as successful in verdi process list: Finished [0]
             # open an issue to fix this
             # raise exceptions.RemoteOperationError(f'failed '

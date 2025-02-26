@@ -140,6 +140,18 @@ def test_sealed():
         node.base.repository.put_object_from_bytes(b'content', 'path')
 
 
+def test_updatable_objects():
+    node = CalcJobNode()
+    node._updatable_objects = ['not_raise']
+    node.store()
+    node.base.repository.put_object_from_bytes(b'content', 'not_raise')
+    with pytest.raises(exceptions.ModificationNotAllowed):
+        node.base.repository.put_object_from_bytes(b'content', 'raise')
+    node.seal()
+    with pytest.raises(exceptions.ModificationNotAllowed):
+        node.base.repository.put_object_from_bytes(b'content', 'not_raise')
+
+
 def test_get_object_raises():
     """Test the ``NodeRepository.get_object`` method when it is supposed to raise."""
     node = Data()

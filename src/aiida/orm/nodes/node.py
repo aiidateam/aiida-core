@@ -180,6 +180,10 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     # Requires Sealable mixin, but needs empty tuple for base class
     _updatable_attributes: Tuple[str, ...] = tuple()
 
+    # A tuple of object names that can be updated even after node is stored
+    # Requires Sealable mixin, but needs empty tuple for base class
+    _updatable_objects: Tuple[str, ...] = tuple()
+
     # A tuple of attribute names that will be ignored when creating the hash.
     _hash_ignored_attributes: Tuple[str, ...] = tuple()
 

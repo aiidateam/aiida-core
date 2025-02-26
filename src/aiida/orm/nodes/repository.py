@@ -61,13 +61,31 @@ class NodeRepository:
         if self._node.is_stored:
             self._node.backend_entity.repository_metadata = self.serialize()
 
-    def _check_mutability(self):
+    def _check_mutability(self, path: str | None = None) -> None:
         """Check if the node is mutable.
 
-        :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
+        - If the node is stored and sealed, modification is **not allowed**.
+        - If the node is stored but not sealed, check if `path` is updatable.
+        - If the node is stored but not sealable, modifications are **not allowed**.
+
+        :param path: The repository path being modified, if any.
+        :raises aiida.common.exceptions.ModificationNotAllowed: If modifications are not allowed.
         """
-        if self._node.is_stored:
-            raise exceptions.ModificationNotAllowed('the node is stored and therefore the repository is immutable.')
+        if not self._node.is_stored:
+            return
+
+        if hasattr(self._node, 'is_sealed'):
+            if self._node.is_sealed:
+                raise exceptions.ModificationNotAllowed('Modification not allowed: the node is sealed and immutable.')
+
+            if path and path in self._node._updatable_objects:
+                return
+
+            raise exceptions.ModificationNotAllowed(
+                f'Cannot modify non-updatable repository object of a stored+unsealed node: {path}'
+            )
+
+        raise exceptions.ModificationNotAllowed('Modification not allowed: the node is stored and immutable.')
 
     @property
     def _repository(self) -> Repository:
@@ -267,7 +285,7 @@ class NodeRepository:
         :raises TypeError: if the path is not a string and relative path.
         :raises FileExistsError: if an object already exists at the given path.
         """
-        self._check_mutability()
+        self._check_mutability(path)
         self._repository.put_object_from_filelike(io.BytesIO(content), path)
         self._update_repository_metadata()
 
@@ -279,7 +297,7 @@ class NodeRepository:
         :raises TypeError: if the path is not a string and relative path.
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
-        self._check_mutability()
+        self._check_mutability(path)
 
         if isinstance(handle, io.StringIO):  # type: ignore[unreachable]
             handle = io.BytesIO(handle.read().encode('utf-8'))  # type: ignore[unreachable]
@@ -301,7 +319,7 @@ class NodeRepository:
         :raises TypeError: if the path is not a string and relative path, or the handle is not a byte stream.
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
-        self._check_mutability()
+        self._check_mutability(path)
         self._repository.put_object_from_file(filepath, path)
         self._update_repository_metadata()
 
@@ -356,7 +374,7 @@ class NodeRepository:
         :raises OSError: if the file could not be deleted.
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
-        self._check_mutability()
+        self._check_mutability(path)
         self._repository.delete_object(path)
         self._update_repository_metadata()
 

@@ -816,7 +816,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         else:
             raise NotImplementedError(f'unsupported dialect: {dialect}')
-        
+
         stat_query = session.query(
             cday.label('cday'),
             sa_func.count(self.Node.id),

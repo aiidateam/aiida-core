@@ -33,7 +33,6 @@ from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 from aiida.common.exceptions import NotExistent
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, QueryDictType
-from aiida.storage import psql_dos, sqlite_dos, sqlite_temp, sqlite_zip
 
 from .joiner import JoinReturn, SqlaJoiner
 
@@ -800,27 +799,24 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         total_query = session.query(self.Node)
         types_query = session.query(self.Node.node_type.label('typestring'), sa_func.count(self.Node.id))
 
-        backend_class = self._backend.__class__
+        dialect = session.bind.dialect.name
         date_format = '%Y-%m-%d'
 
-        if backend_class in {
-            sqlite_dos.backend.SqliteDosStorage,
-            sqlite_zip.SqliteZipBackend,
-            sqlite_temp.SqliteTempBackend,
-        }:
+        if dialect == 'sqlite':
             cday = sa_func.strftime(date_format, sa_func.datetime(self.Node.ctime, 'localtime'))
 
             def date_to_str(d):
                 return d
 
-        elif backend_class == psql_dos.backend.PsqlDosBackend:
+        elif dialect == 'postgresql':
             cday = sa_func.date_trunc('day', self.Node.ctime)
 
             def date_to_str(d):
                 return d.strftime(date_format)
 
         else:
-            raise NotImplementedError(f'unsupported backend: {backend_class}')
+            raise NotImplementedError(f'unsupported dialect: {dialect}')
+        
         stat_query = session.query(
             cday.label('cday'),
             sa_func.count(self.Node.id),

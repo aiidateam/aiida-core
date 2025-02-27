@@ -14,22 +14,28 @@ from aiida.engine import CalcJob
 
 
 class StashCalculation(CalcJob):
-    """Utility to stash files from a remote folder.
+    """
+    Utility to stash files from a remote folder.
 
-    inputs = {
-        'metadata': {
-            'computer': Computer.collection.get(label="localhost"),
-            'options': {
-                'resources': {'num_machines': 1},  # Define the required resources
-                'stash': {
-                    'stash_mode': StashMode.COPY.value,
-                    'target_base': '/home/khosra_a/development/repo/testcrap/stashing/',
-                    'source_list': ['aiida.in', '_aiidasubmit.sh'],
+    An example of how the input should look like:
+
+    .. code-block:: python
+
+        inputs = {
+            'metadata': {
+                'computer': Computer.collection.get(label="localhost"),
+                'options': {
+                    'resources': {'num_machines': 1},
+                    'stash': {
+                        'stash_mode': StashMode.COPY.value,
+                        'target_base': '/scratch/my_stashing/',
+                        'source_list': ['aiida.in', '_aiidasubmit.sh'],
+                    },
                 },
             },
-        },
-        'source_node': node_1,
-    }
+            'source_node': node_1,
+        }
+
     """
 
     def __init__(self, *args, **kwargs):

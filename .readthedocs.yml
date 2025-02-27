@@ -25,7 +25,7 @@ build:
     - uv sync --extra docs --extra tests --extra rest --extra atomic_tools
     build:
       html:
-      - uv run sphinx-build -T -W --keep-going -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
+      - uv run sphinx-build -T -W --keep-going -b html -d _build/doctrees -D language=en docs/source _build/html
 
 search:
   ranking:

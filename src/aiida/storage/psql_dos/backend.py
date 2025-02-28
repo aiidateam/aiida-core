@@ -10,13 +10,16 @@
 
 import functools
 import gc
+import json
 import pathlib
+from collections import defaultdict
 from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
+from typing import TYPE_CHECKING, Any, Iterator, Optional, Sequence, Set, Union
 
 from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field
-from sqlalchemy import column, insert, update
+from sqlalchemy import case, cast, column, func, insert, update
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common import exceptions
@@ -315,7 +318,7 @@ class PsqlDosBackend(StorageBackend):
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 
-    def bulk_insert(self, entity_type: EntityTypes, rows: List[dict], allow_defaults: bool = False) -> List[int]:
+    def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
         if not rows:
             return []
@@ -338,18 +341,50 @@ class PsqlDosBackend(StorageBackend):
             result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
         return [row.id for row in result]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: list[dict], extend_json: bool = False) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
             return None
+
+        session = self.get_session()
+
+        def to_json(x: dict[str, Any]):
+            return cast(x, JSONB)
+
+        if session.bind is not None and session.bind.dialect.name == 'sqlite':
+            # TODO: A dirty workaround:
+            #   SQLite DOS now doesn't have a dedicated background, and SQLite don't have JSONB type,
+            #   so the casting need to be implement specifically.
+            def to_json(x: dict[str, Any]):
+                return json.dumps(x)
+
+        cases = defaultdict(list)
+        id_list = []
         for row in rows:
-            if 'id' not in row:
-                raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
             if not keys.issuperset(row):
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+            if 'id' in row:
+                when = mapper.c.id == row['id']
+                id_list.append(row['id'])
+            else:
+                raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
+
+            for key, value in row.items():
+                if key == 'id':
+                    continue
+
+                update_value = value
+                if key in ['extras', 'attributes']:
+                    update_value = to_json(update_value)
+                    if extend_json:
+                        update_value = func.json_patch(mapper.c[key], update_value)
+                cases[key].append((when, update_value))
+
         session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
-            session.execute(update(mapper), rows)
+            values = {k: case(*v, else_=mapper.c[k]) for k, v in cases.items()}
+            stmt = update(mapper).where(mapper.c.id.in_(id_list)).values(**values)
+            session.execute(stmt)
 
     def delete(self, delete_database_user: bool = False) -> None:
         """Delete the storage and all the data.

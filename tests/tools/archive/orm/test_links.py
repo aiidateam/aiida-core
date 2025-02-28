@@ -58,7 +58,7 @@ def test_links_to_unknown_nodes(tmp_path, aiida_profile_clean):
     assert orm.QueryBuilder().append(entity_type='link').count() == 0
 
 
-def test_input_and_create_links(tmp_path, aiida_profile):
+def test_input_and_create_links(tmp_path, aiida_profile_clean):
     """Simple test that will verify that INPUT and CREATE links are properly exported and
     correctly recreated upon import.
     """
@@ -76,7 +76,7 @@ def test_input_and_create_links(tmp_path, aiida_profile):
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([node_output], filename=export_file)
 
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
 
     import_archive(export_file)
     import_links = get_all_node_links()

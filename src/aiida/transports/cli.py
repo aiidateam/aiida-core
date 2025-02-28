@@ -8,6 +8,7 @@
 ###########################################################################
 """Common cli utilities for transport plugins."""
 
+import enum
 from functools import partial
 
 import click
@@ -98,6 +99,8 @@ def interactive_default(key, also_non_interactive=False):
 
         auth_params = authinfo.get_auth_params()
         suggestion = auth_params.get(key)
+        if isinstance(suggestion, enum.Enum):
+            suggestion = suggestion.name
         suggestion = suggestion or transport_option_default(key, computer)
         return suggestion
 

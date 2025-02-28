@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12' and sys_platform == 'win32'",
@@ -42,6 +43,7 @@ dependencies = [
     { name = "ipython", version = "8.31.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "jedi" },
     { name = "jinja2" },
+    { name = "keyringrs" },
     { name = "kiwipy", extra = ["rmq"] },
     { name = "numpy" },
     { name = "paramiko" },
@@ -192,6 +194,7 @@ requires-dist = [
     { name = "jinja2", specifier = "~=3.0" },
     { name = "jupyter", marker = "extra == 'notebook'", specifier = "~=1.0" },
     { name = "jupyter-client", marker = "extra == 'notebook'", specifier = "~=8.0" },
+    { name = "keyringrs", specifier = "~=0.4.0" },
     { name = "kiwipy", extras = ["rmq"], specifier = "~=0.8.4" },
     { name = "matplotlib", marker = "extra == 'atomic-tools'", specifier = "~=3.3,>=3.3.4" },
     { name = "mypy", marker = "extra == 'pre-commit'", specifier = "~=1.13.0" },
@@ -249,6 +252,7 @@ requires-dist = [
     { name = "upf-to-json", specifier = "~=0.9.2" },
     { name = "wrapt", specifier = "~=1.11" },
 ]
+provides-extras = ["atomic-tools", "bpython", "docs", "notebook", "pre-commit", "rest", "ssh-kerberos", "tests", "tui"]
 
 [[package]]
 name = "aiida-export-migration-tests"
@@ -2047,6 +2051,28 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/59/73/fa26bbb747a9ea4fca6b01453aa22990d52ab62dd61384f1ac0dc9d4e7ba/jupyterlab_widgets-3.0.13.tar.gz", hash = "sha256:a2966d385328c1942b683a8cd96b89b8dd82c8b8f81dda902bb2bc06d46f5bed", size = 203556 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a9/93/858e87edc634d628e5d752ba944c2833133a28fa87bb093e6832ced36a3e/jupyterlab_widgets-3.0.13-py3-none-any.whl", hash = "sha256:e3cda2c233ce144192f1e29914ad522b2f4c40e77214b0cc97377ca3d323db54", size = 214392 },
+]
+
+[[package]]
+name = "keyringrs"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/9e/6c73d08404518bbe81889dd48ca0494815b9790f031e83ebf382427ba6e0/keyringrs-0.4.0.tar.gz", hash = "sha256:4474fc294474a9e88746a1e5de3bd7249a9cea8f3668e722c9df7dd2b68cd77b", size = 31518 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1e/07/19237f4a5886525a1468a71dc860da7ceed6eba11968075db34f5eefd3c6/keyringrs-0.4.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:942084d562b754eef9ce4f5f84700530059baaa815de1aa9421ee1d9c566484e", size = 257467 },
+    { url = "https://files.pythonhosted.org/packages/a5/28/c49326f4794e3ca839b7e1a4c41f30e6a593131e42560c970195bd639617/keyringrs-0.4.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:ffce9bb7737e83c86b2e0fd3fa868f29a86ad7e275d3853755131d6aadc21a5e", size = 251546 },
+    { url = "https://files.pythonhosted.org/packages/77/57/8c16cb0053a5305398161bd8a8b7526a74c652fc2e794504d551b8feb62c/keyringrs-0.4.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a50370aac82f10a91365e5ac9be0bb74946ee064741eae9ae235773f9006a7a2", size = 724491 },
+    { url = "https://files.pythonhosted.org/packages/38/03/fba6a69192bc1054e2785337aedef3798a8c1cc6b7893cadabc8dfcaa3c6/keyringrs-0.4.0-cp39-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:07f9fda5c4bf51cadddd4409c2bcfd7db4aa8f42c98e7f1c5125eb7230ba5598", size = 722183 },
+    { url = "https://files.pythonhosted.org/packages/4c/9d/49409d37e72c334a6a51d8e5c5ecc5033ac825f1c781836c23f85e29b072/keyringrs-0.4.0-cp39-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:7d8c86c77fce368e60425313c5993edaa70fec6a51d525834eb663f1fb60e16c", size = 809595 },
+    { url = "https://files.pythonhosted.org/packages/5c/62/4dc4e976a10bb3619a45ab6f6ae6bc7e3eaa0e4693184b6f7072aaa1e525/keyringrs-0.4.0-cp39-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:067e4df8de97b4958c4c8676a8f53e424889b660fe5968e7360af5265c6c2b0c", size = 843601 },
+    { url = "https://files.pythonhosted.org/packages/33/b7/b8ae5d763f9902cfb68fe784c8d024b9a265ea4a00fb835448353aa23521/keyringrs-0.4.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:75a64e393576310632c9c27bdbfbc75d4d8229453d4323a5255479eb00e300e3", size = 755171 },
+    { url = "https://files.pythonhosted.org/packages/0c/84/d9c2aca6b1a5ba844d06885bd0611460750514b0e1d75a4cd60c414e4fe4/keyringrs-0.4.0-cp39-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:ed512b6f344b5550cc9178871f7f94c2b3c931202dce438defcb90b9dff4b289", size = 796531 },
+    { url = "https://files.pythonhosted.org/packages/86/03/badaed39a93528bb620ee15fc6e4d315b805b8b99af174e45fa5a51caac4/keyringrs-0.4.0-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:3be0f3f4e627ce409e233e96dd84dd3564c6eafa2a8b01c7a9b3574a4e0ec7f0", size = 914455 },
+    { url = "https://files.pythonhosted.org/packages/f5/df/a38e3e63d3755250d9576368d98d4e2a195496f3551c35f9d9a727c53047/keyringrs-0.4.0-cp39-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:e948c6b3e94ad0ccfe1e7108c20ceb99667b05c1e455733a466fc41be097a02b", size = 984575 },
+    { url = "https://files.pythonhosted.org/packages/35/8f/983fb0a4728cb97a8ae418d2da234afcb130ffb8c845d746b802e7ba530e/keyringrs-0.4.0-cp39-abi3-musllinux_1_2_i686.whl", hash = "sha256:1fd0f3fca90c4443669966d533a408f211a290e7483b9bf9ac1595cda9bc90dd", size = 951522 },
+    { url = "https://files.pythonhosted.org/packages/64/f4/b4798a08918281d7da3e94295d3e80cbfbc6e66ffbee455252fb58db01e1/keyringrs-0.4.0-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:f4f09bcc1d4fb61cd7c1038150ee9309af3b51f0801c2a8f3a22cc542da0ed77", size = 926049 },
+    { url = "https://files.pythonhosted.org/packages/29/14/666630b5a5ff76663ad8e609f44ff02a9cb10b289a5f264af45262082f97/keyringrs-0.4.0-cp39-abi3-win32.whl", hash = "sha256:531c09db12cb319238a071fd50eaa1f0598de31341a3444a46c385f7f4fe43be", size = 139458 },
+    { url = "https://files.pythonhosted.org/packages/c6/b5/ffed5cdc3b6d56d90c84ef97a12569c0f21517c0f59dba4c61b4bd8da737/keyringrs-0.4.0-cp39-abi3-win_amd64.whl", hash = "sha256:e50fe42a9a12226acd39ff8cd3bbb5b3e5b316f26a3698e9dea445b0a9399fab", size = 145837 },
 ]
 
 [[package]]

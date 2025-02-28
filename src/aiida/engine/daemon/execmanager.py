@@ -435,7 +435,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     :param transport: an already opened transport.
     """
     from aiida.common.datastructures import StashMode
-    from aiida.orm import RemoteStashCompressedData, RemoteStashFolderData
+    from aiida.orm import RemoteStashCompressedData, RemoteStashCustomData, RemoteStashFolderData
 
     logger_extra = get_dblogger_extra(calculation)
 
@@ -450,11 +450,6 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     stash_options = calculation.get_option('stash')
     stash_mode = stash_options.get('stash_mode')
     source_list = stash_options.get('source_list', [])
-    target_base = Path(stash_options['target_base'])
-    dereference = stash_options.get('dereference', False)
-
-    if not source_list:
-        return
 
     if stash_mode not in [mode.value for mode in StashMode.__members__.values()]:
         EXEC_LOGGER.warning(f'stashing mode {stash_mode} is not supported. Stashing skipped.')
@@ -463,6 +458,44 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     EXEC_LOGGER.debug(
         f'stashing files with mode {stash_mode} for calculation<{calculation.pk}>: {source_list}', extra=logger_extra
     )
+
+    if stash_mode == StashMode.CUSTOM_SCRIPT.value:
+        command = stash_options.get('custom_command')
+
+        remote_stash = RemoteStashCustomData(
+            computer=calculation.computer,
+            stash_mode=StashMode(stash_mode),
+            custom_command=command,
+        )
+
+        if not command:
+            EXEC_LOGGER.warning('no custom command specified for custom script stashing')
+            return
+        retval, stdout, stderr = await transport.exec_command_wait_async(command, workdir=source_basepath)
+        if retval == 0:
+            if stderr.strip():
+                EXEC_LOGGER.warning(
+                    'There was nonempty stderr in the while executing'
+                    ' `metadata.options.stash.custom_command`: {stderr}'
+                )
+        else:
+            EXEC_LOGGER.error(
+                "Problem while stash. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
+                    retval, stdout, stderr, command
+                )
+            )
+
+        remote_stash.store()
+        remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
+        return
+
+    ###
+
+    target_base = Path(stash_options.get['target_base'])
+    dereference = stash_options.get('dereference', False)
+
+    if not source_list:
+        return
 
     if stash_mode == StashMode.COPY.value:
         target_basepath = target_base / uuid[:2] / uuid[2:4] / uuid[4:]

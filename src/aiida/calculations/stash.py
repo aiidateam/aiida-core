@@ -9,7 +9,7 @@
 """"""
 
 from aiida import orm
-from aiida.common.datastructures import CalcInfo
+from aiida.common.datastructures import CalcInfo, CodeInfo, StashMode
 from aiida.engine import CalcJob
 
 
@@ -36,6 +36,27 @@ class StashCalculation(CalcJob):
             'source_node': node_1,
         }
 
+    Or in case of a custom script, 'source_list' and 'target_base' are stored
+    as a bash array and bash variable, respectively.
+    The 'custom_command' could be a bash command that uses these variables,
+    Before executing 'custom_command', working directory is set to the one of 'source_node'.
+    For example:
+
+    .. code-block:: python
+
+        inputs = {
+            'metadata': {
+                'computer': Computer.collection.get(label="localhost"),
+                'options': {
+                    'resources': {'num_machines': 1},
+                    'stash': {
+                        'stash_mode': StashMode.CUSTOM_SCRIPT.value,
+                    },
+                },
+            },
+            'source_node': node_1,
+            'custom_command': 'rsync -av aiida.in _aiidasubmit.sh /scratch/my_stashing/',
+        }
     """
 
     def __init__(self, *args, **kwargs):
@@ -52,6 +73,8 @@ class StashCalculation(CalcJob):
             help='',
         )
 
+        spec.inputs['metadata']['options']['input_filename'].default = 'aiida.in'
+        spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
         # Code is irrelevant for this calculation.
         spec.inputs.pop('code', None)
 
@@ -64,13 +87,43 @@ class StashCalculation(CalcJob):
         }
 
     def prepare_for_submission(self, folder):
-        calc_info = CalcInfo()
-        calc_info.skip_submit = True
+        source_node = self.inputs.get('source_node')
+        stash_mode = self.inputs.metadata.options.stash.get('stash_mode')
 
-        calc_info.codes_info = []
-        calc_info.retrieve_list = []
-        calc_info.local_copy_list = []
-        calc_info.remote_copy_list = []
-        calc_info.remote_symlink_list = []
+        calc_info = CalcInfo()
+
+        if stash_mode == StashMode.CUSTOM_SCRIPT.value:
+            custom_command = self.inputs.metadata.options.stash.get('custom_command')
+
+            if custom_command is None:
+                raise ValueError("Input 'custom_command' is required for `StashMode.CUSTOM_SCRIPT` mode.")
+
+            working_directory = source_node.get_remote_path()  # type: ignore[union-attr]
+            change_dir = f'cd {working_directory}\n'
+
+            with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
+                the_scripts = change_dir + '\n' + custom_command
+                handle.write(the_scripts)
+
+            code_info = CodeInfo()
+            code_info.stdin_name = self.options.input_filename
+            code_info.stdout_name = self.options.output_filename
+
+            calc_info.codes_info = [code_info]
+            calc_info.retrieve_list = [self.options.output_filename]
+            calc_info.local_copy_list = []
+            calc_info.remote_copy_list = []
+            calc_info.remote_symlink_list = []
+
+            # TODO: CREATE A RemoteStashCustomData node here and store it in the database.
+
+        else:
+            calc_info.skip_submit = True
+
+            calc_info.codes_info = []
+            calc_info.retrieve_list = []
+            calc_info.local_copy_list = []
+            calc_info.remote_copy_list = []
+            calc_info.remote_symlink_list = []
 
         return calc_info

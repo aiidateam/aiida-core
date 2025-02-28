@@ -72,20 +72,11 @@ async def upload_calculation(
 ) -> RemoteData | None:
     """Upload a `CalcJob` instance
 
-        inputs = {
-        'metadata': {
-            'computer': Computer.collection.get(label="localhost"),
-            'options': {
-                'resources': {'num_machines': 1},
-                'stash': {
-                    'stash_mode': StashMode.COPY.value,
-                    'target_base': '/scratch/my_stashing/',
-                    'source_list': ['aiida.in', '_aiidasubmit.sh'],
-                },
-            },
-        },
-        'source_node': node_1,
-    }
+    :param node: the `CalcJobNode`.
+    :param transport: an already opened transport to use to submit the calculation.
+    :param calc_info: the calculation info datastructure returned by `CalcJob.presubmit`
+    :param folder: temporary local file system folder containing the inputs written by `CalcJob.prepare_for_submission`
+    :returns: The ``RemoteData`` representing the working directory on the remote if, or ``None`` if  ``dry_run=True``.
     """
     # If the calculation already has a `remote_folder`, simply return. The upload was apparently already completed
     # before, which can happen if the daemon is restarted and it shuts down after uploading but before getting the

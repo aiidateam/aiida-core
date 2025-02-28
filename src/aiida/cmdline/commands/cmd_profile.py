@@ -269,3 +269,196 @@ def profile_delete(force, delete_data, profiles):
 
         get_config().delete_profile(profile.name, delete_storage=delete_data)
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
+
+
+@verdi_profile.command('mirror')
+@options.PATH()
+@options.DRY_RUN()
+@options.OVERWRITE()
+@options.INCREMENTAL()
+@options.FILTER_BY_LAST_DUMP_TIME()
+@options.DUMP_PROCESSES()
+@options.GROUPS()
+@options.ORGANIZE_BY_GROUPS()
+@options.SYMLINK_DUPLICATES()
+@options.DELETE_MISSING()
+@options.ONLY_GROUPS()
+@options.ONLY_TOP_LEVEL_CALCS()
+@options.ONLY_TOP_LEVEL_WORKFLOWS()
+@options.UPDATE_GROUPS()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+@click.pass_context
+def profile_mirror(
+    ctx,
+    path,
+    dry_run,
+    overwrite,
+    incremental,
+    filter_by_last_dump_time,
+    dump_processes,
+    groups,
+    organize_by_groups,
+    symlink_duplicates,
+    delete_missing,
+    update_groups,
+    only_groups,
+    only_top_level_calcs,
+    only_top_level_workflows,
+    include_inputs,
+    include_outputs,
+    include_attributes,
+    include_extras,
+    flat,
+):
+    """Mirror all data in an AiiDA profile's storage to disk."""
+
+    import json
+    from datetime import datetime
+    from pathlib import Path
+
+    from aiida.tools.dumping import ProfileDumper
+    from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig, ProfileDumpConfig
+    from aiida.tools.dumping.logger import DumpLogger
+    from aiida.tools.dumping.utils import (
+        SafeguardFileMapping,
+        prepare_dump_path,
+        resolve_click_path_argument_for_dumping,
+    )
+
+    profile = ctx.obj['profile']
+
+    if not organize_by_groups and update_groups:
+        # Add check outside in cmd_profile?
+        msg = '`--update-groups` selected, even though `--organize-by-groups` is set to False.'
+        echo.echo_critical(msg)
+
+    dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=profile)
+    output_path_absolute = dump_paths.absolute
+    safeguard_file = SafeguardFileMapping.PROFILE.value
+    safeguard_file_path: Path = output_path_absolute / safeguard_file
+
+    echo.echo_report(f'Mirroring data of profile `{profile.name}` at path: `{output_path_absolute.name}`.')
+
+    try:
+        prepare_dump_path(
+            path_to_validate=output_path_absolute,
+            overwrite=overwrite,
+            incremental=incremental,
+            safeguard_file=safeguard_file,
+            top_level_caller=True,
+        )
+    except (FileExistsError, ValueError) as exc:
+        echo.echo_critical(str(exc))
+
+    # The logging of this behavior is taken care of in `prepare_dump_path`
+    if overwrite and incremental:
+        incremental = False
+
+    # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
+    try:
+        with safeguard_file_path.open('r') as fhandle:
+            last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()
+    except IndexError:
+        last_dump_time = None
+
+    # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
+    try:
+        dump_logger = DumpLogger.from_file(dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child)
+    except (json.JSONDecodeError, OSError):
+        dump_logger = DumpLogger(dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child)
+
+    # Append the current dump time to dumping safeguard file
+    # Set the `last_dump_time` now after the dumping, as writing files to disk can take some time
+    current_dump_time = datetime.now().astimezone()
+
+    # Create config options that hold the various settings for dumping data
+    base_dump_config = BaseDumpConfig(
+        overwrite=overwrite,
+        incremental=incremental,
+    )
+
+    process_dump_config = ProcessDumpConfig(
+        # process_dump_config.include_inputs = include_inputs
+        include_inputs=include_inputs,
+        include_outputs=include_outputs,
+        include_attributes=include_attributes,
+        include_extras=include_extras,
+        flat=flat,
+    )
+
+    profile_dump_config = ProfileDumpConfig(
+        dump_processes=dump_processes,
+        symlink_duplicates=symlink_duplicates,
+        delete_missing=delete_missing,
+        organize_by_groups=organize_by_groups,
+        only_groups=only_groups,
+        only_top_level_calcs=only_top_level_calcs,
+        only_top_level_workflows=only_top_level_workflows,
+    )
+
+    profile_dumper = ProfileDumper(
+        profile=profile,
+        dump_parent_path=dump_paths.parent,
+        dump_sub_path=dump_paths.child,
+        last_dump_time=last_dump_time,
+        dump_logger=dump_logger,
+        base_dump_config=base_dump_config,
+        process_dump_config=process_dump_config,
+        profile_dump_config=profile_dump_config,
+        groups=groups,
+    )
+
+    num_processes_to_dump = len(profile_dumper.processes_to_dump)
+    num_processes_to_delete = len(profile_dumper.processes_to_delete)
+
+    # num_groups_to_dump = len(profile_dumper.groups_to_dump)
+    num_groups_to_delete = len(profile_dumper.groups_to_delete)
+
+    # FIXME: This doesn't respect the -G --groups selection
+    if dry_run:
+        dry_run_message = (
+            f'Dry run for mirroring of profile `{profile.name}`. '
+            f'Would dump: {num_processes_to_dump} new nodes and delete '
+            f'{num_processes_to_delete} previously dumped node directories.'
+        )
+        echo.echo_report(dry_run_message)
+        return
+
+    if dump_processes:
+        if num_processes_to_dump == 0:
+            msg = 'No processes to dump.'
+            echo.echo_success(msg)
+        else:
+            profile_dumper.dump_processes()
+            msg = f'Dumped {num_processes_to_dump} new nodes.'
+            echo.echo_success(msg)
+
+    if delete_missing:
+        if num_processes_to_delete == 0:
+            echo.echo_success('No processes to delete.')
+        else:
+            profile_dumper.delete_processes()
+            echo.echo_success(f'Deleted {num_processes_to_delete} node directories.')
+
+        if num_groups_to_delete == 0:
+            echo.echo_success('No groups to delete.')
+        else:
+            profile_dumper.delete_groups()
+            echo.echo_success(f'Deleted {num_groups_to_delete} group directories.')
+
+    if update_groups:
+        relabeled_paths = profile_dumper.update_groups()
+        msg = 'Renamed group directories and updated the log file.'
+        echo.echo_success(msg)
+        # print(relabeled_paths)
+
+    with safeguard_file_path.open('a') as fhandle:
+        msg = f'Last profile mirror time: {current_dump_time.isoformat()}\n'
+        fhandle.write(msg)
+
+    # Write the logging json file to disk
+    dump_logger.save_log()

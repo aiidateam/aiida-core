@@ -467,9 +467,8 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
             stash_mode=StashMode(stash_mode),
             custom_command=command,
         )
-
         if not command:
-            EXEC_LOGGER.warning('no custom command specified for custom script stashing')
+            EXEC_LOGGER.warning('Failed to stash, no custom command specified for custom script stashing')
             return
         retval, stdout, stderr = await transport.exec_command_wait_async(command, workdir=source_basepath)
         if retval == 0:
@@ -479,10 +478,8 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                     ' `metadata.options.stash.custom_command`: {stderr}'
                 )
         else:
-            EXEC_LOGGER.error(
-                "Problem while stash. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, command
-                )
+            EXEC_LOGGER.warning(
+                f"Failed to stash. Exit code: {retval}, stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
             )
 
         remote_stash.store()
@@ -490,8 +487,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
         return
 
     ###
-
-    target_base = Path(stash_options.get['target_base'])
+    target_base = Path(stash_options.get('target_base'))
     dereference = stash_options.get('dereference', False)
 
     if not source_list:
@@ -517,7 +513,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                 try:
                     await transport.copy_async(source_filepath, target_filepath)
                 except (OSError, ValueError) as exception:
-                    EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+                    EXEC_LOGGER.warning(f'Failed to stash {source_filepath} to {target_filepath}: {exception}')
                     # try to clean up in case of a failure
                     await transport.rmtree_async(target_base / uuid[:2])
                 else:
@@ -565,7 +561,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                 dereference=dereference,
             )
         except (OSError, ValueError) as exception:
-            EXEC_LOGGER.warning(f'failed to stash {source_list} to {target_destination}: {exception}')
+            EXEC_LOGGER.warning(f'Failed to stash {source_list} to {target_destination}: {exception}')
             return
             # note: if you raise here, you trigger the exponential backoff
             # and if you don't raise, it appears as successful in verdi process list: Finished [0]

@@ -21,7 +21,7 @@ import plumpy.futures
 import plumpy.persistence
 import plumpy.process_states
 
-from aiida.common.datastructures import CalcJobState
+from aiida.common.datastructures import CalcJobState, StashMode
 from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
@@ -32,6 +32,7 @@ from aiida.manage.configuration import get_config_option
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.schedulers.datastructures import JobState
 
+# from aiida.calculations.stash import StashCalculation
 from ..process import ProcessState
 from .monitors import CalcJobMonitorAction, CalcJobMonitorResult, CalcJobMonitors
 
@@ -89,6 +90,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
                 # Any exception thrown in `presubmit` call is not transient so we circumvent the exponential backoff
                 try:
                     calc_info = process.presubmit(folder)
+                    node.calc_info = calc_info
                 except Exception as exception:
                     raise PreSubmitException('exception occurred in presubmit call') from exception
                 else:
@@ -493,7 +495,8 @@ class Waiting(plumpy.process_states.Waiting):
             if self._command == UPLOAD_COMMAND:
                 skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)
                 if skip_submit:
-                    result = self.retrieve(monitor_result=self._monitor_result)
+                    # result = self.retrieve(monitor_result=self._monitor_result)
+                    result = self.stash(monitor_result=self._monitor_result)
                 else:
                     result = self.submit()
 
@@ -529,8 +532,12 @@ class Waiting(plumpy.process_states.Waiting):
                 result = self.stash(monitor_result=monitor_result)
 
             elif self._command == STASH_COMMAND:
-                if node.get_option('stash') is not None:
+                if (node.get_option('stash') is not None) or (
+                    type(self.process).__name__ == 'StashCalculation'
+                    and node.get_option('stash_mode') != StashMode.CUSTOM_SCRIPT.value
+                ):
                     await self._launch_task(task_stash_job, node, transport_queue)
+
                 result = self.retrieve(monitor_result=self._monitor_result)
 
             elif self._command == RETRIEVE_COMMAND:

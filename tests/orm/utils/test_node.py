@@ -67,4 +67,4 @@ def test_load_node_class_with_data_prefix():
     # Test data prefix with empty subtype
     with pytest.warns(UserWarning, match='unknown type string `data.`'):
         loaded_class = load_node_class('data.')
-        assert loaded_class == Data 
+        assert loaded_class == Data

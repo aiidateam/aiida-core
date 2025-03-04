@@ -33,12 +33,12 @@ def test_load_node_class_with_node_prefix():
     # Test node prefix removal
     with pytest.warns(UserWarning):
         loaded_class = load_node_class('node.data.dict.')
-        assert loaded_class == Data
+    assert loaded_class == Data
 
     # Test node prefix with invalid subtype
     with pytest.warns(UserWarning):
         loaded_class = load_node_class('node.invalid.type.')
-        assert loaded_class == Data
+    assert loaded_class == Data
 
 
 def test_load_node_class_with_process_prefix():

@@ -664,6 +664,9 @@ class TestVerdiDelete:
         """Test the `setup_node_hierarchy` and `verify_deletion` fixtures."""
         # Guard the guardians
         setup_node_hierarchy()
+        assert len(self.workflow_nodes) == 1
+        assert len(self.calcjob_nodes) == 1
+        assert len(self.remote_nodes) == 1
         self.verify_deletion(nodes_deleted=False, folders_deleted=False)
 
     def test_node_delete_dry_run(self, run_cli_command, setup_node_hierarchy):

@@ -59,7 +59,7 @@ def load_node_class(type_string):
         except exceptions.MissingEntryPointError:
             return Data
 
-    if base_path.startswith('process.'):
+    if base_path.startswith('process'):
         return load_entry_point('aiida.node', base_path)
 
     # At this point we really have an anomalous type string. At some point, storing nodes with unresolvable type strings

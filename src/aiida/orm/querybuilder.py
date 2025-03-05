@@ -1336,14 +1336,25 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
     from aiida.common.escaping import escape_for_sql_like
     from aiida.orm.utils.node import get_query_type_from_type_string
 
+    # value = classifiers.ormclass_type_string
+
+    # if not subclassing:
+    #     filters = {'==': value}
+    # else:
+    #     # Note: the query_type_string always ends with a dot. This ensures that "like {str}%" matches *only*
+    #     # the query type string
+    #     filters = {'like': f'{escape_for_sql_like(get_query_type_from_type_string(value))}%'}
+
     value = classifiers.ormclass_type_string
+
+    if value == 'data.core.code.abstract':
+        value = 'data.core.code'  # Ensure it matches all codes
 
     if not subclassing:
         filters = {'==': value}
     else:
-        # Note: the query_type_string always ends with a dot. This ensures that "like {str}%" matches *only*
-        # the query type string
         filters = {'like': f'{escape_for_sql_like(get_query_type_from_type_string(value))}%'}
+
 
     return filters
 

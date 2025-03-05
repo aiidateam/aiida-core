@@ -1355,7 +1355,6 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
     else:
         filters = {'like': f'{escape_for_sql_like(get_query_type_from_type_string(value))}%'}
 
-
     return filters
 
 

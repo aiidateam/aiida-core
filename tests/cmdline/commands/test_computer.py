@@ -807,7 +807,7 @@ class TestVerdiComputerCommands:
         with pytest.raises(NotExistent):
             orm.load_code(code_label)
 
-    def test_computer_delete_existing_computer(self):
+    def test_computer_delete_existing_computer_not_deleted(self):
         """Test if `verdi computer delete` works correctly for an existing computer when it is not deleted"""
         label = 'computer_temp'
         computer_temp = orm.Computer(
@@ -831,17 +831,20 @@ class TestVerdiComputerCommands:
         # Tests that Abort in case of wrong input
         false_user_input = ''  # most common input that could happen by accident
         self.cli_runner(computer_delete, [label], user_input=false_user_input, raises=True)
+        # raises an error if not existing
         orm.load_code(code_label)
 
         # Safety check in case of --dry-run
         options = [label, '--dry-run']
-        self.cli_runner(computer_delete, options)
+        self.cli_runner(computer_delete, options, user_input='y')
+        # raises an error if not existing
         orm.load_code(code_label)
 
     def test_computer_delete_nonexisting_computer(self):
         """Test if `verdi computer delete` command works correctly for a nonexisting computer"""
         # See if the command complains about not getting an nonexisting computer
-        self.cli_runner(computer_delete, ['computer_that_does_not_exist'], raises=True)
+        result = self.cli_runner(computer_delete, ['computer_that_does_not_exist'], user_input='y', raises=True)
+        assert 'no Computer found with LABEL<computer_that_does_not_exist>' in result.stderr
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)

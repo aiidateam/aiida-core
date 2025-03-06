@@ -255,11 +255,23 @@ def test_dir_permissions_creation_modification(custom_transport, tmp_path_remote
         # TODO : bug in paramiko. When changing the directory to very low \
         # I cannot set it back to higher permissions
 
-        # TODO: probably here we should then check for
-        # the new directory modes. To see if we want a higher
-        # level function to ask for the mode, or we just
-        # use get_attribute
+        # Test checking specific permission bits
+        # Owner: read, write, execute
+        assert transport.get_mode(directory) & 0o700 == 0o500
+        # Group: execute only
+        assert transport.get_mode(directory) & 0o070 == 0o010
+        # Others: execute only
+        assert transport.get_mode(directory) & 0o007 == 0o001
 
+        # Creating a file to test file permission changes
+        test_file = directory / 'testfile.txt'
+        with open(test_file, 'w', encoding='utf8') as fhandle:
+            fhandle.write('test content')
+        
+        # Change file permissions
+        transport.chmod(test_file, 0o644)
+        assert transport.get_mode(test_file) == 0o644
+        
         # change permissions of an empty string, non existing folder.
         with pytest.raises(OSError):
             transport.chmod('', 0o777)
@@ -278,17 +290,57 @@ def test_dir_reading_permissions(custom_transport, tmp_path_remote):
 
         # create directory with non default permissions
         transport.mkdir(directory)
-
+        
+        # Store original permissions to attempt restoration later
+        original_mode = transport.get_mode(directory)
+        
         # change permissions to low ones
         transport.chmod(directory, 0)
 
         # test if the security bits have changed
         assert transport.get_mode(directory) == 0
-
-        # TODO : the test leaves a directory even if it is successful
-        #        The bug is in paramiko. After lowering the permissions,
-        #        I cannot restore them to higher values
-        # transport.rmdir(directory)
+        
+        # Verify expected behavior with zero-permission directory
+        # These operations should fail with appropriate errors
+        with pytest.raises(OSError):
+            transport.listdir(directory)
+            
+        # Test listing parent directory still works
+        parent_listing = transport.listdir(tmp_path_remote)
+        assert 'test' in parent_listing
+        
+        # Try to create a file in the directory (should fail)
+        test_file_path = directory / 'testfile'
+        with tempfile.NamedTemporaryFile() as tmpf:
+            with pytest.raises(OSError):
+                transport.putfile(tmpf.name, test_file_path)
+        
+        # Test progressive permission changes
+        try:
+            # Try to restore permissions to allow deletion
+            # Note: This might fail due to the paramiko issue mentioned in the TODO
+            transport.chmod(directory, 0o700)  # rwx for owner only
+            
+            # Verify intermediate permissions if restoration succeeded
+            if transport.get_mode(directory) == 0o700:
+                # Now we should be able to list the directory
+                assert isinstance(transport.listdir(directory), list)
+                
+                # Finally restore original permissions
+                transport.chmod(directory, original_mode)
+                
+                # Clean up by removing the directory
+                transport.rmdir(directory)
+            else:
+                # TODO: The bug is still in paramiko. After lowering the permissions,
+                # we cannot restore them to higher values, so we can't clean up properly.
+                # Consider implementing a force_rmdir method in transport plugins that can
+                # handle zero-permission directories, or use OS-specific commands via exec_command
+                pass
+        except OSError:
+            # If permission restoration fails, log the issue
+            print("WARNING: Could not restore permissions to clean up test directory")
+            # The directory will remain but with zero permissions
 
 
 def test_isfile_isdir(custom_transport, tmp_path_remote):
@@ -444,8 +496,7 @@ def test_put_get_abs_path_file(custom_transport, tmp_path_remote, tmp_path_local
 
 
 def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_local):
-    """Test of exception put/get of empty strings"""
-    # TODO : verify the correctness of \n at the end of a file
+    """Test of exception put/get of empty strings and verify file content preservation."""
     local_dir = tmp_path_local
     remote_dir = tmp_path_remote
     directory = 'tmp_try'
@@ -456,18 +507,47 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
 
         local_file_name = 'file.txt'
         retrieved_file_name = 'file_retrieved.txt'
+        empty_file_name = 'empty_file.txt'
+        binary_file_name = 'binary_file.bin'
+        no_newline_file = 'no_newline.txt'
 
         remote_file_name = 'file_remote.txt'
+        remote_empty_file = 'remote_empty.txt'
+        remote_binary_file = 'remote_binary.bin'
+        remote_no_newline = 'remote_no_newline.txt'
 
         # here use full path in src and dst
         local_file_abs_path = local_dir / directory / local_file_name
         retrieved_file_abs_path = local_dir / directory / retrieved_file_name
+        empty_file_abs_path = local_dir / directory / empty_file_name
+        binary_file_abs_path = local_dir / directory / binary_file_name
+        no_newline_abs_path = local_dir / directory / no_newline_file
+        
         remote_file_abs_path = remote_dir / directory / remote_file_name
+        remote_empty_abs_path = remote_dir / directory / remote_empty_file
+        remote_binary_abs_path = remote_dir / directory / remote_binary_file
+        remote_no_newline_abs_path = remote_dir / directory / remote_no_newline
 
+        # Create test files with different content types
         text = 'Viva Verdi\n'
+        text_no_newline = 'No newline at end'
+        binary_data = b'\x00\x01\x02\x03\xFF\xFE\xAB\xCD'
+        
         with open(local_file_abs_path, 'w', encoding='utf8') as fhandle:
             fhandle.write(text)
+            
+        # Create empty file
+        open(empty_file_abs_path, 'w').close()
+        
+        # Create file with no newline at the end
+        with open(no_newline_abs_path, 'w', encoding='utf8') as fhandle:
+            fhandle.write(text_no_newline)
+            
+        # Create binary file
+        with open(binary_file_abs_path, 'wb') as fhandle:
+            fhandle.write(binary_data)
 
+        # Test error cases with empty strings
         # localpath is an empty string
         # ValueError because it is not an abs path
         with pytest.raises(ValueError):
@@ -481,11 +561,13 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
         with pytest.raises(OSError):
             transport.putfile(local_file_abs_path, '')
 
+        # Transfer files and verify content preservation
         transport.put(local_file_abs_path, remote_file_abs_path)
-        # overwrite the remote_file_name
-        transport.putfile(local_file_abs_path, remote_file_abs_path)
+        transport.put(empty_file_abs_path, remote_empty_abs_path)
+        transport.put(binary_file_abs_path, remote_binary_abs_path)
+        transport.put(no_newline_abs_path, remote_no_newline_abs_path)
 
-        # remote path is an empty string
+        # Test retrieval errors with empty strings
         with pytest.raises(OSError):
             transport.get('', retrieved_file_abs_path)
         with pytest.raises(OSError):
@@ -498,19 +580,45 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
         with pytest.raises(ValueError):
             transport.getfile(remote_file_abs_path, '')
 
-        # TODO : get doesn't retrieve empty files.
-        # Is it what we want?
+        # Get files back for content verification
         transport.get(remote_file_abs_path, retrieved_file_abs_path)
         assert Path(retrieved_file_abs_path).exists()
         t1 = Path(retrieved_file_abs_path).stat().st_mtime_ns
+        
+        # Verify file content is preserved correctly (including newline)
+        with open(retrieved_file_abs_path, 'r', encoding='utf8') as fhandle:
+            retrieved_content = fhandle.read()
+        assert retrieved_content == text  # This verifies the newline at the end is preserved
+        
+        # Check handling of empty files
+        # TODO: If empty files are not properly retrieved, this test will fail
+        # and should be updated by the maintainer
+        retrieved_empty_path = local_dir / directory / "retrieved_empty.txt"
+        transport.get(remote_empty_abs_path, retrieved_empty_path)
+        assert Path(retrieved_empty_path).exists()
+        assert Path(retrieved_empty_path).stat().st_size == 0
+        
+        # Check binary file content preservation
+        retrieved_binary_path = local_dir / directory / "retrieved_binary.bin"
+        transport.get(remote_binary_abs_path, retrieved_binary_path)
+        with open(retrieved_binary_path, 'rb') as fhandle:
+            retrieved_binary = fhandle.read()
+        assert retrieved_binary == binary_data
+        
+        # Check preservation of files without trailing newline
+        retrieved_no_newline_path = local_dir / directory / "retrieved_no_newline.txt"
+        transport.get(remote_no_newline_abs_path, retrieved_no_newline_path)
+        with open(retrieved_no_newline_path, 'r', encoding='utf8') as fhandle:
+            retrieved_no_newline = fhandle.read()
+        assert retrieved_no_newline == text_no_newline
 
-        # overwrite retrieved_file_name in 0.01 s
+        # Test overwrite timestamp behavior
         time.sleep(1)
         transport.getfile(remote_file_abs_path, retrieved_file_abs_path)
         assert Path(retrieved_file_abs_path).exists()
         t2 = Path(retrieved_file_abs_path).stat().st_mtime_ns
 
-        # Check st_mtime_ns to sure it is overwritten
+        # Check st_mtime_ns to ensure it is overwritten
         # Note: this test will fail if getfile() would preserve the remote timestamp,
         # this is supported by core.ssh_async, but the default value is False
         assert t2 > t1
@@ -899,7 +1007,7 @@ def test_put_get_abs_path_tree(custom_transport, tmp_path_remote, tmp_path_local
 
 
 def test_put_get_empty_string_tree(custom_transport, tmp_path_remote, tmp_path_local):
-    """Test of exception put/get of empty strings"""
+    """Test of exception put/get of empty strings and check empty file preservation."""
     local_dir = tmp_path_local
     remote_dir = tmp_path_remote
     directory = 'tmp_try'
@@ -911,37 +1019,61 @@ def test_put_get_empty_string_tree(custom_transport, tmp_path_remote, tmp_path_l
 
         local_subfolder.mkdir(parents=True)
 
-        local_file = local_subfolder / 'file.txt'
-
+        # Create a non-empty file
+        nonempty_file = local_subfolder / 'file.txt'
         text = 'Viva Verdi\n'
-        with open(local_file, 'w', encoding='utf8') as fhandle:
+        with open(nonempty_file, 'w', encoding='utf8') as fhandle:
             fhandle.write(text)
 
-        # localpath is an empty string
-        # ValueError because it is not an abs path
+        # Create an empty file to enhance the test for empty file retrieval
+        empty_file = local_subfolder / 'empty.txt'
+        empty_file.touch()
+
+        # localpath is an empty string -> ValueError because it is not an abs path
         with pytest.raises(ValueError):
             transport.puttree('', remote_subfolder)
 
-        # remote path is an empty string
+        # remote path is an empty string -> OSError expected
         with pytest.raises(OSError):
             transport.puttree(local_subfolder, '')
 
+        # put the tree from local to remote
         transport.puttree(local_subfolder, remote_subfolder)
 
-        # remote path is an empty string
+        # remote path is an empty string -> OSError expected
         with pytest.raises(OSError):
             transport.gettree('', retrieved_subfolder)
 
-        # local path is an empty string
-        # ValueError because it is not an abs path
+        # local path is an empty string -> ValueError expected
         with pytest.raises(ValueError):
             transport.gettree(remote_subfolder, '')
 
         # TODO : get doesn't retrieve empty files.
         # Is it what we want?
-        transport.gettree((remote_subfolder), (retrieved_subfolder))
+        transport.gettree(remote_subfolder, retrieved_subfolder)
 
+        # Check that the non-empty file is retrieved correctly
         assert 'file.txt' in [p.name for p in retrieved_subfolder.iterdir()]
+        retrieved_nonempty = retrieved_subfolder / 'file.txt'
+        with open(retrieved_nonempty, 'r', encoding='utf8') as f:
+            assert f.read() == text
+
+        # Enhanced check: verify that the empty file is now retrieved and still empty
+        retrieved_empty = retrieved_subfolder / 'empty.txt'
+        assert retrieved_empty.exists(), "Empty file should be retrieved"
+        assert retrieved_empty.stat().st_size == 0, "Retrieved empty file should have size 0"
+
+        updated_text = 'Updated content\n'
+        with open(nonempty_file, 'w', encoding='utf8') as fhandle:
+            fhandle.write(updated_text)
+        # Put the updated tree - this call is expected to overwrite the remote copy
+        transport.puttree(local_subfolder, remote_subfolder)
+        # Retrieve to a new location
+        new_retrieved = local_dir / directory / 'tmp4'
+        transport.gettree(remote_subfolder, new_retrieved)
+        updated_retrieved = new_retrieved / 'file.txt'
+        with open(updated_retrieved, 'r', encoding='utf8') as fhandle:
+            assert fhandle.read() == updated_text
 
 
 def test_gettree_nested_directory(custom_transport, tmp_path_remote, tmp_path_local):

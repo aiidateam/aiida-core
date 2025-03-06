@@ -267,11 +267,11 @@ def test_dir_permissions_creation_modification(custom_transport, tmp_path_remote
         test_file = directory / 'testfile.txt'
         with open(test_file, 'w', encoding='utf8') as fhandle:
             fhandle.write('test content')
-        
+
         # Change file permissions
         transport.chmod(test_file, 0o644)
         assert transport.get_mode(test_file) == 0o644
-        
+
         # change permissions of an empty string, non existing folder.
         with pytest.raises(OSError):
             transport.chmod('', 0o777)
@@ -290,45 +290,45 @@ def test_dir_reading_permissions(custom_transport, tmp_path_remote):
 
         # create directory with non default permissions
         transport.mkdir(directory)
-        
+
         # Store original permissions to attempt restoration later
         original_mode = transport.get_mode(directory)
-        
+
         # change permissions to low ones
         transport.chmod(directory, 0)
 
         # test if the security bits have changed
         assert transport.get_mode(directory) == 0
-        
+
         # Verify expected behavior with zero-permission directory
         # These operations should fail with appropriate errors
         with pytest.raises(OSError):
             transport.listdir(directory)
-            
+
         # Test listing parent directory still works
         parent_listing = transport.listdir(tmp_path_remote)
         assert 'test' in parent_listing
-        
+
         # Try to create a file in the directory (should fail)
         test_file_path = directory / 'testfile'
         with tempfile.NamedTemporaryFile() as tmpf:
             with pytest.raises(OSError):
                 transport.putfile(tmpf.name, test_file_path)
-        
+
         # Test progressive permission changes
         try:
             # Try to restore permissions to allow deletion
             # Note: This might fail due to the paramiko issue mentioned in the TODO
             transport.chmod(directory, 0o700)  # rwx for owner only
-            
+
             # Verify intermediate permissions if restoration succeeded
             if transport.get_mode(directory) == 0o700:
                 # Now we should be able to list the directory
                 assert isinstance(transport.listdir(directory), list)
-                
+
                 # Finally restore original permissions
                 transport.chmod(directory, original_mode)
-                
+
                 # Clean up by removing the directory
                 transport.rmdir(directory)
             else:
@@ -339,7 +339,7 @@ def test_dir_reading_permissions(custom_transport, tmp_path_remote):
                 pass
         except OSError:
             # If permission restoration fails, log the issue
-            print("WARNING: Could not restore permissions to clean up test directory")
+            print('WARNING: Could not restore permissions to clean up test directory')
             # The directory will remain but with zero permissions
 
 
@@ -522,7 +522,7 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
         empty_file_abs_path = local_dir / directory / empty_file_name
         binary_file_abs_path = local_dir / directory / binary_file_name
         no_newline_abs_path = local_dir / directory / no_newline_file
-        
+
         remote_file_abs_path = remote_dir / directory / remote_file_name
         remote_empty_abs_path = remote_dir / directory / remote_empty_file
         remote_binary_abs_path = remote_dir / directory / remote_binary_file
@@ -531,18 +531,18 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
         # Create test files with different content types
         text = 'Viva Verdi\n'
         text_no_newline = 'No newline at end'
-        binary_data = b'\x00\x01\x02\x03\xFF\xFE\xAB\xCD'
-        
+        binary_data = b'\x00\x01\x02\x03\xff\xfe\xab\xcd'
+
         with open(local_file_abs_path, 'w', encoding='utf8') as fhandle:
             fhandle.write(text)
-            
+
         # Create empty file
         open(empty_file_abs_path, 'w').close()
-        
+
         # Create file with no newline at the end
         with open(no_newline_abs_path, 'w', encoding='utf8') as fhandle:
             fhandle.write(text_no_newline)
-            
+
         # Create binary file
         with open(binary_file_abs_path, 'wb') as fhandle:
             fhandle.write(binary_data)
@@ -584,29 +584,29 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
         transport.get(remote_file_abs_path, retrieved_file_abs_path)
         assert Path(retrieved_file_abs_path).exists()
         t1 = Path(retrieved_file_abs_path).stat().st_mtime_ns
-        
+
         # Verify file content is preserved correctly (including newline)
         with open(retrieved_file_abs_path, 'r', encoding='utf8') as fhandle:
             retrieved_content = fhandle.read()
         assert retrieved_content == text  # This verifies the newline at the end is preserved
-        
+
         # Check handling of empty files
         # TODO: If empty files are not properly retrieved, this test will fail
         # and should be updated by the maintainer
-        retrieved_empty_path = local_dir / directory / "retrieved_empty.txt"
+        retrieved_empty_path = local_dir / directory / 'retrieved_empty.txt'
         transport.get(remote_empty_abs_path, retrieved_empty_path)
         assert Path(retrieved_empty_path).exists()
         assert Path(retrieved_empty_path).stat().st_size == 0
-        
+
         # Check binary file content preservation
-        retrieved_binary_path = local_dir / directory / "retrieved_binary.bin"
+        retrieved_binary_path = local_dir / directory / 'retrieved_binary.bin'
         transport.get(remote_binary_abs_path, retrieved_binary_path)
         with open(retrieved_binary_path, 'rb') as fhandle:
             retrieved_binary = fhandle.read()
         assert retrieved_binary == binary_data
-        
+
         # Check preservation of files without trailing newline
-        retrieved_no_newline_path = local_dir / directory / "retrieved_no_newline.txt"
+        retrieved_no_newline_path = local_dir / directory / 'retrieved_no_newline.txt'
         transport.get(remote_no_newline_abs_path, retrieved_no_newline_path)
         with open(retrieved_no_newline_path, 'r', encoding='utf8') as fhandle:
             retrieved_no_newline = fhandle.read()
@@ -1060,8 +1060,8 @@ def test_put_get_empty_string_tree(custom_transport, tmp_path_remote, tmp_path_l
 
         # Enhanced check: verify that the empty file is now retrieved and still empty
         retrieved_empty = retrieved_subfolder / 'empty.txt'
-        assert retrieved_empty.exists(), "Empty file should be retrieved"
-        assert retrieved_empty.stat().st_size == 0, "Retrieved empty file should have size 0"
+        assert retrieved_empty.exists(), 'Empty file should be retrieved'
+        assert retrieved_empty.stat().st_size == 0, 'Retrieved empty file should have size 0'
 
         updated_text = 'Updated content\n'
         with open(nonempty_file, 'w', encoding='utf8') as fhandle:

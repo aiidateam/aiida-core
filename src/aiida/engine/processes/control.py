@@ -173,6 +173,7 @@ def kill_processes(
     processes: list[ProcessNode] | None = None,
     *,
     msg_text: str = 'Killed through `aiida.engine.processes.control.kill_processes`',
+    force_kill: bool = False,
     all_entries: bool = False,
     timeout: float = 5.0,
     wait: bool = False,
@@ -201,7 +202,7 @@ def kill_processes(
         return
 
     controller = get_manager().get_process_controller()
-    action = functools.partial(controller.kill_process, msg_text=msg_text)
+    action = functools.partial(controller.kill_process, msg_text=msg_text, force_kill=force_kill)
     _perform_actions(processes, action, 'kill', 'killing', timeout, wait)
 
 
@@ -262,6 +263,7 @@ def _resolve_futures(
     :param wait: Set to ``True`` to wait for process response, for ``False`` the action is fire-and-forget.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
     """
+    breakpoint()
     scheduled = {}
 
     def handle_result(result):
@@ -316,3 +318,4 @@ def _resolve_futures(
             'If the problem persists, make sure the daemon and RabbitMQ are running properly by restarting them.\n'
             'If the processes remain unresponsive, as a last resort, try reviving them with ``revive_processes``.'
         )
+    breakpoint()

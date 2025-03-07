@@ -28,6 +28,7 @@ dependencies = [
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
   'graphviz~=0.19',
+  'plumpy',
   'ipython>=7',
   'jedi<0.19',
   'jinja2~=3.0',
@@ -35,7 +36,6 @@ dependencies = [
   'importlib-metadata~=6.0',
   'numpy~=1.21',
   'paramiko~=3.0',
-  'plumpy~=0.24.0',
   'pgsu~=0.3.0',
   'psutil~=5.6',
   'psycopg[binary]~=3.0',
@@ -522,3 +522,7 @@ commands = molecule {posargs:test}
 # .github/actions/install-aiida-core/action.yml
 # .readthedocs.yml
 required-version = ">=0.5.21"
+
+[tool.uv.sources]
+plumpy = { git = "https://github.com/aiidateam/plumpy.git", branch = "force-kill-v2"}
+

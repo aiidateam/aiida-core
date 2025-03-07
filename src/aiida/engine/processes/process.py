@@ -329,16 +329,17 @@ class Process(PlumpyProcess):
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
-    def kill(self, msg_text: str | None = None) -> Union[bool, plumpy.futures.Future]:
+    def kill(self, msg_text: str | None = None, force_kill: bool = False) -> Union[bool, plumpy.futures.Future]:
         """Kill the process and all the children calculations it called
 
         :param msg: message
         """
+        breakpoint()
         self.node.logger.info(f'Request to kill Process<{self.node.pk}>')
 
         had_been_terminated = self.has_terminated()
 
-        result = super().kill(msg_text)
+        result = super().kill(msg_text, force_kill)
 
         # Only kill children if we could be killed ourselves
         if result is not False and not had_been_terminated:

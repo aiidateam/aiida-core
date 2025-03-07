@@ -5,11 +5,13 @@
 # fmt: off
 
 from .base import *
+from .compress import *
 from .folder import *
 
 __all__ = (
+    'RemoteStashCompressedData',
     'RemoteStashData',
-    'RemoteStashFolderData',
+    'RemoteStashFolderData'
 )
 
 # fmt: on

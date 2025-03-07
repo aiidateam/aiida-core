@@ -22,14 +22,13 @@ class ComputerBuilder:
         # Existing setup...
         if self.minimum_job_poll_interval is not None:
             computer.set_minimum_job_poll_interval(self.minimum_job_poll_interval)
+        # Set default based on transport and scheduler
+        elif self.transport == 'core.local' and self.scheduler == 'core.direct':
+            computer.set_minimum_job_poll_interval(0.1)
         else:
-            # Set default based on transport and scheduler
-            if (self.transport == 'core.local' and self.scheduler == 'core.direct'):
-                computer.set_minimum_job_poll_interval(0.1)
-            else:
-                computer.set_minimum_job_poll_interval(10.0)
+            computer.set_minimum_job_poll_interval(10.0)
         return computer
-    
+
     @staticmethod
     def from_computer(computer):
         """Create ComputerBuilder from existing computer instance.

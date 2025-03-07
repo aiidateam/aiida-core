@@ -1267,6 +1267,21 @@ def test_rename(custom_transport, tmp_path_remote):
             transport.rename(new_file, another_file)
 
 
+def test_chown(custom_transport, tmp_path_remote):
+
+    with custom_transport as transport:
+        file_path = tmp_path_remote / 'testfile.txt'
+        file_path.touch()  # Create an empty file
+
+        # Change owner to the 'root' or any other user
+        transport.chown(file_path, 'root', 'root')
+
+        # Just to  check if the method runs without errors
+        assert file_path.exists()
+
+
+
+
 def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: Path, monkeypatch: pytest.MonkeyPatch):
     """Test that the compress method raises an error according to instructions given in the abstract method."""
     with custom_transport as transport:
@@ -1474,3 +1489,4 @@ def test_extract(
     with pytest.raises(OSError, match='Error while extracting the tar archive.'):
         with custom_transport as transport:
             transport.extract(tmp_path_remote / archive_name, tmp_path_remote / 'extracted_1')
+>>>>>>> main

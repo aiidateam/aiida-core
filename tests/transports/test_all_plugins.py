@@ -1257,3 +1257,16 @@ def test_rename(custom_transport, tmp_path_remote):
         # Perform rename operation if new file already exists
         with pytest.raises(OSError, match='already exist|destination exists'):
             transport.rename(new_file, another_file)
+            
+def test_chown(custom_transport, tmp_path_remote):
+   
+    with custom_transport as transport:
+        file_path = tmp_path_remote / 'testfile.txt'
+        file_path.touch()  # Create an empty file
+        
+        # Change owner to the 'root' or any other user
+        transport.chown(file_path, 'root', 'root')
+        
+        # Just to  check if the method runs without errors
+        assert file_path.exists()
+            

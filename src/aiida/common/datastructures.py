@@ -22,6 +22,10 @@ class StashMode(Enum):
     """Mode to use when stashing files from the working directory of a completed calculation job for safekeeping."""
 
     COPY = 'copy'
+    COMPRESS_TAR = 'tar'
+    COMPRESS_TARBZ2 = 'tar.bz2'
+    COMPRESS_TARGZ = 'tar.gz'
+    COMPRESS_TARXZ = 'tar.xz'
 
 
 class CalcJobState(Enum):

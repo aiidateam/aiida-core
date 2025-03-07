@@ -121,6 +121,40 @@ def test_reachable():
     output = sp.check_output(['verdi', 'computer', 'setup', '--help'])
     assert b'Usage:' in output
 
+def test_computer_setup_minimum_poll_interval(run_cli_command):
+    # Test explicit interval
+    options = [
+        '--label', 'test-computer',
+        '--hostname', 'localhost',
+        '--transport', 'core.local',
+        '--scheduler', 'core.direct',
+        '--minimum-job-poll-interval', '5.0',
+    ]
+    run_cli_command(computer_setup, options)
+    computer = Computer.collection.get(label='test-computer')
+    assert computer.get_minimum_job_poll_interval() == 5.0
+
+    # Test default for LocalTransport + DirectScheduler
+    options = [
+        '--label', 'test-default',
+        '--hostname', 'localhost',
+        '--transport', 'core.local',
+        '--scheduler', 'core.direct',
+    ]
+    run_cli_command(computer_setup, options)
+    computer = Computer.collection.get(label='test-default')
+    assert computer.get_minimum_job_poll_interval() == 0.1
+
+    # Test default for other transports
+    options = [
+        '--label', 'test-ssh',
+        '--hostname', 'remote',
+        '--transport', 'core.ssh',
+        '--scheduler', 'core.slurm',
+    ]
+    run_cli_command(computer_setup, options)
+    computer = Computer.collection.get(label='test-ssh')
+    assert computer.get_minimum_job_poll_interval() == 10.0
 
 def test_mixed(run_cli_command):
     """Test verdi computer setup in mixed mode.

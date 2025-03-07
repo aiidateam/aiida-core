@@ -271,6 +271,12 @@ def set_computer_builder(ctx, param, value):
 
 
 @verdi_computer.command('setup')
+@click.option(
+    '--minimum-job-poll-interval',
+    type=click.FLOAT,
+    default=None,
+    help='Minimum interval (seconds) between polling scheduler for job status. Default varies by transport/scheduler.'
+)
 @options_computer.LABEL()
 @options_computer.HOSTNAME()
 @options_computer.DESCRIPTION()
@@ -319,7 +325,6 @@ def computer_setup(ctx, non_interactive, **kwargs):
 
     profile = ctx.obj['profile']
     echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
-
 
 @verdi_computer.command('duplicate')
 @arguments.COMPUTER(callback=set_computer_builder)

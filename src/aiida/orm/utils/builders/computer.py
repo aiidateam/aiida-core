@@ -13,8 +13,23 @@ from aiida.common.utils import ErrorAccumulator
 
 
 class ComputerBuilder:
-    """Build a computer with validation of attribute combinations"""
+    def __init__(self, **kwargs):
+        # Existing parameters...
+        self.minimum_job_poll_interval = kwargs.get('minimum_job_poll_interval')
 
+    def new(self):
+        computer = Computer(...)
+        # Existing setup...
+        if self.minimum_job_poll_interval is not None:
+            computer.set_minimum_job_poll_interval(self.minimum_job_poll_interval)
+        else:
+            # Set default based on transport and scheduler
+            if (self.transport == 'core.local' and self.scheduler == 'core.direct'):
+                computer.set_minimum_job_poll_interval(0.1)
+            else:
+                computer.set_minimum_job_poll_interval(10.0)
+        return computer
+    
     @staticmethod
     def from_computer(computer):
         """Create ComputerBuilder from existing computer instance.

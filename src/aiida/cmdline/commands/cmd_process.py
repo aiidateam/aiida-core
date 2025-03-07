@@ -320,8 +320,12 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
 @options.ALL(help='Kill all processes if no specific processes are specified.')
 @options.TIMEOUT()
 @options.WAIT()
+@options.FORCE_KILL(
+    help='Force kill the process if it does not respond to the initial kill signal.\n'
+    ' Note: This may lead to orphaned jobs on your HPC and should be used with caution.'
+)
 @decorators.with_dbenv()
-def process_kill(processes, all_entries, timeout, wait):
+def process_kill(processes, all_entries, timeout, wait, force_kill):
     """Kill running processes.
 
     Kill one or multiple running processes."""
@@ -338,11 +342,17 @@ def process_kill(processes, all_entries, timeout, wait):
     if all_entries:
         click.confirm('Are you sure you want to kill all processes?', abort=True)
 
+    if force_kill:
+        echo.echo_warning('Force kill is enabled. This may lead to orphaned jobs on your HPC.')
+        msg_text = 'Force killed through `verdi process kill`'
+    else:
+        msg_text = 'Killed through `verdi process kill`'
     with capture_logging() as stream:
         try:
             control.kill_processes(
                 processes,
-                msg_text='Killed through `verdi process kill`',
+                msg_text=msg_text,
+                force_kill=force_kill,
                 all_entries=all_entries,
                 timeout=timeout,
                 wait=wait,

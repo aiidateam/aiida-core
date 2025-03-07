@@ -10,7 +10,7 @@
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
-from aiida.orm.fields import add_field
+from aiida.common.pydantic import MetadataField
 
 from ...data import Data
 
@@ -36,13 +36,8 @@ class RemoteStashData(Data):
 
     _storable = False
 
-    __qb_fields__ = [
-        add_field(
-            'stash_mode',
-            dtype=str,
-            doc='The mode with which the data was stashed',
-        ),
-    ]
+    class Model(Data.Model):
+        stash_mode: StashMode = MetadataField(description='The mode with which the data was stashed')
 
     def __init__(self, stash_mode: StashMode, **kwargs):
         """Construct a new instance

@@ -334,7 +334,6 @@ class Process(PlumpyProcess):
 
         :param msg: message
         """
-        breakpoint()
         self.node.logger.info(f'Request to kill Process<{self.node.pk}>')
 
         had_been_terminated = self.has_terminated()

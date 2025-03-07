@@ -263,7 +263,6 @@ def _resolve_futures(
     :param wait: Set to ``True`` to wait for process response, for ``False`` the action is fire-and-forget.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
     """
-    breakpoint()
     scheduled = {}
 
     def handle_result(result):
@@ -318,4 +317,3 @@ def _resolve_futures(
             'If the problem persists, make sure the daemon and RabbitMQ are running properly by restarting them.\n'
             'If the processes remain unresponsive, as a last resort, try reviving them with ``revive_processes``.'
         )
-    breakpoint()

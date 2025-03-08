@@ -344,9 +344,9 @@ def process_kill(processes, all_entries, timeout, wait, force_kill):
 
     if force_kill:
         echo.echo_warning('Force kill is enabled. This may lead to orphaned jobs on your HPC.')
-        msg_text = 'Force killed through `verdi process kill`'
+        msg_text = 'Force killed through verdi'
     else:
-        msg_text = 'Killed through `verdi process kill`'
+        msg_text = 'Killed through verdi'
     with capture_logging() as stream:
         try:
             control.kill_processes(

@@ -271,6 +271,12 @@ def set_computer_builder(ctx, param, value):
 
 
 @verdi_computer.command('setup')
+@click.option(
+    '--minimum-job-poll-interval',
+    type=click.FLOAT,
+    default=None,
+    help='Minimum interval (seconds) between polling scheduler for job status. Default varies by transport/scheduler.',
+)
 @options_computer.LABEL()
 @options_computer.HOSTNAME()
 @options_computer.DESCRIPTION()

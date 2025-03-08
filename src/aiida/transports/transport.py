@@ -128,9 +128,7 @@ class Transport(abc.ABC):
         elif 'machine' in kwargs:
             self.hostname = kwargs.pop('machine')
             warnings.warn(
-                "The 'machine' parameter is deprecated, use 'hostname' instead",
-                DeprecationWarning,
-                stacklevel=2
+                "The 'machine' parameter is deprecated, use 'hostname' instead", DeprecationWarning, stacklevel=2
             )
         else:
             self.hostname = None

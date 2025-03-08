@@ -524,5 +524,4 @@ commands = molecule {posargs:test}
 required-version = ">=0.5.21"
 
 [tool.uv.sources]
-plumpy = { git = "https://github.com/aiidateam/plumpy.git", branch = "force-kill-v2"}
-
+plumpy = {git = "https://github.com/aiidateam/plumpy.git", branch = "force-kill-v2"}

@@ -52,7 +52,7 @@ class LocalTransport(BlockingTransport):
         self._internal_dir = None
 
         # Just to avoid errors
-        self._machine = kwargs.pop('machine', None)
+        self._machine = self.hostname
         if self._machine and self._machine != 'localhost':
             self.logger.debug('machine was passed, but it is not localhost')
 

@@ -126,7 +126,7 @@ class AsyncSshTransport(AsyncTransport):
         # by default, 'machine_or_host' is set to 'machine' in the __init__ method, if not provided.
         # NOTE: to guarantee a connection,
         # a computer with core.ssh_async transport plugin should be configured before any instantiation.
-        self.machine = kwargs.pop('machine_or_host', kwargs.pop('machine'))
+        self.machine = self.hostname
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
 

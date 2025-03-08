@@ -383,7 +383,7 @@ class SshTransport(BlockingTransport):
         self._proxy = None
         self._proxies = []
 
-        self._machine = kwargs.pop('machine')
+        self._machine = self.hostname
 
         self._client = paramiko.SSHClient()
         self._load_system_host_keys = kwargs.pop('load_system_host_keys', False)

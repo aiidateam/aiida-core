@@ -121,7 +121,19 @@ class Transport(abc.ABC):
         self._enters = 0
 
         # for accessing the identity of the underlying machine
-        self.hostname = kwargs.get('machine')
+        import warnings
+
+        if 'hostname' in kwargs:
+            self.hostname = kwargs.pop('hostname')
+        elif 'machine' in kwargs:
+            self.hostname = kwargs.pop('machine')
+            warnings.warn(
+                "The 'machine' parameter is deprecated, use 'hostname' instead",
+                DeprecationWarning,
+                stacklevel=2
+            )
+        else:
+            self.hostname = None
 
     def __repr__(self):
         return f'<{self.__class__.__name__}: {self!s}>'

@@ -138,6 +138,9 @@ requires-python = '>=3.9'
 'process.workflow.workchain' = 'aiida.orm.nodes.process.workflow.workchain:WorkChainNode'
 'process.workflow.workfunction' = 'aiida.orm.nodes.process.workflow.workfunction:WorkFunctionNode'
 
+[project.entry-points.'aiida.orm']
+'core.code.abstract' = 'aiida.orm.nodes.data.code.abstract:AbstractCode'
+
 [project.entry-points.'aiida.parsers']
 'core.arithmetic.add' = 'aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser'
 'core.templatereplacer' = 'aiida.parsers.plugins.templatereplacer.parser:TemplatereplacerParser'

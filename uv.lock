@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12' and sys_platform == 'win32'",
@@ -250,7 +249,6 @@ requires-dist = [
     { name = "upf-to-json", specifier = "~=0.9.2" },
     { name = "wrapt", specifier = "~=1.11" },
 ]
-provides-extras = ["atomic-tools", "bpython", "docs", "notebook", "pre-commit", "rest", "ssh-kerberos", "tests", "tui"]
 
 [[package]]
 name = "aiida-export-migration-tests"
@@ -3269,7 +3267,7 @@ wheels = [
 [[package]]
 name = "plumpy"
 version = "0.24.0"
-source = { git = "https://github.com/aiidateam/plumpy.git?branch=force-kill-v2#f6b466d0b3a3eb79213e3372cc88e5f2d5c4ab68" }
+source = { git = "https://github.com/aiidateam/plumpy.git?branch=force-kill-v2#90544ed813dda74c17e09c1a615d2aa4bc4c184f" }
 dependencies = [
     { name = "kiwipy", extra = ["rmq"] },
     { name = "nest-asyncio" },

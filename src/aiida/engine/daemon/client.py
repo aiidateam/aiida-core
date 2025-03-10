@@ -535,7 +535,8 @@ class DaemonClient:
         try:
             subprocess.check_output(command, env=env, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exception:
-            raise DaemonException('The daemon failed to start.') from exception
+            # CalledProcessError is not passing the subprocess stderr in its message so we add it in DaemonException
+            raise DaemonException(f'The daemon failed to start with error:\n{exception.stdout.decode()}') from exception
 
         if not wait:
             return

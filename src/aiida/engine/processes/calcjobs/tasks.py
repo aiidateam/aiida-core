@@ -24,10 +24,11 @@ import plumpy.process_states
 from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
 from aiida.common.folders import SandboxFolder
+from aiida.engine import utils
 from aiida.engine.daemon import execmanager
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.transports import TransportQueue
-from aiida.engine.utils import InterruptableFuture, exponential_backoff_retry, interruptable_task
+from aiida.engine.utils import InterruptableFuture, interruptable_task
 from aiida.manage.configuration import get_config_option
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.schedulers.datastructures import JobState
@@ -102,7 +103,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
     try:
         logger.info(f'scheduled request to upload CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, PreSubmitException, plumpy.process_states.Interruption)
-        skip_submit = await exponential_backoff_retry(
+        skip_submit = await utils.exponential_backoff_retry(
             do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except PreSubmitException:
@@ -150,7 +151,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
     try:
         logger.info(f'scheduled request to submit CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
-        result = await exponential_backoff_retry(
+        result = await utils.exponential_backoff_retry(
             do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
@@ -208,7 +209,7 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
     try:
         logger.info(f'scheduled request to update CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
-        job_done = await exponential_backoff_retry(
+        job_done = await utils.exponential_backoff_retry(
             do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
@@ -258,7 +259,7 @@ async def task_monitor_job(
     try:
         logger.info(f'scheduled request to monitor CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
-        monitor_result = await exponential_backoff_retry(
+        monitor_result = await utils.exponential_backoff_retry(
             do_monitor, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
@@ -326,7 +327,7 @@ async def task_retrieve_job(
     try:
         logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
-        result = await exponential_backoff_retry(
+        result = await utils.exponential_backoff_retry(
             do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
@@ -371,7 +372,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
             return await execmanager.stash_calculation(node, transport)
 
     try:
-        await exponential_backoff_retry(
+        await utils.exponential_backoff_retry(
             do_stash,
             initial_interval,
             max_attempts,
@@ -419,7 +420,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
 
     try:
         logger.info(f'scheduled request to kill CalcJob<{node.pk}>')
-        result = await exponential_backoff_retry(do_kill, initial_interval, max_attempts, logger=node.logger)
+        result = await utils.exponential_backoff_retry(do_kill, initial_interval, max_attempts, logger=node.logger)
     except plumpy.process_states.Interruption:
         raise
     except Exception as exception:

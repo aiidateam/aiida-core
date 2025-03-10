@@ -291,7 +291,7 @@ The user also has to specify the units for both ``x`` and ``y``:
   In [5]: x_name, x_array, x_units = xy.get_x()
   # The x values are stored as a 1D array with a shape of (1, n),
   # where n is the total number of data points.
-  
+
 Similarly, to retrieve the ``y`` values and their metadata, use the :py:meth:`~aiida.orm.XyData.get_y` method:
 
 .. code-block:: ipython

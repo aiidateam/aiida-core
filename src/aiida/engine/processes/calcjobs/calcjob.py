@@ -116,7 +116,7 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
 
     target_base = stash_options.get('target_base', None)
     source_list = stash_options.get('source_list', None)
-    stash_mode = stash_options.get('mode', StashMode.COPY.value)
+    stash_mode = stash_options.get('stash_mode', None)
 
     if not isinstance(target_base, str) or not os.path.isabs(target_base):
         return f'`metadata.options.stash.target_base` should be an absolute filepath, got: {target_base}'
@@ -130,8 +130,22 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     try:
         StashMode(stash_mode)
     except ValueError:
-        port = 'metadata.options.stash.mode'
+        port = 'metadata.options.stash.stash_mode'
         return f'`{port}` should be a member of aiida.common.datastructures.StashMode, got: {stash_mode}'
+
+    dereference = stash_options.get('dereference', None)
+
+    if stash_mode in [
+        StashMode.COMPRESS_TAR.value,
+        StashMode.COMPRESS_TARBZ2.value,
+        StashMode.COMPRESS_TARGZ.value,
+        StashMode.COMPRESS_TARXZ.value,
+    ]:
+        if not isinstance(dereference, bool):
+            return f'`metadata.options.stash.dereference` should be a boolean, got: {dereference}'
+
+    elif dereference is not None:
+        return '`metadata.options.stash.dereference` is only valid for compression stashing modes'
 
     return None
 
@@ -415,7 +429,12 @@ class CalcJob(Process):
             required=False,
             help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode`.',
         )
-
+        spec.input(
+            'metadata.options.stash.dereference',
+            valid_type=bool,
+            required=False,
+            help='Whether to follow symlinks while stashing or not, specific to StashMode.COMPRESS_* enums',
+        )
         spec.output(
             'remote_folder',
             valid_type=orm.RemoteData,
@@ -434,7 +453,6 @@ class CalcJob(Process):
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
             'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.',
         )
-
         spec.exit_code(
             100,
             'ERROR_NO_RETRIEVED_FOLDER',

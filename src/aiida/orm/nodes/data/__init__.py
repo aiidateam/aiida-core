@@ -58,6 +58,7 @@ __all__ = (
     'PortableCode',
     'ProjectionData',
     'RemoteData',
+    'RemoteStashCompressedData',
     'RemoteStashData',
     'RemoteStashFolderData',
     'SinglefileData',

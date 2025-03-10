@@ -141,7 +141,7 @@ class XyData(ArrayData):
         for num, (y_array, y_name, y_unit) in enumerate(zip(y_arrays, y_names, y_units)):
             self._arrayandname_validator(y_array, y_name, y_unit)
             if np.shape(y_array) != np.shape(x_array):
-                raise ValueError(f'y_array {y_name} did not have the same shape has the x_array!')
+                raise ValueError(f'y_array {y_name} does not have the same shape as x_array!')
             self.set_array(f'y_array_{num}', y_array)
 
         # if the y_arrays pass the initial validation, sets each

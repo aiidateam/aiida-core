@@ -289,12 +289,18 @@ The user also has to specify the units for both ``x`` and ``y``:
 .. code-block:: ipython
 
   In [5]: x_name, x_array, x_units = xy.get_x()
-
+  # The x values are stored as a 1D array with a shape of (1, n),
+  # where n is the total number of data points.
+  
 Similarly, to retrieve the ``y`` values and their metadata, use the :py:meth:`~aiida.orm.XyData.get_y` method:
 
 .. code-block:: ipython
 
   In [6]: y_values = xy.get_y()
+  # The y values are stored as a 2D array with a shape of (m, n), where:
+  # -m represents the number of datasets (each dataset is stored as a row in the array).
+  # -n represents the number of data points per dataset, which remains consistent with the x-array.
+
   In [7]: for y_name, y_array, y_units in y_values:
      ...:     print(y_name, y_array, y_units)
 

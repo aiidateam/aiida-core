@@ -66,6 +66,16 @@ def test_get_y_arraynames():
     y_names = node.get_y_arraynames()
     assert y_names == ['y_name1', 'y_name2']
 
+    # Test when no y_array exists
     empty_node = XyData()
     with pytest.raises(NotExistent):
         empty_node.get_y_arraynames()
+
+    # Test when y_array have inconsistent shapes
+    invalid_y_array = numpy.array([3, 4, 5])
+
+    invalid_node = XyData()
+    invalid_node.set_x(x_array, 'x_name', 'x_unit')
+
+    with pytest.raises(ValueError, match=r"y_array .* does not have the same shape as x_array!"):
+        invalid_node.set_y([y_array1, invalid_y_array], ['y_name1', 'invalid_y_name'], ['y_unit1', 'invalid_y_unit'])

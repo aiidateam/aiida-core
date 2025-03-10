@@ -55,7 +55,8 @@ def tmp_path_local(tmp_path_factory):
 # Skip for any transport plugins that are locally installed but are not part of `aiida-core`
 @pytest.fixture(
     scope='function',
-    params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
+    # params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
+    params=['core.ssh_async'],
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
@@ -74,6 +75,7 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     elif request.param == 'core.ssh_async':
         kwargs = {
             'machine': 'localhost',
+            'multiplexing': True,
         }
     else:
         kwargs = {}

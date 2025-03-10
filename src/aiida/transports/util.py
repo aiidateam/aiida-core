@@ -8,7 +8,9 @@
 ###########################################################################
 """General utilities for Transport classes."""
 
+import os
 import time
+import zipfile
 
 from paramiko import ProxyCommand
 
@@ -107,3 +109,39 @@ async def copy_from_remote_to_remote_async(
     .. note:: it uses the method transportsource.copy_from_remote_to_remote
     """
     await transportsource.copy_from_remote_to_remote(transportdestination, remotesource, remotedestination, **kwargs)
+
+def _compress_zip(source, dest, **kwargs):
+    """Compress a directory into a ZIP archive."""
+    with zipfile.ZipFile(dest, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(source):
+            # Add files to the ZIP archive
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, start=source)
+                zipf.write(file_path, arcname)
+            # Add empty directories
+            if not files and not dirs:
+                arcname_dir = os.path.relpath(root, start=source) + '/'
+                zipf.writestr(arcname_dir, b'')
+
+
+def _extract_zip(source, dest, **kwargs):
+    """Extract a ZIP archive to a destination directory."""
+    with zipfile.ZipFile(source, 'r') as zipf:
+        zipf.extractall(dest)
+
+
+def compress(transport, source, dest, format='tar', **kwargs):
+    """Compress files or directories into an archive."""
+    if format == 'zip':
+        _compress_zip(source, dest, **kwargs)
+    else:
+        raise ValueError(f"Unsupported compression format: {format}")
+
+
+def extract(transport, source, dest, format='tar', **kwargs):
+    """Extract files from an archive."""
+    if format == 'zip':
+        _extract_zip(source, dest, **kwargs)
+    else:
+        raise ValueError(f"Unsupported extraction format: {format}")

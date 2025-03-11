@@ -16,14 +16,11 @@ from aiida.orm.fields import add_field
 
 from .base import RemoteStashData
 
-__all__ = ('RemoteStashFolderData',)
+__all__ = ('RemoteStashCompressedData',)
 
 
-class RemoteStashFolderData(RemoteStashData):
-    """Data plugin that models a folder with files of a completed calculation job that has been stashed through a copy.
-
-    This data plugin can and should be used to stash files if and only if the stash mode is `StashMode.COPY`.
-    """
+class RemoteStashCompressedData(RemoteStashData):
+    """Data plugin that models a compressed stashed file on a remote computer."""
 
     _storable = True
 
@@ -38,21 +35,60 @@ class RemoteStashFolderData(RemoteStashData):
             dtype=List[str],
             doc='The list of source files that were stashed',
         ),
+        add_field(
+            'dereference',
+            dtype=bool,
+            doc='The format of the compression used when stashed',
+        ),
     ]
 
-    def __init__(self, stash_mode: StashMode, target_basepath: str, source_list: List, **kwargs):
+    def __init__(
+        self,
+        stash_mode: StashMode,
+        target_basepath: str,
+        source_list: List,
+        dereference: bool,
+        **kwargs,
+    ):
         """Construct a new instance
 
         :param stash_mode: the stashing mode with which the data was stashed on the remote.
-        :param target_basepath: the target basepath.
+        :param target_basepath: absolute path to place the compressed file (path+filename).
         :param source_list: the list of source files.
         """
         super().__init__(stash_mode, **kwargs)
         self.target_basepath = target_basepath
         self.source_list = source_list
+        self.dereference = dereference
 
-        if stash_mode != StashMode.COPY:
-            raise ValueError('`RemoteStashFolderData` can only be used with `stash_mode == StashMode.COPY`.')
+        if stash_mode not in [
+            StashMode.COMPRESS_TAR,
+            StashMode.COMPRESS_TARBZ2,
+            StashMode.COMPRESS_TARGZ,
+            StashMode.COMPRESS_TARXZ,
+        ]:
+            raise ValueError(
+                '`RemoteStashCompressedData` can only be used with `stash_mode` being either '
+                '`StashMode.COMPRESS_TAR`, `StashMode.COMPRESS_TARGZ`, '
+                '`StashMode.COMPRESS_TARBZ2` or `StashMode.COMPRESS_TARXZ`.'
+            )
+
+    @property
+    def dereference(self) -> bool:
+        """Return the dereference boolean.
+
+        :return: the dereference boolean.
+        """
+        return self.base.attributes.get('dereference')
+
+    @dereference.setter
+    def dereference(self, value: bool):
+        """Set the dereference boolean.
+
+        :param value: the dereference boolean.
+        """
+        type_check(value, bool)
+        self.base.attributes.set('dereference', value)
 
     @property
     def target_basepath(self) -> str:

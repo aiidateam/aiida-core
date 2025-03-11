@@ -11,8 +11,10 @@ pass.
 Plugin specific tests will be written in the corresponding test file.
 """
 
+import grp
 import io
 import os
+import pwd
 import shutil
 import signal
 import tempfile
@@ -22,8 +24,6 @@ from pathlib import Path
 
 import psutil
 import pytest
-import pwd
-import grp
 
 from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
 from aiida.transports import Transport
@@ -1268,13 +1268,13 @@ def test_rename(custom_transport, tmp_path_remote):
         with pytest.raises(OSError, match='already exist|destination exists'):
             transport.rename(new_file, another_file)
 
-            
+
 def test_chown(custom_transport, tmp_path_remote):
     """Test chown using grp and pwd to get current user and group."""
     with custom_transport as transport:
         file_path = tmp_path_remote / 'testfile.txt'
         file_path.touch()  # Create an empty file
-        
+
         # Get current user's name and group name
         user_name = pwd.getpwuid(os.getuid()).pw_name
         group_name = grp.getgrgid(os.getgid()).gr_name
@@ -1283,7 +1283,7 @@ def test_chown(custom_transport, tmp_path_remote):
         user_id = pwd.getpwnam(user_name).pw_uid
         group_id = grp.getgrnam(group_name).gr_gid
 
-        print(f"Testing with user: {user_name} (UID: {user_id}), group: {group_name} (GID: {group_id})")
+        print(f'Testing with user: {user_name} (UID: {user_id}), group: {group_name} (GID: {group_id})')
 
         # Change ownership using UID and GID
         transport.chown(file_path, user_id, group_id)
@@ -1300,8 +1300,6 @@ def test_chown(custom_transport, tmp_path_remote):
         # Non-existent file case
         with pytest.raises(OSError):
             transport.chown(tmp_path_remote / 'does_not_exist.txt', user_id, group_id)
-            
-
 
 
 def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: Path, monkeypatch: pytest.MonkeyPatch):
@@ -1511,4 +1509,3 @@ def test_extract(
     with pytest.raises(OSError, match='Error while extracting the tar archive.'):
         with custom_transport as transport:
             transport.extract(tmp_path_remote / archive_name, tmp_path_remote / 'extracted_1')
-

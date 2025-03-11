@@ -55,16 +55,21 @@ def tmp_path_local(tmp_path_factory):
 # Skip for any transport plugins that are locally installed but are not part of `aiida-core`
 @pytest.fixture(
     scope='function',
-    # params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
-    params=['core.ssh_async'],
+    params=[
+        ('core.local', None),
+        ('core.ssh', None),
+        ('core.ssh_auto', None),
+        ('core.ssh_async', True),
+        ('core.ssh_async', False),
+    ],
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
-    plugin = TransportFactory(request.param)
+    plugin = TransportFactory(request.param[0])
 
-    if request.param == 'core.ssh':
+    if request.param[0] == 'core.ssh':
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
-    elif request.param == 'core.ssh_auto':
+    elif request.param[0] == 'core.ssh_auto':
         kwargs = {'machine': 'localhost'}
         # The transport config is store in a independent temporary path per test to not mix up
         # with the files under operating.
@@ -72,10 +77,10 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
         monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
         if not filepath_config.exists():
             filepath_config.write_text('Host localhost')
-    elif request.param == 'core.ssh_async':
+    elif request.param[0] == 'core.ssh_async':
         kwargs = {
             'machine': 'localhost',
-            'multiplexing': True,
+            'multiplexing': request.param[1],
         }
     else:
         kwargs = {}

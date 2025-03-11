@@ -303,7 +303,7 @@ class OpenSSHwrapper:
             if await self.path_exists(path):
                 raise FileExistsError(f'Directory already exists: {path}')
 
-        commands = self.ssh_command_generator(f'mkdir {'-p' if parents else ''} {path}')
+        commands = self.ssh_command_generator(f"mkdir {'-p' if parents else ''} {path}")
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:

@@ -1340,7 +1340,7 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
 
     # Since `AbstractCode` was introduced later and does not have a direct entry point,
     # filtering for `data.core.code.abstract%` does not return any results. However, both
-    # `InstalledCode` and `PortableCode` (which inherit from `AbstractCode`) use `data.core.code.%` 
+    # `InstalledCode` and `PortableCode` (which inherit from `AbstractCode`) use `data.core.code.%`
     # as their node type. To ensure `AbstractCode` queries correctly return all code instances,
     # we adjust the filter to `data.core.code%`, matching all subclasses properly.
 

@@ -98,7 +98,14 @@ class Transport(abc.ABC):
         ),
     ]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *,
+        machine: Optional[str] = None,
+        safe_interval: Optional[float] = None,
+        use_login_shell: Optional[bool] = None,
+        **_,
+    ):
         """__init__ method of the Transport base class.
 
         :param safe_interval: (optional, default self._DEFAULT_SAFE_OPEN_INTERVAL)
@@ -108,8 +115,8 @@ class Transport(abc.ABC):
         """
         from aiida.common import AIIDA_LOGGER
 
-        self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
-        self._use_login_shell = kwargs.pop('use_login_shell', True)
+        self._safe_open_interval = self._DEFAULT_SAFE_OPEN_INTERVAL if safe_interval is None else safe_interval
+        self._use_login_shell = True if use_login_shell is None else use_login_shell
         if self._use_login_shell:
             self._bash_command_str = 'bash -l '
         else:
@@ -121,7 +128,7 @@ class Transport(abc.ABC):
         self._enters = 0
 
         # for accessing the identity of the underlying machine
-        self.hostname = kwargs.get('machine')
+        self.hostname = machine
 
     def __repr__(self):
         return f'<{self.__class__.__name__}: {self!s}>'

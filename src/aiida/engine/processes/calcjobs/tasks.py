@@ -493,7 +493,7 @@ class Waiting(plumpy.process_states.Waiting):
             if self._command == UPLOAD_COMMAND:
                 skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)
                 if skip_submit:
-                    result = self.retrieve(monitor_result=self._monitor_result)
+                    result = self.stash(monitor_result=self._monitor_result)
                 else:
                     result = self.submit()
 
@@ -529,7 +529,7 @@ class Waiting(plumpy.process_states.Waiting):
                 result = self.stash(monitor_result=monitor_result)
 
             elif self._command == STASH_COMMAND:
-                if node.get_option('stash') is not None:
+                if (node.get_option('stash') is not None) or (type(self.process).__name__ == 'StashCalculation'):
                     await self._launch_task(task_stash_job, node, transport_queue)
                 result = self.retrieve(monitor_result=self._monitor_result)
 

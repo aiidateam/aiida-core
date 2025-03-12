@@ -81,6 +81,17 @@ class WaitProcess(Process):
         pass
 
 
+class RunningProcess(Process):
+    _node_class = WorkflowNode
+
+    async def run(self):
+        import asyncio
+
+        await asyncio.sleep(100)
+        # TODO this does not work but at the moment never reaches there
+        return plumpy.Continue(self.run)
+
+
 class InvalidateCaching(Process):
     """A process which invalidates cache for some exit codes."""
 

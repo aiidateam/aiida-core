@@ -760,6 +760,8 @@ def submit_and_await(started_daemon_client):
                     f'Daemon <{started_daemon_client.profile.name}|{daemon_status}> log file content: \n'
                     f'{daemon_log_file}'
                 )
+            time.sleep(1)
+            print(node.process_state)
 
         return node
 

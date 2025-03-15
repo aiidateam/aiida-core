@@ -92,6 +92,38 @@ def test_is_open(custom_transport):
 
     assert not custom_transport.is_open
 
+# Add this function near the top of the file after the imports
+def safe_unpack_archive(filename, extract_dir):
+    """Unpack an archive with safe filtering to avoid warnings."""
+    if filename.endswith('.tar') or filename.endswith('.tar.gz') or filename.endswith('.tar.bz2') or filename.endswith('.tar.xz'):
+        format_map = {
+            '.tar': 'r:',
+            '.tar.gz': 'r:gz',
+            '.tar.bz2': 'r:bz2',
+            '.tar.xz': 'r:xz'
+        }
+        
+        # Determine format based on extension
+        format_str = None
+        for ext, fmt in format_map.items():
+            if filename.endswith(ext):
+                format_str = fmt
+                break
+        
+        # Open and extract with safe filter - support both older and newer Python versions
+        try:
+            # Try the more modern approach with filter in extractall (Python 3.12+)
+            with tarfile.open(filename, format_str) as tar:
+                tar.extractall(path=extract_dir, filter='tar') # Remove filter to avoid AbsoluteLinkError
+        except TypeError:
+            # Fall back to standard extraction if filter is not supported
+            # This might show deprecation warnings but will work
+            with tarfile.open(filename, format_str) as tar:
+                tar.extractall(path=extract_dir)
+    else:
+        # For other archive types, fall back to shutil
+        shutil.unpack_archive(filename, extract_dir)
+
 
 def test_makedirs(custom_transport, tmpdir):
     """Verify the functioning of makedirs command"""
@@ -1697,8 +1729,8 @@ def test_compress_basic(
         )
         # Download the archive from remote to local.
         transport.get(str(tmp_path_remote / archive_name), str(tmp_path_local / archive_name))
-        # Unpack the archive in a local "extracted" folder.
-        shutil.unpack_archive(str(tmp_path_local / archive_name), str(tmp_path_local / 'extracted'))
+        # Unpack the archive in a local "extracted" folder using safe_unpack_archive.
+        safe_unpack_archive(str(tmp_path_local / archive_name), str(tmp_path_local / 'extracted'))
         # Collect a list of extracted relative paths.
         extracted = [
             str(path.relative_to(tmp_path_local / 'extracted'))
@@ -1826,7 +1858,8 @@ def test_compress_glob(
 
         # Retrieve the archive (convert paths to strings) and unpack it locally.
         transport.get(str(tmp_path_remote / archive_name), str(tmp_path_local / archive_name))
-        shutil.unpack_archive(str(tmp_path_local / archive_name), str(tmp_path_local / 'extracted_glob'))
+        # Use safe_unpack_archive instead of shutil.unpack_archive
+        safe_unpack_archive(str(tmp_path_local / archive_name), str(tmp_path_local / 'extracted_glob'))
 
         # Gather the extracted relative paths.
         extracted = [
@@ -1870,8 +1903,8 @@ def test_extract(
             # Create destination directory
             Path(dst).mkdir(parents=True, exist_ok=True)
             
-            # Extract based on format
-            shutil.unpack_archive(src, dst)
+            # Extract based on format using safe unpacking
+            safe_unpack_archive(src, dst)
             
         # Bypass attribute restrictions by setting the attribute directly on the instance
         object.__setattr__(custom_transport, 'extract', dummy_extract)

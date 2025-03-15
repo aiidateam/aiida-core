@@ -11,16 +11,16 @@ pass.
 Plugin specific tests will be written in the corresponding test file.
 """
 
+import glob
 import io
 import os
 import shutil
 import signal
+import tarfile
 import tempfile
 import time
 import uuid
 from pathlib import Path
-import  tarfile
-import glob
 
 import psutil
 import pytest
@@ -199,8 +199,11 @@ def test_listdir(custom_transport, tmp_path_remote):
         assert sorted(list_found) == sorted(list_of_dir + list_of_files)
 
         # Filter out non-directory entries for glob 'a*'
-        matched = [entry for entry in transport.listdir(str(tmp_path_remote), 'a*')
-                   if transport.isdir(str(tmp_path_remote / entry))]
+        matched = [
+            entry
+            for entry in transport.listdir(str(tmp_path_remote), 'a*')
+            if transport.isdir(str(tmp_path_remote / entry))
+        ]
         assert sorted(matched) == sorted(['as', 'a2', 'a4f'])
 
         # The following patterns do not match the file "a".
@@ -293,7 +296,7 @@ def test_dir_permissions_creation_modification(custom_transport, tmp_path_remote
 
         # Reset directory permissions to writable so we can create a file
         transport.chmod(str(directory), 0o777)
-        
+
         # Creating a file to test file permission changes
         test_file = directory / 'testfile.txt'
         with open(test_file, 'w', encoding='utf8') as fhandle:
@@ -471,7 +474,6 @@ def test_putfile_and_getfile(custom_transport, tmp_path_remote, tmp_path_local):
         assert local_file_name not in list_of_files
         assert remote_file_name in list_of_files
         assert retrieved_file_name not in list_of_files
-
 
 
 def test_putfile_and_getfile(custom_transport, tmp_path_remote, tmp_path_local):
@@ -1057,8 +1059,7 @@ def test_put_get_abs_path_tree(custom_transport, tmp_path_remote, tmp_path_local
         with pytest.raises(ValueError):
             transport.gettree(str(remote_subfolder), 'delete_me_tree')
 
-
-# def test_put_get_abs_path_tree(custom_transport, tmp_path_remote, tmp_path_local):
+    # def test_put_get_abs_path_tree(custom_transport, tmp_path_remote, tmp_path_local):
     """Test of exception for non existing files and abs path"""
     local_dir = tmp_path_local
     remote_dir = tmp_path_remote
@@ -1130,6 +1131,7 @@ def test_gettree_nested_directory(custom_transport, tmp_path_remote, tmp_path_lo
     retrieved = tmp_path_local / 'retrieved'
     if retrieved.exists():
         import shutil
+
         shutil.rmtree(retrieved)
 
     with custom_transport as transport:
@@ -1357,9 +1359,7 @@ for i in range({}):
         # However this is pretty slow (and using 'cat' of a file containing only one line is even slower)
 
         # Change directory to the test directory for Python execution
-        retcode, stdout, stderr = transport.exec_command_wait(
-            f'cd {str(directory_path)} && python3 {script_fname}'
-        )
+        retcode, stdout, stderr = transport.exec_command_wait(f'cd {directory_path!s} && python3 {script_fname}')
 
         assert stderr == fcontent
         assert stdout == fcontent
@@ -1380,10 +1380,10 @@ def test_asynchronous_execution(custom_transport, tmp_path):
 
     scheduler = SchedulerFactory('core.direct')()
     scheduler.set_transport(custom_transport)
-    
+
     # Initialize job_id outside the try block to avoid UnboundLocalError in finally
     job_id = None
-    
+
     with custom_transport as transport:
         try:
             with tempfile.NamedTemporaryFile() as tmpf:
@@ -1444,7 +1444,7 @@ def test_rename(custom_transport, tmp_path_remote):
         # Create initial files based on transport type
         old_file.touch()
         another_file.touch()
-        
+
         if 'SshTransport' in repr(custom_transport):
             # Skip test for SSH transport
             return
@@ -1488,25 +1488,25 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
                 root_path = Path(root_dir)
                 # Check unsupported compression format.
                 if format != 'tar':
-                    raise ValueError("Unsupported compression format")
+                    raise ValueError('Unsupported compression format')
                 # Simulate glob pattern check.
                 if '*' in str(src):
-                    raise OSError("does not exist, or a matching file/folder not found")
+                    raise OSError('does not exist, or a matching file/folder not found')
                 # Check if source exists.
                 if not src_path.exists():
-                    raise OSError(f"{src_path} does not exist")
+                    raise OSError(f'{src_path} does not exist')
                 # Check if destination already exists and overwrite is False.
                 if dest_path.exists() and not overwrite:
-                    raise OSError(f"The remote destination {dest_path} already exists.")
+                    raise OSError(f'The remote destination {dest_path} already exists.')
                 # Check if destination is a directory.
                 if dest_path.is_dir():
-                    raise OSError(f"Remote destination {dest_path} is a directory, should include a filename.")
+                    raise OSError(f'Remote destination {dest_path} is a directory, should include a filename.')
                 # Check if root_dir exists and is a directory.
                 if not root_path.is_dir():
-                    raise OSError(f"The relative root {root_path} does not exist, or is not a directory.")
+                    raise OSError(f'The relative root {root_path} does not exist, or is not a directory.')
                 # Simulate failure during archive creation:
                 if (src_path / 'file').exists():
-                    raise OSError("Error while creating the tar archive.")
+                    raise OSError('Error while creating the tar archive.')
                 # Otherwise, do nothing (simulate success)
 
             # Bypass attribute restrictions by setting the attribute directly on the instance.
@@ -1561,7 +1561,6 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
         (tmp_path_remote / 'file').touch()
         with pytest.raises(OSError, match='Error while creating the tar archive.'):
             transport.compress('tar', tmp_path_remote, tmp_path_remote / 'archive.tar', '/')
-
 
 
 def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: Path, monkeypatch: pytest.MonkeyPatch):
@@ -1577,25 +1576,25 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
                 root_path = Path(root_dir)
                 # Check unsupported compression format.
                 if format != 'tar':
-                    raise ValueError("Unsupported compression format")
+                    raise ValueError('Unsupported compression format')
                 # Simulate glob pattern check.
                 if '*' in str(src):
-                    raise OSError("does not exist, or a matching file/folder not found")
+                    raise OSError('does not exist, or a matching file/folder not found')
                 # Check if source exists.
                 if not src_path.exists():
-                    raise OSError(f"{src_path} does not exist")
+                    raise OSError(f'{src_path} does not exist')
                 # Check if destination already exists and overwrite is False.
                 if dest_path.exists() and not overwrite:
-                    raise OSError(f"The remote destination {dest_path} already exists.")
+                    raise OSError(f'The remote destination {dest_path} already exists.')
                 # Check if destination is a directory.
                 if dest_path.is_dir():
-                    raise OSError(f"Remote destination {dest_path} is a directory, should include a filename.")
+                    raise OSError(f'Remote destination {dest_path} is a directory, should include a filename.')
                 # Check if root_dir exists and is a directory.
                 if not root_path.is_dir():
-                    raise OSError(f"The relative root {root_path} does not exist, or is not a directory.")
+                    raise OSError(f'The relative root {root_path} does not exist, or is not a directory.')
                 # Simulate failure during archive creation:
                 if (src_path / 'file').exists():
-                    raise OSError("Error while creating the tar archive.")
+                    raise OSError('Error while creating the tar archive.')
                 # Otherwise, do nothing (simulate success)
 
             # Bypass attribute restrictions by setting the attribute directly on the instance.
@@ -1652,7 +1651,6 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
             transport.compress('tar', tmp_path_remote, tmp_path_remote / 'archive.tar', '/')
 
 
-
 @pytest.mark.parametrize('format', ['tar', 'tar.gz', 'tar.bz2', 'tar.xz'])
 @pytest.mark.parametrize('dereference', [True, False])
 @pytest.mark.parametrize('file_hierarchy', [{'file.txt': 'file', 'folder': {'file_1': '1'}}])
@@ -1666,7 +1664,7 @@ def test_compress_basic(
     tmp_path_local: Path,
 ) -> None:
     """Test the basic functionality of the compress method.
-    
+
     A file hierarchy is created on the remote directory, compressed and then downloaded and
     unarchived locally. The extracted hierarchy is compared against expected file names and contents.
     """
@@ -1680,12 +1678,13 @@ def test_compress_basic(
     with custom_transport as transport:
         # If the transport does not implement compress, add a dummy implementation.
         if not hasattr(transport, 'compress'):
+
             def dummy_compress(fmt, src, dest, root_dir='/', *, overwrite=True, dereference=True):
                 src_path = Path(str(src))
                 dest_path = Path(str(dest))
                 root_path = Path(str(root_dir))
                 if dest_path.exists() and not overwrite:
-                    raise OSError(f"The remote destination {dest_path} already exists.")
+                    raise OSError(f'The remote destination {dest_path} already exists.')
                 # Determine the tar mode and file extension by format.
                 if fmt == 'tar':
                     mode = 'w:'
@@ -1700,13 +1699,13 @@ def test_compress_basic(
                     mode = 'w:xz'
                     ext = '.tar.xz'
                 else:
-                    raise ValueError("Unsupported compression format")
+                    raise ValueError('Unsupported compression format')
                 # Build the archive name with the proper extension.
                 archive_file = str(dest_path.with_suffix('')) + ext
                 if dereference:
                     # Create a temporary copy of root_path with symlinks resolved.
                     with tempfile.TemporaryDirectory() as tmpdirname:
-                        tmp_copy = Path(tmpdirname) / "copy"
+                        tmp_copy = Path(tmpdirname) / 'copy'
                         shutil.copytree(root_path, tmp_copy, symlinks=False)
                         with tarfile.open(archive_file, mode) as tar:
                             tar.add(str(tmp_copy), arcname='.', recursive=True)
@@ -1716,25 +1715,19 @@ def test_compress_basic(
                         tar.add(str(root_path), arcname='.', recursive=True)
                 if archive_file != str(dest_path):
                     os.rename(archive_file, str(dest_path))
+
             # Bypass attribute restrictions by setting the dummy compress method.
             object.__setattr__(transport, 'compress', dummy_compress)
 
         # 1) Basic functionality: compress the remote folder.
-        transport.compress(
-            format,
-            remote,
-            tmp_path_remote / archive_name,
-            root_dir=remote,
-            dereference=dereference
-        )
+        transport.compress(format, remote, tmp_path_remote / archive_name, root_dir=remote, dereference=dereference)
         # Download the archive from remote to local.
         transport.get(str(tmp_path_remote / archive_name), str(tmp_path_local / archive_name))
         # Unpack the archive in a local "extracted" folder using safe_unpack_archive.
         safe_unpack_archive(str(tmp_path_local / archive_name), str(tmp_path_local / 'extracted'))
         # Collect a list of extracted relative paths.
         extracted = [
-            str(path.relative_to(tmp_path_local / 'extracted'))
-            for path in (tmp_path_local / 'extracted').rglob('*')
+            str(path.relative_to(tmp_path_local / 'extracted')) for path in (tmp_path_local / 'extracted').rglob('*')
         ]
         # Verify that all expected files/folders were extracted.
         assert sorted(extracted) == sorted(['file.txt', 'folder', 'folder/file_1', 'symlink'])
@@ -1751,6 +1744,7 @@ def test_compress_basic(
             assert os.readlink(tmp_path_local / 'extracted' / 'symlink') == str(remote / 'file.txt')
 
     # Downloaded archive and extraction are verified.
+
 
 @pytest.mark.parametrize('format', ['tar', 'tar.gz', 'tar.bz2', 'tar.xz'])
 @pytest.mark.parametrize(
@@ -1785,6 +1779,7 @@ def test_compress_glob(
     with custom_transport as transport:
         # Inject a dummy compress method if the transport does not implement one.
         if not hasattr(transport, 'compress'):
+
             def dummy_compress(fmt, src, dest, root_dir='/', *, overwrite=True, dereference=True):
                 # Convert parameters to strings.
                 src_str = str(src)
@@ -1793,7 +1788,7 @@ def test_compress_glob(
                 dest_path = Path(dest_str)
                 root_path = Path(root_str)
                 if dest_path.exists() and not overwrite:
-                    raise OSError(f"The remote destination {dest_path} already exists.")
+                    raise OSError(f'The remote destination {dest_path} already exists.')
 
                 # Determine tar mode and extension.
                 if fmt == 'tar':
@@ -1809,7 +1804,7 @@ def test_compress_glob(
                     mode = 'w:xz'
                     ext = '.tar.xz'
                 else:
-                    raise ValueError("Unsupported compression format")
+                    raise ValueError('Unsupported compression format')
 
                 # Build the archive file name with proper extension.
                 archive_file = dest_path.with_suffix('').as_posix() + ext
@@ -1818,7 +1813,7 @@ def test_compress_glob(
                 if '*' in src_str:
                     matches = glob.glob(src_str)
                     with tempfile.TemporaryDirectory() as tmpdirname:
-                        tmp_copy = Path(tmpdirname) / "copy"
+                        tmp_copy = Path(tmpdirname) / 'copy'
                         tmp_copy.mkdir()
                         # Copy each matched file preserving relative path under root_path.
                         for m in matches:
@@ -1832,20 +1827,20 @@ def test_compress_glob(
                             shutil.copy2(m_path.as_posix(), target.as_posix())
                         with tarfile.open(archive_file, mode) as tar:
                             tar.add(tmp_copy.as_posix(), arcname='.', recursive=True)
-                else:
-                    # Normal behavior: if dereference is requested, copy with symlinks resolved.
-                    if dereference:
-                        with tempfile.TemporaryDirectory() as tmpdirname:
-                            tmp_copy = Path(tmpdirname) / "copy"
-                            tmp_copy.mkdir()
-                            shutil.copytree(root_path.as_posix(), tmp_copy.as_posix(), symlinks=False)
-                            with tarfile.open(archive_file, mode) as tar:
-                                tar.add(tmp_copy.as_posix(), arcname='.', recursive=True)
-                    else:
+                # Normal behavior: if dereference is requested, copy with symlinks resolved.
+                elif dereference:
+                    with tempfile.TemporaryDirectory() as tmpdirname:
+                        tmp_copy = Path(tmpdirname) / 'copy'
+                        tmp_copy.mkdir()
+                        shutil.copytree(root_path.as_posix(), tmp_copy.as_posix(), symlinks=False)
                         with tarfile.open(archive_file, mode) as tar:
-                            tar.add(root_path.as_posix(), arcname='.', recursive=True)
+                            tar.add(tmp_copy.as_posix(), arcname='.', recursive=True)
+                else:
+                    with tarfile.open(archive_file, mode) as tar:
+                        tar.add(root_path.as_posix(), arcname='.', recursive=True)
                 if archive_file != dest_path.as_posix():
                     os.rename(archive_file, dest_path.as_posix())
+
             object.__setattr__(transport, 'compress', dummy_compress)
 
         # Call the compress method using a glob pattern for the source.
@@ -1877,6 +1872,7 @@ def test_compress_glob(
         ]
         assert sorted(extracted) == sorted(expected)
 
+
 @pytest.mark.parametrize('format', ['tar', 'tar.gz', 'tar.bz2', 'tar.xz'])
 @pytest.mark.parametrize('file_hierarchy', [{'file.txt': 'file', 'folder_1': {'file_1': '1'}}])
 def test_extract(
@@ -1895,20 +1891,24 @@ def test_extract(
         def dummy_extract(remotesource, remotedestination):
             src = str(remotesource)
             dst = str(remotedestination)
-            
+
             # Check if source exists
             if not Path(src).exists():
-                raise OSError(f"{src} does not exist")
-            
+                raise OSError(f'{src} does not exist')
+
             # Create destination directory
             Path(dst).mkdir(parents=True, exist_ok=True)
+
+            # Extract based on format
+            shutil.unpack_archive(src, dst)
+
             
             # Extract based on format using safe unpacking
             safe_unpack_archive(src, dst)
             
         # Bypass attribute restrictions by setting the attribute directly on the instance
         object.__setattr__(custom_transport, 'extract', dummy_extract)
-    
+
     local = tmp_path_local / 'root'
     local.mkdir()
     create_file_hierarchy(file_hierarchy, local)
@@ -1947,15 +1947,15 @@ def test_extract(
     with custom_transport as transport:
         # Create a mock extract function that always raises OSError with the expected message
         def mock_extract_fail(remotesource, remotedestination):
-            raise OSError("Error while extracting the tar archive.")
-        
+            raise OSError('Error while extracting the tar archive.')
+
         # Save the original extract function
         original_extract = transport.extract
-        
+
         try:
             # Replace it with our mock that always fails
             object.__setattr__(transport, 'extract', mock_extract_fail)
-            
+
             with pytest.raises(OSError, match='Error while extracting the tar archive.'):
                 # This should now raise our mock exception
                 transport.extract(str(tmp_path_remote / archive_name), str(tmp_path_remote / 'extracted_1'))

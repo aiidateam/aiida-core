@@ -94,6 +94,8 @@ class PortableCode(Code):
         type_check(filepath_files, pathlib.Path)
         self.filepath_executable = filepath_executable  # type: ignore[assignment]
         self.base.repository.put_object_from_tree(str(filepath_files))
+        #from aiida.orm import FolderData
+        #self.folder_data = FolderData(tree=str(filepath_files))
 
     def _validate(self):
         """Validate the instance by checking that an executable is defined and it is part of the repository files.
@@ -107,11 +109,17 @@ class PortableCode(Code):
         except TypeError as exception:
             raise exceptions.ValidationError('The `filepath_executable` is not set.') from exception
 
-        objects = self.base.repository.list_object_names()
+        files = self.base.repository.list_objects()
+        from itertools import chain
+        import os
+        def resolve_files(root_name, file):
+            return chain((resolve_files(file.name, file_) for file_ in file.objects.values())) if file.objects else os.path.join(root_name, file.name)
 
-        if str(filepath_executable) not in objects:
+        file_names = list(*(resolve_files(file.name, file) for file in files))
+
+        if str(filepath_executable) not in file_names:
             raise exceptions.ValidationError(
-                f'The executable `{filepath_executable}` is not one of the uploaded files: {objects}'
+                f'The executable `{filepath_executable}` is not one of the uploaded files: {file_names}'
             )
 
     def can_run_on_computer(self, computer: Computer) -> bool:

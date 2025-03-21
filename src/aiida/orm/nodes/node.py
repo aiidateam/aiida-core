@@ -501,8 +501,8 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             raise exceptions.ModificationNotAllowed(f'Node<{self.pk}> is already stored')
 
         # For each node of a cached incoming link, check that all its incoming links are stored
-        for link_triple in self.base.links.incoming_cache:
-            link_triple.node._verify_are_parents_stored()
+        #for link_triple in self.base.links.incoming_cache:
+        #    link_triple.node._verify_are_parents_stored()
 
         for link_triple in self.base.links.incoming_cache:
             if not link_triple.node.is_stored:

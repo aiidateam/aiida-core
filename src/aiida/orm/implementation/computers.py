@@ -8,13 +8,22 @@
 ###########################################################################
 """Backend specific computer objects and methods"""
 
+from __future__ import annotations
+
 import abc
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Protocol
 
 from .entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendComputer', 'BackendComputerCollection')
+
+
+class HasUUID(Protocol):
+    @property
+    def uuid(self) -> str:
+        """A required UUID property."""
+        ...
 
 
 class BackendComputer(BackendEntity):

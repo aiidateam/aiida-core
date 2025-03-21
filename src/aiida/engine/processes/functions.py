@@ -604,8 +604,9 @@ class FunctionProcess(Process):
 
         if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
             return result  # type: ignore[unreachable]
-        
+
         from aiida.orm import Group
+
         if isinstance(result, Group) or isinstance(result, Data):  # type: ignore[unreachable]
             self.out(self.SINGLE_OUTPUT_LINKNAME, result)  # type: ignore[unreachable]
         elif isinstance(result, collections.abc.Mapping):

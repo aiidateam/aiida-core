@@ -93,7 +93,7 @@ def clean_value(value):
 
         # Anything else we do not understand and we refuse
         return val
-        #raise exceptions.ValidationError(f'type `{type(val)}` is not supported as it is not json-serializable')
+        # raise exceptions.ValidationError(f'type `{type(val)}` is not supported as it is not json-serializable')
 
     if isinstance(value, BaseType):
         return clean_builtin(value.value)

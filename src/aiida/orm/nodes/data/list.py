@@ -16,6 +16,7 @@ from .data import Data
 
 __all__ = ('List',)
 
+
 class List(Data, MutableSequence):
     """`Data` sub class to represent a list."""
 

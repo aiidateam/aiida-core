@@ -1,8 +1,7 @@
 """Implementation of the MultiplyAddWorkChain for testing and demonstration purposes."""
 
-from aiida.engine import WorkChain, calcfunction
 from aiida import orm
-
+from aiida.engine import WorkChain, calcfunction
 
 
 @calcfunction

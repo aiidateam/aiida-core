@@ -138,11 +138,11 @@ def validate_link(
     :raise ValueError: if the proposed link is invalid
     """
     from aiida.common.links import LinkType, validate_link_label
-    from aiida.orm import CalculationNode, Data, Node, WorkflowNode
+    from aiida.orm import CalculationNode, Data, WorkflowNode
 
     type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
-    #type_check(source, Node, f'source should be a `Node` but got: {type(source)}')
-    #type_check(target, Node, f'target should be a `Node` but got: {type(target)}')
+    # type_check(source, Node, f'source should be a `Node` but got: {type(source)}')
+    # type_check(target, Node, f'target should be a `Node` but got: {type(target)}')
 
     if source.backend != target.backend:
         raise ValueError(

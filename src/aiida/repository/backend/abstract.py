@@ -86,6 +86,24 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         pass
 
+    def put_objects_from_filelike_packed(self, handle_list) -> str:
+        """Store the byte contents of a file in the repository.
+
+        :param handle: filelike object with the byte content to be stored.
+        :return: the generated fully qualified identifier for the object within the repository.
+        :raises TypeError: if the handle is not a byte stream.
+        """
+        # if (
+        #     not isinstance(handle, io.BufferedIOBase)  # type: ignore[redundant-expr,unreachable]
+        #     and not self.is_readable_byte_stream(handle)
+        # ):
+        #     raise TypeError(f'handle does not seem to be a byte stream: {type(handle)}.')
+        return self._put_objects_from_filelike_packed(handle_list)
+
+    # @abc.abstractmethod
+    # def _put_objects_from_filelike_packed(self, handle_list: list) -> str:
+    #     pass
+
     def put_object_from_file(self, filepath: Union[str, pathlib.Path]) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.
 

@@ -13,8 +13,11 @@
 # fmt: off
 
 from .ssh import *
+from .ssh_async_backend import *
 
 __all__ = (
+    'AsyncSSHwrapper',
+    'OpenSSHwrapper',
     'SshTransport',
     'convert_to_bool',
     'parse_sshconfig',

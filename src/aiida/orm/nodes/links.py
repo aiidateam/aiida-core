@@ -55,7 +55,7 @@ class NodeLinks:
         :raise ValueError: if the proposed link is invalid
         """
         self.validate_incoming(source, link_type, link_label)
-        source.base.links.validate_outgoing(self._node, link_type, link_label)
+        # source.base.links.validate_outgoing(self._node, link_type, link_label)
 
         if self._node.is_stored and source.is_stored:
             self._node.backend_entity.add_incoming(source.backend_entity, link_type, link_label)

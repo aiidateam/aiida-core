@@ -2,13 +2,12 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, ClassVar, Dict, List, Mapping, Optional, Type
+from typing import Any, ClassVar, Dict, Optional, Type
 
 from aiida import orm
-from aiida.tools.dumping.utils import NodeDumpKeyMapper
 from aiida.tools.dumping.config import NodeCollectorConfig
-# from typing import TYPE_CHECKING
 
+# from typing import TYPE_CHECKING
 from aiida.tools.dumping.logger import DumpLogger
 
 
@@ -79,7 +78,7 @@ class NodeDumpCollector:
         self.include_processes = config.include_processes
         self.include_data = config.include_data
         self.filter_by_last_dump_time = config.filter_by_last_dump_time
-        self.only_top_level_calcs =config.only_top_level_calcs
+        self.only_top_level_calcs = config.only_top_level_calcs
         self.only_top_level_workflows = config.only_top_level_workflows
 
         self.orm_types = {'calculations': orm.CalculationNode, 'workflows': orm.WorkflowNode, 'data': orm.Data}
@@ -128,12 +127,11 @@ class NodeDumpCollector:
         container = NodeContainer()
 
         if self.include_processes:
-
             setattr(container, 'workflows', self.get_workflows())
             setattr(container, 'calculations', self.get_calculations())
 
         if self.include_data:
-            msg = "Mirroring of data nodes not yet implemented."
+            msg = 'Mirroring of data nodes not yet implemented.'
             raise NotImplementedError(msg)
 
             # data_nodes = self._get_nodes(orm.Dat)
@@ -171,7 +169,6 @@ class NodeDumpCollector:
 
         return qb.all(flat=True)
 
-
     # def _get_processes_to_dump(self) -> NodeContainer:
     #     """Retrieve the processeses from the collection nodes.
 
@@ -203,7 +200,6 @@ class NodeDumpCollector:
     #         workflows=workflows,
     #     )
 
-
     def get_calculations(self) -> list:
         """Get calculation nodes with the collector's parameters."""
         calculations = self._get_nodes(orm_type=self.orm_types['calculations'])
@@ -225,7 +221,6 @@ class NodeDumpCollector:
 
         return calculations
 
-
     def get_workflows(self) -> list:
         """Get workflow nodes with the collector's parameters."""
         return self._get_nodes(orm_type=self.orm_types['workflows'])
@@ -233,17 +228,6 @@ class NodeDumpCollector:
     def get_data(self) -> list:
         """Get data nodes with the collector's parameters."""
         return self._get_nodes(orm_type=self.orm_types['data'])
-
-
-
-
-
-
-
-
-
-
-
 
 
 # # Example usage:

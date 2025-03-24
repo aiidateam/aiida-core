@@ -45,10 +45,10 @@ class ProcessDumper:
     ) -> None:
         """Initialize the ProcessDumper."""
 
-        self.dump_parent_path=dump_parent_path
-        self.dump_sub_path=dump_sub_path
-        self.last_dump_time=last_dump_time
-        self.dump_logger=dump_logger
+        self.dump_parent_path = dump_parent_path
+        self.dump_sub_path = dump_sub_path
+        self.last_dump_time = last_dump_time
+        self.dump_logger = dump_logger
 
         self.dump_mode = dump_mode
         self.process_dump_config = process_dump_config or ProcessDumpConfig()

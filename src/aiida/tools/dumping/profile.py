@@ -22,8 +22,7 @@ from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import load_profile
 from aiida.manage.configuration.profile import Profile
-from aiida.tools.dumping.base import BaseDumper
-from aiida.tools.dumping.collector import NodeDumpCollector, NodeContainer
+from aiida.tools.dumping.collector import NodeContainer, NodeDumpCollector
 from aiida.tools.dumping.config import (
     DumpMode,
     GroupDumpConfig,
@@ -64,10 +63,10 @@ class ProfileDumper:
         :param groups: Dump data only for selected groups.
         """
 
-        self.dump_parent_path=dump_parent_path
-        self.dump_sub_path=dump_sub_path
-        self.last_dump_time=last_dump_time
-        self.dump_logger=dump_logger
+        self.dump_parent_path = dump_parent_path
+        self.dump_sub_path = dump_sub_path
+        self.last_dump_time = last_dump_time
+        self.dump_logger = dump_logger
         self.dump_mode = dump_mode
 
         if not isinstance(profile, Profile):
@@ -190,7 +189,6 @@ class ProfileDumper:
 
     @cached_property
     def node_dump_container(self) -> NodeContainer:
-
         node_collector = NodeDumpCollector(
             incremental=self.base_dump_config.incremental,
             filter_by_last_dump_time=self.profile_dump_config.filter_by_last_dump_time,
@@ -230,7 +228,9 @@ class ProfileDumper:
         no_group_nodes: list[str] = [
             profile_node for profile_node in profile_nodes if profile_node not in nodes_in_groups
         ]
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
 
         return no_group_nodes
 

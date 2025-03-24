@@ -10,18 +10,18 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import NamedTuple, cast
+from typing import cast
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import Profile
-from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.config import DumpMode
+from aiida.tools.dumping.logger import DumpLogger
 
 __all__ = (
     'DumpPathMapper',

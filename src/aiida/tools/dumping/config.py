@@ -52,7 +52,9 @@ class CollectionMirrorConfig:
 @dataclass
 class GroupDumpConfig(NodeCollectorConfig, CollectionMirrorConfig):
     """Arguments for dumping group data."""
+
     ...
+
 
 @dataclass
 class ProfileMirrorConfig(NodeCollectorConfig, CollectionMirrorConfig):

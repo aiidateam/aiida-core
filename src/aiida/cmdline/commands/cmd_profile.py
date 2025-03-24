@@ -398,7 +398,7 @@ def profile_mirror(
         only_top_level_calcs=only_top_level_calcs,
         only_top_level_workflows=only_top_level_workflows,
         filter_by_last_dump_time=filter_by_last_dump_time,
-        update_groups=update_groups
+        update_groups=update_groups,
     )
 
     profile_dumper = ProfileDumper(
@@ -423,9 +423,7 @@ def profile_mirror(
     #     echo.echo_report(dry_run_message)
     #     return
 
-    profile_dumper.mirror(
-        update_groups=update_groups
-    )
+    profile_dumper.mirror(update_groups=update_groups)
 
     with safeguard_file_path.open('a') as fhandle:
         msg = f'Last profile mirror time: {current_dump_time.isoformat()}\n'

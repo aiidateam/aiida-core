@@ -14,18 +14,16 @@ import os
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.config import DumpMode, GroupDumpConfig, ProcessDumpConfig, NodeCollectorConfig
+from aiida.tools.dumping.collector import NodeContainer, NodeDumpCollector
+from aiida.tools.dumping.config import DumpMode, GroupDumpConfig, NodeCollectorConfig, ProcessDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
-from aiida.tools.dumping.collector import NodeContainer, NodeDumpCollector
 from aiida.tools.dumping.utils import (
     NodeDumpKeyMapper,
     delete_missing_node_dir,
-    do_filter_nodes,
     generate_process_default_dump_path,
     load_given_group,
 )
@@ -83,10 +81,8 @@ class GroupDumper:
         # self.only_top_level_workflows = self.group_dump_config.only_top_level_workflows
         # self.filter_nodes_by_last_dump_time = self.group_dump_config.filter_by_last_dump_time
 
-
     @cached_property
     def node_dump_container(self) -> NodeContainer:
-
         node_collector = NodeDumpCollector(
             config=self.node_collector_config,
             dump_mode=self.dump_mode,
@@ -176,7 +172,9 @@ class GroupDumper:
         # TODO: Only allow for "pure" sequences of Calculation- or WorkflowNodes, or also mixed?
         # TODO: If the latter possibly also have directory creation in the loop
 
-        sub_path = self.dump_parent_path / self.dump_sub_path / NodeDumpKeyMapper.get_key_from_instance(node_inst=processes[0])
+        sub_path = (
+            self.dump_parent_path / self.dump_sub_path / NodeDumpKeyMapper.get_key_from_instance(node_inst=processes[0])
+        )
         # sub_path = Path(NodeDumpKeyMapper.get_key_from_node(node=next(iter(processes))))
         sub_path.mkdir(exist_ok=True, parents=True)
 

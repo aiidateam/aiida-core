@@ -22,30 +22,24 @@ from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import load_profile
 from aiida.manage.configuration.profile import Profile
-from aiida.orm.querybuilder import QueryBuilder
 from aiida.tools.dumping.base import BaseDumper
+from aiida.tools.dumping.collector import NodeDumpCollector, NodeContainer
 from aiida.tools.dumping.config import (
-    BaseDumpConfig,
+    DumpMode,
     GroupDumpConfig,
     ProcessDumpConfig,
-    ProfileDumpConfig,
+    ProfileMirrorConfig,
 )
 from aiida.tools.dumping.group import GroupDumper
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
-from aiida.tools.dumping.utils import (
-    ProcessDumpContainer,
-    delete_missing_node_dir,
-    get_group_subpath,
-    load_given_group,
-)
+from aiida.tools.dumping.utils import delete_missing_node_dir, get_group_subpath, load_given_group
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
-# TODO: Use ProcessContainer rather than list[str]
 # NOTE: This class just orchestrates the group_dumpers, it doesn't "obtain" the nodes itself
 
 
-class ProfileDumper(BaseDumper):
+class ProfileDumper:
     """Class to handle dumping of the data of an AiiDA profile."""
 
     def __init__(
@@ -53,11 +47,11 @@ class ProfileDumper(BaseDumper):
         profile: str | Profile | None = None,
         dump_parent_path: Path | None = None,
         dump_sub_path: Path | None = None,
+        dump_mode: DumpMode = DumpMode.DEFAULT,
         last_dump_time: datetime | None = None,
         dump_logger: DumpLogger | None = None,
-        base_dump_config: BaseDumpConfig | None = None,
         process_dump_config: ProcessDumpConfig | None = None,
-        profile_dump_config: ProfileDumpConfig | None = None,
+        profile_dump_config: ProfileMirrorConfig | None = None,
         groups: list[str] | list[orm.Group] | None = None,
     ):
         """Initialize the ProfileDumper.
@@ -70,13 +64,11 @@ class ProfileDumper(BaseDumper):
         :param groups: Dump data only for selected groups.
         """
 
-        super().__init__(
-            dump_parent_path=dump_parent_path,
-            dump_sub_path=dump_sub_path,
-            last_dump_time=last_dump_time,
-            dump_logger=dump_logger,
-            base_dump_config=base_dump_config,
-        )
+        self.dump_parent_path=dump_parent_path
+        self.dump_sub_path=dump_sub_path
+        self.last_dump_time=last_dump_time
+        self.dump_logger=dump_logger
+        self.dump_mode = dump_mode
 
         if not isinstance(profile, Profile):
             profile: Profile = load_profile(profile=profile, allow_switch=True)
@@ -87,9 +79,8 @@ class ProfileDumper(BaseDumper):
         else:
             self.groups = []
 
-        self.base_dump_config = base_dump_config or BaseDumpConfig()
         self.process_dump_config = process_dump_config or ProcessDumpConfig()
-        self.profile_dump_config = profile_dump_config or ProfileDumpConfig()
+        self.profile_dump_config = profile_dump_config or ProfileMirrorConfig()
 
         # Construct `GroupDumpConfig` from options passed via `ProfileDumpConfig`
         # The arguments of `GroupDumpConfig` are a subset of `ProfileDumpConfig`
@@ -101,7 +92,7 @@ class ProfileDumper(BaseDumper):
         )
 
         # Unpack arguments for easier access
-        self.should_dump_processes = self.profile_dump_config.dump_processes
+        self.should_dump_processes = self.profile_dump_config.include_processes
         self.symlink_duplicates = self.profile_dump_config.symlink_duplicates
         self.delete_missing = self.profile_dump_config.delete_missing
         self.organize_by_groups = self.profile_dump_config.organize_by_groups
@@ -121,18 +112,18 @@ class ProfileDumper(BaseDumper):
             dump_parent_path=self.dump_parent_path / self.dump_sub_path,
             dump_sub_path=no_group_subpath,
             group=None,
-            base_dump_config=self.base_dump_config,
+            dump_mode=self.dump_mode,
             process_dump_config=self.process_dump_config,
             group_dump_config=self.group_dump_config,
             dump_logger=self.dump_logger,
         )
 
-        processes_to_dump: ProcessDumpContainer = no_group_dumper.processes_to_dump
+        processes_to_dump: NodeContainer = no_group_dumper.processes_to_dump
 
         if self.should_dump_processes and not processes_to_dump.dump_processes:
             msg = f'Dumping processes not in any group for profile `{self.profile.name}`...'
             logger.report(msg)
-            no_group_dumper.dump()
+            no_group_dumper.mirror()
             # TODO: Possibly add entry to logger
 
     def _dump_processes_per_group(self, groups: list[orm.Group]) -> None:
@@ -152,7 +143,7 @@ class ProfileDumper(BaseDumper):
             group_dumper = GroupDumper(
                 dump_parent_path=self.dump_parent_path / self.dump_sub_path,
                 dump_sub_path=group_subpath,
-                base_dump_config=self.base_dump_config,
+                dump_mode=self.base_dump_config,
                 process_dump_config=self.process_dump_config,
                 group_dump_config=self.group_dump_config,
                 dump_logger=self.dump_logger,
@@ -166,7 +157,7 @@ class ProfileDumper(BaseDumper):
             if self.should_dump_processes and not processes_to_dump.dump_processes:
                 msg = f'Dumping processes in group `{group.label}` for profile `{self.profile.name}`...'
                 logger.report(msg)
-                group_dumper.dump()
+                group_dumper.mirror()
 
                 group_output_path = self.dump_parent_path / self.dump_sub_path / group_subpath
                 group_store.add_entry(
@@ -198,17 +189,50 @@ class ProfileDumper(BaseDumper):
         self._dump_processes_per_group(groups=groups_to_dump)
 
     @cached_property
-    def profile_nodes(self) -> list[orm.Node]:
-        return self._get_profile_nodes()
+    def node_dump_container(self) -> NodeContainer:
 
-    def _get_profile_nodes(self) -> list[orm.Node]:
-        qb = orm.QueryBuilder()
-        if self.profile_dump_config.filter_nodes_by_last_dump_time and self.last_dump_time:
-            qb.append(orm.Node, filters={'mtime': {'>=': self.last_dump_time}})
-        else:
-            qb.append(orm.Node)
+        node_collector = NodeDumpCollector(
+            incremental=self.base_dump_config.incremental,
+            filter_by_last_dump_time=self.profile_dump_config.filter_by_last_dump_time,
+            last_dump_time=self.last_dump_time,
+            dump_logger=self.dump_logger,
+            group=None,
+        )
 
-        return qb.all(flat=True)
+        return node_collector.collect()
+
+    def _get_no_group_nodes(self) -> NodeContainer:
+        """Obtain nodes in the profile that are not part of any group.
+
+        :return: List of UUIDs of selected nodes.
+        """
+
+        profile_groups = cast(list[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
+        profile_nodes = (
+            self.node_dump_container.calculations + self.node_dump_container.workflows + self.node_dump_container.data
+        )
+
+        nodes_in_groups: list[str] = [node.uuid for group in profile_groups for node in group.nodes]
+
+        # Need to expand here also with the called_descendants of `WorkflowNodes`, otherwise the called
+        # `CalculationNode`s for `WorkflowNode`s that are part of a group are dumped twice
+        # Get the called descendants of WorkflowNodes within the nodes_in_groups list
+        sub_nodes_in_groups: list[str] = [
+            node.uuid
+            for n in nodes_in_groups
+            # if isinstance((workflow_node := orm.load_node(n)), orm.WorkflowNode)
+            if isinstance((workflow_node := orm.load_node(n)), orm.ProcessNode)
+            for node in workflow_node.called_descendants
+        ]
+
+        nodes_in_groups += sub_nodes_in_groups
+
+        no_group_nodes: list[str] = [
+            profile_node for profile_node in profile_nodes if profile_node not in nodes_in_groups
+        ]
+        import ipdb; ipdb.set_trace()
+
+        return no_group_nodes
 
     @cached_property
     def processes_to_dump(self) -> list[str]:
@@ -253,6 +277,7 @@ class ProfileDumper(BaseDumper):
 
         return to_delete_uuids
 
+    # TODO: Also move this into a more general method that returns a `NodeContainer`
     @cached_property
     def processes_to_delete(self) -> list[str]:
         if not self.delete_missing:
@@ -333,9 +358,9 @@ class ProfileDumper(BaseDumper):
                 try:
                     dump_logger.groups.entries[uuid].path = new_path
                 except:
-                    # For debugging
-                    # import ipdb
+                    import ipdb
 
+                    ipdb.set_trace()
                     raise
 
                 modified_paths.append(
@@ -346,3 +371,41 @@ class ProfileDumper(BaseDumper):
                 )
 
         return modified_paths
+
+    def mirror(self):  #  dump_data):
+        # TODO: Most of the logic below should be in the class itself
+        num_processes_to_dump = len(self.node_dump_container.calculations) + len(self.node_dump_container.workflows)
+        # num_processes_to_delete = len(self.processes_to_delete)
+
+        # num_groups_to_dump = len(self.groups_to_dump)
+        # num_groups_to_delete = len(self.groups_to_delete)
+
+        if self.profile_dump_config.include_processes:
+            if num_processes_to_dump == 0:
+                msg = 'No processes to dump.'
+                logger.report(msg)
+            else:
+                self.dump_processes()
+                msg = f'Dumped {num_processes_to_dump} new nodes.'
+                logger.report(msg)
+
+        # if delete_missing_processes:
+        #     if num_processes_to_delete == 0:
+        #         msg = 'No processes to delete.'
+        #         logger.report(msg)
+        #     else:
+        #         self.delete_processes()
+        #         msg = f'Deleted {num_processes_to_delete} node directories.'
+        #         logger.report(msg)
+
+        # if num_groups_to_delete == 0:
+        #     echo.echo_success('No groups to delete.')
+        # else:
+        #     self.delete_groups()
+        #     echo.echo_success(f'Deleted {num_groups_to_delete} group directories.')
+
+        # if update_groups:
+        #     relabeled_paths = self.update_groups()
+        #     msg = 'Renamed group directories and updated the log file.'
+        #     echo.echo_success(msg)
+        #     # print(relabeled_paths)

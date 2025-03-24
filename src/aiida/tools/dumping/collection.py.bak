@@ -24,9 +24,9 @@ from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
 from aiida.tools.dumping.utils import (
     NodeDumpKeyMapper,
-    ProcessDumpContainer,
+    NodeDumpContainer,
     delete_missing_node_dir,
-    do_filter_nodes,
+    # do_filter_nodes,
     generate_process_default_dump_path,
     load_given_group,
 )
@@ -95,7 +95,7 @@ class DumpNodeCollector:
         return nodes
 
     @cached_property
-    def processes_to_dump(self) -> ProcessDumpContainer:
+    def processes_to_dump(self) -> NodeDumpContainer:
         """Get the processes to dump from the collection of nodes.
 
         Only re-evaluates the processes, if not already set.
@@ -105,7 +105,7 @@ class DumpNodeCollector:
 
         return self._get_processes_to_dump()
 
-    def _get_processes_to_dump(self) -> ProcessDumpContainer:
+    def _get_processes_to_dump(self) -> NodeDumpContainer:
         """Retrieve the processeses from the collection nodes.
 
         Depending on the attributes of the ``CollectionDumper``, this method takes care of only selecting top-level
@@ -117,7 +117,7 @@ class DumpNodeCollector:
 
         # ipdb.set_trace()
         if not self.group_nodes:
-            return ProcessDumpContainer(calculations=[], workflows=[])
+            return NodeDumpContainer(calculations=[], workflows=[])
 
         # Better than: `nodes = [orm.load_node(n) for n in self.collection_nodes]`
         # As the list comprehension fetches each node from the DB individually
@@ -145,13 +145,13 @@ class DumpNodeCollector:
             calculations = list(set(calculations + called_calculations))
 
         # Use this small helper class rather than returning a dictionary for access via dot-notation
-        return ProcessDumpContainer(
+        return NodeDumpContainer(
             calculations=calculations,
             workflows=workflows,
         )
 
     @cached_property
-    def processes_to_delete(self) -> ProcessDumpContainer:
+    def processes_to_delete(self) -> NodeDumpContainer:
         """Get the processes to dump from the collection of nodes.
 
         Only re-evaluates the processes, if not already set.
@@ -159,10 +159,10 @@ class DumpNodeCollector:
         :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
         """
         if not self.delete_missing:
-            return ProcessDumpContainer(calculations=[], workflows=[])
+            return NodeDumpContainer(calculations=[], workflows=[])
         return self._get_processes_to_delete()
 
-    def _get_processes_to_delete(self) -> ProcessDumpContainer:
+    def _get_processes_to_delete(self) -> NodeDumpContainer:
         dump_logger = self.dump_logger
         log = dump_logger.log
 

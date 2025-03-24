@@ -17,6 +17,8 @@ from aiida.common.exceptions import NotExistent
 
 # TODO: Possibly mirror hierarchy of mirrored directory inside json file
 # TODO: Currently, json file has only top-level "groups", "workflows", and "calculations"
+# NOTE: Could use DumpLogger also as container for orm.Nodes, that should be dumped
+# NOTE: Should DumpLogger be not provided (None), or should it rather just be empty with no entries
 
 
 @dataclass
@@ -98,7 +100,7 @@ class DumpLogStoreCollection:
     calculations: DumpLogStore
     workflows: DumpLogStore
     groups: DumpLogStore
-    # data: DumpLogStore
+    data: DumpLogStore
 
 
 class DumpLogger:
@@ -113,14 +115,14 @@ class DumpLogger:
         calculations: DumpLogStore | None = None,
         workflows: DumpLogStore | None = None,
         groups: DumpLogStore | None = None,
-        # data: DumpLogStore | None = None,
+        data: DumpLogStore | None = None,
     ) -> None:
         self.dump_parent_path = dump_parent_path or Path.cwd()
         self.dump_sub_path = dump_sub_path or Path('.')
         self.calculations = calculations or DumpLogStore()
         self.workflows = workflows or DumpLogStore()
         self.groups = groups or DumpLogStore()
-        # self.dat = data or DumpLogStore()
+        self.data = data or DumpLogStore()
 
     @property
     def log_file_path(self) -> Path:
@@ -136,7 +138,9 @@ class DumpLogger:
     @property
     def log(self) -> DumpLogStoreCollection:
         """Retrieve the current state of the log as a dataclass."""
-        return DumpLogStoreCollection(calculations=self.calculations, workflows=self.workflows, groups=self.groups)
+        return DumpLogStoreCollection(
+            calculations=self.calculations, workflows=self.workflows, groups=self.groups, data=self.data
+        )
 
     def save_log(self) -> None:
         """Save the log to a JSON file."""
@@ -155,7 +159,7 @@ class DumpLogger:
             'calculations': serialize_logs(self.calculations),
             'workflows': serialize_logs(self.workflows),
             'groups': serialize_logs(self.groups),
-            # 'data': serialize_logs(self.data),
+            'data': serialize_logs(self.data),
         }
 
         with self.log_file_path.open('w', encoding='utf-8') as f:

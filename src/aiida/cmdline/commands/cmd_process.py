@@ -600,7 +600,7 @@ def process_dump(
     """
 
     from aiida.tools.archive.exceptions import ExportValidationError
-    from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
+    from aiida.tools.dumping.config import DumpMode, ProcessDumpConfig
     from aiida.tools.dumping.process import ProcessDumper
     from aiida.tools.dumping.utils import (
         SafeguardFileMapping,
@@ -624,10 +624,10 @@ def process_dump(
     except (FileExistsError, ValueError) as exc:
         echo.echo_critical(str(exc))
 
-    base_dump_config = BaseDumpConfig(
-        overwrite=overwrite,
-        incremental=incremental,
-    )
+    if overwrite:
+        dump_mode = DumpMode.OVERWRITE
+    else:
+        dump_mode = DumpMode.INCREMENTAL
 
     process_dump_config = ProcessDumpConfig(
         include_inputs=include_inputs,
@@ -643,7 +643,7 @@ def process_dump(
         # TODO: last_dump_time currently
         last_dump_time=None,
         # last_dump_time=last_dump_time,
-        base_dump_config=base_dump_config,
+        dump_mode=dump_mode,
         process_dump_config=process_dump_config,
     )
 

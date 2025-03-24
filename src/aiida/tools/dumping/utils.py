@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -21,11 +21,11 @@ from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import Profile
 from aiida.tools.dumping.logger import DumpLogger
+from aiida.tools.dumping.config import DumpMode
 
 __all__ = (
-    'DumpPaths',
+    'DumpPathMapper',
     'NodeDumpKeyMapper',
-    'ProcessDumpContainer',
     'SafeguardFileMapping',
     'do_filter_nodes',
     'get_group_subpath',
@@ -36,43 +36,39 @@ __all__ = (
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 
-class ProcessDumpContainer(NamedTuple):
-    calculations: list[orm.CalculationNode]
-    workflows: list[orm.WorkflowNode]
-    data: list[orm.Data]
-
-    @property
-    def dump_processes(self) -> bool:
-        """Check if there are any processes to dump."""
-        return len(self.calculations) == 0 and len(self.workflows) == 0
-
-    @property
-    def dump_data(self) -> bool:
-        """Check if there are any data nodes to dump."""
-        return len(self.data) == 0
-
-    # @override -> only available in Py 3.12
-    def __len__(self) -> int:
-        return len(self.calculations) + len(self.workflows) + len(self.data)
-
-
 class NodeDumpKeyMapper:
     calculation_key: str = 'calculations'
     workflow_key: str = 'workflows'
+    data_key: str = 'data'
 
     @classmethod
-    def get_key_from_node(cls, node: orm.Node) -> str:
-        if isinstance(node, orm.CalculationNode):
+    def get_key_from_instance(cls, node_inst: orm.Node) -> str:
+        match node_inst:
+            case orm.CalculationNode():
+                return cls.calculation_key
+            case orm.WorkflowNode():
+                return cls.workflow_key
+            case orm.Data():
+                return cls.data_key
+            case _:
+                msg = f'Dumping not implemented yet for node type: {type(node_inst)}'
+                raise NotImplementedError(msg)
+
+    @classmethod
+    def get_key_from_class(cls, node_type: type) -> str:
+        if issubclass(node_type, orm.CalculationNode):
             return cls.calculation_key
-        elif isinstance(node, orm.WorkflowNode):
+        elif issubclass(node_type, orm.WorkflowNode):
             return cls.workflow_key
+        elif issubclass(node_type, orm.Data):
+            return cls.data_key
         else:
-            msg = f'Dumping not implemented yet for node type: {type(node)}'
+            msg = f'Dumping not implemented yet for node type: {node_type}'
             raise NotImplementedError(msg)
 
 
 @dataclass
-class DumpPaths:
+class DumpPathMapper:
     parent: Path
     child: Path
     absolute: Path
@@ -86,8 +82,7 @@ class SafeguardFileMapping(Enum):
 
 def prepare_dump_path(
     path_to_validate: Path,
-    overwrite: bool,
-    incremental: bool,
+    dump_mode: DumpMode,
     safeguard_file: str,
     top_level_caller: bool = False,
 ) -> None:
@@ -103,8 +98,6 @@ def prepare_dump_path(
         `incremental` are enabled.
     :raises FileNotFoundError: If no `safeguard_file` is found."""
 
-    # traceback.print_stack()
-
     if path_to_validate.is_file():
         msg = f'A file at the given path `{path_to_validate}` already exists.'
         raise FileExistsError(msg)
@@ -113,46 +106,22 @@ def prepare_dump_path(
         msg = f'The path to validate must be an absolute path. Got `{path_to_validate}.'
         raise ValueError(msg)
 
-    # Disable this check as otherwise the user would always have to type:
-    # verdi <xyz> dump/mirror --overwrite/--no-incremental
-    # As incremental is the (most sensible) default
-    # Could also fix it with a click callback that automatically sets incremental to False if overwrite is True
-    # But this solution easier for now
-
-    # if overwrite and incremental:
-    #     msg = '`overwrite` and `incremental` cannot both be set to True.'
-    #     raise ValueError(msg)
-
     # Additional logging for top-level directory
     # Don't want to repeat that for all sub-directories created during dumping
     if top_level_caller:
-        if incremental and not overwrite:
+        if dump_mode == DumpMode.INCREMENTAL:
             msg = 'Incremental mirroring selected. Will update directory.'
-            logger.report(msg)
-
-        if overwrite and not incremental:
+        elif dump_mode == DumpMode.OVERWRITE:
             msg = 'Overwriting selected. Will clean directory first.'
-            logger.report(msg)
 
-        if overwrite and incremental:
-            msg = 'Overwriting selected. Will clean directory first (this takes precedence over `--incremental` option which is True by default).'
-            logger.report(msg)
-            incremental = False
+        logger.report(msg)
 
     # Handle existing non-empty directory
-
-    if path_to_validate.is_dir() and any(path_to_validate.iterdir()):
-        # Case 1: overwrite=False, incremental=False -> raise
-        if not overwrite and not incremental:
-            msg = f'Path `{path_to_validate.name}` already exists, and neither overwrite nor incremental options are set to True.'
-            raise FileExistsError(msg)
-
-        # Case 2: overwrite=True, incremental=False -> clean dir
-        if overwrite:
-            safe_delete_dir(
-                path_to_validate=path_to_validate,
-                safeguard_file=safeguard_file,
-            )
+    if path_to_validate.is_dir() and any(path_to_validate.iterdir()) and dump_mode == DumpMode.OVERWRITE:
+        safe_delete_dir(
+            path_to_validate=path_to_validate,
+            safeguard_file=safeguard_file,
+        )
 
     # Check if path is symlink, otherwise `mkdir` fails
     if path_to_validate.is_symlink():
@@ -349,7 +318,7 @@ def generate_group_default_dump_path(group: orm.Group, prefix: str = 'group', ap
 
 def resolve_click_path_argument_for_dumping(
     path: Path | None | str, entity: orm.ProcessNode | orm.Group | Profile
-) -> DumpPaths:
+) -> DumpPathMapper:
     ENTITY_DUMP_FUNCTIONS = {
         orm.ProcessNode: generate_process_default_dump_path,
         orm.Group: generate_group_default_dump_path,
@@ -370,7 +339,7 @@ def resolve_click_path_argument_for_dumping(
                 dump_sub_path = dump_path_generator(entity)
                 dump_parent_path = Path.cwd()
 
-            return DumpPaths(
+            return DumpPathMapper(
                 parent=dump_parent_path,
                 child=dump_sub_path,
                 absolute=dump_parent_path / dump_sub_path,

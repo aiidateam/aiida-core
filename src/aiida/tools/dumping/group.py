@@ -18,13 +18,12 @@ from typing import cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.base import BaseDumper
-from aiida.tools.dumping.config import BaseDumpConfig, GroupDumpConfig, ProcessDumpConfig
+from aiida.tools.dumping.config import DumpMode, GroupDumpConfig, ProcessDumpConfig, NodeCollectorConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
+from aiida.tools.dumping.collector import NodeContainer, NodeDumpCollector
 from aiida.tools.dumping.utils import (
     NodeDumpKeyMapper,
-    ProcessDumpContainer,
     delete_missing_node_dir,
     do_filter_nodes,
     generate_process_default_dump_path,
@@ -34,36 +33,34 @@ from aiida.tools.dumping.utils import (
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 
-class GroupDumper(BaseDumper):
+class GroupDumper:
     """Class to handle dumping of a collection of AiiDA ORM entities."""
 
     def __init__(
         self,
+        dump_mode: DumpMode,
         dump_parent_path: Path | None = None,
         dump_sub_path: Path | None = None,
         last_dump_time: datetime | None = None,
-        base_dump_config: BaseDumpConfig | None = None,
+        dump_logger: DumpLogger | None = None,
+        node_collector_config: NodeCollectorConfig | None = None,
         process_dump_config: ProcessDumpConfig | None = None,
         group_dump_config: GroupDumpConfig | None = None,
-        dump_logger: DumpLogger | None = None,
         group: orm.Group | str | None = None,
     ):
         """Initialize the CollectionDumper.
 
-        :param base_dump_config: Base dumper instance or None (gets instantiated).
         :param dump_logger: Logger for the dumping (gets instantiated).
         :param group: AiiDA group of which the nodes should be dumped.
         :param process_dumper: Process dumper instance or None (gets instantiated).
         :param processes_to_dump: Optional precomputed processes to dump.
         """
 
-        super().__init__(
-            dump_parent_path=dump_parent_path,
-            dump_sub_path=dump_sub_path,
-            last_dump_time=last_dump_time,
-            dump_logger=dump_logger,
-            base_dump_config=base_dump_config,
-        )
+        self.mode = dump_mode
+        self.dump_parent_path = dump_parent_path
+        self.dump_sub_path = dump_sub_path
+        self.last_dump_time = last_dump_time
+        self.dump_logger = dump_logger
 
         self.group: orm.Group | None
 
@@ -73,97 +70,46 @@ class GroupDumper(BaseDumper):
         else:
             self.group = None
 
-        self.base_dump_config = base_dump_config or BaseDumpConfig()
+        self.node_collector_config = node_collector_config or NodeCollectorConfig()
         self.process_dump_config = process_dump_config or ProcessDumpConfig()
         self.group_dump_config = group_dump_config or GroupDumpConfig()
 
-        self.should_dump_processes = self.group_dump_config.dump_processes
-        self.symlink_duplicates = self.group_dump_config.symlink_duplicates
+        # self.include_processes = self.group_dump_config.include_processes
+        # self.include_data = self.group_dump_config.include_data
+        # self.symlink_duplicates = self.group_dump_config.symlink_duplicates
         self.delete_missing = self.group_dump_config.delete_missing
-        self.only_top_level_calcs = self.group_dump_config.only_top_level_calcs
-        self.only_top_level_workflows = self.group_dump_config.only_top_level_workflows
-        self.filter_nodes_by_last_dump_time = self.group_dump_config.filter_by_last_dump_time
+
+        # self.only_top_level_calcs = self.group_dump_config.only_top_level_calcs
+        # self.only_top_level_workflows = self.group_dump_config.only_top_level_workflows
+        # self.filter_nodes_by_last_dump_time = self.group_dump_config.filter_by_last_dump_time
 
 
     @cached_property
-    def group_nodes(self) -> list[str]:
-        """Property to hold the nodes of the group.
+    def node_dump_container(self) -> NodeContainer:
 
-        :return: List of collection node UUIDs.
-        """
-        if self.group:
-            nodes = self._get_group_nodes()
-        else:
-            nodes = self._get_no_group_nodes()
-
-        return nodes
-
-    def _get_group_nodes(self) -> list[str]:
-        assert self.group is not None, "`self.group` shouldn't be None at this stage."
-        nodes = [n.uuid for n in self.group.nodes]
-
-        if self.filter_nodes_by_last_dump_time:
-            nodes = do_filter_nodes(nodes=nodes, last_dump_time=self.last_dump_time)
-        return nodes
-
-    @cached_property
-    def processes_to_dump(self) -> ProcessDumpContainer:
-        """Get the processes to dump from the collection of nodes.
-
-        Only re-evaluates the processes, if not already set.
-
-        :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
-        """
-
-        return self._get_processes_to_dump()
-
-    def _get_processes_to_dump(self) -> ProcessDumpContainer:
-        """Retrieve the processeses from the collection nodes.
-
-        Depending on the attributes of the ``CollectionDumper``, this method takes care of only selecting top-level
-        workflows and calculations if they are not part of a workflow. This requires to use the actual ORM entities,
-        rather than UUIDs, as the ``.caller``s have to be checked. In addition, sub-calculations
-
-        :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
-        """
-
-        # ipdb.set_trace()
-        if not self.group_nodes:
-            return ProcessDumpContainer(calculations=[], workflows=[])
-
-        # Better than: `nodes = [orm.load_node(n) for n in self.collection_nodes]`
-        # As the list comprehension fetches each node from the DB individually
-        nodes_orm = orm.QueryBuilder().append(orm.Node, filters={'uuid': {'in': self.group_nodes}}).all(flat=True)
-
-        if self.group_dump_config.only_top_level_workflows:
-            workflows = [node for node in nodes_orm if isinstance(node, orm.WorkflowNode) and node.caller is None]
-        else:
-            workflows = [node for node in nodes_orm if isinstance(node, orm.WorkflowNode)]
-
-        if self.group_dump_config.only_top_level_calcs:
-            calculations = [node for node in nodes_orm if isinstance(node, orm.CalculationNode) and node.caller is None]
-        else:
-            calculations = [node for node in nodes_orm if isinstance(node, orm.CalculationNode)]
-
-            # Get sub-calculations that were called by workflows but which might themselves not be directly contained in
-            # the collection
-            called_calculations = []
-            for workflow in workflows:
-                called_calculations += [
-                    node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)
-                ]
-
-            # Convert to set to avoid duplicates
-            calculations = list(set(calculations + called_calculations))
-
-        # Use this small helper class rather than returning a dictionary for access via dot-notation
-        return ProcessDumpContainer(
-            calculations=calculations,
-            workflows=workflows,
+        node_collector = NodeDumpCollector(
+            config=self.node_collector_config,
+            dump_mode=self.dump_mode,
+            last_dump_time=self.last_dump_time,
+            dump_logger=self.dump_logger,
+            group=self.group,
         )
 
+        return node_collector.collect()
+
+    # @cached_property
+    # def processes_to_dump(self) -> NodeContainer:
+    #     """Get the processes to dump from the collection of nodes.
+
+    #     Only re-evaluates the processes, if not already set.
+
+    #     :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
+    #     """
+
+    #     return self._get_processes_to_dump()
+
     @cached_property
-    def processes_to_delete(self) -> ProcessDumpContainer:
+    def processes_to_delete(self) -> NodeContainer:
         """Get the processes to dump from the collection of nodes.
 
         Only re-evaluates the processes, if not already set.
@@ -171,10 +117,10 @@ class GroupDumper(BaseDumper):
         :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
         """
         if not self.delete_missing:
-            return ProcessDumpContainer(calculations=[], workflows=[])
+            return NodeContainer(calculations=[], workflows=[])
         return self._get_processes_to_delete()
 
-    def _get_processes_to_delete(self) -> ProcessDumpContainer:
+    def _get_processes_to_delete(self) -> NodeContainer:
         dump_logger = self.dump_logger
         log = dump_logger.log
 
@@ -208,41 +154,6 @@ class GroupDumper(BaseDumper):
 
         return to_delete_uuids
 
-    def _get_no_group_nodes(self) -> list[str]:
-        """Obtain nodes in the profile that are not part of any group.
-
-        :return: List of UUIDs of selected nodes.
-        """
-
-        profile_groups = cast(list[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
-        profile_nodes = cast(
-            list[str],
-            orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True),
-        )
-
-        nodes_in_groups: list[str] = [node.uuid for group in profile_groups for node in group.nodes]
-
-        # Need to expand here also with the called_descendants of `WorkflowNodes`, otherwise the called
-        # `CalculationNode`s for `WorkflowNode`s that are part of a group are dumped twice
-        # Get the called descendants of WorkflowNodes within the nodes_in_groups list
-        sub_nodes_in_groups: list[str] = [
-            node.uuid
-            for n in nodes_in_groups
-            # if isinstance((workflow_node := orm.load_node(n)), orm.WorkflowNode)
-            if isinstance((workflow_node := orm.load_node(n)), orm.ProcessNode)
-            for node in workflow_node.called_descendants
-        ]
-
-        nodes_in_groups += sub_nodes_in_groups
-
-        no_group_nodes: list[str] = [
-            profile_node for profile_node in profile_nodes if profile_node not in nodes_in_groups
-        ]
-        if self.filter_nodes_by_last_dump_time:
-            no_group_nodes = do_filter_nodes(nodes=no_group_nodes, last_dump_time=self.last_dump_time)
-
-        return no_group_nodes
-
     def delete_processes(self):
         # print(f'TO_DUMP_PROCESSES: {to_dump_processes}')
         # print(f'TO_DELETE_PROCESSES: {to_delete_processes}')
@@ -265,11 +176,11 @@ class GroupDumper(BaseDumper):
         # TODO: Only allow for "pure" sequences of Calculation- or WorkflowNodes, or also mixed?
         # TODO: If the latter possibly also have directory creation in the loop
 
-        sub_path = self.dump_parent_path / self.dump_sub_path / NodeDumpKeyMapper.get_key_from_node(node=processes[0])
+        sub_path = self.dump_parent_path / self.dump_sub_path / NodeDumpKeyMapper.get_key_from_instance(node_inst=processes[0])
         # sub_path = Path(NodeDumpKeyMapper.get_key_from_node(node=next(iter(processes))))
         sub_path.mkdir(exist_ok=True, parents=True)
 
-        logger_attr = NodeDumpKeyMapper.get_key_from_node(node=next(iter(processes)))
+        logger_attr = NodeDumpKeyMapper.get_key_from_instance(node_inst=next(iter(processes)))
         # ! `getattr` gives a reference to the actual object, thus I can update the store directly
         current_store = getattr(self.dump_logger.log, logger_attr)
 
@@ -316,7 +227,8 @@ class GroupDumper(BaseDumper):
                 entry=DumpLog(path=process_dump_path, time=datetime.now().astimezone()),
             )
 
-    def dump(self, output_path: Path | None = None) -> None:
+    # NOTE: Remove `output_path` here?
+    def mirror(self, output_path: Path | None = None) -> None:
         """Top-level method that actually performs the dumping of the AiiDA data for the collection.
 
         :return: None
@@ -329,17 +241,19 @@ class GroupDumper(BaseDumper):
         self.dump_parent_path = output_path
 
         self.dump_parent_path.mkdir(exist_ok=True, parents=True)
-        group_nodes: list[str] = self.group_nodes
-        collection_processes: ProcessDumpContainer = self.processes_to_dump
+        # group_nodes: list[str] = self.group_nodes
+        # collection_processes: NodeContainer = self.processes_to_dump
 
         # ipdb.set_trace()
 
-        if not self.processes_to_dump.dump_processes:
-            # First, dump workflows, then calculations
-            if len(collection_processes.workflows) > 0:
-                self._dump_processes(processes=collection_processes.workflows)
-            if len(collection_processes.calculations) > 0:
-                self._dump_processes(processes=collection_processes.calculations)
+        # First, dump workflows, then calculations
+        calculations = self.node_dump_container.calculations
+        workflows = self.node_dump_container.workflows
+
+        if len(calculations) > 0:
+            self._dump_processes(processes=calculations)
+        if len(workflows) > 0:
+            self._dump_processes(workflows)
 
     # @property
     # def processes_to_delete(self): ...
@@ -377,3 +291,12 @@ class GroupDumper(BaseDumper):
     #     process_nodes = filter_nodes_last_dump_time(nodes=process_nodes, last_dump_time=self.last_dump_time)
 
     #     return process_nodes
+
+    # # NOTE: Accessing via `group.nodes` might be nice, keep in mind
+    # def _get_group_nodes(self) -> list[str]:
+    #     assert self.group is not None, "`self.group` shouldn't be None at this stage."
+    #     nodes = [n.uuid for n in self.group.nodes]
+
+    #     if self.filter_nodes_by_last_dump_time:
+    #         nodes = do_filter_nodes(nodes=nodes, last_dump_time=self.last_dump_time)
+    #     return nodes

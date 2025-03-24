@@ -691,7 +691,7 @@ def group_mirror(
     # Maybe point to actual modules here
     from aiida.tools.dumping import GroupDumper  # ProfileDumper
     from aiida.tools.dumping.config import (
-        BaseDumpConfig,
+        DumpMode,
         GroupDumpConfig,
         ProcessDumpConfig,
     )
@@ -753,10 +753,10 @@ def group_mirror(
         )
 
     # Create config options that hold the various settings for dumping data
-    base_dump_config = BaseDumpConfig(
-        overwrite=overwrite,
-        incremental=incremental,
-    )
+    if overwrite:
+        dump_mode = DumpMode.OVERWRITE
+    else:
+        dump_mode = DumpMode.INCREMENTAL
 
     process_dump_config = ProcessDumpConfig(
         include_inputs=include_inputs,
@@ -769,7 +769,7 @@ def group_mirror(
     # These options here are all set to `ProfileDumpConfig`, even though, as evident, they also relate to the dumping of
     # just a single group
     group_dump_config = GroupDumpConfig(
-        dump_processes=dump_processes,
+        include_processes=dump_processes,
         symlink_duplicates=symlink_duplicates,
         delete_missing=delete_missing,
         only_top_level_calcs=only_top_level_calcs,
@@ -781,7 +781,7 @@ def group_mirror(
         dump_parent_path=dump_paths.parent,
         dump_sub_path=dump_paths.child,
         last_dump_time=last_dump_time,
-        base_dump_config=base_dump_config,
+        dump_mode=dump_mode,
         group_dump_config=group_dump_config,
         process_dump_config=process_dump_config,
         dump_logger=dump_logger,
@@ -805,7 +805,7 @@ def group_mirror(
         #     msg = 'No processes to dump.'
         #     echo.echo_success(msg)
         # else:
-        group_dumper.dump()
+        group_dumper.mirror()
         msg = f'Dumped {len(group_dumper.processes_to_dump)} new nodes.'
         echo.echo_success(msg)
 

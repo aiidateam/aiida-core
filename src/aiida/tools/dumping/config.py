@@ -10,16 +10,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum, auto
 
-# TODO: Check if dataclasses are meant to
 
+class DumpMode(Enum):
+    OVERWRITE = auto()  # overwrite=True, incremental=False
+    INCREMENTAL = auto()  # overwrite=False, incremental=True
 
-@dataclass
-class BaseDumpConfig:
-    """Container for shared base arguments of all Dumper classes."""
-
-    overwrite: bool = False
-    incremental: bool = True
+    DEFAULT = INCREMENTAL
 
 
 @dataclass
@@ -35,27 +33,31 @@ class ProcessDumpConfig:
 
 
 @dataclass
-class CollectionDumpConfig:
+class NodeCollectorConfig:
     """Shared arguments for dumping of collections of nodes."""
 
-    dump_processes: bool = True
-    symlink_duplicates: bool = False
-    delete_missing: bool = False
+    include_processes: bool = True
+    include_data: bool = False
+    filter_by_last_dump_time: bool = True
     only_top_level_calcs: bool = True
     only_top_level_workflows: bool = True
-    filter_by_last_dump_time: bool = True
 
 
 @dataclass
-class GroupDumpConfig(CollectionDumpConfig):
-    """Arguments for dumping group data."""
+class CollectionMirrorConfig:
+    symlink_duplicates: bool = False
+    delete_missing: bool = False
 
+
+@dataclass
+class GroupDumpConfig(NodeCollectorConfig, CollectionMirrorConfig):
+    """Arguments for dumping group data."""
     ...
 
-
 @dataclass
-class ProfileDumpConfig(CollectionDumpConfig):
+class ProfileMirrorConfig(NodeCollectorConfig, CollectionMirrorConfig):
     """Arguments for dumping profile data."""
 
     organize_by_groups: bool = True
     only_groups: bool = False
+    update_groups: bool = True

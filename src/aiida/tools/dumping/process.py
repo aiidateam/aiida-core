@@ -24,40 +24,33 @@ from aiida.common import LinkType
 from aiida.common.exceptions import NotExistentAttributeError
 from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
-from aiida.tools.dumping.base import BaseDumper
-from aiida.tools.dumping.config import BaseDumpConfig, ProcessDumpConfig
+from aiida.tools.dumping.config import DumpMode, ProcessDumpConfig
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.utils import SafeguardFileMapping, generate_process_default_dump_path, prepare_dump_path
 
 logger = logging.getLogger(__name__)
 
 
-class ProcessDumper(BaseDumper):
+class ProcessDumper:
     """Class to handle dumping of an AiiDA process."""
 
     def __init__(
         self,
-        dump_parent_path,
-        dump_sub_path,
-        last_dump_time,
-        # dump_parent_path: Path | None = None,
-        # output_path: Path | None = None,
-        # last_dump_time,
-        base_dump_config: BaseDumpConfig | None = None,
+        dump_parent_path: Path | str,
+        dump_sub_path: Path | str,
+        dump_mode: DumpMode = DumpMode.DEFAULT,
+        last_dump_time: datetime | None = None,
         dump_logger: DumpLogger | None = None,
         process_dump_config: ProcessDumpConfig | None = None,
     ) -> None:
         """Initialize the ProcessDumper."""
 
-        super().__init__(
-            dump_parent_path=dump_parent_path,
-            dump_sub_path=dump_sub_path,
-            last_dump_time=last_dump_time,
-            base_dump_config=base_dump_config,
-            dump_logger=dump_logger,
-        )
+        self.dump_parent_path=dump_parent_path
+        self.dump_sub_path=dump_sub_path
+        self.last_dump_time=last_dump_time
+        self.dump_logger=dump_logger
 
-        self.base_dump_config = base_dump_config or BaseDumpConfig()
+        self.dump_mode = dump_mode
         self.process_dump_config = process_dump_config or ProcessDumpConfig()
 
         # Unpack arguments for easier access
@@ -197,8 +190,7 @@ class ProcessDumper(BaseDumper):
 
         prepare_dump_path(
             path_to_validate=output_path,
-            overwrite=self.overwrite,
-            incremental=self.incremental,
+            dump_mode=self.dump_mode,
             safeguard_file=SafeguardFileMapping.PROCESS.value,
             top_level_caller=False,
         )
@@ -249,8 +241,7 @@ class ProcessDumper(BaseDumper):
 
         prepare_dump_path(
             path_to_validate=output_path,
-            overwrite=self.overwrite,
-            incremental=self.incremental,
+            dump_mode=self.dump_mode,
             safeguard_file=SafeguardFileMapping.PROCESS.value,
             top_level_caller=False,
         )
@@ -327,8 +318,7 @@ class ProcessDumper(BaseDumper):
 
         prepare_dump_path(
             path_to_validate=output_path,
-            overwrite=self.overwrite,
-            incremental=self.incremental,
+            dump_mode=self.dump_mode,
             safeguard_file=SafeguardFileMapping.PROCESS.value,
             top_level_caller=False,
         )

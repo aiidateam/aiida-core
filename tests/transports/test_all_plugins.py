@@ -11,8 +11,10 @@ pass.
 Plugin specific tests will be written in the corresponding test file.
 """
 
+import grp
 import io
 import os
+import pwd
 import shutil
 import signal
 import tempfile
@@ -1265,6 +1267,39 @@ def test_rename(custom_transport, tmp_path_remote):
         # Perform rename operation if new file already exists
         with pytest.raises(OSError, match='already exist|destination exists'):
             transport.rename(new_file, another_file)
+
+
+def test_chown(custom_transport, tmp_path_remote):
+    """Test chown using grp and pwd to get current user and group."""
+    with custom_transport as transport:
+        file_path = tmp_path_remote / 'testfile.txt'
+        file_path.touch()  # Create an empty file
+
+        # Get current user's name and group name
+        user_name = pwd.getpwuid(os.getuid()).pw_name
+        group_name = grp.getgrgid(os.getgid()).gr_name
+
+        # Get user and group IDs (to pass to chown)
+        user_id = pwd.getpwnam(user_name).pw_uid
+        group_id = grp.getgrnam(group_name).gr_gid
+
+        print(f'Testing with user: {user_name} (UID: {user_id}), group: {group_name} (GID: {group_id})')
+
+        # Change ownership using UID and GID
+        transport.chown(file_path, user_id, group_id)
+        assert file_path.exists()
+
+        # Invalid user case
+        with pytest.raises(OSError):
+            transport.chown(file_path, -1, group_id)  # invalid user ID
+
+        # Invalid group case
+        with pytest.raises(OSError):
+            transport.chown(file_path, user_id, -1)  # invalid group ID
+
+        # Non-existent file case
+        with pytest.raises(OSError):
+            transport.chown(tmp_path_remote / 'does_not_exist.txt', user_id, group_id)
 
 
 def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: Path, monkeypatch: pytest.MonkeyPatch):

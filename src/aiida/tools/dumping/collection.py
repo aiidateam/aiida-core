@@ -16,7 +16,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import cast
 
-from aiida import orm
+from aiida import orm, load_profile
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import Profile
 from aiida.tools.dumping.config import BaseDumpConfig, GroupDumpConfig, ProcessDumpConfig
@@ -34,14 +34,29 @@ from aiida.tools.dumping.utils import (
 logger = AIIDA_LOGGER.getChild('tools.dumping')
 
 
-class CollectionDumper:  # (BaseDumper):
+class DumpNodeCollector:
     """Class to handle dumping of a collection of AiiDA ORM entities."""
 
-    @staticmethod
-    def resolve_identifier(identifier: orm.Group | Profile | str | None) -> orm.Group | Profile | None: ...
+    def resolve_identifier(self, identifier: orm.Group | Profile | str | None) -> orm.Group | Profile | None:
+
+        if isinstance(identifier, (orm.Group, Profile)):
+            return identifier
+        elif isinstance(identifier, str):
+            try:
+                profile = load_profile(identifier)
+                return profile
+            except:
+                pass
+            try:
+                group = orm.load_group(identifier)
+                return group
+            except:
+                pass
+
 
     def __init__(
         self,
+        identifier: orm.Group | Profile | str,
         dump_parent_path: Path | None = None,
         dump_sub_path: Path | None = None,
         last_dump_time: datetime | None = None,
@@ -49,45 +64,13 @@ class CollectionDumper:  # (BaseDumper):
         process_dump_config: ProcessDumpConfig | None = None,
         group_dump_config: GroupDumpConfig | None = None,
         dump_logger: DumpLogger | None = None,
-        group: orm.Group | str | None = None,
     ):
-        """Initialize the CollectionDumper.
 
-        :param base_dump_config: Base dumper instance or None (gets instantiated).
-        :param dump_logger: Logger for the dumping (gets instantiated).
-        :param group: AiiDA group of which the nodes should be dumped.
-        :param process_dumper: Process dumper instance or None (gets instantiated).
-        :param processes_to_dump: Optional precomputed processes to dump.
-        """
+        self.identifier = self.resolve_identifier(identifier)
 
-        # super().__init__(
-        #     dump_parent_path=dump_parent_path,
-        #     dump_sub_path=dump_sub_path,
-        #     last_dump_time=last_dump_time,
-        #     dump_logger=dump_logger,
-        #     base_dump_config=base_dump_config,
-        # )
-
-        self.group: orm.Group | None
-
-        if group is not None:
-            # This is only required to ensure we deal with `orm.Group` and not a `str`
-            self.group = load_given_group(group)
-        else:
-            self.group = None
-
-        # self.base_dump_config = base_dump_config or BaseDumpConfig()
-        # self.process_dump_config = process_dump_config or ProcessDumpConfig()
-        # self.group_dump_config = group_dump_config or GroupDumpConfig()
-
-        # self.should_dump_processes = self.group_dump_config.dump_processes
-        # self.symlink_duplicates = self.group_dump_config.symlink_duplicates
-        # self.delete_missing = self.group_dump_config.delete_missing
-        # self.only_top_level_calcs = self.group_dump_config.only_top_level_calcs
-        # self.only_top_level_workflows = self.group_dump_config.only_top_level_workflows
-        # self.filter_nodes_by_last_dump_time = self.group_dump_config.filter_by_last_dump_time
-
-        # ipdb.set_trace()
+        self.base_dump_config = base_dump_config or BaseDumpConfig()
+        self.process_dump_config = process_dump_config or ProcessDumpConfig()
+        self.group_dump_config = group_dump_config or GroupDumpConfig()
 
     @cached_property
     def group_nodes(self) -> list[str]:
@@ -247,104 +230,6 @@ class CollectionDumper:  # (BaseDumper):
             no_group_nodes = do_filter_nodes(nodes=no_group_nodes, last_dump_time=self.last_dump_time)
 
         return no_group_nodes
-
-    def delete_processes(self):
-        # print(f'TO_DUMP_PROCESSES: {to_dump_processes}')
-        # print(f'TO_DELETE_PROCESSES: {to_delete_processes}')
-
-        for to_delete_uuid in self.processes_to_delete:
-            delete_missing_node_dir(dump_logger=self.dump_logger, to_delete_uuid=to_delete_uuid)
-
-        # TODO: Add also logging for node/path deletion?
-
-    def _dump_processes(self, processes: list[orm.CalculationNode] | list[orm.WorkflowNode]) -> None:
-        """Dump a list of AiiDA calculations or workflows to disk.
-
-        :param processes: List of AiiDA calculations or workflows from the ``ProcessesToDumpContainer``.
-        """
-
-        # ipdb.set_trace()
-        if len(list(processes)) == 0:
-            return
-
-        # TODO: Only allow for "pure" sequences of Calculation- or WorkflowNodes, or also mixed?
-        # TODO: If the latter possibly also have directory creation in the loop
-
-        sub_path = self.dump_parent_path / self.dump_sub_path / NodeDumpKeyMapper.get_key_from_node(node=processes[0])
-        # sub_path = Path(NodeDumpKeyMapper.get_key_from_node(node=next(iter(processes))))
-        sub_path.mkdir(exist_ok=True, parents=True)
-
-        logger_attr = NodeDumpKeyMapper.get_key_from_node(node=next(iter(processes)))
-        # ! `getattr` gives a reference to the actual object, thus I can update the store directly
-        current_store = getattr(self.dump_logger.log, logger_attr)
-
-        process_dumper = ProcessDumper(
-            dump_parent_path=sub_path.parent,
-            dump_sub_path=sub_path.name,
-            last_dump_time=self.last_dump_time,
-            base_dump_config=self.base_dump_config,
-            process_dump_config=self.process_dump_config,
-            dump_logger=self.dump_logger,
-        )
-
-        for process in processes:
-            process_dump_path = sub_path / generate_process_default_dump_path(process_node=process, prefix=None)
-
-            if self.group_dump_config.symlink_duplicates and process.uuid in current_store.entries.keys():
-                if process_dump_path.exists():
-                    continue
-                else:
-                    process_dump_path.parent.mkdir(exist_ok=True, parents=True)
-                    # breakpoint()
-                    try:
-                        os.symlink(
-                            src=current_store.entries[process.uuid].path,
-                            dst=process_dump_path,
-                        )
-                        # TODO: If this works here, call `add_link` to the DumpLog to extend an existing DumpLog
-                    except FileExistsError:
-                        pass
-
-            else:
-                # TODO: Don't update the logger with the UUID of a symlinked calculation as keys must be unique
-                # TODO: Possibly add another `symlink` attribute to `DumpLog` which can hold a list of symlinks
-                # TODO: Ignore for now, as I would need to retrieve the list of links, append to it, and assign again
-
-                # process_dumper._dump_calculation(calculation_node=process, output_path=process_dump_path)
-                # ! TODO: Add DumpLogger here, such that sub-calculations of workflows are also registered in the
-                # ! dumping, otherwise they end up duplicated, as the registration is done here in the for loop
-
-                process_dumper.dump(process_node=process, output_path=process_dump_path)
-
-            current_store.add_entry(
-                uuid=process.uuid,
-                entry=DumpLog(path=process_dump_path, time=datetime.now().astimezone()),
-            )
-
-    def dump(self, output_path: Path | None = None) -> None:
-        """Top-level method that actually performs the dumping of the AiiDA data for the collection.
-
-        :return: None
-        """
-
-        if not output_path:
-            output_path = self.dump_parent_path
-        if not output_path.is_absolute():
-            output_path /= self.dump_parent_path
-        self.dump_parent_path = output_path
-
-        self.dump_parent_path.mkdir(exist_ok=True, parents=True)
-        group_nodes: list[str] = self.group_nodes
-        collection_processes: ProcessDumpContainer = self.processes_to_dump
-
-        # ipdb.set_trace()
-
-        if not self.processes_to_dump.is_empty:
-            # First, dump workflows, then calculations
-            if len(collection_processes.workflows) > 0:
-                self._dump_processes(processes=collection_processes.workflows)
-            if len(collection_processes.calculations) > 0:
-                self._dump_processes(processes=collection_processes.calculations)
 
     # @property
     # def processes_to_delete(self): ...

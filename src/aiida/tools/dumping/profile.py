@@ -22,6 +22,7 @@ from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import load_profile
 from aiida.manage.configuration.profile import Profile
+from aiida.orm.querybuilder import QueryBuilder
 from aiida.tools.dumping.base import BaseDumper
 from aiida.tools.dumping.config import (
     BaseDumpConfig,
@@ -128,7 +129,7 @@ class ProfileDumper(BaseDumper):
 
         processes_to_dump: ProcessDumpContainer = no_group_dumper.processes_to_dump
 
-        if self.should_dump_processes and not processes_to_dump.is_empty:
+        if self.should_dump_processes and not processes_to_dump.dump_processes:
             msg = f'Dumping processes not in any group for profile `{self.profile.name}`...'
             logger.report(msg)
             no_group_dumper.dump()
@@ -162,7 +163,7 @@ class ProfileDumper(BaseDumper):
 
             processes_to_dump = group_dumper.processes_to_dump
 
-            if self.should_dump_processes and not processes_to_dump.is_empty:
+            if self.should_dump_processes and not processes_to_dump.dump_processes:
                 msg = f'Dumping processes in group `{group.label}` for profile `{self.profile.name}`...'
                 logger.report(msg)
                 group_dumper.dump()
@@ -195,6 +196,19 @@ class ProfileDumper(BaseDumper):
             groups_to_dump = self.groups
 
         self._dump_processes_per_group(groups=groups_to_dump)
+
+    @cached_property
+    def profile_nodes(self) -> list[orm.Node]:
+        return self._get_profile_nodes()
+
+    def _get_profile_nodes(self) -> list[orm.Node]:
+        qb = orm.QueryBuilder()
+        if self.profile_dump_config.filter_nodes_by_last_dump_time and self.last_dump_time:
+            qb.append(orm.Node, filters={'mtime': {'>=': self.last_dump_time}})
+        else:
+            qb.append(orm.Node)
+
+        return qb.all(flat=True)
 
     @cached_property
     def processes_to_dump(self) -> list[str]:

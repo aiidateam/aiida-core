@@ -84,7 +84,6 @@ class GroupDumper(BaseDumper):
         self.only_top_level_workflows = self.group_dump_config.only_top_level_workflows
         self.filter_nodes_by_last_dump_time = self.group_dump_config.filter_by_last_dump_time
 
-        # ipdb.set_trace()
 
     @cached_property
     def group_nodes(self) -> list[str]:
@@ -92,7 +91,6 @@ class GroupDumper(BaseDumper):
 
         :return: List of collection node UUIDs.
         """
-        # ipdb.set_trace()
         if self.group:
             nodes = self._get_group_nodes()
         else:
@@ -336,7 +334,7 @@ class GroupDumper(BaseDumper):
 
         # ipdb.set_trace()
 
-        if not self.processes_to_dump.is_empty:
+        if not self.processes_to_dump.dump_processes:
             # First, dump workflows, then calculations
             if len(collection_processes.workflows) > 0:
                 self._dump_processes(processes=collection_processes.workflows)

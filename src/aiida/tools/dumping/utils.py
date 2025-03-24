@@ -39,17 +39,21 @@ logger = AIIDA_LOGGER.getChild('tools.dumping')
 class ProcessDumpContainer(NamedTuple):
     calculations: list[orm.CalculationNode]
     workflows: list[orm.WorkflowNode]
-    # ? Add groups here, as well?
-    # groups: list[orm.Group]
+    data: list[orm.Data]
 
     @property
-    def is_empty(self) -> bool:
+    def dump_processes(self) -> bool:
         """Check if there are any processes to dump."""
         return len(self.calculations) == 0 and len(self.workflows) == 0
 
+    @property
+    def dump_data(self) -> bool:
+        """Check if there are any data nodes to dump."""
+        return len(self.data) == 0
+
     # @override -> only available in Py 3.12
     def __len__(self) -> int:
-        return len(self.calculations) + len(self.workflows)
+        return len(self.calculations) + len(self.workflows) + len(self.data)
 
 
 class NodeDumpKeyMapper:

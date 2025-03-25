@@ -56,6 +56,18 @@ class RemoteData(Data):
         return self.base.extras.get(self.KEY_EXTRA_CLEANED, False)
 
     @property
+    def is_file(self):
+        """Return whether the ``RemoteData`` points to a file, rather than a folder."""
+        if self.is_cleaned:
+            return False
+
+        authinfo = self.get_authinfo()
+        transport = authinfo.get_transport()
+
+        with transport:
+            return transport.isfile(self.get_remote_path())
+
+    @property
     def is_empty(self):
         """Check if remote folder is empty"""
         if self.is_cleaned:

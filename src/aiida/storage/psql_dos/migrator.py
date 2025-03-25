@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import pathlib
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, Optional
 
 from alembic.command import downgrade, upgrade
 from alembic.config import Config
@@ -170,7 +170,12 @@ class PsqlDosMigrator:
                 f"but the disk-objectstore's is {repository_uuid}."
             )
 
-    def get_container(self) -> 'Container':
+    def get_container(self):
+        # TODO do we need to deprecate it?
+        raise NotImplementedError()
+
+    @contextlib.contextmanager
+    def container_context(self) -> Generator['Container', None, None]:
         """Return the disk-object store container.
 
         :returns: The disk-object store container configured for the repository path of the current profile.
@@ -179,7 +184,8 @@ class PsqlDosMigrator:
 
         from .backend import get_filepath_container
 
-        return Container(get_filepath_container(self.profile))
+        with Container(get_filepath_container(self.profile)) as container:
+            yield container
 
     def get_repository_uuid(self) -> str:
         """Return the UUID of the repository.
@@ -188,12 +194,18 @@ class PsqlDosMigrator:
         :raises: :class:`~aiida.common.exceptions.UnreachableStorage` if the UUID cannot be retrieved, which probably
             means that the repository is not initialised.
         """
+        container = None
         try:
-            return self.get_container().container_id
+            with self.container_context() as container:
+                return container.container_id
         except Exception as exception:
-            raise exceptions.UnreachableStorage(
-                f'Could not access disk-objectstore {self.get_container()}: {exception}'
-            ) from exception
+            # PR COMMENT removed the printing of exception in message since we use from exception
+            if container is None:
+                msg = 'During creation of the container context for the disk-objectstore the following error was raised'
+            else:
+                msg = f'During access of disk-objectstore {container} error was raised.'
+
+            raise exceptions.UnreachableStorage(msg) from exception
 
     def initialise(self, reset: bool = False) -> bool:
         """Initialise the storage backend.
@@ -239,7 +251,8 @@ class PsqlDosMigrator:
 
         :returns: ``True`` if the repository is initialised, ``False`` otherwise.
         """
-        return self.get_container().is_initialised
+        with self.container_context() as container:
+            return container.is_initialised
 
     @property
     def is_database_initialised(self) -> bool:
@@ -261,7 +274,8 @@ class PsqlDosMigrator:
         import shutil
 
         try:
-            shutil.rmtree(self.get_container().get_folder())
+            with self.container_context() as container:
+                shutil.rmtree(container.get_folder())
         except FileNotFoundError:
             pass
 
@@ -276,8 +290,8 @@ class PsqlDosMigrator:
         """Initialise the repository."""
         from aiida.storage.psql_dos.backend import CONTAINER_DEFAULTS
 
-        container = self.get_container()
-        container.init_container(clear=True, **CONTAINER_DEFAULTS)
+        with self.container_context() as container:
+            container.init_container(clear=True, **CONTAINER_DEFAULTS)
 
     def initialise_database(self) -> None:
         """Initialise the database.

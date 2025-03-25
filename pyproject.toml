@@ -144,7 +144,7 @@ requires-python = '>=3.9'
 'core.log' = 'aiida.orm.logs:Log'
 'core.node' = 'aiida.orm.nodes.node:Node'
 'core.user' = 'aiida.orm.users:User'
- 
+
 [project.entry-points.'aiida.parsers']
 'core.arithmetic.add' = 'aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser'
 'core.templatereplacer' = 'aiida.parsers.plugins.templatereplacer.parser:TemplatereplacerParser'

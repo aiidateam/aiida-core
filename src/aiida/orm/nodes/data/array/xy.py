@@ -16,6 +16,7 @@ Example:
     xy.set_y([np.array([1, 2, 3]), np.array([4, 5, 6])], ['y', 'z'], ['unit_y', 'unit_z'])
     print(xy.get_arraynames())  # ['x_array', 'y_array_0', 'y_array_1']
     print(xy.get_y())           # [('y', array([1, 2, 3]), 'unit_y'), ('z', array([4, 5, 6]), 'unit_z')]
+    print(xy.get_y_arraynames())  # ['y', 'z']
 """
 
 from __future__ import annotations

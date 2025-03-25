@@ -77,5 +77,5 @@ def test_get_y_arraynames():
     invalid_node = XyData()
     invalid_node.set_x(x_array, 'x_name', 'x_unit')
 
-    with pytest.raises(ValueError, match=r"y_array .* does not have the same shape as x_array!"):
+    with pytest.raises(ValueError, match=r'y_array .* does not have the same shape as x_array!'):
         invalid_node.set_y([y_array1, invalid_y_array], ['y_name1', 'invalid_y_name'], ['y_unit1', 'invalid_y_unit'])

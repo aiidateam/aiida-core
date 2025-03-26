@@ -23,10 +23,10 @@ __all__ = (
 
 
 def load_node_class(type_string):
-    """Return the `Node` sub class that corresponds to the given type string.
+    """Return the Node sub class that corresponds to the given type string.
 
-    :param type_string: the `type` string of the node
-    :return: a sub class of `Node`
+    :param type_string: the type string of the node
+    :return: a sub class of Node
     """
     from aiida.orm import Data, Node
     from aiida.plugins.entry_point import load_entry_point
@@ -55,17 +55,23 @@ def load_node_class(type_string):
 
     if base_path.startswith('data.'):
         entry_point_name = base_path.removeprefix('data.')
-        # This section should be properly indented
         try:
             return load_entry_point('aiida.data', entry_point_name)
         except exceptions.MissingEntryPointError:
-            warnings.warn(f'unknown type string `{type_string}`')
+            warnings.warn(f'unknown type string {type_string}')
             return Data
 
-    if base_path.startswith('process'):
-        return load_entry_point('aiida.node', base_path)
+    if base_path.startswith('process.'):
+        entry_point_name = base_path.removeprefix('process.')
+        try:
+            return load_entry_point('aiida.node', base_path)
+        except exceptions.MissingEntryPointError:
+            warnings.warn(f'unknown type string {type_string}')
+            from aiida.orm.nodes.process.calculation.calculation import CalculationNode
 
-    warnings.warn(f'unknown type string `{type_string}`')
+            return CalculationNode
+
+    warnings.warn(f'unknown type string {type_string}')
     return Data
 
 

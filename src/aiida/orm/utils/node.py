@@ -65,7 +65,7 @@ def load_node_class(type_string):
     if base_path.startswith('process'):
         return load_entry_point('aiida.node', base_path)
 
-    warnings.warn(f'Unresolvable type string `{type_string}`, falling back onto `Data` class')
+    warnings.warn(f'unknown type string `{type_string}`')
     return Data
 
 

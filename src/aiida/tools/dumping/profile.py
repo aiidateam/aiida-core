@@ -28,6 +28,7 @@ from aiida.tools.dumping.config import (
     GroupDumpConfig,
     ProcessDumpConfig,
     ProfileMirrorConfig,
+    NodeCollectorConfig
 )
 from aiida.tools.dumping.group import GroupDumper
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
@@ -49,6 +50,7 @@ class ProfileDumper:
         dump_mode: DumpMode = DumpMode.DEFAULT,
         last_dump_time: datetime | None = None,
         dump_logger: DumpLogger | None = None,
+        node_collector_config: NodeCollectorConfig | None = None,
         process_dump_config: ProcessDumpConfig | None = None,
         profile_dump_config: ProfileMirrorConfig | None = None,
         groups: list[str] | list[orm.Group] | None = None,
@@ -56,7 +58,6 @@ class ProfileDumper:
         """Initialize the ProfileDumper.
 
         :param profile: The selected profile to dump.
-        :param base_dump_config: Base dumper instance or None (gets instantiated).
         :param process_dumper: Process dumper instance or None (gets instantiated).
         :param dump_logger: Logger for the dumping (gets instantiated).
         :param organize_by_groups: Organize dumped data by groups.
@@ -78,6 +79,7 @@ class ProfileDumper:
         else:
             self.groups = []
 
+        self.node_collector_config = node_collector_config or NodeCollectorConfig()
         self.process_dump_config = process_dump_config or ProcessDumpConfig()
         self.profile_dump_config = profile_dump_config or ProfileMirrorConfig()
 
@@ -142,7 +144,7 @@ class ProfileDumper:
             group_dumper = GroupDumper(
                 dump_parent_path=self.dump_parent_path / self.dump_sub_path,
                 dump_sub_path=group_subpath,
-                dump_mode=self.base_dump_config,
+                dump_mode=self.dump_mode,
                 process_dump_config=self.process_dump_config,
                 group_dump_config=self.group_dump_config,
                 dump_logger=self.dump_logger,
@@ -190,7 +192,7 @@ class ProfileDumper:
     @cached_property
     def node_dump_container(self) -> NodeContainer:
         node_collector = NodeDumpCollector(
-            incremental=self.base_dump_config.incremental,
+            config=self.node_collector_config,
             filter_by_last_dump_time=self.profile_dump_config.filter_by_last_dump_time,
             last_dump_time=self.last_dump_time,
             dump_logger=self.dump_logger,
@@ -228,9 +230,6 @@ class ProfileDumper:
         no_group_nodes: list[str] = [
             profile_node for profile_node in profile_nodes if profile_node not in nodes_in_groups
         ]
-        import ipdb
-
-        ipdb.set_trace()
 
         return no_group_nodes
 
@@ -358,9 +357,7 @@ class ProfileDumper:
                 try:
                     dump_logger.groups.entries[uuid].path = new_path
                 except:
-                    import ipdb
-
-                    ipdb.set_trace()
+                    # import ipdb, ipdb.set_trace()
                     raise
 
                 modified_paths.append(

@@ -21,10 +21,14 @@ from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import Profile
 from aiida.tools.dumping.config import DumpMode
-from aiida.tools.dumping.logger import DumpLogger
+from typing import TYPE_CHECKING
+import json
+
+if TYPE_CHECKING:
+    from aiida.tools.dumping.logger import DumpLogger
 
 __all__ = (
-    'DumpPathMapper',
+    'DumpPaths',
     'NodeDumpKeyMapper',
     'SafeguardFileMapping',
     'do_filter_nodes',
@@ -67,11 +71,27 @@ class NodeDumpKeyMapper:
             raise NotImplementedError(msg)
 
 
+# NOTE: Could also add logger and safeguard file path here
 @dataclass
-class DumpPathMapper:
+class DumpPaths:
     parent: Path
     child: Path
-    absolute: Path
+
+    @property
+    def absolute(self) -> Path:
+        """Returns the absolute path by joining parent and child."""
+        return self.parent / self.child
+
+    # @property
+    # def safeguard_file(self) -> Path:
+    #     """Returns the path to a safeguard file."""
+    #     return self.absolute / ".safeguard"
+
+    # @property
+    # def logger(self) -> logging.Logger:
+    #     """Returns a logger specific to this dump path."""
+    #     logger_name = f"dump_paths.{self.parent.name}.{self.child.name}"
+    #     return logging.getLogger(logger_name)
 
 
 class SafeguardFileMapping(Enum):
@@ -318,7 +338,7 @@ def generate_group_default_dump_path(group: orm.Group, prefix: str = 'group', ap
 
 def resolve_click_path_argument_for_dumping(
     path: Path | None | str, entity: orm.ProcessNode | orm.Group | Profile
-) -> DumpPathMapper:
+) -> DumpPaths:
     ENTITY_DUMP_FUNCTIONS = {
         orm.ProcessNode: generate_process_default_dump_path,
         orm.Group: generate_group_default_dump_path,
@@ -339,7 +359,7 @@ def resolve_click_path_argument_for_dumping(
                 dump_sub_path = dump_path_generator(entity)
                 dump_parent_path = Path.cwd()
 
-            return DumpPathMapper(
+            return DumpPaths(
                 parent=dump_parent_path,
                 child=dump_sub_path,
                 absolute=dump_parent_path / dump_sub_path,
@@ -349,7 +369,7 @@ def resolve_click_path_argument_for_dumping(
     raise ValueError(f"Unsupported entity type '{type(entity).__name__}'. Supported types: {supported_types}.")
 
 
-def delete_missing_node_dir(dump_logger: DumpLogger, to_delete_uuid: str) -> None:
+def delete_missing_node_dir(dump_logger: 'DumpLogger', to_delete_uuid: str) -> None:
     # TODO: Possibly make a delete method for the path and the log, and then call that in the loop
 
     current_store = dump_logger.get_store_by_uuid(uuid=to_delete_uuid)
@@ -371,3 +391,12 @@ def delete_missing_node_dir(dump_logger: DumpLogger, to_delete_uuid: str) -> Non
             current_store.del_entry(uuid=to_delete_uuid)
         except:
             raise
+
+def load_dump_logger(dump_paths):
+    # NOTE: This could be in the base class
+    try:
+        dump_logger = DumpLogger.from_file(dump_paths=dump_paths)
+    except (json.JSONDecodeError, OSError):
+        dump_logger = DumpLogger(dump_paths=dump_paths)
+
+    return dump_logger

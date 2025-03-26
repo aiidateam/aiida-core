@@ -733,24 +733,13 @@ def group_mirror(
         incremental = False
 
     # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
-    try:
-        with safeguard_file_path.open('r') as fhandle:
-            last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()
-    except IndexError:
-        last_dump_time = None
-
-    # Update the `last_dump_time` now, rather than after the dumping, as writing files to disk can take some time, and
-    # which processes should be dumped is evaluated beforehand (here)
-    current_dump_time = datetime.now().astimezone()
-
-    # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
-    try:
-        dump_logger = DumpLogger.from_file(dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child)
-    except (json.JSONDecodeError, OSError):
-        dump_logger = DumpLogger(
-            dump_parent_path=dump_paths.parent,
-            dump_sub_path=dump_paths.child,
-        )
+    # try:
+    #     dump_logger = DumpLogger.from_file(dump_parent_path=dump_paths.parent, dump_sub_path=dump_paths.child)
+    # except (json.JSONDecodeError, OSError):
+    #     dump_logger = DumpLogger(
+    #         dump_parent_path=dump_paths.parent,
+    #         dump_sub_path=dump_paths.child,
+    #     )
 
     # Create config options that hold the various settings for dumping data
     if overwrite:
@@ -823,9 +812,5 @@ def group_mirror(
     #     echo.echo_success(msg)
     #     print(relabeled_paths)
 
-    # Append the current dump time to dumping safeguard file
-    with safeguard_file_path.open('a') as fhandle:
-        fhandle.write(f'Last profile mirror time: {current_dump_time.isoformat()}\n')
-
     # Write the logging json file to disk
-    dump_logger.save_log()
+    # dump_logger.save_log()

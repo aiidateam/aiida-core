@@ -9,7 +9,7 @@
 """Functionality for dumping of a Collection of AiiDA ORM entities."""
 
 from __future__ import annotations
-
+import json
 import os
 from datetime import datetime
 from functools import cached_property
@@ -18,17 +18,36 @@ from pathlib import Path
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.collector import NodeContainer, NodeDumpCollector
-from aiida.tools.dumping.config import DumpMode, GroupDumpConfig, NodeCollectorConfig, ProcessDumpConfig
+from aiida.tools.dumping.config import (
+    DumpMode,
+    GroupDumpConfig,
+    NodeCollectorConfig,
+    ProcessDumpConfig,
+)
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.process import ProcessDumper
 from aiida.tools.dumping.utils import (
     NodeDumpKeyMapper,
+    SafeguardFileMapping,
     delete_missing_node_dir,
     generate_process_default_dump_path,
     load_given_group,
+    prepare_dump_path,
+    DumpPaths,
+    load_dump_logger,
+)
+from aiida.common.progress_reporter import (
+    get_progress_reporter,
+    set_progress_bar_tqdm,
+    set_progress_reporter,
+    create_callback,
 )
 
 logger = AIIDA_LOGGER.getChild('tools.dumping')
+
+# NOTE: `load_dump_logger` could be put in general Parent cparent class
+# NOTE: Accessing via `group.nodes` might be nice, keep in mind
+# NOTE: Should the `dump_logger` even be passed as an argument???
 
 
 class GroupDumper:
@@ -36,15 +55,15 @@ class GroupDumper:
 
     def __init__(
         self,
+        group: orm.Group,
         dump_mode: DumpMode,
-        dump_parent_path: Path | None = None,
-        dump_sub_path: Path | None = None,
+        dump_paths: DumpPaths,
+        # NOTE: This should be part of the logger...
         last_dump_time: datetime | None = None,
         dump_logger: DumpLogger | None = None,
         node_collector_config: NodeCollectorConfig | None = None,
         process_dump_config: ProcessDumpConfig | None = None,
         group_dump_config: GroupDumpConfig | None = None,
-        group: orm.Group | str | None = None,
     ):
         """Initialize the CollectionDumper.
 
@@ -54,23 +73,22 @@ class GroupDumper:
         :param processes_to_dump: Optional precomputed processes to dump.
         """
 
-        self.mode = dump_mode
-        self.dump_parent_path = dump_parent_path
-        self.dump_sub_path = dump_sub_path
+        self.dump_mode = dump_mode
+        self.dump_paths = dump_paths
         self.last_dump_time = last_dump_time
         self.dump_logger = dump_logger
 
-        self.group: orm.Group | None
-
-        if group is not None:
-            # This is only required to ensure we deal with `orm.Group` and not a `str`
-            self.group = load_given_group(group)
-        else:
-            self.group = None
+        self.group = load_given_group(group)
 
         self.node_collector_config = node_collector_config or NodeCollectorConfig()
         self.process_dump_config = process_dump_config or ProcessDumpConfig()
         self.group_dump_config = group_dump_config or GroupDumpConfig()
+
+        if not dump_logger:
+            if self.dump_mode.OVERWRITE:
+                self.dump_logger = dump_logger = DumpLogger(dump_paths=self.dump_paths)
+            else:
+                self.dump_logger = load_dump_logger()
 
         # self.include_processes = self.group_dump_config.include_processes
         # self.include_data = self.group_dump_config.include_data
@@ -81,17 +99,24 @@ class GroupDumper:
         # self.only_top_level_workflows = self.group_dump_config.only_top_level_workflows
         # self.filter_nodes_by_last_dump_time = self.group_dump_config.filter_by_last_dump_time
 
-    @cached_property
-    def node_dump_container(self) -> NodeContainer:
+        # Try to get `last_dump_time` from dumping safeguard file, if it already exsits
+
+    def get_node_container(self) -> NodeContainer:
+        """
+        Returns a NodeContainer by collecting nodes using the NodeDumpCollector.
+
+        Returns:
+            NodeContainer: The collected node container
+        """
+        # import ipdb; ipdb.set_trace()
         node_collector = NodeDumpCollector(
             config=self.node_collector_config,
-            dump_mode=self.dump_mode,
             last_dump_time=self.last_dump_time,
             dump_logger=self.dump_logger,
+        )
+        return node_collector.collect(
             group=self.group,
         )
-
-        return node_collector.collect()
 
     # @cached_property
     # def processes_to_dump(self) -> NodeContainer:
@@ -165,17 +190,13 @@ class GroupDumper:
         :param processes: List of AiiDA calculations or workflows from the ``ProcessesToDumpContainer``.
         """
 
-        # ipdb.set_trace()
         if len(list(processes)) == 0:
             return
 
         # TODO: Only allow for "pure" sequences of Calculation- or WorkflowNodes, or also mixed?
         # TODO: If the latter possibly also have directory creation in the loop
 
-        sub_path = (
-            self.dump_parent_path / self.dump_sub_path / NodeDumpKeyMapper.get_key_from_instance(node_inst=processes[0])
-        )
-        # sub_path = Path(NodeDumpKeyMapper.get_key_from_node(node=next(iter(processes))))
+        sub_path = self.dump_paths.absolute / NodeDumpKeyMapper.get_key_from_instance(node_inst=processes[0])
         sub_path.mkdir(exist_ok=True, parents=True)
 
         logger_attr = NodeDumpKeyMapper.get_key_from_instance(node_inst=next(iter(processes)))
@@ -186,115 +207,99 @@ class GroupDumper:
             dump_parent_path=sub_path.parent,
             dump_sub_path=sub_path.name,
             last_dump_time=self.last_dump_time,
-            base_dump_config=self.base_dump_config,
+            dump_mode=self.dump_mode,
             process_dump_config=self.process_dump_config,
             dump_logger=self.dump_logger,
         )
 
-        for process in processes:
-            process_dump_path = sub_path / generate_process_default_dump_path(process_node=process, prefix=None)
+        # import ipdb; ipdb.set_trace()
 
-            if self.group_dump_config.symlink_duplicates and process.uuid in current_store.entries.keys():
-                if process_dump_path.exists():
-                    continue
+        set_progress_bar_tqdm()
+        with get_progress_reporter()(desc=f'Mirroring new processes', total=len(processes)) as progress:
+            for process in processes:
+                process_dump_path = sub_path / generate_process_default_dump_path(process_node=process, prefix=None)
+
+                if self.group_dump_config.symlink_duplicates and process.uuid in current_store.entries.keys():
+                    if process_dump_path.exists():
+                        continue
+                    else:
+                        process_dump_path.parent.mkdir(exist_ok=True, parents=True)
+                        # breakpoint()
+                        try:
+                            os.symlink(
+                                src=current_store.entries[process.uuid].path,
+                                dst=process_dump_path,
+                            )
+                            # TODO: If this works here, call `add_link` to the DumpLog to extend an existing DumpLog
+                        except FileExistsError:
+                            pass
+
                 else:
-                    process_dump_path.parent.mkdir(exist_ok=True, parents=True)
-                    # breakpoint()
-                    try:
-                        os.symlink(
-                            src=current_store.entries[process.uuid].path,
-                            dst=process_dump_path,
-                        )
-                        # TODO: If this works here, call `add_link` to the DumpLog to extend an existing DumpLog
-                    except FileExistsError:
-                        pass
+                    # TODO: Don't update the logger with the UUID of a symlinked calculation as keys must be unique
+                    # TODO: Possibly add another `symlink` attribute to `DumpLog` which can hold a list of symlinks
+                    # TODO: Ignore for now, as I would need to retrieve the list of links, append to it, and assign again
 
-            else:
-                # TODO: Don't update the logger with the UUID of a symlinked calculation as keys must be unique
-                # TODO: Possibly add another `symlink` attribute to `DumpLog` which can hold a list of symlinks
-                # TODO: Ignore for now, as I would need to retrieve the list of links, append to it, and assign again
+                    # process_dumper._dump_calculation(calculation_node=process, output_path=process_dump_path)
+                    # ! TODO: Add DumpLogger here, such that sub-calculations of workflows are also registered in the
+                    # ! dumping, otherwise they end up duplicated, as the registration is done here in the for loop
 
-                # process_dumper._dump_calculation(calculation_node=process, output_path=process_dump_path)
-                # ! TODO: Add DumpLogger here, such that sub-calculations of workflows are also registered in the
-                # ! dumping, otherwise they end up duplicated, as the registration is done here in the for loop
+                    process_dumper.dump(process_node=process, output_path=process_dump_path)
 
-                process_dumper.dump(process_node=process, output_path=process_dump_path)
+                current_store.add_entry(
+                    uuid=process.uuid,
+                    entry=DumpLog(path=process_dump_path, time=datetime.now().astimezone()),
+                )
 
-            current_store.add_entry(
-                uuid=process.uuid,
-                entry=DumpLog(path=process_dump_path, time=datetime.now().astimezone()),
-            )
+                progress.update(1)
 
-    # NOTE: Remove `output_path` here?
-    def mirror(self, output_path: Path | None = None) -> None:
+    def _pre_mirror(self) -> None:
+        """_summary_"""
+        _ = prepare_dump_path(
+            path_to_validate=self.dump_paths.absolute,
+            dump_mode=self.dump_mode,
+            safeguard_file=SafeguardFileMapping.GROUP.value,
+            top_level_caller=True,
+        )
+
+        safeguard_file_path = self.dump_paths.absolute / SafeguardFileMapping.GROUP.value
+
+        try:
+            with safeguard_file_path.open('r') as fhandle:
+                last_dump_time = datetime.fromisoformat(fhandle.readlines()[-1].strip().split()[-1]).astimezone()
+        except (IndexError, FileNotFoundError):
+            last_dump_time = None
+
+        self.safeguard_file_path = safeguard_file_path
+        self.last_dump_time = last_dump_time
+        self.current_dump_time = datetime.now().astimezone()
+
+    def _post_mirror(self) -> None:
+        """_summary_"""
+        self.dump_logger.save_log()
+
+        # Append the current dump time to dumping safeguard file
+        with self.safeguard_file_path.open('a') as fhandle:
+            fhandle.write(f'Last profile mirror time: {self.current_dump_time.isoformat()}\n')
+
+    def mirror(self) -> None:
         """Top-level method that actually performs the dumping of the AiiDA data for the collection.
 
         :return: None
         """
 
-        if not output_path:
-            output_path = self.dump_parent_path
-        if not output_path.is_absolute():
-            output_path /= self.dump_parent_path
-        self.dump_parent_path = output_path
+        self._pre_mirror()
 
-        self.dump_parent_path.mkdir(exist_ok=True, parents=True)
-        # group_nodes: list[str] = self.group_nodes
-        # collection_processes: NodeContainer = self.processes_to_dump
+        # Update the `last_dump_time` now, rather than after the dumping, as writing files to disk can take some time, and
+        # which processes should be dumped is evaluated beforehand (here)
 
-        # ipdb.set_trace()
+        node_container = self.get_node_container()
 
-        # First, dump workflows, then calculations
-        calculations = self.node_dump_container.calculations
-        workflows = self.node_dump_container.workflows
+        for process_type in ('calculations', 'workflows'):
+            processes = getattr(node_container, process_type)
+            if len(processes) > 0:
+                logger.report(f'Dumping {process_type}')
+                self._dump_processes(processes=processes)
+            else:
+                logger.report(f'No {process_type} to dump.')
 
-        if len(calculations) > 0:
-            self._dump_processes(processes=calculations)
-        if len(workflows) > 0:
-            self._dump_processes(workflows)
-
-    # @property
-    # def processes_to_delete(self): ...
-
-    # def _get_no_group_processes(self) -> list[str]:
-    #     """Obtain nodes in the profile that are not part of any group.
-
-    #     :return: List of UUIDs of selected nodes.
-    #     """
-
-    #     profile_groups = cast(list[orm.Group], orm.QueryBuilder().append(orm.Group).all(flat=True))
-    #     profile_processes = cast(
-    #         list[str],
-    #         orm.QueryBuilder().append(orm.ProcessNode, project=['uuid']).all(flat=True),
-    #     )
-
-    #     nodes_in_groups: list[str] = [node.uuid for group in profile_groups for node in group.nodes]
-
-    #     # Need to expand here also with the called_descendants of `WorkflowNodes`, otherwise the called
-    #     # `CalculationNode`s for `WorkflowNode`s that are part of a group are dumped twice
-    #     # Get the called descendants of WorkflowNodes within the nodes_in_groups list
-    #     sub_nodes_in_groups: list[str] = [
-    #         node.uuid
-    #         for n in nodes_in_groups
-    #         # if isinstance((workflow_node := orm.load_node(n)), orm.WorkflowNode)
-    #         if isinstance((workflow_node := orm.load_node(n)), orm.ProcessNode)
-    #         for node in workflow_node.called_descendants
-    #     ]
-
-    #     nodes_in_groups += sub_nodes_in_groups
-
-    #     process_nodes: list[str] = [
-    #         profile_node for profile_node in profile_processes if profile_node not in nodes_in_groups
-    #     ]
-    #     process_nodes = filter_nodes_last_dump_time(nodes=process_nodes, last_dump_time=self.last_dump_time)
-
-    #     return process_nodes
-
-    # # NOTE: Accessing via `group.nodes` might be nice, keep in mind
-    # def _get_group_nodes(self) -> list[str]:
-    #     assert self.group is not None, "`self.group` shouldn't be None at this stage."
-    #     nodes = [n.uuid for n in self.group.nodes]
-
-    #     if self.filter_nodes_by_last_dump_time:
-    #         nodes = do_filter_nodes(nodes=nodes, last_dump_time=self.last_dump_time)
-    #     return nodes
+        self._post_mirror()

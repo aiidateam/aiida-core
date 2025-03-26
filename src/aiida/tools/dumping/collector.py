@@ -62,18 +62,13 @@ class NodeDumpCollector:
 
     def __init__(
         self,
-        incremental: bool,
         dump_logger: DumpLogger,
         config: NodeCollectorConfig,
         last_dump_time: datetime | None = None,
-        group: Optional['orm.Group'] = None,
-        # NOTE: This should be part of the DumpLogger, not extra
     ):
         """Initialize the collector with query parameters."""
-        self.incremental = incremental
         self.last_dump_time = last_dump_time
         self.dump_logger = dump_logger
-        self.group = group
 
         self.include_processes = config.include_processes
         self.include_data = config.include_data
@@ -99,14 +94,15 @@ class NodeDumpCollector:
         orm_key = self._get_orm_key(orm_type)
 
         # Filter by modification time if requested
+        # import ipdb; ipdb.set_trace()
         if self.filter_by_last_dump_time and self.last_dump_time:
-            filters['mtime'] = {'>=': self.last_dump_time}
+            filters['mtime'] = {'>=': self.last_dump_time.astimezone()}
 
-        # Filter out already dumped nodes if in incremental mode
-        if self.incremental and self.dump_logger and hasattr(self.dump_logger, orm_key):
-            node_list = getattr(self.dump_logger, orm_key)
-            if node_list and len(node_list) > 0:
-                filters['uuid'] = {'!in': node_list}
+        # if self.incremental and self.dump_logger and hasattr(self.dump_logger, orm_key):  # Incremental here also not really needed
+        if self.dump_logger and hasattr(self.dump_logger, orm_key):
+            node_store = getattr(self.dump_logger, orm_key)
+            if node_store and len(node_store) > 0:
+                filters['uuid'] = {'!in': list(node_store.entries.keys())}
 
         return filters
 
@@ -117,7 +113,7 @@ class NodeDumpCollector:
                 return attr
         raise ValueError(f'Unknown ORM type: {orm_type}')
 
-    def collect(self) -> NodeContainer:
+    def collect(self, group) -> NodeContainer:
         """
         Collect all node types using the collector's parameters.
 
@@ -126,9 +122,10 @@ class NodeDumpCollector:
         """
         container = NodeContainer()
 
+        # import ipdb; ipdb.set_trace()
         if self.include_processes:
-            setattr(container, 'workflows', self.get_workflows())
-            setattr(container, 'calculations', self.get_calculations())
+            container.workflows = self.get_workflows(group=group)
+            container.calculations = self.get_calculations(group=group)
 
         if self.include_data:
             msg = 'Mirroring of data nodes not yet implemented.'
@@ -139,7 +136,7 @@ class NodeDumpCollector:
 
         return container
 
-    def _get_nodes(self, orm_type: Type) -> list:
+    def _get_nodes(self, orm_type: Type, group: orm.Group | None = None):
         """
         Get nodes of a specific type with the collector's parameters.
 
@@ -154,18 +151,12 @@ class NodeDumpCollector:
         # Resolve filters for this query
         filters = self._resolve_filters(orm_type)
 
-        # First append the node type with its filters
-        qb.append(orm_type, filters=filters, tag='node')
+        if group is not None:
+            qb.append(orm.Group, filters={'id': group.id}, tag='group')
+            qb.append(orm_type, filters=filters, with_group='group', tag='node')
 
-        # If a group is provided, add the relationship to the query
-        if self.group is not None:
-            qb.append(orm.Group, filters={'id': self.group.id}, with_node='node')
-
-        # If only_not_in_any_group is True, modify the query accordingly
-        # if self.only_not_in_any_group:
-        #     # Proper implementation for nodes not in any group
-        #     qb.append(orm.Group, with_node='node', outerjoin=True)
-        #     qb.add_filter(orm.Group, {'id': None})
+        else:
+            qb.append(orm_type, filters=filters, tag='node')
 
         return qb.all(flat=True)
 
@@ -200,9 +191,9 @@ class NodeDumpCollector:
     #         workflows=workflows,
     #     )
 
-    def get_calculations(self) -> list:
+    def get_calculations(self, group: orm.Group | None = None) -> list:
         """Get calculation nodes with the collector's parameters."""
-        calculations = self._get_nodes(orm_type=self.orm_types['calculations'])
+        calculations = self._get_nodes(orm_type=self.orm_types['calculations'], group=group)
 
         if self.only_top_level_calcs:
             calculations = [node for node in calculations if node.caller is None]
@@ -221,13 +212,13 @@ class NodeDumpCollector:
 
         return calculations
 
-    def get_workflows(self) -> list:
+    def get_workflows(self, group: orm.Group | None = None) -> list:
         """Get workflow nodes with the collector's parameters."""
-        return self._get_nodes(orm_type=self.orm_types['workflows'])
+        return self._get_nodes(orm_type=self.orm_types['workflows'], group=group)
 
-    def get_data(self) -> list:
+    def get_data(self, group: orm.Group | None = None) -> list:
         """Get data nodes with the collector's parameters."""
-        return self._get_nodes(orm_type=self.orm_types['data'])
+        return self._get_nodes(orm_type=self.orm_types['data'], group=group)
 
 
 # # Example usage:

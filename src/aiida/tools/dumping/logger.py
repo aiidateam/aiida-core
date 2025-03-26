@@ -14,11 +14,13 @@ from datetime import datetime
 from pathlib import Path
 
 from aiida.common.exceptions import NotExistent
+from aiida.tools.dumping.utils import DumpPaths
 
 # TODO: Possibly mirror hierarchy of mirrored directory inside json file
 # TODO: Currently, json file has only top-level "groups", "workflows", and "calculations"
 # NOTE: Could use DumpLogger also as container for orm.Nodes, that should be dumped
 # NOTE: Should DumpLogger be not provided (None), or should it rather just be empty with no entries
+# NOTE: Is on `save_log` again the whole history being written to disk? Ideally, this would be incremental
 
 
 @dataclass
@@ -110,15 +112,13 @@ class DumpLogger:
 
     def __init__(
         self,
-        dump_parent_path: Path | None = None,
-        dump_sub_path: Path | None = None,
+        dump_paths: DumpPaths,
         calculations: DumpLogStore | None = None,
         workflows: DumpLogStore | None = None,
         groups: DumpLogStore | None = None,
         data: DumpLogStore | None = None,
     ) -> None:
-        self.dump_parent_path = dump_parent_path or Path.cwd()
-        self.dump_sub_path = dump_sub_path or Path('.')
+        self.dump_paths = dump_paths
         self.calculations = calculations or DumpLogStore()
         self.workflows = workflows or DumpLogStore()
         self.groups = groups or DumpLogStore()
@@ -127,7 +127,7 @@ class DumpLogger:
     @property
     def log_file_path(self) -> Path:
         """Get the path to the dump file."""
-        return self.dump_parent_path / self.dump_sub_path / self.DUMP_LOG_FILE
+        return self.dump_paths.parent / self.dump_paths.child / self.DUMP_LOG_FILE
 
     def add_entry(self, store: DumpLogStore, uuid: str, entry: DumpLog) -> None:
         store.add_entry(uuid, entry)
@@ -162,6 +162,8 @@ class DumpLogger:
             'data': serialize_logs(self.data),
         }
 
+        # if not self.log_file_path.is_file():
+            
         with self.log_file_path.open('w', encoding='utf-8') as f:
             json.dump(log_dict, f, indent=4)
 
@@ -172,9 +174,9 @@ class DumpLogger:
         self.save_log()
 
     @classmethod
-    def from_file(cls, dump_parent_path: Path, dump_sub_path: Path) -> 'DumpLogger':
+    def from_file(cls, dump_paths: DumpPaths) -> 'DumpLogger':
         """Alternative constructor to load from an existing JSON file."""
-        instance = cls(dump_parent_path=dump_parent_path, dump_sub_path=dump_sub_path)
+        instance = cls(dump_paths=dump_paths)
 
         if not instance.log_file_path.exists():
             return instance
@@ -237,3 +239,21 @@ class DumpLogger:
             # For debugging
 
             raise
+    def to_dict(self) -> dict:
+
+        """
+        Convert the DumpLogger state to a dictionary format.
+        
+        Returns:
+            dict: A dictionary representation of the DumpLogger state,
+                containing all calculations, workflows, groups, and data entries.
+        """
+        def serialize_logs(container: DumpLogStore) -> dict:
+            return container.to_dict()
+        
+        return {
+            'calculations': serialize_logs(self.calculations),
+            'workflows': serialize_logs(self.workflows),
+            'groups': serialize_logs(self.groups),
+            'data': serialize_logs(self.data),
+        }

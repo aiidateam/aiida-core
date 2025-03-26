@@ -36,6 +36,7 @@ class ProcessDumpConfig:
 class NodeCollectorConfig:
     """Shared arguments for dumping of collections of nodes."""
 
+    # NOTE: Should the `last_dump_time` also be here
     include_processes: bool = True
     include_data: bool = False
     filter_by_last_dump_time: bool = True

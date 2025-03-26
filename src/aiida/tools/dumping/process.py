@@ -36,6 +36,7 @@ class ProcessDumper:
 
     def __init__(
         self,
+        # NOTE: Replace individual paths with DumpPaths
         dump_parent_path: Path | str,
         dump_sub_path: Path | str,
         dump_mode: DumpMode = DumpMode.DEFAULT,

@@ -24,6 +24,7 @@ def test_load_node_class_fallback():
         loaded_class = load_node_class('__main__.SubData.')
     assert loaded_class == Data
 
+
 def test_load_node_class_with_node_prefix():
     """Test the behavior of load_node_class with node prefix."""
     # Test node prefix removal
@@ -35,6 +36,7 @@ def test_load_node_class_with_node_prefix():
     with pytest.warns(UserWarning):
         loaded_class = load_node_class('node.invalid.type.')
     assert loaded_class == Data
+
 
 def test_load_node_class_with_process_prefix():
     """Test the behavior of load_node_class with process prefix."""
@@ -48,7 +50,7 @@ def test_load_node_class_with_process_prefix():
     # Test process prefix with empty subtype - should return ProcessNode
     loaded_class = load_node_class('process.')
     assert loaded_class == ProcessNode
-     # Changed from Data to ProcessNode because that's what the implementation returns
+    # Changed from Data to ProcessNode because that's what the implementation returns
 
 
 def test_load_node_class_with_data_prefix():
@@ -63,20 +65,26 @@ def test_load_node_class_with_data_prefix():
         loaded_class = load_node_class('data.')
         assert loaded_class == Data
 
+
 def test_load_node_class_empty_string():
     """Test that an empty string returns the base `Node` class."""
     from aiida.orm import Node
+
     loaded_class = load_node_class('')
     assert loaded_class == Node
+
 
 def test_load_node_class_data_data():
     """Test explicitly that 'data.Data.' returns Data."""
     from aiida.orm import Data
+
     loaded_class = load_node_class('data.Data.')
     assert loaded_class == Data
+
 
 def test_load_node_class_no_trailing_dot():
     """Test invalid type string without trailing dot."""
     from aiida.common import exceptions
+
     with pytest.raises(exceptions.DbContentError, match='invalid'):
         load_node_class('data.dict')

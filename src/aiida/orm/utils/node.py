@@ -55,11 +55,12 @@ def load_node_class(type_string):
 
     if base_path.startswith('data.'):
         entry_point_name = base_path.removeprefix('data.')
-    try:
-        return load_entry_point('aiida.data', entry_point_name)
-    except exceptions.MissingEntryPointError:
-        warnings.warn(f'unknown type string `{type_string}`')
-        return Data
+        # This section should be properly indented
+        try:
+            return load_entry_point('aiida.data', entry_point_name)
+        except exceptions.MissingEntryPointError:
+            warnings.warn(f'unknown type string `{type_string}`')
+            return Data
 
     if base_path.startswith('process'):
         return load_entry_point('aiida.node', base_path)

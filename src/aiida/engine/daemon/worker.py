@@ -37,13 +37,14 @@ async def shutdown_worker(runner: Runner) -> None:
     LOGGER.info('Daemon worker stopped')
 
 
-def start_daemon_worker(foreground: bool = False) -> None:
+def start_daemon_worker(foreground: bool = False, profile_name: str | None = None) -> None:
     """Start a daemon worker for the currently configured profile.
 
     :param foreground: If true, the logging will be configured to write to stdout, otherwise it will be configured to
         write to the daemon log file.
     """
-    daemon_client = get_daemon_client()
+
+    daemon_client = get_daemon_client(profile_name)
     configure_logging(with_orm=True, daemon=not foreground, daemon_log_file=daemon_client.daemon_log_file)
 
     LOGGER.debug(f'sys.executable: {sys.executable}')

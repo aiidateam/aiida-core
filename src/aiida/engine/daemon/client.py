@@ -477,6 +477,10 @@ class DaemonClient:
         command = {'command': 'stats', 'properties': {'name': self.daemon_name}}
         return self.call_client(command, timeout=timeout)
 
+    def get_number_of_workers(self, timeout: int | None = None) -> int:
+        """Get number of workers."""
+        return len(self.get_worker_info(timeout).get('info', []))
+
     def get_daemon_info(self, timeout: int | None = None) -> dict[str, t.Any]:
         """Get statistics about this daemon itself.
 

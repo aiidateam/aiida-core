@@ -179,23 +179,6 @@ def test_load_node_class_generic_fallback():
 
 
 def test_load_node_class_empty_base_path_parts():
-    """Test that load_node_class fails (raises an EntryPointError) when rsplit returns an empty list."""
-    from aiida.common import exceptions
-    from aiida.orm.utils.node import load_node_class
-
-    class FakeString(str):
-        def endswith(self, suffix):
-            return True
-
-        def rsplit(self, sep, maxsplit):
-            return []  # Simulate empty list as the rsplit result
-
-    fake_type_string = FakeString('anything.')
-    with pytest.raises(exceptions.EntryPointError, match='Invalid type string format'):
-        load_node_class(fake_type_string)
-
-
-def test_load_node_class_empty_base_path_parts():
     """Test that load_node_class fails (raises an EntryPointError) when rsplit returns an empty list-like object."""
     import pytest
 

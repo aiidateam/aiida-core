@@ -38,8 +38,7 @@ def load_node_class(type_string):
         return Data
 
     if not type_string.endswith('.'):
-        logging.error(f'Invalid type string: {type_string}. Returning base class.')
-        return Node  # Fallback to Node if type string is invalid
+        raise exceptions.DbContentError(f'invalid type string: {type_string}')
 
     try:
         base_path_parts = type_string.rsplit('.', 2)
@@ -60,7 +59,7 @@ def load_node_class(type_string):
         try:
             return load_entry_point('aiida.data', entry_point_name)
         except exceptions.MissingEntryPointError:
-            logging.warning(f'Unknown type string: {type_string}. Returning Data class as fallback.')
+            warnings.warn(f'unknown type string `{type_string}`')
             return Data
 
     if base_path.startswith('process'):

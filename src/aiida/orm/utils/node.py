@@ -38,37 +38,35 @@ def load_node_class(type_string):
         return Data
 
     if not type_string.endswith('.'):
-        raise exceptions.DbContentError(f'The type string `{type_string}` is invalid')
+        logging.error(f'Invalid type string: {type_string}. Returning base class.')
+        return Node  # Fallback to Node if type string is invalid
 
     try:
-        base_path = type_string.rsplit('.', 2)[0]
+        base_path_parts = type_string.rsplit('.', 2)
+        if len(base_path_parts) == 0:
+            raise ValueError('Invalid type string format')
+        base_path = base_path_parts[0]
     except ValueError as exc:
+        logging.error(f'Failed to process type string: {type_string}')
         raise exceptions.EntryPointError from exc
 
-    # This exception needs to be there to make migrations work that rely on the old type string starting with `node.`
-    # Since now the type strings no longer have that prefix, we simply strip it and continue with the normal logic.
     if base_path.startswith('node.'):
+        logging.info('Removing node. prefix from base_path')
         base_path = base_path.removeprefix('node.')
 
-    # Data nodes are the only ones with sub classes that are still external, so if the plugin is not available
-    # we fall back on the base node type
     if base_path.startswith('data.'):
         entry_point_name = base_path.removeprefix('data.')
+        # This section should be properly indented
         try:
             return load_entry_point('aiida.data', entry_point_name)
         except exceptions.MissingEntryPointError:
+            logging.warning(f'Unknown type string: {type_string}. Returning Data class as fallback.')
             return Data
 
     if base_path.startswith('process'):
         return load_entry_point('aiida.node', base_path)
 
-    # At this point we really have an anomalous type string. At some point, storing nodes with unresolvable type strings
-    # was allowed, for example by creating a sub class in a shell and then storing an instance. Attempting to load the
-    # node then would fail miserably. This is now no longer allowed, but we need a fallback for existing cases, which
-    # should be rare. We fallback on `Data` and not `Node` because bare node instances are also not storable and so the
-    # logic of the ORM is not well defined for a loaded instance of the base `Node` class.
-    warnings.warn(f'unknown type string `{type_string}`, falling back onto `Data` class')
-
+    warnings.warn(f'Unresolvable type string `{type_string}`, falling back onto `Data` class')
     return Data
 
 

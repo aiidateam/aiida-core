@@ -177,14 +177,17 @@ def test_load_node_class_generic_fallback():
     with pytest.raises(ValueError, match='Invalid type string format'):
         node(base_path_parts)
 
+
 def test_load_node_class_empty_base_path_parts():
     """Test that load_node_class fails (raises an IndexError) when rsplit returns an empty list."""
+
     class FakeString(str):
         def endswith(self, suffix):
             return True
+
         def rsplit(self, sep, maxsplit):
             return []  # Simulate empty list as the rsplit result
 
-    fake_type_string = FakeString("anything.")
+    fake_type_string = FakeString('anything.')
     with pytest.raises(IndexError):
         load_node_class(fake_type_string)

@@ -163,3 +163,14 @@ def test_abstract_node_meta():
     # Verify node_type is properly set
     assert hasattr(TestNode, '_node_type')
     assert TestNode._node_type == 'test.node'
+
+
+def test_load_node_class_generic_fallback():
+    """Test that an unknown type string (not matching any known prefix)
+    falls back onto the `Data` class."""
+    from aiida.orm import Data
+
+    # 'unknown.type.' does not match node., data. or process
+    with pytest.warns(UserWarning, match='unknown type string'):
+        loaded_class = load_node_class('unknown.type.')
+    assert loaded_class == Data

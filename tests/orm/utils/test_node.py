@@ -177,14 +177,48 @@ def test_load_node_class_generic_fallback():
     with pytest.raises(ValueError, match='Invalid type string format'):
         node(base_path_parts)
 
+
 def test_load_node_class_empty_base_path_parts():
-    """Test that load_node_class fails (raises an IndexError) when rsplit returns an empty list."""
+    """Test that load_node_class fails (raises an EntryPointError) when rsplit returns an empty list."""
+    from aiida.common import exceptions
+    from aiida.orm.utils.node import load_node_class
+
     class FakeString(str):
         def endswith(self, suffix):
             return True
+
         def rsplit(self, sep, maxsplit):
             return []  # Simulate empty list as the rsplit result
 
-    fake_type_string = FakeString("anything.")
-    with pytest.raises(IndexError):
+    fake_type_string = FakeString('anything.')
+    with pytest.raises(exceptions.EntryPointError, match='Invalid type string format'):
         load_node_class(fake_type_string)
+
+
+def test_load_node_class_empty_base_path_parts():
+    """Test that load_node_class fails (raises an EntryPointError) when rsplit returns an empty list-like object."""
+    import pytest
+
+    from aiida.common import exceptions
+    from aiida.orm.utils.node import load_node_class
+
+    class FakeList:
+        def __len__(self):
+            return 0
+
+        def __getitem__(self, index):
+            raise ValueError('Invalid type string format')
+
+    class FakeString(str):
+        def endswith(self, suffix):
+            return True
+
+        def rsplit(self, sep, maxsplit):
+            # Return a fake list-like object that simulates an empty result but raises ValueError on access
+            return FakeList()
+
+    fake_type_string = FakeString('anything.')
+    with pytest.raises(exceptions.EntryPointError) as excinfo:
+        load_node_class(fake_type_string)
+    # Verify that the underlying ValueError has the expected message.
+    assert 'Invalid type string format' in str(excinfo.value.__cause__)

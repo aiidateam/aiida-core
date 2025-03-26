@@ -58,12 +58,10 @@ __all__ = (
     'DICT_FORMAT',
     'DICT_KEYS',
     'DRY_RUN',
-    'DUMP_PROCESSES',
-    'DUMP_UNSEALED',
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
-    'FILTER_BY_LAST_DUMP_TIME',
+    'FILTER_BY_LAST_MIRROR_TIME',
     'FLAT',
     'FORCE',
     'FORMULA_MODE',
@@ -82,6 +80,8 @@ __all__ = (
     'INPUT_PLUGIN',
     'LABEL',
     'LIMIT',
+    'MIRROR_PROCESSES',
+    'MIRROR_UNSEALED',
     'MOST_RECENT_NODE',
     'NODE',
     'NODES',
@@ -798,8 +798,8 @@ SORT = OverridableOption(
     show_default=True,
 )
 
-DUMP_PROCESSES = OverridableOption(
-    '--dump-processes/--no-dump-processes',
+MIRROR_PROCESSES = OverridableOption(
+    '--mirror-processes/--no-mirror-processes',
     is_flag=True,
     default=True,
     show_default=True,
@@ -812,7 +812,7 @@ ORGANIZE_BY_GROUPS = OverridableOption(
     is_flag=True,
     type=bool,
     show_default=True,
-    help='If the collection of nodes to be dumped is organized in groups, reproduce its hierarchy.',
+    help='If the collection of nodes to be mirrored is organized in groups, reproduce its hierarchy.',
 )
 
 INCLUDE_INPUTS = OverridableOption(
@@ -856,7 +856,7 @@ INCREMENTAL = OverridableOption(
     is_flag=True,
     default=True,
     show_default=True,
-    help="Incremental dumping of data to disk. Doesn't require using overwrite to clean previous directories.",
+    help="Incremental mirroring of data to disk. Doesn't require using overwrite to clean previous directories.",
 )
 
 SYMLINK_DUPLICATES = OverridableOption(
@@ -870,7 +870,7 @@ DELETE_MISSING = OverridableOption(
     '--delete-missing/--no-delete-missing',
     default=False,
     show_default=True,
-    help="If a previously dumped node is deleted from AiiDA's DB, also delete the corresponding dump directory.",
+    help="If a previously mirrored node is deleted from AiiDA's DB, also delete the corresponding mirror directory.",
 )
 
 ONLY_GROUPS = OverridableOption(
@@ -884,7 +884,7 @@ ONLY_TOP_LEVEL_CALCS = OverridableOption(
     '--only-top-level-calcs/--no-only-top-level-calcs',
     default=True,
     show_default=True,
-    help='Dump calculations in their own dedicated directories, not just as part of the dumped workflow.',
+    help='Dump calculations in their own dedicated directories, not just as part of the mirrored workflow.',
 )
 
 ONLY_TOP_LEVEL_WORKFLOWS = OverridableOption(
@@ -901,18 +901,18 @@ UPDATE_GROUPS = OverridableOption(
     help='Update directories if nodes have been added to other groups, or organized differently in terms of groups.',
 )
 
-DUMP_UNSEALED = OverridableOption(
-    '--dump-unsealed/--no-dump-unsealed',
+MIRROR_UNSEALED = OverridableOption(
+    '--mirror-unsealed/--no-mirror-unsealed',
     is_flag=True,
     default=False,
     show_default=True,
-    help='Also allow the dumping of unsealed process nodes.',
+    help='Also allow the mirroring of unsealed process nodes.',
 )
 
-FILTER_BY_LAST_DUMP_TIME = OverridableOption(
-    '--filter-by-last-dump-time/--no-filter-by-last-dump-time',
+FILTER_BY_LAST_MIRROR_TIME = OverridableOption(
+    '--filter-by-last-mirror-time/--no-filter-by-last-mirror-time',
     is_flag=True,
     default=True,
     show_default=True,
-    help='Only select nodes whose `mtime` is after the last dump time.',
+    help='Only select nodes whose `mtime` is after the last mirror time.',
 )

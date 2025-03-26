@@ -1,0 +1,27 @@
+Node data:
+  label: ''
+  description: ''
+  pk: 47362
+  uuid: 3789640d-dd7a-433f-8279-64f81cd529a9
+  ctime: 2025-03-26 10:06:39.514160+00:00
+  mtime: 2025-03-26 10:06:43.709652+00:00
+  node_type: process.workflow.workchain.WorkChainNode.
+  process_type: aiida.workflows:core.arithmetic.multiply_add
+  is_finished_ok: true
+User data:
+  first_name: ''
+  last_name: ''
+  email: aiida@localhost
+  institution: ''
+Node attributes:
+  process_state: finished
+  process_label: MultiplyAddWorkChain
+  metadata_inputs: null
+  version:
+    core: 2.6.2.post0
+    plugin: 2.6.2.post0
+  stepper_state_info: 3:result
+  exit_status: 0
+  sealed: true
+Node extras:
+  _aiida_hash: 6b7873d6d4cfbc3829f5697515e3d59dafad28dd10b5302d088aa3b7d290832d

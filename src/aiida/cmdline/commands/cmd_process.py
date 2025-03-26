@@ -558,7 +558,7 @@ def process_repair(manager, broker, dry_run):
             echo.echo_report(f'Revived process `{pid}`')
 
 
-@verdi_process.command('dump')
+@verdi_process.command('mirror')
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
@@ -568,10 +568,10 @@ def process_repair(manager, broker, dry_run):
 @options.INCLUDE_ATTRIBUTES()
 @options.INCLUDE_EXTRAS()
 @options.FLAT()
-@options.DUMP_UNSEALED()
+@options.MIRROR_UNSEALED()
 # TODO: Also add CONFIG_FILE option here
 # TODO: Currently, setting rich options is not supported here directly
-def process_dump(
+def process_mirror(
     process,
     path,
     overwrite,
@@ -580,10 +580,10 @@ def process_dump(
     include_attributes,
     include_extras,
     flat,
-    dump_unsealed,
+    mirror_unsealed,
     incremental,
 ) -> None:
-    """Dump process input and output files to disk.
+    """Mirror process input and output files to disk.
 
     Child calculations/workflows (also called `CalcJob`s/`CalcFunction`s and `WorkChain`s/`WorkFunction`s in AiiDA
     jargon) run by the parent workflow are contained in the directory tree as sub-folders and are sorted by their
@@ -600,36 +600,21 @@ def process_dump(
     """
 
     from aiida.tools.archive.exceptions import ExportValidationError
-    from aiida.tools.dumping.config import DumpMode, ProcessDumpConfig
-    from aiida.tools.dumping.process import ProcessDumper
-    from aiida.tools.dumping.utils import (
-        SafeguardFileMapping,
-        prepare_dump_path,
-        resolve_click_path_argument_for_dumping,
+    from aiida.tools.mirror.config import MirrorMode, ProcessMirrorConfig
+    from aiida.tools.mirror.process import ProcessMirror
+    from aiida.tools.mirror.utils import (
+        resolve_click_path_for_mirror,
     )
 
-    dump_paths = resolve_click_path_argument_for_dumping(path=path, entity=process)
-    output_path = dump_paths.parent / dump_paths.child
-    safeguard_file = SafeguardFileMapping.PROCESS.value
-
-    # ? This is also done inside the `dump` method
-    try:
-        prepare_dump_path(
-            path_to_validate=output_path,
-            overwrite=overwrite,
-            incremental=incremental,
-            safeguard_file=safeguard_file,
-            top_level_caller=True,
-        )
-    except (FileExistsError, ValueError) as exc:
-        echo.echo_critical(str(exc))
+    mirror_paths = resolve_click_path_for_mirror(path=path, entity=process)
+    output_path = mirror_paths.parent / mirror_paths.child
 
     if overwrite:
-        dump_mode = DumpMode.OVERWRITE
+        mirror_mode = MirrorMode.OVERWRITE
     else:
-        dump_mode = DumpMode.INCREMENTAL
+        mirror_mode = MirrorMode.INCREMENTAL
 
-    process_dump_config = ProcessDumpConfig(
+    process_mirror_config = ProcessMirrorConfig(
         include_inputs=include_inputs,
         include_outputs=include_outputs,
         include_attributes=include_attributes,
@@ -637,24 +622,21 @@ def process_dump(
         flat=flat,
     )
 
-    process_dumper = ProcessDumper(
-        dump_parent_path=dump_paths.parent,
-        dump_sub_path=dump_paths.child,
-        # TODO: last_dump_time currently
-        last_dump_time=None,
-        # last_dump_time=last_dump_time,
-        dump_mode=dump_mode,
-        process_dump_config=process_dump_config,
+    process_mirrorer = ProcessMirror(
+        mirror_paths=mirror_paths,
+        last_mirror_time=None,  # ? Is this needed for a single process?
+        # last_mirror_time=last_mirror_time,
+        mirror_mode=mirror_mode,
+        process_mirror_config=process_mirror_config,
     )
 
     try:
-        _ = process_dumper.dump(process_node=process)
-        _ = process_dumper._generate_readme(process_node=process)
-        echo.echo_success(
-            f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{output_path.name}`.'
-        )
+        _ = process_mirrorer.do_mirror(process_node=process)
+        _ = process_mirrorer._generate_readme(process_node=process)
+        msg = f'Raw files for {process.__class__.__name__} <{process.pk}> mirrored into folder `{output_path.name}`.'
+        echo.echo_success(msg)
     except ExportValidationError as e:
         echo.echo_critical(f'{e!s}')
     except Exception as e:
-        raise
-        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')
+        msg = f'Unexpected error while mirroring {process.__class__.__name__} <{process.pk}>:\n ({e!s}).'
+        echo.echo_critical(msg)

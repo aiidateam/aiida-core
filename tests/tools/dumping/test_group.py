@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from aiida import orm
-from aiida.tools.dumping import GroupDumper
+from aiida.tools.dumping import GroupMirror
 
 from .utils import compare_tree
 
@@ -89,7 +89,7 @@ class TestCollectionDumper:
         add_group: orm.Group = setup_add_group
         add_nodes = add_group.nodes
 
-        add_dumper = GroupDumper(group=add_group)
+        add_dumper = GroupMirror(group=add_group)
 
         nodes = add_dumper._get_group_nodes()
         assert len(nodes) == 1
@@ -115,7 +115,7 @@ class TestCollectionDumper:
         assert set(nodes) == set([add_nodes[0].uuid, cj_node1.uuid])
 
         # Filtering by time should work -> Now, only cj_node2 gets returned
-        add_dumper.base_dump_config.last_dump_time = datetime.now().astimezone()
+        add_dumper.base_mirror_config.last_dump_time = datetime.now().astimezone()
 
         cj_node2 = generate_calculation_node_add()
         add_group.add_nodes([cj_node2])
@@ -125,7 +125,7 @@ class TestCollectionDumper:
         assert nodes[0] == cj_node2.uuid
 
         for invalid_collection in [{'foo': 'bar'}, [1.0, 1.1]]:
-            collection_dumper = GroupDumper(group=invalid_collection)
+            collection_dumper = GroupMirror(group=invalid_collection)
             with pytest.raises(ValueError):
                 collection_dumper._get_group_nodes()
 
@@ -137,8 +137,8 @@ class TestCollectionDumper:
         add_nodes = list(add_group.nodes)
         multiply_add_nodes = list(multiply_add_group.nodes)
 
-        add_dumper = GroupDumper(group=add_group)
-        multiply_add_dumper = GroupDumper(group=multiply_add_group)
+        add_dumper = GroupMirror(group=add_group)
+        multiply_add_dumper = GroupMirror(group=multiply_add_group)
 
         add_process_to_dump = add_dumper._get_processes_to_dump()
         assert len(add_process_to_dump.calculations) == 1
@@ -160,9 +160,9 @@ class TestCollectionDumper:
         add_group_label = add_group.label
         add_group_path = tmp_path / add_group_label
 
-        add_dumper = GroupDumper(group=add_group, output_path=add_group_path)
+        add_dumper = GroupMirror(group=add_group, output_path=add_group_path)
 
-        add_dumper._dump_processes(add_dumper._get_processes_to_dump().calculations)
+        add_dumper._mirror_processes(add_dumper._get_processes_to_dump().calculations)
 
         expected_tree = {
             'calculations': {
@@ -182,18 +182,20 @@ class TestCollectionDumper:
         multiply_add_group_label = multiply_add_group.label
         multiply_add_group_path = tmp_path / multiply_add_group_label
 
-        multiply_add_dumper = GroupDumper(group=multiply_add_group, output_path=multiply_add_group_path)
+        multiply_add_dumper = GroupMirror(group=multiply_add_group, output_path=multiply_add_group_path)
 
         # No calculations to dump when deduplication is enabled
-        multiply_add_dumper._dump_processes(multiply_add_dumper._get_processes_to_dump().calculations)
+        multiply_add_dumper._mirror_processes(multiply_add_dumper._get_processes_to_dump().calculations)
         assert not (multiply_add_group_path / 'calculations').exists()
 
         # Now, disable de-duplication -> Should dump calculations
-        multiply_add_dumper_no_dedup = GroupDumper(
+        multiply_add_dumper_no_dedup = GroupMirror(
             group=multiply_add_group, output_path=multiply_add_group_path, deduplicate=False
         )
 
-        multiply_add_dumper_no_dedup._dump_processes(multiply_add_dumper_no_dedup._get_processes_to_dump().calculations)
+        multiply_add_dumper_no_dedup._mirror_processes(
+            multiply_add_dumper_no_dedup._get_processes_to_dump().calculations
+        )
 
         expected_tree_no_dedup = {
             'calculations': {
@@ -247,7 +249,7 @@ class TestCollectionDumper:
     #     assert len(nodes) == 2
 
     #     # Filtering by time should work
-    #     collection_dumper.base_dump_config.last_dump_time = datetime.now().astimezone()
+    #     collection_dumper.base_mirror_config.last_dump_time = datetime.now().astimezone()
 
     #     cj_node2 = generate_calculation_node_add()
     #     add_group.add_nodes([cj_node2])

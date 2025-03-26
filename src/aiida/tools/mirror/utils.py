@@ -12,35 +12,32 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
-from aiida import orm
+from aiida import load_profile, orm
 from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import Profile
-from aiida.tools.dumping.config import DumpMode
-from typing import TYPE_CHECKING
-import json
+from aiida.tools.mirror.config import MirrorMode
 
 if TYPE_CHECKING:
-    from aiida.tools.dumping.logger import DumpLogger
+    from aiida.tools.mirror.logger import MirrorLogger
 
 __all__ = (
-    'DumpPaths',
-    'NodeDumpKeyMapper',
-    'SafeguardFileMapping',
+    'MirrorPaths',
+    'NodeMirrorKeyMapper',
+    # 'SafeguardFileMapping',
     'do_filter_nodes',
     'get_group_subpath',
-    'prepare_dump_path',
+    'prepare_mirror_path',
     'safe_delete_dir',
 )
 
-logger = AIIDA_LOGGER.getChild('tools.dumping')
+logger = AIIDA_LOGGER.getChild('tools.mirror.utils')
 
 
-class NodeDumpKeyMapper:
+class NodeMirrorKeyMapper:
     calculation_key: str = 'calculations'
     workflow_key: str = 'workflows'
     data_key: str = 'data'
@@ -55,7 +52,7 @@ class NodeDumpKeyMapper:
             case orm.Data():
                 return cls.data_key
             case _:
-                msg = f'Dumping not implemented yet for node type: {type(node_inst)}'
+                msg = f'Mirroring not implemented yet for node type: {type(node_inst)}'
                 raise NotImplementedError(msg)
 
     @classmethod
@@ -67,49 +64,67 @@ class NodeDumpKeyMapper:
         elif issubclass(node_type, orm.Data):
             return cls.data_key
         else:
-            msg = f'Dumping not implemented yet for node type: {node_type}'
+            msg = f'Mirroring not implemented yet for node type: {node_type}'
             raise NotImplementedError(msg)
 
 
 # NOTE: Could also add logger and safeguard file path here
 @dataclass
-class DumpPaths:
-    parent: Path
-    child: Path
+class MirrorPaths:
+    parent: Path = Path.cwd
+    child: Path = Path('aiida-mirror')
 
     @property
     def absolute(self) -> Path:
         """Returns the absolute path by joining parent and child."""
         return self.parent / self.child
 
+    @property
+    def safeguard_path(self) -> Path:
+        """Returns the path to a safeguard file."""
+        return self.absolute / '.aiida_safeguard'
+
+    # NOTE: Should this return a new instance?
+    def extend_paths(self, subdir: str) -> 'MirrorPaths':
+        """
+        Creates a new MirrorPaths instance with an additional subdirectory.
+
+        Args:
+            subdir: The name of the subdirectory to add
+
+        Returns:
+            A new MirrorPaths instance with the updated path structure
+        """
+        return MirrorPaths(parent=self.absolute, child=Path(subdir))
+
     # @property
-    # def safeguard_file(self) -> Path:
+    # def logger_path(self) -> Path:
     #     """Returns the path to a safeguard file."""
-    #     return self.absolute / ".safeguard"
+    #     return self.absolute / ".aiida_safeguard"
 
     # @property
     # def logger(self) -> logging.Logger:
     #     """Returns a logger specific to this dump path."""
-    #     logger_name = f"dump_paths.{self.parent.name}.{self.child.name}"
+    #     logger_name = f"mirror_paths.{self.parent.name}.{self.child.name}"
     #     return logging.getLogger(logger_name)
 
 
-class SafeguardFileMapping(Enum):
-    PROCESS = '.aiida_process_safeguard'
-    GROUP = '.aiida_group_safeguard'
-    PROFILE = '.aiida_profile_safeguard'
+# class SafeguardFileMapping(Enum):
+#     PROCESS = '.aiida_process_safeguard'
+#     GROUP = '.aiida_group_safeguard'
+#     PROFILE = '.aiida_profile_safeguard'
 
 
-def prepare_dump_path(
+def prepare_mirror_path(
     path_to_validate: Path,
-    dump_mode: DumpMode,
+    mirror_mode: MirrorMode,
     safeguard_file: str,
     top_level_caller: bool = False,
 ) -> None:
     """Create default dumping directory for a given process node and return it as absolute path.
 
     :param validate_path: Path to validate for dumping.
-    :param safeguard_file: Dumping-specific file that indicates that the directory indeed originated from a `verdi ...
+    :param safeguard_file: Mirroring-specific file that indicates that the directory indeed originated from a `verdi ...
         dump` command to avoid accidentally deleting wrong directory.
         Default: `.aiida_node_metadata.yaml`
     :return: The absolute created dump path.
@@ -129,15 +144,15 @@ def prepare_dump_path(
     # Additional logging for top-level directory
     # Don't want to repeat that for all sub-directories created during dumping
     if top_level_caller:
-        if dump_mode == DumpMode.INCREMENTAL:
+        if mirror_mode == MirrorMode.INCREMENTAL:
             msg = 'Incremental mirroring selected. Will update directory.'
-        elif dump_mode == DumpMode.OVERWRITE:
+        elif mirror_mode == MirrorMode.OVERWRITE:
             msg = 'Overwriting selected. Will clean directory first.'
 
         logger.report(msg)
 
     # Handle existing non-empty directory
-    if path_to_validate.is_dir() and any(path_to_validate.iterdir()) and dump_mode == DumpMode.OVERWRITE:
+    if path_to_validate.is_dir() and any(path_to_validate.iterdir()) and mirror_mode == MirrorMode.OVERWRITE:
         safe_delete_dir(
             path_to_validate=path_to_validate,
             safeguard_file=safeguard_file,
@@ -270,7 +285,7 @@ def load_given_group(group: orm.Group | str) -> orm.Group:
         return group
 
 
-def generate_process_default_dump_path(
+def generate_process_default_mirror_path(
     process_node: orm.ProcessNode, prefix: str | None = 'dump', append_pk: bool = True
 ) -> Path:
     """Simple helper function to generate the default parent-dumping directory if none given.
@@ -302,11 +317,13 @@ def generate_process_default_dump_path(
     return Path('-'.join(entities_to_dump))
 
 
-def generate_profile_default_dump_path(profile: Profile, prefix: str = 'profile', appendix: str = 'mirror') -> Path:
+def generate_profile_default_mirror_path(
+    profile: Profile = load_profile(), prefix: str = 'profile', appendix: str = 'mirror'
+) -> Path:
     return Path(f'{prefix}-{profile.name}-{appendix}')
 
 
-def generate_group_default_dump_path(group: orm.Group, prefix: str = 'group', appendix: str = 'mirror') -> Path:
+def generate_group_default_mirror_path(group: orm.Group, prefix: str = 'group', appendix: str = 'mirror') -> Path:
     # TODO: Or, make sure mirror not in the group name?
     if 'group' in group.label:
         if appendix == 'group' and prefix != 'group':
@@ -336,16 +353,16 @@ def generate_group_default_dump_path(group: orm.Group, prefix: str = 'group', ap
     return Path(return_str)
 
 
-def resolve_click_path_argument_for_dumping(
+def resolve_click_path_for_mirror(
     path: Path | None | str, entity: orm.ProcessNode | orm.Group | Profile
-) -> DumpPaths:
-    ENTITY_DUMP_FUNCTIONS = {
-        orm.ProcessNode: generate_process_default_dump_path,
-        orm.Group: generate_group_default_dump_path,
-        Profile: generate_profile_default_dump_path,
+) -> MirrorPaths:
+    _entity_mirror_functions = {
+        orm.ProcessNode: generate_process_default_mirror_path,
+        orm.Group: generate_group_default_mirror_path,
+        Profile: generate_profile_default_mirror_path,
     }
 
-    for entity_class, dump_path_generator in ENTITY_DUMP_FUNCTIONS.items():
+    for entity_class, dump_path_generator in _entity_mirror_functions.items():
         if isinstance(entity, entity_class):
             if path:
                 path = Path(path)
@@ -359,20 +376,19 @@ def resolve_click_path_argument_for_dumping(
                 dump_sub_path = dump_path_generator(entity)
                 dump_parent_path = Path.cwd()
 
-            return DumpPaths(
+            return MirrorPaths(
                 parent=dump_parent_path,
                 child=dump_sub_path,
-                absolute=dump_parent_path / dump_sub_path,
             )
 
-    supported_types = ', '.join(cls.__name__ for cls in ENTITY_DUMP_FUNCTIONS)
+    supported_types = ', '.join(cls.__name__ for cls in _entity_mirror_functions)
     raise ValueError(f"Unsupported entity type '{type(entity).__name__}'. Supported types: {supported_types}.")
 
 
-def delete_missing_node_dir(dump_logger: 'DumpLogger', to_delete_uuid: str) -> None:
+def delete_missing_node_dir(mirror_logger: 'MirrorLogger', to_delete_uuid: str) -> None:
     # TODO: Possibly make a delete method for the path and the log, and then call that in the loop
 
-    current_store = dump_logger.get_store_by_uuid(uuid=to_delete_uuid)
+    current_store = mirror_logger.get_store_by_uuid(uuid=to_delete_uuid)
     if not current_store:
         return
 
@@ -380,7 +396,7 @@ def delete_missing_node_dir(dump_logger: 'DumpLogger', to_delete_uuid: str) -> N
     # ! from the DB. Should find a better solution
 
     # breakpoint()
-    path_to_delete = dump_logger.get_path_by_uuid(uuid=to_delete_uuid)
+    path_to_delete = mirror_logger.get_path_by_uuid(uuid=to_delete_uuid)
     if path_to_delete is not None:
         try:
             safe_delete_dir(
@@ -391,12 +407,3 @@ def delete_missing_node_dir(dump_logger: 'DumpLogger', to_delete_uuid: str) -> N
             current_store.del_entry(uuid=to_delete_uuid)
         except:
             raise
-
-def load_dump_logger(dump_paths):
-    # NOTE: This could be in the base class
-    try:
-        dump_logger = DumpLogger.from_file(dump_paths=dump_paths)
-    except (json.JSONDecodeError, OSError):
-        dump_logger = DumpLogger(dump_paths=dump_paths)
-
-    return dump_logger

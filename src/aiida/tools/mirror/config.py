@@ -13,15 +13,19 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 
-class DumpMode(Enum):
-    OVERWRITE = auto()  # overwrite=True, incremental=False
-    INCREMENTAL = auto()  # overwrite=False, incremental=True
+class NodeMirrorGroupScope(Enum):
+    IN_GROUP = auto()
+    ANY = auto()
+    NO_GROUP = auto()
 
-    DEFAULT = INCREMENTAL
+
+class MirrorMode(Enum):
+    OVERWRITE = auto()
+    INCREMENTAL = auto()
 
 
 @dataclass
-class ProcessDumpConfig:
+class ProcessMirrorConfig:
     """Arguments for dumping process data."""
 
     include_inputs: bool = True
@@ -29,19 +33,20 @@ class ProcessDumpConfig:
     include_attributes: bool = True
     include_extras: bool = True
     flat: bool = False
-    dump_unsealed: bool = False
+    mirror_unsealed: bool = False
 
 
 @dataclass
 class NodeCollectorConfig:
     """Shared arguments for dumping of collections of nodes."""
 
-    # NOTE: Should the `last_dump_time` also be here
+    # NOTE: Should the `last_mirror_time` also be here
     include_processes: bool = True
     include_data: bool = False
-    filter_by_last_dump_time: bool = True
+    filter_by_last_mirror_time: bool = True
     only_top_level_calcs: bool = True
     only_top_level_workflows: bool = True
+    group_scope: NodeMirrorGroupScope = NodeMirrorGroupScope.IN_GROUP
 
 
 @dataclass
@@ -51,14 +56,14 @@ class CollectionMirrorConfig:
 
 
 @dataclass
-class GroupDumpConfig(NodeCollectorConfig, CollectionMirrorConfig):
+class GroupMirrorConfig(CollectionMirrorConfig):  # NodeCollectorConfig
     """Arguments for dumping group data."""
 
     ...
 
 
 @dataclass
-class ProfileMirrorConfig(NodeCollectorConfig, CollectionMirrorConfig):
+class ProfileMirrorConfig(CollectionMirrorConfig):  # NodeCollectorConfig
     """Arguments for dumping profile data."""
 
     organize_by_groups: bool = True

@@ -26,7 +26,7 @@ __all__ = ('RemoteData',)
 
 
 class RemoteData(Data):
-    """Store a link to a file or folder on a remote machine.
+    """Store a link to a folder on a remote machine.
 
     Remember to pass a computer!
     """
@@ -42,12 +42,14 @@ class RemoteData(Data):
     def __init__(self, remote_path=None, **kwargs):
         super().__init__(**kwargs)
         if remote_path is not None:
+            self._validate_remote_path(remote_path=remote_path)
             self.set_remote_path(remote_path)
 
     def get_remote_path(self) -> str:
         return self.base.attributes.get('remote_path')
 
     def set_remote_path(self, val):
+        self._validate_remote_path(remote_path=val)
         self.base.attributes.set('remote_path', val)
 
     @property
@@ -179,6 +181,26 @@ class RemoteData(Data):
 
         self.base.extras.set(self.KEY_EXTRA_CLEANED, True)
 
+    def _validate_remote_path(self, remote_path=None):
+        """Check if `remote_path` exists and points to a directory.
+
+        :param remote_path: Defaults to None
+        :raises ValidationError: If the path does not exist or points to a file
+        """
+
+        from aiida.common.exceptions import ValidationError
+
+        if remote_path is not None:
+            if self.computer is not None:
+                with self.computer.get_transport() as transport:
+                    if not transport.path_exists(remote_path):
+                        msg = f"The remote_path '{remote_path}' does not exist."
+                        raise ValidationError(msg)
+
+                    if transport.isfile(remote_path):
+                        msg = f"The remote_path '{remote_path}' points to a file. Only directories are allowed."
+                        raise ValidationError(msg)
+
     def _validate(self):
         from aiida.common.exceptions import ValidationError
 
@@ -192,6 +214,8 @@ class RemoteData(Data):
         computer = self.computer
         if computer is None:
             raise ValidationError('Remote computer not set.')
+
+        self._validate_remote_path(remote_path=self.get_remote_path())
 
     def get_authinfo(self):
         return AuthInfo.get_collection(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)
@@ -229,7 +253,7 @@ class RemoteData(Data):
 
         with authinfo.get_transport() as transport:
             if not transport.path_exists(str(full_path)):
-                exc_message = f'The required remote path {full_path} on Computer <{computer_label}> ' 'does not exist.'
+                exc_message = f'The required remote path {full_path} on Computer <{computer_label}> does not exist.'
                 raise FileNotFoundError(exc_message)
 
             if method not in ('du', 'stat'):

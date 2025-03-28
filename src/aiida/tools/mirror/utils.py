@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 __all__ = (
     'MirrorPaths',
     'NodeMirrorKeyMapper',
-    # 'SafeguardFileMapping',
     'do_filter_nodes',
     'get_group_subpath',
     'prepare_mirror_path',
@@ -115,6 +114,7 @@ class MirrorPaths:
 #     PROFILE = '.aiida_profile_safeguard'
 
 
+# NOTE: Could move to BaseMirror class
 def prepare_mirror_path(
     path_to_validate: Path,
     mirror_mode: MirrorMode,
@@ -246,22 +246,6 @@ def do_filter_nodes(nodes: list[str], last_dump_time: datetime | None = None) ->
     qb = orm.QueryBuilder().append(orm.Node, filters={'uuid': {'in': nodes}})
     nodes_orm: list[orm.Node] = cast(list[orm.Node], qb.all(flat=True))
     return [node.uuid for node in nodes_orm if node.mtime > last_dump_time]
-
-
-def get_group_subpath(group: orm.Group) -> Path:
-    group_entry_point = group.entry_point
-    if group_entry_point is None:
-        return Path(group.label)
-
-    group_entry_point_name = group_entry_point.name
-    if group_entry_point_name == 'core':
-        return Path(f'{group.label}')
-    if group_entry_point_name == 'core.import':
-        return Path('import') / f'{group.label}'
-
-    group_subpath = Path(*group_entry_point_name.split('.'))
-
-    return group_subpath / f'{group.label}'
 
 
 def load_given_group(group: orm.Group | str) -> orm.Group:

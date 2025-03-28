@@ -455,7 +455,7 @@ class MirrorNodeCollector:
 #     workflows and calculations if they are not part of a workflow. This requires to use the actual ORM entities,
 #     rather than UUIDs, as the ``.caller``s have to be checked. In addition, sub-calculations
 
-#     :return: Instance of a ``ProcessesToDumpContainer``, that holds the selected calculations and workflows.
+#     :return: Instance of a ``ProcessesToMirrorContainer``, that holds the selected calculations and workflows.
 #     """
 
 #     # ipdb.set_trace()

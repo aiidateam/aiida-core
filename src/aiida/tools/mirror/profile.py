@@ -26,7 +26,7 @@ from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import load_profile
 from aiida.manage.configuration.profile import Profile
-from aiida.tools.mirror.collection import CollectionBaseMirror
+from aiida.tools.mirror.collection import BaseCollectionMirror
 from aiida.tools.mirror.collector import MirrorNodeContainer
 from aiida.tools.mirror.config import (
     GroupMirrorConfig,
@@ -41,14 +41,13 @@ from aiida.tools.mirror.logger import MirrorLog, MirrorLogger
 from aiida.tools.mirror.utils import (
     MirrorPaths,
     generate_profile_default_mirror_path,
-    get_group_subpath,
     load_given_group,
 )
 
 logger = AIIDA_LOGGER.getChild('tools.mirror.profile')
 
 
-class ProfileMirror(CollectionBaseMirror):
+class ProfileMirror(BaseCollectionMirror):
     """Class to handle mirroring of the data of an AiiDA profile."""
 
     def __init__(
@@ -106,7 +105,7 @@ class ProfileMirror(CollectionBaseMirror):
         self.organize_by_groups = self.profile_mirror_config.organize_by_groups
         self.only_groups = self.profile_mirror_config.only_groups
 
-        self.group_container_mapping: dict[orm.Group, MirrorNodeContainer] = {}
+        # self.group_container_mapping: dict[orm.Group, MirrorNodeContainer] = {}
 
     def _mirror_per_group(self, groups: list[orm.Group]) -> None:
         """Iterate through a list of groups and mirror the contained processes in their dedicated directories.
@@ -118,7 +117,7 @@ class ProfileMirror(CollectionBaseMirror):
 
         for group in groups:
             if self.organize_by_groups:
-                group_subpath = 'groups' / get_group_subpath(group=group)
+                group_subpath = 'groups' / GroupMirror.get_group_subpath(group=group)
             else:
                 group_subpath = Path('.')
 

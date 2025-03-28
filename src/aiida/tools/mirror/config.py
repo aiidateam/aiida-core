@@ -12,6 +12,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, auto
 
+__all__ = (
+    "NodeMirrorGroupScope",
+    "MirrorMode",
+    "NodeCollectorConfig",
+    "ProcessMirrorConfig",
+    "BaseCollectionMirrorConfig",
+    "GroupMirrorConfig",
+    "ProfileMirrorConfig"
+)
+
 
 class NodeMirrorGroupScope(Enum):
     IN_GROUP = auto()
@@ -22,18 +32,7 @@ class NodeMirrorGroupScope(Enum):
 class MirrorMode(Enum):
     OVERWRITE = auto()
     INCREMENTAL = auto()
-
-
-@dataclass
-class ProcessMirrorConfig:
-    """Arguments for dumping process data."""
-
-    include_inputs: bool = True
-    include_outputs: bool = False
-    include_attributes: bool = True
-    include_extras: bool = True
-    flat: bool = False
-    mirror_unsealed: bool = False
+    DRY_RUN = auto()
 
 
 @dataclass
@@ -50,20 +49,32 @@ class NodeCollectorConfig:
 
 
 @dataclass
-class CollectionMirrorConfig:
+class ProcessMirrorConfig:
+    """Arguments for dumping process data."""
+
+    include_inputs: bool = True
+    include_outputs: bool = False
+    include_attributes: bool = True
+    include_extras: bool = True
+    flat: bool = False
+    mirror_unsealed: bool = False
+
+
+@dataclass
+class BaseCollectionMirrorConfig:
     symlink_duplicates: bool = False
     delete_missing: bool = False
 
 
 @dataclass
-class GroupMirrorConfig(CollectionMirrorConfig):  # NodeCollectorConfig
+class GroupMirrorConfig(BaseCollectionMirrorConfig):  # NodeCollectorConfig
     """Arguments for dumping group data."""
 
     ...
 
 
 @dataclass
-class ProfileMirrorConfig(CollectionMirrorConfig):  # NodeCollectorConfig
+class ProfileMirrorConfig(BaseCollectionMirrorConfig):  # NodeCollectorConfig
     """Arguments for dumping profile data."""
 
     organize_by_groups: bool = True

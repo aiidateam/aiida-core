@@ -24,6 +24,7 @@ from aiida.common import LinkType
 from aiida.common.exceptions import NotExistentAttributeError
 from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
+from aiida.tools.mirror.base import BaseMirror
 from aiida.tools.mirror.config import MirrorMode, ProcessMirrorConfig
 from aiida.tools.mirror.logger import MirrorLog, MirrorLogger
 from aiida.tools.mirror.utils import (
@@ -35,11 +36,12 @@ from aiida.tools.mirror.utils import (
 logger = logging.getLogger(__name__)
 
 
-class ProcessMirror:
+class ProcessMirror(BaseMirror):
     """Class to handle mirroring of an AiiDA process."""
 
     def __init__(
         self,
+        process_node: orm.ProcessNode,
         mirror_mode: MirrorMode = MirrorMode.INCREMENTAL,
         mirror_paths: MirrorPaths | None = None,
         last_mirror_time: datetime | None = None,
@@ -48,11 +50,19 @@ class ProcessMirror:
     ) -> None:
         """Initialize the ProcessMirror."""
 
-        self.mirror_paths = mirror_paths
-        self.last_mirror_time = last_mirror_time
-        self.mirror_logger = mirror_logger
+        self.process_node = process_node
 
-        self.mirror_mode = mirror_mode
+        if mirror_paths is None:
+            default_mirror_path = generate_process_default_mirror_path(process_node=self.process_node)
+            mirror_paths = MirrorPaths(parent=Path.cwd(), child=default_mirror_path)
+
+        super().__init__(
+            mirror_mode=mirror_mode,
+            mirror_paths=mirror_paths,
+            last_mirror_time=last_mirror_time,
+            mirror_logger=mirror_logger,
+        )
+
         self.process_mirror_config = process_mirror_config or ProcessMirrorConfig()
 
         # Unpack arguments for easier access
@@ -163,10 +173,9 @@ class ProcessMirror:
         node_label = node_label.replace("CALL-", "")
         return node_label.replace("None-", "")
 
+    # TODO: Make the ProcessNode an attribute of the class?
     def do_mirror(
         self,
-        process_node: orm.ProcessNode,
-        output_path: Path | None = None,
         io_mirror_paths: list[str | Path] | None = None,
     ) -> None:
         """Mirrors all data involved in a `ProcessNode`, including its outgoing links.
@@ -181,6 +190,8 @@ class ProcessMirror:
         :raises: ExportValidationError if the node is not sealed and mirror_unsealed is False.
         """
 
+        process_node = self.process_node
+
         if not process_node.is_sealed and not self.mirror_unsealed:
             raise ExportValidationError(
                 f"Process `{process_node.pk}` must be sealed before it can be dumped, or `--dump-unsealed` set to True."
@@ -193,38 +204,23 @@ class ProcessMirror:
         # for key, value in kwargs.items():
         #     setattr(self, key, value)
 
-        if not output_path:
-            output_path = self.mirror_paths.absolute
-
-        prepare_mirror_path(
-            path_to_validate=output_path,
-            mirror_mode=self.mirror_mode,
-            safeguard_file=self.mirror_paths.safeguard_path,
-            top_level_caller=False,
-        )
+        self._pre_mirror()
 
         if isinstance(process_node, orm.CalculationNode):
             self._mirror_calculation(
                 calculation_node=process_node,
-                output_path=output_path,
+                output_path=self.mirror_paths.absolute,
                 io_mirror_paths=io_mirror_paths,
             )
-
-            if self.mirror_logger is not None:
-                calculation_store = self.mirror_logger.log.calculations
-
-                self.mirror_logger.add_entry(
-                    store=calculation_store,
-                    uuid=process_node.uuid,
-                    entry=MirrorLog(path=output_path, time=datetime.now().astimezone()),
-                )
 
         elif isinstance(process_node, orm.WorkflowNode):
             self._mirror_workflow(
                 workflow_node=process_node,
-                output_path=output_path,
+                output_path=self.mirror_paths.absolute,
                 io_mirror_paths=io_mirror_paths,
             )
+
+        self._post_mirror()
 
     def _mirror_workflow(
         self,
@@ -310,14 +306,6 @@ class ProcessMirror:
                         raise
                         pass
 
-                self.mirror_logger.add_entry(
-                    store=calculation_store,
-                    uuid=child_node.uuid,
-                    entry=MirrorLog(
-                        path=child_output_path, time=datetime.now().astimezone()
-                    ),
-                )
-
     def _mirror_calculation(
         self,
         calculation_node: orm.CalculationNode,
@@ -385,6 +373,17 @@ class ProcessMirror:
                 parent_path=output_path / io_mirror_mapping.outputs,
                 link_triples=output_links,
             )
+
+        # TODO: Add store entry here
+        if self.mirror_logger is not None:
+            calculation_store = self.mirror_logger.log.calculations
+
+            if calculation_node.uuid not in calculation_store.entries:
+                self.mirror_logger.add_entry(
+                    store=calculation_store,
+                    uuid=calculation_node.uuid,
+                    entry=MirrorLog(path=output_path, time=datetime.now().astimezone()),
+                )
 
     def _mirror_calculation_io_files(
         self,

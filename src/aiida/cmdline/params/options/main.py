@@ -53,6 +53,7 @@ __all__ = (
     'DB_PORT',
     'DB_USERNAME',
     'DEBUG',
+    'DELETE_MISSING',
     'DESCRIPTION',
     'DICT_FORMAT',
     'DICT_KEYS',
@@ -60,6 +61,8 @@ __all__ = (
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
+    'FILTER_BY_LAST_MIRROR_TIME',
+    'FLAT',
     'FORCE',
     'FORMULA_MODE',
     'FREQUENCY',
@@ -68,18 +71,29 @@ __all__ = (
     'GROUP_CLEAR',
     'HOSTNAME',
     'IDENTIFIER',
-    'INCREMENTAL',
+    'INCLUDE_ATTRIBUTES',
+    'INCLUDE_EXTRAS',
+    'INCLUDE_INPUTS',
+    'INCLUDE_OUTPUTS',
+    # 'INCREMENTAL',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
     'LIMIT',
+    'MIRROR_DATA',
+    'MIRROR_PROCESSES',
+    'MIRROR_UNSEALED',
     'MOST_RECENT_NODE',
     'NODE',
     'NODES',
     'NON_INTERACTIVE',
     'OLDER_THAN',
+    'ONLY_GROUPS',
+    'ONLY_TOP_LEVEL_CALCS',
+    'ONLY_TOP_LEVEL_WORKFLOWS',
     'ORDER_BY',
     'ORDER_DIRECTION',
+    'ORGANIZE_BY_GROUPS',
     'OVERWRITE',
     'PAST_DAYS',
     'PATH',
@@ -98,11 +112,13 @@ __all__ = (
     'SCHEDULER',
     'SILENT',
     'SORT',
+    'SYMLINK_CALCS',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
     'TRAVERSAL_RULE_HELP_STRING',
     'TYPE_STRING',
+    'UPDATE_GROUPS',
     'USER',
     'USER_EMAIL',
     'USER_FIRST_NAME',
@@ -783,10 +799,129 @@ SORT = OverridableOption(
     show_default=True,
 )
 
-INCREMENTAL = OverridableOption(
-    '--incremental/--no-incremental',
+MIRROR_DATA = OverridableOption(
+    '--mirror-data/--no-mirror-data',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Dump data nodes.',
+)
+
+MIRROR_PROCESSES = OverridableOption(
+    '--mirror-processes/--no-mirror-processes',
     is_flag=True,
     default=True,
     show_default=True,
-    help="Incremental dumping of data to disk. Doesn't require using overwrite to clean previous directories.",
+    help='Dump process data.',
+)
+
+ORGANIZE_BY_GROUPS = OverridableOption(
+    '--organize-by-groups/--no-organize-by-groups',
+    default=True,
+    is_flag=True,
+    type=bool,
+    show_default=True,
+    help='If the collection of nodes to be mirrored is organized in groups, reproduce its hierarchy.',
+)
+
+INCLUDE_INPUTS = OverridableOption(
+    '--include-inputs/--exclude-inputs',
+    default=True,
+    show_default=True,
+    help='Include linked input nodes of `CalculationNode`(s).',
+)
+
+INCLUDE_OUTPUTS = OverridableOption(
+    '--include-outputs/--exclude-outputs',
+    default=False,
+    show_default=True,
+    help='Include linked output nodes of `CalculationNode`(s).',
+)
+
+INCLUDE_ATTRIBUTES = OverridableOption(
+    '--include-attributes/--exclude-attributes',
+    default=True,
+    show_default=True,
+    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+
+INCLUDE_EXTRAS = OverridableOption(
+    '--include-extras/--exclude-extras',
+    default=True,
+    show_default=True,
+    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+
+FLAT = OverridableOption(
+    '-f',
+    '--flat',
+    is_flag=True,
+    default=False,
+    help='Dump files in a flat directory for every step of a workflow.',
+)
+
+# INCREMENTAL = OverridableOption(
+#     '--incremental/--no-incremental',
+#     is_flag=True,
+#     default=True,
+#     show_default=True,
+#     help="Incremental mirroring of data to disk. Doesn't require using overwrite to clean previous directories.",
+# )
+
+SYMLINK_CALCS = OverridableOption(
+    '--symlink-calcs/--no-symlink-calcs',
+    default=False,
+    show_default=True,
+    help='Symlink data if the same node is contained in multiple groups.',
+)
+
+DELETE_MISSING = OverridableOption(
+    '--delete-missing/--no-delete-missing',
+    default=False,
+    show_default=True,
+    help="If a previously mirrored node is deleted from AiiDA's DB, also delete the corresponding mirror directory.",
+)
+
+ONLY_GROUPS = OverridableOption(
+    '--only-groups/--no-only-groups',
+    default=False,
+    show_default=True,
+    help='Dump only data of nodes which are already organized in groups.',
+)
+
+ONLY_TOP_LEVEL_CALCS = OverridableOption(
+    '--only-top-level-calcs/--no-only-top-level-calcs',
+    default=True,
+    show_default=True,
+    help='Dump calculations in their own dedicated directories, not just as part of the mirrored workflow.',
+)
+
+ONLY_TOP_LEVEL_WORKFLOWS = OverridableOption(
+    '--only-top-level-workflows/--no-only-top-level-workflows',
+    default=True,
+    show_default=True,
+    help='If a top-level process calls sub-processes, create a designated directory only for the top-level process.',
+)
+
+UPDATE_GROUPS = OverridableOption(
+    '--update-groups/--no-update-groups',
+    default=False,
+    show_default=True,
+    help='Update directories if nodes have been added to other groups, or organized differently in terms of groups.',
+)
+
+MIRROR_UNSEALED = OverridableOption(
+    '--mirror-unsealed/--no-mirror-unsealed',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Also allow the mirroring of unsealed process nodes.',
+)
+
+FILTER_BY_LAST_MIRROR_TIME = OverridableOption(
+    '--filter-by-last-mirror-time/--no-filter-by-last-mirror-time',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Only select nodes whose `mtime` is after the last mirror time.',
 )

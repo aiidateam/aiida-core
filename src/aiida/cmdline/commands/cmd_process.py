@@ -558,51 +558,20 @@ def process_repair(manager, broker, dry_run):
             echo.echo_report(f'Revived process `{pid}`')
 
 
-@verdi_process.command('dump')
+@verdi_process.command('mirror')
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
-@click.option(
-    '--include-inputs/--exclude-inputs',
-    default=True,
-    show_default=True,
-    help='Include the linked input nodes of the `CalculationNode`(s).',
-)
-@click.option(
-    '--include-outputs/--exclude-outputs',
-    default=False,
-    show_default=True,
-    help='Include the linked output nodes of the `CalculationNode`(s).',
-)
-@click.option(
-    '--include-attributes/--exclude-attributes',
-    default=True,
-    show_default=True,
-    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-@click.option(
-    '--include-extras/--exclude-extras',
-    default=True,
-    show_default=True,
-    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-@click.option(
-    '-f',
-    '--flat',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Dump files in a flat directory for every step of the workflow.',
-)
-@click.option(
-    '--dump-unsealed',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Also allow the dumping of unsealed process nodes.',
-)
-@options.INCREMENTAL()
-def process_dump(
+# @options.INCREMENTAL()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+@options.MIRROR_UNSEALED()
+# TODO: Also add CONFIG_FILE option here
+# TODO: Currently, setting rich options is not supported here directly
+def process_mirror(
     process,
     path,
     overwrite,
@@ -611,10 +580,9 @@ def process_dump(
     include_attributes,
     include_extras,
     flat,
-    dump_unsealed,
-    incremental,
+    mirror_unsealed,
 ) -> None:
-    """Dump process input and output files to disk.
+    """Mirror process input and output files to disk.
 
     Child calculations/workflows (also called `CalcJob`s/`CalcFunction`s and `WorkChain`s/`WorkFunction`s in AiiDA
     jargon) run by the parent workflow are contained in the directory tree as sub-folders and are sorted by their
@@ -631,28 +599,45 @@ def process_dump(
     """
 
     from aiida.tools.archive.exceptions import ExportValidationError
-    from aiida.tools.dumping.processes import ProcessDumper
+    from aiida.tools.mirror.config import MirrorMode, ProcessMirrorConfig
+    from aiida.tools.mirror.process import ProcessMirror
+    from aiida.tools.mirror.utils import (
+        resolve_click_path_for_mirror,
+    )
 
-    process_dumper = ProcessDumper(
+    mirror_paths = resolve_click_path_for_mirror(path=path, entity=process)
+    output_path = mirror_paths.parent / mirror_paths.child
+
+    if overwrite:
+        mirror_mode = MirrorMode.OVERWRITE
+    else:
+        mirror_mode = MirrorMode.INCREMENTAL
+
+    process_mirror_config = ProcessMirrorConfig(
         include_inputs=include_inputs,
         include_outputs=include_outputs,
         include_attributes=include_attributes,
         include_extras=include_extras,
-        overwrite=overwrite,
         flat=flat,
-        dump_unsealed=dump_unsealed,
-        incremental=incremental,
+        mirror_unsealed=mirror_unsealed,
+    )
+
+    process_mirror_inst = ProcessMirror(
+        process_node=process,
+        mirror_paths=mirror_paths,
+        last_mirror_time=None,  # ? Is this needed for a single process?
+        # last_mirror_time=last_mirror_time,
+        mirror_mode=mirror_mode,
+        process_mirror_config=process_mirror_config,
     )
 
     try:
-        dump_path = process_dumper.dump(process_node=process, output_path=path)
-    except FileExistsError:
-        echo.echo_critical(
-            'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
-        )
+        _ = process_mirror_inst.do_mirror(top_level_caller=True)
+        _ = process_mirror_inst._generate_readme()
+        msg = f'Raw files for {process.__class__.__name__} <{process.pk}> mirrored into folder `{output_path.name}`.'
+        echo.echo_success(msg)
     except ExportValidationError as e:
         echo.echo_critical(f'{e!s}')
     except Exception as e:
-        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')
-
-    echo.echo_success(f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.')
+        msg = f'Unexpected error while mirroring {process.__class__.__name__} <{process.pk}>:\n ({e!s}).'
+        echo.echo_critical(msg)

@@ -184,7 +184,7 @@ class PortableCode(Code):
     def _prepare_yaml(self, *args, **kwargs):
         """Export code to a YAML file."""
         try:
-            target = pathlib.Path().cwd() / f'{self.label}'
+            target = pathlib.Path.cwd() / f'{self.label}'
             setattr(self, 'filepath_files', str(target))
             result = super()._prepare_yaml(*args, **kwargs)[0]
 

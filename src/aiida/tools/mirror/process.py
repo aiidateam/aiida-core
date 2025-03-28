@@ -230,13 +230,7 @@ class ProcessMirror:
         self,
         workflow_node: orm.WorkflowNode,
         output_path,
-        # TODO: Refactor this to child path, to always append to it?
-        # TODO: Or, re-assign it?
         io_mirror_paths: list[str | Path] | None = None,
-        # TODO: See if this is even necessary here, or if this can be achieved outside?
-        # TODO: Do I even need that?
-        link_calculations: bool = False,
-        link_calculations_dir: Path | None = None,
     ) -> None:
         """Recursive function to traverse a `WorkflowNode` and dump its `CalculationNode` s.
 
@@ -277,10 +271,6 @@ class ProcessMirror:
                     workflow_node=child_node,
                     output_path=child_output_path,
                     io_mirror_paths=io_mirror_paths,
-                    # TODO: Always need to pass this stuff through due to the recursive nature of the function call...
-                    # TODO: Maybe one can make a separate method that only does the linking
-                    link_calculations=link_calculations,
-                    link_calculations_dir=link_calculations_dir,
                 )
 
                 if self.mirror_logger is not None:
@@ -296,34 +286,37 @@ class ProcessMirror:
 
             # Once a `CalculationNode` as child reached, dump it
             elif isinstance(child_node, orm.CalculationNode):
-                if not link_calculations:
+
+                calculation_store = self.mirror_logger.log.calculations
+
+                if (
+                    not self.process_mirror_config.symlink_calcs
+                    or child_node.uuid not in calculation_store.entries.keys()
+                ):
                     self._mirror_calculation(
                         calculation_node=child_node,
                         output_path=child_output_path,
                         io_mirror_paths=io_mirror_paths,
                     )
 
-                    calculation_store = self.mirror_logger.log.calculations
-
-                    self.mirror_logger.add_entry(
-                        store=calculation_store,
-                        uuid=child_node.uuid,
-                        entry=MirrorLog(
-                            path=child_output_path, time=datetime.now().astimezone()
-                        ),
-                    )
-
-                elif link_calculations_dir is not None:
-                    calculation_mirror_path = (
-                        link_calculations_dir
-                        / generate_process_default_mirror_path(
-                            process_node=child_node, prefix=""
-                        )
-                    )
+                else:
                     try:
-                        os.symlink(calculation_mirror_path, child_output_path)
+                        os.symlink(
+                            calculation_store.get_entry(child_node.uuid).path,
+                            child_output_path,
+                        )
                     except FileExistsError:
+                        # For debugging
+                        raise
                         pass
+
+                self.mirror_logger.add_entry(
+                    store=calculation_store,
+                    uuid=child_node.uuid,
+                    entry=MirrorLog(
+                        path=child_output_path, time=datetime.now().astimezone()
+                    ),
+                )
 
     def _mirror_calculation(
         self,

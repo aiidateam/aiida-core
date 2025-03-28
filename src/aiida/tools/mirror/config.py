@@ -58,11 +58,12 @@ class ProcessMirrorConfig:
     include_extras: bool = True
     flat: bool = False
     mirror_unsealed: bool = False
+    symlink_calcs: bool = False
 
 
 @dataclass
 class BaseCollectionMirrorConfig:
-    symlink_duplicates: bool = False
+    symlink_calcs: bool = False
     delete_missing: bool = False
 
 
@@ -80,3 +81,4 @@ class ProfileMirrorConfig(BaseCollectionMirrorConfig):  # NodeCollectorConfig
     organize_by_groups: bool = True
     only_groups: bool = False
     update_groups: bool = True
+    symlink_between_groops: bool = False

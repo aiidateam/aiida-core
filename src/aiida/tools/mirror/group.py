@@ -36,8 +36,9 @@ from aiida.tools.mirror.utils import (
     generate_process_default_mirror_path,
     load_given_group,
 )
+from typing import Any
 
-logger = AIIDA_LOGGER.getChild('tools.mirror.group')
+logger = AIIDA_LOGGER.getChild("tools.mirror.group")
 
 # NOTE: `load_mirror_logger` could be put in general Parent cparent class
 # NOTE: Accessing via `group.nodes` might be nice, keep in mind
@@ -64,9 +65,7 @@ class GroupMirror(BaseCollectionMirror):
         process_mirror_config: ProcessMirrorConfig | None = None,
         group_mirror_config: GroupMirrorConfig | None = None,
     ):
-        """Initialize the GroupMirror class.
-
-        """
+        """Initialize the GroupMirror class."""
 
         if mirror_paths is None:
             default_mirror_path = generate_group_default_mirror_path()
@@ -82,44 +81,61 @@ class GroupMirror(BaseCollectionMirror):
 
         self.group = load_given_group(group)
 
-        self.process_mirror_config = process_mirror_config or ProcessMirrorConfig()
         self.group_mirror_config = group_mirror_config or GroupMirrorConfig()
+        self.process_mirror_config = process_mirror_config or ProcessMirrorConfig()
+        # FIXME: This is duplicated/overwritten here because, due to the recursive nature of the Process mirroring
+        # FIXME: I need to pass the option to both, the GroupMirror and the ProcessMirror
+        self.process_mirror_config.symlink_calcs = self.group_mirror_config.symlink_calcs
 
     # staticmethod so I can use it before instantiation of the GroupDumper, as that will need the subpath already
     @staticmethod
     def get_group_subpath(group) -> Path:
-
 
         group_entry_point = group.entry_point
         if group_entry_point is None:
             return Path(group.label)
 
         group_entry_point_name = group_entry_point.name
-        if group_entry_point_name == 'core':
-            return Path(f'{group.label}')
-        if group_entry_point_name == 'core.import':
-            return Path('import') / f'{group.label}'
+        if group_entry_point_name == "core":
+            return Path(f"{group.label}")
+        if group_entry_point_name == "core.import":
+            return Path("import") / f"{group.label}"
 
-        group_subpath = Path(*group_entry_point_name.split('.'))
+        group_subpath = Path(*group_entry_point_name.split("."))
 
-        return group_subpath / f'{group.label}'
+        return group_subpath / f"{group.label}"
 
-    def _mirror_processes(self, processes: list[orm.CalculationNode] | list[orm.WorkflowNode]) -> None:
+    def _mirror_processes(
+        self, processes: list[orm.CalculationNode] | list[orm.WorkflowNode]
+    ) -> None:
         """Dump a list of AiiDA calculations or workflows to disk.
 
         :param processes: List of AiiDA calculations or workflows from the ``ProcessesToMirrorContainer``.
         """
         # NOTE: In principle, a node can only be once in a group
-        
+
         if len(list(processes)) == 0:
             return
 
         # Setup common resources needed for mirroring
-        process_type_path = self.mirror_paths.absolute / NodeMirrorKeyMapper.get_key_from_instance(node_inst=processes[0])
+        process_type_path = (
+            self.mirror_paths.absolute
+            / NodeMirrorKeyMapper.get_key_from_instance(node_inst=processes[0])
+        )
         process_type_path.mkdir(exist_ok=True, parents=True)
 
-        store_type = NodeMirrorKeyMapper.get_key_from_instance(node_inst=next(iter(processes)))
-        current_store = getattr(self.mirror_logger.log, store_type)
+        # NOTE: This seems a bit hacky. Can probably be improved
+        current_store_type = NodeMirrorKeyMapper.get_key_from_instance(
+            node_inst=next(iter(processes))
+        )
+        other_store_type = (
+            "calculations" if current_store_type == "workflows" else "workflows"
+        )
+
+        current_store = getattr(self.mirror_logger.log, current_store_type)
+        other_store = getattr(self.mirror_logger.log, other_store_type)
+        self.current_store = current_store
+        self.other_store = other_store
 
         process_mirror = ProcessMirror(
             mirror_mode=self.mirror_mode,
@@ -132,45 +148,95 @@ class GroupMirror(BaseCollectionMirror):
         set_progress_bar_tqdm()
 
         # Mirror each process with progress tracking
-        with get_progress_reporter()(desc='Mirroring new processes', total=len(processes)) as progress:
+        with get_progress_reporter()(
+            desc="Mirroring new processes", total=len(processes)
+        ) as progress:
             for process in processes:
-                self._mirror_process(process, process_type_path, current_store, process_mirror)
+                self._mirror_process(
+                    process=process,
+                    process_type_path=process_type_path,
+                    process_mirror=process_mirror,
+                )
                 progress.update()
+
+    def _create_symlink_from_store(
+        self, process_uuid: str, store_instance: Any, process_mirror_path: Path
+    ) -> bool:
+        """Create a symlink from an existing entry in a store to a new path.
+
+        :param process_uuid: The UUID of the process to link
+        :param store_instance: The store instance (current_store or other_store)
+        :param process_mirror_path: The target path for the symlink
+        :return: True if the symlink was created or already exists, False if UUID not in store
+        """
+        if process_uuid not in store_instance.entries.keys():
+            return False
+
+        if not process_mirror_path.exists():
+            process_mirror_path.parent.mkdir(exist_ok=True, parents=True)
+            try:
+                os.symlink(
+                    src=store_instance.entries[process_uuid].path,
+                    dst=process_mirror_path,
+                )
+                # TODO: If this works here, call `add_link` to the MirrorLog to extend an existing MirrorLog
+            except FileExistsError:
+                # For debugging
+                raise
+                pass
+
+        return True
 
     def _mirror_process(
         self,
         process: orm.CalculationNode | orm.WorkflowNode,
         process_type_path: Path,
-        current_store: Any,
-        process_mirror: ProcessMirror
+        process_mirror: ProcessMirror,
     ) -> None:
         """Mirror a single process to disk.
 
         :param process: An AiiDA calculation or workflow node to mirror
         :param process_type_path: Path where processes of this type are stored
-        :param current_store: The logger store for this process type
         :param process_mirror: The ProcessMirror instance to use
         """
-        process_mirror_path = process_type_path / generate_process_default_mirror_path(process_node=process, prefix=None)
-        
-        import ipdb; ipdb.set_trace()
-        if self.group_mirror_config.symlink_duplicates and process.uuid in current_store.entries.keys():
-            if not process_mirror_path.exists():
-                process_mirror_path.parent.mkdir(exist_ok=True, parents=True)
-                try:
-                    os.symlink(
-                        src=current_store.entries[process.uuid].path,
-                        dst=process_mirror_path,
-                    )
-                    # TODO: If this works here, call `add_link` to the MirrorLog to extend an existing MirrorLog
-                except FileExistsError:
-                    pass
-        else:
-            # ! TODO: Add MirrorLogger here, such that sub-calculations of workflows are also registered in the
-            # ! mirroring, otherwise they end up duplicated, as the registration is done here in the for loop
-            process_mirror.do_mirror(process_node=process, output_path=process_mirror_path)
+        process_mirror_path = process_type_path / generate_process_default_mirror_path(
+            process_node=process, prefix=None
+        )
 
-        current_store.add_entry(
+        # import ipdb
+
+        # ipdb.set_trace()
+
+        if not self.group_mirror_config.symlink_calcs:
+            # Case: symlink_duplicates is disabled
+            process_mirror.do_mirror(
+                process_node=process, output_path=process_mirror_path
+            )
+
+        else:
+            # Try to create symlink from current_store first
+            symlinked = self._create_symlink_from_store(
+                process_uuid=process.uuid,
+                store_instance=self.current_store,
+                process_mirror_path=process_mirror_path,
+            )
+
+            # If not found in current_store, try other_store
+            if not symlinked:
+                symlinked = self._create_symlink_from_store(
+                    process_uuid=process.uuid,
+                    store_instance=self.other_store,
+                    process_mirror_path=process_mirror_path,
+                )
+
+            # If not found in either store, create a new mirror
+            if not symlinked:
+                process_mirror.do_mirror(
+                    process_node=process, output_path=process_mirror_path
+                )
+
+        # This happens regardless of which case was executed
+        self.current_store.add_entry(
             uuid=process.uuid,
             entry=MirrorLog(path=process_mirror_path, time=datetime.now().astimezone()),
         )
@@ -179,14 +245,14 @@ class GroupMirror(BaseCollectionMirror):
         """Handle mirroring of different process collections."""
 
         # First, mirror calculations and then workflows, as sub-calculations of workflows can be symlinked
-        for process_type in ('calculations', 'workflows'):
+        for process_type in ("calculations", "workflows"):
             processes = getattr(self.node_container, process_type)
             if len(processes) > 0:
-                msg = f'Mirroring {len(processes)} {process_type}s...'
+                msg = f"Mirroring {len(processes)} {process_type}s..."
                 logger.report(msg)
                 self._mirror_processes(processes=processes)
             else:
-                msg = f'No {process_type} to mirror in group `{self.group.label}`.'
+                msg = f"No {process_type} to mirror in group `{self.group.label}`."
                 logger.report(msg)
 
     def do_mirror(self) -> None:

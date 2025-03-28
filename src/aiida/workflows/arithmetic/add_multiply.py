@@ -10,20 +10,21 @@
 """Basic calcfunction-based workflows for demonstration purposes."""
 
 from aiida.engine import calcfunction, workfunction
+from aiida.orm import Int
 
 
 @calcfunction
-def add(x, y):
+def add(x: Int, y: Int) -> Int:
     return x + y
 
 
 @calcfunction
-def multiply(x, y):
+def multiply(x: Int, y: Int) -> Int:
     return x * y
 
 
 @workfunction
-def add_multiply(x, y, z):
+def add_multiply(x: Int, y: Int, z: Int) -> Int:
     """Add two numbers and multiply it with a third."""
     addition = add(x, y)
     product = multiply(addition, z)

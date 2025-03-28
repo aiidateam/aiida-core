@@ -639,170 +639,129 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
             echo.echo(child.path, bold=not child.is_virtual)
 
 
-# @verdi_group.command('mirror')
-# @arguments.GROUP()
-# @options.PATH()
+@verdi_group.command('mirror')
+# Possibly GROUPS
+@arguments.GROUP()
+@options.PATH()
 # @options.DRY_RUN()
-# @options.OVERWRITE()
+@options.OVERWRITE()
 # @options.INCREMENTAL()
-# @options.FILTER_BY_LAST_MIRROR_TIME()
-# @options.MIRROR_PROCESSES()
-# # ? Could (should) use GROUP(S) argument here instead of option
-# @options.SYMLINK_DUPLICATES()
-# @options.DELETE_MISSING()
-# @options.ONLY_TOP_LEVEL_CALCS()
-# @options.ONLY_TOP_LEVEL_WORKFLOWS()
-# # ? @options.UPDATE_GROUPS()
-# @options.INCLUDE_INPUTS()
-# @options.INCLUDE_OUTPUTS()
-# @options.INCLUDE_ATTRIBUTES()
-# @options.INCLUDE_EXTRAS()
-# @options.FLAT()
-# @click.pass_context
-# def group_mirror(
-#     ctx,
-#     group,
-#     path,
-#     dry_run,
-#     overwrite,
-#     incremental,
-#     filter_by_last_mirror_time,
-#     mirror_processes,
-#     # organize_by_groups,
-#     symlink_duplicates,
-#     delete_missing,
-#     # update_groups,
-#     only_top_level_calcs,
-#     only_top_level_workflows,
-#     include_inputs,
-#     include_outputs,
-#     include_attributes,
-#     include_extras,
-#     flat,
-# ):
-#     """Mirror data of group to disk."""
+@options.FILTER_BY_LAST_MIRROR_TIME()
+@options.MIRROR_PROCESSES()
+@options.MIRROR_DATA()
+@options.SYMLINK_CALCS()
+@options.DELETE_MISSING()
+@options.ONLY_TOP_LEVEL_CALCS()
+@options.ONLY_TOP_LEVEL_WORKFLOWS()
+# ? @options.UPDATE_GROUPS()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+def group_mirror(
+    group,
+    path,
+    # dry_run,
+    overwrite,
+    # incremental,
+    filter_by_last_mirror_time,
+    mirror_processes,
+    mirror_data,
+    symlink_calcs,
+    delete_missing,
+    # update_groups,
+    only_top_level_calcs,
+    only_top_level_workflows,
+    include_inputs,
+    include_outputs,
+    include_attributes,
+    include_extras,
+    flat,
+):
+    """Mirror data of group to disk."""
 
-#     # FIXME: No actual data being mirrored here...?
+    from aiida.tools.archive.exceptions import ExportValidationError
+    from aiida.tools.mirror import GroupMirror
+    from aiida.tools.mirror.config import (
+        GroupMirrorConfig,
+        MirrorMode,
+        ProcessMirrorConfig,
+        NodeCollectorConfig
+    )
+    from aiida.tools.mirror.utils import resolve_click_path_for_mirror
 
-#     # Maybe point to actual modules here
-#     from aiida.tools.mirror import GroupMirror
-#     from aiida.tools.mirror.config import (
-#         GroupMirrorConfig,
-#         MirrorMode,
-#         ProcessMirrorConfig,
-#     )
-#     from aiida.tools.mirror.utils import (
-#         prepare_mirror_path,
-#     )
+    # FIXME: If nodes not newly created since the last Mirroring, but only added to the group, those are not picked up
+    # during the incremental mirroring
 
-#     # profile = ctx.obj['profile']
+    mirror_paths = resolve_click_path_for_mirror(path=path, entity=group)
+    output_path = mirror_paths.parent / mirror_paths.child
 
-#     # FIXME: If nodes not newly created since the last Mirroring, but only added to the group, those are not picked up
-#     # during the incremental mirroring
+    msg = f'Mirroring data of group `{group.label}` at path: `{output_path.name}`.'
+    echo.echo_report(msg)
 
-#     mirror_paths = resolve_click_path_argument_for_mirroring(path=path, entity=group)
-#     output_path = mirror_paths.parent / mirror_paths.child
+    if overwrite:
+        mirror_mode = MirrorMode.OVERWRITE
+    else:
+        mirror_mode = MirrorMode.INCREMENTAL
 
-#     msg = f'Mirroring data of group `{group.label}` at path: `{output_path.name}`.'
-#     echo.echo_report(msg)
+    node_collector_config = NodeCollectorConfig(
+        include_processes=mirror_processes,
+        include_data=mirror_data,
+        filter_by_last_mirror_time=filter_by_last_mirror_time,
+        only_top_level_calcs=only_top_level_calcs,
+        only_top_level_workflows=only_top_level_workflows
+    )
 
-#     # This cleans the entire Mirroring directory, including the log file
-#     try:
-#         prepare_mirror_path(
-#             path_to_validate=output_path,
-#             overwrite=overwrite,
-#             incremental=incremental,
-#             safeguard_file=safeguard_file,
-#             top_level_caller=True,
-#         )
-#     except (FileExistsError, ValueError) as exc:
-#         echo.echo_critical(str(exc))
+    process_mirror_config = ProcessMirrorConfig(
+        include_inputs=include_inputs,
+        include_outputs=include_outputs,
+        include_attributes=include_attributes,
+        include_extras=include_extras,
+        flat=flat,
+    )
 
-#     # The logging of this behavior is taken care of in `prepare_mirror_path`
-#     if overwrite and incremental:
-#         incremental = False
+    group_mirror_config = GroupMirrorConfig(
+        symlink_calcs=symlink_calcs,
+        delete_missing=delete_missing,
+    )
 
-#     # Try to get `last_mirror_time` from Mirroring safeguard file, if it already exsits
-#     # try:
-#     #     mirror_logger = MirrorLogger.from_file(
-    # mirror_parent_path=mirror_paths.parent, mirror_sub_path=mirror_paths.child)
-#     # except (json.JSONDecodeError, OSError):
-#     #     mirror_logger = MirrorLogger(
-#     #         mirror_parent_path=mirror_paths.parent,
-#     #         mirror_sub_path=mirror_paths.child,
-#     #     )
+    group_mirror_inst = GroupMirror(
+        group=group,
+        mirror_mode=mirror_mode,
+        mirror_paths=mirror_paths,
+        # last_mirror_time=None,
+        # mirror_logger=None,
+        node_collector_config=node_collector_config,
+        group_mirror_config=group_mirror_config,
+        process_mirror_config=process_mirror_config,
+    )
 
-#     # Create config options that hold the various settings for Mirroring data
-#     if overwrite:
-#         mirror_mode = MirrorMode.OVERWRITE
-#     else:
-#         mirror_mode = MirrorMode.INCREMENTAL
+    try:
+        _ = group_mirror_inst.do_mirror(top_level_caller=True)
+        # _ = group_mirror_inst._generate_readme()
+        msg = f'Raw files for {group.label} <{group.pk}> mirrored into folder `{output_path.name}`.'
+        echo.echo_success(msg)
+    except ExportValidationError as e:
+        echo.echo_critical(f'{e!s}')
+    except Exception as e:
+        msg = f'Unexpected error while mirroring {group.label} <{group.pk}>:\n ({e!s}).'
+        echo.echo_critical(msg)
+    
+    # TODO: This logic below should be in the `do_mirror` call
+    # if delete_missing:
+    #     if num_processes_to_delete == 0:
+    #         echo.echo_success('No processes to delete.')
+    #     else:
+    #         group_group_mirror.delete_processes()
+    #         echo.echo_success(f'Deleted {num_processes_to_delete} node directories.')
 
-#     process_mirror_config = ProcessMirrorConfig(
-#         include_inputs=include_inputs,
-#         include_outputs=include_outputs,
-#         include_attributes=include_attributes,
-#         include_extras=include_extras,
-#         flat=flat,
-#     )
+    # if update_groups:
+    #     relabeled_paths = profile_group_mirror.update_groups()
 
-#     # These options here are all set to `ProfileMirrorConfig`, even though, as evident,
-# they also relate to the Mirroring of
-#     # just a single group
-#     group_mirror_config = GroupMirrorConfig(
-#         include_processes=mirror_processes,
-#         symlink_duplicates=symlink_duplicates,
-#         delete_missing=delete_missing,
-#         only_top_level_calcs=only_top_level_calcs,
-#         only_top_level_workflows=only_top_level_workflows,
-#         filter_by_last_mirror_time=filter_by_last_mirror_time,
-#     )
+    #     msg = 'Mirrored directories and '
+    #     echo.echo_success(msg)
+    #     print(relabeled_paths)
 
-#     group_group_mirror = GroupMirror(
-#         mirror_parent_path=mirror_paths.parent,
-#         mirror_sub_path=mirror_paths.child,
-#         last_mirror_time=last_mirror_time,
-#         mirror_mode=mirror_mode,
-#         group_mirror_config=group_mirror_config,
-#         process_mirror_config=process_mirror_config,
-#         mirror_logger=mirror_logger,
-#         group=group,
-#     )
-
-#     num_processes_to_mirror = len(group_group_mirror.processes_to_mirror)
-#     num_processes_to_delete = len(group_group_mirror.processes_to_delete)
-
-#     if dry_run:
-#         dry_run_message = (
-#             f'Dry run for mirroring of group `{group.label}`. '
-#             f'Would Mirror: {num_processes_to_Mirror} new nodes and delete '
-#             f'{num_processes_to_delete} previously Mirrored node directories.'
-#         )
-#         echo.echo_report(dry_run_message)
-#         return
-
-#     if mirror_processes:
-#         # if num_processes_to_Mirror == 0:
-#         #     msg = 'No processes to Mirror.'
-#         #     echo.echo_success(msg)
-#         # else:
-#         group_group_mirror.do_mirror()
-#         msg = f'Mirrored {len(group_group_mirror.processes_to_Mirror)} new nodes.'
-#         echo.echo_success(msg)
-
-#     if delete_missing:
-#         if num_processes_to_delete == 0:
-#             echo.echo_success('No processes to delete.')
-#         else:
-#             group_group_mirror.delete_processes()
-#             echo.echo_success(f'Deleted {num_processes_to_delete} node directories.')
-
-#     # if update_groups:
-#     #     relabeled_paths = profile_group_mirror.update_groups()
-
-#     #     msg = 'Mirrored directories and '
-#     #     echo.echo_success(msg)
-#     #     print(relabeled_paths)
-
-#     # Write the logging json file to disk
-#     # mirror_logger.save_log()
+    # Write the logging json file to disk
+    # mirror_logger.save_log()

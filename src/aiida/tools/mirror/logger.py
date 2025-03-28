@@ -18,14 +18,14 @@ from aiida.tools.mirror.utils import MirrorPaths
 
 # TODO: Possibly mirror hierarchy of mirrored directory inside json file
 # TODO: Currently, json file has only top-level "groups", "workflows", and "calculations"
-# NOTE: Could use MirrorLogger also as container for orm.Nodes, that should be dumped
+# NOTE: Could use MirrorLogger also as container for orm.Nodes, that should be mirrored
 # NOTE: Should MirrorLogger be not provided (None), or should it rather just be empty with no entries
 # NOTE: Is on `save_log` again the whole history being written to disk? Ideally, this would be incremental
 
 
 @dataclass
 class MirrorLog:
-    """Represents a single dump log entry."""
+    """Represents a single mirror log entry."""
 
     # TODO: Possibly add `node_type` or something similar here
 
@@ -130,7 +130,7 @@ class MirrorLogger:
 
     @property
     def log_file_path(self) -> Path:
-        """Get the path to the dump file."""
+        """Get the path to the mirror file."""
         return self.mirror_paths.parent / self.mirror_paths.child / self.MIRROR_LOG_FILE
 
     def add_entry(self, store: MirrorLogStore, uuid: str, entry: MirrorLog) -> None:
@@ -169,16 +169,8 @@ class MirrorLogger:
             'data': serialize_logs(self.data),
         }
 
-        # if not self.log_file_path.is_file():
-
         with self.log_file_path.open('w', encoding='utf-8') as f:
             json.dump(log_dict, f, indent=4)
-
-    def __enter__(self) -> 'MirrorLogger':
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
-        self.save_log()
 
     @classmethod
     def from_file(cls, mirror_paths: MirrorPaths) -> 'MirrorLogger':

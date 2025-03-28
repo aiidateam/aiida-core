@@ -179,12 +179,13 @@ class ProfileMirror(BaseCollectionMirror):
         no_group_mirrorer.no_group_mirror()
         # TODO: Possibly add entry to logger
 
-    def do_mirror(self):
+    def do_mirror(self, top_level_caller: bool = False):
         """_summary_
 
         :param
         """
-        self._pre_mirror()
+
+        self.pre_mirror(top_level_caller=top_level_caller)
 
         # If `groups` given on construction, mirror only data within those groups
         if self.groups:
@@ -223,7 +224,7 @@ class ProfileMirror(BaseCollectionMirror):
         #     echo.echo_success(msg)
         #     # print(relabeled_paths)
 
-        self._post_mirror()
+        self.post_mirror()
 
 
 #####

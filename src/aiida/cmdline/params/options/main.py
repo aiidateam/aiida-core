@@ -75,11 +75,12 @@ __all__ = (
     'INCLUDE_EXTRAS',
     'INCLUDE_INPUTS',
     'INCLUDE_OUTPUTS',
-    'INCREMENTAL',
+    # 'INCREMENTAL',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
     'LIMIT',
+    'MIRROR_DATA',
     'MIRROR_PROCESSES',
     'MIRROR_UNSEALED',
     'MOST_RECENT_NODE',
@@ -111,7 +112,7 @@ __all__ = (
     'SCHEDULER',
     'SILENT',
     'SORT',
-    'SYMLINK_DUPLICATES',
+    'SYMLINK_CALCS',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
@@ -798,6 +799,14 @@ SORT = OverridableOption(
     show_default=True,
 )
 
+MIRROR_DATA = OverridableOption(
+    '--mirror-data/--no-mirror-data',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Dump data nodes.',
+)
+
 MIRROR_PROCESSES = OverridableOption(
     '--mirror-processes/--no-mirror-processes',
     is_flag=True,
@@ -851,16 +860,16 @@ FLAT = OverridableOption(
     help='Dump files in a flat directory for every step of a workflow.',
 )
 
-INCREMENTAL = OverridableOption(
-    '--incremental/--no-incremental',
-    is_flag=True,
-    default=True,
-    show_default=True,
-    help="Incremental mirroring of data to disk. Doesn't require using overwrite to clean previous directories.",
-)
+# INCREMENTAL = OverridableOption(
+#     '--incremental/--no-incremental',
+#     is_flag=True,
+#     default=True,
+#     show_default=True,
+#     help="Incremental mirroring of data to disk. Doesn't require using overwrite to clean previous directories.",
+# )
 
-SYMLINK_DUPLICATES = OverridableOption(
-    '--symlink-duplicates/--no-symlink-duplicates',
+SYMLINK_CALCS = OverridableOption(
+    '--symlink-calcs/--no-symlink-calcs',
     default=False,
     show_default=True,
     help='Symlink data if the same node is contained in multiple groups.',

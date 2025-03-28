@@ -562,7 +562,7 @@ def process_repair(manager, broker, dry_run):
 @arguments.PROCESS()
 @options.PATH()
 @options.OVERWRITE()
-@options.INCREMENTAL()
+# @options.INCREMENTAL()
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
@@ -581,7 +581,6 @@ def process_mirror(
     include_extras,
     flat,
     mirror_unsealed,
-    incremental,
 ) -> None:
     """Mirror process input and output files to disk.
 
@@ -620,9 +619,11 @@ def process_mirror(
         include_attributes=include_attributes,
         include_extras=include_extras,
         flat=flat,
+        mirror_unsealed=mirror_unsealed
     )
 
-    process_mirrorer = ProcessMirror(
+    process_mirror_inst = ProcessMirror(
+        process_node=process,
         mirror_paths=mirror_paths,
         last_mirror_time=None,  # ? Is this needed for a single process?
         # last_mirror_time=last_mirror_time,
@@ -631,8 +632,8 @@ def process_mirror(
     )
 
     try:
-        _ = process_mirrorer.do_mirror(process_node=process)
-        _ = process_mirrorer._generate_readme(process_node=process)
+        _ = process_mirror_inst.do_mirror(top_level_caller=True)
+        _ = process_mirror_inst._generate_readme()
         msg = f'Raw files for {process.__class__.__name__} <{process.pk}> mirrored into folder `{output_path.name}`.'
         echo.echo_success(msg)
     except ExportValidationError as e:

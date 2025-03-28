@@ -47,7 +47,6 @@ class NodeCollectorConfig:
     only_top_level_workflows: bool = True
     group_scope: NodeMirrorGroupScope = NodeMirrorGroupScope.IN_GROUP
 
-
 @dataclass
 class ProcessMirrorConfig:
     """Arguments for dumping process data."""

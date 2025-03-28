@@ -62,8 +62,9 @@ class BaseMirror:
         except (json.JSONDecodeError, OSError):
             return MirrorLogger(mirror_paths=self.mirror_paths)
 
-    def _pre_mirror(self, top_level_caller: bool = False) -> None:
+    def pre_mirror(self, top_level_caller: bool = False) -> None:
         """_summary_"""
+
         _ = prepare_mirror_path(
             path_to_validate=self.mirror_paths.absolute,
             mirror_mode=self.mirror_mode,
@@ -83,7 +84,7 @@ class BaseMirror:
         self.last_mirror_time = last_mirror_time
         self.current_mirror_time = datetime.now().astimezone()
 
-    def _post_mirror(self) -> None:
+    def post_mirror(self) -> None:
         """_summary_"""
         self.mirror_logger.save_log()
 

@@ -73,7 +73,7 @@ class ProcessMirror(BaseMirror):
         self.flat = self.process_mirror_config.flat
         self.mirror_unsealed = self.process_mirror_config.mirror_unsealed
 
-    def _generate_readme(self, process_node: orm.ProcessNode) -> None:
+    def _generate_readme(self) -> None:
         """Generate README.md file in main mirroring directory.
 
         :param process_node: `CalculationNode` or `WorkflowNode`.
@@ -91,6 +91,7 @@ class ProcessMirror(BaseMirror):
             get_workchain_report,
         )
 
+        process_node = self.process_node
         pk = process_node.pk
 
         _readme_string = textwrap.dedent(
@@ -177,6 +178,7 @@ class ProcessMirror(BaseMirror):
     def do_mirror(
         self,
         io_mirror_paths: list[str | Path] | None = None,
+        top_level_caller: bool = True,
     ) -> None:
         """Mirrors all data involved in a `ProcessNode`, including its outgoing links.
 
@@ -204,7 +206,7 @@ class ProcessMirror(BaseMirror):
         # for key, value in kwargs.items():
         #     setattr(self, key, value)
 
-        self._pre_mirror()
+        self.pre_mirror(top_level_caller=top_level_caller)
 
         if isinstance(process_node, orm.CalculationNode):
             self._mirror_calculation(
@@ -220,7 +222,7 @@ class ProcessMirror(BaseMirror):
                 io_mirror_paths=io_mirror_paths,
             )
 
-        self._post_mirror()
+        self.post_mirror()
 
     def _mirror_workflow(
         self,
@@ -238,14 +240,18 @@ class ProcessMirror(BaseMirror):
         if not output_path:
             output_path = self.mirror_paths.absolute
 
-        prepare_mirror_path(
-            path_to_validate=output_path,
-            mirror_mode=self.mirror_mode,
-            safeguard_file=self.mirror_paths.safeguard_path,
-            top_level_caller=False,
-        )
-
         self._write_node_yaml(process_node=workflow_node, output_path=output_path)
+
+        if self.mirror_logger is not None:
+            workflow_store = self.mirror_logger.log.workflows
+
+            self.mirror_logger.add_entry(
+                store=workflow_store,
+                uuid=workflow_node.uuid,
+                entry=MirrorLog(
+                    path=output_path.resolve(), time=datetime.now().astimezone()
+                ),
+            )
 
         called_links = workflow_node.base.links.get_outgoing(
             link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)
@@ -269,16 +275,6 @@ class ProcessMirror(BaseMirror):
                     io_mirror_paths=io_mirror_paths,
                 )
 
-                if self.mirror_logger is not None:
-                    workflow_store = self.mirror_logger.log.workflows
-
-                    self.mirror_logger.add_entry(
-                        store=workflow_store,
-                        uuid=child_node.uuid,
-                        entry=MirrorLog(
-                            path=child_output_path, time=datetime.now().astimezone()
-                        ),
-                    )
 
             # Once a `CalculationNode` as child reached, dump it
             elif isinstance(child_node, orm.CalculationNode):

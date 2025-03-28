@@ -232,12 +232,12 @@ class MirrorNodeCollector:
 
 #     @property
 #     def mirror_processes(self) -> bool:
-#         """Check if there are any processes to dump."""
+#         """Check if there are any processes to mirror."""
 #         return len(self.calculations) > 0 or len(self.workflows) > 0
 
 #     @property
 #     def mirror_data(self) -> bool:
-#         """Check if there are any data nodes to dump."""
+#         """Check if there are any data nodes to mirror."""
 #         return len(self.data) > 0
 
 #     def __len__(self) -> int:
@@ -374,7 +374,7 @@ class MirrorNodeCollector:
 #         nodes_in_groups: list[orm.Node] = [node for group in profile_groups for node in group.nodes]
 
 #         # Need to expand here also with the called_descendants of `WorkflowNodes`, otherwise the called
-#         # `CalculationNode`s for `WorkflowNode`s that are part of a group are dumped twice
+#         # `CalculationNode`s for `WorkflowNode`s that are part of a group are mirrored twice
 #         # Get the called descendants of WorkflowNodes within the nodes_in_groups list
 #         sub_nodes_in_groups: list[orm.Node] = [
 #             node
@@ -448,7 +448,7 @@ class MirrorNodeCollector:
 #     container = NodeCollector.create_node_container(incremental=True)
 
 
-# def _get_processes_to_dump(self) -> NodeContainer:
+# def _get_processes_to_mirror(self) -> NodeContainer:
 #     """Retrieve the processeses from the collection nodes.
 
 #     Depending on the attributes of the ``CollectionDumper``, this method takes care of only selecting top-level

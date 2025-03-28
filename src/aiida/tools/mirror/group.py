@@ -62,8 +62,8 @@ class GroupMirror(BaseCollectionMirror):
         last_mirror_time: datetime | None = None,
         mirror_logger: MirrorLogger | None = None,
         node_collector_config: NodeCollectorConfig | None = None,
-        process_mirror_config: ProcessMirrorConfig | None = None,
         group_mirror_config: GroupMirrorConfig | None = None,
+        process_mirror_config: ProcessMirrorConfig | None = None,
     ):
         """Initialize the GroupMirror class."""
 
@@ -137,14 +137,6 @@ class GroupMirror(BaseCollectionMirror):
         self.current_store = current_store
         self.other_store = other_store
 
-        process_mirror = ProcessMirror(
-            mirror_mode=self.mirror_mode,
-            mirror_paths=self.mirror_paths,
-            last_mirror_time=self.last_mirror_time,
-            process_mirror_config=self.process_mirror_config,
-            mirror_logger=self.mirror_logger,
-        )
-
         set_progress_bar_tqdm()
 
         # Mirror each process with progress tracking
@@ -152,10 +144,10 @@ class GroupMirror(BaseCollectionMirror):
             desc="Mirroring new processes", total=len(processes)
         ) as progress:
             for process in processes:
+
                 self._mirror_process(
                     process=process,
                     process_type_path=process_type_path,
-                    process_mirror=process_mirror,
                 )
                 progress.update()
 
@@ -191,7 +183,6 @@ class GroupMirror(BaseCollectionMirror):
         self,
         process: orm.CalculationNode | orm.WorkflowNode,
         process_type_path: Path,
-        process_mirror: ProcessMirror,
     ) -> None:
         """Mirror a single process to disk.
 
@@ -203,15 +194,23 @@ class GroupMirror(BaseCollectionMirror):
             process_node=process, prefix=None
         )
 
-        # import ipdb
+        process_paths = MirrorPaths(
+            parent=process_mirror_path.parent,
+            child=process_mirror_path.name,
+        )
 
-        # ipdb.set_trace()
+        process_mirror_inst = ProcessMirror(
+            process_node=process,
+            mirror_mode=self.mirror_mode,
+            mirror_paths=process_paths,
+            last_mirror_time=self.last_mirror_time,
+            process_mirror_config=self.process_mirror_config,
+            mirror_logger=self.mirror_logger,
+        )
 
         if not self.group_mirror_config.symlink_calcs:
             # Case: symlink_duplicates is disabled
-            process_mirror.do_mirror(
-                process_node=process, output_path=process_mirror_path
-            )
+            process_mirror_inst.do_mirror(top_level_caller=False)
 
         else:
             # Try to create symlink from current_store first
@@ -231,7 +230,7 @@ class GroupMirror(BaseCollectionMirror):
 
             # If not found in either store, create a new mirror
             if not symlinked:
-                process_mirror.do_mirror(
+                process_mirror_inst.do_mirror(
                     process_node=process, output_path=process_mirror_path
                 )
 
@@ -255,18 +254,18 @@ class GroupMirror(BaseCollectionMirror):
                 msg = f"No {process_type} to mirror in group `{self.group.label}`."
                 logger.report(msg)
 
-    def do_mirror(self) -> None:
+    def do_mirror(self, top_level_caller: bool = False) -> None:
         """Top-level method that actually performs the mirroring of the AiiDA data for the collection.
 
         :return: None
         """
 
-        self._pre_mirror()
+        self.pre_mirror(top_level_caller=top_level_caller)
         self.node_container = self.get_node_container(group=self.group)
 
         self._mirror_process_collections()
 
-        self._post_mirror()
+        self.post_mirror()
 
     # @cached_property
     # def processes_to_delete(self) -> NodeContainer:

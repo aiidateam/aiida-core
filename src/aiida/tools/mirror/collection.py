@@ -13,20 +13,18 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
 
 from aiida import orm
+from aiida.tools.mirror.base import BaseMirror
 from aiida.tools.mirror.collector import MirrorNodeCollector, MirrorNodeContainer
 from aiida.tools.mirror.config import (
     MirrorMode,
     NodeCollectorConfig,
 )
-from aiida.tools.mirror.base import BaseMirror
 from aiida.tools.mirror.logger import MirrorLogger
 from aiida.tools.mirror.utils import (
     MirrorPaths,
-    prepare_mirror_path,
 )
 
 

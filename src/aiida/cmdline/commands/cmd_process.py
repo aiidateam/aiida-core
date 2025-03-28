@@ -619,7 +619,7 @@ def process_mirror(
         include_attributes=include_attributes,
         include_extras=include_extras,
         flat=flat,
-        mirror_unsealed=mirror_unsealed
+        mirror_unsealed=mirror_unsealed,
     )
 
     process_mirror_inst = ProcessMirror(

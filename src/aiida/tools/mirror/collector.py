@@ -17,20 +17,20 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.mirror.config import NodeCollectorConfig, NodeMirrorGroupScope
 from aiida.tools.mirror.logger import MirrorLogger
 
-logger = AIIDA_LOGGER.getChild("tools.mirror.collector")
+logger = AIIDA_LOGGER.getChild('tools.mirror.collector')
 
 
 @dataclass
 class MirrorNodeContainer:
-    calculations: list["orm.CalculationNode"] = field(default_factory=list)
-    workflows: list["orm.WorkflowNode"] = field(default_factory=list)
-    data: list["orm.Data"] = field(default_factory=list)
+    calculations: list['orm.CalculationNode'] = field(default_factory=list)
+    workflows: list['orm.WorkflowNode'] = field(default_factory=list)
+    data: list['orm.Data'] = field(default_factory=list)
 
     # Mapping between node types and container attribute names
     TYPE_MAP: ClassVar[Dict[str, str]] = {
-        "orm.CalculationNode": "calculations",
-        "orm.WorkflowNode": "workflows",
-        "orm.Data": "data",
+        'orm.CalculationNode': 'calculations',
+        'orm.WorkflowNode': 'workflows',
+        'orm.Data': 'data',
     }
 
     @property
@@ -61,8 +61,8 @@ class MirrorNodeContainer:
 class MirrorNodeCollector:
     def __init__(
         self,
-        mirror_logger: "MirrorLogger",
-        config: "NodeCollectorConfig",
+        mirror_logger: 'MirrorLogger',
+        config: 'NodeCollectorConfig',
         last_mirror_time: datetime | None = None,
     ):
         self.last_mirror_time = last_mirror_time
@@ -76,28 +76,24 @@ class MirrorNodeCollector:
         self.only_top_level_workflows = config.only_top_level_workflows
 
         self.orm_types = {
-            "calculations": orm.CalculationNode,
-            "workflows": orm.WorkflowNode,
-            "data": orm.Data,
+            'calculations': orm.CalculationNode,
+            'workflows': orm.WorkflowNode,
+            'data': orm.Data,
         }
 
-    def collect(self, group: "orm.Group" = None) -> MirrorNodeContainer:
-        msg = "Collecting nodes from the database. For the first mirror, this can take a while."
+    def collect(self, group: 'orm.Group' = None) -> MirrorNodeContainer:
+        msg = 'Collecting nodes from the database. For the first mirror, this can take a while.'
         logger.report(msg)
 
         container = MirrorNodeContainer()
 
         if self.include_processes:
             # Get workflow nodes
-            workflows = self._get_nodes(
-                "workflows", group=group, top_level_only=self.only_top_level_workflows
-            )
+            workflows = self._get_nodes('workflows', group=group, top_level_only=self.only_top_level_workflows)
             container.workflows = workflows
 
             # Get calculation nodes
-            calculations = self._get_nodes(
-                "calculations", group=group, top_level_only=self.only_top_level_calcs
-            )
+            calculations = self._get_nodes('calculations', group=group, top_level_only=self.only_top_level_calcs)
 
             # If not using top-level-only filter, add descendant calculations from workflows
             if not self.only_top_level_calcs and workflows:
@@ -110,13 +106,11 @@ class MirrorNodeCollector:
         if self.include_data:
             # Get data nodes
             try:
-                data_nodes = self._get_nodes(
-                    "data", group=group, scope=self.config.group_scope
-                )
+                data_nodes = self._get_nodes('data', group=group, scope=self.config.group_scope)
                 container.data = data_nodes
             except NotImplementedError:
                 # Keep the existing behavior
-                msg = "Mirroring of data nodes not yet implemented."
+                msg = 'Mirroring of data nodes not yet implemented.'
                 raise NotImplementedError(msg)
 
         return container
@@ -126,19 +120,17 @@ class MirrorNodeCollector:
 
         # Filter by modification time if requested
         if self.filter_by_last_mirror_time and self.last_mirror_time:
-            filters["mtime"] = {">=": self.last_mirror_time.astimezone()}
+            filters['mtime'] = {'>=': self.last_mirror_time.astimezone()}
 
         # Filter out already logged nodes if mirror_logger is available
         if self.mirror_logger and hasattr(self.mirror_logger, orm_key):
             node_store = getattr(self.mirror_logger, orm_key)
             if node_store and len(node_store) > 0:
-                filters["uuid"] = {"!in": list(node_store.entries.keys())}
+                filters['uuid'] = {'!in': list(node_store.entries.keys())}
 
         return filters
 
-    def _get_nodes(
-        self, orm_key: str, group: "orm.Group" = None, top_level_only: bool = False
-    ) -> list["orm.Node"]:
+    def _get_nodes(self, orm_key: str, group: 'orm.Group' = None, top_level_only: bool = False) -> list['orm.Node']:
         orm_type = self.orm_types[orm_key]
 
         # Basic filters for the query
@@ -147,7 +139,7 @@ class MirrorNodeCollector:
         # Build query based on scope
         if self.config.group_scope == NodeMirrorGroupScope.IN_GROUP:
             if group is None:
-                raise ValueError("Group must be provided when scope is IN_GROUP")
+                raise ValueError('Group must be provided when scope is IN_GROUP')
             nodes = self._query_group_nodes(orm_type, group, filters)
 
         elif self.config.group_scope == NodeMirrorGroupScope.ANY:
@@ -157,7 +149,7 @@ class MirrorNodeCollector:
             nodes = self._query_no_group_nodes(orm_type, filters)
 
         else:
-            raise ValueError("Unknown scope: ")
+            raise ValueError('Unknown scope: ')
 
         # Apply top-level filtering if requested
         if top_level_only:
@@ -165,31 +157,25 @@ class MirrorNodeCollector:
 
         return nodes
 
-    def _query_group_nodes(
-        self, orm_type: orm.Node, group: "orm.Group", filters: Dict[str, Any]
-    ) -> list["orm.Node"]:
+    def _query_group_nodes(self, orm_type: orm.Node, group: 'orm.Group', filters: Dict[str, Any]) -> list['orm.Node']:
         qb = orm.QueryBuilder()
-        qb.append(orm.Group, filters={"id": group.id}, tag="group")
-        qb.append(orm_type, filters=filters, with_group="group", tag="node")
+        qb.append(orm.Group, filters={'id': group.id}, tag='group')
+        qb.append(orm_type, filters=filters, with_group='group', tag='node')
         return qb.all(flat=True)
 
-    def _query_all_nodes(
-        self, orm_type: orm.Node, filters: Dict[str, Any]
-    ) -> list["orm.Node"]:
+    def _query_all_nodes(self, orm_type: orm.Node, filters: Dict[str, Any]) -> list['orm.Node']:
         qb = orm.QueryBuilder()
-        qb.append(orm_type, filters=filters, tag="node")
+        qb.append(orm_type, filters=filters, tag='node')
         return qb.all(flat=True)
 
-    def _query_no_group_nodes(
-        self, orm_type: orm.Node, filters: Dict[str, Any]
-    ) -> list["orm.Node"]:
+    def _query_no_group_nodes(self, orm_type: orm.Node, filters: Dict[str, Any]) -> list['orm.Node']:
         # First get all nodes
         all_nodes = self._query_all_nodes(orm_type, filters)
 
         # Then get all nodes that are in groups
         qb = orm.QueryBuilder()
-        qb.append(orm.Group, tag="group")
-        qb.append(orm_type, with_group="group", tag="node")
+        qb.append(orm.Group, tag='group')
+        qb.append(orm_type, with_group='group', tag='node')
         grouped_nodes = qb.all(flat=True)
 
         # Also include descendant nodes of process nodes
@@ -204,9 +190,7 @@ class MirrorNodeCollector:
         # Return only nodes that are not in any group
         return [node for node in all_nodes if node not in all_grouped_nodes]
 
-    def _get_workflow_descendants(
-        self, workflows: list["orm.WorkflowNode"]
-    ) -> list[orm.Node]:
+    def _get_workflow_descendants(self, workflows: list['orm.WorkflowNode']) -> list[orm.Node]:
         descendants = []
         for workflow in workflows:
             for node in workflow.called_descendants:

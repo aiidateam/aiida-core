@@ -13,13 +13,13 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 __all__ = (
-    "NodeMirrorGroupScope",
-    "MirrorMode",
-    "NodeCollectorConfig",
-    "ProcessMirrorConfig",
-    "BaseCollectionMirrorConfig",
-    "GroupMirrorConfig",
-    "ProfileMirrorConfig"
+    'BaseCollectionMirrorConfig',
+    'GroupMirrorConfig',
+    'MirrorMode',
+    'NodeCollectorConfig',
+    'NodeMirrorGroupScope',
+    'ProcessMirrorConfig',
+    'ProfileMirrorConfig',
 )
 
 
@@ -46,6 +46,7 @@ class NodeCollectorConfig:
     only_top_level_calcs: bool = True
     only_top_level_workflows: bool = True
     group_scope: NodeMirrorGroupScope = NodeMirrorGroupScope.IN_GROUP
+
 
 @dataclass
 class ProcessMirrorConfig:

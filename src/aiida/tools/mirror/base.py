@@ -14,11 +14,8 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-from aiida import orm
-from aiida.tools.mirror.collector import MirrorNodeCollector, MirrorNodeContainer
 from aiida.tools.mirror.config import (
     MirrorMode,
-    NodeCollectorConfig,
 )
 from aiida.tools.mirror.logger import MirrorLogger
 from aiida.tools.mirror.utils import (
@@ -40,14 +37,13 @@ class BaseMirror:
         self.last_mirror_time = last_mirror_time
         self.mirror_logger = self.set_mirror_logger(mirror_logger=mirror_logger)
 
-
     def set_mirror_logger(self, mirror_logger: MirrorLogger | None = None):
         """If in OVERWRITE mode or if loading from file fails, create a new instance
 
         :param mirror_logger: Optional existing logger instance to use
         :return: The appropriate MirrorLogger instance
         """
-        
+
         # If in OVERWRITE mode, create a new instance
         if self.mirror_mode.OVERWRITE:
             return MirrorLogger(mirror_paths=self.mirror_paths)
@@ -55,7 +51,7 @@ class BaseMirror:
         # Use provided mirror_logger if one is passed in
         if mirror_logger is not None:
             return mirror_logger
-        
+
         # Try to load from file, fall back to new instance on failure
         try:
             return MirrorLogger.from_file(mirror_paths=self.mirror_paths)

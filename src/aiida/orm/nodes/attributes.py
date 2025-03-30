@@ -9,6 +9,7 @@
 """Interface to the attributes of a node instance."""
 
 import copy
+import warnings
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Tuple
 
 if TYPE_CHECKING:
@@ -17,6 +18,47 @@ if TYPE_CHECKING:
 __all__ = ('NodeAttributes',)
 
 _NO_DEFAULT: Any = tuple()
+
+
+class _AttributesDict(dict):
+    """Protected dictionary for attributes that warns on modification attempts."""
+    
+    def __init__(self, attributes: dict, node: 'Node'):
+        super().__init__(attributes)
+        self._node = node
+
+    def _warn_modification(self):
+        # Dynamically check the node's stored status
+        if self._node.is_stored:
+            raise RuntimeError("Cannot modify attributes of stored node via dictionary interface")
+        warnings.warn(
+            "Directly modifying the .all dictionary is deprecated. "
+            "Use attribute setter methods instead.", UserWarning, stacklevel=3
+        )
+
+    def __setitem__(self, key, value):
+        self._warn_modification()
+        super().__setitem__(key, value)
+
+    def update(self, *args, **kwargs):
+        self._warn_modification()
+        super().update(*args, **kwargs)
+
+    def pop(self, *args, **kwargs):
+        self._warn_modification()
+        return super().pop(*args, **kwargs)
+
+    def popitem(self):
+        self._warn_modification()
+        return super().popitem()
+
+    def clear(self):
+        self._warn_modification()
+        super().clear()
+
+    def setdefault(self, key, default=None):
+        self._warn_modification()
+        return super().setdefault(key, default)
 
 
 class NodeAttributes:
@@ -50,14 +92,20 @@ class NodeAttributes:
             only need the keys or some values, use the iterators `keys` and `items`, or the
             getters `get` and `get_many` instead.
 
-        :return: the attributes as a dictionary
+        :return: the attributes as a dictionary wrapped in a protection layer
         """
         attributes = self._backend_node.attributes
 
         if self._node.is_stored:
-            attributes = copy.deepcopy(attributes)
+            # Return protected copy for stored nodes
+            return _AttributesDict(copy.deepcopy(attributes), self._node)
+        
+        # Return live reference with protection for unstored nodes
+        return _AttributesDict(attributes, self._node)
 
-        return attributes
+    def get_dict(self) -> Dict[str, Any]:
+        """Return a safe copy of attributes that cannot modify the node."""
+        return copy.deepcopy(self._backend_node.attributes)
 
     def get(self, key: str, default=_NO_DEFAULT) -> Any:
         """Return the value of an attribute.

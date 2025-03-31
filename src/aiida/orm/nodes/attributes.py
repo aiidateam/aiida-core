@@ -22,7 +22,7 @@ _NO_DEFAULT: Any = tuple()
 
 class _AttributesDict(dict):
     """Protected dictionary for attributes that warns on modification attempts."""
-    
+
     def __init__(self, attributes: dict, node: 'Node'):
         super().__init__(attributes)
         self._node = node
@@ -30,10 +30,11 @@ class _AttributesDict(dict):
     def _warn_modification(self):
         # Dynamically check the node's stored status
         if self._node.is_stored:
-            raise RuntimeError("Cannot modify attributes of stored node via dictionary interface")
+            raise RuntimeError('Cannot modify attributes of stored node via dictionary interface')
         warnings.warn(
-            "Directly modifying the .all dictionary is deprecated. "
-            "Use attribute setter methods instead.", UserWarning, stacklevel=3
+            'Directly modifying the .all dictionary is deprecated. ' 'Use attribute setter methods instead.',
+            UserWarning,
+            stacklevel=3,
         )
 
     def __setitem__(self, key, value):
@@ -99,7 +100,7 @@ class NodeAttributes:
         if self._node.is_stored:
             # Return protected copy for stored nodes
             return _AttributesDict(copy.deepcopy(attributes), self._node)
-        
+
         # Return live reference with protection for unstored nodes
         return _AttributesDict(attributes, self._node)
 

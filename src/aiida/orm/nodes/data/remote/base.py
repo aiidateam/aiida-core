@@ -187,19 +187,39 @@ class RemoteData(Data):
         :param remote_path: Defaults to None
         :raises ValidationError: If the path does not exist or points to a file
         """
-
         from aiida.common.exceptions import ValidationError
 
-        if remote_path is not None:
-            if self.computer is not None:
-                with self.computer.get_transport() as transport:
-                    if not transport.path_exists(remote_path):
-                        msg = f"The remote_path '{remote_path}' does not exist."
-                        raise ValidationError(msg)
+        # Early return if no path or computer
+        if remote_path is None or self.computer is None:
+            return
 
-                    if transport.isfile(remote_path):
-                        msg = f"The remote_path '{remote_path}' points to a file. Only directories are allowed."
-                        raise ValidationError(msg)
+        # Check if path appears to be a file based on extension or trailing slash
+        path_likely_file = False
+
+        # Method 1: Check if it has an extension
+        if os.path.splitext(remote_path)[1]:
+            path_likely_file = True
+
+        # Method 2: Check if it ends with a slash (directories often do)
+        if remote_path.endswith('/') or remote_path.endswith('\\'):
+            path_likely_file = False
+
+        with self.computer.get_transport() as transport:
+            if transport.path_exists(remote_path):
+                # Path exists, so check directly
+                if transport.isfile(remote_path):
+                    msg = f"The remote_path '{remote_path}' points to a file. Only directories are allowed."
+                    raise ValidationError(msg)
+            elif path_likely_file:
+                # Path doesn't exist but looks like a file
+                msg = f"The remote_path '{remote_path}' appears to be a file path. Only directories are allowed."
+                raise ValidationError(msg)
+
+        # with self.computer.get_transport() as transport:
+        #     # No need to check if path exists before checking if it's a file
+        #     if transport.path_exists(remote_path) and transport.isfile(remote_path):
+        #         msg = f"The remote_path '{remote_path}' points to a file. Only directories are allowed."
+        #         raise ValidationError(msg)
 
     def _validate(self):
         from aiida.common.exceptions import ValidationError

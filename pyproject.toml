@@ -64,6 +64,7 @@ requires-python = '>=3.9'
 
 [project.entry-points.'aiida.calculations']
 'core.arithmetic.add' = 'aiida.calculations.arithmetic.add:ArithmeticAddCalculation'
+'core.stash' = 'aiida.calculations.stash:StashCalculation'
 'core.templatereplacer' = 'aiida.calculations.templatereplacer:TemplatereplacerCalculation'
 'core.transfer' = 'aiida.calculations.transfer:TransferCalculation'
 
@@ -116,6 +117,7 @@ requires-python = '>=3.9'
 'core.remote' = 'aiida.orm.nodes.data.remote.base:RemoteData'
 'core.remote.stash' = 'aiida.orm.nodes.data.remote.stash.base:RemoteStashData'
 'core.remote.stash.compress' = 'aiida.orm.nodes.data.remote.stash.compress:RemoteStashCompressedData'
+'core.remote.stash.custom' = 'aiida.orm.nodes.data.remote.stash.custom:RemoteStashCustomData'
 'core.remote.stash.folder' = 'aiida.orm.nodes.data.remote.stash.folder:RemoteStashFolderData'
 'core.singlefile' = 'aiida.orm.nodes.data.singlefile:SinglefileData'
 'core.str' = 'aiida.orm.nodes.data.str:Str'

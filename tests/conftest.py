@@ -433,7 +433,7 @@ def profile_factory() -> Profile:
                     'database_name': kwargs.pop('database_name', name),
                     'database_username': kwargs.pop('database_username', 'user'),
                     'database_password': kwargs.pop('database_password', 'pass'),
-                    'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
+                    'repository_uri': f'file:///{os.path.join(repository_dirpath, f"repository_{name}")}',
                 },
             },
             'process_control': {

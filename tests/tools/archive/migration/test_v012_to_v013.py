@@ -23,4 +23,4 @@ def test_migrate_v12_to_v13(core_archive, migrate_from_func):
             assert values['transport_type'] in [
                 'core.local',
                 'core.ssh',
-            ], f"encountered illegal transport entry point string `{values['transport_type']}`"
+            ], f'encountered illegal transport entry point string `{values["transport_type"]}`'

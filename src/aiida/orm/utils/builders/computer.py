@@ -102,12 +102,10 @@ class ComputerBuilder:
                 mpiprocs_per_machine = int(mpiprocs_per_machine)
             except ValueError:
                 raise self.ComputerValidationError(
-                    'Invalid value provided for mpiprocs_per_machine, ' 'must be a valid integer'
+                    'Invalid value provided for mpiprocs_per_machine, must be a valid integer'
                 )
             if mpiprocs_per_machine <= 0:
-                raise self.ComputerValidationError(
-                    'Invalid value provided for mpiprocs_per_machine, ' 'must be positive'
-                )
+                raise self.ComputerValidationError('Invalid value provided for mpiprocs_per_machine, must be positive')
             computer.set_default_mpiprocs_per_machine(mpiprocs_per_machine)
 
         def_memory_per_machine = self._get_and_count('default_memory_per_machine', used)
@@ -132,7 +130,7 @@ class ComputerBuilder:
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
             raise self.ComputerValidationError(
-                f"Unknown parameters passed to the ComputerBuilder: {', '.join(sorted(passed_keys - used))}"
+                f'Unknown parameters passed to the ComputerBuilder: {", ".join(sorted(passed_keys - used))}'
             )
 
         return computer

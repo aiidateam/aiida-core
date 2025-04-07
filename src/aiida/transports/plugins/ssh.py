@@ -399,7 +399,7 @@ class SshTransport(BlockingTransport):
             self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         else:
             raise ValueError(
-                'Unknown value of the key policy, allowed values ' 'are: RejectPolicy, WarningPolicy, AutoAddPolicy'
+                'Unknown value of the key policy, allowed values are: RejectPolicy, WarningPolicy, AutoAddPolicy'
             )
 
         self._connect_args = {}
@@ -569,17 +569,17 @@ class SshTransport(BlockingTransport):
         """Return a useful string."""
         conn_info = self._machine
         try:
-            conn_info = f"{self._connect_args['username']}@{conn_info}"
+            conn_info = f'{self._connect_args["username"]}@{conn_info}'
         except KeyError:
             # No username explicitly defined: ignore
             pass
         try:
-            conn_info += f":{self._connect_args['port']}"
+            conn_info += f':{self._connect_args["port"]}'
         except KeyError:
             # No port explicitly defined: ignore
             pass
 
-        return f"{'OPEN' if self._is_open else 'CLOSED'} [{conn_info}]"
+        return f'{"OPEN" if self._is_open else "CLOSED"} [{conn_info}]'
 
     def chdir(self, path: TransportPath):
         """
@@ -1296,7 +1296,7 @@ class SshTransport(BlockingTransport):
                 self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing cp. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                "Problem executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
                     retval, stdout, stderr, command
                 )
             )
@@ -1304,7 +1304,7 @@ class SshTransport(BlockingTransport):
                 raise FileNotFoundError(f'Error while executing cp: {stderr}')
 
             raise OSError(
-                'Error while executing cp. Exit code: {}, ' "stdout: '{}', stderr: '{}', " "command: '{}'".format(
+                "Error while executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
                     retval, stdout, stderr, command
                 )
             )
@@ -1433,7 +1433,7 @@ class SshTransport(BlockingTransport):
         else:
             command_to_execute = command
 
-        self.logger.debug(f'Command to be executed: {command_to_execute[:self._MAX_EXEC_COMMAND_LOG_SIZE]}')
+        self.logger.debug(f'Command to be executed: {command_to_execute[: self._MAX_EXEC_COMMAND_LOG_SIZE]}')
 
         # Note: The default shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
@@ -1572,19 +1572,19 @@ class SshTransport(BlockingTransport):
 
         further_params = []
         if 'username' in self._connect_args:
-            further_params.append(f"-l {escape_for_bash(self._connect_args['username'])}")
+            further_params.append(f'-l {escape_for_bash(self._connect_args["username"])}')
 
         if self._connect_args.get('port'):
-            further_params.append(f"-p {self._connect_args['port']}")
+            further_params.append(f'-p {self._connect_args["port"]}')
 
         if self._connect_args.get('key_filename'):
-            further_params.append(f"-i {escape_for_bash(self._connect_args['key_filename'])}")
+            further_params.append(f'-i {escape_for_bash(self._connect_args["key_filename"])}')
 
         if self._connect_args.get('proxy_jump'):
-            further_params.append(f"-o ProxyJump={escape_for_bash(self._connect_args['proxy_jump'])}")
+            further_params.append(f'-o ProxyJump={escape_for_bash(self._connect_args["proxy_jump"])}')
 
         if self._connect_args.get('proxy_command'):
-            further_params.append(f"-o ProxyCommand={escape_for_bash(self._connect_args['proxy_command'])}")
+            further_params.append(f'-o ProxyCommand={escape_for_bash(self._connect_args["proxy_command"])}')
 
         further_params_str = ' '.join(further_params)
 

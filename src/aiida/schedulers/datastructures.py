@@ -149,7 +149,7 @@ class NodeNumberJobResource(JobResource):
                     raise ValueError(f'`{parameter}` must be an integer when specified')
 
         if kwargs:
-            raise ValueError(f"these parameters were not recognized: {', '.join(list(kwargs.keys()))}")
+            raise ValueError(f'these parameters were not recognized: {", ".join(list(kwargs.keys()))}')
 
         # At least two of the following parameters need to be defined as non-zero
         if [resources.num_machines, resources.num_mpiprocs_per_machine, resources.tot_num_mpiprocs].count(None) > 1:
@@ -238,7 +238,7 @@ class ParEnvJobResource(JobResource):
             raise ValueError('`tot_num_mpiprocs` must be greater than or equal to one.')
 
         if kwargs:
-            raise ValueError(f"these parameters were not recognized: {', '.join(list(kwargs.keys()))}")
+            raise ValueError(f'these parameters were not recognized: {", ".join(list(kwargs.keys()))}')
 
         return resources
 

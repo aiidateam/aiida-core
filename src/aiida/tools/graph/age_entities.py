@@ -125,7 +125,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
         return len(self.keyset)
 
     def __repr__(self):
-        return f"{{{','.join(map(str, self.keyset))}}}"
+        return f'{{{",".join(map(str, self.keyset))}}}'
 
     def __eq__(self, other):
         return self.keyset == other.keyset

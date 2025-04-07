@@ -375,7 +375,7 @@ class TestAutoGroups:
                 queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
                 queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups = queryb.all()
-                assert (
-                    len(all_auto_groups) == 1
-                ), 'There should be only one autogroup associated with the node just created'
+                assert len(all_auto_groups) == 1, (
+                    'There should be only one autogroup associated with the node just created'
+                )
                 assert all_auto_groups[0][0].label.startswith(autogroup_label)

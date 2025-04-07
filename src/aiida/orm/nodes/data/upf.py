@@ -264,7 +264,7 @@ def parse_upf(fname, check_filename=True, encoding='utf-8'):
     if check_filename:
         if not os.path.basename(fname).lower().startswith(element.lower()):
             raise ParsingError(
-                'Filename {0} was recognized for element ' '{1}, but the filename does not start ' 'with {1}'.format(
+                'Filename {0} was recognized for element {1}, but the filename does not start with {1}'.format(
                     fname, element
                 )
             )

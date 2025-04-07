@@ -297,7 +297,7 @@ def _resolve_futures(
         if not wait or not scheduled:
             return
 
-        LOGGER.report(f"waiting for process(es) {','.join([str(proc.pk) for proc in scheduled.values()])}")
+        LOGGER.report(f'waiting for process(es) {",".join([str(proc.pk) for proc in scheduled.values()])}')
 
         for future in concurrent.futures.as_completed(scheduled.keys(), timeout=timeout):
             process = scheduled[future]

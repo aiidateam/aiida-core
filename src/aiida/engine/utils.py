@@ -316,7 +316,7 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
     valid_process_types = ['calculation', 'work']
 
     if process_type is not None and process_type not in valid_process_types:
-        raise ValueError(f"invalid value for process_type, valid values are {', '.join(valid_process_types)}")
+        raise ValueError(f'invalid value for process_type, valid values are {", ".join(valid_process_types)}')
 
     if process_type is None:
         process_types = valid_process_types

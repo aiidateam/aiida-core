@@ -69,12 +69,12 @@ def test_input_code(aiida_profile_clean, tmp_path, aiida_localhost):
     # Check that the link is in place
     import_links = get_all_node_links()
     assert sorted(export_links) == sorted(import_links)
-    assert (
-        len(export_links) == links_count
-    ), f'Expected to find only one link from code to the calculation node before export. {len(export_links)} found.'
-    assert (
-        len(import_links) == links_count
-    ), f'Expected to find only one link from code to the calculation node after import. {len(import_links)} found.'
+    assert len(export_links) == links_count, (
+        f'Expected to find only one link from code to the calculation node before export. {len(export_links)} found.'
+    )
+    assert len(import_links) == links_count, (
+        f'Expected to find only one link from code to the calculation node after import. {len(import_links)} found.'
+    )
 
 
 def test_solo_code(aiida_profile, tmp_path, aiida_localhost):

@@ -119,7 +119,7 @@ class StashCalculation(CalcJob):
             calc_info.remote_copy_list = []
             calc_info.remote_symlink_list = []
 
-            # TODO: CREATE A RemoteStashCustomData node here and store it in the database.
+            # The stashed node is going to be created by ``execmanager``, once the job is finished.
 
         else:
             calc_info.skip_submit = True

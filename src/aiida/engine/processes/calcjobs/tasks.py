@@ -21,7 +21,7 @@ import plumpy.futures
 import plumpy.persistence
 import plumpy.process_states
 
-from aiida.common.datastructures import CalcJobState, StashMode
+from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
@@ -529,10 +529,7 @@ class Waiting(plumpy.process_states.Waiting):
                 result = self.stash(monitor_result=monitor_result)
 
             elif self._command == STASH_COMMAND:
-                if (node.get_option('stash') is not None) or (
-                    type(self.process).__name__ == 'StashCalculation'
-                    and node.get_option('stash_mode') != StashMode.CUSTOM_SCRIPT.value
-                ):
+                if node.get_option('stash') is not None:
                     await self._launch_task(task_stash_job, node, transport_queue)
 
                 result = self.retrieve(monitor_result=self._monitor_result)

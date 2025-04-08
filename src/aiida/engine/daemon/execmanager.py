@@ -470,20 +470,26 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
             stash_mode=StashMode(stash_mode),
             custom_command=command,
         )
-        if not command:
-            EXEC_LOGGER.warning('Failed to stash, no custom command specified for custom script stashing')
-            return
-        retval, stdout, stderr = await transport.exec_command_wait_async(command, workdir=source_basepath)
-        if retval == 0:
-            if stderr.strip():
+
+        if calculation.process_type != 'aiida.calculations:core.stash':
+            # Otherwise, the command is already executed via job submission.
+
+            if not command:
+                EXEC_LOGGER.warning('Failed to stash, no custom command specified for custom script stashing')
+                return
+
+            retval, stdout, stderr = await transport.exec_command_wait_async(command, workdir=source_basepath)
+            if retval == 0:
+                if stderr.strip():
+                    EXEC_LOGGER.warning(
+                        'There was nonempty stderr in the while executing'
+                        ' `metadata.options.stash.custom_command`: {stderr}'
+                    )
+            else:
                 EXEC_LOGGER.warning(
-                    'There was nonempty stderr in the while executing'
-                    ' `metadata.options.stash.custom_command`: {stderr}'
+                    f"Failed to stash. Exit code: {retval}, stdout: '{stdout}', "
+                    "stderr: '{stderr}', command: '{command}'"
                 )
-        else:
-            EXEC_LOGGER.warning(
-                f"Failed to stash. Exit code: {retval}, stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
-            )
 
         remote_stash.store()
         remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')

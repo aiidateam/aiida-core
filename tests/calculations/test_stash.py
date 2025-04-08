@@ -54,7 +54,7 @@ def test_basic(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
 
 @pytest.mark.requires_rmq
 def test_custom_script(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
-    """Test that the `StashCalculation` basic implementation."""
+    """Test basic implementation of `StashCalculation`."""
 
     source = tmp_path / 'source'
     source.mkdir()
@@ -85,9 +85,7 @@ def test_custom_script(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_
     assert calc_info.remote_copy_list == []
     assert calc_info.remote_symlink_list == []
 
-    # TODO: not able to monkeypatch the `folder` object, as it's being instantiated in another process
-    # So I'm not able to check the content of the file
-
+    # Tests here could be more sophisticated
     # with open(tmp_path / code_info.stdin_name, 'r') as handle:
     #     content = handle.read()
 

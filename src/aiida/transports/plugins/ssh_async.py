@@ -1197,7 +1197,7 @@ class AsyncSshTransport(AsyncTransport):
         if not path:
             raise OSError('Input path is an empty argument.')
 
-        if self.path_exists(path):
+        if await self.path_exists_async(path):
             await self.async_backend.chown(path, uid, gid)
         else:
             raise OSError(f'Error, path {path} does not exist')

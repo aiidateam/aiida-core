@@ -91,7 +91,7 @@ class AsyncSshTransport(AsyncTransport):
             {
                 'type': bool,
                 'default': False,
-                'prompt': 'Wheather your connection is via Multiplexing',
+                'prompt': 'Whether your connection is via Multiplexing',
                 'help': '',
                 'non_interactive_default': True,
             },

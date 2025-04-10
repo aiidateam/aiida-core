@@ -59,8 +59,8 @@ def tmp_path_local(tmp_path_factory):
         ('core.local', None),
         ('core.ssh', None),
         ('core.ssh_auto', None),
-        ('core.ssh_async', True),
-        ('core.ssh_async', False),
+        ('core.ssh_async', 'asyncssh'),
+        ('core.ssh_async', 'openssh'),
     ],
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
@@ -80,7 +80,7 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     elif request.param[0] == 'core.ssh_async':
         kwargs = {
             'machine': 'localhost',
-            'multiplexing': request.param[1],
+            'backend': request.param[1],
         }
     else:
         kwargs = {}

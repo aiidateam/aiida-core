@@ -17,12 +17,13 @@ import pathlib
 import typing as t
 
 from aiida.common import exceptions
+from aiida.common.types import PathType
 
 from .data import Data
 
 __all__ = ('SinglefileData',)
 
-FilePath = t.Union[str, pathlib.PurePath]
+FilePath = PathType
 
 
 class SinglefileData(Data):

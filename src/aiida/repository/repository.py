@@ -7,6 +7,8 @@ from typing import Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, Tupl
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check
 
+from aiida.common.types import PathType
+
 from .backend import AbstractRepositoryBackend, SandboxRepositoryBackend
 from .common import File, FileType
 
@@ -480,7 +482,7 @@ class Repository:
 
         yield path, dirnames, filenames
 
-    def copy_tree(self, target: Union[str, pathlib.Path], path: Optional[FilePath] = None) -> None:
+    def copy_tree(self, target: PathType, path: Optional[PathType] = None) -> None:
         """Copy the contents of the entire node repository to another location on the local file system.
 
         .. note:: If ``path`` is specified, only its contents are copied, and the relative path with respect to the

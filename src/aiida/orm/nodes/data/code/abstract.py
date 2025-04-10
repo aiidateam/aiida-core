@@ -104,20 +104,20 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             ),
         )
 
-        @field_validator('label')
-        @classmethod
-        def validate_label_uniqueness(cls, value: str) -> str:
-            """Validate that the label does not already exist."""
-            from aiida.orm import load_code
+        # @field_validator('label')
+        # @classmethod
+        # def validate_label_uniqueness(cls, value: str) -> str:
+        #     """Validate that the label does not already exist."""
+        #     from aiida.orm import load_code
 
-            try:
-                load_code(value)
-            except exceptions.NotExistent:
-                return value
-            except exceptions.MultipleObjectsError as exception:
-                raise ValueError(f'Multiple codes with the label `{value}` already exist.') from exception
-            else:
-                raise ValueError(f'A code with the label `{value}` already exists.')
+        #     try:
+        #         load_code(value)
+        #     except exceptions.NotExistent:
+        #         return value
+        #     except exceptions.MultipleObjectsError as exception:
+        #         raise ValueError(f'Multiple codes with the label `{value}` already exist.') from exception
+        #     else:
+        #         raise ValueError(f'A code with the label `{value}` already exists.')
 
     def __init__(
         self,

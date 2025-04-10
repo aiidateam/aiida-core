@@ -15,8 +15,6 @@ import functools
 import pathlib
 import typing as t
 
-from pydantic import field_validator
-
 from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder

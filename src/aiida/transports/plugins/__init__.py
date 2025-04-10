@@ -12,8 +12,8 @@
 
 # fmt: off
 
+from .async_backend import *
 from .ssh import *
-from .ssh_async_backend import *
 
 __all__ = (
     'AsyncSSHwrapper',

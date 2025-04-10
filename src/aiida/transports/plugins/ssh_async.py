@@ -42,6 +42,12 @@ def validate_script(ctx, param, value: str):
     return value
 
 
+def validate_backend(ctx, param, value: str):
+    if value not in ['asyncssh', 'openssh']:
+        raise click.BadParameter(f'{value} is not a valid backend, choose either `asyncssh` or `openssh`')
+    return value
+
+
 class AsyncSshTransport(AsyncTransport):
     """Transport plugin via SSH, asynchronously."""
 
@@ -87,13 +93,16 @@ class AsyncSshTransport(AsyncTransport):
             },
         ),
         (
-            'multiplexing',
+            'backend',
             {
-                'type': bool,
-                'default': False,
-                'prompt': 'Whether your connection is via Multiplexing',
-                'help': '',
+                'type': str,
+                'default': 'asyncssh',
+                'prompt': 'Type of async backend to use, `asyncssh` or `openssh`',
+                'help': '`openssh` uses the `ssh` command line tool to connect to the remote machine,'
+                'e.g. it is useful in case of multiplexing. '
+                'The `asyncssh` backend is the default and is recommended for most use cases.',
                 'non_interactive_default': True,
+                'callback': validate_backend,
             },
         ),
     ]
@@ -119,12 +128,12 @@ class AsyncSshTransport(AsyncTransport):
         self.machine = kwargs.pop('machine_or_host', kwargs.pop('machine'))
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
-        if kwargs.pop('multiplexing', False):
-            from .ssh_async_backend import OpenSSHwrapper
+        if kwargs.pop('backend') == 'openssh':
+            from .async_backend import OpenSSHwrapper
 
             self.async_backend = OpenSSHwrapper(self.machine, self.logger, self._bash_command_str)
         else:
-            from .ssh_async_backend import AsyncSSHwrapper
+            from .async_backend import AsyncSSHwrapper
 
             self.async_backend = AsyncSSHwrapper(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
 

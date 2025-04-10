@@ -38,6 +38,8 @@ from .legacy import Code
 __all__ = ('PortableCode',)
 _LOGGER = logging.getLogger(__name__)
 
+FilePath = t.Union[str, pathlib.PurePath]
+
 
 class PortableCode(Code):
     """Data plugin representing an executable code stored in AiiDA's storage."""
@@ -49,14 +51,14 @@ class PortableCode(Code):
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
 
-        filepath_files: t.Union[str, pathlib.Path] = MetadataField(
+        filepath_files: FilePath = MetadataField(
             ...,
             title='Code directory',
             description='Filepath to directory containing code files.',
             short_name='-F',
             priority=2,
         )
-        filepath_executable: str = MetadataField(
+        filepath_executable: FilePath = MetadataField(
             ...,
             title='Filepath executable',
             description='Relative filepath of executable with directory of code files.',

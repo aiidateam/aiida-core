@@ -15,17 +15,17 @@ import os
 import re
 import sys
 from collections import OrderedDict
-from aiida.common.types import PathType
+from pathlib import Path, PurePosixPath
 from typing import Optional, Union
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
+from aiida.common.types import PathType
 
 __all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
 TransportPath = PathType
-
 
 def validate_positive_number(ctx, param, value):
     """Validate that the number passed to this parameter is a positive number.

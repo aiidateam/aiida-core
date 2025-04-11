@@ -1581,9 +1581,6 @@ class TestManager:
     def init_db(self, backend):
         self.backend = backend
 
-    # This fails with sqlite with:
-    # sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such function: date_trunc
-    @pytest.mark.requires_psql
     def test_statistics(self):
         """Test if the statistics query works properly.
 
@@ -1620,9 +1617,6 @@ class TestManager:
 
         assert new_db_statistics == expected_db_statistics
 
-    # This fails with sqlite with:
-    # sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such function: date_trunc
-    @pytest.mark.requires_psql
     def test_statistics_default_class(self):
         """Test if the statistics query works properly.
 

@@ -88,6 +88,7 @@ __all__ = (
     'QbFields',
     'QueryBuilder',
     'RemoteData',
+    'RemoteStashCompressedData',
     'RemoteStashData',
     'RemoteStashFolderData',
     'SinglefileData',

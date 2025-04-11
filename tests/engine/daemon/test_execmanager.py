@@ -13,7 +13,7 @@ import pathlib
 
 import pytest
 
-from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation
+from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, StashMode
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.manage import get_manager
@@ -624,3 +624,122 @@ def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_info, t
                 fixture_sandbox,
             )
         )
+
+
+@pytest.mark.parametrize(
+    'file_hierarchy',
+    [{'aiida.out': 'out', 'aiida.in': 'in', '_aiidasubmit.sh': 'script', 'folder': {'1': '1', '2': '2', '3': '3'}}],
+)
+@pytest.mark.parametrize(
+    'stash_mode',
+    [
+        StashMode.COPY.value,
+        StashMode.COMPRESS_TAR.value,
+        StashMode.COMPRESS_TARBZ2.value,
+        StashMode.COMPRESS_TARGZ.value,
+        StashMode.COMPRESS_TARXZ.value,
+    ],
+)
+def test_stashing(
+    generate_calcjob_node,
+    stash_mode,
+    file_hierarchy,
+    create_file_hierarchy,
+    serialize_file_hierarchy,
+    tmp_path,
+    monkeypatch,
+    caplog,
+):
+    """Test the stashing of files."""
+    import logging
+
+    computer_wdir = tmp_path / 'aiida'
+    computer_wdir.mkdir()
+    dest_path = tmp_path / 'stash_path'
+    dest_path.mkdir()
+
+    node = generate_calcjob_node()
+    uuid = node.uuid
+    node_workdir = computer_wdir / uuid[:2] / uuid[2:4] / uuid[4:]
+    pathlib.Path(node_workdir).mkdir(parents=True)
+    node.set_remote_workdir(str(node_workdir))
+    create_file_hierarchy(file_hierarchy, node_workdir)
+
+    node.set_option(
+        'stash',
+        {
+            'source_list': ['*'],
+            'target_base': str(dest_path),
+            'stash_mode': stash_mode,
+            'dereference': True,  # ignored in case of COPY
+        },
+    )
+
+    runner = get_manager().get_runner()
+
+    def mock_get_authinfo(*args, **kwargs):
+        class MockAuthInfo:
+            def get_workdir(self, *args, **kwargs):
+                return str(computer_wdir)
+
+        return MockAuthInfo()
+
+    monkeypatch.setattr(node, 'get_authinfo', mock_get_authinfo)
+
+    ## 1) test the basic functionality
+    # various transport plugins are tested in `test_all_plugins.py` to check the full functionality
+    # of `transport.compress` and `transport.extract`.
+    # Here we using local transport we test basic functionality of `stash_calculation`.
+
+    with LocalTransport() as transport:
+        runner.loop.run_until_complete(execmanager.stash_calculation(node, transport))
+
+    if stash_mode != StashMode.COPY.value:
+        # more detailed test on integrity of the zip file is in `test_all_plugins.py`
+        assert pathlib.Path(str(dest_path / node.uuid) + '.' + stash_mode).is_file()
+
+        with LocalTransport() as transport:
+            transport.extract(str(dest_path / node.uuid) + '.' + stash_mode, dest_path / 'extracted')
+        base_path = dest_path / 'extracted'
+
+    else:
+        assert pathlib.Path(dest_path).is_dir()
+        base_path = dest_path
+
+    serialize_file_hierarchy(base_path, read_bytes=True) == serialize_file_hierarchy(computer_wdir, read_bytes=True)
+
+    ## 2) test Error handling
+    dest_path_error = tmp_path / 'stash_path_error'
+    dest_path_error.mkdir()
+    node.set_option(
+        'stash',
+        {
+            'source_list': ['*'],
+            'target_base': str(dest_path_error),
+            'stash_mode': stash_mode,
+            'dereference': True,  # ignored in case of COPY
+        },
+    )
+
+    with LocalTransport() as transport:
+        if stash_mode == StashMode.COPY.value:
+
+            async def mock_copy_async(*args, **kwargs):
+                raise OSError('copy mocked error')
+
+            monkeypatch.setattr(transport, 'copy_async', mock_copy_async)
+        else:
+
+            async def mock_compress_async(*args, **kwargs):
+                raise OSError('compress mocked error')
+
+            monkeypatch.setattr(transport, 'compress_async', mock_compress_async)
+
+        # no error should be raised
+        # the error should only be logged to EXEC_LOGGER.warning and exit with 0
+        with caplog.at_level(logging.WARNING):
+            runner.loop.run_until_complete(execmanager.stash_calculation(node, transport))
+            assert any('failed to stash' in message for message in caplog.messages)
+
+    # Ensure no files were created in the destination path after the error
+    assert not any(dest_path_error.iterdir())

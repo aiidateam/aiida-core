@@ -1679,14 +1679,27 @@ class StructureData(Data):
 
         cell = self.cell
         lengths = self.cell_lengths
-        return [
-            float(numpy.arccos(x) / numpy.pi * 180)
-            for x in [
-                numpy.vdot(cell[1], cell[2]) / lengths[1] / lengths[2],
-                numpy.vdot(cell[0], cell[2]) / lengths[0] / lengths[2],
-                numpy.vdot(cell[0], cell[1]) / lengths[0] / lengths[1],
-            ]
-        ]
+
+        # Check for zero-length vectors
+        if all(length == 0.0 for length in lengths):
+            raise ValueError('Cannot calculate angles for a cell with all zero-length vectors')
+
+        angles = []
+
+        # Calculate angles, using None for undefined angles involving zero-length vectors
+        angle_indices = [(1, 2, 0), (0, 2, 1), (0, 1, 2)]  # (vec1, vec2, angle_position)
+
+        for i, j, k in angle_indices:
+            if lengths[i] == 0.0 or lengths[j] == 0.0:
+                angles.append(None)
+            else:
+                dot_product = numpy.vdot(cell[i], cell[j])
+                cos_angle = dot_product / (lengths[i] * lengths[j])
+                # Handle numerical issues where |cos_angle| might slightly exceed 1
+                cos_angle = max(min(cos_angle, 1.0), -1.0)
+                angles.append(numpy.degrees(numpy.arccos(cos_angle)))
+
+        return angles
 
     @cell_angles.setter
     def cell_angles(self, value):

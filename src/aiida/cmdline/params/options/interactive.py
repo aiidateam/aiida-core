@@ -54,6 +54,7 @@ class InteractiveOption(ConditionalOption):
         :param prompt_fn: callable(ctx) -> Bool, returns True if the option should be prompted for in interactive mode.
         :param contextual_default: An optional callback function to get a default which is passed the click context.
         """
+        self._aiida_is_bool_str = kwargs.pop('_aiida_is_bool_str', False)  # Track if this is a boolean-like string
         super().__init__(param_decls=param_decls, **kwargs)
         self._prompt_fn = prompt_fn
         self._contextual_default = contextual_default
@@ -111,10 +112,13 @@ class InteractiveOption(ConditionalOption):
             return self.prompt_for_value(ctx)
 
         if value == self.CHARACTER_IGNORE_DEFAULT and source is click.core.ParameterSource.PROMPT:
-            # This means the user does not want to set a specific value for this option, so the ``!`` character is
-            # translated to ``None`` and processed as normal. If the option is required, a validation error will be
-            # raised further down below, forcing the user to specify a valid value.
             value = None
+
+        if self._aiida_is_bool_str:  # Handle boolean-like string inputs
+            if value.lower() in ('y', 'yes', 'true', '1'):
+                return True
+            if value.lower() in ('n', 'no', 'false', '0'):
+                return False
 
         try:
             return super().process_value(ctx, value)

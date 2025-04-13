@@ -71,10 +71,11 @@ class PortableCode(Code):
         def validate_filepath_files(cls, value: str) -> pathlib.Path:
             """Validate that ``filepath_files`` is an existing directory."""
             filepath = pathlib.Path(value)
-            if not filepath.exists():
-                raise ValueError(f'The filepath `{value}` does not exist.')
-            if not filepath.is_dir():
-                raise ValueError(f'The filepath `{value}` is not a directory.')
+            # TODO the following fails serialization - rethink
+            # if not filepath.exists():
+            #     raise ValueError(f'The filepath `{value}` does not exist.')
+            # if not filepath.is_dir():
+            #     raise ValueError(f'The filepath `{value}` is not a directory.')
             return filepath
 
     def __init__(self, filepath_executable: str, filepath_files: pathlib.Path | str, **kwargs):

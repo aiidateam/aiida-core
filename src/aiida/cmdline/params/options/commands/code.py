@@ -76,7 +76,7 @@ ON_COMPUTER = OverridableOption(
     prompt='Installed on target computer?',
     help='Whether the code is installed on the target computer, or should be copied to the target computer each time '
     'from a local path.',
-    _aiida_is_bool_str=True  # Add custom marker attribute to indicate boolean-like behavior
+    _aiida_is_bool_str=True,  # Add custom marker attribute to indicate boolean-like behavior
 )
 
 REMOTE_ABS_PATH = OverridableOption(

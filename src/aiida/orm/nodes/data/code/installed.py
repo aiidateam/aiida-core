@@ -60,11 +60,12 @@ class InstalledCode(Code):
             priority=1,
         )
 
-        @field_validator('label')
-        @classmethod
-        def validate_label_uniqueness(cls, value: str) -> str:
-            """Override the validator for the ``label`` of the base class since uniqueness is defined on full label."""
-            return value
+        # @field_validator('label')
+        # @classmethod
+        # def validate_label_uniqueness(cls, value: str) -> str:
+        #     """Override the validator for the ``label`` of the base class since uniqueness is defined on full label.
+        #     """
+        #     return value
 
         @field_validator('computer')
         @classmethod
@@ -81,7 +82,7 @@ class InstalledCode(Code):
         def serialize_computer(self, computer: Computer, _info):
             return computer.label
 
-        # TODO the following fails serialization - rethink
+        # TODO the following fails serialization - see https://github.com/aiidateam/aiida-core/issues/6821
         # @model_validator(mode='after')  # type: ignore[misc]
         # def validate_full_label_uniqueness(self) -> AbstractCode.Model:
         #     """Validate that the full label does not already exist."""

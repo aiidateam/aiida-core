@@ -71,7 +71,7 @@ class PortableCode(Code):
         def validate_filepath_files(cls, value: str) -> pathlib.Path:
             """Validate that ``filepath_files`` is an existing directory."""
             filepath = pathlib.Path(value)
-            # TODO the following fails serialization - rethink
+            # TODO the following fails serialization - see https://github.com/aiidateam/aiida-core/issues/6821
             # if not filepath.exists():
             #     raise ValueError(f'The filepath `{value}` does not exist.')
             # if not filepath.is_dir():

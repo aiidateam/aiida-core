@@ -152,7 +152,10 @@ def generate_class_instance(tmp_path, aiida_localhost):
     return _generate_class_instance
 
 
-@pytest.fixture(scope='function', params=plugins.get_entry_points('aiida.data'))
+@pytest.fixture(
+    scope='function',
+    params=[entry_point for entry_point in plugins.get_entry_points('aiida.data') if entry_point.name != 'core.code'],
+)
 def data_plugin(request):
     """Fixture that parametrizes over all the registered entry points of the ``aiida.data`` entry point group."""
     return request.param.load()

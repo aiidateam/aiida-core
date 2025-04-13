@@ -102,7 +102,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             ),
         )
 
-        # TODO the following fails serialization - rethink
+        # TODO the following fails serialization - see https://github.com/aiidateam/aiida-core/issues/6821
         # @field_validator('label')
         # @classmethod
         # def validate_label_uniqueness(cls, value: str) -> str:

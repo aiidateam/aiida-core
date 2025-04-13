@@ -102,6 +102,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             ),
         )
 
+        # TODO the following fails serialization - rethink
         # @field_validator('label')
         # @classmethod
         # def validate_label_uniqueness(cls, value: str) -> str:

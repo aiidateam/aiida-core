@@ -81,6 +81,7 @@ class InstalledCode(Code):
         def serialize_computer(self, computer: Computer, _info):
             return computer.label
 
+        # TODO the following fails serialization - rethink
         # @model_validator(mode='after')  # type: ignore[misc]
         # def validate_full_label_uniqueness(self) -> AbstractCode.Model:
         #     """Validate that the full label does not already exist."""

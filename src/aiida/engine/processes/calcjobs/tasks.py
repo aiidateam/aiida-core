@@ -481,7 +481,30 @@ class Waiting(plumpy.process_states.Waiting):
         self._killing = None
 
     async def execute(self) -> plumpy.process_states.State:  # type: ignore[override]
-        """Override the execute coroutine of the base `Waiting` state."""
+        """Override the execute coroutine of the base `Waiting` state.
+        Using the plumpy state machine the waiting state is repeatedly re-entered with different commands.
+        The waiting state is not always the same instance, it could be re-instantiated when re-entering this method,
+        therefor any newly created attribute in each command block
+        (e.g. `SUBMIT_COMMAND`, `UPLOAD_COMMAND`, etc.) will be lost, and is not usable in other blocks.
+        The advantage of this design, is that the sequence is interruptable,
+        meaning, the process can potentially come back and start from where it left off.
+
+        The overall sequence is as follows:
+        in case `skip_submit` is True:
+
+        UPLOAD -> STASH -> RETRIEVE
+        |   ^     |   ^     |   ^
+        v   |     v   |     v   |
+        .. ..     .. ..     .. ..
+
+        otherwise:
+
+        UPLOAD -> SUBMIT -> UPDATE -> STASH -> RETRIEVE
+        |   ^     |   ^     |   ^     |   ^     |   ^
+        v   |     v   |     v   |     v   |     v   |
+        .. ..     .. ..     .. ..     .. ..     .. ..
+        """
+
         node = self.process.node
         transport_queue = self.process.runner.transport
         result: plumpy.process_states.State = self
@@ -529,7 +552,7 @@ class Waiting(plumpy.process_states.Waiting):
                 result = self.stash(monitor_result=monitor_result)
 
             elif self._command == STASH_COMMAND:
-                if (node.get_option('stash') is not None) or (type(self.process).__name__ == 'StashCalculation'):
+                if node.get_option('stash') is not None:
                     await self._launch_task(task_stash_job, node, transport_queue)
                 result = self.retrieve(monitor_result=self._monitor_result)
 

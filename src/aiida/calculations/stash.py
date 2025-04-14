@@ -50,7 +50,7 @@ class StashCalculation(CalcJob):
 
         spec.input(
             'source_node',
-            valid_type=(orm.RemoteData, orm.SinglefileData),
+            valid_type=(orm.RemoteData, orm.SinglefileData, orm.FolderData),
             required=True,
             help='',
         )

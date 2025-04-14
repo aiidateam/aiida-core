@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing as t
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_core import PydanticUndefined
@@ -34,7 +35,7 @@ def MetadataField(  # noqa: N802
     short_name: str | None = None,
     option_cls: t.Any | None = None,
     orm_class: type['Entity'] | str | None = None,
-    orm_to_model: t.Callable[['Entity'], t.Any] | None = None,
+    orm_to_model: t.Callable[['Entity', Path], t.Any] | None = None,
     model_to_orm: t.Callable[['BaseModel'], t.Any] | None = None,
     exclude_to_orm: bool = False,
     exclude_from_cli: bool = False,

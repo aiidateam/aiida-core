@@ -116,7 +116,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             description='The group owner',
             is_attribute=False,
             orm_class='core.user',
-            orm_to_model=lambda group: group.user.pk,  # type: ignore[attr-defined]
+            orm_to_model=lambda group, _: group.user.pk,  # type: ignore[attr-defined]
         )
         time: Optional[datetime.datetime] = MetadataField(
             description='The creation time of the node', is_attribute=False
@@ -127,7 +127,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             description='The group extras',
             is_attribute=False,
             is_subscriptable=True,
-            orm_to_model=lambda group: group.base.extras.all,  # type: ignore[attr-defined]
+            orm_to_model=lambda group, _: group.base.extras.all,  # type: ignore[attr-defined]
         )
 
     _CLS_COLLECTION = GroupCollection

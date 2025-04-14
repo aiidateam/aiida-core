@@ -26,6 +26,30 @@ from aiida.orm.nodes.data import (
     StructureData,
 )
 
+orms_to_test = (
+    AuthInfo,
+    Comment,
+    Computer,
+    Group,
+    Log,
+    User,
+    SinglefileData,
+    ArrayData,
+    Bool,
+    CifData,
+    Data,
+    Dict,
+    EnumData,
+    Float,
+    FolderData,
+    Int,
+    JsonableData,
+    List,
+    SinglefileData,
+    Str,
+    StructureData,
+)
+
 
 class DummyEnum(enum.Enum):
     """Dummy enum for testing."""
@@ -116,32 +140,10 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
 
 @pytest.mark.parametrize(
     'required_arguments',
-    (
-        AuthInfo,
-        Comment,
-        Computer,
-        Group,
-        Log,
-        User,
-        SinglefileData,
-        ArrayData,
-        Bool,
-        CifData,
-        Data,
-        Dict,
-        EnumData,
-        Float,
-        FolderData,
-        Int,
-        JsonableData,
-        List,
-        SinglefileData,
-        Str,
-        StructureData,
-    ),
+    orms_to_test,
     indirect=True,
 )
-def test_roundtrip(required_arguments):
+def test_roundtrip(required_arguments, tmp_path):
     cls, kwargs = required_arguments
 
     # Construct instance of the entity class
@@ -149,18 +151,18 @@ def test_roundtrip(required_arguments):
     assert isinstance(entity, cls)
 
     # Get the model instance from the entity instance
-    model = entity.to_model()
+    model = entity._to_model(tmp_path)
     assert isinstance(model, BaseModel)
 
     # Reconstruct the entity instance from the model instance
-    roundtrip = cls.from_model(model)
+    roundtrip = cls._from_model(model)
     assert isinstance(roundtrip, cls)
 
     # Get the model instance again from the reconstructed entity and check that the fields that would be passed to the
     # ORM entity constructor are identical of the original model. The ``model_to_orm_field_values`` excludes values of
     # fields that define ``exclude_to_orm=True`` because these can change during roundtrips. This because these
     # typically correspond to entity fields that have defaults set on the database level, e.g., UUIDs.
-    roundtrip_model = roundtrip.to_model()
+    roundtrip_model = roundtrip._to_model(tmp_path)
     original_field_values = cls.model_to_orm_field_values(model)
 
     for key, value in cls.model_to_orm_field_values(roundtrip_model).items():
@@ -171,3 +173,20 @@ def test_roundtrip(required_arguments):
                 assert np.array_equal(array, original_field_values[key][array_name])
         else:
             assert value == original_field_values[key]
+
+
+@pytest.mark.parametrize(
+    'required_arguments',
+    orms_to_test,
+    indirect=True,
+)
+def test_roundtrip_serialization(required_arguments, tmp_path):
+    cls, kwargs = required_arguments
+
+    # Construct instance of the entity class
+    entity = cls(**kwargs)
+    assert isinstance(entity, cls)
+
+    # Get the model instance from the entity instance
+    serialized_entity = entity.serialize(tmp_path)
+    entity.from_serialized(**serialized_entity)

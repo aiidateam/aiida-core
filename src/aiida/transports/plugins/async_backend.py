@@ -60,7 +60,7 @@ class BasicAdapter:
         :param dereference: Whether to follow symlinks
         :param preserve: Whether to preserve the file attributes
         :param recursive: Whether to copy directories recursively.
-            If `remotepath` is a file, set this to `False`, `True` otherwise.
+        If `remotepath` is a file, set this to `False`, `True` otherwise.
 
         :raises OSError: If failed for whatever reason
         """
@@ -73,7 +73,7 @@ class BasicAdapter:
         :param dereference: Whether to follow symlinks
         :param preserve: Whether to preserve the file attributes
         :param recursive: Whether to copy directories recursively.
-            If `localpath` is a file, set this to `False`, `True` otherwise.
+        If `localpath` is a file, set this to `False`, `True` otherwise.
 
         :raises OSError: If failed for whatever reason
         """
@@ -202,7 +202,7 @@ class BasicAdapter:
         :param remotedestination: The destination path on the remote machine
         :param dereference: Whether to follow symlinks
         :param recursive: Whether to copy directories recursively.
-            If `remotesource` is a file, set this to `False`, `True` otherwise.
+        If `remotesource` is a file, set this to `False`, `True` otherwise.
         :param preserve: Whether to preserve the file attributes
 
         :raises OSError: If failed for whatever reason

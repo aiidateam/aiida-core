@@ -6,8 +6,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-""""""
+"""
+This module instruct a `BasicAdapter` class that backends `AsyncSshTransport`.
+It also provides two implementation classes: `AsyncSSH` and `OpenSSH`, which are used to
+interact with remote machines over SSH.
 
+The `AsyncSSH` class uses the `asyncssh` library to execute commands and transfer files,
+while the `OpenSSH` class uses the `ssh` command line client.
+"""
+
+import abc
 import asyncio
 import logging
 from typing import Optional
@@ -21,18 +29,194 @@ from aiida.transports.transport import (
     has_magic,
 )
 
-__all__ = ('AsyncSSHwrapper', 'OpenSSHwrapper')
+__all__ = ('AsyncSSH', 'OpenSSH')
 
 
-class AsyncSSHwrapper:
-    """A backend class that uses asyncssh to execute commands and transfer files.
-    This calss is not part of the public api and should not be used directly.
+class BasicAdapter:
+    """
+    This is a base class for the backend adaptors of `AsyncSshTransport` class.
+    It defines the interface for the methods that need to be implemented by the subclasses.
+    Note: Subclasses should not be part of the public API and should not be used directly.
     """
 
     def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
         self.bash_command = bash_command + '-c '
         self.machine = machine
         self.logger = logger
+
+    @abc.abstractmethod
+    async def open(self):
+        """Open the connection"""
+
+    @abc.abstractmethod
+    async def close(self):
+        """Close the connection"""
+
+    @abc.abstractmethod
+    async def get(self, remotepath: str, localpath: str, dereference: bool, preserve: bool, recursive: bool):
+        """Get a file or directory from the remote machine.
+        :param remotepath: The path to the file or directory on the remote machine
+        :param localpath: The path to the file or directory on the local machine
+        :param dereference: Whether to follow symlinks
+        :param preserve: Whether to preserve the file attributes
+        :param recursive: Whether to copy directories recursively.
+            If `remotepath` is a file, set this to `False`, `True` otherwise.
+
+        :raises OSError: If failed for whatever reason
+        """
+
+    @abc.abstractmethod
+    async def put(self, localpath: str, remotepath: str, dereference: bool, preserve: bool, recursive: bool):
+        """Put a file or directory on the remote machine.
+        :param localpath: The path to the file or directory on the local machine
+        :param remotepath: The path to the file or directory on the remote machine
+        :param dereference: Whether to follow symlinks
+        :param preserve: Whether to preserve the file attributes
+        :param recursive: Whether to copy directories recursively.
+            If `localpath` is a file, set this to `False`, `True` otherwise.
+
+        :raises OSError: If failed for whatever reason
+        """
+
+    @abc.abstractmethod
+    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[int] = None):
+        """Run a command on the remote machine.
+        :param command: The command to run
+        :param stdin: The input to send to the command
+        :param timeout: The timeout in seconds
+        :return: The return code, str(stdout), and str(stderr)
+        """
+
+    @abc.abstractmethod
+    async def lstat(self, path: str):
+        """Get the stat of a file or directory.
+        :param path: The path to the file or directory
+        :return: An instance of `Stat` class
+        """
+
+    @abc.abstractmethod
+    async def isdir(self, path: str):
+        """Check if a path is a directory."""
+
+    @abc.abstractmethod
+    async def isfile(self, path: str):
+        """Check if a path is a file."""
+
+    @abc.abstractmethod
+    async def listdir(self, path: str):
+        """List the contents of a directory.
+        :param path: The path to the directory
+        :return: A list of file and directory names
+        """
+
+    @abc.abstractmethod
+    async def mkdir(self, path: str, exist_ok: bool = False, parents: bool = False):
+        """Create a directory.
+        :param path: The path to the directory
+        :param exist_ok: If `True`, do not raise an error if the directory already exists
+        :param parents: If `True`, create parent directories if they do not exist
+        """
+
+    @abc.abstractmethod
+    async def remove(self, path: str):
+        """Remove a file.
+        :param path: The path to the file.
+        :raises OSError: If the path is a directory.
+        """
+
+    @abc.abstractmethod
+    async def rename(self, oldpath: str, newpath: str):
+        """Rename a file or directory.
+        :param oldpath: The old path and name
+        :param newpath: The new path and name
+        """
+
+    @abc.abstractmethod
+    async def rmdir(self, path: str):
+        """Remove an empty directory.
+        :param path: The path to the directory
+
+        :raises OSError: If the directory is not empty.
+        """
+
+    @abc.abstractmethod
+    async def rmtree(self, path: str):
+        """Remove a directory and all its contents.
+        :param path: The path to the directory
+
+        :raises OSError: If it fails for whatever reason.
+        """
+
+    @abc.abstractmethod
+    async def path_exists(self, path: str):
+        """Check if a path exists.
+        :param path: The path to check
+        :return: `True` if the path exists, `False` otherwise
+        """
+
+    @abc.abstractmethod
+    async def symlink(self, source: str, destination: str):
+        """Create a single link from source to destination.
+        No magic is allowed in source or destination.
+        :param source: The source path
+        :param destination: The destination path
+        """
+
+    @abc.abstractmethod
+    async def glob(self, path: str):
+        """Return a list of files and directories matching the glob pattern.
+        :param path: A path potentially containing the glob pattern
+
+        :return: A list of matching files and directories
+
+        :raises OSError: If the path does not exist or no matching files/folders are found.
+        """
+
+    @abc.abstractmethod
+    async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
+        """Change the permissions of a file or directory.
+        :param path: The path to the file or directory
+        :param mode: Th permissions to set (An integer number base 10 -- not octal!)
+        :param follow_symlinks: If `True`, change the permissions of the target of a symlink
+        """
+
+    @abc.abstractmethod
+    async def chown(self, path: str, uid: int, gid: int):
+        """Change the ownership of a file or directory.
+        :param path: The path to the file or directory
+        :param uid: The user ID to set
+        :param gid: The group ID to set
+        """
+
+    @abc.abstractmethod
+    async def copy(
+        self,
+        remotesource: str,
+        remotedestination: str,
+        dereference: bool,
+        recursive: bool,
+        preserve: bool,
+    ):
+        """Copy a file or directory from one location to another.
+        :param remotesource: The source path on the remote machine
+        :param remotedestination: The destination path on the remote machine
+        :param dereference: Whether to follow symlinks
+        :param recursive: Whether to copy directories recursively.
+            If `remotesource` is a file, set this to `False`, `True` otherwise.
+        :param preserve: Whether to preserve the file attributes
+
+        :raises OSError: If failed for whatever reason
+        """
+
+
+class AsyncSSH(BasicAdapter):
+    """A backend class that uses asyncssh to execute commands and transfer files.
+    This class is not part of the public api and should not be used directly.
+    Note: This class is not part of the public API and should not be used directly.
+    """
+
+    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
+        super().__init__(machine, logger, bash_command)
 
     async def open(self):
         self._conn = await asyncssh.connect(self.machine)
@@ -107,9 +291,6 @@ class AsyncSSHwrapper:
                     raise FileExistsError(f'Directory already exists: {path}')
             else:
                 raise TransportInternalError(f'Error while creating directory {path}: {exc}')
-
-    async def makedirs(self, path: str, exist_ok: bool = False):
-        await self.mkdir(path, exist_ok=exist_ok, parents=True)
 
     async def remove(self, path: str):
         # TODO: check if asyncssh does return SFTPFileIsADirectory in this case
@@ -249,15 +430,14 @@ class AsyncSSHwrapper:
                 await _exec_cp(cp_exe, cp_flags, remotesource, remotedestination)
 
 
-class OpenSSHwrapper:
+class OpenSSH(BasicAdapter):
     """A backend class that executes OpenSSH commands directly in a shell.
-    This calss is not part of the public api and should not be used directly.
+    This class is not part of the public api and should not be used directly.
+    Note: This class is not part of the public API and should not be used directly.
     """
 
     def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
-        self.bash_command = bash_command + '-c '
-        self.machine = machine
-        self.logger = logger
+        super().__init__(machine, logger, bash_command)
 
     async def openssh_execute(self, commands, stdin: Optional[str] = None, timeout: Optional[float] = None):
         """
@@ -312,9 +492,6 @@ class OpenSSHwrapper:
                     raise FileExistsError(f'Directory already exists: {path}')
             else:
                 raise OSError(f'Failed to create directory: {path}')
-
-    async def makedirs(self, path: str, exist_ok: bool = False):
-        await self.mkdir(path, exist_ok=exist_ok, parents=True)
 
     async def chown(self, path: str, uid: int, gid: int) -> None:
         commands = self.ssh_command_generator(f'chown {uid}:{gid} {path}')
@@ -423,9 +600,8 @@ class OpenSSHwrapper:
         return Stat(*stdout.split())
 
     async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[float] = None):
-        # not sure if sending the entire command as a single string is a good idea
+        # Not sure if sending the entire command as a single string is a good idea
         # This is a hack to escape the $ character in the stdin
-        # TODO: do it elegantly
         command = command.replace('$', r'\$')
         command = command.replace('\\$', r'\$')
         commands = self.ssh_command_generator(command)
@@ -439,7 +615,7 @@ class OpenSSHwrapper:
             options.append('-p')
         if dereference:
             # options.append("-L")
-            # syminks has to resolved manually
+            # symlinks has to resolved manually
             pass
         if recursive:
             options.append('-r')
@@ -456,7 +632,7 @@ class OpenSSHwrapper:
             options.append('-p')
         if dereference:
             # options.append("-L")
-            # syminks has to resolved manually
+            # symlinks has to resolved manually
             pass
         if recursive:
             options.append('-r')
@@ -486,7 +662,7 @@ class OpenSSHwrapper:
             options.append('-p')
         if dereference:
             # options.append("-L")
-            # syminks has to resolved manually
+            # symlinks has to resolved manually
             pass
         if recursive:
             options.append('-r')

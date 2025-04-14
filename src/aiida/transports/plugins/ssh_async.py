@@ -129,13 +129,13 @@ class AsyncSshTransport(AsyncTransport):
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
         if kwargs.pop('backend') == 'openssh':
-            from .async_backend import OpenSSHwrapper
+            from .async_backend import OpenSSH
 
-            self.async_backend = OpenSSHwrapper(self.machine, self.logger, self._bash_command_str)
+            self.async_backend = OpenSSH(self.machine, self.logger, self._bash_command_str)
         else:
-            from .async_backend import AsyncSSHwrapper
+            from .async_backend import AsyncSSH
 
-            self.async_backend = AsyncSSHwrapper(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
+            self.async_backend = AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
 
         self._concurrent_io = 0
 
@@ -1012,7 +1012,7 @@ class AsyncSshTransport(AsyncTransport):
         """
         path = str(path)
         try:
-            await self.async_backend.makedirs(path=path, exist_ok=ignore_existing)
+            await self.async_backend.mkdir(path=path, exist_ok=ignore_existing, parents=True)
         except FileExistsError as exc:
             raise OSError(f'Error while creating directory {path}: {exc}, directory already exists')
 
@@ -1029,7 +1029,7 @@ class AsyncSshTransport(AsyncTransport):
         """
         path = str(path)
         try:
-            await self.async_backend.mkdir(path=path, exist_ok=ignore_existing)
+            await self.async_backend.mkdir(path=path, exist_ok=ignore_existing, parents=False)
         except FileExistsError as exc:
             raise OSError(f'Error while creating directory {path}: {exc}, directory already exists')
 

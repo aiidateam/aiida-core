@@ -16,8 +16,8 @@ from .async_backend import *
 from .ssh import *
 
 __all__ = (
-    'AsyncSSHwrapper',
-    'OpenSSHwrapper',
+    'AsyncSSH',
+    'OpenSSH',
     'SshTransport',
     'convert_to_bool',
     'parse_sshconfig',

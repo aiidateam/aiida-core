@@ -159,7 +159,7 @@ def test_listdir(custom_transport, tmp_path_remote):
     """Create directories, verify listdir, delete a folder with subfolders"""
     with custom_transport as transport:
         # list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
-        # TODO:  AsyncSshTransport::OpenSSHwrapper is not able to create a directory with special characters
+        # TODO:  AsyncSshTransport::OpenSSH is not able to create a directory with special characters
         # What's the use case?
         list_of_dir = ['1', '-f', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
@@ -194,7 +194,7 @@ def test_listdir_withattributes(custom_transport, tmp_path_remote):
 
     with custom_transport as transport:
         # list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
-        # TODO:  AsyncSshTransport::OpenSSHwrapper is not able to create a directory with special characters
+        # TODO:  AsyncSshTransport::OpenSSH is not able to create a directory with special characters
         # What's the use case?
         list_of_dir = ['1', '-f', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']

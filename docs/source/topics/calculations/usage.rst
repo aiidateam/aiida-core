@@ -230,11 +230,12 @@ File lists
 
 Local copy list
 ~~~~~~~~~~~~~~~
-The local copy list takes tuples of length three, each of which represents a file or directory to be copied, defined through the following items:
+The local copy list consists of three-element tuples, each defining a file or directory to be copied.
+The tuple contains the following items:
 
-* `node uuid`: the node whose repository contains the file, typically a ``SinglefileData`` or ``FolderData`` node
-* `source relative path`: the relative path of the file or directory within the node repository
-* `target relative path`: the relative path within the working directory to which to copy the file or directory contents
+* Node UUID: The UUID of the node (e.g. a ``SinglefileData`` or ``FolderData``) containing the file/directory.
+* Source Relative Path: The path of the file/directory within the node's repository, relative to its base directory.
+* Target Relative Path: The destination path relative to the working directory of the target node, where the file/directory contents will be copied.
 
 As an example, consider a ``CalcJob`` implementation that receives a ``SinglefileData`` node as input with the name ``pseudopotential``, to copy its contents one can specify:
 

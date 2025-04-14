@@ -115,3 +115,15 @@ def test_portablecode_extra_files(tmp_path, chdir_tmp_path):
     assert sorted(extra_files.keys()) == extra_files_keys
     assert extra_files[str(repo_dump_path / 'bash')] == 'bash'.encode('utf-8')
     assert extra_files[str(repo_dump_path / 'subdir/test')] == 'test'.encode('utf-8')
+
+
+def test_portablecode_serialize(tmp_path, chdir_tmp_path):
+    """Test that the node repository contents of an orm.PortableCode are dumped upon YAML export."""
+    filepath_files = tmp_path / 'tmp'
+    filepath_files.mkdir()
+    # (filepath_files / 'bash').touch()
+    (filepath_files / 'bash').write_text('bash')
+    (filepath_files / 'subdir').mkdir()
+    (filepath_files / 'subdir/test').write_text('test')
+    code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=filepath_files)
+    PortableCode.from_serialized(**code.serialize())

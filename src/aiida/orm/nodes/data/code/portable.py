@@ -19,12 +19,9 @@ working directory on the selected computer and the executable will be run there.
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import pathlib
 import typing as t
-
-from pydantic import field_validator
 
 from aiida.common import exceptions
 from aiida.common.folders import Folder
@@ -41,6 +38,15 @@ _LOGGER = logging.getLogger(__name__)
 FilePath = t.Union[str, pathlib.PurePath]
 
 
+def read_files_content(portable_code: PortableCode) -> dict[str, bytes]:
+    files_content = {}
+    for root, _, filenames in portable_code.base.repository.walk():
+        for filename in filenames:
+            rel_path = str(root / filename)
+            files_content[rel_path] = portable_code.base.repository.get_object_content(str(rel_path), mode='rb')
+    return files_content
+
+
 class PortableCode(Code):
     """Data plugin representing an executable code stored in AiiDA's storage."""
 
@@ -51,34 +57,40 @@ class PortableCode(Code):
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
 
-        filepath_files: FilePath = MetadataField(
-            ...,
-            title='Code directory',
-            description='Filepath to directory containing code files.',
-            short_name='-F',
-            priority=2,
-        )
-        filepath_executable: FilePath = MetadataField(
+        filepath_executable: str = MetadataField(
             ...,
             title='Filepath executable',
             description='Relative filepath of executable with directory of code files.',
             short_name='-X',
             priority=1,
+            orm_to_model=lambda node: str(node.filepath_executable),
+        )
+        filepath_files: t.Union[str, None] = MetadataField(
+            ...,
+            title='Code directory',
+            description='Filepath to directory containing code files.',
+            short_name='-F',
+            priority=2,
+            exclude_to_orm=True,
+            is_attribute=False,
+        )
+        files_content: t.Union[dict[str, bytes], None] = MetadataField(
+            ...,
+            title='Code directory content in bytes',
+            description='Content of filepath containing code files.',
+            exclude_from_cli=True,
+            is_attribute=False,
+            orm_to_model=read_files_content,
+            priority=3,
         )
 
-        @field_validator('filepath_files')
-        @classmethod
-        def validate_filepath_files(cls, value: str) -> pathlib.Path:
-            """Validate that ``filepath_files`` is an existing directory."""
-            filepath = pathlib.Path(value)
-            # TODO the following fails serialization - see https://github.com/aiidateam/aiida-core/issues/6821
-            # if not filepath.exists():
-            #     raise ValueError(f'The filepath `{value}` does not exist.')
-            # if not filepath.is_dir():
-            #     raise ValueError(f'The filepath `{value}` is not a directory.')
-            return filepath
-
-    def __init__(self, filepath_executable: str, filepath_files: pathlib.Path | str, **kwargs):
+    def __init__(
+        self,
+        filepath_executable: str,
+        filepath_files: t.Union[pathlib.PurePath, str, None] = None,
+        files_content: t.Union[dict[str, bytes], None] = None,
+        **kwargs,
+    ):
         """Construct a new instance.
 
         .. note:: If the files necessary for this code are not all located in a single directory or the directory
@@ -95,9 +107,28 @@ class PortableCode(Code):
         :param filepath_files: The filepath to the directory containing all the files of the code.
         """
         super().__init__(**kwargs)
-        type_check(filepath_files, pathlib.Path)
         self.filepath_executable = filepath_executable  # type: ignore[assignment]
-        self.base.repository.put_object_from_tree(str(filepath_files))
+        if filepath_files is not None and files_content is not None:
+            raise ValueError('Content and filepath cannot both be specified')
+        elif filepath_files is None and files_content is None:
+            raise ValueError('One of the filepath_files and files_content needs to be specified')
+
+        if filepath_files:
+            if not isinstance(filepath_files, pathlib.PurePath) and not isinstance(filepath_files, str):
+                msg = f"Got object of type '{type(filepath_files)}', expecting 'str' or 'pathlib.PurePath"
+                raise TypeError(msg)
+            if not filepath_files.exists():
+                raise ValueError(f'The filepath `{filepath_files}` does not exist.')
+            if not filepath_files.is_dir():
+                raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
+            self.base.repository.put_object_from_tree(str(filepath_files))
+            self.filepath_files = None if filepath_files else str(filepath_files)
+
+        if files_content:
+            for path, content in files_content.items():
+                type_check(path, str)
+                type_check(content, bytes)
+                self.base.repository.put_object_from_bytes(content, path)
 
     def _validate(self):
         """Validate the instance by checking that an executable is defined and it is part of the repository files.
@@ -173,7 +204,7 @@ class PortableCode(Code):
         return pathlib.PurePath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
 
     @filepath_executable.setter
-    def filepath_executable(self, value: str) -> None:
+    def filepath_executable(self, value: t.Union[str, pathlib.PurePath]) -> None:
         """Set the relative filepath of the executable that this code represents.
 
         :param value: The relative filepath of the executable within the directory of uploaded files.
@@ -183,34 +214,28 @@ class PortableCode(Code):
         if pathlib.PurePath(value).is_absolute():
             raise ValueError('The `filepath_executable` should not be absolute.')
 
-        self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
+        self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, str(value))
 
     def _prepare_yaml(self, *args, **kwargs):
         """Export code to a YAML file."""
-        try:
-            target = pathlib.Path().cwd() / f'{self.label}'
-            setattr(self, 'filepath_files', str(target))
-            result = super()._prepare_yaml(*args, **kwargs)[0]
+        target = pathlib.Path().cwd() / f'{self.label}'
+        result = super()._prepare_yaml(*args, **kwargs)[0]
 
-            extra_files = {}
-            node_repository = self.base.repository
+        extra_files = {}
+        node_repository = self.base.repository
 
-            # Logic taken from `copy_tree` method of the `Repository` class and adapted to return
-            # the relative file paths and their utf-8 encoded content as `extra_files` dictionary
-            path = '.'
-            for root, dirnames, filenames in node_repository.walk():
-                for filename in filenames:
-                    rel_output_file_path = root.relative_to(path) / filename
-                    full_output_file_path = target / rel_output_file_path
-                    full_output_file_path.parent.mkdir(exist_ok=True, parents=True)
+        # Logic taken from `copy_tree` method of the `Repository` class and adapted to return
+        # the relative file paths and their utf-8 encoded content as `extra_files` dictionary
+        path = '.'
+        for root, dirnames, filenames in node_repository.walk():
+            for filename in filenames:
+                rel_output_file_path = root.relative_to(path) / filename
+                full_output_file_path = target / rel_output_file_path
+                full_output_file_path.parent.mkdir(exist_ok=True, parents=True)
 
-                    extra_files[str(full_output_file_path)] = node_repository.get_object_content(
-                        str(rel_output_file_path), mode='rb'
-                    )
-            _LOGGER.warning(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
-
-        finally:
-            with contextlib.suppress(AttributeError):
-                delattr(self, 'filepath_files')
+                extra_files[str(full_output_file_path)] = node_repository.get_object_content(
+                    str(rel_output_file_path), mode='rb'
+                )
+        _LOGGER.warning(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
 
         return result, extra_files

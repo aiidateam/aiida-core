@@ -122,7 +122,7 @@ class PortableCode(Code):
             if not filepath_files_path.is_dir():
                 raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
             self.base.repository.put_object_from_tree(str(filepath_files))
-        self.filepath_files = str(filepath_files) if filepath_files else None 
+        self.filepath_files = str(filepath_files) if filepath_files else None
 
         if files_content:
             for path, content in files_content.items():

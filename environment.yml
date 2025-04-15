@@ -9,10 +9,10 @@ dependencies:
 - alembic~=1.2
 - archive-path~=0.4.2
 - asyncssh~=2.19.0
-- circus~=0.18.0
+- circus~=0.19.0
 - click-spinner~=0.1.8
 - click~=8.1
-- disk-objectstore~=1.2
+- disk-objectstore
 - docstring_parser
 - get-annotations~=0.1
 - python-graphviz~=0.19
@@ -37,4 +37,4 @@ dependencies:
 - typing-extensions~=4.0
 - upf_to_json~=0.9.2
 - wrapt~=1.11
-- chardet~=5.2.0  # [win]
+- chardet~=5.2.0

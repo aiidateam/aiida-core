@@ -26,8 +26,13 @@ def test_constructor_raises(tmp_path, bash_path):
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         PortableCode(filepath_executable=bash_path, filepath_files=tmp_path)
 
-    with pytest.raises(TypeError, match=r'Got object of type .*'):
+    with pytest.raises(ValueError, match=r'The filepath `string` does not exist.'):
         PortableCode(filepath_executable='bash', filepath_files='string')
+
+    file = (tmp_path / 'string')
+    file.touch()
+    with pytest.raises(ValueError, match=r'The filepath .* is not a directory.'):
+        PortableCode(filepath_executable='bash', filepath_files=file)
 
 
 def test_constructor(tmp_path):

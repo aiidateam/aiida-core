@@ -66,16 +66,15 @@ class PortableCode(Code):
             orm_to_model=lambda node: str(node.filepath_executable),
         )
         filepath_files: t.Union[str, None] = MetadataField(
-            ...,
+            None,
             title='Code directory',
             description='Filepath to directory containing code files.',
             short_name='-F',
             priority=2,
-            exclude_to_orm=True,
             is_attribute=False,
         )
         files_content: t.Union[dict[str, bytes], None] = MetadataField(
-            ...,
+            None,
             title='Code directory content in bytes',
             description='Content of filepath containing code files.',
             exclude_from_cli=True,
@@ -117,12 +116,13 @@ class PortableCode(Code):
             if not isinstance(filepath_files, pathlib.PurePath) and not isinstance(filepath_files, str):
                 msg = f"Got object of type '{type(filepath_files)}', expecting 'str' or 'pathlib.PurePath"
                 raise TypeError(msg)
-            if not filepath_files.exists():
+            filepath_files_path = pathlib.Path(filepath_files)
+            if not filepath_files_path.exists():
                 raise ValueError(f'The filepath `{filepath_files}` does not exist.')
-            if not filepath_files.is_dir():
+            if not filepath_files_path.is_dir():
                 raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
             self.base.repository.put_object_from_tree(str(filepath_files))
-            self.filepath_files = None if filepath_files else str(filepath_files)
+        self.filepath_files = str(filepath_files) if filepath_files else None 
 
         if files_content:
             for path, content in files_content.items():

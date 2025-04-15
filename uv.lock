@@ -173,11 +173,11 @@ requires-dist = [
     { name = "asyncssh", specifier = "~=2.19.0" },
     { name = "bpython", marker = "extra == 'bpython'", specifier = "~=0.18.0" },
     { name = "chardet", marker = "sys_platform == 'win32'", specifier = "~=5.2.0" },
-    { name = "circus", specifier = "~=0.18.0" },
+    { name = "circus", specifier = "~=0.19.0" },
     { name = "click", specifier = "~=8.1" },
     { name = "click-spinner", specifier = "~=0.1.8" },
     { name = "coverage", marker = "extra == 'tests'", specifier = "~=7.0" },
-    { name = "disk-objectstore", specifier = "~=1.2" },
+    { name = "disk-objectstore", git = "https://github.com/aiidateam/disk-objectstore.git?branch=main" },
     { name = "docstring-parser" },
     { name = "docutils", marker = "extra == 'tests'", specifier = "~=0.20" },
     { name = "flask", marker = "extra == 'rest'", specifier = "~=2.2" },
@@ -760,16 +760,16 @@ wheels = [
 
 [[package]]
 name = "circus"
-version = "0.18.0"
+version = "0.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "psutil" },
     { name = "pyzmq" },
     { name = "tornado" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/53/93/4a918c0bb13347c62ad1c72e9bdee9edc9074918bb6d7fc4306bbe3b702f/circus-0.18.0.tar.gz", hash = "sha256:193ce8224e068ced66724cf483106fb6674b51a57583ac1a0e7ed7a7ee8c71ab", size = 142587 }
+sdist = { url = "https://files.pythonhosted.org/packages/94/97/824bfce6949716ea93adcd5ff8aa4c277f40a735d7f644669674ec132ae4/circus-0.19.0.tar.gz", hash = "sha256:fbe6a5029998ac1239b17ebdd38251ac8b22627d30e4ec6f68cb10233911b0f4", size = 94206 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7b/fd/254a8a04ae1b57af59917bcd2670b31d42ce0da94d0aa257c80096c9089e/circus-0.18.0-py3-none-any.whl", hash = "sha256:f3ee4167bea16d34b42bab61440284f3936d2548f5546e70cf79f66daec867b0", size = 200600 },
+    { url = "https://files.pythonhosted.org/packages/f4/2c/1b09e40d512b7b9f9e58f2ee6c4648461e3fb40de2201856adaa1d22e96f/circus-0.19.0-py3-none-any.whl", hash = "sha256:15cac59d2bac8d8793f801a3a57e54acb261590c93e29fbfe639eaef8a680d39", size = 118155 },
 ]
 
 [[package]]
@@ -1195,14 +1195,10 @@ wheels = [
 [[package]]
 name = "disk-objectstore"
 version = "1.2.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/aiidateam/disk-objectstore.git?branch=main#34e2185b55555216102dc0e7e5568b6e0912e609" }
 dependencies = [
     { name = "click" },
     { name = "sqlalchemy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e1/68/e9b679861ea08401d9b10414e6e30afc6a0e072db203e77e6e24db42dcff/disk_objectstore-1.2.0.tar.gz", hash = "sha256:ceb318a40eeee62aec3af2936cdbe893b1560eecfc8acfc20591aa6180cf031a", size = 7329534 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/00/6223b14455945e248420f124103301f3d3607bc162ae8c15f4355864165c/disk_objectstore-1.2.0-py3-none-any.whl", hash = "sha256:1f99757810e96d88e30d0b2cac547482ab371c87715b91f5325063dff82fd147", size = 71118 },
 ]
 
 [[package]]

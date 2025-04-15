@@ -21,7 +21,7 @@ dependencies = [
   'alembic~=1.2',
   'archive-path~=0.4.2',
   "asyncssh~=2.19.0",
-  'circus~=0.18.0',
+  'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click~=8.1',
   'disk-objectstore~=1.2',
@@ -523,3 +523,6 @@ commands = molecule {posargs:test}
 # .github/actions/install-aiida-core/action.yml
 # .readthedocs.yml
 required-version = ">=0.5.21"
+
+[tool.uv.sources]
+disk-objectstore = {git = "https://github.com/aiidateam/disk-objectstore.git", branch = "main"}

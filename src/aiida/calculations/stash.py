@@ -15,7 +15,7 @@ from aiida.engine import CalcJob
 
 class StashCalculation(CalcJob):
     """
-    Utility to stash files from a remote folder.
+    Utility to stash files/folders from `RemoteData`, `SinglefileData`, or `FolderData`.
 
     An example of how the input should look like:
 
@@ -59,6 +59,10 @@ class StashCalculation(CalcJob):
         spec.inputs.pop('code', None)
 
         spec.inputs['metadata']['computer'].required = True
+        spec.inputs['metadata']['options']['stash'].required = True
+        spec.inputs['metadata']['options']['stash']['stash_mode'].required = True
+        spec.inputs['metadata']['options']['stash']['target_base'].required = True
+        spec.inputs['metadata']['options']['stash']['source_list'].required = True
         spec.inputs['metadata']['options']['resources'].default = {
             'num_machines': 1,
             'num_mpiprocs_per_machine': 1,

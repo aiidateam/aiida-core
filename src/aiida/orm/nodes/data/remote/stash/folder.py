@@ -10,10 +10,13 @@
 
 from typing import List, Tuple, Union
 
+from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
 
 from .base import RemoteStashData
+
+EXEC_LOGGER = AIIDA_LOGGER.getChild('folder')
 
 
 class RemoteStashFolderData(RemoteStashData):
@@ -28,10 +31,11 @@ class RemoteStashFolderData(RemoteStashData):
     """
 
     def __init__(self, stash_mode: StashMode, target_basepath: str, source_list: List, **kwargs):
-        raise DeprecationWarning(
-            '`RemoteStashFolderData` is deprecated, it can only be used to load already stored data.'
-            'Not possible to make any new instance of it. Use `RemoteStashCopyData` instead.'
+        EXEC_LOGGER.warning(
+            '`RemoteStashFolderData` is deprecated, it can only be used to load already stored data. '
+            'Not possible to make any new instance of it. Use `RemoteStashCopyData` instead.',
         )
+        raise RuntimeError('`RemoteStashFolderData` instantiation is not allowed. Use `RemoteStashCopyData` instead.')
 
     @property
     def target_basepath(self) -> str:

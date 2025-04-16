@@ -13,6 +13,7 @@ from typing import List, Tuple, Union
 from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
+from aiida.orm.fields import add_field
 
 from .base import RemoteStashData
 
@@ -29,6 +30,21 @@ class RemoteStashFolderData(RemoteStashData):
     Data plugin that models a folder with files of a completed calculation job that has been stashed through a copy.
     This data plugin can and should be used to stash files if and only if the stash mode is `StashMode.COPY`.
     """
+
+    _storable = True
+
+    __qb_fields__ = [
+        add_field(
+            'target_basepath',
+            dtype=str,
+            doc='The the target basepath',
+        ),
+        add_field(
+            'source_list',
+            dtype=List[str],
+            doc='The list of source files that were stashed',
+        ),
+    ]
 
     def __init__(self, stash_mode: StashMode, target_basepath: str, source_list: List, **kwargs):
         EXEC_LOGGER.warning(

@@ -10,8 +10,8 @@ from .folder import *
 
 __all__ = (
     'RemoteStashCompressedData',
-    'RemoteStashData',
-    'RemoteStashFolderData'
+    'RemoteStashCopyData',
+    'RemoteStashData'
 )
 
 # fmt: on

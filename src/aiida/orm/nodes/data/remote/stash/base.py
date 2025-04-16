@@ -44,13 +44,16 @@ class RemoteStashData(Data):
         ),
     ]
 
-    def __init__(self, stash_mode: StashMode, **kwargs):
+    def __init__(self, stash_mode: StashMode, source_uuid: str, **kwargs):
         """Construct a new instance
 
         :param stash_mode: the stashing mode with which the data was stashed on the remote.
+        :param source_uuid: the uuid of the source node. If the source node itself is a stashed node,
+        then the `source_uuid` of the stashed node should be passed.
         """
         super().__init__(**kwargs)
         self.stash_mode = stash_mode
+        self.source_uuid = source_uuid
 
     @property
     def stash_mode(self) -> StashMode:
@@ -68,3 +71,20 @@ class RemoteStashData(Data):
         """
         type_check(value, StashMode)
         self.base.attributes.set('stash_mode', value.value)
+
+    @property
+    def source_uuid(self) -> str:
+        """Return the source uuid.
+
+        :return: the source uuid.
+        """
+        return self.base.attributes.get('source_uuid')
+
+    @source_uuid.setter
+    def source_uuid(self, value: str):
+        """Set the source uuid.
+
+        :param value: the source uuid.
+        """
+        type_check(value, str)
+        self.base.attributes.set('source_uuid', value)

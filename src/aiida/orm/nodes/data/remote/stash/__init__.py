@@ -6,7 +6,7 @@
 
 from .base import *
 from .compress import *
-from .folder import *
+from .copy import *
 
 __all__ = (
     'RemoteStashCompressedData',

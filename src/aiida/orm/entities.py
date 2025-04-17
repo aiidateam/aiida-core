@@ -225,7 +225,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return fields
 
-    def to_model(self, repository_path: pathlib.Path) -> Model:
+    def _to_model(self, repository_path: pathlib.Path) -> Model:
         """Return the entity instance as an instance of its model."""
         fields = {}
 
@@ -238,7 +238,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return self.Model(**fields)
 
     @classmethod
-    def from_model(cls, model: Model) -> 'Entity':
+    def _from_model(cls, model: Model) -> 'Entity':
         """Return an entity instance from an instance of its model."""
         fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
@@ -259,12 +259,12 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                 raise ValueError(f'The repository_path `{repository_path}` does not exist.')
             if not repository_path.is_dir():
                 raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
-        return self.to_model(repository_path).model_dump()
+        return self._to_model(repository_path).model_dump()
 
     @classmethod
     def from_serialized(cls, **kwargs: dict[str, Any]) -> 'Entity':
         """Construct an entity instance from JSON serialized data."""
-        return cls.from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
+        return cls._from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
 
     @classproperty
     def objects(cls: EntityType) -> CollectionType:  # noqa: N805

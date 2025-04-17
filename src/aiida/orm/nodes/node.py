@@ -307,7 +307,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             self.base.extras.set_many(extras)
 
     @classmethod
-    def from_model(cls, model: Model) -> 'Node':  # type: ignore[override]
+    def _from_model(cls, model: Model) -> 'Node':  # type: ignore[override]
         """Return an entity instance from an instance of its model."""
         fields = cls.model_to_orm_field_values(model)
 

@@ -188,5 +188,5 @@ def test_roundtrip_serialization(required_arguments, tmp_path):
     assert isinstance(entity, cls)
 
     # Get the model instance from the entity instance
-    serialized_entity = entity._serialize(tmp_path)
-    entity._from_serialized(**serialized_entity)
+    serialized_entity = entity.serialize(tmp_path)
+    entity.from_serialized(**serialized_entity)

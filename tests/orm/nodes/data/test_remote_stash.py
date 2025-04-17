@@ -12,13 +12,13 @@ import pytest
 
 from aiida.common.datastructures import StashMode
 from aiida.common.exceptions import StoringNotAllowed
-from aiida.orm import RemoteStashCompressedData, RemoteStashData, RemoteStashFolderData
+from aiida.orm import RemoteStashCompressedData, RemoteStashCopyData, RemoteStashData
 
 
 def test_base_class():
     """Verify that base class cannot be stored."""
 
-    node = RemoteStashData(stash_mode=StashMode.COPY)
+    node = RemoteStashData(stash_mode=StashMode.COPY, source_uuid='1234')
 
     with pytest.raises(StoringNotAllowed):
         node.store()
@@ -31,8 +31,9 @@ def test_constructor_folder(store):
     stash_mode = StashMode.COPY
     target_basepath = '/absolute/path'
     source_list = ['relative/folder', 'relative/file']
+    source_uuid = '1234'
 
-    data = RemoteStashFolderData(stash_mode, target_basepath, source_list)
+    data = RemoteStashCopyData(stash_mode, source_uuid, target_basepath, source_list)
 
     assert data.stash_mode == stash_mode
     assert data.target_basepath == target_basepath
@@ -60,13 +61,14 @@ def test_constructor_invalid_folder(argument, value):
 
     kwargs = {
         'stash_mode': StashMode.COPY,
+        'source_uuid': '1234',
         'target_basepath': '/absolute/path',
         'source_list': ('relative/folder', 'relative/file'),
     }
 
     with pytest.raises(TypeError):
         kwargs[argument] = value
-        RemoteStashFolderData(**kwargs)
+        RemoteStashCopyData(**kwargs)
 
 
 @pytest.mark.parametrize('store', (False, True))
@@ -80,8 +82,9 @@ def test_constructor_compressed(store, stash_mode, dereference):
 
     target_basepath = '/absolute/path/foo.tar.gz'
     source_list = ['relative/folder', 'relative/file']
+    source_uuid = '1234'
 
-    data = RemoteStashCompressedData(stash_mode, target_basepath, source_list, dereference)
+    data = RemoteStashCompressedData(stash_mode, source_uuid, target_basepath, source_list, dereference)
 
     assert data.stash_mode == stash_mode
     assert data.target_basepath == target_basepath
@@ -111,6 +114,7 @@ def test_constructor_invalid_compressed(argument, value):
 
     kwargs = {
         'stash_mode': StashMode.COMPRESS_TAR,
+        'source_uuid': '1234',
         'target_basepath': '/absolute/path',
         'source_list': ('relative/folder', 'relative/file'),
         'dereference': False,
@@ -124,7 +128,7 @@ def test_constructor_invalid_compressed(argument, value):
 @pytest.mark.parametrize(
     'dataclass, valid_stash_modes',
     (
-        (RemoteStashFolderData, [StashMode.COPY]),
+        (RemoteStashCopyData, [StashMode.COPY]),
         (
             RemoteStashCompressedData,
             [StashMode.COMPRESS_TAR, StashMode.COMPRESS_TARBZ2, StashMode.COMPRESS_TARGZ, StashMode.COMPRESS_TARXZ],
@@ -139,6 +143,7 @@ def test_constructor_invalid_stash_mode(dataclass, valid_stash_modes):
     for mode in all_modes:
         kwargs = {
             'stash_mode': mode,
+            'source_uuid': '1234',
             'target_basepath': '/absolute/path',
             'source_list': ('relative/folder', 'relative/file'),
         }

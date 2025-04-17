@@ -209,7 +209,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             None,
             description='Virtual hierarchy of the file repository.',
             is_attribute=False,
-            orm_to_model=lambda node, path: node.base.repository.metadata,  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: node.base.repository.metadata,  # type: ignore[attr-defined]
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
@@ -237,7 +237,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             None,
             description='The node attributes',
             is_attribute=False,
-            orm_to_model=lambda node: node.base.attributes.all,  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: node.base.attributes.all,  # type: ignore[attr-defined]
             is_subscriptable=True,
             exclude_from_cli=True,
             exclude_to_orm=True,
@@ -246,7 +246,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             None,
             description='The node extras',
             is_attribute=False,
-            orm_to_model=lambda node: node.base.extras.all,  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: node.base.extras.all,  # type: ignore[attr-defined]
             is_subscriptable=True,
             exclude_from_cli=True,
             exclude_to_orm=True,
@@ -255,7 +255,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             None,
             description='The PK of the computer',
             is_attribute=False,
-            orm_to_model=lambda node: node.computer.pk if node.computer else None,  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: node.computer.pk if node.computer else None,  # type: ignore[attr-defined]
             orm_class=Computer,
             exclude_from_cli=True,
         )
@@ -263,7 +263,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             None,
             description='The PK of the user who owns the node',
             is_attribute=False,
-            orm_to_model=lambda node: node.user.pk,  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: node.user.pk,  # type: ignore[attr-defined]
             orm_class=User,
             exclude_from_cli=True,
         )
@@ -272,7 +272,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             description='Dictionary of file repository content. Keys are relative filepaths and values are binary file '
             'contents encoded as base64.',
             is_attribute=False,
-            orm_to_model=lambda node: {
+            orm_to_model=lambda node, _: {
                 key: base64.encodebytes(content)
                 for key, content in node.base.repository.serialize_content().items()  # type: ignore[attr-defined]
             },

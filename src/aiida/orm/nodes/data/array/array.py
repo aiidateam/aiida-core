@@ -52,8 +52,8 @@ class ArrayData(Data):
         arrays: Optional[dict[str, bytes]] = MetadataField(
             None,
             description='The dictionary of numpy arrays.',
-            orm_to_model=lambda node: ArrayData.save_arrays(node.arrays),  # type: ignore[attr-defined]
-            model_to_orm=lambda model: ArrayData.load_arrays(model.arrays),  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: ArrayData.save_arrays(node.arrays),  # type: ignore[attr-defined]
+            model_to_orm=lambda model, _: ArrayData.load_arrays(model.arrays),  # type: ignore[attr-defined]
         )
 
     array_prefix = 'array|'

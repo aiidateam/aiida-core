@@ -231,11 +231,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         for key, field in self.Model.model_fields.items():
             if orm_to_model := get_metadata(field, 'orm_to_model'):
-                # TODO tmp hack to try out idea
-                try:
-                    fields[key] = orm_to_model(self, repository_path)
-                except TypeError:
-                    fields[key] = orm_to_model(self)
+                fields[key] = orm_to_model(self, repository_path)
             else:
                 fields[key] = getattr(self, key)
 

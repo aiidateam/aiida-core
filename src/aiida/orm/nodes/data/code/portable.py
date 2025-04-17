@@ -38,15 +38,6 @@ _LOGGER = logging.getLogger(__name__)
 FilePath = t.Union[str, pathlib.PurePath]
 
 
-# def read_files_content(portable_code: PortableCode) -> dict[str, bytes]:
-#    files_content = {}
-#    for root, _, filenames in portable_code.base.repository.walk():
-#        for filename in filenames:
-#            rel_path = str(root / filename)
-#            files_content[rel_path] = portable_code.base.repository.get_object_content(str(rel_path), mode='rb')
-#    return files_content
-
-
 def _export_filpath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
     for root, _, filenames in portable_code.base.repository.walk():
         for filename in filenames:
@@ -56,26 +47,6 @@ def _export_filpath_files_from_repo(portable_code: PortableCode, repository_path
             export_path = repository_path / root / filename
             export_path.write_bytes(portable_code.base.repository.get_object_content(str(rel_path), mode='rb'))
     return str(repository_path)
-
-
-#        result = super()._prepare_yaml(*args, **kwargs)[0]
-#
-#        extra_files = {}
-#        node_repository = self.base.repository
-#
-#        # Logic taken from `copy_tree` method of the `Repository` class and adapted to return
-#        # the relative file paths and their utf-8 encoded content as `extra_files` dictionary
-#        path = '.'
-#        for root, dirnames, filenames in node_repository.walk():
-#            for filename in filenames:
-#                rel_output_file_path = root.relative_to(path) / filename
-#                full_output_file_path = target / rel_output_file_path
-#                full_output_file_path.parent.mkdir(exist_ok=True, parents=True)
-#
-#                extra_files[str(full_output_file_path)] = node_repository.get_object_content(
-#                    str(rel_output_file_path), mode='rb'
-#                )
-#        _LOGGER.warning(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
 
 
 class PortableCode(Code):
@@ -94,7 +65,7 @@ class PortableCode(Code):
             description='Relative filepath of executable with directory of code files.',
             short_name='-X',
             priority=1,
-            orm_to_model=lambda node: str(node.filepath_executable),
+            orm_to_model=lambda node, _: str(node.filepath_executable),
         )
         filepath_files: t.Union[pathlib.PurePath, str] = MetadataField(
             ...,

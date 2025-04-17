@@ -243,7 +243,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
 
-    def serialize(self, repository_path: Union[pathlib.Path, None] = None) -> dict[str, Any]:
+    def _serialize(self, repository_path: Union[pathlib.Path, None] = None) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
         :param repository_path: If the orm node has files in the repository, this path is used to dump the repostiory
@@ -262,7 +262,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return self._to_model(repository_path).model_dump()
 
     @classmethod
-    def from_serialized(cls, **kwargs: dict[str, Any]) -> 'Entity':
+    def _from_serialized(cls, **kwargs: dict[str, Any]) -> 'Entity':
         """Construct an entity instance from JSON serialized data."""
         return cls._from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
 

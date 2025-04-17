@@ -20,6 +20,7 @@ from plumpy.base.utils import call_with_super_check, super_check
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
+from aiida.common import exceptions, log
 from aiida.common.exceptions import EntryPointError, InvalidOperation, NotExistent
 from aiida.common.lang import classproperty, type_check
 from aiida.common.pydantic import MetadataField, get_metadata
@@ -178,6 +179,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     """An AiiDA entity"""
 
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
+    _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
     class Model(BaseModel):
         pk: Optional[int] = MetadataField(
@@ -249,6 +251,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :param repository_path: If the orm node has files in the repository, this path is used to dump the repostiory
             files to. If no path is specified a temporary path is created using the entities pk.
         """
+        self.logger.warning(
+            'Serialization through pydantic is still an experimental feature and might break in future releases.'
+        )
         if repository_path is None:
             import tempfile
 
@@ -264,6 +269,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     @classmethod
     def from_serialized(cls, **kwargs: dict[str, Any]) -> 'Entity':
         """Construct an entity instance from JSON serialized data."""
+        cls._logger.warning(
+            'Serialization through pydantic is still an experimental feature and might break in future releases.'
+        )
         return cls._from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
 
     @classproperty
@@ -335,6 +343,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         This will be called after the constructor is called or an entity is created from an existing backend entity.
         """
+
+    @property
+    def logger(self):
+        """Return the internal logger."""
+        try:
+            return self._logger
+        except AttributeError:
+            raise exceptions.InternalError('No self._logger configured for {}!')
 
     @property
     def id(self) -> int | None:

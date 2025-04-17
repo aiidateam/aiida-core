@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import abc
+import pathlib
 from enum import Enum
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, Union, cast
@@ -224,13 +225,17 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return fields
 
-    def to_model(self) -> Model:
+    def to_model(self, repository_path: pathlib.Path) -> Model:
         """Return the entity instance as an instance of its model."""
         fields = {}
 
         for key, field in self.Model.model_fields.items():
             if orm_to_model := get_metadata(field, 'orm_to_model'):
-                fields[key] = orm_to_model(self)
+                # TODO tmp hack to try out idea
+                try:
+                    fields[key] = orm_to_model(self, repository_path)
+                except TypeError:
+                    fields[key] = orm_to_model(self)
             else:
                 fields[key] = getattr(self, key)
 
@@ -242,9 +247,23 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
 
-    def serialize(self) -> dict[str, Any]:
-        """Serialize the entity instance to JSON."""
-        return self.to_model().model_dump()
+    def serialize(self, repository_path: Union[pathlib.Path, None] = None) -> dict[str, Any]:
+        """Serialize the entity instance to JSON.
+
+        :param repository_path: If the orm node has files in the repository, this path is used to dump the repostiory
+            files to. If no path is specified a temporary path is created using the entities pk.
+        """
+        if repository_path is None:
+            import tempfile
+
+            repository_path = pathlib.Path(tempfile.mkdtemp()) / f'./aiida_serialization/{self.pk}/'
+            repository_path.mkdir(parents=True)
+        else:
+            if not repository_path.exists():
+                raise ValueError(f'The repository_path `{repository_path}` does not exist.')
+            if not repository_path.is_dir():
+                raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
+        return self.to_model(repository_path).model_dump()
 
     @classmethod
     def from_serialized(cls, **kwargs: dict[str, Any]) -> 'Entity':

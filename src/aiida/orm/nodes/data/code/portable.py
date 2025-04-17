@@ -38,13 +38,44 @@ _LOGGER = logging.getLogger(__name__)
 FilePath = t.Union[str, pathlib.PurePath]
 
 
-def read_files_content(portable_code: PortableCode) -> dict[str, bytes]:
-    files_content = {}
+# def read_files_content(portable_code: PortableCode) -> dict[str, bytes]:
+#    files_content = {}
+#    for root, _, filenames in portable_code.base.repository.walk():
+#        for filename in filenames:
+#            rel_path = str(root / filename)
+#            files_content[rel_path] = portable_code.base.repository.get_object_content(str(rel_path), mode='rb')
+#    return files_content
+
+
+def _export_filpath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
     for root, _, filenames in portable_code.base.repository.walk():
         for filename in filenames:
             rel_path = str(root / filename)
-            files_content[rel_path] = portable_code.base.repository.get_object_content(str(rel_path), mode='rb')
-    return files_content
+            # we need to create parents as we have no guarantee how we walk through the repo
+            (repository_path / root).mkdir(parents=True, exist_ok=True)
+            export_path = repository_path / root / filename
+            export_path.write_bytes(portable_code.base.repository.get_object_content(str(rel_path), mode='rb'))
+    return str(repository_path)
+
+
+#        result = super()._prepare_yaml(*args, **kwargs)[0]
+#
+#        extra_files = {}
+#        node_repository = self.base.repository
+#
+#        # Logic taken from `copy_tree` method of the `Repository` class and adapted to return
+#        # the relative file paths and their utf-8 encoded content as `extra_files` dictionary
+#        path = '.'
+#        for root, dirnames, filenames in node_repository.walk():
+#            for filename in filenames:
+#                rel_output_file_path = root.relative_to(path) / filename
+#                full_output_file_path = target / rel_output_file_path
+#                full_output_file_path.parent.mkdir(exist_ok=True, parents=True)
+#
+#                extra_files[str(full_output_file_path)] = node_repository.get_object_content(
+#                    str(rel_output_file_path), mode='rb'
+#                )
+#        _LOGGER.warning(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
 
 
 class PortableCode(Code):
@@ -65,29 +96,20 @@ class PortableCode(Code):
             priority=1,
             orm_to_model=lambda node: str(node.filepath_executable),
         )
-        filepath_files: t.Union[str, None] = MetadataField(
-            None,
+        filepath_files: t.Union[pathlib.PurePath, str] = MetadataField(
+            ...,
             title='Code directory',
             description='Filepath to directory containing code files.',
             short_name='-F',
             priority=2,
             is_attribute=False,
-        )
-        files_content: t.Union[dict[str, bytes], None] = MetadataField(
-            None,
-            title='Code directory content in bytes',
-            description='Content of filepath containing code files.',
-            exclude_from_cli=True,
-            is_attribute=False,
-            orm_to_model=read_files_content,
-            priority=3,
+            orm_to_model=_export_filpath_files_from_repo,
         )
 
     def __init__(
         self,
         filepath_executable: str,
-        filepath_files: t.Union[pathlib.PurePath, str, None] = None,
-        files_content: t.Union[dict[str, bytes], None] = None,
+        filepath_files: t.Union[pathlib.PurePath, str],
         **kwargs,
     ):
         """Construct a new instance.
@@ -107,28 +129,15 @@ class PortableCode(Code):
         """
         super().__init__(**kwargs)
         self.filepath_executable = filepath_executable  # type: ignore[assignment]
-        if filepath_files is not None and files_content is not None:
-            raise ValueError('Content and filepath cannot both be specified')
-        elif filepath_files is None and files_content is None:
-            raise ValueError('One of the filepath_files and files_content needs to be specified')
-
-        if filepath_files:
-            if not isinstance(filepath_files, pathlib.PurePath) and not isinstance(filepath_files, str):
-                msg = f"Got object of type '{type(filepath_files)}', expecting 'str' or 'pathlib.PurePath"
-                raise TypeError(msg)
-            filepath_files_path = pathlib.Path(filepath_files)
-            if not filepath_files_path.exists():
-                raise ValueError(f'The filepath `{filepath_files}` does not exist.')
-            if not filepath_files_path.is_dir():
-                raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
-            self.base.repository.put_object_from_tree(str(filepath_files))
-        self.filepath_files = str(filepath_files) if filepath_files else None
-
-        if files_content:
-            for path, content in files_content.items():
-                type_check(path, str)
-                type_check(content, bytes)
-                self.base.repository.put_object_from_bytes(content, path)
+        if not isinstance(filepath_files, pathlib.PurePath) and not isinstance(filepath_files, str):
+            msg = f"Got object of type '{type(filepath_files)}', expecting 'str' or 'pathlib.PurePath"
+            raise TypeError(msg)
+        filepath_files_path = pathlib.Path(filepath_files)
+        if not filepath_files_path.exists():
+            raise ValueError(f'The filepath `{filepath_files}` does not exist.')
+        if not filepath_files_path.is_dir():
+            raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
+        self.base.repository.put_object_from_tree(str(filepath_files))
 
     def _validate(self):
         """Validate the instance by checking that an executable is defined and it is part of the repository files.

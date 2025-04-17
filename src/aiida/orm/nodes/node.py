@@ -209,7 +209,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             None,
             description='Virtual hierarchy of the file repository.',
             is_attribute=False,
-            orm_to_model=lambda node: node.base.repository.metadata,  # type: ignore[attr-defined]
+            orm_to_model=lambda node, path: node.base.repository.metadata,  # type: ignore[attr-defined]
             exclude_to_orm=True,
             exclude_from_cli=True,
         )

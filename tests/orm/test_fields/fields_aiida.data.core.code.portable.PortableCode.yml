@@ -8,10 +8,9 @@ default_calc_job_plugin: QbStrField('default_calc_job_plugin', dtype=typing.Opti
 description: QbStrField('description', dtype=<class 'str'>, is_attribute=True)
 extras: QbDictField('extras', dtype=typing.Optional[typing.Dict[str, typing.Any]],
   is_attribute=False, is_subscriptable=True)
-filepath_executable: QbStrField('filepath_executable', dtype=typing.Union[str, pathlib.PurePath],
-  is_attribute=True)
-filepath_files: QbStrField('filepath_files', dtype=typing.Union[str, pathlib.PurePath],
-  is_attribute=True)
+filepath_executable: QbStrField('filepath_executable', dtype=<class 'str'>, is_attribute=True)
+filepath_files: QbField('filepath_files', dtype=typing.Union[pathlib.PurePath, str],
+  is_attribute=False)
 label: QbStrField('label', dtype=<class 'str'>, is_attribute=True)
 mtime: QbNumericField('mtime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
 node_type: QbStrField('node_type', dtype=typing.Optional[str], is_attribute=False)

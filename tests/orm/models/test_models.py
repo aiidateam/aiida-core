@@ -141,7 +141,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
     ),
     indirect=True,
 )
-def test_roundtrip(required_arguments):
+def test_roundtrip(required_arguments, tmp_path):
     cls, kwargs = required_arguments
 
     # Construct instance of the entity class
@@ -149,7 +149,7 @@ def test_roundtrip(required_arguments):
     assert isinstance(entity, cls)
 
     # Get the model instance from the entity instance
-    model = entity.to_model()
+    model = entity.to_model(tmp_path)
     assert isinstance(model, BaseModel)
 
     # Reconstruct the entity instance from the model instance
@@ -160,7 +160,7 @@ def test_roundtrip(required_arguments):
     # ORM entity constructor are identical of the original model. The ``model_to_orm_field_values`` excludes values of
     # fields that define ``exclude_to_orm=True`` because these can change during roundtrips. This because these
     # typically correspond to entity fields that have defaults set on the database level, e.g., UUIDs.
-    roundtrip_model = roundtrip.to_model()
+    roundtrip_model = roundtrip.to_model(tmp_path)
     original_field_values = cls.model_to_orm_field_values(model)
 
     for key, value in cls.model_to_orm_field_values(roundtrip_model).items():

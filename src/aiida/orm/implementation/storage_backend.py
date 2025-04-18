@@ -491,7 +491,7 @@ class StorageBackend(abc.ABC):
             mtime = last_time.first()
 
             data['Nodes']['first_created'] = str(ctime[0]) if ctime else None
-            data['Nodes']['last_created'] = str(ctime[0]) if ctime else None
+            data['Nodes']['last_created'] = str(mtime[0]) if mtime else None
 
         
         query_group = QueryBuilder(self).append(Group, project=['type_string'])

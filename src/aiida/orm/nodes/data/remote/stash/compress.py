@@ -54,8 +54,8 @@ class RemoteStashCompressedData(RemoteStashData):
         """Construct a new instance
 
         :param stash_mode: the stashing mode with which the data was stashed on the remote.
-        :param source_uuid: the uuid of the source node. If the source node itself is a stashed node,
-        then the `source_uuid` of the stashed node should be passed.
+        :param source_uuid: the uuid of the source node (str). If the source node itself is a stashed node,
+            then the `source_uuid` of the stashed node should be passed.
         :param target_basepath: absolute path to place the compressed file (path+filename).
         :param source_list: the list of source files.
         :param dereference: whether to dereference symbolic links when compressing.

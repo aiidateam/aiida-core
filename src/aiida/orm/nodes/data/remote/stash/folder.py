@@ -22,10 +22,10 @@ EXEC_LOGGER = AIIDA_LOGGER.getChild('folder')
 
 class RemoteStashFolderData(RemoteStashData):
     """
-    ############################################################################
-    Deprecated! use `RemoteStashCopyData` instead.
-    The plugin is kept for backwards compatibility (to load already stored nodes, only) and will be removed in AiiDA 3.0
-    ############################################################################
+    .. warning::
+        **Deprecated!** Use `RemoteStashCopyData` instead.
+        The plugin is kept for backwards compatibility (to load already stored nodes, only)
+        and will be removed in AiiDA 3.0
 
     Data plugin that models a folder with files of a completed calculation job that has been stashed through a copy.
     This data plugin can and should be used to stash files if and only if the stash mode is `StashMode.COPY`.

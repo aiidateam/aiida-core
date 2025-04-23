@@ -15,7 +15,7 @@ import os
 import re
 import sys
 from collections import OrderedDict
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Optional, Union
 
 from aiida.common.exceptions import InternalError

@@ -15,8 +15,9 @@ import io
 import pathlib
 import typing as t
 
-from .data import Data
 from aiida.common.types import PathType
+
+from .data import Data
 
 if t.TYPE_CHECKING:
     from aiida.repository import File

@@ -145,6 +145,7 @@ def test_retrieve_files_from_list(
         (['sub', None], {'b': 'file_b'}),
         ([None, 'target'], {'target': {'sub': {'b': 'file_b'}, 'a': 'file_a'}}),
         (['sub', 'target'], {'target': {'b': 'file_b'}}),
+        (['sub', 'target/another-sub'], {'target': {'another-sub': {'b': 'file_b'}}}),
     ),
 )
 def test_upload_local_copy_list(
@@ -310,7 +311,7 @@ def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, order, e
 
 
 @pytest.mark.parametrize(
-    'sandbox_hierarchy, local_copy_list, remote_copy_list, expected_hierarchy, expected_exception',
+    'sandbox_hierarchy, local_copy_list_params, remote_copy_list_params, expected_hierarchy, expected_exception',
     [
         ## Single `FileCopyOperation`
         # Only Sandbox
@@ -352,6 +353,26 @@ def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, order, e
             ((FolderData, {'pseudo': {'Ba.upf': 'Ba pseudo'}}, 'pseudo', '.'),),
             (),
             {'Ba.upf': 'Ba pseudo'},
+            None,
+        ),
+        # Only local copy of a single nested directory to the same nested directory
+        # -> Copies the contents of the nested folder to the target nested folder
+        # COUNTER-INTUITIVE: this command would fail with `cp` since the parent folder does not exist
+        (
+            {},
+            ((FolderData, {'out': {'HP': {'file': 'content'}}}, 'out/HP', 'out/HP'),),
+            (),
+            {'out': {'HP': {'file': 'content'}}},
+            None,
+        ),
+        # Only local root copy of single nested directory to a nested directory
+        # -> Copies the contents of entire FolderData to the target nested folder, leading to a 4-level hierarchy
+        # COUNTER-INTUITIVE: this command would fail with `cp` since the parent folder does not exist
+        (
+            {},
+            ((FolderData, {'out': {'HP': {'file': 'content'}}}, '.', 'new/sub'),),
+            (),
+            {'new': {'sub': {'out': {'HP': {'file': 'content'}}}}},
             None,
         ),
         # Only remote copy of a single file to the "pseudo" directory
@@ -516,8 +537,8 @@ def test_upload_combinations(
     node_and_calc_info,
     tmp_path,
     sandbox_hierarchy,
-    local_copy_list,
-    remote_copy_list,
+    local_copy_list_params,
+    remote_copy_list_params,
     expected_hierarchy,
     expected_exception,
     create_file_hierarchy,
@@ -525,17 +546,20 @@ def test_upload_combinations(
 ):
     """Test the ``upload_calculation`` functions for various combinations of sandbox folders and copy lists.
 
-    The `local_copy_list` is formatted as a list of tuples, where each tuple contains the following elements:
+    The `local_copy_list_params` is formatted as a list of tuples, where each tuple contains the following elements:
 
         - The class of the data node to be copied.
         - The content of the data node to be copied. This can be either a string in case of a file, or a dictionary
-            representing the file hierarchy in case of a folder.
-        - The name of the file or directory to be copied.
-        - The relative path the data should be copied to.
+          representing the file hierarchy in case of a folder.
+        - The path of the file or directory to be copied, specified relative to the source node's working directory.
+        - The destination path where the data will be copied, specified relative to the destination node's working
+          directory.
 
-    The `remote_copy_list` is formatted as a list of tuples, where each tuple contains the following elements:
+    The `remote_copy_list_params` is formatted as a list of tuples, where each tuple contains the following elements:
 
         - A dictionary representing the file hierarchy that should be in the remote directory.
+        - The source path of the file or directory to be copied.
+        - The target path the file or directory should be copied to.
 
     """
     create_file_hierarchy(sandbox_hierarchy, fixture_sandbox)
@@ -544,7 +568,7 @@ def test_upload_combinations(
 
     calc_info.local_copy_list = []
 
-    for copy_id, (data_class, content, filename, target_path) in enumerate(local_copy_list):
+    for copy_id, (data_class, content, filename, target_path) in enumerate(local_copy_list_params):
         # Create a sub directroy in the temporary folder for each copy to avoid conflicts
         sub_tmp_path_local = tmp_path / f'local_{copy_id}'
 
@@ -565,7 +589,7 @@ def test_upload_combinations(
 
     calc_info.remote_copy_list = []
 
-    for copy_id, (hierarchy, source_path, target_path) in enumerate(remote_copy_list):
+    for copy_id, (hierarchy, source_path, target_path) in enumerate(remote_copy_list_params):
         # Create a sub directroy in the temporary folder for each copy to avoid conflicts
         sub_tmp_path_remote = tmp_path / f'remote_{copy_id}'
 

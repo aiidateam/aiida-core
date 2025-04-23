@@ -572,7 +572,7 @@ class AsyncSshTransport(AsyncTransport):
             raise OSError('Cannot copy a directory into a file')
 
         if not await self.isdir_async(remotepath):  # in this case copy things in the remotepath directly
-            await self.mkdir_async(remotepath)  # and make a directory at its place
+            await self.makedirs_async(remotepath)  # and make a directory at its place
         else:  # remotepath exists already: copy the folder inside of it!
             remotepath = os.path.join(remotepath, os.path.split(localpath)[1])
             await self.makedirs_async(remotepath, ignore_existing=overwrite)  # create a nested folder

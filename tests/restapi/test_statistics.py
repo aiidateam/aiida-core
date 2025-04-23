@@ -33,10 +33,7 @@ def linearize_namespace(tree_namespace, linear_namespace=None):
     return linear_namespace
 
 
-# This test does not work with SQLite since it uses the `statistics` endpoint,
-# which uses `date_trunc` under the hood, which is not implemented in SQLite.
 @pytest.mark.usefixtures('populate_restapi_database')
-@pytest.mark.requires_psql
 def test_count_consistency(restapi_server, server_url):
     """Test the consistency in values between full_type_count and statistics"""
     server = restapi_server()

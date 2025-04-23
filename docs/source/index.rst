@@ -1,5 +1,9 @@
 :sd_hide_title:
 
+.. HTML meta tag to verify aiida.readthedocs.io in Google Search Console (aiidateam account)
+.. meta::
+   :google-site-verification: wLcoklPmiTRQs5TXRD6At5hNXGYSwexWnx0wygU4Uxk
+
 .. grid::
    :reverse:
    :gutter: 2 3 3 3

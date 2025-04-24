@@ -374,7 +374,7 @@ async def _copy_local_files(logger, node, transport, inputs, local_copy_list, wo
                 # If the source object is a directory, we copy its entire contents
                 data_node.base.repository.copy_tree(filepath_target, filename_source)
                 await transport.put_async(
-                    f'{dirpath}/*',
+                    f'{filepath_target}/',
                     workdir.joinpath(target) if target else workdir.joinpath('.'),
                     overwrite=True,
                 )

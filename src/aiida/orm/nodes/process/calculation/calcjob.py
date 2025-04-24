@@ -15,6 +15,7 @@ from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
 from aiida.orm.fields import add_field
+from aiida.orm.nodes.data.base import to_aiida_type
 
 from ..process import ProcessNodeCaching
 from .calculation import CalculationNode
@@ -550,3 +551,8 @@ class CalcJobNode(CalculationNode):
         if not state:
             return ''
         return state.value
+
+
+@to_aiida_type.register(CalcJobNode)
+def _(value):
+    return value

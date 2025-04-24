@@ -166,17 +166,19 @@ def validate_link(
     # type can be defined, as long as the link label is unique for the sub set of links of that type. Finally, for
     # `unique_triple` the triple of node, link type and link label has to be unique.
     link_mapping = {
-        LinkType.CALL_CALC: (WorkflowNode, CalculationNode, 'unique_triple', 'unique'),
-        LinkType.CALL_WORK: (WorkflowNode, WorkflowNode, 'unique_triple', 'unique'),
-        LinkType.CREATE: (CalculationNode, Data, 'unique_pair', 'unique'),
-        LinkType.INPUT_CALC: (Data, CalculationNode, 'unique_triple', 'unique_pair'),
-        LinkType.INPUT_WORK: (Data, WorkflowNode, 'unique_triple', 'unique_pair'),
-        LinkType.RETURN: (WorkflowNode, Data, 'unique_pair', 'unique_triple'),
+        LinkType.CALL_CALC: ({WorkflowNode}, CalculationNode, 'unique_triple', 'unique'),
+        LinkType.CALL_WORK: ({WorkflowNode}, WorkflowNode, 'unique_triple', 'unique'),
+        LinkType.CREATE: ({CalculationNode}, Data, 'unique_pair', 'unique'),
+        LinkType.INPUT_CALC: ({Data, CalculationNode}, CalculationNode, 'unique_triple', 'unique_pair'),
+        LinkType.INPUT_WORK: ({Data}, WorkflowNode, 'unique_triple', 'unique_pair'),
+        LinkType.RETURN: ({WorkflowNode}, Data, 'unique_pair', 'unique_triple'),
     }
 
-    type_source, type_target, outdegree, indegree = link_mapping[link_type]
+    type_sources, type_target, outdegree, indegree = link_mapping[link_type]
 
-    if not isinstance(source, type_source) or not isinstance(target, type_target):
+    if all([not isinstance(source, type_source) for type_source in type_sources]) or not isinstance(
+        target, type_target
+    ):
         raise ValueError(f'cannot add a {link_type} link from {type(source)} to {type(target)}')
 
     if outdegree == 'unique_triple' or indegree == 'unique_triple':

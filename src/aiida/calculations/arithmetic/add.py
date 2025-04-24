@@ -24,6 +24,7 @@ class ArithmeticAddCalculation(CalcJob):
         :param spec: the calculation job process spec to define.
         """
         super().define(spec)
+        spec.input('calcj', valid_type=orm.CalcJobNode, required=False, help='The left operand.')
         spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
         spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')

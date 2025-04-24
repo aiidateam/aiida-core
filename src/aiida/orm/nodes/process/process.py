@@ -132,7 +132,7 @@ class ProcessNodeLinks(NodeLinks):
         :param link_label: the link label
         :raise aiida.common.ModificationNotAllowed: if the source node (self) is sealed
         """
-        if self._node.is_sealed:
+        if self._node.is_sealed and link_type is not LinkType.INPUT_CALC:
             raise exceptions.ModificationNotAllowed('Cannot add a link from a sealed node')
 
         super().validate_outgoing(target, link_type=link_type, link_label=link_label)

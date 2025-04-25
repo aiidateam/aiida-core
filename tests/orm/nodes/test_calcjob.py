@@ -142,4 +142,4 @@ class TestCalcJobNode:
         )
         node.base.links.add_incoming(incoming_node, link_type=LinkType.INPUT_CALC, link_label='input_calculation')
         node.store()
-        node2.seal()
+        node.seal()

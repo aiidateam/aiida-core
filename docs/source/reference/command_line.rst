@@ -27,7 +27,7 @@ Below is a list with all available subcommands.
     Commands:
       create   Create an archive from all or part of a profiles's data.
       import   Import archived data to a profile.
-      info     Summarise the contents of an archive.
+      info     Summaries the contents of an archive.
       migrate  Migrate an archive to a more recent schema version.
       version  Print the current version of an archive's schema.
 

@@ -127,3 +127,22 @@ class TestCalcJobNode:
         else:
             node.set_retrieve_list(retrieve_list)
             assert node.get_retrieve_list() == retrieve_list
+
+    def test_link_validation(self):
+        """Test that the link validation works as expected.
+        Especially, that a `CalcJobNode` can be input to another `CalcJobNode`,
+        as long as the source is sealed, but not the target.
+        """
+
+        node = CalcJobNode(
+            computer=self.computer,
+        )
+        node.store()
+        node.seal()
+
+        node2 = CalcJobNode(
+            computer=self.computer,
+        )
+        node2.base.links.add_incoming(node, link_type=LinkType.INPUT_CALC, link_label='input_calculation')
+        node2.store()
+        node2.seal()

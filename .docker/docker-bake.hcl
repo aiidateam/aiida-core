@@ -36,9 +36,9 @@ group "default" {
 
 target "aiida-core-base" {
   tags = tags("aiida-core-base")
-  context = "aiida-core-base"
+  context = ".docker/aiida-core-base"
   contexts = {
-    src = ".."
+    src = "."
   }
   platforms = "${PLATFORMS}"
   args = {
@@ -47,7 +47,7 @@ target "aiida-core-base" {
 }
 target "aiida-core-with-services" {
   tags = tags("aiida-core-with-services")
-  context = "aiida-core-with-services"
+  context = ".docker/aiida-core-with-services"
   contexts = {
     aiida-core-base = "target:aiida-core-base"
   }
@@ -59,9 +59,9 @@ target "aiida-core-with-services" {
 }
 target "aiida-core-dev" {
   tags = tags("aiida-core-dev")
-  context = "aiida-core-dev"
+  context = ".docker/aiida-core-dev"
   contexts = {
-    src = ".."
+    src = "."
     aiida-core-with-services = "target:aiida-core-with-services"
   }
   platforms = "${PLATFORMS}"

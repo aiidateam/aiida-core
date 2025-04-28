@@ -6,35 +6,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# ruff: noqa: F401, E402
-"""Sub commands of the ``verdi`` command line interface.
+"""The utils for `verdi smart` command line interface."""
 
-The commands need to be imported here for them to be registered with the top-level command group.
-"""
+from pathlib import Path
 
-from aiida.cmdline.commands import (
-    cmd_archive,
-    cmd_calcjob,
-    cmd_code,
-    cmd_computer,
-    cmd_config,
-    cmd_daemon,
-    cmd_data,
-    cmd_devel,
-    cmd_group,
-    cmd_help,
-    cmd_node,
-    cmd_plugin,
-    cmd_presto,
-    cmd_process,
-    cmd_profile,
-    cmd_rabbitmq,
-    cmd_restapi,
-    cmd_run,
-    cmd_setup,
-    cmd_shell,
-    cmd_smart,
-    cmd_status,
-    cmd_storage,
-    cmd_user,
-)
+VERDI_CLI_MAP = Path(__file__).resolve().parent / 'verdi_cli.json'
+
+__all__ = ['VERDI_CLI_MAP']

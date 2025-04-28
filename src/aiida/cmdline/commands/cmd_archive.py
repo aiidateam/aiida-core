@@ -58,7 +58,7 @@ def archive_version(path):
 @click.argument('path', nargs=1, type=click.Path(exists=True, readable=True))
 @click.option('--detailed', is_flag=True, help='Provides more detailed information.')
 def archive_info(path, detailed):
-    """Summarise the contents of an archive."""
+    """Summaries the contents of an archive."""
     # note: this mirrors `cmd_storage:storage_info`
     # it is currently hardcoded to the `SqliteZipBackend`, but could be generalized in the future
     from aiida.storage.sqlite_zip.backend import SqliteZipBackend

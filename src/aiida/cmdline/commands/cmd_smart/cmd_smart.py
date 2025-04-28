@@ -9,15 +9,15 @@
 """The `verdi smart` command line interface."""
 
 import json
-import pathlib
 import subprocess
+from time import time
 from typing import Callable, Optional
 
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 
-from .llm_backend import groc_command_generator
+from .llm_backend import LLM_DIRECTORY, RAG, groc_command_generator
 
 
 @verdi.group('smart')
@@ -68,7 +68,7 @@ def load_smart_config(func):
     """Decorator to load the smart config file."""
 
     def wrapper(*args, **kwargs):
-        config_file = pathlib.Path.home() / '.aiida' / 'llm_config.json'
+        config_file = LLM_DIRECTORY / 'config.json'
         if not config_file.exists():
             click.echo('No configuration file found. Please run `verdi smart configure` first.')
             return None
@@ -92,9 +92,12 @@ def load_smart_config(func):
     help='The LLM backend to use. Available options: groq.',
     callback=_validate_backend,
 )
-@click.option('-b', '--api-key', type=str, required=False, help='Your API key for the LLM backend.')
-def smart_configure(backend, api_key):
+@click.option('--api-key', type=str, required=False, help='Your API key for the LLM backend.')
+@click.pass_context
+def smart_configure(ctx, backend, api_key):
     """Choose and configure an LLM backend."""
+
+    # Step 1: Setup the credentials
     click.echo('This command will help you choose and configure an LLM backend for AiiDA.\n')
     if not backend:
         click.echo('Please follow the instructions below to set up your preferred LLM backend.')
@@ -111,12 +114,19 @@ def smart_configure(backend, api_key):
     # TODO: properly and safely store this data after merging this PR:
     # https://github.com/aiidateam/aiida-core/pull/6761
 
-    config_file = pathlib.Path.home() / '.aiida' / 'llm_config.json'
+    config_file = LLM_DIRECTORY / 'config.json'
     config_file.parent.mkdir(parents=True, exist_ok=True)
+
     config_data = {'backend': backend_choice, 'api_key': api_key}
     with config_file.open('w') as f:
+        # Overwrites
         json.dump(config_data, f)
+
     click.echo(f'Configuration saved to {config_file}. You can change it later by editing this file.\n')
+
+    # Step 2: build the or embeddings
+    RAG()
+
     click.echo('You can now use the `verdi smart` command to interact with the LLM backend.\n')
 
 
@@ -126,9 +136,10 @@ def smart_configure(backend, api_key):
 def smart_generate(backend, api_key, something_to_ask):
     """Generate a command based on a natural language something-to-ask."""
 
+    start_time = time()
     if backend == 'groq':
         suggestion = groc_command_generator(something_to_ask, api_key)
-        click.echo(f'Generated command: `{suggestion}`\n')
+        click.echo(f'Generated command (in {time()-start_time:.1f} seconds): `{suggestion}`\n')
         action = click.prompt('Execute[e], Modify[m], or Cancel[c]:')
         if action.lower() == 'e':
             command = suggestion

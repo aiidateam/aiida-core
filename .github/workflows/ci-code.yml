@@ -133,3 +133,21 @@ jobs:
         verdi devel check-load-time
         verdi devel check-undesired-imports
         .github/workflows/verdi.sh
+
+  verdi-smart:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.12'
+        from-lock: 'true'
+        extras: ''
+
+    - name: Run verdi smart tests
+      run: |
+        .github/workflows/verdi-smart.sh

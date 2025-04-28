@@ -10,18 +10,24 @@ repos:
   hooks:
   - id: check-merge-conflict
   - id: check-yaml
+    exclude: &exclude_auto_generated_files >
+      src/aiida/cmdline/commands/cmd_smart/utils/verdi_cli\.json
   - id: double-quote-string-fixer
+    exclude: *exclude_auto_generated_files
   - id: end-of-file-fixer
     exclude: &exclude_pre_commit_hooks >
       (?x)^(
         tests/.*(?<!\.py)$|
         docs/source/.+\.aiida/repo/.+|
         CHANGELOG.md|
+        src/aiida/cmdline/commands/cmd_smart/utils/verdi_cli\.json|
       )$
   - id: fix-encoding-pragma
     args: [--remove]
+    exclude: *exclude_auto_generated_files
   - id: mixed-line-ending
     args: [--fix=lf]
+    exclude: *exclude_auto_generated_files
   - id: trailing-whitespace
     exclude: *exclude_pre_commit_hooks
 

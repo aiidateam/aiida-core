@@ -67,7 +67,7 @@ class PortableCode(Code):
             priority=1,
             orm_to_model=lambda node, _: str(node.filepath_executable),
         )
-        filepath_files: t.Union[pathlib.PurePath, str] = MetadataField(
+        filepath_files: FilePath = MetadataField(
             ...,
             title='Code directory',
             description='Filepath to directory containing code files.',
@@ -80,7 +80,7 @@ class PortableCode(Code):
     def __init__(
         self,
         filepath_executable: str,
-        filepath_files: t.Union[pathlib.PurePath, str],
+        filepath_files: FilePath,
         **kwargs,
     ):
         """Construct a new instance.
@@ -184,7 +184,7 @@ class PortableCode(Code):
         return pathlib.PurePath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
 
     @filepath_executable.setter
-    def filepath_executable(self, value: t.Union[str, pathlib.PurePath]) -> None:
+    def filepath_executable(self, value: FilePath) -> None:
         """Set the relative filepath of the executable that this code represents.
 
         :param value: The relative filepath of the executable within the directory of uploaded files.
@@ -216,6 +216,6 @@ class PortableCode(Code):
                 extra_files[str(full_output_file_path)] = node_repository.get_object_content(
                     str(rel_output_file_path), mode='rb'
                 )
-        _LOGGER.warning(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
+        _LOGGER.info(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
 
         return result, extra_files

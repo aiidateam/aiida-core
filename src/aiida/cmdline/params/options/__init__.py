@@ -100,6 +100,7 @@ __all__ = (
     'USER_INSTITUTION',
     'USER_LAST_NAME',
     'VERBOSITY',
+    'COLOR',
     'VISUALIZATION_FORMAT',
     'WAIT',
     'WITH_ELEMENTS',

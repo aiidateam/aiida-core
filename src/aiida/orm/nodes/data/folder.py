@@ -15,6 +15,8 @@ import io
 import pathlib
 import typing as t
 
+from aiida.common.types import PathType
+
 from .data import Data
 
 if t.TYPE_CHECKING:
@@ -23,7 +25,7 @@ if t.TYPE_CHECKING:
 
 __all__ = ('FolderData',)
 
-FilePath = t.Union[str, pathlib.PurePath]
+FilePath = PathType
 
 
 class FolderData(Data):

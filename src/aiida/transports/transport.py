@@ -15,16 +15,17 @@ import os
 import re
 import sys
 from collections import OrderedDict
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Optional, Union
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
+from aiida.common.types import PathType
 from aiida.common.warnings import warn_deprecation
 
 __all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
-TransportPath = Union[str, Path, PurePosixPath]
+TransportPath = PathType
 
 
 def validate_positive_number(ctx, param, value):

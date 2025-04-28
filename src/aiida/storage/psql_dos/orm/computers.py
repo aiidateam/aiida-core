@@ -126,3 +126,13 @@ class SqlaComputerCollection(BackendComputerCollection):
             session.commit()
         except SQLAlchemyError as exc:
             raise exceptions.InvalidOperation(f'Unable to delete the requested computer: {exc}')
+
+        try:
+            # We delete the password from the secure storage if available.
+            from aiida.storage.psql_dos.orm.authinfos import SqlaAuthInfo
+
+            SqlaAuthInfo.SecureStorage(row).delete_password()
+        except Exception as exc:
+            raise exceptions.InvalidOperation(
+                f'Unable to delete the password associated to requested computer {row}: {exc}'
+            )

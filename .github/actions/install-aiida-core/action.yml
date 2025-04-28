@@ -46,3 +46,12 @@ runs:
     if: ${{ inputs.from-lock != 'true' }}
     run: uv pip install -e .${{ inputs.extras }}
     shell: bash
+
+  - name: Set up gnome-keyring
+    run: |
+      sudo apt install -y gnome-keyring dbus-x11
+      echo "$(dbus-launch)" >> $GITHUB_ENV
+      export $(dbus-launch)
+      gnome-keyring-daemon -r -d
+      echo 'somecredstorepass' | gnome-keyring-daemon --unlock
+    shell: bash

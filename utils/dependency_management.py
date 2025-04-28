@@ -171,9 +171,26 @@ def validate_environment_yml():
         raise DependencySpecificationError(f"Error in 'environment.yml': {error}")
 
     try:
-        conda_dependencies = {Requirement(d) for d in environment_yml['dependencies']}
+        dependencies = environment_yml['dependencies']
+        # flattened out nested dependencies
+        flatten_dependencies = []
+        for entry in dependencies:
+            if isinstance(entry, dict):
+                if len(entry) > 1:
+                    raise ValueError(f'During parsing found nested entry with multiple keys: {entry}')
+                entry_key, entry_items = next(iter(entry.items()))
+                if entry_key != 'pip':
+                    raise NotImplementedError('Found nested entry {entry} but we only nested entry for pip.')
+
+                for entry_item in entry_items:
+                    flatten_dependencies.append(entry_item)
+            elif entry.startswith('pip~='):
+                pass
+            else:
+                flatten_dependencies.append(entry)
+        conda_dependencies = {Requirement(d) for d in flatten_dependencies}
     except TypeError as error:
-        raise DependencySpecificationError(f"Error while parsing requirements from 'environment_yml': {error}")
+        raise DependencySpecificationError(f"Error while parsing requirements from 'environment.yml': {error}")
 
     # Attempt to find the specification of Python among the 'environment.yml' dependencies.
     for dependency in conda_dependencies:

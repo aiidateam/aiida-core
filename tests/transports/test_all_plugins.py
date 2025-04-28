@@ -23,8 +23,10 @@ from pathlib import Path
 import psutil
 import pytest
 
-from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
+from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import Transport
+from aiida.transports.plugins import ssh_async
+from aiida.transports.plugins.local import LocalTransport
 
 # TODO : test for copy with pattern
 # TODO : test for copy with/without patterns, overwriting folder
@@ -55,30 +57,85 @@ def tmp_path_local(tmp_path_factory):
 # Skip for any transport plugins that are locally installed but are not part of `aiida-core`
 @pytest.fixture(
     scope='function',
-    params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
+    params=[  # first argument specifies transport plugin name the second the, authentication method
+        ('core.local', None),
+        ('core.ssh', None),
+        ('core.ssh_async', 'key'),
+        ('core.ssh_async', 'password-passed'),  # covers the case where the password is passed to transport directly
+        ('core.ssh_async', 'password-from-keychain'),  # covers the case where the password is retrieved from keychain
+        ('core.ssh_auto', None),
+    ],
 )
-def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
+def custom_transport(request, tmp_path_factory, monkeypatch, aiida_localhost) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
-    plugin = TransportFactory(request.param)
+    # we use the suffix to differentiate between different use cases
+    #
 
-    if request.param == 'core.ssh':
-        kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
-    elif request.param == 'core.ssh_auto':
-        kwargs = {'machine': 'localhost'}
-        # The transport config is store in a independent temporary path per test to not mix up
-        # with the files under operating.
-        filepath_config = tmp_path_factory.mktemp('transport') / 'config'
-        monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
-        if not filepath_config.exists():
-            filepath_config.write_text('Host localhost')
-    elif request.param == 'core.ssh_async':
-        kwargs = {
-            'machine': 'localhost',
-        }
-    else:
-        kwargs = {}
+    plugin_name, use_case = request.param
+    plugin = TransportFactory(plugin_name)
+    auth_info = aiida_localhost.configure()
+    try:
+        if plugin_name == 'core.ssh':
+            kwargs = {
+                'machine': 'localhost',
+                'timeout': 30,
+                'load_system_host_keys': True,
+                'key_policy': 'AutoAddPolicy',
+            }
+        elif plugin_name == 'core.ssh_auto':
+            kwargs = {'machine': 'localhost'}
+            # The transport config is store in a independent temporary path per test to not mix up
+            # with the files under operating.
+            filepath_config = tmp_path_factory.mktemp('transport') / 'config'
+            monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
+            if not filepath_config.exists():
+                filepath_config.write_text('Host localhost')
+        elif plugin_name == 'core.ssh_async':
+            if use_case == 'key':
+                kwargs = {
+                    'machine': 'localhost',
+                    'secure_storage': auth_info.secure_storage,
+                }
+            elif use_case == 'password-passed':
+                kwargs = {
+                    'machine': 'localhost',
+                    'password': 'password',
+                    'secure_storage': auth_info.secure_storage,
+                }
+            elif use_case == 'password-from-keychain':
+                from aiida.orm.authinfos import Password
 
-    return plugin(**kwargs)
+                # we add the password to the keychain
+                # for the user this step is done by writing the AuthInfo into the database
+                auth_info.secure_storage.set_password('password')
+                kwargs = {
+                    'machine': 'localhost',
+                    'password': Password.OBFUSCATED,
+                    'secure_storage': auth_info.secure_storage,
+                }
+        else:
+            kwargs = {}
+
+        transport_instance = plugin(**kwargs)
+
+        # enforces password authentication
+        if plugin_name == 'core.ssh_async':
+            if use_case in ['password-passed', 'password-from-keychain']:
+                # we enforce that password authentication is used by changing options
+                from asyncssh import SSHClientConnectionOptions
+
+                transport_instance._ssh_cient_connection_options = SSHClientConnectionOptions(
+                    public_key_auth=False,
+                    preferred_auth='password',
+                    options=transport_instance._ssh_cient_connection_options,
+                )
+
+        yield transport_instance
+
+    finally:
+        if plugin_name == 'core.ssh_async':
+            if use_case == 'password-from-keychain':
+                auth_info.secure_storage.delete_password()
 
 
 def test_is_open(custom_transport):
@@ -1480,3 +1537,23 @@ def test_extract(
     with pytest.raises(OSError, match='Error while extracting the tar archive.'):
         with custom_transport as transport:
             transport.extract(tmp_path_remote / archive_name, tmp_path_remote / 'extracted_1')
+
+
+def test_gotocomputer_command(custom_transport):
+    goto_computer_cmd = custom_transport.gotocomputer_command(Path('/path'))
+    if isinstance(custom_transport, LocalTransport):
+        assert 'bash' in goto_computer_cmd
+    else:
+        assert 'ssh' in goto_computer_cmd
+
+
+def test_validate_os_supports_secure_storage(monkeypatch):
+    import keyringrs
+
+    class FailingEntry:
+        def set_password(self, _: str):
+            raise RuntimeError('Could not access secure storage.')
+
+    monkeypatch.setattr(keyringrs, 'Entry', FailingEntry)
+    with pytest.raises(OSError, match=r'.*Cannot use password authentication without secure storage.*'):
+        ssh_async.validate_os_supports_secure_storage(None, None, 'pw')

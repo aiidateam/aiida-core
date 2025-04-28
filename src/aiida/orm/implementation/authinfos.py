@@ -9,7 +9,10 @@
 """Module for the backend implementation of the `AuthInfo` ORM class."""
 
 import abc
-from typing import TYPE_CHECKING, Any, Dict
+import sys
+from typing import TYPE_CHECKING, Any, Dict, Protocol, Union
+
+import keyringrs
 
 from .entities import BackendCollection, BackendEntity
 
@@ -18,6 +21,10 @@ if TYPE_CHECKING:
     from .users import BackendUser
 
 __all__ = ('BackendAuthInfo', 'BackendAuthInfoCollection')
+
+
+class HasUuid(Protocol):
+    def uuid(self) -> str: ...
 
 
 class BackendAuthInfo(BackendEntity):
@@ -81,6 +88,58 @@ class BackendAuthInfo(BackendEntity):
 
         :param metadata: a dictionary with metadata
         """
+
+    class SecureStorage:
+        # the service name used to store in the secure storage
+        _SERVICE_NAME = 'aiida.core.authinfo'
+
+        def __init__(self, unique_obj: HasUuid):
+            self._unique_obj = unique_obj
+
+        def get_password(self) -> Union[str, None]:
+            """Retrieves the password associated with this unique_obj from system's secure storage
+
+            :raises RuntimeError: If the keychain is not accessible.
+            """
+            try:
+                return keyringrs.Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').get_password()
+            except KeyError:
+                return None
+
+        def set_password(self, password: str) -> None:
+            """Sets the entry with the uuid of the unique_obj to system's secure storage with the `password`.
+
+            :raises RuntimeError: If the keychain is not accessible.
+            """
+            keyringrs.Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').set_password(password)
+
+        def delete_password(self) -> None:
+            """Deletes the password associated with this unique_obj from system's secure storage if available.
+
+            :raises RuntimeError: If the keychain is not accessible.
+            """
+
+            try:
+                keyringrs.Entry(self._SERVICE_NAME, f'{self._unique_obj.uuid}').delete_credential()
+            except KeyError:
+                return None
+
+        def get_cmd_stdout_password(self) -> str:
+            """Returns the command line command to retrieve the password to stdout.
+
+            This is needed for the gotounique_obj commands."""
+
+            python_command = (
+                'from keyringrs import Entry;'
+                f'entry = Entry("{self._SERVICE_NAME}", "{self._unique_obj.uuid}");'
+                'print(entry.get_password(), end="")'
+            )
+            return f"{sys.executable} -c '{python_command}'"
+
+    @property
+    def secure_storage(self) -> SecureStorage:
+        """Returns the manager of the password associated to this computer stored in system's secure storage."""
+        return self.SecureStorage(self.computer)
 
 
 class BackendAuthInfoCollection(BackendCollection[BackendAuthInfo]):

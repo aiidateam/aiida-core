@@ -59,13 +59,13 @@ class PortableCode(Code):
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
 
-        filepath_executable: str = MetadataField(
+        filepath_executable: FilePath = MetadataField(
             ...,
             title='Filepath executable',
             description='Relative filepath of executable with directory of code files.',
             short_name='-X',
             priority=1,
-            orm_to_model=lambda node, _: str(node.filepath_executable),
+            orm_to_model=lambda node, _: node.filepath_executable,
         )
         filepath_files: FilePath = MetadataField(
             ...,
@@ -79,7 +79,7 @@ class PortableCode(Code):
 
     def __init__(
         self,
-        filepath_executable: str,
+        filepath_executable: FilePath,
         filepath_files: FilePath,
         **kwargs,
     ):
@@ -99,15 +99,14 @@ class PortableCode(Code):
         :param filepath_files: The filepath to the directory containing all the files of the code.
         """
         super().__init__(**kwargs)
-        self.filepath_executable = filepath_executable  # type: ignore[assignment]
-        if not isinstance(filepath_files, pathlib.PurePath) and not isinstance(filepath_files, str):
-            msg = f"Got object of type '{type(filepath_files)}', expecting 'str' or 'pathlib.PurePath"
-            raise TypeError(msg)
+        type_check(filepath_files, (pathlib.PurePath, str))
         filepath_files_path = pathlib.Path(filepath_files)
         if not filepath_files_path.exists():
             raise ValueError(f'The filepath `{filepath_files}` does not exist.')
         if not filepath_files_path.is_dir():
             raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
+
+        self.filepath_executable = filepath_executable
         self.base.repository.put_object_from_tree(str(filepath_files))
 
     def _validate(self):
@@ -189,7 +188,7 @@ class PortableCode(Code):
 
         :param value: The relative filepath of the executable within the directory of uploaded files.
         """
-        type_check(value, str)
+        type_check(value, (pathlib.PurePath, str))
 
         if pathlib.PurePath(value).is_absolute():
             raise ValueError('The `filepath_executable` should not be absolute.')

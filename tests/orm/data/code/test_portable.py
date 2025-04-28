@@ -23,8 +23,11 @@ def test_constructor_raises(tmp_path, bash_path):
     with pytest.raises(TypeError, match=r'missing .* required positional argument'):
         PortableCode()
 
-    with pytest.raises(TypeError, match=r'Got object of type .*'):
+    with pytest.raises(ValueError, match=r'The `filepath_executable` should not be absolute.'):
         PortableCode(filepath_executable=bash_path, filepath_files=tmp_path)
+
+    with pytest.raises(TypeError, match=r'Got object of type .*'):
+        PortableCode(filepath_executable=5, filepath_files=tmp_path)
 
     with pytest.raises(ValueError, match=r'The filepath `string` does not exist.'):
         PortableCode(filepath_executable='bash', filepath_files='string')
@@ -80,7 +83,7 @@ def test_filepath_executable(tmp_path):
         code.filepath_executable = '/usr/bin/cat'
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
-        code.filepath_executable = pathlib.Path(filepath_executable)
+        code.filepath_executable = 5
 
     code.filepath_executable = filepath_executable
     code.base.repository.put_object_from_filelike(io.BytesIO(b''), filepath_executable)

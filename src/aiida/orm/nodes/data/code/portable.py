@@ -35,7 +35,7 @@ from .legacy import Code
 __all__ = ('PortableCode',)
 _LOGGER = logging.getLogger(__name__)
 
-FilePath = t.Union[str, pathlib.PurePath]
+FilePath = t.Union[pathlib.PurePath, str]
 
 
 def _export_filpath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
@@ -72,6 +72,7 @@ class PortableCode(Code):
             title='Code directory',
             description='Filepath to directory containing code files.',
             short_name='-F',
+            is_attribute=False,
             priority=2,
             orm_to_model=_export_filpath_files_from_repo,
         )

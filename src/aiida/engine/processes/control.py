@@ -280,11 +280,14 @@ def _resolve_futures(
         for future in concurrent.futures.as_completed(futures.keys(), timeout=timeout):
             process = futures[future]
 
+            unwrapped = None
             try:
                 # unwrap is need here since LoopCommunicator will also wrap a future
                 unwrapped = unwrap_kiwi_future(future)
                 result = unwrapped.result(timeout)
             except communications.TimeoutError:
+                if unwrapped is not None:
+                    unwrapped.cancel()
                 LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out')
             except Exception as exception:
                 LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')

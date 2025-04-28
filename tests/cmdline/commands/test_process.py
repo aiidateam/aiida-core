@@ -743,7 +743,7 @@ def test_process_play_all(submit_and_await, run_cli_command):
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('started_daemon_client')
-def test_process_kill_uni(submit_and_await, run_cli_command, aiida_code_installed):
+def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
     """Test the ``verdi process kill`` command.
     It tries to cover all the possible scenarios of killing a process.
     """
@@ -761,7 +761,7 @@ def test_process_kill_uni(submit_and_await, run_cli_command, aiida_code_installe
     builder = code.get_builder()
     builder.x = Int(2)
     builder.y = Int(3)
-    builder.metadata.options.sleep = 10
+    builder.metadata.options.sleep = 20
 
     # Kill a paused process
     node = submit_and_await(builder, ProcessState.WAITING)

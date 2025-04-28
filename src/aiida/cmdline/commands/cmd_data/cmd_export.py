@@ -89,6 +89,8 @@ def data_export(node, output_fname, fileformat, other_args=None, overwrite=False
     :note: this function calls directly sys.exit(1) when an error occurs (or e.g. if
         check_overwrite is True and a file already exists).
     """
+    node.export(output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)
+
     if other_args is None:
         other_args = {}
     try:

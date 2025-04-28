@@ -73,7 +73,6 @@ class PortableCode(Code):
             description='Filepath to directory containing code files.',
             short_name='-F',
             priority=2,
-            is_attribute=False,
             orm_to_model=_export_filpath_files_from_repo,
         )
 
@@ -198,24 +197,8 @@ class PortableCode(Code):
 
     def _prepare_yaml(self, *args, **kwargs):
         """Export code to a YAML file."""
-        target = pathlib.Path().cwd() / f'{self.label}'
         result = super()._prepare_yaml(*args, **kwargs)[0]
-
-        extra_files = {}
-        node_repository = self.base.repository
-
-        # Logic taken from `copy_tree` method of the `Repository` class and adapted to return
-        # the relative file paths and their utf-8 encoded content as `extra_files` dictionary
-        path = '.'
-        for root, dirnames, filenames in node_repository.walk():
-            for filename in filenames:
-                rel_output_file_path = root.relative_to(path) / filename
-                full_output_file_path = target / rel_output_file_path
-                full_output_file_path.parent.mkdir(exist_ok=True, parents=True)
-
-                extra_files[str(full_output_file_path)] = node_repository.get_object_content(
-                    str(rel_output_file_path), mode='rb'
-                )
+        target = pathlib.Path().cwd() / f'{self.label}'
+        _export_filpath_files_from_repo(self, target)
         _LOGGER.info(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
-
-        return result, extra_files
+        return result, {}

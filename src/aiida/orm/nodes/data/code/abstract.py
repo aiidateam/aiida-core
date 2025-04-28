@@ -385,13 +385,23 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Export code to a YAML file."""
         import yaml
 
-        data = self.serialize()
+        code_data = {}
+        sort = kwargs.get('sort', False)
 
         for key, field in self.Model.model_fields.items():
             if get_metadata(field, 'exclude_from_cli'):
-                data.pop(key)
+                continue
+            if (orm_to_model := get_metadata(field, 'orm_to_model')) is None:
+                value = getattr(self, key)
+            else:
+                value = orm_to_model(self, pathlib.Path.cwd() / f'{self.label}')
 
-        return yaml.dump(data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}
+            # If the attribute is not set, for example ``with_mpi`` do not export it
+            # so that there are no null-values in the resulting YAML file
+            if value is not None:
+                code_data[key] = str(value)
+
+        return yaml.dump(code_data, sort_keys=sort, encoding='utf-8'), {}
 
     def _prepare_yml(self, *args, **kwargs):
         """Also allow for export as .yml"""

@@ -110,7 +110,7 @@ def validate_verdi_documentation():
     # Generate the new block with the command help strings
     header = 'Commands'
     message = 'Below is a list with all available subcommands.'
-    block = [f"{header}\n{'=' * len(header)}\n{message}\n\n"]
+    block = [f'{header}\n{"=" * len(header)}\n{message}\n\n']
 
     for name, command in sorted(verdi.commands.items()):
         if name == 'tui':

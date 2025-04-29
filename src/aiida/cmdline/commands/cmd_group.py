@@ -137,7 +137,7 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
 
     if not force:
         click.confirm(
-            f'Are you sure you want to move {len(nodes)} nodes from {source_group} ' f'to {target_group}?', abort=True
+            f'Are you sure you want to move {len(nodes)} nodes from {source_group} to {target_group}?', abort=True
         )
 
     source_group.remove_nodes(nodes)

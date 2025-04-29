@@ -152,7 +152,7 @@ def get_query_type_from_type_string(type_string):
 class AbstractNodeMeta(EntityFieldMeta):
     """Some python black magic to set correctly the logger also in subclasses."""
 
-    def __new__(mcs, name, bases, namespace, **kwargs):  # noqa: N804
+    def __new__(mcs, name, bases, namespace, **kwargs):
         newcls = super().__new__(mcs, name, bases, namespace, **kwargs)
-        newcls._logger = logging.getLogger(f"{namespace['__module__']}.{name}")
+        newcls._logger = logging.getLogger(f'{namespace["__module__"]}.{name}')
         return newcls

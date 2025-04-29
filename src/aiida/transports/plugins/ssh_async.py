@@ -54,7 +54,7 @@ def validate_machine(ctx, param, value: str):
         return True
 
     if not asyncio.run(attempt_connection()):
-        raise click.BadParameter("Couldn't connect! " 'Please make sure `ssh {value}` would work without password')
+        raise click.BadParameter("Couldn't connect! Please make sure `ssh {value}` would work without password")
     else:
         click.echo(f'`ssh {value}` successful!')
 
@@ -177,7 +177,7 @@ class AsyncSshTransport(AsyncTransport):
         self._is_open = False
 
     def __str__(self):
-        return f"{'OPEN' if self._is_open else 'CLOSED'} [AsyncSshTransport]"
+        return f'{"OPEN" if self._is_open else "CLOSED"} [AsyncSshTransport]'
 
     async def get_async(
         self,
@@ -592,7 +592,7 @@ class AsyncSshTransport(AsyncTransport):
                 )
                 await self._unlock()
             except (OSError, asyncssh.Error) as exc:
-                raise OSError(f'Error while uploading file {PurePath(localpath)/content_}: {exc}')
+                raise OSError(f'Error while uploading file {PurePath(localpath) / content_}: {exc}')
 
     async def copy_async(
         self,
@@ -675,7 +675,7 @@ class AsyncSshTransport(AsyncTransport):
                         self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
                 else:
                     self.logger.error(
-                        "Problem executing cp. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                        "Problem executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
                             retval, stdout, stderr, command
                         )
                     )
@@ -683,9 +683,9 @@ class AsyncSshTransport(AsyncTransport):
                         raise FileNotFoundError(f'Error while executing cp: {stderr}')
 
                     raise OSError(
-                        'Error while executing cp. Exit code: {}, '
-                        "stdout: '{}', stderr: '{}', "
-                        "command: '{}'".format(retval, stdout, stderr, command)
+                        "Error while executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
+                            retval, stdout, stderr, command
+                        )
                     )
 
             cp_exe = 'cp'
@@ -832,7 +832,7 @@ class AsyncSshTransport(AsyncTransport):
         copy_items = ' '.join([str(Path(item).relative_to(root_dir)) for item in copy_list])
         # note: order of the flags is important
         tar_command = (
-            f"tar -c{compression_flag!s}{'h' if dereference else ''}f {remotedestination!s} -C {root_dir!s} "
+            f'tar -c{compression_flag!s}{"h" if dereference else ""}f {remotedestination!s} -C {root_dir!s} '
             + copy_items
         )
 
@@ -881,7 +881,7 @@ class AsyncSshTransport(AsyncTransport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                "Problem executing tar. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
                     retval, stdout, stderr, tar_command
                 )
             )

@@ -73,7 +73,7 @@ class ExtrasMixin:
         non_existing_keys = [key for key in keys if key not in self.model.extras]
 
         if non_existing_keys:
-            raise AttributeError(f"extras `{', '.join(non_existing_keys)}` do not exist")
+            raise AttributeError(f'extras `{", ".join(non_existing_keys)}` do not exist')
 
         for key in keys:
             self.bare_model.extras.pop(key)

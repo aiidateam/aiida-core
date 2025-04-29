@@ -426,9 +426,9 @@ class EntityFieldMeta(ABCMeta):
         for key, attr in ((key, attr) for subcls in reversed(cls.__mro__) for key, attr in subcls.__dict__.items()):
             # __qb_fields__ should be a list of QbField instances
             if key == '__qb_fields__':
-                assert isinstance(
-                    attr, t.Sequence
-                ), f"class '{cls}' has a '__qb_fields__' attribute, but it is not a sequence"
+                assert isinstance(attr, t.Sequence), (
+                    f"class '{cls}' has a '__qb_fields__' attribute, but it is not a sequence"
+                )
                 for field in attr:
                     if not isinstance(field, QbField):
                         raise ValueError(f"__qb_fields__ attribute of class '{cls}' must be list of QbField instances")

@@ -108,17 +108,25 @@ class ProcessNodeLinks(NodeLinks):
         by the engine in one go. If a link is being added after the node is stored, it is most likely not by the engine
         and it should not be allowed.
 
+        Adding an input link from a unsealed `CalculationNode` is forbidden, because it would break the DAG.
+
         :param source: the node from which the link is coming
         :param link_type: the link type
         :param link_label: the link label
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
+        :raise aiida.common.ModificationNotAllowed: if the source node is not sealed
+            and the link type is not ``INPUT_CALC``.
         """
+
         if self._node.is_sealed:
             raise exceptions.ModificationNotAllowed('Cannot add a link to a sealed node')
 
         if self._node.is_stored:
             raise ValueError('attempted to add an input link after the process node was already stored.')
+
+        if link_type is LinkType.INPUT_CALC and not source.is_sealed:
+            raise exceptions.ModificationNotAllowed('Cannot add a link from a `CalculationNode`, if not sealed.')
 
         super().validate_incoming(source, link_type, link_label)
 

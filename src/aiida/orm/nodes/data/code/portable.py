@@ -65,7 +65,7 @@ class PortableCode(Code):
             description='Relative filepath of executable with directory of code files.',
             short_name='-X',
             priority=1,
-            orm_to_model=lambda node, _: node.filepath_executable,
+            orm_to_model=lambda node, _: str(node.filepath_executable),
         )
         filepath_files: FilePath = MetadataField(
             ...,

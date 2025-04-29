@@ -391,16 +391,14 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         for key, field in self.Model.model_fields.items():
             if get_metadata(field, 'exclude_from_cli'):
                 continue
-            if (orm_to_model := get_metadata(field, 'orm_to_model')) is None:
+            elif (orm_to_model := get_metadata(field, 'orm_to_model')) is None:
                 value = getattr(self, key)
             else:
                 value = orm_to_model(self, pathlib.Path.cwd() / f'{self.label}')
 
             # If the attribute is not set, for example ``with_mpi`` do not export it
             # so that there are no null-values in the resulting YAML file
-            if value is not None:
-                code_data[key] = str(value)
-
+            code_data[key] = value
         return yaml.dump(code_data, sort_keys=sort, encoding='utf-8'), {}
 
     def _prepare_yml(self, *args, **kwargs):

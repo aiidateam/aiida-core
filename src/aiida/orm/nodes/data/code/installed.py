@@ -60,13 +60,6 @@ class InstalledCode(Code):
             priority=1,
         )
 
-        # @field_validator('label')
-        # @classmethod
-        # def validate_label_uniqueness(cls, value: str) -> str:
-        #     """Override the validator for the ``label`` of the base class since uniqueness is defined on full label.
-        #     """
-        #     return value
-
         @field_validator('computer')
         @classmethod
         def validate_computer(cls, value: str) -> Computer:
@@ -81,23 +74,6 @@ class InstalledCode(Code):
         @field_serializer('computer')
         def serialize_computer(self, computer: Computer, _info):
             return computer.label
-
-        # TODO the following fails serialization - see https://github.com/aiidateam/aiida-core/issues/6821
-        # @model_validator(mode='after')  # type: ignore[misc]
-        # def validate_full_label_uniqueness(self) -> AbstractCode.Model:
-        #     """Validate that the full label does not already exist."""
-        #     from aiida.orm import load_code
-
-        #     full_label = f'{self.label}@{self.computer.label}'  # type: ignore[attr-defined]
-
-        #     try:
-        #         load_code(full_label)
-        #     except exceptions.NotExistent:
-        #         return self
-        #     except exceptions.MultipleObjectsError as exception:
-        #         raise ValueError(f'Multiple codes with the label `{full_label}` already exist.') from exception
-        #     else:
-        #         raise ValueError(f'A code with the label `{full_label}` already exists.')
 
     def __init__(self, computer: Computer, filepath_executable: str, **kwargs):
         """Construct a new instance.

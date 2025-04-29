@@ -102,22 +102,6 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             ),
         )
 
-        # TODO the following fails serialization - see https://github.com/aiidateam/aiida-core/issues/6821
-        # @field_validator('label')
-        # @classmethod
-        # def validate_label_uniqueness(cls, value: str) -> str:
-        #     """Validate that the label does not already exist."""
-        #     from aiida.orm import load_code
-
-        #     try:
-        #         load_code(value)
-        #     except exceptions.NotExistent:
-        #         return value
-        #     except exceptions.MultipleObjectsError as exception:
-        #         raise ValueError(f'Multiple codes with the label `{value}` already exist.') from exception
-        #     else:
-        #         raise ValueError(f'A code with the label `{value}` already exists.')
-
     def __init__(
         self,
         default_calc_job_plugin: str | None = None,

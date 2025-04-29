@@ -89,6 +89,7 @@ __all__ = (
     'QueryBuilder',
     'RemoteData',
     'RemoteStashCompressedData',
+    'RemoteStashCustomData',
     'RemoteStashData',
     'RemoteStashFolderData',
     'SinglefileData',

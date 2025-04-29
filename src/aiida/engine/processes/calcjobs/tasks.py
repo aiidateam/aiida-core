@@ -43,6 +43,7 @@ SUBMIT_COMMAND = 'submit'
 UPDATE_COMMAND = 'update'
 RETRIEVE_COMMAND = 'retrieve'
 STASH_COMMAND = 'stash'
+UN_STASH_COMMAND = 'unstash'
 KILL_COMMAND = 'kill'
 
 RETRY_INTERVAL_OPTION = 'transport.task_retry_initial_interval'
@@ -493,9 +494,15 @@ class Waiting(plumpy.process_states.Waiting):
             if self._command == UPLOAD_COMMAND:
                 skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)
                 if skip_submit:
-                    result = self.retrieve(monitor_result=self._monitor_result)
+                    result = self.stash(monitor_result=self._monitor_result)
                 else:
                     result = self.submit()
+
+            elif self._command == UN_STASH_COMMAND:
+                if node.get_option('unstash') is not None:
+                    await self._launch_task(task_unstash_job, node, transport_queue)
+
+                result = self.retrieve(monitor_result=self._monitor_result)
 
             elif self._command == SUBMIT_COMMAND:
                 result = await self._launch_task(task_submit_job, node, transport_queue)
@@ -531,6 +538,7 @@ class Waiting(plumpy.process_states.Waiting):
             elif self._command == STASH_COMMAND:
                 if node.get_option('stash') is not None:
                     await self._launch_task(task_stash_job, node, transport_queue)
+
                 result = self.retrieve(monitor_result=self._monitor_result)
 
             elif self._command == RETRIEVE_COMMAND:
@@ -642,6 +650,13 @@ class Waiting(plumpy.process_states.Waiting):
         msg = 'Waiting to stash'
         return self.create_state(  # type: ignore[return-value]
             ProcessState.WAITING, None, msg=msg, data={'command': STASH_COMMAND, 'monitor_result': monitor_result}
+        )
+    
+    def unstash(self, monitor_result: CalcJobMonitorResult | None = None) -> 'Waiting':
+        """Return the `Waiting` state that will `unstash` the `CalcJob`."""
+        msg = 'Waiting to unstash'
+        return self.create_state(  # type: ignore[return-value]
+            ProcessState.WAITING, None, msg=msg, data={'command': UN_STASH_COMMAND, 'monitor_result': monitor_result}
         )
 
     def retrieve(self, monitor_result: CalcJobMonitorResult | None = None) -> 'Waiting':

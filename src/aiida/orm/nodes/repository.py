@@ -210,7 +210,7 @@ class NodeRepository:
 
         with self._repository.open(path) as handle:
             if 'b' not in mode:
-                yield io.StringIO(handle.read().decode('utf-8'))
+                yield io.TextIOWrapper(handle, encoding='utf-8')
             else:
                 yield handle
 

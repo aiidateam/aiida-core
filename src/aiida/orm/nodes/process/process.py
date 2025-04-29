@@ -118,6 +118,7 @@ class ProcessNodeLinks(NodeLinks):
         :raise aiida.common.ModificationNotAllowed: if the source node is not sealed
             and the link type is not ``INPUT_CALC``.
         """
+        from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 
         if self._node.is_sealed:
             raise exceptions.ModificationNotAllowed('Cannot add a link to a sealed node')
@@ -125,7 +126,7 @@ class ProcessNodeLinks(NodeLinks):
         if self._node.is_stored:
             raise ValueError('attempted to add an input link after the process node was already stored.')
 
-        if link_type is LinkType.INPUT_CALC and not source.is_sealed:
+        if isinstance(source, CalcJobNode) and link_type is LinkType.INPUT_CALC and not source.is_sealed:
             raise exceptions.ModificationNotAllowed('Cannot add a link from a `CalculationNode`, if not sealed.')
 
         super().validate_incoming(source, link_type, link_label)

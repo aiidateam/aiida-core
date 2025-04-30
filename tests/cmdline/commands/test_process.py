@@ -88,6 +88,9 @@ def fork_worker_context(aiida_profile):
 
     client = get_daemon_client(aiida_profile)
     nb_workers = client.get_number_of_workers()
+    # The workers are decreased to zero to ensure that the worker that is
+    # subsequently started through this fixture is the one that receives all
+    # submitted processes.
     client.decrease_workers(nb_workers)
     daemon_log_dir = Path(client.daemon_log_file).parent
 

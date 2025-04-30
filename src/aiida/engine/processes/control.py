@@ -277,18 +277,17 @@ def _resolve_futures(
             LOGGER.error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
 
     try:
-        for future in concurrent.futures.as_completed(futures.keys(), timeout=timeout):
-            process = futures[future]
-
-            unwrapped = None
+        for future, process in futures.items():
+            # unwrap is need here since LoopCommunicator will also wrap a future
+            unwrapped = unwrap_kiwi_future(future)
             try:
-                # unwrap is need here since LoopCommunicator will also wrap a future
-                unwrapped = unwrap_kiwi_future(future)
-                result = unwrapped.result(timeout)
+                result = unwrapped.result(timeout=timeout)
             except communications.TimeoutError:
-                if unwrapped is not None:
-                    unwrapped.cancel()
-                LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out')
+                cancelled = unwrapped.cancel()
+                if cancelled:
+                    LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out and was cancelled.')
+                else:
+                    LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out but could not be cancelled.')
             except Exception as exception:
                 LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
             else:

@@ -21,12 +21,12 @@ from __future__ import annotations
 
 import logging
 import pathlib
-import typing as t
 
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField
+from aiida.common.typing import FilePath
 from aiida.orm import Computer
 
 from .abstract import AbstractCode
@@ -34,8 +34,6 @@ from .legacy import Code
 
 __all__ = ('PortableCode',)
 _LOGGER = logging.getLogger(__name__)
-
-FilePath = t.Union[pathlib.PurePath, str]
 
 
 def _export_filpath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:

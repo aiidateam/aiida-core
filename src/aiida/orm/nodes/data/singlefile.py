@@ -18,12 +18,11 @@ import typing as t
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
+from aiida.common.typing import FilePath
 
 from .data import Data
 
 __all__ = ('SinglefileData',)
-
-FilePath = t.Union[str, pathlib.PurePath]
 
 
 class SinglefileData(Data):

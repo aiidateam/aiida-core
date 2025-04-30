@@ -57,7 +57,7 @@ class PortableCode(Code):
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
 
-        filepath_executable: FilePath = MetadataField(
+        filepath_executable: str = MetadataField(
             ...,
             title='Filepath executable',
             description='Relative filepath of executable with directory of code files.',
@@ -65,7 +65,7 @@ class PortableCode(Code):
             priority=1,
             orm_to_model=lambda node, _: str(node.filepath_executable),
         )
-        filepath_files: FilePath = MetadataField(
+        filepath_files: str = MetadataField(
             ...,
             title='Code directory',
             description='Filepath to directory containing code files.',

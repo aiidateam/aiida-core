@@ -288,7 +288,6 @@ exclude = [
 ]
 
 [tool.mypy]
-python_version = "3.9"
 disallow_any_generics = false
 disallow_incomplete_defs = false
 disallow_subclassing_any = false

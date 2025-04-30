@@ -134,7 +134,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             doc='The group description',
         ),
         add_field(
-            'time',
+            'ctime',
             dtype=str,
             is_attribute=False,
             doc='The time of the group creation',

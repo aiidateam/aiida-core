@@ -21,6 +21,7 @@ from aiida.orm.nodes.data import (
     Int,
     JsonableData,
     List,
+    RemoteData,
     SinglefileData,
     Str,
     StructureData,
@@ -48,6 +49,7 @@ orms_to_test = (
     SinglefileData,
     Str,
     StructureData,
+    RemoteData,
 )
 
 
@@ -134,6 +136,8 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         return Str, {'value': 'string'}
     if request.param is StructureData:
         return StructureData, {'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]]}
+    if request.param is RemoteData:
+        return RemoteData, {'remote_path': '/some/path', 'computer': aiida_localhost}
 
     raise NotImplementedError()
 

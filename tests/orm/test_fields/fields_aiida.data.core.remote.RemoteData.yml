@@ -10,7 +10,7 @@ mtime: QbNumericField('mtime', dtype=typing.Optional[datetime.datetime], is_attr
 node_type: QbStrField('node_type', dtype=typing.Optional[str], is_attribute=False)
 pk: QbNumericField('pk', dtype=typing.Optional[int], is_attribute=False)
 process_type: QbStrField('process_type', dtype=typing.Optional[str], is_attribute=False)
-remote_path: QbStrField('remote_path', dtype=<class 'str'>, is_attribute=True)
+remote_path: QbStrField('remote_path', dtype=typing.Optional[str], is_attribute=True)
 repository_content: QbDictField('repository_content', dtype=typing.Optional[dict[str,
   bytes]], is_attribute=False)
 repository_metadata: QbDictField('repository_metadata', dtype=typing.Optional[typing.Dict[str,

@@ -88,28 +88,24 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             command = super().get_command(ctx, cmd_name)
         return command
 
-    def call_command(self, ctx, cls, **kwargs):
+    def call_command(self, ctx, cls, non_interactive, **kwargs):
         """Call the ``command`` after validating the provided inputs."""
         from pydantic import ValidationError
 
         if hasattr(cls, 'Model'):
             # The plugin defines a pydantic model: use it to validate the provided arguments
             try:
-                model = cls.Model(**kwargs)
+                cls.Model(**kwargs)
             except ValidationError as exception:
                 param_hint = [
                     f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
                     for loc in exception.errors()[0]['loc']
                 ]
-                message = '\n'.join([str(e['ctx']['error']) for e in exception.errors()])
+                message = '\n'.join([str(e['msg']) for e in exception.errors()])
                 raise click.BadParameter(
                     message,
-                    param_hint=param_hint or 'multiple parameters',  # type: ignore[arg-type]
+                    param_hint=param_hint or 'one or more parameters',  # type: ignore[arg-type]
                 ) from exception
-
-            # Update the arguments with the dictionary representation of the model. This will include any type coercions
-            # that may have been applied with validators defined for the model.
-            kwargs.update(**model.model_dump())
 
         return self._command(ctx, cls, **kwargs)
 
@@ -154,6 +150,8 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         """
         from pydantic_core import PydanticUndefined
 
+        from aiida.common.pydantic import get_metadata
+
         cls = self.factory(entry_point)
 
         if not hasattr(cls, 'Model'):
@@ -170,6 +168,9 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         options_spec = {}
 
         for key, field_info in cls.Model.model_fields.items():
+            if get_metadata(field_info, 'exclude_from_cli'):
+                continue
+
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
 
             # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real
@@ -194,7 +195,8 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             }
             for metadata in field_info.metadata:
                 for metadata_key, metadata_value in metadata.items():
-                    options_spec[key][metadata_key] = metadata_value
+                    if metadata_key in ('priority', 'short_name', 'option_cls'):
+                        options_spec[key][metadata_key] = metadata_value
 
         options_ordered = []
 

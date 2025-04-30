@@ -14,6 +14,8 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS, capture_logging
+from aiida.cmdline.params.options.overridable import OverridableOption
+
 
 REPAIR_INSTRUCTIONS = """\
 If one ore more processes are unreachable, you can run the following commands to try and repair them:
@@ -318,7 +320,14 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
 @verdi_process.command('kill')
 @arguments.PROCESSES()
 @options.ALL(help='Kill all processes if no specific processes are specified.')
-@options.TIMEOUT()
+@OverridableOption(
+    '-t',
+    '--timeout',
+    type=click.FLOAT,
+    default=5.0,
+    show_default=True,
+    help='Time in seconds to wait for a response of the kill task before timing out.',
+)()
 @options.WAIT()
 @options.FORCE_KILL(
     help='Force kill the process if it does not respond to the initial kill signal.\n'

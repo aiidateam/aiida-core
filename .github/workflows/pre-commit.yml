@@ -25,7 +25,7 @@ jobs:
     - name: Install python dependencies
       uses: ./.github/actions/install-aiida-core
       with:
-        python-version: '3.9' # lowest possible support
+        python-version: '3.13'
         from-lock: 'true'
 
     - name: Run pre-commit

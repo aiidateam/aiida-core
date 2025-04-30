@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
-from typing import Union
 import pathlib
+from typing import Union
 
 __all__ = ('FilePath',)
 

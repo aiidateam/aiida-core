@@ -64,7 +64,7 @@ class ComputerCollection(entities.Collection['Computer']):
 class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     """Computer entity."""
 
-    _logger = logging.getLogger(__name__)
+    _logger = logging.getLogger(__name__)  # type: ignore[assignment]
 
     PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL = 'minimum_scheduler_poll_interval'
     PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT = 10.0
@@ -125,7 +125,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     @property
     def logger(self) -> logging.Logger:
-        return self._logger
+        return self._logger  # type: ignore[has-type]
 
     @classmethod
     def _label_validator(cls, label: str) -> None:

@@ -81,7 +81,10 @@ For details refer to the next section :ref:`"How to add support for custom data 
 .. _how-to:data:dump:
 
 Dumping data to disk
---------------------
+====================
+
+Profile dumping
+---------------
 
 .. versionadded:: 2.6
 
@@ -147,6 +150,262 @@ node inputs (outputs) of each ``CalculationNode`` of the workflow into ``node_in
 subdirectories.
 
 For a full list of available options, call :code:`verdi process dump --help`.
+
+Group Dumping
+-------------
+
+.. versionadded:: 2.7
+
+The functionality has been expanded to also dump data from groups:
+
+.. code-block:: shell
+
+    verdi group dump <group-identifier>
+
+This command will create a directory structure with all processes contained in the specified group. For example:
+
+.. code-block:: shell
+
+    $ verdi group dump my-calculations
+    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please reach out via Discourse.
+    Report: No config file found. Using command-line arguments.
+    Report: Starting dump process of group `my-calculations` in mode: INCREMENTAL
+    Report: Processing group changes...
+    Report: Processing 1 new or modified groups: ['my-calculations']
+    Report: Dumping 1 nodes for group 'my-calculations'
+    Report: Saving final dump log, mapping, and configuration...
+    Success: Raw files for group `my-calculations` dumped into folder `group-my-calculations-dump`.
+
+Will result in the following output directory:
+
+.. code-block:: shell
+
+    $ tree -a group-my-calculations-dump/
+    group-my-calculations-dump
+    ├── .aiida_dump_safeguard
+    ├── aiida_dump_config.yaml
+    ├── aiida_dump_log.json
+    └── calculations
+    └── ArithmeticAddCalculation-4
+        ├── .aiida_dump_safeguard
+        ├── .aiida_node_metadata.yaml
+        ├── inputs
+        │  ├── .aiida
+        │  │  ├── calcinfo.json
+        │  │  └── job_tmpl.json
+        │  ├── _aiidasubmit.sh
+        │  └── aiida.in
+        └── outputs
+            ├── _scheduler-stderr.txt
+            ├── _scheduler-stdout.txt
+            └── aiida.out
+
+Similarly for a group ``my-workflows`` with a ``MultiplyAddWorkChain``:
+
+.. code-block:: shell
+
+    $ verdi group dump my-calculations
+    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please reach out via Discourse.
+    Report: No config file found. Using command-line arguments.
+    Report: Starting dump process of group `my-workflows` in mode: INCREMENTAL
+    Report: Processing group changes...
+    Report: Processing 1 new or modified groups: ['my-workflows']
+    Report: Dumping 1 nodes for group 'my-workflows'
+    Report: Saving final dump log, mapping, and configuration...
+    Success: Raw files for group `my-workflows` dumped into folder `group-my-workflows-dump`.
+
+And the following output directory:
+
+.. code-block:: shell
+
+    $ tree -a group-my-workflows-dump/
+    group-my-workflows-dump
+    ├── .aiida_dump_safeguard
+    ├── aiida_dump_config.yaml
+    ├── aiida_dump_log.json
+    └── workflows
+    └── MultiplyAddWorkChain-11
+        ├── .aiida_dump_safeguard
+        ├── .aiida_node_metadata.yaml
+        ├── 01-multiply-12
+        │  ├── .aiida_dump_safeguard
+        │  ├── .aiida_node_metadata.yaml
+        │  └── inputs
+        │     └── source_file
+        └── 02-ArithmeticAddCalculation-14
+            ├── .aiida_dump_safeguard
+            ├── .aiida_node_metadata.yaml
+            ├── inputs
+            │  ├── .aiida
+            │  │  ├── calcinfo.json
+            │  │  └── job_tmpl.json
+            │  ├── _aiidasubmit.sh
+            │  └── aiida.in
+            └── outputs
+                ├── _scheduler-stderr.txt
+                ├── _scheduler-stdout.txt
+                └── aiida.out
+
+Profile Dumping
+---------------
+
+.. versionadded:: 2.7
+
+And, going even further, you can now also dump your data from an entire AiiDA profile.
+If no options are provided, by default, no data is being dumped:
+
+.. code-block:: shell
+
+    $ verdi profile dump
+    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please reach out via Discourse.
+    Report: No config file found. Using command-line arguments.
+    Warning: No specific data selection determined from config file or CLI arguments.
+    Warning: Please specify `--all` to dump all profile data or filters such as `groups`, `user` etc.
+    Warning: Use `--help` for all options and `--dry-run` to preview.
+
+This is to avoid accidentally initiating the dumping operation on a large AiiDA database.
+Instead, if all data of the profile should be dumped, use the ``--all`` flag, or select a subset of your AiiDA data
+using ``--groups``, ``--user``, as well as the various time-based filter options the command provides.
+
+If we run with ``--all`` on our current profile, we get the following result:
+
+.. code-block:: shell
+
+    $ verdi profile dump --all
+    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please reach out via Discourse.
+    Report: No config file found. Using command-line arguments.
+    Report: Starting dump process of default profile in mode: INCREMENTAL
+    Report: Processing group changes...
+    Report: Processing 2 new or modified groups: ['my-calculations', 'my-workflows']
+    Report: Dumping 1 nodes for group 'my-calculations'
+    Report: Dumping 1 nodes for group 'my-workflows'
+    Report: Saving final dump log, mapping, and configuration...
+    Success: Raw files for profile `docs` dumped into folder `profile-docs-dump`.
+
+The resulting directory preserves the group organization:
+
+.. code-block:: shell
+
+    $ tree -a profile-docs-dump/
+    profile-docs-dump
+    ├── .aiida_dump_safeguard
+    ├── aiida_dump_config.yaml
+    ├── aiida_dump_log.json
+    └── groups
+    ├── my-calculations
+    │  ├── .aiida_dump_safeguard
+    │  └── calculations
+    │     └── ArithmeticAddCalculation-4
+    │        ├── .aiida_dump_safeguard
+    │        ├── .aiida_node_metadata.yaml
+    │        ├── inputs
+    │        │  ├── .aiida
+    │        │  │  ├── calcinfo.json
+    │        │  │  └── job_tmpl.json
+    │        │  ├── _aiidasubmit.sh
+    │        │  └── aiida.in
+    │        └── outputs
+    │           ├── _scheduler-stderr.txt
+    │           ├── _scheduler-stdout.txt
+    │           └── aiida.out
+    └── my-workflows
+        ├── .aiida_dump_safeguard
+        └── workflows
+            └── MultiplyAddWorkChain-11
+                ├── .aiida_dump_safeguard
+                ├── .aiida_node_metadata.yaml
+                ├── 01-multiply-12
+                │  ├── .aiida_dump_safeguard
+                │  ├── .aiida_node_metadata.yaml
+                │  └── inputs
+                │     └── source_file
+                └── 02-ArithmeticAddCalculation-14
+                ├── .aiida_dump_safeguard
+                ├── .aiida_node_metadata.yaml
+                ├── inputs
+                │  ├── .aiida
+                │  │  ├── calcinfo.json
+                │  │  └── job_tmpl.json
+                │  ├── _aiidasubmit.sh
+                │  └── aiida.in
+                └── outputs
+                    ├── _scheduler-stderr.txt
+                    ├── _scheduler-stdout.txt
+                    └── aiida.out
+
+.. Common Options
+.. ------------
+
+.. All three commands (``verdi process dump``, ``verdi group dump``, and ``verdi profile dump``) support various options:
+
+.. - ``-p/--path PATH``: Specify a custom dumping path
+.. - ``-o/--overwrite``: Fully overwrite an existing dumping directory
+.. - ``--include-inputs/--exclude-inputs``: Include/exclude linked input nodes
+.. - ``--include-outputs/--exclude-outputs``: Include/exclude linked output nodes
+.. - ``--include-attributes/--exclude-attributes``: Include/exclude node attributes
+.. - ``--include-extras/--exclude-extras``: Include/exclude node extras
+.. - ``-f/--flat``: Dump files in a flat directory structure
+.. - ``--dump-unsealed/--no-dump-unsealed``: Allow/disallow dumping of unsealed process nodes
+
+.. For group and profile dumping, additional options include:
+
+.. - ``--filter-by-last-dump-time/--no-filter-by-last-dump-time``: Only dump nodes modified since last dump
+.. - ``--dump-processes/--no-dump-processes``: Control process dumping
+.. - ``--only-top-level-calcs/--no-only-top-level-calcs``: Control calculation directory creation
+.. - ``--only-top-level-workflows/--no-only-top-level-workflows``: Control workflow directory creation
+.. - ``--symlink-calcs/--no-symlink-calcs``: Use symlinks for duplicate calculations to avoid data duplication
+
+.. For a full list of available options, call ``verdi process dump --help``, ``verdi group dump --help``, or ``verdi profile dump --help``.
+
+.. Incremental Dumping
+.. ---------------~~
+
+.. By default, all dump commands operate in incremental mode, which means they only process nodes that are new or have been modified since the last dump operation. This makes the feature efficient when run repeatedly:
+
+.. .. code-block:: shell
+
+..     $ verdi group dump my-calculations
+..     Report: No (new) calculations to dump in group `my-calculations`.
+..     Report: No (new) workflows to dump in group `my-calculations`.
+..     Success: Raw files for group `my-calculations` dumped into folder `my-calculations-dump`.
+
+Python API
+----------
+
+The dump functionality is also available through a Python API:
+
+.. code-block:: python
+
+    # Dump a single process
+    from aiida import orm, load_profile
+    from aiida.tools.dump.process import ProcessDump
+
+    load_profile()
+    process_node = orm.load_node(4)  # ArithmeticAddCalculation node
+    process_dump = ProcessDump(process_node=process_node)
+    process_dump.dump()
+
+    # Dump a group
+    from aiida.tools.dump.group import GroupDump
+    group = orm.load_group('my-calculations')
+    group_dump = GroupDump(group=group)
+    group_dump.dump()
+
+    # Dump a profile
+    from aiida.tools.dump.profile import ProfileDump
+    profile_dump = ProfileDump()
+    profile_dump.dump()
+
+Usage Scenarios
+------------~~
+
+The data dumping functionality was designed to bridge the gap between research conducted with AiiDA and scientists not familiar with AiiDA. Some common use cases include:
+
+1. Sharing simulation results with collaborators who don't use AiiDA
+2. Periodically running the dump command to reflect changes while working on a project
+3. Analyzing data using traditional shell tools outside of AiiDA's programmatic approach
+
+###
 
 .. _how-to:data:import:provenance:
 

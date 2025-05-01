@@ -137,6 +137,7 @@ class TestProcessDumpManager:
 
 # === Tests for classes used by ProcessDumpManager ===
 
+
 @pytest.mark.usefixtures('aiida_profile_clean')
 class TestProcessManagerHelpers:
     """Tests helper classes used by ProcessDumpManager."""

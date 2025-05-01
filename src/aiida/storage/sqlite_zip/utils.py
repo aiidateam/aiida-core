@@ -72,7 +72,7 @@ def _json_contains(lhs: Union[str, bytes, bytearray, dict, list], rhs: Union[str
             rhs = json.loads(rhs)
     except json.JSONDecodeError:
         return 0
-    return int(_contains(lhs, rhs))
+    return int(_contains(lhs, rhs))  # type: ignore[arg-type]
 
 
 def register_json_contains(dbapi_connection, _):

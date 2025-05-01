@@ -146,3 +146,10 @@ def test_get_execname(aiida_localhost, bash_path):
     code = InstalledCode(label='some-label', computer=aiida_localhost, filepath_executable=str(bash_path.absolute()))
     with pytest.warns(AiidaDeprecationWarning):
         assert code.get_execname() == str(bash_path.absolute())
+
+
+def test_serialization(aiida_localhost, bash_path):
+    """Test the deprecated :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.get_execname` method."""
+    code = InstalledCode(label='some-label', computer=aiida_localhost, filepath_executable=str(bash_path.absolute()))
+
+    InstalledCode.from_serialized(**code.serialize())

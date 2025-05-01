@@ -121,6 +121,7 @@ class TestCodDbImporter:
                 {'id': '2000000', 'svnrevision': '1234'},
             ]
         )
+        assert [res for res in iter(results)] == [results.at(0), results.at(1), results.at(2)]
         assert len(results) == 3
         assert results.at(1).source == {
             'db_name': 'Crystallography Open Database',

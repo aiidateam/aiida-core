@@ -267,12 +267,12 @@ def test_open_text():
     """Test the ``NodeRepository.open`` method in text mode."""
     node = Data()
     node.base.repository.put_object_from_bytes(b'content', 'file')
-    
+
     # The 'r' case
     with node.base.repository.open('file', 'r') as handle:
         assert isinstance(handle, io.TextIOWrapper)
         assert handle.read() == 'content'
-       
+
     # The 'rb' case
     with node.base.repository.open('file', 'rb') as handle:
         assert handle.read() == b'content'

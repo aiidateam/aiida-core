@@ -223,6 +223,7 @@ Below is a list with all available subcommands.
       create        Create an empty group with a given label.
       delete        Delete groups and (optionally) the nodes they contain.
       description   Change the description of a group.
+      dump          Dump data of an AiiDA group to disk.
       list          Show a list of existing groups.
       move-nodes    Move the specified NODES from one group to another.
       path          Inspect groups of nodes, with delimited label paths.
@@ -397,6 +398,7 @@ Below is a list with all available subcommands.
     Commands:
       configure-rabbitmq  Configure RabbitMQ for a profile.
       delete              Delete one or more profiles.
+      dump                Dump all data in an AiiDA profile's storage to disk.
       list                Display a list of all available profiles.
       set-default         Set a profile as the default profile.
       setdefault          (Deprecated) Set a profile as the default profile.

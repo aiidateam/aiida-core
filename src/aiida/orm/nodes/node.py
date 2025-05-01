@@ -13,13 +13,13 @@ from __future__ import annotations
 import base64
 import datetime
 from functools import cached_property
-from logging import Logger
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterator, List, Optional, Tuple, Type, TypeVar
 from uuid import UUID
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
+from aiida.common.log import AIIDA_LOGGER
 from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
@@ -42,6 +42,8 @@ from .links import NodeLinks
 
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
+
+    from aiida.common.log import AiidaLoggerType
 
     from ..implementation import StorageBackend
     from ..implementation.nodes import BackendNode  # noqa: F401
@@ -174,8 +176,8 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             cls.__query_type_string = get_query_type_from_type_string(cls._plugin_type_string)  # type: ignore[misc]
         return cls.__query_type_string
 
-    # This will be set by the metaclass call
-    _logger: Optional[Logger] = None
+    # This will be set by the metaclass call but we set default
+    _logger: AiidaLoggerType = AIIDA_LOGGER
 
     # A tuple of attribute names that can be updated even after node is stored
     # Requires Sealable mixin, but needs empty tuple for base class
@@ -407,7 +409,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
 
     @property
-    def logger(self) -> Optional[Logger]:
+    def logger(self) -> Optional[AiidaLoggerType]:
         """Return the logger configured for this Node.
 
         :return: Logger object

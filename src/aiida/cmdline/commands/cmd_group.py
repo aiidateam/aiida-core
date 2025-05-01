@@ -325,6 +325,11 @@ def group_relabel(group, label):
         echo.echo_critical(str(exception))
     else:
         echo.echo_success(f"Label changed to '{label}'")
+        msg = (
+            'Note that if you are dumping your profile data to disk, to reflect the relabeling of the group, '
+            'run your `verdi profile dump` command again.'
+        )
+        echo.echo_report(msg)
 
 
 @verdi_group.command('description')
@@ -632,3 +637,153 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
             if no_virtual and child.is_virtual:
                 continue
             echo.echo(child.path, bold=not child.is_virtual)
+
+
+@verdi_group.command('dump')
+@arguments.GROUP()
+@options.PATH()
+@options.DRY_RUN()
+@options.OVERWRITE()
+@options.PAST_DAYS()
+@options.START_DATE()
+@options.END_DATE()
+@options.FILTER_BY_LAST_DUMP_TIME()
+@options.DUMP_PROCESSES()
+@options.DUMP_DATA()
+@options.ONLY_TOP_LEVEL_CALCS()
+@options.ONLY_TOP_LEVEL_WORKFLOWS()
+@options.DELETE_MISSING()
+@options.SYMLINK_CALCS()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+@options.DUMP_UNSEALED()
+@click.pass_context
+@with_dbenv()
+def group_dump(
+    ctx,
+    group,
+    path,
+    dry_run,
+    overwrite,
+    past_days,
+    start_date,
+    end_date,
+    filter_by_last_dump_time,
+    dump_processes,
+    dump_data,
+    delete_missing,
+    only_top_level_calcs,
+    only_top_level_workflows,
+    symlink_calcs,
+    include_inputs,
+    include_outputs,
+    include_attributes,
+    include_extras,
+    flat,
+    dump_unsealed,
+):
+    """Dump data of an AiiDA group to disk.
+
+    If 'aiida_dump_config.yaml' exists in the target directory, it will be used
+    as the sole source of configuration settings, ignoring other CLI flags.
+    Otherwise, CLI flags will be used.
+    """
+    import traceback
+
+    from pydantic import ValidationError
+
+    from aiida.cmdline.utils import echo
+    from aiida.common import NotExistent
+    from aiida.tools.dumping import GroupDumper
+    from aiida.tools.dumping.config import DumpConfig, DumpMode
+    from aiida.tools.dumping.utils.paths import DumpPaths
+
+    warning_msg = (
+        'This is a new feature which is still in its testing phase. '
+        'If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.'
+    )
+    echo.echo_warning(warning_msg)
+
+    # --- Initial Setup ---
+    final_dump_config = None
+    try:
+        dump_paths = DumpPaths._resolve_click_path_for_dump(path=path, entity=group)
+        config_file_path = dump_paths.config_path
+
+        if config_file_path.is_file():
+            # --- Config File Exists: Load ONLY from file ---
+            try:
+                config_path_rel = config_file_path.relative_to(dump_paths.top_level.parent)
+            except ValueError:
+                config_path_rel = config_file_path
+            echo.echo_report(f"Config file found at '{config_path_rel}'.")
+            echo.echo_report('Using config file settings ONLY (ignoring other CLI flags).')
+            try:
+                final_dump_config = DumpConfig.parse_yaml_file(config_file_path)
+                if final_dump_config.groups not in ([group.uuid], [group.label]):
+                    msg = (
+                        f"Config file specifies groups '{final_dump_config.groups}', "
+                        f"Overriding to dump only group '{group.label}'."
+                    )
+                    echo.echo_warning(msg)
+                    final_dump_config.groups = [group.uuid]
+
+            except (ValidationError, FileNotFoundError, ValueError) as e:
+                echo.echo_critical(f'Error loading or validating config file {config_file_path}: {e}')
+                return
+        else:
+            # --- Config File Does NOT Exist: Use ONLY CLI args ---
+            echo.echo_report('No config file found. Using command-line arguments.')
+            try:
+                # Gather relevant CLI args for group dump
+                config_input_data = {
+                    'dry_run': dry_run,
+                    'overwrite': overwrite,
+                    'groups': [group.uuid],  # Set group explicitly here
+                    'past_days': past_days,
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'filter_by_last_dump_time': filter_by_last_dump_time,
+                    'dump_processes': dump_processes,
+                    'dump_data': dump_data,
+                    'only_top_level_calcs': only_top_level_calcs,
+                    'only_top_level_workflows': only_top_level_workflows,
+                    'delete_missing': delete_missing,
+                    'symlink_calcs': symlink_calcs,
+                    'include_inputs': include_inputs,
+                    'include_outputs': include_outputs,
+                    'include_attributes': include_attributes,
+                    'include_extras': include_extras,
+                    'flat': flat,
+                    'dump_unsealed': dump_unsealed,
+                }
+                final_dump_config = DumpConfig.model_validate(config_input_data)
+            except ValidationError as e:
+                echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
+                return
+
+        # --- Logical Checks ---
+        if final_dump_config.dump_mode == DumpMode.DRY_RUN and overwrite:
+            msg = (
+                '`--dry-run` and `--overwrite` selected (or set in config). Overwrite operation will NOT be performed.'
+            )
+            echo.echo_warning(msg)
+
+        # --- Instantiate and Run GroupDumper ---
+        group_dumper = GroupDumper(group=group, config=final_dump_config, output_path=dump_paths.top_level)
+        group_dumper.dump()
+
+        if final_dump_config.dump_mode != DumpMode.DRY_RUN:
+            msg = f'Raw files for group `{group.label}` dumped into folder `{dump_paths.child}`.'
+            echo.echo_success(msg)
+        else:
+            echo.echo_success('Dry run completed.')
+
+    except NotExistent as e:
+        echo.echo_critical(f'Error: Required AiiDA entity not found: {e!s}')
+    except Exception as e:
+        msg = f'Unexpected error during dump of group {group.label}:\n ({e!s}).\n'
+        echo.echo_critical(msg + traceback.format_exc())

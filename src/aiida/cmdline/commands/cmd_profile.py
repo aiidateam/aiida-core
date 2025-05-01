@@ -17,6 +17,7 @@ from aiida.cmdline.groups import DynamicEntryPointCommandGroup
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
+from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
 
@@ -58,7 +59,10 @@ def command_create_profile(
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if not storage_cls.read_only and email is None:
-        raise click.BadParameter('The option is required for storages that are not read-only.', param_hint='--email')
+        raise click.BadParameter(
+            'The option is required for storages that are not read-only.',
+            param_hint='--email',
+        )
 
     _, storage_entry_point = get_entry_point_from_class(storage_cls.__module__, storage_cls.__name__)
     assert storage_entry_point is not None
@@ -94,7 +98,12 @@ def command_create_profile(
             broker_backend=broker_backend,
             broker_config=broker_config,
         )
-    except (ValueError, TypeError, exceptions.EntryPointError, exceptions.StorageMigrationError) as exception:
+    except (
+        ValueError,
+        TypeError,
+        exceptions.EntryPointError,
+        exceptions.StorageMigrationError,
+    ) as exception:
         echo.echo_critical(str(exception))
 
     echo.echo_success(f'Created new profile `{profile.name}`.')
@@ -164,7 +173,10 @@ def profile_list():
     """Display a list of all available profiles."""
     try:
         config = get_config()
-    except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:
+    except (
+        exceptions.MissingConfigurationError,
+        exceptions.ConfigurationError,
+    ) as exception:
         # This can happen for a fresh install and the `verdi setup` has not yet been run. In this case it is still nice
         # to be able to see the configuration directory, for instance for those who have set `AIIDA_PATH`. This way
         # they can at least verify that it is correctly set.
@@ -224,7 +236,10 @@ def profile_set_default(profile):
 def _profile_set_default(profile):
     try:
         config = get_config()
-    except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:
+    except (
+        exceptions.MissingConfigurationError,
+        exceptions.ConfigurationError,
+    ) as exception:
         echo.echo_critical(str(exception))
 
     config.set_default_profile(profile.name, overwrite=True).store()
@@ -260,7 +275,10 @@ def profile_delete(force, delete_data, profiles):
         echo.echo_warning(f'Deleting profile `{profile.name}`, {suffix} all data.')
 
         if not force:
-            echo.echo_warning('This operation cannot be undone, are you sure you want to continue?', nl=False)
+            echo.echo_warning(
+                'This operation cannot be undone, are you sure you want to continue?',
+                nl=False,
+            )
 
         if not force and not click.confirm(''):
             echo.echo_report(f'Deleting of `{profile.name}` cancelled.')
@@ -268,3 +286,178 @@ def profile_delete(force, delete_data, profiles):
 
         get_config().delete_profile(profile.name, delete_storage=delete_data)
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
+
+
+@verdi_profile.command('dump')
+@options.PATH()
+@options.DRY_RUN()
+@options.OVERWRITE()
+@options.ALL()
+@options.CODES()
+@options.COMPUTERS()
+@options.GROUPS()
+@options.USER()
+@options.PAST_DAYS()
+@options.START_DATE()
+@options.END_DATE()
+@options.FILTER_BY_LAST_DUMP_TIME()
+@options.DUMP_PROCESSES()
+@options.DUMP_DATA()
+@options.ONLY_TOP_LEVEL_CALCS()
+@options.ONLY_TOP_LEVEL_WORKFLOWS()
+@options.DELETE_MISSING()
+@options.SYMLINK_CALCS()
+@options.ORGANIZE_BY_GROUPS()
+@options.ALSO_UNGROUPED()
+@options.UPDATE_GROUPS()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+@options.DUMP_UNSEALED()
+@click.pass_context
+@with_dbenv()
+def profile_dump(
+    ctx,
+    path,
+    dry_run,
+    overwrite,
+    all_entries,
+    codes,
+    computers,
+    groups,
+    user,
+    past_days,
+    start_date,
+    end_date,
+    filter_by_last_dump_time,
+    dump_processes,
+    dump_data,
+    only_top_level_calcs,
+    only_top_level_workflows,
+    delete_missing,
+    symlink_calcs,
+    organize_by_groups,
+    also_ungrouped,
+    update_groups,
+    include_inputs,
+    include_outputs,
+    include_attributes,
+    include_extras,
+    flat,
+    dump_unsealed,
+):
+    """Dump all data in an AiiDA profile's storage to disk.
+
+    If 'aiida_dump_config.yaml' exists in the target directory, it will be used
+    as the sole source of configuration settings, ignoring other CLI flags.
+    Otherwise, CLI flags will be used.
+    """
+    import traceback
+
+    from pydantic import ValidationError
+
+    from aiida.cmdline.utils import echo
+    from aiida.common import NotExistent
+    from aiida.tools.dumping import ProfileDumper
+    from aiida.tools.dumping.config import DumpConfig, DumpMode, ProfileDumpSelection
+    from aiida.tools.dumping.utils.paths import DumpPaths
+
+    warning_msg = (
+        'This is a new feature which is still in its testing phase. '
+        'If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.'
+    )
+    echo.echo_warning(warning_msg)
+
+    # --- Initial Setup ---
+    profile = ctx.obj['profile']
+    final_dump_config = None
+    try:
+        dump_paths = DumpPaths._resolve_click_path_for_dump(path=path, entity=profile)
+        config_file_path = dump_paths.config_path
+
+        if config_file_path.is_file():
+            # --- Config File Exists: Load ONLY from file ---
+            try:
+                config_path_rel = config_file_path.relative_to(dump_paths.top_level.parent)
+            except ValueError:
+                config_path_rel = config_file_path  # Fallback if not relative
+            echo.echo_report(f"Config file found at '{config_path_rel}'.")
+            echo.echo_report('Using config file settings ONLY (ignoring other CLI flags).')
+            try:
+                # Validate and create config SOLELY from the file
+                final_dump_config = DumpConfig.parse_yaml_file(config_file_path)
+            except (ValidationError, FileNotFoundError, ValueError) as e:
+                echo.echo_critical(f'Error loading or validating config file {config_file_path}: {e}')
+                return
+        else:
+            # --- Config File Does NOT Exist: Use ONLY CLI args ---
+            echo.echo_report('No config file found. Using command-line arguments.')
+            try:
+                # Gather all relevant CLI args here
+                config_input_data = {
+                    'dry_run': dry_run,
+                    'overwrite': overwrite,
+                    'all_entries': all_entries,
+                    'groups': groups,
+                    'past_days': past_days,
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'user': user,
+                    'codes': codes,
+                    'computers': computers,
+                    'filter_by_last_dump_time': filter_by_last_dump_time,
+                    'dump_processes': dump_processes,
+                    'dump_data': dump_data,
+                    'only_top_level_calcs': only_top_level_calcs,
+                    'only_top_level_workflows': only_top_level_workflows,
+                    'delete_missing': delete_missing,
+                    'symlink_calcs': symlink_calcs,
+                    'organize_by_groups': organize_by_groups,
+                    'also_ungrouped': also_ungrouped,
+                    'update_groups': update_groups,
+                    'include_inputs': include_inputs,
+                    'include_outputs': include_outputs,
+                    'include_attributes': include_attributes,
+                    'include_extras': include_extras,
+                    'flat': flat,
+                    'dump_unsealed': dump_unsealed,
+                }
+                final_dump_config = DumpConfig.model_validate(config_input_data)
+            except ValidationError as e:
+                echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
+                return
+
+        # --- Check final determined scope (applies to both paths) ---
+        if final_dump_config.profile_dump_selection == ProfileDumpSelection.NONE:
+            echo.echo_warning('No specific data selection determined from config file or CLI arguments.')
+            msg = 'Please specify `--all` to dump all profile data or filters such as `groups`, `user` etc.'
+            echo.echo_warning(msg)
+            echo.echo_warning('Use `--help` for all options and `--dry-run` to preview.')
+            return
+
+        # --- Other logical checks ---
+        if not final_dump_config.organize_by_groups and final_dump_config.update_groups:
+            echo.echo_warning('`update_groups` is True, but `organize_by_groups` is False.')
+        if final_dump_config.dump_mode == DumpMode.DRY_RUN and overwrite:
+            msg = (
+                '`--dry-run` and `--overwrite` selected (or set in config). Overwrite operation will NOT be performed.'
+            )
+            echo.echo_warning(msg)
+
+        # --- Instantiate and Run ProfileDumper ---
+        profile_dumper = ProfileDumper(config=final_dump_config, output_path=dump_paths.top_level)
+        profile_dumper.dump()
+
+        if final_dump_config.dump_mode != DumpMode.DRY_RUN:
+            msg = f'Raw files for profile `{profile.name}` dumped into folder `{dump_paths.child}`.'
+            echo.echo_success(msg)
+        else:
+            echo.echo_success('Dry run completed.')
+
+    except NotExistent as e:
+        echo.echo_critical(f'Error: Required AiiDA entity not found: {e!s}')
+    except Exception as e:
+        msg = f'Unexpected error during dump of {profile.name}:\n ({e!s}).\n'
+        echo.echo_critical(msg + traceback.format_exc())

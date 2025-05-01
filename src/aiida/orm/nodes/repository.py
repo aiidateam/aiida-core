@@ -199,7 +199,8 @@ class NodeRepository:
             ``put_object_from_filelike`` instead.
 
         :param path: the relative path of the object within the repository.
-        :return: yield a byte stream object.
+        :param mode: (str) the type of stream object to be returned, 'r' for text handler, 'rb' for byte handler.
+        :return: yield a stream object, (byte or text)
         :raises TypeError: if the path is not a string and relative path.
         :raises FileNotFoundError: if the file does not exist.
         :raises IsADirectoryError: if the object is a directory and not a file.

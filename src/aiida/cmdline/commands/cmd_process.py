@@ -328,10 +328,14 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
     help='Time in seconds to wait for a response of the kill task before timing out.',
 )()
 @options.WAIT()
-@options.FORCE_KILL(
-    help='Force kill the process if it does not respond to the initial kill signal.\n'
-    ' Note: This may lead to orphaned jobs on your HPC and should be used with caution.'
-)
+@OverridableOption(
+    '-F',
+    '--force-kill',
+    is_flag=True,
+    default=False,
+    help='Kills the process without waiting for a confirmation if the job has been killed.\n'
+    'Note: This may lead to orphaned jobs on your HPC and should be used with caution.',
+)()
 @decorators.with_dbenv()
 def process_kill(processes, all_entries, timeout, wait, force_kill):
     """Kill running processes.

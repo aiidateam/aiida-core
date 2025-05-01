@@ -16,7 +16,7 @@ dependencies:
 - docstring_parser
 - get-annotations~=0.1
 - python-graphviz~=0.19
-- plumpy
+- plumpy~=0.25.0
 - ipython>=7
 - jedi<0.19
 - jinja2~=3.0

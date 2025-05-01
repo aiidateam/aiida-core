@@ -28,7 +28,7 @@ dependencies = [
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
   'graphviz~=0.19',
-  'plumpy',
+  'plumpy~=0.25.0',
   'ipython>=7',
   'jedi<0.19',
   'jinja2~=3.0',
@@ -535,6 +535,3 @@ commands = molecule {posargs:test}
 # .github/actions/install-aiida-core/action.yml
 # .readthedocs.yml
 required-version = ">=0.5.21"
-
-[tool.uv.sources]
-plumpy = {git = "https://github.com/aiidateam/plumpy.git", rev = "c437fc5487e682e6eba3ce56b0986b9b3863d0de"}

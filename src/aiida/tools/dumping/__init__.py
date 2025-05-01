@@ -6,6 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Modules related to the dumping of AiiDA data."""
+"""Public API for data dumping functionality."""
 
-__all__ = ('processes',)
+from aiida.tools.dumping.config import DumpConfig, DumpMode
+from aiida.tools.dumping.facades import GroupDumper, ProcessDumper, ProfileDumper
+
+__all__ = ('DumpConfig', 'DumpMode', 'GroupDumper', 'ProcessDumper', 'ProfileDumper')

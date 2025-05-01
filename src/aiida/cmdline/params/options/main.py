@@ -27,6 +27,7 @@ __all__ = (
     'ALL',
     'ALL_STATES',
     'ALL_USERS',
+    'ALSO_UNGROUPED',
     'APPEND_TEXT',
     'ARCHIVE_FORMAT',
     'BROKER_HOST',
@@ -53,13 +54,20 @@ __all__ = (
     'DB_PORT',
     'DB_USERNAME',
     'DEBUG',
+    'DELETE_MISSING',
     'DESCRIPTION',
     'DICT_FORMAT',
     'DICT_KEYS',
     'DRY_RUN',
+    'DUMP_DATA',
+    'DUMP_PROCESSES',
+    'DUMP_UNSEALED',
+    'END_DATE',
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
+    'FILTER_BY_LAST_DUMP_TIME',
+    'FLAT',
     'FORCE',
     'FORMULA_MODE',
     'FREQUENCY',
@@ -68,7 +76,10 @@ __all__ = (
     'GROUP_CLEAR',
     'HOSTNAME',
     'IDENTIFIER',
-    'INCREMENTAL',
+    'INCLUDE_ATTRIBUTES',
+    'INCLUDE_EXTRAS',
+    'INCLUDE_INPUTS',
+    'INCLUDE_OUTPUTS',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
@@ -78,8 +89,11 @@ __all__ = (
     'NODES',
     'NON_INTERACTIVE',
     'OLDER_THAN',
+    'ONLY_TOP_LEVEL_CALCS',
+    'ONLY_TOP_LEVEL_WORKFLOWS',
     'ORDER_BY',
     'ORDER_DIRECTION',
+    'ORGANIZE_BY_GROUPS',
     'OVERWRITE',
     'PAST_DAYS',
     'PATH',
@@ -98,11 +112,14 @@ __all__ = (
     'SCHEDULER',
     'SILENT',
     'SORT',
+    'START_DATE',
+    'SYMLINK_CALCS',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
     'TRAVERSAL_RULE_HELP_STRING',
     'TYPE_STRING',
+    'UPDATE_GROUPS',
     'USER',
     'USER_EMAIL',
     'USER_FIRST_NAME',
@@ -762,7 +779,7 @@ PATH = OverridableOption(
     '--path',
     type=click.Path(path_type=pathlib.Path),
     show_default=False,
-    help='Base path for operations that write to disk.',
+    help='Base path for dump operations that write to disk.',
 )
 
 OVERWRITE = OverridableOption(
@@ -783,10 +800,146 @@ SORT = OverridableOption(
     show_default=True,
 )
 
-INCREMENTAL = OverridableOption(
-    '--incremental/--no-incremental',
+DUMP_DATA = OverridableOption(
+    '--dump-data/--no-dump-data',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Dump data nodes.',
+)
+
+DUMP_PROCESSES = OverridableOption(
+    '--dump-processes/--no-dump-processes',
     is_flag=True,
     default=True,
     show_default=True,
-    help="Incremental dumping of data to disk. Doesn't require using overwrite to clean previous directories.",
+    help='Dump process data.',
+)
+
+ORGANIZE_BY_GROUPS = OverridableOption(
+    '--organize-by-groups/--no-organize-by-groups',
+    default=True,
+    is_flag=True,
+    type=bool,
+    show_default=True,
+    help='If the collection of nodes to be dumped is organized in groups, reproduce its hierarchy.',
+)
+
+INCLUDE_INPUTS = OverridableOption(
+    '--include-inputs/--exclude-inputs',
+    default=True,
+    show_default=True,
+    help='Include linked input nodes of `CalculationNode`(s).',
+)
+
+INCLUDE_OUTPUTS = OverridableOption(
+    '--include-outputs/--exclude-outputs',
+    default=False,
+    show_default=True,
+    help='Include linked output nodes of `CalculationNode`(s).',
+)
+
+INCLUDE_ATTRIBUTES = OverridableOption(
+    '--include-attributes/--exclude-attributes',
+    default=True,
+    show_default=True,
+    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+
+INCLUDE_EXTRAS = OverridableOption(
+    '--include-extras/--exclude-extras',
+    default=True,
+    show_default=True,
+    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+
+FLAT = OverridableOption(
+    '-f',
+    '--flat',
+    is_flag=True,
+    default=False,
+    help='Dump files in a flat directory for every step of a workflow.',
+)
+
+SYMLINK_CALCS = OverridableOption(
+    '--symlink-calcs/--no-symlink-calcs',
+    default=False,
+    show_default=True,
+    help='Symlink workflow sub-calculations to their own dedicated directories.',
+    #   (must be used in conjunction with no-only-top-level-calcs)
+)
+
+DELETE_MISSING = OverridableOption(
+    '--delete-missing/--no-delete-missing',
+    default=True,
+    show_default=True,
+    help='If a previously dumped group or node is deleted from the DB, delete the corresponding dump directory.',
+)
+
+ALSO_UNGROUPED = OverridableOption(
+    '--also-ungrouped/--no-also-ungrouped',
+    default=False,
+    show_default=True,
+    help='Dump also data of nodes that are not part of any group.',
+)
+
+ONLY_TOP_LEVEL_CALCS = OverridableOption(
+    '--only-top-level-calcs/--no-only-top-level-calcs',
+    default=True,
+    show_default=True,
+    help='Dump calculations in their own dedicated directories, not just as part of the dumped workflow.',
+)
+
+ONLY_TOP_LEVEL_WORKFLOWS = OverridableOption(
+    '--only-top-level-workflows/--no-only-top-level-workflows',
+    default=True,
+    show_default=True,
+    help='If a top-level workflow calls sub-workflows, create a designated directory only for the top-level workflow.',
+)
+
+UPDATE_GROUPS = OverridableOption(
+    '--update-groups/--no-update-groups',
+    default=True,
+    show_default=True,
+    help='Update directories if nodes have been added to other groups, or organized differently in terms of groups.',
+)
+
+DUMP_UNSEALED = OverridableOption(
+    '--dump-unsealed/--no-dump-unsealed',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Also allow the dumping of unsealed process nodes.',
+)
+
+FILTER_BY_LAST_DUMP_TIME = OverridableOption(
+    '--filter-by-last-dump-time/--no-filter-by-last-dump-time',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Only select nodes whose `mtime` is after the last dump time.',
+)
+
+FILTER_BY_LAST_DUMP_TIME = OverridableOption(
+    '--filter-by-last-dump-time/--no-filter-by-last-dump-time',
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help='Only select nodes whose `mtime` is after the last dump time.',
+)
+
+START_DATE = OverridableOption(
+    '--start-date',
+    is_flag=False,
+    default=None,
+    show_default=True,
+    help='Start date for node mtime range selection for profile dumping.',
+)
+
+END_DATE = OverridableOption(
+    '--end-date',
+    is_flag=False,
+    default=None,
+    show_default=True,
+    help='End date for node mtime range selection for profile dumping.',
 )

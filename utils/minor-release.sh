@@ -24,18 +24,26 @@ GITHUB_REPO="aiidateam/aiida-core"
 
 # Create an array to store commit summaries
 declare -a commit_summaries=()
+commit_list=$(git rev-list "$1"..HEAD)
+
+commits=()
+while IFS= read -r line; do
+    commits+=("$line")
+done <<< "$commit_list"
+
+
 
 # Loop through each commit hash
-for commit in "$@"; do
+for commit in "${commits[@]}"; do
     # Cherry-pick the commit
-    if git cherry-pick "$commit"; then
+    if git cat-file -t "$commit"; then
         # If cherry-pick succeeds, get the short message and short hash
         commit_message=$(git log -1 --pretty=format:"%B" $commit)
         original_short_hash=$(git log -1 --pretty=format:"%h" "$commit")
         original_long_hash=$(git rev-parse $original_short_hash)
 
         # Amend the cherry-picked commit to include the original commit ID for tracking
-        git commit --amend -m "$commit_message" -m "Cherry-pick: $original_long_hash"
+        #git commit --amend -m "$commit_message" -m "Cherry-pick: $original_long_hash"
 
         # Format the output as a Markdown list item and add to the array
         short_commit_message=$(git log -1 --pretty=format:"%s" $commit)

@@ -21,7 +21,7 @@ from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
-    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation import BackendComputer, StorageBackend  # noqa: F401
     from aiida.schedulers import Scheduler
     from aiida.transports import Transport
 
@@ -54,7 +54,7 @@ class ComputerCollection(entities.Collection['Computer']):
 
     def list_labels(self) -> List[str]:
         """Return a list with all the labels of the computers in the DB."""
-        return self._backend.computers.list_names()
+        return self._backend.computers.list_names()  # type: ignore[attr-defined]
 
     def delete(self, pk: int) -> None:
         """Delete the computer with the given id"""
@@ -190,7 +190,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """Validates the mpirun_command variable. MUST be called after properly
         checking for a valid scheduler.
         """
-        if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, str) for i in mpirun_cmd):
+        if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, str) for i in mpirun_cmd):  # type: ignore[redundant-expr]
             raise exceptions.ValidationError('the mpirun_command must be a list of strings')
 
         try:
@@ -244,7 +244,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         if def_cpus_per_machine is None:
             return
 
-        if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:
+        if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:  # type: ignore[redundant-expr]
             raise exceptions.ValidationError(
                 'Invalid value for default_mpiprocs_per_machine, must be a positive integer, or an empty string if you '
                 'do not want to provide a default value.'
@@ -256,7 +256,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         if def_memory_per_machine is None:
             return
 
-        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:
+        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:  # type: ignore[redundant-expr]
             raise exceptions.ValidationError(
                 f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
             )
@@ -453,7 +453,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """Set the mpirun command. It must be a list of strings (you can use
         string.split() if you have a single, space-separated string).
         """
-        if not isinstance(val, (tuple, list)) or not all(isinstance(i, str) for i in val):
+        if not isinstance(val, (tuple, list)) or not all(isinstance(i, str) for i in val):  # type: ignore[redundant-expr]
             raise TypeError('the mpirun_command must be a list of strings')
         self.set_property('mpirun_command', val)
 

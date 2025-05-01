@@ -14,6 +14,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.log import LOG_LEVELS, capture_logging
 
 REPAIR_INSTRUCTIONS = """\
@@ -583,50 +584,21 @@ def process_repair(manager, broker, dry_run):
 @verdi_process.command('dump')
 @arguments.PROCESS()
 @options.PATH()
+@options.DRY_RUN()
 @options.OVERWRITE()
-@click.option(
-    '--include-inputs/--exclude-inputs',
-    default=True,
-    show_default=True,
-    help='Include the linked input nodes of the `CalculationNode`(s).',
-)
-@click.option(
-    '--include-outputs/--exclude-outputs',
-    default=False,
-    show_default=True,
-    help='Include the linked output nodes of the `CalculationNode`(s).',
-)
-@click.option(
-    '--include-attributes/--exclude-attributes',
-    default=True,
-    show_default=True,
-    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-@click.option(
-    '--include-extras/--exclude-extras',
-    default=True,
-    show_default=True,
-    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-@click.option(
-    '-f',
-    '--flat',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Dump files in a flat directory for every step of the workflow.',
-)
-@click.option(
-    '--dump-unsealed',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Also allow the dumping of unsealed process nodes.',
-)
-@options.INCREMENTAL()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+@options.DUMP_UNSEALED()
+@click.pass_context
+@with_dbenv()
 def process_dump(
+    ctx,
     process,
     path,
+    dry_run,
     overwrite,
     include_inputs,
     include_outputs,
@@ -634,13 +606,12 @@ def process_dump(
     include_extras,
     flat,
     dump_unsealed,
-    incremental,
 ) -> None:
     """Dump process input and output files to disk.
 
     Child calculations/workflows (also called `CalcJob`s/`CalcFunction`s and `WorkChain`s/`WorkFunction`s in AiiDA
     jargon) run by the parent workflow are contained in the directory tree as sub-folders and are sorted by their
-    creation time.  The directory tree thus mirrors the logical execution of the workflow, which can also be queried by
+    creation time.  The directory tree thus dumps the logical execution of the workflow, which can also be queried by
     running `verdi process status <pk>` on the command line.
 
     By default, input and output files of each calculation can be found in the corresponding "inputs" and
@@ -651,30 +622,83 @@ def process_dump(
     Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
     node data for further inspection.
     """
+    import traceback
 
+    from pydantic import ValidationError
+
+    from aiida.cmdline.utils import echo
+    from aiida.common import NotExistent
     from aiida.tools.archive.exceptions import ExportValidationError
-    from aiida.tools.dumping.processes import ProcessDumper
+    from aiida.tools.dumping import ProcessDumper
+    from aiida.tools.dumping.config import DumpConfig, DumpMode
+    from aiida.tools.dumping.utils.paths import DumpPaths
 
-    process_dumper = ProcessDumper(
-        include_inputs=include_inputs,
-        include_outputs=include_outputs,
-        include_attributes=include_attributes,
-        include_extras=include_extras,
-        overwrite=overwrite,
-        flat=flat,
-        dump_unsealed=dump_unsealed,
-        incremental=incremental,
+    warning_msg = (
+        'The backend implementation of this command was recently refactored. '
+        'If you encounter unexpected behavior or bugs, please reach out via Discourse.'
     )
+    echo.echo_warning(warning_msg)
+
+    # --- Initial Setup ---
+    final_dump_config = None
 
     try:
-        dump_path = process_dumper.dump(process_node=process, output_path=path)
-    except FileExistsError:
-        echo.echo_critical(
-            'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
-        )
-    except ExportValidationError as e:
-        echo.echo_critical(f'{e!s}')
-    except Exception as e:
-        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')
+        dump_paths = DumpPaths._resolve_click_path_for_dump(path=path, entity=process)
+        config_file_path = dump_paths.config_path
 
-    echo.echo_success(f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.')
+        if config_file_path.is_file():
+            # Config File Exists: Load ONLY from file
+            try:
+                config_path_rel = config_file_path.relative_to(dump_paths.top_level.parent)
+            except ValueError:
+                config_path_rel = config_file_path
+            echo.echo_report(f"Config file found at '{config_path_rel}'.")
+            echo.echo_report('Using config file settings ONLY (ignoring other CLI flags).')
+            try:
+                final_dump_config = DumpConfig.parse_yaml_file(config_file_path)
+            except (ValidationError, FileNotFoundError, ValueError) as e:
+                echo.echo_critical(f'Error loading or validating config file {config_file_path}: {e}')
+                return
+        else:
+            # Config File Does NOT Exist: Use ONLY CLI args
+            echo.echo_report('No config file found. Using command-line arguments.')
+            try:
+                # Gather relevant CLI args specific to process dump
+                config_input_data = {
+                    'dry_run': dry_run,
+                    'overwrite': overwrite,
+                    'include_inputs': include_inputs,
+                    'include_outputs': include_outputs,
+                    'include_attributes': include_attributes,
+                    'include_extras': include_extras,
+                    'flat': flat,
+                    'dump_unsealed': dump_unsealed,
+                }
+                final_dump_config = DumpConfig.model_validate(config_input_data)
+            except ValidationError as e:
+                echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
+                return
+
+        # --- Logical Checks ---
+        # Check for dry_run + overwrite based on final config
+        if overwrite and dry_run:
+            msg = 'Config specifies both `dry_run` and `overwrite` as True. Overwrite will NOT be performed.'
+            echo.echo_warning(msg)
+
+        # --- Instantiate and Run ProcessDumper ---
+        process_dumper = ProcessDumper(process=process, config=final_dump_config, output_path=dump_paths.top_level)
+        process_dumper.dump()
+
+        if final_dump_config.dump_mode != DumpMode.DRY_RUN:
+            msg = f'Raw files for process `{process.pk}` dumped into folder `{dump_paths.child}`.'
+            echo.echo_success(msg)
+        else:
+            echo.echo_success('Dry run completed.')
+
+    except NotExistent as e:
+        echo.echo_critical(f'Error: Required AiiDA entity not found: {e!s}')
+    except ExportValidationError as e:
+        echo.echo_critical(f'Data validation error during dump: {e!s}')
+    except Exception as e:
+        msg = f'Unexpected error during dump of process {process.pk}:\n ({e!s}).\n'
+        echo.echo_critical(msg + traceback.format_exc())

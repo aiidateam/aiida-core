@@ -77,7 +77,8 @@ inputs = {
         },
     },
 }
-run(MyCalculation, **inputs)```
+run(MyCalculation, **inputs)
+```
 
 However, if a user would realize they need to stash something only after running a calcjob, this would not be possible.
 
@@ -104,7 +105,8 @@ inputs = {
     'source_node': orm.RemoteData,
 }
 
-result = run(StashCalculation_, **inputs)```
+result = run(StashCalculation_, **inputs)
+```
 
 In addition, we now support more types for `stash_mode`, allowing for compressed operations:
 'stash_mode': StashMode.COPY.value,

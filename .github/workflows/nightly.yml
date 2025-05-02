@@ -2,7 +2,7 @@ name: nightly
 
 on:
   schedule:
-  - cron: 0 0 * * *        # Run every day at midnight
+  - cron: 0 0 * * *   # Run every day at midnight
   pull_request:
     paths:
     - .github/workflows/nightly.yml
@@ -15,7 +15,7 @@ on:
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
-    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+  # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -26,7 +26,7 @@ jobs:
 
   nightly-tests:
 
-    if: github.repository == 'aiidateam/aiida-core'      # Prevent running the builds on forks as well
+    if: github.repository == 'aiidateam/aiida-core'  # Prevent running the builds on forks as well
     runs-on: ubuntu-24.04
 
     services:

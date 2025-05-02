@@ -11,10 +11,10 @@
 from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from aiida.common import exceptions
+from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 
 from . import entities
-from .fields import add_field
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
@@ -53,32 +53,11 @@ class User(entities.Entity['BackendUser', UserCollection]):
 
     _CLS_COLLECTION = UserCollection
 
-    __qb_fields__ = [
-        add_field(
-            'email',
-            dtype=str,
-            is_attribute=False,
-            doc='The user email',
-        ),
-        add_field(
-            'first_name',
-            dtype=str,
-            is_attribute=False,
-            doc='The user first name',
-        ),
-        add_field(
-            'last_name',
-            dtype=str,
-            is_attribute=False,
-            doc='The user last name',
-        ),
-        add_field(
-            'institution',
-            dtype=str,
-            is_attribute=False,
-            doc='The user institution',
-        ),
-    ]
+    class Model(entities.Entity.Model):
+        email: str = MetadataField(description='The user email', is_attribute=False)
+        first_name: str = MetadataField(description='The user first name', is_attribute=False)
+        last_name: str = MetadataField(description='The user last name', is_attribute=False)
+        institution: str = MetadataField(description='The user institution', is_attribute=False)
 
     def __init__(
         self,
@@ -98,6 +77,12 @@ class User(entities.Entity['BackendUser', UserCollection]):
 
     def __str__(self) -> str:
         return self.email
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, User):
+            return False
+
+        return self.email == other.email
 
     @staticmethod
     def normalize_email(email: str) -> str:

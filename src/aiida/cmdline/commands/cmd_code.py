@@ -30,10 +30,10 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls, non_interactive: bool, **kwargs):
+def create_code(ctx: click.Context, cls, **kwargs):
     """Create a new `Code` instance."""
     try:
-        instance = cls(**kwargs)
+        instance = cls._from_model(cls.Model(**kwargs))
     except (TypeError, ValueError) as exception:
         echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
 
@@ -243,9 +243,7 @@ def show(code):
 @with_dbenv()
 def export(code, output_file, overwrite, sort):
     """Export code to a yaml file. If no output file is given, default name is created based on the code label."""
-
     other_args = {'sort': sort}
-
     fileformat = 'yaml'
 
     if output_file is None:

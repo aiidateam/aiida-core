@@ -14,13 +14,12 @@ from aiida.common import exceptions
 from aiida.manage import get_config_option
 
 if t.TYPE_CHECKING:
+    from aiida.common.typing import FilePath
     from aiida.repository import File, Repository
 
     from .node import Node
 
 __all__ = ('NodeRepository',)
-
-FilePath = t.Union[str, pathlib.PurePath]
 
 
 class NodeRepository:
@@ -133,6 +132,20 @@ class NodeRepository:
         :param repo: the repository to clone.
         """
         self._repository.clone(repo._repository)
+
+    def serialize_content(self) -> dict[str, bytes]:
+        """Serialize the content of the repository content into a JSON-serializable format.
+
+        :return: dictionary with the content metadata.
+        """
+        serialized = {}
+
+        for dirpath, _, filenames in self.walk():
+            for filename in filenames:
+                filepath = dirpath / filename
+                serialized[str(filepath)] = self.get_object_content(str(filepath), mode='rb')
+
+        return serialized
 
     def serialize(self) -> dict:
         """Serialize the metadata of the repository content into a JSON-serializable format.

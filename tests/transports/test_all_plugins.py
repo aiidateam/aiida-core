@@ -570,6 +570,12 @@ def test_put_and_get_tree(custom_transport, tmp_path_remote, tmp_path_local):
             ('local', 'local'),
             {'local': {'file.txt': 'Viva verdi', 'local': {'file.txt': 'Viva verdi'}}},
         ),
+        (
+            {'local': {'sub': {'file.txt': 'Viva verdi'}}},
+            {},
+            ('local/sub', 'local/sub'),
+            {'local': {'sub': {'file.txt': 'Viva verdi'}}},
+        ),
     ),
 )
 def test_put_and_get_overwrite(

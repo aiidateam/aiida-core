@@ -993,7 +993,7 @@ class SshTransport(BlockingTransport):
             raise OSError('Cannot copy a directory into a file')
 
         if not self.isdir(remotepath):  # in this case copy things in the remotepath directly
-            self.mkdir(remotepath)  # and make a directory at its place
+            self.makedirs(remotepath)  # and make a directory at its place
         else:  # remotepath exists already: copy the folder inside of it!
             remotepath = os.path.join(remotepath, os.path.split(localpath)[1])
             self.makedirs(remotepath, ignore_existing=overwrite)  # create a nested folder

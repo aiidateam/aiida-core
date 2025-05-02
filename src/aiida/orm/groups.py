@@ -8,17 +8,18 @@
 ###########################################################################
 """AiiDA Group entites"""
 
+import datetime
 import warnings
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
+from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from . import convert, entities, extras, users
-from .fields import add_field
 
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
@@ -108,51 +109,26 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
     __type_string: ClassVar[Optional[str]]
 
-    __qb_fields__ = [
-        add_field(
-            'uuid',
-            dtype=str,
+    class Model(entities.Entity.Model):
+        uuid: str = MetadataField(description='The UUID of the group', is_attribute=False, exclude_to_orm=True)
+        type_string: str = MetadataField(description='The type of the group', is_attribute=False, exclude_to_orm=True)
+        user: int = MetadataField(
+            description='The group owner',
             is_attribute=False,
-            doc='The UUID of the group',
-        ),
-        add_field(
-            'type_string',
-            dtype=str,
-            is_attribute=False,
-            doc='The type of the group',
-        ),
-        add_field(
-            'label',
-            dtype=str,
-            is_attribute=False,
-            doc='The group label',
-        ),
-        add_field(
-            'description',
-            dtype=str,
-            is_attribute=False,
-            doc='The group description',
-        ),
-        add_field(
-            'time',
-            dtype=str,
-            is_attribute=False,
-            doc='The time of the group creation',
-        ),
-        add_field(
-            'extras',
-            dtype=Dict[str, Any],
+            orm_class='core.user',
+            orm_to_model=lambda group, _: group.user.pk,  # type: ignore[attr-defined]
+        )
+        time: Optional[datetime.datetime] = MetadataField(
+            description='The creation time of the node', is_attribute=False
+        )
+        label: str = MetadataField(description='The group label', is_attribute=False)
+        description: Optional[str] = MetadataField(description='The group description', is_attribute=False)
+        extras: Optional[Dict[str, Any]] = MetadataField(
+            description='The group extras',
             is_attribute=False,
             is_subscriptable=True,
-            doc='The group extras',
-        ),
-        add_field(
-            'user_pk',
-            dtype=int,
-            is_attribute=False,
-            doc='The PK for the creating user',
-        ),
-    ]
+            orm_to_model=lambda group, _: group.base.extras.all,  # type: ignore[attr-defined]
+        )
 
     _CLS_COLLECTION = GroupCollection
 
@@ -162,6 +138,8 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         user: Optional['User'] = None,
         description: str = '',
         type_string: Optional[str] = None,
+        time: Optional[datetime.datetime] = None,
+        extras: Optional[Dict[str, Any]] = None,
         backend: Optional['StorageBackend'] = None,
     ):
         """Create a new group. Either pass a dbgroup parameter, to reload
@@ -177,15 +155,19 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         if not label:
             raise ValueError('Group label must be provided')
 
+        if type_string:
+            warn_deprecation('Passing the `type_string` is deprecated, it is determined automatically', version=3)
+
         backend = backend or get_manager().get_profile_storage()
         user = cast(users.User, user or backend.default_user)
         type_check(user, users.User)
-        type_string = self._type_string
 
         model = backend.groups.create(
-            label=label, user=user.backend_entity, description=description, type_string=type_string
+            label=label, user=user.backend_entity, description=description, type_string=self._type_string, time=time
         )
         super().__init__(model)
+        if extras is not None:
+            self.base.extras.set_many(extras)
 
     @classproperty
     def _type_string(cls) -> Optional[str]:  # noqa: N805
@@ -279,6 +261,11 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     def type_string(self) -> str:
         """:return: the string defining the type of the group"""
         return self._backend_entity.type_string
+
+    @property
+    def time(self) -> datetime.datetime:
+        """:return: the creation time"""
+        return self._backend_entity.time
 
     @property
     def user(self) -> 'User':

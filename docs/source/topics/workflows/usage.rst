@@ -215,19 +215,19 @@ The following example shows how to use these logical constructs to define the ou
 .. code:: python
 
     spec.outline(
-        cls.intialize_to_zero,
+        cls.initialize_to_zero,
         while_(cls.n_is_less_than_hundred)(
-            if_(cls.n_is_multitple_of_three)(
+            if_(cls.n_is_multiple_of_three_and_five)(
+                cls.report_fizz_buzz,
+            ).elif_(cls.n_is_multiple_of_three)(
                 cls.report_fizz,
             ).elif_(cls.n_is_multiple_of_five)(
                 cls.report_buzz,
-            ).elif_(cls.n_is_multiple_of_three_and_five)(
-                cls.report_fizz_buzz,
             ).else_(
                 cls.report_n,
-            )
+            ),
+            cls.increment_n_by_one,
         ),
-        cls.increment_n_by_one,
     )
 
 This is an implementation (and an extremely contrived one at that) of the well known FizzBuzz [#f2]_ problem.
@@ -239,7 +239,7 @@ The actual implementation of the outline steps themselves is now trivial:
 .. code:: python
 
     def initialize_to_zero(self):
-        self.ctx.n = 0
+        self.ctx.n = 1
 
     def n_is_less_than_hundred(self):
         return self.ctx.n < 100

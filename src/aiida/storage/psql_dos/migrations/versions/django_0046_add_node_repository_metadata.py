@@ -29,7 +29,7 @@ def upgrade():
         'db_dbnode',
         sa.Column('repository_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default='{}'),
     )
-    op.alter_column('db_dbnode', 'repository_metadata', server_default=None)
+    op.alter_column('db_dbnode', 'repository_metadata', server_default=None)  # type: ignore[arg-type]
 
 
 def downgrade():

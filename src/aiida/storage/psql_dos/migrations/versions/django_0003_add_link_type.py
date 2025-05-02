@@ -27,7 +27,7 @@ depends_on = None
 def upgrade():
     """Migrations for the upgrade."""
     op.add_column('db_dblink', sa.Column('type', sa.VARCHAR(length=255), nullable=False, server_default=''))
-    op.alter_column('db_dblink', 'type', server_default=None)
+    op.alter_column('db_dblink', 'type', server_default=None)  # type: ignore[arg-type]
     op.create_index('db_dblink_type_229f212b', 'db_dblink', ['type'])
     op.create_index(
         'db_dblink_type_229f212b_like',

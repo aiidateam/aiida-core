@@ -59,6 +59,8 @@ def tmp_path_local(tmp_path_factory):
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
+    plugin = TransportFactory(request.param)
+
     if request.param == 'core.ssh':
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
     elif request.param == 'core.ssh_async':
@@ -68,7 +70,7 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     else:
         kwargs = {}
 
-    return TransportFactory(request.param)(**kwargs)
+    return plugin(**kwargs)
 
 
 def test_is_open(custom_transport):

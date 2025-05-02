@@ -42,14 +42,19 @@ def file_hierarchy_simple():
     }
 
 
-@pytest.fixture(params=entry_point.get_entry_point_names('aiida.transports'))
-def node_and_calc_info(aiida_localhost, aiida_computer_ssh, aiida_code_installed, request):
+@pytest.fixture(
+    scope='function',
+    params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
+)
+def node_and_calc_info(aiida_localhost, aiida_computer_ssh, aiida_computer_ssh_async, aiida_code_installed, request):
     """Return a ``CalcJobNode`` and associated ``CalcInfo`` instance."""
 
     if request.param == 'core.local':
         node = CalcJobNode(computer=aiida_localhost)
     elif request.param == 'core.ssh':
         node = CalcJobNode(computer=aiida_computer_ssh())
+    elif request.param == 'core.ssh_async':
+        node = CalcJobNode(computer=aiida_computer_ssh_async())
     else:
         raise ValueError(f'unsupported transport: {request.param}')
 
@@ -378,6 +383,7 @@ def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, order, e
         ),
         # Only remote copy of a single file to the "pseudo" directory
         # -> Copy fails silently since target directory does not exist: final directory structure is empty
+        # COUNTER-INTUITIVE: the silent behavior is expected. See `execmanager.py`::_copy_remote_files for more details
         (
             {},
             (),
@@ -386,6 +392,7 @@ def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, order, e
             None,
         ),
         # -> Copy fails silently since target directory does not exist: final directory structure is empty
+        # COUNTER-INTUITIVE: the silent behavior is expected. See `execmanager.py`::_copy_remote_files for more details
         (
             {},
             (),

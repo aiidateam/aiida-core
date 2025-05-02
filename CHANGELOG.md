@@ -224,6 +224,7 @@ Note that this is still not a stable feature and might break in future releases 
 - ORM: Use `skip_orm` as the default implementation for `SqlaGroup.add_nodes` and `SqlaGroup.remove_nodes` (#6720) [[d2fbf214a]](https://github.com/aiidateam/aiida-core/commit/d2fbf214ad2fcfe5e39f9ebe2982f05557196397)
 - A new common funcion:`assert_never` to assert certain part of the code is never reached. [[d7c382a24]](https://github.com/aiidateam/aiida-core/commit/d7c382a2447260320a36be4f5c6de285f9d37bdc)
 - Replace usage of aiida.common.utils.strip_prefix with built-in removeprefix (#6758) [[290045b17]](https://github.com/aiidateam/aiida-core/commit/290045b171626a94f717e1e066e3cced50dab5a3)
+- Revert "Add the `SshAutoTransport` transport plugin (#6154)" (#6852) [[cf2614fa2]](https://github.com/aiidateam/aiida-core/commit/cf2614fa26ce1e8b15656a659a9f3b9fcec88b55)
 
 #### Tests
 - Tests: Remove test for `make_aware` using fixed date [[9fe7672f3]](https://github.com/aiidateam/aiida-core/commit/9fe7672f36c706c7eca87a4807012a1c8a5c0259)

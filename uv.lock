@@ -204,7 +204,7 @@ requires-dist = [
     { name = "pg8000", marker = "extra == 'tests'", specifier = "~=1.13" },
     { name = "pgsu", specifier = "~=0.3.0" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3,>=1.3.1" },
-    { name = "plumpy", specifier = "~=0.24.0" },
+    { name = "plumpy", specifier = "~=0.25.0" },
     { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=3.5" },
     { name = "psutil", specifier = "~=5.6" },
     { name = "psycopg", extras = ["binary"], specifier = "~=3.0" },
@@ -3268,16 +3268,16 @@ wheels = [
 
 [[package]]
 name = "plumpy"
-version = "0.24.0"
+version = "0.25.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "kiwipy", extra = ["rmq"] },
     { name = "nest-asyncio" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d9/0c/0bb568982e461f5e428606ccbdfe6d43c11dab0e3f5a8090298feb321172/plumpy-0.24.0.tar.gz", hash = "sha256:c17c8efbd124d7f5ec2f27cb1f2c3de7901143e61551ce81f3ee22bf7e2ed42d", size = 75634 }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/b1/7c8141f04fb9060e9de7fd4fafed7ce429a16c1a903675a093d390f14b16/plumpy-0.25.0.tar.gz", hash = "sha256:5eccca0f11757db652b15bfb0bb95dc010a9a5fa000df5f9db51cf6a4d1e682f", size = 198187 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/99/d3/68c83d4774f7a4f8e8dd4e30ce34e46071706a4b4dc40d3a1ad77de793fc/plumpy-0.24.0-py3-none-any.whl", hash = "sha256:09efafe97c88c8928e73f1dc08cf02a2c4737fa767920bff23dfa26226252cc6", size = 74955 },
+    { url = "https://files.pythonhosted.org/packages/97/9a/e939c60e6376bdcc84ed9ae92ed96312c13781044c08b1b96be036d4b11b/plumpy-0.25.0-py3-none-any.whl", hash = "sha256:f15e7b471185265e6bbd0cfd37b9cd4b5bf51a9019fdd74247d9cfe28c5da617", size = 75249 },
 ]
 
 [[package]]

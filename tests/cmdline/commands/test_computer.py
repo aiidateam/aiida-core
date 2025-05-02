@@ -977,13 +977,9 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
 # comment on 'core.ssh_async':
 # It is important that 'ssh localhost' is functional in your test environment.
 # It should connect without asking for a password.
-# comment on 'core.ssh_auto':
-# It is important that no other options (except for `--safe-interval`) have to be specified for this transport type.
-@pytest.mark.parametrize(
-    'transport_type, config', [('core.ssh_auto', []), ('core.ssh_async', ['--machine-or-host', 'localhost'])]
-)
+@pytest.mark.parametrize('transport_type, config', [('core.ssh_async', ['--machine-or-host', 'localhost'])])
 def test_computer_setup_with_various_transport(run_cli_command, aiida_computer, transport_type, config):
-    """Test setup of computer with ``core.ssh_auto`` and ``core.ssh_async`` entry points.
+    """Test setup of computer with ``core.ssh_async`` entry points.
 
     pass any config option the setup needs in the parameter section``.
     """

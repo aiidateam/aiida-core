@@ -59,18 +59,8 @@ def tmp_path_local(tmp_path_factory):
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
-    plugin = TransportFactory(request.param)
-
     if request.param == 'core.ssh':
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
-    elif request.param == 'core.ssh_auto':
-        kwargs = {'machine': 'localhost'}
-        # The transport config is store in a independent temporary path per test to not mix up
-        # with the files under operating.
-        filepath_config = tmp_path_factory.mktemp('transport') / 'config'
-        monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
-        if not filepath_config.exists():
-            filepath_config.write_text('Host localhost')
     elif request.param == 'core.ssh_async':
         kwargs = {
             'machine': 'localhost',
@@ -78,7 +68,7 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     else:
         kwargs = {}
 
-    return plugin(**kwargs)
+    return TransportFactory(request.param)(**kwargs)
 
 
 def test_is_open(custom_transport):

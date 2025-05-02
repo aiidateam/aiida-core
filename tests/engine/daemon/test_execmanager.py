@@ -18,6 +18,7 @@ from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.manage import get_manager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
+from aiida.plugins import entry_point
 from aiida.transports.plugins.local import LocalTransport
 
 
@@ -41,7 +42,7 @@ def file_hierarchy_simple():
     }
 
 
-@pytest.fixture(params=('core.local', 'core.ssh'))
+@pytest.fixture(params=entry_point.get_entry_point_names('aiida.transports'))
 def node_and_calc_info(aiida_localhost, aiida_computer_ssh, aiida_code_installed, request):
     """Return a ``CalcJobNode`` and associated ``CalcInfo`` instance."""
 

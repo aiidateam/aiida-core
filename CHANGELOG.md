@@ -4,7 +4,7 @@
 
 ### Highlights
 
-#### Asynchronous SSH connection (PR #6626)
+#### Asynchronous SSH connection [#6626](https://github.com/aiidateam/aiida-core/pull/6626)
 
 So far when a  to a remote computer wass required, the transport plugins blocked any further program execution until the communication finished. This has been for long an open potential for speed ups as. With the new asynchronous transport plugin for SSH (`core.async_ssh`) multiple communcations with the remote can happen concurrently.
 
@@ -39,7 +39,7 @@ For tasks involving both (and many!) uploads and downloads (a common scenario), 
 
 In this scenario, however, the overhead of asynchronous calls seems to outweigh the benefits. We need to discuss the trade-offs and explore possible optimizations. As @agoscinski mentioned, this might be expected, see here [async overheads](https://stackoverflow.com/questions/55761652/what-is-the-overhead-of-an-asyncio-task).
 
-#### Serialization of ORM nodes (PR #6723)
+#### Serialization of ORM nodes [#6723](https://github.com/aiidateam/aiida-core/pull/6723)
 AiiDA's Python API provides an object relational mapper (ORM) that abstracts the various entities that can be stored inside the provenance graph and the relationships between them. In most use cases, users use this ORM directly in Python to construct new instances of entities and retrieve existing ones, in order to get access to their data and manipulate it. A current shortcoming of the ORM is that it is not possible to programmatically introspect the schema of each entity: that is to say, what data each entity stores. This makes it difficult for external applications to provide interfaces to create and or retrieve entity instances. It also makes it difficult to take the data outside of the Python environment since the data would have to be serialized. However, without a well-defined schema, doing this without an ad-hoc solution is practically impossible.
 
 With the implementation of a Model for each Entity we now allow an external application to programmatically determine the schema of all entities of AiiDA's ORM and automatically (de)serialize entity instances to and from other data formats, e.g., JSON.  An example how this is done for an integer node.
@@ -58,12 +58,12 @@ print(node_deserialized)
 
 Note that this is still not a stable feature and might break in future releases without deprecation warning. For more information see [AEP 010](https://github.com/aiidateam/AEP/blob/983a645c9285ba65c7cf07fe6064c23e7e994c06/010_orm_schema/readme.md)
 
-#### Stashing (PR #6844, #6763)
+#### Stashing [#6844]((https://github.com/aiidateam/aiida-core/pull/6844)), [#6763](https://github.com/aiidateam/aiida-core/pull/6763)
 
 TODO
 
 
-#### Forcefully killing process (PR #6793)
+#### Forcefully killing process [#6793](https://github.com/aiidateam/aiida-core/pull/6793)
 
 Till this release `verdi process kill` could get stuck when no connection to the remote computer could be established. There is now the `--force` option to kill a process without waiting for a response and skipping the exponential backoff mechanism (EBM). Note that this might create orphan jobs on the remote computer.
 
@@ -81,7 +81,7 @@ verdi process kill <PROCESS_ID>
 
 For more information see issue #6524.
 
-#### Extended dumping support for profiles and groups (PR #6723)
+#### Extended dumping support for profiles and groups [#6723](https://github.com/aiidateam/aiida-core/pull/6723)
 
 We extended dumping feature for profiles and groups. This allows the user to retrieve all data associated to a profile. Accessible through verdi by
 
@@ -93,18 +93,18 @@ Note that this is still not a stable feature and might break in future releases 
 
 
 #### Miscellaneous
-- aiida-core is compatible with Python 3.13 (PR #6600)
-- Improved windows support (#6715)
-- RemoteData get_size_on_disk (#6584)
-- SinglefileData from_bytes (#6653)
-- Allow memory specification (#6605)
-- Add filters to verdi group delete. (#6556)
-- verdi storage maintain: show a progress bar ([#6562]())
-- New transport endpoint `compress` & `extract` ([#6743](https://github.com/aiidateam/aiida-core/pull/6743))
+- aiida-core is compatible with Python 3.13 [#6600](https://github.com/aiidateam/aiida-core/pull/6600)
+- Improved windows support [#6715](https://github.com/aiidateam/aiida-core/pull/6715)
+- RemoteData get_size_on_disk [#6584](https://github.com/aiidateam/aiida-core/pull/6584)
+- SinglefileData from_bytes [#6653](https://github.com/aiidateam/aiida-core/pull/6653)
+- Allow memory specification [#6605](https://github.com/aiidateam/aiida-core/pull/6605)
+- Add filters to verdi group delete. [#6556](https://github.com/aiidateam/aiida-core/pull/6556)
+- verdi storage maintain: show a progress bar [#6562](https://github.com/aiidateam/aiida-core/pull/6562)
+- New transport endpoint `compress` & `extract` [#6743](https://github.com/aiidateam/aiida-core/pull/6743)
 - Implementation of missing sqlite endpoints:
   - `get_creation_statistics` [#6763](https://github.com/aiidateam/aiida-core/pull/6763)
   - `contains` [#6619](https://github.com/aiidateam/aiida-core/pull/6619)
-  - `has_key` [#6606](https://github.com/aiidateam/aiida-core/pull/6606))
+  - `has_key` [#6606](https://github.com/aiidateam/aiida-core/pull/6606)
 
 
 ### For users 

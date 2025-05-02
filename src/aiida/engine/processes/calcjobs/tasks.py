@@ -555,6 +555,7 @@ class Waiting(plumpy.process_states.Waiting):
             elif self._command == STASH_COMMAND:
                 if node.get_option('stash') is not None:
                     await self._launch_task(task_stash_job, node, transport_queue)
+
                 result = self.retrieve(monitor_result=self._monitor_result)
 
             elif self._command == RETRIEVE_COMMAND:

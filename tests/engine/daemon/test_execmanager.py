@@ -662,6 +662,7 @@ def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_info, t
         StashMode.COMPRESS_TARBZ2.value,
         StashMode.COMPRESS_TARGZ.value,
         StashMode.COMPRESS_TARXZ.value,
+        StashMode.CUSTOM_SCRIPT.value,
     ],
 )
 def test_stashing(
@@ -696,6 +697,7 @@ def test_stashing(
             'target_base': str(dest_path),
             'stash_mode': stash_mode,
             'dereference': True,  # ignored in case of COPY
+            'custom_command': f"rsync -av {node_workdir/'*'} {dest_path}",
         },
     )
 
@@ -718,7 +720,7 @@ def test_stashing(
     with LocalTransport() as transport:
         runner.loop.run_until_complete(execmanager.stash_calculation(node, transport))
 
-    if stash_mode != StashMode.COPY.value:
+    if stash_mode not in {StashMode.COPY.value, StashMode.CUSTOM_SCRIPT.value}:
         # more detailed test on integrity of the zip file is in `test_all_plugins.py`
         assert pathlib.Path(str(dest_path / node.uuid) + '.' + stash_mode).is_file()
 
@@ -742,6 +744,7 @@ def test_stashing(
             'target_base': str(dest_path_error),
             'stash_mode': stash_mode,
             'dereference': True,  # ignored in case of COPY
+            'custom_command': f"rsync -av {node_workdir/'*'} {dest_path}",
         },
     )
 
@@ -752,6 +755,12 @@ def test_stashing(
                 raise OSError('copy mocked error')
 
             monkeypatch.setattr(transport, 'copy_async', mock_copy_async)
+        elif stash_mode == StashMode.CUSTOM_SCRIPT.value:
+
+            async def mock_exec_command_wait_async(*args, **kwargs):
+                return 1, 'failed to stash', 'failed to stash'
+
+            monkeypatch.setattr(transport, 'exec_command_wait_async', mock_exec_command_wait_async)
         else:
 
             async def mock_compress_async(*args, **kwargs):
@@ -763,7 +772,7 @@ def test_stashing(
         # the error should only be logged to EXEC_LOGGER.warning and exit with 0
         with caplog.at_level(logging.WARNING):
             runner.loop.run_until_complete(execmanager.stash_calculation(node, transport))
-            assert any('failed to stash' in message for message in caplog.messages)
+            assert any('Failed to stash' in message for message in caplog.messages)
 
     # Ensure no files were created in the destination path after the error
     assert not any(dest_path_error.iterdir())

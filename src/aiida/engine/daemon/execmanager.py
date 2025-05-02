@@ -436,7 +436,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     :param transport: an already opened transport.
     """
     from aiida.common.datastructures import StashMode
-    from aiida.orm import RemoteStashCompressedData, RemoteStashFolderData
+    from aiida.orm import RemoteStashCompressedData, RemoteStashCustomData, RemoteStashFolderData
 
     logger_extra = get_dblogger_extra(calculation)
 
@@ -454,12 +454,53 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     target_base = Path(stash_options['target_base'])
     dereference = stash_options.get('dereference', False)
 
-    if not source_list:
+    if stash_mode not in [mode.value for mode in StashMode.__members__.values()]:
+        EXEC_LOGGER.warning(f'stashing mode {stash_mode} is not supported. Stashing skipped.')
         return
 
     EXEC_LOGGER.debug(
         f'stashing files with mode {stash_mode} for calculation<{calculation.pk}>: {source_list}', extra=logger_extra
     )
+
+    if stash_mode == StashMode.CUSTOM_SCRIPT.value:
+        command = stash_options.get('custom_command')
+
+        remote_stash = RemoteStashCustomData(
+            computer=calculation.computer,
+            stash_mode=StashMode(stash_mode),
+            custom_command=command,
+        )
+
+        if calculation.process_type != 'aiida.calculations:core.stash':
+            # Otherwise, the command is already executed via job submission.
+
+            if not command:
+                EXEC_LOGGER.warning('Failed to stash, no custom command specified for custom script stashing')
+                return
+
+            retval, stdout, stderr = await transport.exec_command_wait_async(command, workdir=source_basepath)
+            if retval == 0:
+                if stderr.strip():
+                    EXEC_LOGGER.warning(
+                        'There was nonempty stderr in the while executing'
+                        ' `metadata.options.stash.custom_command`: {stderr}'
+                    )
+            else:
+                EXEC_LOGGER.warning(
+                    f"Failed to stash. Exit code: {retval}, stdout: '{stdout}', "
+                    "stderr: '{stderr}', command: '{command}'"
+                )
+
+        remote_stash.store()
+        remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
+        return
+
+    ###
+    target_base = Path(stash_options.get('target_base'))
+    dereference = stash_options.get('dereference', False)
+
+    if not source_list:
+        return
 
     if stash_mode == StashMode.COPY.value:
         target_basepath = target_base / uuid[:2] / uuid[2:4] / uuid[4:]
@@ -481,7 +522,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                 try:
                     await transport.copy_async(source_filepath, target_filepath)
                 except (OSError, ValueError) as exception:
-                    EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+                    EXEC_LOGGER.warning(f'Failed to stash {source_filepath} to {target_filepath}: {exception}')
                     # try to clean up in case of a failure
                     await transport.rmtree_async(target_base / uuid[:2])
                 else:
@@ -529,7 +570,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                 dereference=dereference,
             )
         except (OSError, ValueError) as exception:
-            EXEC_LOGGER.warning(f'failed to stash {source_list} to {target_destination}: {exception}')
+            EXEC_LOGGER.warning(f'Failed to stash {source_list} to {target_destination}: {exception}')
             return
             # note: if you raise here, you triger the exponential backoff
             # and if you don't raise, it appears as successful in verdi process list: Finished [0]

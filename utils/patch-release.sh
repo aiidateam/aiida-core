@@ -35,7 +35,7 @@ for commit in "$@"; do
         original_long_hash=$(git rev-parse $original_short_hash)
 
         # Amend the cherry-picked commit to include the original commit ID for tracking
-        #git commit --amend -m "$commit_message" -m "Cherry-pick: $original_long_hash"
+        git commit --amend -m "$commit_message" -m "Cherry-pick: $original_long_hash"
 
         # Format the output as a Markdown list item and add to the array
         short_commit_message=$(git log -1 --pretty=format:"%s" HEAD)

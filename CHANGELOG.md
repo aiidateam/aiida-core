@@ -58,19 +58,19 @@ print(node_deserialized)
 
 Note that this is still not a stable feature and might break in future releases without deprecation warning. For more information see [AEP 010](https://github.com/aiidateam/AEP/blob/983a645c9285ba65c7cf07fe6064c23e7e994c06/010_orm_schema/readme.md)
 
-#### Stashing [#6772](https://github.com/aiidateam/aiida-core/pull/6772), [#6746](https://github.com/aiidateam/aiida-core/pull/6746)
+#### Stashing [#6746](https://github.com/aiidateam/aiida-core/pull/6746), [#6772](https://github.com/aiidateam/aiida-core/pull/6772)
 
-Historically, stashing was only possible, if it was instructed before running a generic calcjob. The instruction had to be "attached" to the original calcjob, like this for example:
+You can now bundle your data to a tar during the stashing (with compression) by specifying one of the `stash_mode`s option `"tar"`, `"tar.bz2"`, `"tar.gz"`, `"tar.xz"`.
 
 ```python
 inputs = {
-    'MyInputs': <MyInputs>,
+    ...,
     'metadata': {
         'computer': Computer.collection.get(label="localhost"),
         'options': {
             'resources': {'num_machines': 1}, 
             'stash': {
-                'stash_mode': StashMode.COPY.value,
+                'stash_mode':  "tar.gz",
                 'target_base': '/scratch/',
                  'source_list': ['heavy_data.xyz'],
             },
@@ -80,42 +80,35 @@ inputs = {
 run(MyCalculation, **inputs)
 ```
 
-However, if a user would realize they need to stash something only after running a calcjob, this would not be possible.
+Historically, stashing was only possible, if it was instructed before running a generic calcjob. The instruction had to
+be "attached" to the original calcjob. However, if a user would realize they need to stash something only after running a calcjob, this would not be possible.
 
-Now, we introduced a new calcjob, which is able to perform a stashing operation after a calculation is finished.
-The usage is very similar, and for consistency and user-friendliness, we keep the instruction as part of the metadata. The only main input is obviously a source node which is `RemoteData` node of the calculation to be stashed, for example:
+Now, we introduced a new calcjob `StashCalculation` which is able to perform a stashing operation after a calculation has finished. The usage is very similar, and for consistency and user-friendliness, we keep the instruction as part of the metadata. The only main input is obviously a source node which is the UUID of the `RemoteData` node of the calculation to be stashed, for example:
 
 ```python
-StashCalculation_ = CalculationFactory('core.stash')
+from aiida.orm import load_node
 
+StashCalculation = CalculationFactory('core.stash')
 
-MyCalculation = orm.load_node(pk=<PK>)
+calcjob_node = load_node(<CALCJOB_PK>)
+remote_folder = cj.outputs.remote_folder
 inputs = {
     'metadata': {
         'computer': Computer.collection.get(label="localhost"),
         'options': {
             'resources': {'num_machines': 1}, 
             'stash': {
-                'stash_mode': StashMode.COPY.value,
+                'stash_mode': "copy",
                 'target_base': '/scratch/',
                  'source_list': ['heavy_data.xyz'],
             },
         },
     },
-    'source_node': orm.RemoteData,
+    'source_node': remote_folder.uuid,
 }
 
-result = run(StashCalculation_, **inputs)
+result = run(StashCalculation, **inputs)
 ```
-
-In addition, we now support more types for `stash_mode`, allowing for compressed operations:
-'stash_mode': StashMode.COPY.value,
-'stash_mode': StashMode.COMPRESS_TAR
-'stash_mode': StashMode.COMPRESS_TARBZ2
-'stash_mode': StashMode.COMPRESS_TARGZ
-'stash_mode': StashMode.COMPRESS_TARXZ
-
-
 
 #### Forcefully killing process [#6793](https://github.com/aiidateam/aiida-core/pull/6793)
 

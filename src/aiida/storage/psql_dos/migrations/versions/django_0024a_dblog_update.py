@@ -63,7 +63,7 @@ def upgrade():
     op.create_index('db_dblog_dbnode_id_da34b732', 'db_dblog', ['dbnode_id'], unique=False)
 
     # Now that all the data have been migrated, remove the server default, and unnecessary columns
-    op.alter_column('db_dblog', 'dbnode_id', server_default=None)
+    op.alter_column('db_dblog', 'dbnode_id', server_default=None)  # type: ignore[arg-type]
     op.drop_column('db_dblog', 'objpk')
     op.drop_column('db_dblog', 'objname')
 
@@ -77,7 +77,7 @@ def upgrade():
             server_default='f6a16ff7-4a31-11eb-be7b-8344edc8f36b',
         ),
     )
-    op.alter_column('db_dblog', 'uuid', server_default=None)
+    op.alter_column('db_dblog', 'uuid', server_default=None)  # type: ignore[arg-type]
 
     # Set unique uuids on the column rows
     set_new_uuid(connection)

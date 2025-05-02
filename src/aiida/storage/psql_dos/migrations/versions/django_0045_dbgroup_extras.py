@@ -31,7 +31,7 @@ def upgrade():
     op.add_column(
         'db_dbgroup', sa.Column('extras', postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default='{}')
     )
-    op.alter_column('db_dbgroup', 'extras', server_default=None)
+    op.alter_column('db_dbgroup', 'extras', server_default=None)  # type: ignore[arg-type]
 
 
 def downgrade():

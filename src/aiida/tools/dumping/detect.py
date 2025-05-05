@@ -167,81 +167,95 @@ class DumpChangeDetector:
     def _apply_top_level_filter(self, logged_filtered_nodes: dict[str, list[Node]]) -> dict[str, list[Node]]:
         """Apply the top-level calculation/workflow filter.
 
-        If calculations are explicitly part of a group, they are kept, even if they are sub-calculations of a workflow.
+        If calculations or workflows are explicitly part of a group, they are kept,
+        even if they are sub-calculations of a workflow.
 
-        :param logged_filtered_nodes: _description_
+        :param logged_filtered_nodes: Dictionary containing lists of 'workflows' and 'calculations'.
         :type logged_filtered_nodes: dict[str, list[Node]]
-        :return: _description_
+        :return: Dictionary with nodes filtered based on top-level status or grouping.
         :rtype: dict[str, list[Node]]
         """
         logger.debug('Applying top-level status filter...')
         final_filtered_nodes: dict[str, list[Node]] = {
             'workflows': [],
             'calculations': [],
-            'data': [],
         }
         nodes_removed_by_top_level_filter = 0
+
+        # Get grouped node UUIDs (use cache) only if needed
+        # Check if any filtering is actually enabled before fetching UUIDs
+        needs_group_check = self.config.only_top_level_workflows or self.config.only_top_level_calcs
+        all_grouped_node_uuids: set[str] = set()
+        if needs_group_check:
+             all_grouped_node_uuids = self._get_all_grouped_node_uuids()
+
+
+        # --- Define the inner function ---
+        # Note: Changed return type annotation
+        def _filter_nodes_by_caller(
+            node_list: list[TNode],
+            node_type: str,
+            grouped_uuids: set[str]
+        ) -> tuple[list[TNode], int]:
+            """Filter nodes keeping only top-level ones or those explicitly grouped.
+
+            :param node_list: List of nodes to filter.
+            :param node_type: Type of node ("workflows" or "calculations") for logging.
+            :param grouped_uuids: Set of UUIDs for nodes that are explicitly grouped.
+            :return: A tuple containing the filtered list of nodes and the count of removed nodes.
+            :rtype: tuple[list[TNode], int]
+            """
+            filtered_nodes: list[TNode] = []
+            original_count = len(node_list)
+
+            for node in node_list:
+                try:
+                    # Check if node has a caller (i.e., is sub-node)
+                    # Use getattr with default to avoid exception if 'caller' doesn't exist
+                    is_sub_node = bool(getattr(node, 'caller', None))
+                except Exception as e:
+                    # Log specific exceptions if possible, but catch broad for robustness
+                    logger.warning(
+                        f'Could not check caller for {node_type[:-1]} {getattr(node, "pk", "N/A")}. Assuming top-level. Error: {e}'
+                    )
+                    is_sub_node = False  # Assume top-level if check fails
+
+                is_explicitly_grouped = node.uuid in grouped_uuids
+
+                # Keep if: not a sub-node OR is explicitly grouped
+                if not is_sub_node or is_explicitly_grouped:
+                    filtered_nodes.append(node)
+
+            removed_count = original_count - len(filtered_nodes)
+            if removed_count > 0:
+                logger.debug(f'Removed {removed_count} non-top-level, non-grouped {node_type}.')
+
+            # Return both the filtered list and the count of removed items
+            return filtered_nodes, removed_count
 
         # --- Filter Workflows ---
         wf_list = logged_filtered_nodes.get('workflows', [])
         if self.config.only_top_level_workflows and wf_list:
-            filtered_wfs = []
-            for wf in wf_list:
-                # Check if the workflow has an incoming CALL_WORK link
-                # A node is top-level if it has no *incoming* CALL_WORK links
-                # Note: Accessing `caller` might be simpler if consistently available
-                # and reliable for identifying top-level. Using incoming links for robustness.
-                try:
-                    incoming_call_work = wf.base.links.get_incoming(link_type=LinkType.CALL_WORK).all()
-                    if not incoming_call_work:
-                        filtered_wfs.append(wf)
-                except Exception as e:
-                    logger.warning(
-                        f'Could not check incoming links for workflow {wf.pk}. Assuming top-level. Error: {e}'
-                    )
-                    filtered_wfs.append(wf)  # Keep if check fails
-
-            removed_count = len(wf_list) - len(filtered_wfs)
-            if removed_count > 0:
-                logger.debug(f'Removed {removed_count} non-top-level workflows.')
-                nodes_removed_by_top_level_filter += removed_count
+            # Call the modified inner function and unpack the results
+            filtered_wfs, removed_wfs = _filter_nodes_by_caller(wf_list, 'workflows', all_grouped_node_uuids)
             final_filtered_nodes['workflows'] = filtered_wfs
+            # Accumulate the count
+            nodes_removed_by_top_level_filter += removed_wfs
         else:
+            # If no filtering applied, assign the original list
             final_filtered_nodes['workflows'] = wf_list
 
         # --- Filter Calculations ---
         calc_list = logged_filtered_nodes.get('calculations', [])
         if self.config.only_top_level_calcs and calc_list:
-            # Get grouped node UUIDs (use cache) only if needed
-            all_grouped_node_uuids = self._get_all_grouped_node_uuids()
-            filtered_calcs = []
-            for calc in calc_list:
-                # Check if the calculation has an incoming CALL_CALC link from a WorkflowNode
-                try:
-                    incoming_call_calc = calc.base.links.get_incoming(link_type=LinkType.CALL_CALC).all()
-                    is_sub_calculation = any(isinstance(link.node, orm.WorkflowNode) for link in incoming_call_calc)
-                except Exception as e:
-                    logger.warning(
-                        f'Could not check incoming links for calculation {calc.pk}. Assuming top-level. Error: {e}'
-                    )
-                    is_sub_calculation = False  # Assume top-level if check fails
-
-                is_explicitly_grouped = calc.uuid in all_grouped_node_uuids
-
-                # Keep if: not a sub-calculation OR is explicitly grouped
-                if not is_sub_calculation or is_explicitly_grouped:
-                    filtered_calcs.append(calc)
-
-            removed_count = len(calc_list) - len(filtered_calcs)
-            if removed_count > 0:
-                logger.debug(f'Removed {removed_count} non-top-level, non-grouped calculations.')
-                nodes_removed_by_top_level_filter += removed_count
+            # Call the modified inner function and unpack the results
+            filtered_calcs, removed_calcs = _filter_nodes_by_caller(calc_list, 'calculations', all_grouped_node_uuids)
             final_filtered_nodes['calculations'] = filtered_calcs
+            # Accumulate the count
+            nodes_removed_by_top_level_filter += removed_calcs
         else:
-            final_filtered_nodes['calculations'] = calc_list  # Keep all if filter disabled
-
-        # --- Filter Data (Placeholder) ---
-        final_filtered_nodes['data'] = logged_filtered_nodes.get('data', [])
+            # If no filtering applied, assign the original list
+            final_filtered_nodes['calculations'] = calc_list
 
         logger.debug(f'Removed {nodes_removed_by_top_level_filter} total nodes by top-level filter.')
         return final_filtered_nodes

@@ -525,7 +525,7 @@ def runner(manager):
 
 
 @pytest.fixture
-def event_loop(manager):
+def event_loop(manager, aiida_profile_clean):
     """Get the event loop instance of the currently loaded profile.
 
     This is automatically called as a fixture for any test marked with ``@pytest.mark.asyncio``.

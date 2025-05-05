@@ -16,7 +16,6 @@ import pytest
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, StashMode
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
-from aiida.manage import get_manager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
 from aiida.plugins import entry_point
 from aiida.transports.plugins.local import LocalTransport
@@ -117,7 +116,8 @@ def test_hierarchy_utility(file_hierarchy, tmp_path, create_file_hierarchy, seri
         (['file_a.txt', 'file_u.txt', 'path/file_u.txt', ('path/sub/file_u.txt', '.', 3)], {'file_a.txt': 'file_a'}),
     ),
 )
-def test_retrieve_files_from_list(
+@pytest.mark.asyncio
+async def test_retrieve_files_from_list(
     tmp_path_factory,
     generate_calcjob_node,
     file_hierarchy,
@@ -131,15 +131,15 @@ def test_retrieve_files_from_list(
     target = tmp_path_factory.mktemp('target')
 
     create_file_hierarchy(file_hierarchy, source)
-    runner = get_manager().get_runner()
 
     with LocalTransport() as transport:
         node = generate_calcjob_node(workdir=source)
-        runner.loop.run_until_complete(execmanager.retrieve_files_from_list(node, transport, target, retrieve_list))
+        await execmanager.retrieve_files_from_list(node, transport, target, retrieve_list)
 
     assert serialize_file_hierarchy(target, read_bytes=False) == expected_hierarchy
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ('local_copy_list', 'expected_hierarchy'),
     (
@@ -154,7 +154,7 @@ def test_retrieve_files_from_list(
         (['sub', 'target/another-sub'], {'target': {'another-sub': {'b': 'file_b'}}}),
     ),
 )
-def test_upload_local_copy_list(
+async def test_upload_local_copy_list(
     fixture_sandbox,
     node_and_calc_info,
     file_hierarchy_simple,
@@ -174,8 +174,7 @@ def test_upload_local_copy_list(
     calc_info.local_copy_list = [[folder.uuid] + local_copy_list]
 
     with node.computer.get_transport() as transport:
-        runner = get_manager().get_runner()
-        runner.loop.run_until_complete(execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox))
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
     # through the ``local_copy_list``.
@@ -186,7 +185,8 @@ def test_upload_local_copy_list(
     assert written_hierarchy == expected_hierarchy
 
 
-def test_upload_local_copy_list_files_folders(
+@pytest.mark.asyncio
+async def test_upload_local_copy_list_files_folders(
     fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path, create_file_hierarchy, serialize_file_hierarchy
 ):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``.
@@ -212,8 +212,7 @@ def test_upload_local_copy_list_files_folders(
     ]
 
     with node.computer.get_transport() as transport:
-        runner = get_manager().get_runner()
-        runner.loop.run_until_complete(execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox))
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
     # through the ``local_copy_list``.
@@ -228,7 +227,8 @@ def test_upload_local_copy_list_files_folders(
     assert expected_hierarchy == written_hierarchy
 
 
-def test_upload_remote_symlink_list(
+@pytest.mark.asyncio
+async def test_upload_remote_symlink_list(
     fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path, create_file_hierarchy
 ):
     """Test the ``remote_symlink_list`` functionality in ``upload_calculation``.
@@ -244,8 +244,7 @@ def test_upload_remote_symlink_list(
     ]
 
     with node.computer.get_transport() as transport:
-        runner = get_manager().get_runner()
-        runner.loop.run_until_complete(execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox))
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     filepath_workdir = pathlib.Path(node.get_remote_workdir())
     assert (filepath_workdir / 'file_a.txt').is_symlink()
@@ -276,7 +275,8 @@ def test_upload_remote_symlink_list(
         ),
     ),
 )
-def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, order, expected):
+@pytest.mark.asyncio
+async def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, order, expected):
     """Test the ``CalcInfo.file_copy_operation_order`` controls the copy order."""
     node, calc_info = node_and_calc_info
 
@@ -309,8 +309,7 @@ def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, order, e
         calc_info.file_copy_operation_order = order
 
     with node.computer.get_transport() as transport:
-        runner = get_manager().get_runner()
-        runner.loop.run_until_complete(execmanager.upload_calculation(node, transport, calc_info, sandbox, inputs))
+        await execmanager.upload_calculation(node, transport, calc_info, sandbox, inputs)
         filepath = pathlib.Path(node.get_remote_workdir()) / 'file.txt'
         assert filepath.is_file()
         assert filepath.read_text() == expected
@@ -540,7 +539,8 @@ def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, order, e
         ),
     ],
 )
-def test_upload_combinations(
+@pytest.mark.asyncio
+async def test_upload_combinations(
     fixture_sandbox,
     node_and_calc_info,
     tmp_path,
@@ -606,27 +606,25 @@ def test_upload_combinations(
         calc_info.remote_copy_list.append(
             (node.computer.uuid, (sub_tmp_path_remote / source_path).as_posix(), target_path)
         )
-    runner = get_manager().get_runner()
     if expected_exception is not None:
         with pytest.raises(expected_exception):
             with node.computer.get_transport() as transport:
-                runner.loop.run_until_complete(
-                    execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
-                )
+                await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
             filepath_workdir = pathlib.Path(node.get_remote_workdir())
 
             assert serialize_file_hierarchy(filepath_workdir, read_bytes=False) == expected_hierarchy
     else:
         with node.computer.get_transport() as transport:
-            runner.loop.run_until_complete(execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox))
+            await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
         filepath_workdir = pathlib.Path(node.get_remote_workdir())
 
         assert serialize_file_hierarchy(filepath_workdir, read_bytes=False) == expected_hierarchy
 
 
-def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_info, tmp_path):
+@pytest.mark.asyncio
+async def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_info, tmp_path):
     """Test ``upload_calculation`` with a ``PortableCode`` for different transports.
 
     Regression test for https://github.com/aiidateam/aiida-core/issues/6518
@@ -647,14 +645,11 @@ def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_info, t
     calc_info.codes_info = [code_info]
 
     with node.computer.get_transport() as transport:
-        runner = get_manager().get_runner()
-        runner.loop.run_until_complete(
-            execmanager.upload_calculation(
-                node,
-                transport,
-                calc_info,
-                fixture_sandbox,
-            )
+        await execmanager.upload_calculation(
+            node,
+            transport,
+            calc_info,
+            fixture_sandbox,
         )
 
 
@@ -672,7 +667,8 @@ def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_info, t
         StashMode.COMPRESS_TARXZ.value,
     ],
 )
-def test_stashing(
+@pytest.mark.asyncio
+async def test_stashing(
     generate_calcjob_node,
     stash_mode,
     file_hierarchy,
@@ -707,8 +703,6 @@ def test_stashing(
         },
     )
 
-    runner = get_manager().get_runner()
-
     def mock_get_authinfo(*args, **kwargs):
         class MockAuthInfo:
             def get_workdir(self, *args, **kwargs):
@@ -724,7 +718,7 @@ def test_stashing(
     # Here we using local transport we test basic functionality of `stash_calculation`.
 
     with LocalTransport() as transport:
-        runner.loop.run_until_complete(execmanager.stash_calculation(node, transport))
+        await execmanager.stash_calculation(node, transport)
 
     if stash_mode != StashMode.COPY.value:
         # more detailed test on integrity of the zip file is in `test_all_plugins.py`
@@ -770,7 +764,7 @@ def test_stashing(
         # no error should be raised
         # the error should only be logged to EXEC_LOGGER.warning and exit with 0
         with caplog.at_level(logging.WARNING):
-            runner.loop.run_until_complete(execmanager.stash_calculation(node, transport))
+            await execmanager.stash_calculation(node, transport)
             assert any('failed to stash' in message for message in caplog.messages)
 
     # Ensure no files were created in the destination path after the error

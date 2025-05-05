@@ -1793,7 +1793,18 @@ class AsyncTransport(Transport):
     """
 
     def run_command_blocking(self, func, *args, **kwargs):
-        loop = asyncio.get_event_loop()
+        import sys
+
+        if sys.version_info < (3, 10):
+            loop = asyncio.get_event_loop()
+        else:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+
+            asyncio.set_event_loop(loop)
+
         return loop.run_until_complete(func(*args, **kwargs))
 
     def open(self):

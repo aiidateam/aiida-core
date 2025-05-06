@@ -473,6 +473,14 @@ class ProfileDumpManager:
                 # Ensure the group directory exists and is logged
                 try:
                     group = orm.load_group(uuid=group_info.uuid)
+                    # Avoid creating empty directories for empty groups
+                    if not group.nodes:
+                        continue
+                    # Avoid creating empty directories for deselected groups
+                    if self.config.groups and (
+                        group.label not in self.config.groups or group_info.uuid not in self.config.groups
+                    ):
+                        continue
                     group_path = DumpPaths._get_group_path(
                         group=group, organize_by_groups=self.config.organize_by_groups
                     )

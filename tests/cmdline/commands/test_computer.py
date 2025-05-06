@@ -805,7 +805,37 @@ class TestVerdiComputerCommands:
             orm.Computer.collection.get(label=label)
 
         with pytest.raises(NotExistent):
+            orm.load_computer(label)
+
+        with pytest.raises(NotExistent):
             orm.load_code(code_label)
+
+    # Ensures that 'yes' works for backwards compatibility, see issue #6422
+    @pytest.mark.parametrize('user_input', ['y', 'yes'])
+    def test_computer_delete_existing_computer_successful_no_assciated_nodes(self, user_input):
+        """Test if `verdi computer delete` successfully deletes when applied on a computer without associated nodes.
+
+        In this case no prompt should appear."""
+        from aiida.common.exceptions import NotExistent
+
+        label = 'computer_temp'
+        computer_temp = orm.Computer(
+            label=label,
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida',
+        )
+        computer_temp.store()
+
+        # A successul delete, including all associated nodes
+        self.cli_runner(computer_delete, [label])
+
+        with pytest.raises(NotExistent):
+            orm.Computer.collection.get(label=label)
+
+        with pytest.raises(NotExistent):
+            orm.load_computer(label)
 
     def test_computer_delete_existing_computer_not_deleted(self):
         """Test if `verdi computer delete` behaves correctly when applied on an existing computer without deletion.
@@ -835,12 +865,14 @@ class TestVerdiComputerCommands:
         self.cli_runner(computer_delete, [label], user_input=false_user_input, raises=True)
         # raises an error if not existing
         assert orm.load_code(code_label).label == code_label
+        assert orm.Computer.collection.get(label=label).label == label
 
         # Safety check in case of --dry-run
         options = [label, '--dry-run']
         self.cli_runner(computer_delete, options, user_input='y')
         # raises an error if not existing
         assert orm.load_code(code_label).label == code_label
+        assert orm.Computer.collection.get(label=label).label == label
 
     def test_computer_delete_nonexisting_computer(self):
         """Test if `verdi computer delete` command behaves correctly when deleting a nonexisting computer"""

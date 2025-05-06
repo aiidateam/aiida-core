@@ -50,3 +50,44 @@ def test_stash_calculation_basic(fixture_sandbox, aiida_localhost, generate_calc
     assert calc_info.local_copy_list == []
     assert calc_info.remote_copy_list == []
     assert calc_info.remote_symlink_list == []
+
+
+@pytest.mark.requires_rmq
+def test_stash_calculation_different_computer(
+    fixture_sandbox, aiida_computer_local, generate_calc_job, tmp_path, caplog
+):
+    """Test it emits a warning if the source node is on a different computer."""
+
+    target_base = tmp_path / 'target'
+    source = tmp_path / 'source'
+    source.mkdir()
+
+    a_computer = aiida_computer_local()
+    a_different_computer = aiida_computer_local()
+    assert a_computer.uuid != a_different_computer.uuid
+
+    inputs = {
+        'metadata': {
+            'computer': a_computer,
+            'options': {
+                'resources': {'num_machines': 1},
+                'stash': {
+                    'stash_mode': StashMode.COPY.value,
+                    'target_base': str(target_base),
+                    'source_list': ['*'],
+                },
+            },
+        },
+        'source_node': orm.RemoteData(computer=a_different_computer, remote_path=str(source)),
+    }
+    entry_point_name = 'core.stash'
+    generate_calc_job(fixture_sandbox, entry_point_name, inputs)
+
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        assert any(
+            'The computer of the source node and the computer of the calculation must be the same.'
+            ' THIS MIGHT RESULT IN A SILENT FAILURE!' in message
+            for message in caplog.messages
+        )

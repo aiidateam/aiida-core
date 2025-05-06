@@ -9,8 +9,11 @@
 """"""
 
 from aiida import orm
+from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import CalcInfo
 from aiida.engine import CalcJob
+
+EXEC_LOGGER = AIIDA_LOGGER.getChild('StashCalculation')
 
 
 class StashCalculation(CalcJob):
@@ -69,6 +72,12 @@ class StashCalculation(CalcJob):
         }
 
     def prepare_for_submission(self, folder):
+        if self.inputs.source_node.computer.uuid != self.inputs.metadata.computer.uuid:
+            EXEC_LOGGER.warning(
+                'The computer of the source node and the computer of the calculation must be the same.'
+                ' THIS MIGHT RESULT IN A SILENT FAILURE!'
+            )
+
         calc_info = CalcInfo()
         calc_info.skip_submit = True
 

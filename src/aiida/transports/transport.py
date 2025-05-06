@@ -9,7 +9,6 @@
 """Transport interface."""
 
 import abc
-import asyncio
 import fnmatch
 import os
 import re
@@ -1793,11 +1792,10 @@ class AsyncTransport(Transport):
     """
 
     def run_command_blocking(self, func, *args, **kwargs):
-        import sys
         from aiida.manage import get_manager
 
         if get_manager()._runner is None:
-            raise ValueError # should no happen for tests
+            raise ValueError  # should no happen for tests
         loop = get_manager().get_runner()
 
         return loop.run_until_complete(func(*args, **kwargs))

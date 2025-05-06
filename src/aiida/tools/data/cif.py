@@ -125,7 +125,7 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
             constructor_kwargs[argument] = parameters.pop(argument)
 
     with cif.open() as handle:
-        # CifParser can only accept StringIO streams
+        # CifParser can only accept StringIO streams.
         parser = CifParser(io.StringIO(handle.read()), **constructor_kwargs)
 
     try:

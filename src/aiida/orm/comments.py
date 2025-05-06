@@ -17,7 +17,7 @@ from aiida.manage import get_manager
 from . import entities
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import BackendComment, BackendNode, StorageBackend  # noqa: F401
+    from aiida.orm.implementation import BackendComment, BackendNode, StorageBackend
 
     from .nodes.node import Node
     from .users import User

@@ -159,7 +159,7 @@ class InstalledCode(Code):
         """
         return self.filepath_executable
 
-    @property  # type: ignore[override]
+    @property
     def computer(self) -> Computer:
         """Return the computer of this code."""
         assert self.backend_entity.computer is not None

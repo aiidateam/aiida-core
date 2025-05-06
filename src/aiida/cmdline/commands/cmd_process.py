@@ -12,6 +12,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
+from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS, capture_logging
 
@@ -318,10 +319,25 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
 @verdi_process.command('kill')
 @arguments.PROCESSES()
 @options.ALL(help='Kill all processes if no specific processes are specified.')
-@options.TIMEOUT()
+@OverridableOption(
+    '-t',
+    '--timeout',
+    type=click.FLOAT,
+    default=5.0,
+    show_default=True,
+    help='Time in seconds to wait for a response of the kill task before timing out.',
+)()
 @options.WAIT()
+@OverridableOption(
+    '-F',
+    '--force-kill',
+    is_flag=True,
+    default=False,
+    help='Kills the process without waiting for a confirmation if the job has been killed.\n'
+    'Note: This may lead to orphaned jobs on your HPC and should be used with caution.',
+)()
 @decorators.with_dbenv()
-def process_kill(processes, all_entries, timeout, wait):
+def process_kill(processes, all_entries, timeout, wait, force_kill):
     """Kill running processes.
 
     Kill one or multiple running processes."""
@@ -338,11 +354,17 @@ def process_kill(processes, all_entries, timeout, wait):
     if all_entries:
         click.confirm('Are you sure you want to kill all processes?', abort=True)
 
+    if force_kill:
+        echo.echo_warning('Force kill is enabled. This may lead to orphaned jobs on your HPC.')
+        msg_text = 'Force killed through `verdi process kill`'
+    else:
+        msg_text = 'Killed through `verdi process kill`'
     with capture_logging() as stream:
         try:
             control.kill_processes(
                 processes,
-                msg_text='Killed through `verdi process kill`',
+                msg_text=msg_text,
+                force_kill=force_kill,
                 all_entries=all_entries,
                 timeout=timeout,
                 wait=wait,

@@ -618,6 +618,8 @@ class AsyncSshTransport(AsyncTransport):
         :type preserve: bool
 
         :raises: OSError, src does not exist or if the copy execution failed.
+        :raises: FileNotFoundError, if either remotesource does not exists
+            or remotedestination's parent path does not exists
         """
 
         remotesource = str(remotesource)
@@ -648,7 +650,8 @@ class AsyncSshTransport(AsyncTransport):
                     )
                 else:
                     if not await self.path_exists_async(remotesource):
-                        raise OSError(f'The remote path {remotesource} does not exist')
+                        raise FileNotFoundError(f'The remote path {remotesource} does not exist')
+
                     await self._sftp.copy(
                         remotesource,
                         remotedestination,
@@ -657,6 +660,13 @@ class AsyncSshTransport(AsyncTransport):
                         follow_symlinks=dereference,
                         remote_only=True,
                     )
+            except asyncssh.sftp.SFTPNoSuchFile as exc:
+                # note: one could just create directories, but aiida engine expects this behavior
+                # see `execmanager.py`::_copy_remote_files for more details
+                raise FileNotFoundError(
+                    f'The remote path {remotedestination} is not reachable,'
+                    f'perhaps the parent folder does not exists: {exc}'
+                )
             except asyncssh.sftp.SFTPFailure as exc:
                 raise OSError(f'Error while copying {remotesource} to {remotedestination}: {exc}')
         else:

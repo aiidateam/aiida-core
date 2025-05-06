@@ -519,19 +519,18 @@ def manager():
 
 
 @pytest.fixture
-def runner(manager):
+def runner(manager, event_loop):
     """Get the ``Runner`` instance of the currently loaded profile."""
-    return manager.get_runner()
+    manager._runner = manager.create_daemon_runner(loop=event_loop)
+    return  manager._runner
 
 
-@pytest.fixture
-def event_loop(manager, aiida_profile_clean):
-    """Get the event loop instance of the currently loaded profile.
-
-    This is automatically called as a fixture for any test marked with ``@pytest.mark.asyncio``.
-    """
-    yield manager.get_runner().loop
-
+@pytest.fixture(scope="session")
+def event_loop():
+    import asyncio
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
 
 @pytest.fixture
 def backend(manager):

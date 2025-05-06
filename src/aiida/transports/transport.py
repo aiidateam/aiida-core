@@ -1794,16 +1794,11 @@ class AsyncTransport(Transport):
 
     def run_command_blocking(self, func, *args, **kwargs):
         import sys
+        from aiida.manage import get_manager
 
-        if sys.version_info < (3, 10):
-            loop = asyncio.get_event_loop()
-        else:
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-
-            asyncio.set_event_loop(loop)
+        if get_manager()._runner is None:
+            raise ValueError # should no happen for tests
+        loop = get_manager().get_runner()
 
         return loop.run_until_complete(func(*args, **kwargs))
 

@@ -163,6 +163,7 @@ async def test_upload_local_copy_list(
     expected_hierarchy,
     create_file_hierarchy,
     serialize_file_hierarchy,
+    runner,
 ):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``."""
     create_file_hierarchy(file_hierarchy_simple, tmp_path)
@@ -172,7 +173,6 @@ async def test_upload_local_copy_list(
 
     node, calc_info = node_and_calc_info
     calc_info.local_copy_list = [[folder.uuid] + local_copy_list]
-
     with node.computer.get_transport() as transport:
         await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 

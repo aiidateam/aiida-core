@@ -9,7 +9,6 @@
 """Transport interface."""
 
 import abc
-import asyncio
 import fnmatch
 import os
 import re
@@ -1792,41 +1791,13 @@ class AsyncTransport(Transport):
     because they will block the event loop.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._loop = None
-
-    def __exit__(self, *args, **kwargs):
-        super().__exit__(*args, **kwargs)
-        if self._loop:
-            self._loop.close()
-            self._loop = None
-
     def run_command_blocking(self, func, *args, **kwargs):
-        """
-        The priority will always be given to the manager loop, if it has one.
-        If the manager has no loop, we get the running loop, if it exists.
-        If the running loop does not exist, we create a new one.
-        """
-
-        import sys
+        """The event loop must be the one of manager."""
 
         from aiida.manage import get_manager
 
-        if get_manager()._runner:
-            loop = get_manager().get_runner()
-            return loop.run_until_complete(func(*args, **kwargs))
-
-        if self._loop is None:
-            if sys.version_info < (3, 10):
-                self._loop = asyncio.get_event_loop()
-            else:
-                try:
-                    self._loop = asyncio.get_running_loop()
-                except RuntimeError:
-                    self._loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(self._loop)
-        return self._loop.run_until_complete(func(*args, **kwargs))
+        loop = get_manager().get_runner()
+        return loop.run_until_complete(func(*args, **kwargs))
 
     def open(self):
         return self.run_command_blocking(self.open_async)

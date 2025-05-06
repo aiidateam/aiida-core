@@ -1792,20 +1792,29 @@ class AsyncTransport(Transport):
     because they will block the event loop.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._loop = None
+
     def run_command_blocking(self, func, *args, **kwargs):
         import sys
 
-        if sys.version_info < (3, 10):
-            loop = asyncio.get_event_loop()
-        else:
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
+        from aiida.manage import get_manager
 
-            asyncio.set_event_loop(loop)
+        if get_manager()._runner:
+            loop = get_manager().get_runner()
+            return loop.run_until_complete(func(*args, **kwargs))
 
-        return loop.run_until_complete(func(*args, **kwargs))
+        if self._loop is None:
+            if sys.version_info < (3, 10):
+                self._loop = asyncio.get_event_loop()
+            else:
+                try:
+                    self._loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    self._loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(self._loop)
+        return self._loop.run_until_complete(func(*args, **kwargs))
 
     def open(self):
         return self.run_command_blocking(self.open_async)

@@ -45,6 +45,7 @@ class RemoteStashCompressedData(RemoteStashData):
     def __init__(
         self,
         stash_mode: StashMode,
+        source_uuid: str,
         target_basepath: str,
         source_list: List,
         dereference: bool,
@@ -53,10 +54,13 @@ class RemoteStashCompressedData(RemoteStashData):
         """Construct a new instance
 
         :param stash_mode: the stashing mode with which the data was stashed on the remote.
+        :param source_uuid: the uuid of the source node (str). If the source node itself is a stashed node,
+            then the `source_uuid` of the stashed node should be passed.
         :param target_basepath: absolute path to place the compressed file (path+filename).
         :param source_list: the list of source files.
+        :param dereference: whether to dereference symbolic links when compressing.
         """
-        super().__init__(stash_mode, **kwargs)
+        super().__init__(stash_mode, source_uuid, **kwargs)
         self.target_basepath = target_basepath
         self.source_list = source_list
         self.dereference = dereference

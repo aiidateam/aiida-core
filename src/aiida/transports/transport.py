@@ -1796,7 +1796,19 @@ class AsyncTransport(Transport):
         super().__init__(*args, **kwargs)
         self._loop = None
 
+    def __exit__(self, *args, **kwargs):
+        super().__exit__(*args, **kwargs)
+        if self._loop:
+            self._loop.close()
+            self._loop = None
+
     def run_command_blocking(self, func, *args, **kwargs):
+        """
+        The priority will always be given to the manager loop, if it has one.
+        If the manager has no loop, we get the running loop, if it exists.
+        If the running loop does not exist, we create a new one.
+        """
+
         import sys
 
         from aiida.manage import get_manager

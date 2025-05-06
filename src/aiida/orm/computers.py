@@ -21,7 +21,7 @@ from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
-    from aiida.orm.implementation import BackendComputer, StorageBackend  # noqa: F401
+    from aiida.orm.implementation import BackendComputer, StorageBackend
     from aiida.schedulers import Scheduler
     from aiida.transports import Transport
 

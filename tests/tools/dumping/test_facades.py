@@ -104,7 +104,9 @@ _IO_CALC_NODE_CONTENT_FLAT = [
     '.aiida_dump_safeguard',
     '.aiida_node_metadata.yaml',
     # Files from repo/nodes flattened
-    'file.txt',  # From inputs repo, node_inputs/singlefile, node_inputs/folderdata, node_outputs/singlefile, node_outputs/folderdata (potentially overwritten if names clash)
+    'file.txt',
+    # From inputs repo, node_inputs/singlefile, node_inputs/folderdata,
+    # node_outputs/singlefile, node_outputs/folderdata (potentially overwritten if names clash)
     'default.npy',  # From node_inputs/arraydata
     # Note: Representing folders in flat structure is ambiguous in this dict format.
     # The original tree_dump_calculation_io_flat seemed incomplete/potentially incorrect.
@@ -149,8 +151,8 @@ def get_expected_multiply_add_wc_tree(wc_pk: int, child_pks: Tuple[int, int]) ->
     add_child_tree = get_expected_add_calc_tree(add_pk)
 
     # Extract keys to use in parent structure (assumes '01-' and '02-' prefixes)
-    multiply_dir_key = list(multiply_child_tree.keys())[0]
-    add_dir_key = list(add_child_tree.keys())[0]
+    multiply_dir_key = next(iter(multiply_child_tree.keys()))
+    add_dir_key = next(iter(add_child_tree.keys()))
 
     return {
         node_dir_name: [
@@ -237,7 +239,6 @@ def get_expected_nested_io_wc_tree(
 
     # Build the main workflow's content, nesting the sub-workflow
     # Key now uses: {prefix}-{link_label}-{CHILD_PK}
-    # *** ADJUSTED KEY ***
     wc_content = [
         '.aiida_dump_safeguard',
         '.aiida_node_metadata.yaml',
@@ -249,14 +250,12 @@ def get_expected_nested_io_wc_tree(
 
 
 # --- Dynamic Archive Assembly Helpers ---
-
-
 def _assemble_nodes_by_type(node_trees: List[Dict]) -> Dict[str, List[Dict]]:
     """Helper to group node tree dicts by type."""
     grouped_by_type: Dict[str, List[Dict]] = {'calculations': [], 'workflows': [], 'misc': []}
     for node_tree in node_trees:
-        node_key = list(node_tree.keys())[0]
-        # TODO: Fix here
+        node_key = next(iter((node_tree.keys())))
+
         if 'Calculation' in node_key or 'multiply' in node_key:
             grouped_by_type['calculations'].append(node_tree)
         elif 'WorkChain' in node_key:  # Keywords for workflows/functions
@@ -592,7 +591,7 @@ class TestProcessDumper:
 
         # 4. Test incremental works with safeguard (on existing dump)
         (dump_path / 'extra_file.txt').touch()  # Add another file
-        node2 = generate_calculation_node_add()  # Create another node
+        generate_calculation_node_add()  # Create another node
 
         config_incr_ok = DumpConfig(dump_mode=DumpMode.INCREMENTAL, include_outputs=True)
         # Dump the *same* first node again in incremental mode

@@ -108,7 +108,7 @@ class DumpConfig(BaseModel):
         validate_assignment=True,
     )
 
-    groups: Optional[List[str]] = Field(default=None, description='Groups to dump (UUIDs or labels)')
+    groups: Optional[List[Union[str, orm.Group]]] = Field(default=None, description='Groups to dump (UUIDs or labels)')
     start_date: Optional[datetime] = Field(default=None, description='Start date/time for modification time filter')
     end_date: Optional[datetime] = Field(default=None, description='End date/time for modification time filter')
     past_days: Optional[int] = Field(default=None, description='Number of past days to include based on mtime.')
@@ -157,6 +157,39 @@ class DumpConfig(BaseModel):
     )
 
     # --- Pydantic Field Validators ---
+    @field_validator('groups', mode='before')
+    @classmethod
+    def _validate_groups_input(cls, v: Any) -> Optional[List[str]]:
+        """
+        Validate and transform the input for the 'groups' field.
+        Accepts a list containing orm.Group objects or strings (labels/UUIDs),
+        and converts all elements to strings (using group label).
+        """
+        if v is None:
+            return None
+        if not isinstance(v, list):
+            # According to the error, a list is expected.
+            # If other types are possible at this stage from Click, adjust as needed.
+            raise ValueError(f'Invalid input type for groups: {type(v)}. Expected a list.')
+
+        processed_groups: List[str] = []
+        for item_idx, item in enumerate(v):
+            if isinstance(item, orm.Group):
+                # Using group's label as the string representation.
+                # Change to item.uuid if UUIDs are preferred.
+                processed_groups.append(item.label)
+            elif isinstance(item, str):
+                processed_groups.append(item)
+            else:
+                msg = (
+                    f"Invalid item type in 'groups' list at index {item_idx}: {type(item)}. "
+                    'Expected an AiiDA Group object or a string (label/UUID).'
+                )
+                raise ValueError(msg)
+        # Return None if list is empty to match Field(default=None) behavior if desired,
+        # or always return the list (Pydantic will handle default if input is None).
+        return processed_groups if processed_groups else None
+
     @field_validator('user', mode='before')
     def _validate_user(cls, v: Any) -> User | None:  # noqa: N805
         """Load User object from email string."""

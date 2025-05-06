@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, c
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
-from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm import QueryBuilder
 from aiida.tools.dumping.config import GroupDumpScope
@@ -187,16 +186,12 @@ class DumpChangeDetector:
         needs_group_check = self.config.only_top_level_workflows or self.config.only_top_level_calcs
         all_grouped_node_uuids: set[str] = set()
         if needs_group_check:
-             all_grouped_node_uuids = self._get_all_grouped_node_uuids()
-
+            all_grouped_node_uuids = self._get_all_grouped_node_uuids()
 
         # --- Define the inner function ---
-        # Note: Changed return type annotation
         def _filter_nodes_by_caller(
-            node_list: list[TNode],
-            node_type: str,
-            grouped_uuids: set[str]
-        ) -> tuple[list[TNode], int]:
+            node_list: list[Node], node_type: str, grouped_uuids: set[str]
+        ) -> tuple[list[Node], int]:
             """Filter nodes keeping only top-level ones or those explicitly grouped.
 
             :param node_list: List of nodes to filter.
@@ -205,7 +200,7 @@ class DumpChangeDetector:
             :return: A tuple containing the filtered list of nodes and the count of removed nodes.
             :rtype: tuple[list[TNode], int]
             """
-            filtered_nodes: list[TNode] = []
+            filtered_nodes: list[Node] = []
             original_count = len(node_list)
 
             for node in node_list:
@@ -213,11 +208,13 @@ class DumpChangeDetector:
                     # Check if node has a caller (i.e., is sub-node)
                     # Use getattr with default to avoid exception if 'caller' doesn't exist
                     is_sub_node = bool(getattr(node, 'caller', None))
-                except Exception as e:
+                except Exception:
                     # Log specific exceptions if possible, but catch broad for robustness
-                    logger.warning(
-                        f'Could not check caller for {node_type[:-1]} {getattr(node, "pk", "N/A")}. Assuming top-level. Error: {e}'
+                    msg = (
+                        f'Could not check caller for {node_type[:-1]} {getattr(node, "pk", "N/A")}.'
+                        'Assuming top-level. Error: {e}'
                     )
+                    logger.warning(msg)
                     is_sub_node = False  # Assume top-level if check fails
 
                 is_explicitly_grouped = node.uuid in grouped_uuids

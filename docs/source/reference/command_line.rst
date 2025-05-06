@@ -453,7 +453,7 @@ Below is a list with all available subcommands.
       --broker-host HOSTNAME          Hostname for the message broker.  [default: 127.0.0.1]
       --broker-port INTEGER           Port for the message broker.  [default: 5672]
       --broker-virtual-host TEXT      Name of the virtual host for the message broker without
-                                      leading forward slash.  [default: ""]
+                                      leading forward slash.
       --repository DIRECTORY          Absolute path to the file repository.
       --test-profile                  Designate the profile to be used for running the test
                                       suite only.

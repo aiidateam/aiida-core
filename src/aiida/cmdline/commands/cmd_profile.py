@@ -131,17 +131,17 @@ def profile_setup():
     """Set up a new profile."""
 
 
-@verdi_profile.command('configure-rabbitmq')  # type: ignore[arg-type]
+@verdi_profile.command('configure-rabbitmq')
+@click.pass_context
 @arguments.PROFILE(default=defaults.get_default_profile)
 @options.FORCE()
+@options.NON_INTERACTIVE(default=True, show_default='--non-interactive')
 @setup.SETUP_BROKER_PROTOCOL()
 @setup.SETUP_BROKER_USERNAME()
 @setup.SETUP_BROKER_PASSWORD()
 @setup.SETUP_BROKER_HOST()
 @setup.SETUP_BROKER_PORT()
 @setup.SETUP_BROKER_VIRTUAL_HOST()
-@options.NON_INTERACTIVE(default=True, show_default='--non-interactive')
-@click.pass_context
 def profile_configure_rabbitmq(ctx, profile, non_interactive, force, **kwargs):
     """Configure RabbitMQ for a profile.
 

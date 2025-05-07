@@ -87,7 +87,8 @@ def test_stash_calculation_different_computer(
 
     with caplog.at_level(logging.WARNING):
         assert any(
-            'The computer of the source node and the computer of the calculation must be the same.'
-            ' THIS MIGHT RESULT IN A SILENT FAILURE!' in message
+            'YOUR SETTING MIGHT RESULT IN A SILENT FAILURE!'
+            ' The computer of the source node and the computer of the calculation are strongly advised be the same.'
+            in message
             for message in caplog.messages
         )

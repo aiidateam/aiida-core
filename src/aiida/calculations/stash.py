@@ -74,8 +74,13 @@ class StashCalculation(CalcJob):
     def prepare_for_submission(self, folder):
         if self.inputs.source_node.computer.uuid != self.inputs.metadata.computer.uuid:
             EXEC_LOGGER.warning(
-                'The computer of the source node and the computer of the calculation must be the same.'
-                ' THIS MIGHT RESULT IN A SILENT FAILURE!'
+                'YOUR SETTING MIGHT RESULT IN A SILENT FAILURE!'
+                ' The computer of the source node and the computer of the calculation are strongly advised be the same.'
+                ' However, it is not mandatory,'
+                ' in order to support the case that original computer somehow is not usable, anymore.'
+                ' E.g. the original computer was configured for ``core.torque``, but the HPC has move to SLURM,'
+                ' so you had to create a new computer configured with ``core.slurm``,'
+                " and you'll need a job submission to do this."
             )
 
         calc_info = CalcInfo()

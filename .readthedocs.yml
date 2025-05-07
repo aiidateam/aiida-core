@@ -20,7 +20,8 @@ build:
     - asdf install uv 0.5.22
     - asdf global uv 0.5.22
     create_environment:
-    - uv venv
+    - uv venv RTD
+    - . RTD/bin/activate
     install:
     - uv sync --extra docs --extra tests --extra rest --extra atomic_tools
     build:

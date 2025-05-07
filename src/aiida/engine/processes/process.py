@@ -52,6 +52,7 @@ from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm.implementation.utils import clean_value
+from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.orm.utils import serialize
 
 from .builder import ProcessBuilder
@@ -329,50 +330,162 @@ class Process(PlumpyProcess):
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
+    async def _launch_task(self, coro, *args, **kwargs):
+        """Launch a coroutine as a task, making sure to make it interruptable."""
+        import functools
+
+        from aiida.engine.utils import interruptable_task
+
+        task_fn = functools.partial(coro, *args, **kwargs)
+        try:
+            self._task = interruptable_task(task_fn)
+            result = await self._task
+            return result
+        finally:
+            self._task = None
+
     def kill(self, msg_text: str | None = None, force_kill: bool = False) -> Union[bool, plumpy.futures.Future]:
         """Kill the process and all the children calculations it called
 
         :param msg: message
         """
-        self.node.logger.info(f'Request to kill Process<{self.node.pk}>')
+        # breakpoint()
+        if self.killed():
+            self.node.logger.info(f'Request to kill Process<{self.node.pk}> but process has already been killed.')
+            return True
+        elif self.has_terminated():
+            self.node.logger.info(f'Request to kill Process<{self.node.pk}> but process has already terminated.')
+            return False
+        self.node.logger.info(f'Request to kill Process<{self.node.pk}>.')
 
-        had_been_terminated = self.has_terminated()
+        # PR_COMMENT We need to kill the children now before because we transition to kill after the first kill
+        #            This became buggy in the last PR by allowing the user to reusing killing commands (if _killing do
+        #            nothing). Since we want to now allow the user to resend killing commands with different options we
+        #            have to kill first the children, or we still kill the children even when this process has been
+        #            killed. Otherwise you have the problematic scenario: Process is killed but did not kill the
+        #            children yet, kill timeouts, we kill again, but the parent process is already killed so it will
+        #            never enter this code
+        #
+        # TODO if tests just pass it could mean that this is not well tested, need to check if there is a test
 
-        result = super().kill(msg_text, force_kill)
+        # TODO
+        # this blocks worker and it cannot be unblocked
+        # need async await maybe
 
-        # Only kill children if we could be killed ourselves
-        if result is not False and not had_been_terminated:
-            killing = []
-            for child in self.node.called:
-                if self.runner.controller is None:
-                    self.logger.info('no controller available to kill child<%s>', child.pk)
-                    continue
-                try:
-                    result = self.runner.controller.kill_process(child.pk, msg_text=f'Killed by parent<{self.node.pk}>')
-                    result = asyncio.wrap_future(result)  # type: ignore[arg-type]
-                    if asyncio.isfuture(result):
-                        killing.append(result)
-                except ConnectionClosed:
-                    self.logger.info('no connection available to kill child<%s>', child.pk)
-                except UnroutableError:
-                    self.logger.info('kill signal was unable to reach child<%s>', child.pk)
+        killing = []
+        # breakpoint()
+        for child in self.node.called:
+            if self.runner.controller is None:
+                self.logger.info('no controller available to kill child<%s>', child.pk)
+                continue
+            try:
+                # we block for sending message
 
-            if asyncio.isfuture(result):
-                # We ourselves are waiting to be killed so add it to the list
-                killing.append(result)
+                # result = self.loop.run_until_complete(coro)
+                # breakpoint()
+                result = self.runner.controller.kill_process(
+                    child.pk, msg_text=f'Killed by parent<{self.node.pk}>', force_kill=force_kill
+                )
+                from plumpy.futures import unwrap_kiwi_future
 
-            if killing:
+                killing.append(unwrap_kiwi_future(result))
+                breakpoint()
+                # result = unwrapped_future.result(timeout=5)
+                # result = asyncio.wrap_future(result)  # type: ignore[arg-type]
+                # PR_COMMENT I commented out, we wrap it before to an asyncio future why the if check?
+                # if asyncio.isfuture(result):
+                #    killing.append(result)
+            except ConnectionClosed:
+                self.logger.info('no connection available to kill child<%s>', child.pk)
+            except UnroutableError:
+                self.logger.info('kill signal was unable to reach child<%s>', child.pk)
+
+        # TODO need to check this part, might be overengineered
+        # if asyncio.isfuture(result):
+        #    # We ourselves are waiting to be killed so add it to the list
+        #    killing.append(result)
+
+        ####### KILL TWO
+        if not force_kill:
+            # asyncio.send(continue_kill)
+            # return
+            for pending_future in killing:
+                # breakpoint()
+                result = pending_future.result()
                 # We are waiting for things to be killed, so return the 'gathered' future
-                kill_future = plumpy.futures.gather(*killing)
-                result = self.loop.create_future()
 
-                def done(done_future: plumpy.futures.Future):
-                    is_all_killed = all(done_future.result())
-                    result.set_result(is_all_killed)
+                # kill_future = plumpy.futures.gather(*killing)
+                # result = self.loop.create_future()
+                # breakpoint()
 
-                kill_future.add_done_callback(done)
+                # def done(done_future: plumpy.futures.Future):
+                #    is_all_killed = all(done_future.result())
+                #    result.set_result(is_all_killed)
 
-        return result
+                # kill_future.add_done_callback(done)
+
+        # PR_COMMENT We do not do this anymore. The original idea was to resend the killing interruption so the state
+        #            can continue freeing its resources using an EBM with new parameters as the user can change these
+        #            between kills by changing the config parameters. However this was not working properly because the
+        #            process state goes only the first time it receives a KillInterruption into the EBM. This is because
+        #            the EBM is activated within try-catch block.
+        #            try:
+        #              do_work() # <-- now we send the interrupt exception
+        #            except KillInterruption:
+        #              cancel_scheduler_job_in_ebm # <-- if we cancel it will just stop this
+        #
+        #            Not sure why I did not detect this during my tries. We could also do a while loop of interrupts
+        #            but I think it is generally not good design that the process state cancels the scheduler job while
+        #            here we kill the process. It adds another actor responsible for killing the process correctly
+        #            making it more complex than necessary.
+        #
+        # Cancel any old killing command to send a new one
+        # if self._killing:
+        #    self._killing.cancel()
+
+        # Send kill interruption to the tasks in the event loop so they stop
+        # This is not blocking, so the interruption is happening concurrently
+        if self._stepping:
+            # Ask the step function to pause by setting this flag and giving the
+            # caller back a future
+            interrupt_exception = plumpy.process_states.KillInterruption(msg_text, force_kill)
+            # PR COMMENT we do not set interrupt action because plumpy is very smart it uses the interrupt action to set
+            #            next state in the stepping, but we do not want to step to the next state through the plumpy
+            #            state machine, we want to control this here and only here
+            # self._set_interrupt_action_from_exception(interrupt_exception)
+            # self._killing = self._interrupt_action
+            self._state.interrupt(interrupt_exception)
+            # return cast(plumpy.futures.CancellableAction, self._interrupt_action)
+
+        # Kill jobs from scheduler associated with this process.
+        # This is blocking so we only continue when the scheduler job has been killed.
+        if not force_kill and isinstance(self.node, CalcJobNode):
+            # TODO put this function into more common place
+            from .calcjobs.tasks import task_kill_job
+
+            # if already killing we have triggered the Interruption
+            coro = self._launch_task(task_kill_job, self.node, self.runner.transport)
+            task = asyncio.create_task(coro)
+            # task_kill_job is raising an error if not successful, e.g. EBM fails.
+            # PR COMMENT we just return False and write why the kill fails, it does not make sense to me to put the
+            #            process to excepted. Maybe you fix your internet connection and want to try it again.
+            #            We have force-kill now if the user wants to enforce a killing
+            try:
+                # breakpoint()
+                self.loop.run_until_complete(task)
+                # breakpoint()
+            except Exception as exc:
+                self.node.logger.error(f'While cancelling job error was raised: {exc!s}')
+                # breakpoint()
+                return False
+
+        # Transition to killed process state
+        # This is blocking so we only continue when we are in killed state
+        msg = plumpy.process_comms.MessageBuilder.kill(text=msg_text, force_kill=force_kill)
+        new_state = self._create_state_instance(plumpy.process_states.ProcessState.KILLED, msg=msg)
+        self.transition_to(new_state)
+
+        return True
 
     @override
     def out(self, output_port: str, value: Any = None) -> None:

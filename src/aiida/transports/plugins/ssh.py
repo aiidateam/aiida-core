@@ -77,7 +77,7 @@ def convert_to_bool(string):
 class SshTransport(BlockingTransport):
     """Support connection, command execution and data transfer to remote computers via SSH+SFTP."""
 
-    class Model(Transport.Model):
+    class Model(BlockingTransport.Model):
         """Model describing required information to create an instance."""
 
         model_config = ConfigDict(use_enum_values=True)

@@ -852,6 +852,7 @@ class TestQueryBuilderCornerCases:
         qb = orm.QueryBuilder().append(orm.Data, filters={'or': [{}, {}]})
         assert qb.count() == count
 
+    @pytest.mark.usefixtures('suppress_internal_deprecations')
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_abstract_code_filtering(self, aiida_localhost, aiida_code, tmp_path):
         """Test that querying for AbstractCode correctly returns all code instances.
@@ -889,15 +890,19 @@ class TestQueryBuilderCornerCases:
         assert portable_code in portable_results
         assert len(portable_results) == 1
 
+        # Using orm.Code actually matches all codes.
+        # for backwards compatibility reasons we will not fix this.
         legacy_results = qb().append(orm.Code).all(flat=True)
         assert legacy_code in legacy_results
-        # NOTE: This assert fails since orm.Code matches all codes!
-        # for backwards compatibility reasons we will not fix this.
-        # assert len(legacy_results) == 1
+        assert len(legacy_results) == 3
+
+        # Turning off subclassing should however only match the one legacy Code
+        legacy_results = qb().append(orm.Code, subclassing=False).all(flat=True)
+        assert legacy_code in legacy_results
+        assert len(legacy_results) == 1
 
         # AbstractCode query should find all code types
-        qb_abstract = qb().append(orm.AbstractCode)
-        abstract_results = qb_abstract.all(flat=True)
+        abstract_results = qb().append(orm.AbstractCode).all(flat=True)
         assert (
             installed_code in abstract_results
         ), f'InstalledCode not found with AbstractCode query. Result: {abstract_results}'
@@ -912,6 +917,10 @@ class TestQueryBuilderCornerCases:
         filtered_results = qb_filtered.all(flat=True)
         assert installed_code in filtered_results
         assert len(filtered_results) == 1
+
+        # QB should find no codes if subclassing is False
+        subclassing_off_results = qb().append(orm.AbstractCode, subclassing=False).all(flat=True)
+        assert len(subclassing_off_results) == 0
 
 
 class TestAttributes:

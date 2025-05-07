@@ -15,17 +15,18 @@ plugin-specific operations.
 from __future__ import annotations
 
 import os
-import pathlib
 import shutil
 from collections.abc import Mapping
 from logging import LoggerAdapter
+from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 from typing import Mapping as MappingType
 
 from aiida.common import AIIDA_LOGGER, exceptions
+from aiida.common.asserts import assert_never
 from aiida.common.datastructures import CalcInfo, FileCopyOperation
-from aiida.common.folders import SandboxFolder
+from aiida.common.folders import Folder, SandboxFolder
 from aiida.common.links import LinkType
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
@@ -62,11 +63,11 @@ def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
     return data_node
 
 
-def upload_calculation(
+async def upload_calculation(
     node: CalcJobNode,
     transport: Transport,
     calc_info: CalcInfo,
-    folder: SandboxFolder,
+    folder: Folder,
     inputs: Optional[MappingType[str, Any]] = None,
     dry_run: bool = False,
 ) -> RemoteData | None:
@@ -103,9 +104,9 @@ def upload_calculation(
 
     # If we are performing a dry-run, the working directory should actually be a local folder that should already exist
     if dry_run:
-        workdir = transport.getcwd()
+        workdir = Path(folder.abspath)
     else:
-        remote_user = transport.whoami()
+        remote_user = await transport.whoami_async()
         remote_working_directory = computer.get_workdir().format(username=remote_user)
         if not remote_working_directory.strip():
             raise exceptions.ConfigurationError(
@@ -114,16 +115,13 @@ def upload_calculation(
             )
 
         # If it already exists, no exception is raised
-        try:
-            transport.chdir(remote_working_directory)
-        except IOError:
+        if not await transport.path_exists_async(remote_working_directory):
             logger.debug(
-                f'[submission of calculation {node.pk}] Unable to '
-                f'chdir in {remote_working_directory}, trying to create it'
+                f'[submission of calculation {node.pk}] Path '
+                f'{remote_working_directory} does not exist, trying to create it'
             )
             try:
-                transport.makedirs(remote_working_directory)
-                transport.chdir(remote_working_directory)
+                await transport.makedirs_async(remote_working_directory)
             except EnvironmentError as exc:
                 raise exceptions.ConfigurationError(
                     f'[submission of calculation {node.pk}] '
@@ -135,20 +133,18 @@ def upload_calculation(
         # in the calculation properties using _set_remote_dir
         # and I do not have to know the logic, but I just need to
         # read the absolute path from the calculation properties.
-        transport.mkdir(calc_info.uuid[:2], ignore_existing=True)
-        transport.chdir(calc_info.uuid[:2])
-        transport.mkdir(calc_info.uuid[2:4], ignore_existing=True)
-        transport.chdir(calc_info.uuid[2:4])
+        workdir = Path(remote_working_directory).joinpath(calc_info.uuid[:2], calc_info.uuid[2:4])
+        await transport.makedirs_async(workdir, ignore_existing=True)
 
         try:
             # The final directory may already exist, most likely because this function was already executed once, but
-            # failed and as a result was rescheduled by the eninge. In this case it would be fine to delete the folder
+            # failed and as a result was rescheduled by the engine. In this case it would be fine to delete the folder
             # and create it from scratch, except that we cannot be sure that this the actual case. Therefore, to err on
             # the safe side, we move the folder to the lost+found directory before recreating the folder from scratch
-            transport.mkdir(calc_info.uuid[4:])
+            await transport.mkdir_async(workdir.joinpath(calc_info.uuid[4:]))
         except OSError:
             # Move the existing directory to lost+found, log a warning and create a clean directory anyway
-            path_existing = os.path.join(transport.getcwd(), calc_info.uuid[4:])
+            path_existing = os.path.join(str(workdir), calc_info.uuid[4:])
             path_lost_found = os.path.join(remote_working_directory, REMOTE_WORK_DIRECTORY_LOST_FOUND)
             path_target = os.path.join(path_lost_found, calc_info.uuid)
             logger.warning(
@@ -156,18 +152,16 @@ def upload_calculation(
             )
 
             # Make sure the lost+found directory exists, then copy the existing folder there and delete the original
-            transport.mkdir(path_lost_found, ignore_existing=True)
-            transport.copytree(path_existing, path_target)
-            transport.rmtree(path_existing)
+            await transport.mkdir_async(path_lost_found, ignore_existing=True)
+            await transport.copytree_async(path_existing, path_target)
+            await transport.rmtree_async(path_existing)
 
             # Now we can create a clean folder for this calculation
-            transport.mkdir(calc_info.uuid[4:])
+            await transport.mkdir_async(workdir.joinpath(calc_info.uuid[4:]))
         finally:
-            transport.chdir(calc_info.uuid[4:])
+            workdir = workdir.joinpath(calc_info.uuid[4:])
 
-        # I store the workdir of the calculation for later file retrieval
-        workdir = transport.getcwd()
-        node.set_remote_workdir(workdir)
+        node.set_remote_workdir(str(workdir))
 
     # I first create the code files, so that the code can put
     # default files to be overwritten by the plugin itself.
@@ -178,22 +172,25 @@ def upload_calculation(
             # Note: this will possibly overwrite files
             for root, dirnames, filenames in code.base.repository.walk():
                 # mkdir of root
-                transport.makedirs(root, ignore_existing=True)
+                await transport.makedirs_async(workdir.joinpath(root), ignore_existing=True)
 
                 # remotely mkdir first
                 for dirname in dirnames:
-                    transport.makedirs((root / dirname), ignore_existing=True)
+                    await transport.makedirs_async(workdir.joinpath(root, dirname), ignore_existing=True)
 
                 # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
                 # combination with the new `Transport.put_object_from_filelike`
                 # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
                 for filename in filenames:
                     with NamedTemporaryFile(mode='wb+') as handle:
-                        content = code.base.repository.get_object_content((pathlib.Path(root) / filename), mode='rb')
+                        content = code.base.repository.get_object_content(Path(root) / filename, mode='rb')
                         handle.write(content)
                         handle.flush()
-                        transport.put(handle.name, (root / filename))
-            transport.chmod(code.filepath_executable, 0o755)  # rwxr-xr-x
+                        await transport.put_async(handle.name, workdir.joinpath(root, filename))
+            if code.filepath_executable.is_absolute():
+                await transport.chmod_async(code.filepath_executable, 0o755)  # rwxr-xr-x
+            else:
+                await transport.chmod_async(workdir.joinpath(code.filepath_executable), 0o755)  # rwxr-xr-x
 
     # local_copy_list is a list of tuples, each with (uuid, dest_path, rel_path)
     # NOTE: validation of these lists are done inside calculation.presubmit()
@@ -210,20 +207,22 @@ def upload_calculation(
 
     for file_copy_operation in file_copy_operation_order:
         if file_copy_operation is FileCopyOperation.LOCAL:
-            _copy_local_files(logger, node, transport, inputs, local_copy_list)
+            await _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir=workdir)
         elif file_copy_operation is FileCopyOperation.REMOTE:
             if not dry_run:
-                _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list)
+                await _copy_remote_files(
+                    logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir=workdir
+                )
         elif file_copy_operation is FileCopyOperation.SANDBOX:
             if not dry_run:
-                _copy_sandbox_files(logger, node, transport, folder)
+                await _copy_sandbox_files(logger, node, transport, folder, workdir=workdir)
         else:
             raise RuntimeError(f'file copy operation {file_copy_operation} is not yet implemented.')
 
     # In a dry_run, the working directory is the raw input folder, which will already contain these resources
     if dry_run:
         if remote_copy_list:
-            filepath = os.path.join(workdir, '_aiida_remote_copy_list.txt')
+            filepath = os.path.join(str(workdir), '_aiida_remote_copy_list.txt')
             with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
                 for _, remote_abs_path, dest_rel_path in remote_copy_list:
                     handle.write(
@@ -232,7 +231,7 @@ def upload_calculation(
                     )
 
         if remote_symlink_list:
-            filepath = os.path.join(workdir, '_aiida_remote_symlink_list.txt')
+            filepath = os.path.join(str(workdir), '_aiida_remote_symlink_list.txt')
             with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
                 for _, remote_abs_path, dest_rel_path in remote_symlink_list:
                     handle.write(
@@ -276,12 +275,12 @@ def upload_calculation(
     node.base.repository._update_repository_metadata()
 
     if not dry_run:
-        return RemoteData(computer=computer, remote_path=workdir)
+        return RemoteData(computer=computer, remote_path=str(workdir))
 
     return None
 
 
-def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list):
+async def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remote_symlink_list, workdir: Path):
     """Perform the copy instructions of the ``remote_copy_list`` and ``remote_symlink_list``."""
     for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
         if remote_computer_uuid == computer.uuid:
@@ -290,13 +289,13 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
                 f'remotely, directly on the machine {computer.label}'
             )
             try:
-                transport.copy(remote_abs_path, dest_rel_path)
+                await transport.copy_async(remote_abs_path, workdir.joinpath(dest_rel_path))
             except FileNotFoundError:
                 logger.warning(
                     f'[submission of calculation {node.pk}] Unable to copy remote '
                     f'resource from {remote_abs_path} to {dest_rel_path}! NOT Stopping but just ignoring!.'
                 )
-            except (IOError, OSError):
+            except OSError:
                 logger.warning(
                     f'[submission of calculation {node.pk}] Unable to copy remote '
                     f'resource from {remote_abs_path} to {dest_rel_path}! Stopping.'
@@ -314,68 +313,85 @@ def _copy_remote_files(logger, node, computer, transport, remote_copy_list, remo
                 f'[submission of calculation {node.pk}] copying {dest_rel_path} remotely, '
                 f'directly on the machine {computer.label}'
             )
-            remote_dirname = pathlib.Path(dest_rel_path).parent
+            remote_dirname = Path(dest_rel_path).parent
             try:
-                transport.makedirs(remote_dirname, ignore_existing=True)
-                transport.symlink(remote_abs_path, dest_rel_path)
-            except (IOError, OSError):
+                await transport.makedirs_async(workdir.joinpath(remote_dirname), ignore_existing=True)
+                await transport.symlink_async(remote_abs_path, workdir.joinpath(dest_rel_path))
+            except OSError:
                 logger.warning(
                     f'[submission of calculation {node.pk}] Unable to create remote symlink '
                     f'from {remote_abs_path} to {dest_rel_path}! Stopping.'
                 )
                 raise
         else:
-            raise IOError(
+            raise OSError(
                 f'It is not possible to create a symlink between two different machines for calculation {node.pk}'
             )
 
 
-def _copy_local_files(logger, node, transport, inputs, local_copy_list):
-    """Perform the copy instrctions of the ``local_copy_list``."""
-    with TemporaryDirectory() as tmpdir:
-        dirpath = pathlib.Path(tmpdir)
+async def _copy_local_files(logger, node, transport, inputs, local_copy_list, workdir: Path):
+    """Perform the copy instructions of the ``local_copy_list``."""
+    for uuid, filename, target in local_copy_list:
+        logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
+
+        try:
+            data_node = load_node(uuid=uuid)
+        except exceptions.NotExistent:
+            data_node = _find_data_node(inputs, uuid) if inputs else None
+
+        if data_node is None:
+            logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
+            continue
 
         # The transport class can only copy files directly from the file system, so the files in the source node's repo
         # have to first be copied to a temporary directory on disk.
-        for uuid, filename, target in local_copy_list:
-            logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
-
-            try:
-                data_node = load_node(uuid=uuid)
-            except exceptions.NotExistent:
-                data_node = _find_data_node(inputs, uuid) if inputs else None
-
-            if data_node is None:
-                logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
-                continue
+        with TemporaryDirectory() as tmpdir:
+            dirpath = Path(tmpdir)
 
             # If no explicit source filename is defined, we assume the top-level directory
             filename_source = filename or '.'
-            filename_target = target or ''
+            filename_target = target or '.'
 
-            # Make the target filepath absolute and create any intermediate directories if they don't yet exist
+            file_type_source = data_node.base.repository.get_object(filename_source).file_type
+
+            # The logic below takes care of an edge case where the source is a file but the target is a directory. In
+            # this case, the v2.5.1 implementation would raise an `IsADirectoryError` exception, because it would try
+            # to open the directory in the sandbox folder as a file when writing the contents.
+            if file_type_source == FileType.FILE and target and await transport.isdir_async(workdir.joinpath(target)):
+                raise IsADirectoryError
+
+            # In case the source filename is specified and it is a directory that already exists in the remote, we
+            # want to avoid nested directories in the target path to replicate the behavior of v2.5.1. This is done by
+            # setting the target filename to '.', which means the contents of the node will be copied in the top level
+            # of the temporary directory, whose contents are then copied into the target directory.
+            if filename and await transport.isdir_async(workdir.joinpath(filename)):
+                filename_target = '.'
+
             filepath_target = (dirpath / filename_target).resolve().absolute()
             filepath_target.parent.mkdir(parents=True, exist_ok=True)
 
-            if data_node.base.repository.get_object(filename_source).file_type == FileType.DIRECTORY:
+            if file_type_source == FileType.DIRECTORY:
                 # If the source object is a directory, we copy its entire contents
                 data_node.base.repository.copy_tree(filepath_target, filename_source)
+                await transport.put_async(
+                    f'{filepath_target}/',
+                    workdir.joinpath(target) if target else workdir.joinpath('.'),
+                    overwrite=True,
+                )
             else:
                 # Otherwise, simply copy the file
                 with filepath_target.open('wb') as handle:
                     with data_node.base.repository.open(filename_source, 'rb') as source:
                         shutil.copyfileobj(source, handle)
-
-        # Now copy the contents of the temporary folder to the remote working directory using the transport
-        for filepath in dirpath.iterdir():
-            transport.put(str(filepath), filepath.name)
+                await transport.makedirs_async(workdir.joinpath(Path(target).parent), ignore_existing=True)
+                await transport.put_async(filepath_target, workdir.joinpath(target))
 
 
-def _copy_sandbox_files(logger, node, transport, folder):
+async def _copy_sandbox_files(logger, node, transport, folder, workdir: Path):
     """Copy the contents of the sandbox folder to the working directory."""
     for filename in folder.get_content_list():
         logger.debug(f'[submission of calculation {node.pk}] copying file/folder {filename}...')
-        transport.put(folder.get_abs_path(filename), filename)
+        await transport.put_async(folder.get_abs_path(filename), workdir.joinpath(filename))
 
 
 def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
@@ -383,7 +399,7 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | 
 
     :param calculation: the instance of CalcJobNode to submit.
     :param transport: an already opened transport to use to submit the calculation.
-    :return: the job id as returned by the scheduler `submit_from_script` call
+    :return: the job id as returned by the scheduler `submit_job` call
     """
     job_id = calculation.get_job_id()
 
@@ -400,7 +416,7 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | 
 
     submit_script_filename = calculation.get_option('submit_script_filename')
     workdir = calculation.get_remote_workdir()
-    result = scheduler.submit_from_script(workdir, submit_script_filename)
+    result = scheduler.submit_job(workdir, submit_script_filename)
 
     if isinstance(result, str):
         calculation.set_job_id(result)
@@ -408,7 +424,7 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | 
     return result
 
 
-def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     """Stash files from the working directory of a completed calculation to a permanent remote folder.
 
     After a calculation has been completed, optionally stash files from the work directory to a storage location on the
@@ -420,60 +436,118 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     :param transport: an already opened transport.
     """
     from aiida.common.datastructures import StashMode
-    from aiida.orm import RemoteStashFolderData
+    from aiida.orm import RemoteStashCompressedData, RemoteStashFolderData
 
     logger_extra = get_dblogger_extra(calculation)
 
+    if calculation.process_type == 'aiida.calculations:core.stash':
+        remote_node = load_node(calculation.inputs.source_node.pk)
+        uuid = remote_node.uuid
+        source_basepath = Path(remote_node.get_remote_path())
+    else:
+        uuid = calculation.uuid
+        source_basepath = Path(calculation.get_remote_workdir())
+
     stash_options = calculation.get_option('stash')
-    stash_mode = stash_options.get('mode', StashMode.COPY.value)
+    stash_mode = stash_options.get('stash_mode')
     source_list = stash_options.get('source_list', [])
+    target_base = Path(stash_options['target_base'])
+    dereference = stash_options.get('dereference', False)
 
     if not source_list:
         return
 
-    if stash_mode != StashMode.COPY.value:
-        EXEC_LOGGER.warning(f'stashing mode {stash_mode} is not implemented yet.')
-        return
+    EXEC_LOGGER.debug(
+        f'stashing files with mode {stash_mode} for calculation<{calculation.pk}>: {source_list}', extra=logger_extra
+    )
 
-    cls = RemoteStashFolderData
+    if stash_mode == StashMode.COPY.value:
+        target_basepath = target_base / uuid[:2] / uuid[2:4] / uuid[4:]
 
-    EXEC_LOGGER.debug(f'stashing files for calculation<{calculation.pk}>: {source_list}', extra=logger_extra)
-
-    uuid = calculation.uuid
-    source_basepath = pathlib.Path(calculation.get_remote_workdir())
-    target_basepath = pathlib.Path(stash_options['target_base']) / uuid[:2] / uuid[2:4] / uuid[4:]
-
-    for source_filename in source_list:
-        if transport.has_magic(source_filename):
-            copy_instructions = []
-            for globbed_filename in transport.glob(str(source_basepath / source_filename)):
-                target_filepath = target_basepath / pathlib.Path(globbed_filename).relative_to(source_basepath)
-                copy_instructions.append((globbed_filename, target_filepath))
-        else:
-            copy_instructions = [(source_basepath / source_filename, target_basepath / source_filename)]
-
-        for source_filepath, target_filepath in copy_instructions:
-            # If the source file is in a (nested) directory, create those directories first in the target directory
-            target_dirname = target_filepath.parent
-            transport.makedirs(str(target_dirname), ignore_existing=True)
-
-            try:
-                transport.copy(str(source_filepath), str(target_filepath))
-            except (IOError, ValueError) as exception:
-                EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+        for source_filename in source_list:
+            if transport.has_magic(source_filename):
+                copy_instructions = []
+                for globbed_filename in await transport.glob_async(source_basepath / source_filename):
+                    target_filepath = target_basepath / Path(globbed_filename).relative_to(source_basepath)
+                    copy_instructions.append((globbed_filename, target_filepath))
             else:
-                EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
+                copy_instructions = [(source_basepath / source_filename, target_basepath / source_filename)]
 
-    remote_stash = cls(
-        computer=calculation.computer,
-        target_basepath=str(target_basepath),
-        stash_mode=StashMode(stash_mode),
-        source_list=source_list,
-    ).store()
+            for source_filepath, target_filepath in copy_instructions:
+                # If the source file is in a (nested) directory, create those directories first in the target directory
+                target_dirname = target_filepath.parent
+                await transport.makedirs_async(target_dirname, ignore_existing=True)
+
+                try:
+                    await transport.copy_async(source_filepath, target_filepath)
+                except (OSError, ValueError) as exception:
+                    EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+                    # try to clean up in case of a failure
+                    await transport.rmtree_async(target_base / uuid[:2])
+                else:
+                    EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
+
+        remote_stash = RemoteStashFolderData(
+            computer=calculation.computer,
+            target_basepath=str(target_basepath),
+            stash_mode=StashMode(stash_mode),
+            source_list=source_list,
+        ).store()
+
+    elif stash_mode in [
+        StashMode.COMPRESS_TAR.value,
+        StashMode.COMPRESS_TARBZ2.value,
+        StashMode.COMPRESS_TARGZ.value,
+        StashMode.COMPRESS_TARXZ.value,
+    ]:
+        # stash_mode values are identical with compression_format in transport plugin:
+        # 'tar', 'tar.gz', 'tar.bz2', or 'tar.xz'
+        compression_format = stash_mode
+        file_name = uuid
+        authinfo = calculation.get_authinfo()
+        aiida_remote_base = authinfo.get_workdir().format(username=transport.whoami())
+
+        target_destination = str(target_base / file_name) + '.' + compression_format
+
+        remote_stash = RemoteStashCompressedData(
+            computer=calculation.computer,
+            target_basepath=target_destination,
+            stash_mode=StashMode(stash_mode),
+            source_list=source_list,
+            dereference=dereference,
+        )
+
+        source_list_abs = [source_basepath / source for source in source_list]
+
+        try:
+            await transport.compress_async(
+                format=compression_format,
+                remotesources=source_list_abs,
+                remotedestination=target_destination,
+                root_dir=aiida_remote_base,
+                overwrite=False,
+                dereference=dereference,
+            )
+        except (OSError, ValueError) as exception:
+            EXEC_LOGGER.warning(f'failed to stash {source_list} to {target_destination}: {exception}')
+            return
+            # note: if you raise here, you triger the exponential backoff
+            # and if you don't raise, it appears as successful in verdi process list: Finished [0]
+            # An issue opened to investigate and fix this https://github.com/aiidateam/aiida-core/issues/6789
+            # raise exceptions.RemoteOperationError(f'failed '
+            # 'to compress {source_list} to {target_destination}: {exception}')
+        else:
+            EXEC_LOGGER.debug(f'stashed {source_list} to {target_destination}')
+
+        remote_stash.store()
+
+    else:
+        assert_never(stash_mode)
+
     remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
 
 
-def retrieve_calculation(
+async def retrieve_calculation(
     calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str
 ) -> FolderData | None:
     """Retrieve all the files of a completed job calculation using the given transport.
@@ -509,21 +583,19 @@ def retrieve_calculation(
     retrieved_files = FolderData()
 
     with transport:
-        transport.chdir(workdir)
-
         # First, retrieve the files of folderdata
         retrieve_list = calculation.get_retrieve_list()
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
 
         with SandboxFolder(filepath_sandbox) as folder:
-            retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
+            await retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
             retrieved_files.base.repository.put_object_from_tree(folder.abspath)
 
         # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key
         if retrieve_temporary_list:
-            retrieve_files_from_list(calculation, transport, retrieved_temporary_folder, retrieve_temporary_list)
+            await retrieve_files_from_list(calculation, transport, retrieved_temporary_folder, retrieve_temporary_list)
 
             # Log the files that were retrieved in the temporary folder
             for filename in os.listdir(retrieved_temporary_folder):
@@ -558,7 +630,7 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     scheduler.set_transport(transport)
 
     # Call the proper kill method for the job ID of this calculation
-    result = scheduler.kill(job_id)
+    result = scheduler.kill_job(job_id)
 
     if result is not True:
         # Failed to kill because the job might have already been completed
@@ -567,14 +639,14 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
 
         # If the job is returned it is still running and the kill really failed, so we raise
         if job is not None and job.job_state != JobState.DONE:
-            raise exceptions.RemoteOperationError(f'scheduler.kill({job_id}) was unsuccessful')
+            raise exceptions.RemoteOperationError(f'scheduler.kill_job({job_id}) was unsuccessful')
         else:
             EXEC_LOGGER.warning(
-                'scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id
+                'scheduler.kill_job() failed but job<{%s}> no longer seems to be running regardless', job_id
             )
 
 
-def retrieve_files_from_list(
+async def retrieve_files_from_list(
     calculation: CalcJobNode,
     transport: Transport,
     folder: str,
@@ -587,10 +659,10 @@ def retrieve_files_from_list(
         * a string
         * a list
 
-    If it is a string, it represents the remote absolute filepath of the file.
+    If it is a string, it represents the remote absolute or relative filepath of the file.
     If the item is a list, the elements will correspond to the following:
 
-        * remotepath
+        * remotepath (relative path)
         * localpath
         * depth
 
@@ -599,21 +671,24 @@ def retrieve_files_from_list(
     upto what level of the original remotepath nesting the files will be copied.
 
     :param transport: the Transport instance.
-    :param folder: an absolute path to a folder that contains the files to copy.
+    :param folder: an absolute path to a folder that contains the files to retrieve.
     :param retrieve_list: the list of files to retrieve.
     """
+    workdir = Path(calculation.get_remote_workdir())
     for item in retrieve_list:
         if isinstance(item, (list, tuple)):
             tmp_rname, tmp_lname, depth = item
             # if there are more than one file I do something differently
             if transport.has_magic(tmp_rname):
-                remote_names = transport.glob(tmp_rname)
+                remote_names = await transport.glob_async(workdir.joinpath(tmp_rname))
                 local_names = []
                 for rem in remote_names:
+                    # get the relative path so to make local_names relative
+                    rel_rem = os.path.relpath(rem, str(workdir))
                     if depth is None:
-                        local_names.append(os.path.join(tmp_lname, rem))
+                        local_names.append(os.path.join(tmp_lname, rel_rem))
                     else:
-                        to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
+                        to_append = rel_rem.split(os.path.sep)[-depth:] if depth > 0 else []
                         local_names.append(os.path.sep.join([tmp_lname] + to_append))
             else:
                 remote_names = [tmp_rname]
@@ -624,13 +699,22 @@ def retrieve_files_from_list(
                     new_folder = os.path.join(folder, os.path.split(this_local_file)[0])
                     if not os.path.exists(new_folder):
                         os.makedirs(new_folder)
-        elif transport.has_magic(item):  # it is a string
-            remote_names = transport.glob(item)
-            local_names = [os.path.split(rem)[1] for rem in remote_names]
         else:
-            remote_names = [item]
-            local_names = [os.path.split(item)[1]]
+            abs_item = item if item.startswith('/') else str(workdir.joinpath(item))
+
+            if transport.has_magic(abs_item):
+                remote_names = await transport.glob_async(abs_item)
+                local_names = [os.path.split(rem)[1] for rem in remote_names]
+            else:
+                remote_names = [abs_item]
+                local_names = [os.path.split(abs_item)[1]]
 
         for rem, loc in zip(remote_names, local_names):
             transport.logger.debug(f"[retrieval of calc {calculation.pk}] Trying to retrieve remote item '{rem}'")
-            transport.get(rem, os.path.join(folder, loc), ignore_nonexisting=True)
+
+            if rem.startswith('/'):
+                to_get = rem
+            else:
+                to_get = workdir.joinpath(rem)
+
+            await transport.get_async(to_get, os.path.join(folder, loc), ignore_nonexisting=True)

@@ -96,7 +96,7 @@ def postgres_cluster():
         from aiida.manage.external.postgres import Postgres
 
         postgres_config = {
-            'database_engine': 'postgresql_psycopg2',
+            'database_engine': 'postgresql_psycopg',
             'database_name': database_name or str(uuid.uuid4()),
             'database_username': database_username or 'guest',
             'database_password': database_password or 'guest',
@@ -109,8 +109,8 @@ def postgres_cluster():
             )
         postgres.create_db(postgres_config['database_username'], postgres_config['database_name'])
 
-        postgres_config['database_hostname'] = postgres.host_for_psycopg2
-        postgres_config['database_port'] = postgres.port_for_psycopg2
+        postgres_config['database_hostname'] = postgres.host_for_psycopg
+        postgres_config['database_port'] = postgres.port_for_psycopg
 
         return postgres_config
 
@@ -162,6 +162,7 @@ def aiida_instance(
     """
     from aiida.manage import configuration
     from aiida.manage.configuration import settings
+    from aiida.manage.configuration.settings import AiiDAConfigDir
 
     if aiida_test_profile:
         yield configuration.get_config()
@@ -172,14 +173,13 @@ def aiida_instance(
         if configuration.CONFIG is not None:
             reset = True
             current_config = configuration.CONFIG
-            current_config_path = current_config.dirpath
+            current_config_path = pathlib.Path(current_config.dirpath)
             current_profile = configuration.get_profile()
             current_path_variable = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
 
         dirpath_config = tmp_path_factory.mktemp('config')
         os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_config)
-        settings.AIIDA_CONFIG_FOLDER = dirpath_config
-        settings.set_configuration_directory()
+        AiiDAConfigDir.set(dirpath_config)
         configuration.CONFIG = configuration.load_config(create=True)
 
         try:
@@ -191,7 +191,7 @@ def aiida_instance(
                 else:
                     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = current_path_variable
 
-                settings.AIIDA_CONFIG_FOLDER = current_config_path
+                AiiDAConfigDir.set(current_config_path)
                 configuration.CONFIG = current_config
                 if current_profile:
                     aiida_manager.load_profile(current_profile.name, allow_switch=True)
@@ -225,7 +225,7 @@ def config_psql_dos(
             'storage': {
                 'backend': 'core.psql_dos',
                 'config': {
-                    'repository_uri': f'file://{tmp_path_factory.mktemp("repository")}',
+                    'repository_uri': pathlib.Path(f'{tmp_path_factory.mktemp("repository")}').as_uri(),
                 },
             }
         }
@@ -760,6 +760,7 @@ def submit_and_await(started_daemon_client):
                     f'Daemon <{started_daemon_client.profile.name}|{daemon_status}> log file content: \n'
                     f'{daemon_log_file}'
                 )
+            time.sleep(0.1)
 
         return node
 

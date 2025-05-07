@@ -13,26 +13,236 @@ import re
 import time
 import typing as t
 import uuid
+from contextlib import contextmanager
+from pathlib import Path
 
 import pytest
+
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
+from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
-
 from tests.utils.processes import WaitProcess
 
+FuncArgs = tuple[t.Any, ...]
 
-def await_condition(condition: t.Callable, timeout: int = 1):
+
+def start_daemon_worker_in_foreground_and_redirect_streams(
+    aiida_profile_name: str, log_dir: Path, prepare_func: t.Callable[[FuncArgs], t.Any], prepare_func_args: FuncArgs
+):
+    """Starts a daemon worker and logs its stdout and and stderr streams to a file in the daemon log directory.
+
+    :param aiida_profile_name: The name of the profile the daemon worker should load.
+    :param log_dir: The directory the log of the worker is put
+    :param prepare_func: Called before the worker is started
+    :param prepare_func_args: The arguments passed to the `prepare_func`
+    """
+    import os
+    import sys
+
+    from aiida.engine.daemon.worker import start_daemon_worker
+
+    prepare_func(*prepare_func_args)
+
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+
+    try:
+        pid = os.getpid()
+        sys.stdout = open(log_dir / f'worker-{pid}.out', 'w')
+        sys.stderr = open(log_dir / f'worker-{pid}.err', 'w')
+        start_daemon_worker(False, aiida_profile_name)
+    finally:
+        if sys.stdout != original_stdout:
+            sys.stdout.close()
+            sys.stdout = original_stdout
+        if sys.stderr != original_stderr:
+            sys.stderr.close()
+            sys.stderr = original_stderr
+
+
+# We have to define the mock functions globally as we cannot pass local function to a spawn process
+class MockFunctions:
+    @staticmethod
+    def mock_open(_):
+        raise Exception('Mock open exception')
+
+    @staticmethod
+    async def mock_exponential_backoff_retry(*_, **__):
+        from aiida.common.exceptions import TransportTaskException
+
+        raise TransportTaskException
+
+
+@pytest.fixture(scope='function')
+@pytest.mark.usefixtures('started_daemon_client')
+def fork_worker_context(aiida_profile):
+    """Runs daemon worker on a new process with redirected stdout and stderr streams."""
+    import multiprocessing
+
+    from aiida.engine.daemon.client import get_daemon_client
+
+    client = get_daemon_client(aiida_profile)
+    nb_workers = client.get_number_of_workers()
+    # The workers are decreased to zero to ensure that the worker that is
+    # subsequently started through this fixture is the one that receives all
+    # submitted processes.
+    client.decrease_workers(nb_workers)
+    daemon_log_dir = Path(client.daemon_log_file).parent
+
+    @contextmanager
+    def fork_worker(func, func_args):
+        # It is important that we spawn the process to not inherit the sql and
+        # broker connection that cannot be shared over procesess
+        ctx = multiprocessing.get_context('spawn')
+        # we need to pass the aiida profile so it uses the same configuration
+        process = ctx.Process(
+            target=start_daemon_worker_in_foreground_and_redirect_streams,
+            args=(aiida_profile.name, daemon_log_dir, func, func_args),
+        )
+        process.start()
+
+        yield process
+
+        process.terminate()
+        process.join()
+
+    yield fork_worker
+
+    client.increase_workers(nb_workers)
+
+
+def await_condition(condition: t.Callable, timeout: int = 1) -> t.Any:
     """Wait for the ``condition`` to evaluate to ``True`` within the ``timeout`` or raise."""
     start_time = time.time()
 
-    while not condition():
+    while not (result := condition()):
         if time.time() - start_time > timeout:
             raise RuntimeError(f'waiting for {condition} to evaluate to `True` timed out after {timeout} seconds.')
+        time.sleep(0.1)
+
+    return result
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('started_daemon_client')
+def test_process_kill_failing_transport(
+    fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
+):
+    """Tests if a process that is unable to open a transport connection can be force killed.
+
+    A failure in opening a transport connection results in the EBM to be fired blocking a regular kill command.
+    The force kill command will ignore the EBM and kill the process in any case."""
+    from aiida.cmdline.utils.common import get_process_function_report
+    from aiida.orm import Int
+
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+
+    def make_a_builder(sleep_seconds=0):
+        builder = code.get_builder()
+        builder.x = Int(1)
+        builder.y = Int(1)
+        builder.metadata.options.sleep = sleep_seconds
+        return builder
+
+    kill_timeout = 10
+
+    # patch a faulty transport open
+    mokeypatch_args = ('aiida.transports.plugins.local.LocalTransport.open', MockFunctions.mock_open)
+    with fork_worker_context(monkeypatch.setattr, mokeypatch_args):
+        node = submit_and_await(make_a_builder(100), ProcessState.WAITING)
+        result = await_condition(lambda: get_process_function_report(node), timeout=kill_timeout)
+        assert 'Mock open exception' in result
+        assert 'exponential_backoff_retry' in result
+
+        # force kill the process
+        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
+        await_condition(lambda: node.is_killed, timeout=kill_timeout)
+        assert node.is_killed
+        assert node.process_status == 'Force killed through `verdi process kill`'
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('started_daemon_client')
+def test_process_kill_failing_transport_failed_kill(
+    fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
+):
+    """Tests if a process that is unable to open a transport connection can be force killed.
+
+    A process that has stuck in EBM, cannot get killed directly by `verdi process kill`.
+    Such a process with a history of failed attempts, should still be able to get force killed.
+    `verdi process kill -F` --as the second attempt--
+    """
+
+    from aiida.cmdline.utils.common import get_process_function_report
+    from aiida.orm import Int
+
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+
+    def make_a_builder(sleep_seconds=0):
+        builder = code.get_builder()
+        builder.x = Int(1)
+        builder.y = Int(1)
+        builder.metadata.options.sleep = sleep_seconds
+        return builder
+
+    kill_timeout = 10
+
+    monkeypatch_args = ('aiida.transports.plugins.local.LocalTransport.open', MockFunctions.mock_open)
+    with fork_worker_context(monkeypatch.setattr, monkeypatch_args):
+        node = submit_and_await(make_a_builder(5), ProcessState.WAITING)
+
+        # assert the process is stuck in EBM
+        result = await_condition(lambda: get_process_function_report(node), timeout=kill_timeout)
+        assert 'Mock open exception' in result
+        assert 'exponential_backoff_retry' in result
+
+        # practice a normal kill, which should fail
+        result = run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait', '--timeout', '1.0'])
+        assert f'Error: call to kill Process<{node.pk}> timed out' in result.stdout
+
+        # force kill the process
+        result = run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
+        await_condition(lambda: node.is_killed, timeout=kill_timeout)
+        assert node.process_status == 'Force killed through `verdi process kill`'
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('started_daemon_client')
+def test_process_kill_failng_ebm(
+    fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
+):
+    """9) Kill a process that is paused after EBM (5 times failed). It should be possible to kill it normally.
+    # (e.g. in scenarios that transport is working again)
+    """
+    from aiida.orm import Int
+
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+
+    def make_a_builder(sleep_seconds=0):
+        builder = code.get_builder()
+        builder.x = Int(1)
+        builder.y = Int(1)
+        builder.metadata.options.sleep = sleep_seconds
+        return builder
+
+    kill_timeout = 10
+
+    monkeypatch_args = ('aiida.engine.utils.exponential_backoff_retry', MockFunctions.mock_exponential_backoff_retry)
+    with fork_worker_context(monkeypatch.setattr, monkeypatch_args):
+        node = submit_and_await(make_a_builder(), ProcessState.WAITING)
+        await_condition(
+            lambda: node.process_status
+            == 'Pausing after failed transport task: upload_calculation failed 5 times consecutively',
+            timeout=kill_timeout,
+        )
+
+        run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        await_condition(lambda: node.is_killed, timeout=kill_timeout)
 
 
 class TestVerdiProcess:
@@ -205,11 +415,11 @@ class TestVerdiProcess:
         calcjob_one.store()
         calcjob_two.store()
 
-        # Running without identifiers should not except and not print anything
+        # Running without identifiers should except and print something
         options = []
-        result = run_cli_command(cmd_process.process_show, options)
-
-        assert len(result.output_lines) == 0
+        result = run_cli_command(cmd_process.process_show, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
 
         # Giving a single identifier should print a non empty string message
         options = [str(workchain_one.pk)]
@@ -231,11 +441,11 @@ class TestVerdiProcess:
         """Test verdi process report"""
         node = WorkflowNode().store()
 
-        # Running without identifiers should not except and not print anything
+        # Running without identifiers should except and print something
         options = []
-        result = run_cli_command(cmd_process.process_report, options)
-
-        assert len(result.output_lines) == 0
+        result = run_cli_command(cmd_process.process_report, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
 
         # Giving a single identifier should print a non empty string message
         options = [str(node.pk)]
@@ -254,11 +464,11 @@ class TestVerdiProcess:
         node = WorkflowNode().store()
         node.set_process_state(ProcessState.RUNNING)
 
-        # Running without identifiers should not except and not print anything
+        # Running without identifiers should except and print something
         options = []
-        result = run_cli_command(cmd_process.process_status, options)
-        assert result.exception is None, result.output
-        assert len(result.output_lines) == 0
+        result = run_cli_command(cmd_process.process_status, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
 
         # Giving a single identifier should print a non empty string message
         options = [str(node.pk)]
@@ -271,6 +481,21 @@ class TestVerdiProcess:
         result = run_cli_command(cmd_process.process_status, options)
         assert result.exception is None, result.output
         assert len(result.output_lines) == 0
+
+    @pytest.mark.requires_rmq
+    def test_process_watch(self, run_cli_command):
+        """Test verdi process watch"""
+        # Running without identifiers should except and print something
+        options = []
+        result = run_cli_command(cmd_process.process_watch, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
+
+        # Running with both identifiers should raise an error and print something
+        options = ['--most-recent-node', '1']
+        result = run_cli_command(cmd_process.process_watch, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
 
     def test_process_status_call_link_label(self, run_cli_command):
         """Test ``verdi process status --call-link-label``."""
@@ -336,9 +561,41 @@ class TestVerdiProcess:
             assert len(result.output_lines) == 1, result.output_lines
             assert result.output_lines[0] == 'No log messages recorded for this entry'
 
+    def test_process_dump(self, run_cli_command, tmp_path, generate_workchain_multiply_add):
+        """Test verdi process dump"""
+
+        # Only test CLI interface here, the actual functionalities of the Python API are tested in `test_processes.py`
+        test_path = tmp_path / 'cli-dump'
+        node = generate_workchain_multiply_add()
+
+        # Giving a single identifier should print a non empty string message
+        options = [str(node.pk), '-p', str(test_path)]
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert 'Success:' in result.output
+
+        # Trying to run the dumping again in the same path but with overwrite=False should raise exception
+        options = [str(node.pk), '-p', str(test_path), '--no-incremental']
+        result = run_cli_command(cmd_process.process_dump, options, raises=True)
+        assert result.exit_code is ExitCode.CRITICAL
+
+        # Works fine when using overwrite=True
+        options = [str(node.pk), '-p', str(test_path), '-o', '--no-incremental']
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert 'Success:' in result.output
+
+        # Set overwrite=True but provide bad directory, i.e. missing metadata file
+        (test_path / '.aiida_node_metadata.yaml').unlink()
+
+        options = [str(node.pk), '-p', str(test_path), '-o']
+        result = run_cli_command(cmd_process.process_dump, options, raises=True)
+        assert result.exit_code is ExitCode.CRITICAL
+
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('numprocesses, percentage', ((0, 100), (1, 90)))
+@pytest.mark.requires_rmq
 def test_list_worker_slot_warning(run_cli_command, monkeypatch, numprocesses, percentage):
     """Test that the if the number of used worker process slots exceeds a threshold,
     that the warning message is displayed to the user when running `verdi process list`
@@ -427,6 +684,13 @@ class TestVerdiProcessCallRoot:
         assert str(self.node_root.pk) in result.output_lines[1]
         assert str(self.node_root.pk) in result.output_lines[2]
 
+    def test_no_process_argument(self, run_cli_command):
+        # Running without identifiers should except and print something
+        options = []
+        result = run_cli_command(cmd_process.process_call_root, options, raises=True)
+        assert result.exit_code == ExitCode.USAGE_ERROR
+        assert len(result.output_lines) > 0
+
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('started_daemon_client')
@@ -437,6 +701,12 @@ def test_process_pause(submit_and_await, run_cli_command):
 
     run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
     await_condition(lambda: node.paused)
+
+    # Running without identifiers should except and print something
+    options = []
+    result = run_cli_command(cmd_process.process_pause, options, raises=True)
+    assert result.exit_code == ExitCode.USAGE_ERROR
+    assert len(result.output_lines) > 0
 
 
 @pytest.mark.requires_rmq
@@ -450,6 +720,12 @@ def test_process_play(submit_and_await, run_cli_command):
 
     run_cli_command(cmd_process.process_play, [str(node.pk), '--wait'])
     await_condition(lambda: not node.paused)
+
+    # Running without identifiers should except and print something
+    options = []
+    result = run_cli_command(cmd_process.process_play, options, raises=True)
+    assert result.exit_code == ExitCode.USAGE_ERROR
+    assert len(result.output_lines) > 0
 
 
 @pytest.mark.requires_rmq
@@ -470,9 +746,28 @@ def test_process_play_all(submit_and_await, run_cli_command):
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('started_daemon_client')
-def test_process_kill(submit_and_await, run_cli_command):
-    """Test the ``verdi process kill`` command."""
-    node = submit_and_await(WaitProcess, ProcessState.WAITING)
+def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
+    """Test the ``verdi process kill`` command.
+    It tries to cover all the possible scenarios of killing a process.
+    """
+
+    kill_timeout = 20
+
+    # 0) Running without identifiers should except and print something
+    result = run_cli_command(cmd_process.process_kill, raises=True)
+    assert result.exit_code == ExitCode.USAGE_ERROR
+    assert len(result.output_lines) > 0
+
+    from aiida.orm import Int
+
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+    builder = code.get_builder()
+    builder.x = Int(2)
+    builder.y = Int(3)
+    builder.metadata.options.sleep = 20
+
+    # Kill a paused process
+    node = submit_and_await(builder, ProcessState.WAITING)
 
     run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
     await_condition(lambda: node.paused)
@@ -481,6 +776,41 @@ def test_process_kill(submit_and_await, run_cli_command):
     run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
     await_condition(lambda: node.is_killed)
     assert node.process_status == 'Killed through `verdi process kill`'
+
+    # Force kill a paused process
+    node = submit_and_await(builder, ProcessState.WAITING)
+
+    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    await_condition(lambda: node.paused)
+    assert node.process_status == 'Paused through `verdi process pause`'
+
+    run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
+    await_condition(lambda: node.is_killed)
+    assert node.process_status == 'Force killed through `verdi process kill`'
+
+    # `verdi process kill --all` should kill all processes
+    node_1 = submit_and_await(builder, ProcessState.WAITING)
+    run_cli_command(cmd_process.process_pause, [str(node_1.pk), '--wait'])
+    await_condition(lambda: node_1.paused)
+    node_2 = submit_and_await(builder, ProcessState.WAITING)
+
+    run_cli_command(cmd_process.process_kill, ['--all', '--wait'], user_input='y')
+    await_condition(lambda: node_1.is_killed, timeout=kill_timeout)
+    await_condition(lambda: node_2.is_killed, timeout=kill_timeout)
+    assert node_1.process_status == 'Killed through `verdi process kill`'
+    assert node_2.process_status == 'Killed through `verdi process kill`'
+
+    # `verdi process kill --all -F` should Force kill all processes (running / not running)
+    node_1 = submit_and_await(builder, ProcessState.WAITING)
+    run_cli_command(cmd_process.process_pause, [str(node_1.pk), '--wait'])
+    await_condition(lambda: node_1.paused)
+    node_2 = submit_and_await(builder, ProcessState.WAITING)
+
+    run_cli_command(cmd_process.process_kill, ['--all', '--wait', '-F'], user_input='y')
+    await_condition(lambda: node_1.is_killed, timeout=kill_timeout)
+    await_condition(lambda: node_2.is_killed, timeout=kill_timeout)
+    assert node_1.process_status == 'Force killed through `verdi process kill`'
+    assert node_2.process_status == 'Force killed through `verdi process kill`'
 
 
 @pytest.mark.requires_rmq

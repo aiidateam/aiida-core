@@ -8,17 +8,20 @@
 ###########################################################################
 """`verdi code` command."""
 
+import pathlib
 from collections import defaultdict
 from functools import partial
 
 import click
 
+from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo, echo_tabulate
-from aiida.cmdline.utils.decorators import deprecated_command, with_dbenv
+from aiida.cmdline.utils.common import validate_output_filename
+from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 
 
@@ -27,10 +30,10 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls, non_interactive: bool, **kwargs):
+def create_code(ctx: click.Context, cls, **kwargs):
     """Create a new `Code` instance."""
     try:
-        instance = cls(**kwargs)
+        instance = cls._from_model(cls.Model(**kwargs))
     except (TypeError, ValueError) as exception:
         echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
 
@@ -89,7 +92,7 @@ def set_code_builder(ctx, param, value):
 # because the ``LABEL`` option has a callback that relies on the computer being already set. Execution order is
 # guaranteed only for the interactive case, however. For the non-interactive case, the callback is called explicitly
 # once more in the command body to cover the case when the label is specified before the computer.
-@verdi_code.command('setup')
+@verdi_code.command('setup', deprecated='Please use `verdi code create` instead.')
 @options_code.ON_COMPUTER()
 @options_code.COMPUTER()
 @options_code.LABEL()
@@ -105,9 +108,8 @@ def set_code_builder(ctx, param, value):
 @options.CONFIG_FILE()
 @click.pass_context
 @with_dbenv()
-@deprecated_command('This command will be removed soon, use `verdi code create` instead.')
 def setup_code(ctx, non_interactive, **kwargs):
-    """Setup a new code."""
+    """Setup a new code (use `verdi code create`)."""
     from aiida.orm.utils.builders.code import CodeBuilder
 
     options_code.validate_label_uniqueness(ctx, None, kwargs['label'])
@@ -235,33 +237,42 @@ def show(code):
 
 @verdi_code.command()
 @arguments.CODE()
-@arguments.OUTPUT_FILE(type=click.Path(exists=False))
-@click.option(
-    '--sort/--no-sort',
-    is_flag=True,
-    default=True,
-    help='Sort the keys of the output YAML.',
-)
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
+@options.OVERWRITE()
+@options.SORT()
 @with_dbenv()
-def export(code, output_file, sort):
-    """Export code to a yaml file."""
-    import yaml
+def export(code, output_file, overwrite, sort):
+    """Export code to a yaml file. If no output file is given, default name is created based on the code label."""
+    other_args = {'sort': sort}
+    fileformat = 'yaml'
 
-    code_data = {}
+    if output_file is None:
+        output_file = pathlib.Path(f'{code.full_label}.{fileformat}')
 
-    for key in code.Model.model_fields.keys():
-        if key == 'computer':
-            value = getattr(code, key).label
-        else:
-            value = getattr(code, key)
+    try:
+        # In principle, output file validation is also done in the `data_export` function. However, the
+        # `validate_output_filename` function is applied here, as well, as it is also used in the `Computer` export, and
+        # as `Computer` is not derived from `Data`, it cannot be exported by `data_export`, so
+        # `validate_output_filename` cannot be removed in favor of the validation done in `data_export`.
+        validate_output_filename(
+            output_file=output_file,
+            overwrite=overwrite,
+        )
+    except (FileExistsError, IsADirectoryError) as exception:
+        raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
 
-        # If the attribute is not set, for example ``with_mpi`` do not export it, because the YAML won't be valid for
-        # use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
-        if value is not None:
-            code_data[key] = str(value)
+    try:
+        data_export(
+            node=code,
+            output_fname=output_file,
+            fileformat=fileformat,
+            other_args=other_args,
+            overwrite=overwrite,
+        )
+    except Exception as exception:
+        echo.echo_critical(f'Error in the `data_export` function: {exception}')
 
-    with open(output_file, 'w', encoding='utf-8') as yfhandle:
-        yaml.dump(code_data, yfhandle, sort_keys=sort)
+    echo.echo_success(f'Code<{code.pk}> {code.label} exported to file `{output_file}`.')
 
 
 @verdi_code.command()

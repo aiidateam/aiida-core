@@ -18,12 +18,11 @@ import typing as t
 from .data import Data
 
 if t.TYPE_CHECKING:
+    from aiida.common.typing import FilePath
     from aiida.repository import File
 
 
 __all__ = ('FolderData',)
-
-FilePath = t.Union[str, pathlib.PurePosixPath]
 
 
 class FolderData(Data):
@@ -177,7 +176,7 @@ class FolderData(Data):
         """
         return self.base.repository.put_object_from_tree(filepath, path)
 
-    def walk(self, path: FilePath | None = None) -> t.Iterable[tuple[pathlib.PurePosixPath, list[str], list[str]]]:
+    def walk(self, path: FilePath | None = None) -> t.Iterable[tuple[pathlib.PurePath, list[str], list[str]]]:
         """Walk over the directories and files contained within this repository.
 
         .. note:: the order of the dirname and filename lists that are returned is not necessarily sorted. This is in
@@ -186,11 +185,11 @@ class FolderData(Data):
         :param path: the relative path of the directory within the repository whose contents to walk.
         :return: tuples of root, dirnames and filenames just like ``os.walk``, with the exception that the root path is
             always relative with respect to the repository root, instead of an absolute path and it is an instance of
-            ``pathlib.PurePosixPath`` instead of a normal string
+            ``pathlib.PurePath`` instead of a normal string
         """
         yield from self.base.repository.walk(path)
 
-    def glob(self) -> t.Iterable[pathlib.PurePosixPath]:
+    def glob(self) -> t.Iterable[pathlib.PurePath]:
         """Yield a recursive list of all paths (files and directories)."""
         yield from self.base.repository.glob()
 

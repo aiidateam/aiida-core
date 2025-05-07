@@ -27,7 +27,7 @@ from . import echo
 
 DAEMON_NOT_RUNNING_DEFAULT_MESSAGE = 'daemon is not running'
 
-__all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
+__all__ = ('dbenv', 'only_if_daemon_running', 'with_dbenv')
 
 
 @decorator
@@ -45,6 +45,7 @@ def with_broker(wrapped, _, args, kwargs):
 
     If the currently loaded profile does not define a broker, the command is aborted.
     """
+    from aiida.common.docs import URL_NO_BROKER
     from aiida.manage import get_manager
 
     broker = get_manager().get_broker()
@@ -54,6 +55,7 @@ def with_broker(wrapped, _, args, kwargs):
     if broker is None:
         echo.echo_critical(
             f'Profile `{profile.name}` does not support this functionality as it does not provide a broker.'
+            f'See {URL_NO_BROKER} for more details.'
         )
 
     kwargs['broker'] = broker
@@ -248,7 +250,16 @@ def deprecated_command(message):
         @deprecated_command('This command has been deprecated in AiiDA v1.0, please use 'foo' instead.)
         def mycommand():
             pass
+
+    .. deprecated:: 2.6
+
+        Ironically, this decorator itself has been deprecated. ``verdi`` commands that should be deprecated should
+        simply use the ``deprecated`` argument in the ``command`` decorator and specify the deprecation message.
+
     """
+    from aiida.common.warnings import warn_deprecation
+
+    warn_deprecation('The `deprecated_command` decorator is deprecated', version=3)
 
     @decorator
     def wrapper(wrapped, _, args, kwargs):
@@ -304,6 +315,7 @@ def requires_broker(wrapped, _, args, kwargs):
 
     If the loaded profile does not define a broker, the command will exit with a critical error.
     """
+    from aiida.common.docs import URL_NO_BROKER
     from aiida.manage import get_manager
 
     manager = get_manager()
@@ -314,6 +326,9 @@ def requires_broker(wrapped, _, args, kwargs):
     assert profile is not None
 
     if manager.get_broker() is None:
-        echo.echo_critical(f'profile `{profile.name}` does not define a broker and so cannot use this functionality.')
+        echo.echo_critical(
+            f'profile `{profile.name}` does not define a broker and so cannot use this functionality.'
+            f'See {URL_NO_BROKER} for more details.'
+        )
 
     return wrapped(*args, **kwargs)

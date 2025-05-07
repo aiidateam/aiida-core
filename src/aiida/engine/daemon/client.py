@@ -84,22 +84,28 @@ class DaemonClient:
     """Client to interact with the daemon."""
 
     _DAEMON_NAME = 'aiida-{name}'
-    _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
+    if sys.platform == 'win32':
+        _ENDPOINT_PROTOCOL = ControllerProtocol.TCP
+    else:
+        _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
 
     def __init__(self, profile: Profile):
         """Construct an instance for a given profile.
 
         :param profile: The profile instance.
         """
+        from aiida.common.docs import URL_NO_BROKER
+
         type_check(profile, Profile)
-        config = get_config()
+        self._config = get_config()
         self._profile = profile
         self._socket_directory: str | None = None
-        self._daemon_timeout: int = config.get_option('daemon.timeout', scope=profile.name)
+        self._daemon_timeout: int = self._config.get_option('daemon.timeout', scope=profile.name)
 
         if self._profile.process_control_backend is None:
             raise ConfigurationError(
-                f'profile `{self._profile.name}` does not define a broker so the daemon cannot be used.'
+                f'profile `{self._profile.name}` does not define a broker so the daemon cannot be used. '
+                f'See {URL_NO_BROKER} for more details.'
             )
 
     @property
@@ -153,31 +159,31 @@ class DaemonClient:
 
     @property
     def circus_log_file(self) -> str:
-        return self.profile.filepaths['circus']['log']
+        return self._config.filepaths(self.profile)['circus']['log']
 
     @property
     def circus_pid_file(self) -> str:
-        return self.profile.filepaths['circus']['pid']
+        return self._config.filepaths(self.profile)['circus']['pid']
 
     @property
     def circus_port_file(self) -> str:
-        return self.profile.filepaths['circus']['port']
+        return self._config.filepaths(self.profile)['circus']['port']
 
     @property
     def circus_socket_file(self) -> str:
-        return self.profile.filepaths['circus']['socket']['file']
+        return self._config.filepaths(self.profile)['circus']['socket']['file']
 
     @property
     def circus_socket_endpoints(self) -> dict[str, str]:
-        return self.profile.filepaths['circus']['socket']
+        return self._config.filepaths(self.profile)['circus']['socket']
 
     @property
     def daemon_log_file(self) -> str:
-        return self.profile.filepaths['daemon']['log']
+        return self._config.filepaths(self.profile)['daemon']['log']
 
     @property
     def daemon_pid_file(self) -> str:
-        return self.profile.filepaths['daemon']['pid']
+        return self._config.filepaths(self.profile)['daemon']['pid']
 
     def get_circus_port(self) -> int:
         """Retrieve the port for the circus controller, which should be written to the circus port file.
@@ -192,7 +198,7 @@ class DaemonClient:
             try:
                 with open(self.circus_port_file, 'r', encoding='utf8') as fhandle:
                     return int(fhandle.read().strip())
-            except (ValueError, IOError):
+            except (ValueError, OSError):
                 raise RuntimeError('daemon is running so port file should have been there but could not read it')
         else:
             port = self.get_available_port()
@@ -241,7 +247,7 @@ class DaemonClient:
                 with open(self.circus_socket_file, 'r', encoding='utf8') as fhandle:
                     content = fhandle.read().strip()
                 return content
-            except (ValueError, IOError):
+            except (ValueError, OSError):
                 raise RuntimeError('daemon is running so sockets file should have been there but could not read it')
         else:
             # The SOCKET_DIRECTORY is already set, a temporary directory was already created and the same should be used
@@ -265,7 +271,7 @@ class DaemonClient:
                 with open(self.circus_pid_file, 'r', encoding='utf8') as fhandle:
                     content = fhandle.read().strip()
                 return int(content)
-            except (ValueError, IOError):
+            except (ValueError, OSError):
                 return None
         else:
             return None
@@ -471,6 +477,10 @@ class DaemonClient:
         command = {'command': 'stats', 'properties': {'name': self.daemon_name}}
         return self.call_client(command, timeout=timeout)
 
+    def get_number_of_workers(self, timeout: int | None = None) -> int:
+        """Get number of workers."""
+        return len(self.get_worker_info(timeout).get('info', []))
+
     def get_daemon_info(self, timeout: int | None = None) -> dict[str, t.Any]:
         """Get statistics about this daemon itself.
 
@@ -525,7 +535,8 @@ class DaemonClient:
         try:
             subprocess.check_output(command, env=env, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exception:
-            raise DaemonException('The daemon failed to start.') from exception
+            # CalledProcessError is not passing the subprocess stderr in its message so we add it in DaemonException
+            raise DaemonException(f'The daemon failed to start with error:\n{exception.stdout.decode()}') from exception
 
         if not wait:
             return

@@ -18,13 +18,19 @@ import copy
 import dataclasses
 import os
 import pathlib
+import subprocess
 import types
 import typing as t
 import warnings
+from enum import Enum
+from pathlib import Path
 
 import click
 import pytest
+
 from aiida import get_profile
+from aiida.common.folders import Folder
+from aiida.common.links import LinkType
 from aiida.manage.configuration import Profile, get_config, load_profile
 
 if t.TYPE_CHECKING:
@@ -33,16 +39,104 @@ if t.TYPE_CHECKING:
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
 
+class TestDbBackend(Enum):
+    """Options for the '--db-backend' CLI argument when running pytest."""
+
+    SQLITE = 'sqlite'
+    PSQL = 'psql'
+
+
+def pytest_collection_modifyitems(items, config):
+    """Automatically generate markers for certain tests.
+
+    Most notably, we add the 'presto' marker for all tests that
+    are not marked with either requires_rmq or requires_psql.
+    """
+    filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
+    filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
+    filepath_sqla = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'sqlalchemy_branch'
+
+    # If the user requested the SQLite backend, automatically skip incompatible tests
+    if config.option.db_backend is TestDbBackend.SQLITE:
+        if config.option.markexpr != '':
+            # Don't overwrite markers that the user already provided via '-m ' cmdline argument
+            config.option.markexpr += ' and (not requires_psql)'
+        else:
+            config.option.markexpr = 'not requires_psql'
+
+    for item in items:
+        filepath_item = Path(item.fspath)
+
+        # Add 'nightly' marker to all tests in 'storage/psql_dos/migrations/<django|sqlalchemy>_branch'
+        if filepath_item.is_relative_to(filepath_django) or filepath_item.is_relative_to(filepath_sqla):
+            item.add_marker('nightly')
+
+        # Add 'requires_rmq' for all tests that depend 'daemon_client' and its dependant fixtures
+        if 'daemon_client' in item.fixturenames:
+            item.add_marker('requires_rmq')
+
+        # All tests in 'storage/psql_dos' require PostgreSQL
+        if filepath_item.is_relative_to(filepath_psqldos):
+            item.add_marker('requires_psql')
+
+        # Add 'presto' marker to all tests that require neither PostgreSQL nor RabbitMQ services.
+        markers = [marker.name for marker in item.iter_markers()]
+        if 'requires_rmq' not in markers and 'requires_psql' not in markers and 'nightly' not in markers:
+            item.add_marker('presto')
+
+
+def db_backend_type(string):
+    """Conversion function for the custom '--db-backend' pytest CLI option
+
+    :param string: String provided by the user via CLI
+    :returns: DbBackend enum corresponding to user input string
+    """
+    try:
+        return TestDbBackend(string)
+    except ValueError:
+        msg = f"Invalid --db-backend option '{string}'\nMust be one of: {tuple(db.value for db in TestDbBackend)}"
+        raise pytest.UsageError(msg)
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        '--db-backend',
+        action='store',
+        default=TestDbBackend.SQLITE,
+        required=False,
+        help=f'Database backend to be used for tests {tuple(db.value for db in TestDbBackend)}',
+        type=db_backend_type,
+    )
+
+
 @pytest.fixture(scope='session')
-def aiida_profile(aiida_config, aiida_profile_factory, config_psql_dos):
+def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql_dos, config_sqlite_dos):
     """Create and load a profile with ``core.psql_dos`` as a storage backend and RabbitMQ as the broker.
 
     This overrides the ``aiida_profile`` fixture provided by ``aiida-core`` which runs with ``core.sqlite_dos`` and
     without broker. However, tests in this package make use of the daemon which requires a broker and the tests should
     be run against the main storage backend, which is ``core.sqlite_dos``.
     """
+    marker_opts = pytestconfig.getoption('-m')
+    db_backend = pytestconfig.getoption('--db-backend')
+
+    # We use RabbitMQ broker by default unless 'presto' marker is specified
+    broker = 'core.rabbitmq'
+    if 'not requires_rmq' in marker_opts or 'presto' in marker_opts:
+        broker = None
+
+    if db_backend is TestDbBackend.SQLITE:
+        storage = 'core.sqlite_dos'
+        config = config_sqlite_dos()
+    elif db_backend is TestDbBackend.PSQL:
+        storage = 'core.psql_dos'
+        config = config_psql_dos()
+    else:
+        # This should be unreachable
+        raise ValueError(f'Invalid DB backend {db_backend}')
+
     with aiida_profile_factory(
-        aiida_config, storage_backend='core.psql_dos', storage_config=config_psql_dos(), broker_backend='core.rabbitmq'
+        aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker
     ) as profile:
         yield profile
 
@@ -154,11 +248,48 @@ def generate_work_chain():
 
 
 @pytest.fixture
+def generate_calcjob_node():
+    """Generate an instance of a `CalcJobNode`."""
+    from aiida.engine import ProcessState
+
+    def _generate_calcjob_node(
+        process_state: ProcessState = ProcessState.FINISHED,
+        exit_status: int | None = None,
+        entry_point: str | None = None,
+        workdir: pathlib.Path | None = None,
+    ):
+        """Generate an instance of a `CalcJobNode`..
+
+        :param process_state: state to set
+        :param exit_status: optional exit status, will be set to `0` if `process_state` is `ProcessState.FINISHED`
+        :return: a `CalcJobNode` instance.
+        """
+        from aiida.orm import CalcJobNode
+
+        if process_state is ProcessState.FINISHED and exit_status is None:
+            exit_status = 0
+
+        calcjob_node = CalcJobNode(process_type=entry_point)
+        calcjob_node.set_remote_workdir(workdir)
+
+        return calcjob_node
+
+    return _generate_calcjob_node
+
+
+@pytest.fixture
 def generate_calculation_node():
     """Generate an instance of a `CalculationNode`."""
     from aiida.engine import ProcessState
 
-    def _generate_calculation_node(process_state=ProcessState.FINISHED, exit_status=None, entry_point=None):
+    def _generate_calculation_node(
+        process_state: ProcessState = ProcessState.FINISHED,
+        exit_status: int | None = None,
+        entry_point: str | None = None,
+        inputs: dict | None = None,
+        outputs: dict | None = None,
+        repository: pathlib.Path | None = None,
+    ):
         """Generate an instance of a `CalculationNode`..
 
         :param process_state: state to set
@@ -170,13 +301,38 @@ def generate_calculation_node():
         if process_state is ProcessState.FINISHED and exit_status is None:
             exit_status = 0
 
-        node = CalculationNode(process_type=entry_point)
-        node.set_process_state(process_state)
+        calculation_node = CalculationNode(process_type=entry_point)
+        calculation_node.set_process_state(process_state)
 
         if exit_status is not None:
-            node.set_exit_status(exit_status)
+            calculation_node.set_exit_status(exit_status)
 
-        return node
+        if repository is not None:
+            calculation_node.base.repository.put_object_from_tree(repository)
+
+        # For storing, need to first store the input nodes, then the CalculationNode, then the output nodes
+        if inputs is not None:
+            for input_label, input_node in inputs.items():
+                calculation_node.base.links.add_incoming(
+                    input_node,
+                    link_type=LinkType.INPUT_CALC,
+                    link_label=input_label,
+                )
+
+                input_node.store()
+
+        if outputs is not None:
+            # Need to first store CalculationNode before I can attach `created` outputs
+            calculation_node.store()
+            for output_label, output_node in outputs.items():
+                output_node.base.links.add_incoming(
+                    calculation_node, link_type=LinkType.CREATE, link_label=output_label
+                )
+
+                output_node.store()
+
+        # Return unstored by default
+        return calculation_node
 
     return _generate_calculation_node
 
@@ -218,7 +374,7 @@ def empty_config(tmp_path) -> Config:
     """
     from aiida.common.utils import Capturing
     from aiida.manage import configuration, get_manager
-    from aiida.manage.configuration import settings
+    from aiida.manage.configuration.settings import AiiDAConfigDir
 
     manager = get_manager()
 
@@ -232,7 +388,7 @@ def empty_config(tmp_path) -> Config:
 
     # Set the configuration directory to a temporary directory. This will create the necessary folders for an empty
     # AiiDA configuration and set relevant global variables in :mod:`aiida.manage.configuration.settings`.
-    settings.set_configuration_directory(tmp_path)
+    AiiDAConfigDir.set(tmp_path)
 
     # The constructor of `Config` called by `load_config` will print warning messages about migrating it
     with Capturing():
@@ -250,7 +406,7 @@ def empty_config(tmp_path) -> Config:
         # like the :class:`aiida.engine.daemon.client.DaemonClient` will not function properly after a test that uses
         # this fixture because the paths of the daemon files would still point to the path of the temporary config
         # folder created by this fixture.
-        settings.set_configuration_directory(pathlib.Path(current_config_path))
+        AiiDAConfigDir.set(pathlib.Path(current_config_path))
 
         # Reload the original profile
         manager.load_profile(current_profile_name)
@@ -271,7 +427,7 @@ def profile_factory() -> Profile:
             'storage': {
                 'backend': kwargs.pop('storage_backend', 'core.psql_dos'),
                 'config': {
-                    'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
+                    'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg'),
                     'database_hostname': kwargs.pop('database_hostname', 'localhost'),
                     'database_port': kwargs.pop('database_port', 5432),
                     'database_name': kwargs.pop('database_name', name),
@@ -369,8 +525,10 @@ def runner(manager):
 
 
 @pytest.fixture
-def event_loop(manager):
-    """Get the event loop instance of the currently loaded profile.
+def event_loop(manager, aiida_profile_clean):
+    """Get the event loop instance of a cleaned profile.
+    This works, because ``aiida_profile_clean`` fixture, apart from loading a profile and cleaning it,
+    and also triggers ``manager.reset_profile()`` which clears the event loop.
 
     This is automatically called as a fixture for any test marked with ``@pytest.mark.asyncio``.
     """
@@ -627,9 +785,10 @@ def run_cli_command_subprocess(command, parameters, user_input, profile_name, su
 
 def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs):
     """Run CLI command through ``click.testing.CliRunner``."""
+    from click.testing import CliRunner
+
     from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
     from aiida.cmdline.groups.verdi import LazyVerdiObjAttributeDict
-    from click.testing import CliRunner
 
     if initialize_ctx_obj:
         config = get_config()
@@ -671,3 +830,126 @@ def reset_log_level():
         log.CLI_ACTIVE = None
         log.CLI_LOG_LEVEL = None
         log.configure_logging(with_orm=True)
+
+
+@pytest.fixture
+def generate_calculation_node_add(aiida_localhost):
+    def _generate_calculation_node_add():
+        from aiida.engine import run_get_node
+        from aiida.orm import InstalledCode, Int
+        from aiida.plugins import CalculationFactory
+
+        arithmetic_add = CalculationFactory('core.arithmetic.add')
+
+        add_inputs = {
+            'x': Int(1),
+            'y': Int(2),
+            'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
+        }
+
+        _, add_node = run_get_node(arithmetic_add, **add_inputs)
+
+        return add_node
+
+    return _generate_calculation_node_add
+
+
+@pytest.fixture
+def generate_workchain_multiply_add(aiida_localhost):
+    def _generate_workchain_multiply_add():
+        from aiida.engine import run_get_node
+        from aiida.orm import InstalledCode, Int
+        from aiida.plugins import WorkflowFactory
+
+        multiplyaddworkchain = WorkflowFactory('core.arithmetic.multiply_add')
+
+        multiply_add_inputs = {
+            'x': Int(1),
+            'y': Int(2),
+            'z': Int(3),
+            'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
+        }
+
+        _, multiply_add_node = run_get_node(multiplyaddworkchain, **multiply_add_inputs)
+
+        return multiply_add_node
+
+    return _generate_workchain_multiply_add
+
+
+@pytest.fixture
+def create_file_hierarchy():
+    """Create a file hierarchy in the target location.
+
+    .. note:: empty directories are ignored and are not created explicitly.
+
+    :param hierarchy: mapping with directory structure, e.g. returned by ``serialize_file_hierarchy``.
+    :param target: the target where the hierarchy should be created.
+    """
+
+    def _create_file_hierarchy(hierarchy: t.Dict, target: t.Union[pathlib.Path, Folder]) -> None:
+        for filename, value in hierarchy.items():
+            if isinstance(value, dict):
+                if isinstance(target, pathlib.Path):
+                    _create_file_hierarchy(value, target / filename)
+                elif isinstance(target, Folder):
+                    _create_file_hierarchy(value, target.get_subfolder(filename, create=True))
+                else:
+                    raise TypeError('target must be either a `Path` or a `Folder` instance.')
+
+            elif isinstance(target, pathlib.Path):
+                target.mkdir(parents=True, exist_ok=True)
+                (target / filename).write_text(value)
+
+            elif isinstance(target, Folder):
+                with target.open(filename, 'w') as handle:
+                    handle.write(value)
+            else:
+                raise TypeError('target must be either a `Path` or a `Folder` instance.')
+
+    return _create_file_hierarchy
+
+
+@pytest.fixture
+def serialize_file_hierarchy():
+    """Serialize the file hierarchy at ``dirpath``.
+
+    .. note:: empty directories are ignored.
+
+    :param dirpath: the base path.
+    :return: a mapping representing the file hierarchy, where keys are filenames. The leafs correspond to files and the
+        values are the text contents.
+    """
+
+    def factory(dirpath: pathlib.Path, read_bytes=True) -> dict:
+        serialized = {}
+
+        for root, _, files in os.walk(dirpath):
+            for filepath in files:
+                relpath = pathlib.Path(root).relative_to(dirpath)
+                subdir = serialized
+                if relpath.parts:
+                    for part in relpath.parts:
+                        subdir = subdir.setdefault(part, {})
+                if read_bytes:
+                    subdir[filepath] = (pathlib.Path(root) / filepath).read_bytes()
+                else:
+                    subdir[filepath] = (pathlib.Path(root) / filepath).read_text()
+
+        return serialized
+
+    return factory
+
+
+@pytest.fixture(scope='session')
+def bash_path() -> Path:
+    run_process = subprocess.run(['which', 'bash'], capture_output=True, check=True)
+    path = run_process.stdout.decode('utf-8').strip()
+    return Path(path)
+
+
+@pytest.fixture(scope='session')
+def cat_path() -> Path:
+    run_process = subprocess.run(['which', 'cat'], capture_output=True, check=True)
+    path = run_process.stdout.decode('utf-8').strip()
+    return Path(path)

@@ -17,6 +17,7 @@ import uuid
 
 import click
 import pytest
+
 from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
@@ -44,6 +45,21 @@ def code(aiida_localhost):
 def test_help(run_cli_command):
     """Test the help message."""
     run_cli_command(cmd_code.setup_code, ['--help'])
+
+
+def test_code_setup_deprecation(run_cli_command):
+    """Checks if a deprecation warning is printed in stdout and stderr."""
+    # Checks if the deprecation warning is present when invoking the help page
+    result = run_cli_command(cmd_code.setup_code, ['--help'])
+    assert 'Deprecated:' in result.output
+    assert 'Deprecated:' in result.stderr
+
+    # Checks if the deprecation warning is present when invoking the command
+    # Runs setup in interactive mode and sends Ctrl+D (\x04) as input so we exit the prompts.
+    # This way we can check if the deprecated message was printed with the first prompt.
+    result = run_cli_command(cmd_code.setup_code, user_input='\x04', use_subprocess=True, raises=True)
+    assert 'Deprecated:' in result.output
+    assert 'Deprecated:' in result.stderr
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -244,8 +260,8 @@ def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_intera
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('sort', (True, False))
-def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort):
+@pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
+def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort_option):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
     code = aiida_code_installed(
@@ -256,14 +272,11 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     )
     filepath = tmp_path / 'code.yml'
 
-    options = [str(code.pk), str(filepath)]
-    options.append('--sort' if sort else '--no-sort')
-
-    run_cli_command(cmd_code.export, options)
-
+    options = [str(code.pk), str(filepath), sort_option]
+    result = run_cli_command(cmd_code.export, options)
+    assert str(filepath) in result.output, 'Filename should be in terminal output but was not found.'
     # file regression check
-    with open(filepath, 'r', encoding='utf-8') as fhandle:
-        content = fhandle.read()
+    content = filepath.read_text()
     file_regression.check(content, extension='.yml')
 
     # round trip test by create code from the config file
@@ -275,6 +288,65 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     new_code = load_code(new_label)
     assert code.base.attributes.all == new_code.base.attributes.all
     assert isinstance(new_code, InstalledCode)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_code_export_overwrite(run_cli_command, aiida_code_installed, tmp_path):
+    prepend_text = 'module load something\n    some command'
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        label='code',
+        prepend_text=prepend_text,
+    )
+    filepath = tmp_path / 'code.yml'
+
+    options = [str(code.pk), str(filepath)]
+
+    # Create directory with the same name and check that command fails
+    filepath.mkdir()
+    result = run_cli_command(cmd_code.export, options, raises=True)
+    assert f'A directory with the name `{filepath}` already exists' in result.output
+    filepath.rmdir()
+
+    # Export fails if file already exists and overwrite set to False
+    filepath.touch()
+    result = run_cli_command(cmd_code.export, options, raises=True)
+    assert f'File `{filepath}` already exists' in result.output
+
+    # Check that overwrite actually overwrites the exported Code config with the new data
+    code_echo = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/echo',
+        # Need to set different label, therefore manually specify the same output filename
+        label='code_echo',
+        prepend_text=prepend_text,
+    )
+
+    options = [str(code_echo.pk), str(filepath), '--overwrite']
+    run_cli_command(cmd_code.export, options)
+
+    content = filepath.read_text()
+    assert '/bin/echo' in content
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_code_export_default_filename(run_cli_command, aiida_code_installed):
+    """Test default filename being created if no argument passed."""
+
+    prepend_text = 'module load something\n    some command'
+    code = aiida_code_installed(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/cat',
+        label='code',
+        prepend_text=prepend_text,
+    )
+
+    options = [str(code.pk)]
+    run_cli_command(cmd_code.export, options)
+
+    assert pathlib.Path('code@localhost.yaml').is_file()
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
@@ -390,10 +462,13 @@ def test_code_setup_local_duplicate_full_label_interactive(run_cli_command, non_
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command):
+def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command, tmp_path):
     """Test ``verdi code setup`` for a local code in non-interactive mode specifying an existing full label."""
     label = 'some-label'
-    code = PortableCode(filepath_executable='bash', filepath_files=pathlib.Path('/bin/bash'))
+    tmp_bin_dir = tmp_path / 'bin'
+    tmp_bin_dir.mkdir()
+    (tmp_bin_dir / 'bash').touch()
+    code = PortableCode(filepath_executable='bash', filepath_files=tmp_bin_dir)
     code.label = label
     code.base.repository.put_object_from_filelike(io.BytesIO(b''), 'bash')
     code.store()
@@ -406,7 +481,7 @@ def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command):
         '-P',
         'core.arithmetic.add',
         '--store-in-db',
-        '--code-folder=/bin',
+        f'--code-folder={tmp_bin_dir}',
         '--code-rel-path=bash',
         '--label',
         label,
@@ -459,7 +534,7 @@ def test_code_test(run_cli_command):
 
 
 @pytest.fixture
-def command_options(request, aiida_localhost, tmp_path):
+def command_options(request, aiida_localhost, tmp_path, bash_path):
     """Return tuple of list of options and entry point."""
     options = [request.param, '-n', '--label', str(uuid.uuid4())]
 
@@ -479,7 +554,7 @@ def command_options(request, aiida_localhost, tmp_path):
                 '--computer',
                 str(aiida_localhost.pk),
                 '--filepath-executable',
-                '/usr/bin/bash',
+                str(bash_path.absolute()),
                 '--engine-command',
                 engine_command,
                 '--image-name',

@@ -14,6 +14,7 @@ import pathlib
 import tempfile
 
 import pytest
+
 from aiida.orm import SinglefileData, load_node
 
 
@@ -188,18 +189,40 @@ def test_from_string():
     content = 'some\ncontent'
     node = SinglefileData.from_string(content).store()
     assert node.get_content() == content
+    assert node.get_content('rb') == content.encode()
     assert node.filename == SinglefileData.DEFAULT_FILENAME
 
     content = 'some\ncontent'
     filename = 'custom_filename.dat'
     node = SinglefileData.from_string(content, filename).store()
     assert node.get_content() == content
+    assert node.get_content('rb') == content.encode()
+    assert node.filename == filename
+
+
+def test_from_bytes():
+    """Test the :meth:`aiida.orm.nodes.data.singlefile.SinglefileData.from_bytes` classmethod."""
+    content = b'some\ncontent'
+    node = SinglefileData.from_bytes(content).store()
+    assert node.get_content(mode='rb') == content
+    assert node.get_content(mode='r') == content.decode('utf-8')
+    assert node.filename == SinglefileData.DEFAULT_FILENAME
+
+    content = b'some\ncontent'
+    filename = 'custom_filename.dat'
+    node = SinglefileData.from_bytes(content, filename).store()
+    assert node.get_content(mode='rb') == content
+    assert node.get_content(mode='r') == content.decode('utf-8')
     assert node.filename == filename
 
 
 def test_get_content():
     """Test the :meth:`aiida.orm.nodes.data.singlefile.SinglefileData.get_content` method."""
+    content = 'some\ncontent'
+    node = SinglefileData.from_string(content).store()
+    assert node.get_content() == content
+    assert node.get_content('rb') == content.encode()
     content = b'some\ncontent'
-    node = SinglefileData.from_string(content.decode('utf-8')).store()
+    node = SinglefileData.from_bytes(content).store()
     assert node.get_content() == content.decode('utf-8')
     assert node.get_content('rb') == content

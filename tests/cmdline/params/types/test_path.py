@@ -10,6 +10,7 @@
 
 import click
 import pytest
+
 from aiida.cmdline.params.types.path import PathOrUrl, check_timeout_seconds
 
 

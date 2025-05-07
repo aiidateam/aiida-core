@@ -12,15 +12,16 @@ import threading
 
 import plumpy
 import pytest
+from plumpy.utils import AttributesFrozendict
+
 from aiida import orm
 from aiida.common.lang import override
 from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
 from aiida.engine.processes.ports import PortNamespace
 from aiida.manage.caching import disable_caching, enable_caching
+from aiida.orm import to_aiida_type
 from aiida.orm.nodes.caching import NodeCaching
 from aiida.plugins import CalculationFactory
-from plumpy.utils import AttributesFrozendict
-
 from tests.utils import processes as test_processes
 
 
@@ -76,7 +77,7 @@ class ProcessStackTest(Process):
     _node_class = orm.WorkflowNode
 
     @override
-    def run(self):
+    async def run(self):
         pass
 
     @override
@@ -173,6 +174,36 @@ class TestProcess:
         assert not process.node.is_finished_ok
         run(process)
         assert process.node.is_finished_ok
+
+    def test_on_finish_node_updated_before_broadcast(self, monkeypatch):
+        """Tests if the process state and output has been updated in the database before a broadcast is invoked.
+
+        In plumpy.Process.on_entered the state update is broadcasted. When a process is finished this results in the
+        next process being run. If the next process will access the process that just finished, it can result in not
+        being able to retrieve the outputs or correct process state because this information has yet not been updated
+        them in the database.
+        """
+        import copy
+
+        # By monkeypatching the parent class we can check the state when the
+        # parents class method is invoked and check if the state has be
+        # correctly updated.
+        original_on_entered = copy.deepcopy(plumpy.Process.on_entered)
+
+        def on_entered(self, from_state):
+            if self._state.LABEL.value == 'finished':
+                assert (
+                    self.node.is_finished_ok
+                ), 'Node state should have been updated before plumpy.Process.on_entered is invoked.'
+                assert (
+                    self.node.outputs.result.value == 2
+                ), 'Outputs should have been attached before plumpy.Process.on_entered is invoked.'
+            original_on_entered(self, from_state)
+
+        monkeypatch.setattr(plumpy.Process, 'on_entered', on_entered)
+        # Ensure that process has run correctly otherwise the asserts in the
+        # monkeypatched member function have been skipped
+        assert run_get_node(test_processes.AddProcess, a=1, b=1).node.is_finished_ok, 'Process should not fail.'
 
     @staticmethod
     def test_save_instance_state():
@@ -292,7 +323,7 @@ class TestProcess:
                 spec.input_namespace('namespace', valid_type=orm.Int, dynamic=True)
                 spec.output_namespace('namespace', valid_type=orm.Int, dynamic=True)
 
-            def run(self):
+            async def run(self):
                 self.out('namespace', self.inputs.namespace)
 
         results, node = run_get_node(TestProcess1, namespace={'alpha': orm.Int(1), 'beta': orm.Int(2)})
@@ -316,7 +347,7 @@ class TestProcess:
                 spec.output_namespace('integer.namespace', valid_type=orm.Int, dynamic=True)
                 spec.output('required_string', valid_type=orm.Str, required=True)
 
-            def run(self):
+            async def run(self):
                 if self.inputs.add_outputs:
                     self.out('required_string', orm.Str('testing').store())
                     self.out('integer.namespace.two', orm.Int(2).store())
@@ -568,3 +599,28 @@ def test_metadata_disable_cache(runner, entry_points):
     with enable_caching():
         process = CachableProcess(runner=runner, inputs={'metadata': {'disable_cache': True}})
         assert not process.node.base.caching.is_created_from_cache
+
+
+def custom_serializer():
+    pass
+
+
+class AutoSerializeProcess(Process):
+    """Check the automatic assignment of ``to_aiida_type`` serializer."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('non_metadata_input')
+        spec.input('metadata_input', is_metadata=True)
+        spec.input('custom_input', serializer=custom_serializer)
+
+
+def test_auto_default_serializer():
+    """Test that all inputs ports automatically have ``to_aiida_type`` set as the serializer.
+
+    Exceptions are if the port is a metadata port or it defines an explicit serializer
+    """
+    assert AutoSerializeProcess.spec().inputs['non_metadata_input'].serializer is to_aiida_type
+    assert AutoSerializeProcess.spec().inputs['metadata_input'].serializer is None
+    assert AutoSerializeProcess.spec().inputs['custom_input'].serializer is custom_serializer

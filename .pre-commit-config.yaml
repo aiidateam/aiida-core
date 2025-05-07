@@ -2,11 +2,11 @@ ci:
   autofix_prs: true
   autoupdate_commit_msg: 'Devops: Update pre-commit dependencies'
   autoupdate_schedule: quarterly
-  skip: [mypy, dm-generate-all, dependencies, verdi-autodocs]
+  skip: [mypy, generate-conda-environment, validate-conda-environment, verdi-autodocs]
 
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.6.0
+  rev: v5.0.0
   hooks:
   - id: check-merge-conflict
   - id: check-yaml
@@ -26,7 +26,7 @@ repos:
     exclude: *exclude_pre_commit_hooks
 
 - repo: https://github.com/python-jsonschema/check-jsonschema
-  rev: 0.28.2
+  rev: 0.30.0
   hooks:
   - id: check-github-workflows
 
@@ -37,20 +37,14 @@ repos:
     args: [--line-length=120, --fail-on-change]
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.4.1
+  rev: v0.8.6
   hooks:
   - id: ruff-format
-    exclude: &exclude_ruff >
-      (?x)^(
-        docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py|
-        docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py|
-      )$
   - id: ruff
-    exclude: *exclude_ruff
     args: [--fix, --exit-non-zero-on-fix, --show-fixes]
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.13.0
+  rev: v2.14.0
   hooks:
   - id: pretty-format-toml
     args: [--autofix]
@@ -61,6 +55,12 @@ repos:
         tests/.*|
         environment.yml|
       )$
+
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: 0.5.22
+  hooks:
+    # Check and update the uv lockfile
+  - id: uv-lock
 
 - repo: local
 
@@ -90,6 +90,7 @@ repos:
         .docker/.*|
         docs/.*|
         utils/.*|
+        tests/.*|
 
         src/aiida/calculations/arithmetic/add.py|
         src/aiida/calculations/diff_tutorial/calculations.py|
@@ -124,14 +125,12 @@ repos:
         src/aiida/engine/processes/ports.py|
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
-        src/aiida/manage/configuration/profile.py|
         src/aiida/manage/external/rmq/launcher.py|
         src/aiida/manage/tests/main.py|
         src/aiida/manage/tests/pytest_fixtures.py|
         src/aiida/orm/comments.py|
         src/aiida/orm/computers.py|
         src/aiida/orm/implementation/storage_backend.py|
-        src/aiida/orm/nodes/caching.py|
         src/aiida/orm/nodes/comments.py|
         src/aiida/orm/nodes/data/array/bands.py|
         src/aiida/orm/nodes/data/array/trajectory.py|
@@ -145,7 +144,6 @@ repos:
         src/aiida/orm/utils/builders/computer.py|
         src/aiida/orm/utils/calcjob.py|
         src/aiida/orm/utils/node.py|
-        src/aiida/orm/utils/remote.py|
         src/aiida/repository/backend/disk_object_store.py|
         src/aiida/repository/backend/sandbox.py|
         src/aiida/restapi/common/utils.py|
@@ -193,31 +191,21 @@ repos:
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|
         src/aiida/workflows/arithmetic/multiply_add.py|
-
-        tests/conftest.py|
-        tests/repository/conftest.py|
-        tests/repository/test_repository.py|
-        tests/sphinxext/sources/workchain/conf.py|
-        tests/sphinxext/sources/workchain_broken/conf.py|
-        tests/storage/psql_dos/migrations/conftest.py|
-        tests/storage/psql_dos/migrations/django_branch/test_0026_0027_traj_data.py|
-        tests/test_calculation_node.py|
-        tests/test_nodes.py|
-
       )$
 
-  - id: dm-generate-all
-    name: Update all requirements files
-    entry: python ./utils/dependency_management.py generate-all
+  - id: generate-conda-environment
+    name: Update conda environment file
+    entry: python ./utils/dependency_management.py generate-environment-yml
     language: system
     pass_filenames: false
     files: >-
       (?x)^(
         pyproject.toml|
-        utils/dependency_management.py
+        utils/dependency_management.py|
+        environment.yml|
       )$
 
-  - id: dependencies
+  - id: validate-conda-environment
     name: Validate environment.yml
     entry: python ./utils/dependency_management.py validate-environment-yml
     language: system

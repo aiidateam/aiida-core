@@ -12,12 +12,15 @@ from unittest.mock import patch
 
 import pytest
 import zmq
+
 from aiida.engine.daemon.client import (
     DaemonClient,
     DaemonNotRunningException,
     DaemonTimeoutException,
     get_daemon_client,
 )
+
+pytestmark = pytest.mark.requires_rmq
 
 
 def test_ipc_socket_file_length_limit():

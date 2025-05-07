@@ -18,7 +18,7 @@ def md5_from_filelike(filelike, block_size_factor=128):
     :param block_size_factor: the file is read at chunks of size ``block_size_factor * md5.block_size``, where
         ``md5.block_size`` is the block_size used internally by the hashlib module.
     :returns: a string with the hexdigest md5.
-    :raises: no checks are done on the filelike object, so it may raise IOError if it cannot be read from.
+    :raises: no checks are done on the filelike object, so it may raise OSError if it cannot be read from.
     """
     md5 = hashlib.md5()
 
@@ -37,7 +37,7 @@ def md5_file(filepath, block_size_factor=128):
         ``md5.block_size`` is the block_size used internally by the hashlib module.
     :returns: a string with the hexdigest md5.
     :raises: No checks are done on the file, so if it doesn't exists it may
-        raise IOError.
+        raise OSError.
     """
     with open(filepath, 'rb', encoding=None) as handle:
         return md5_from_filelike(handle, block_size_factor=block_size_factor)
@@ -55,7 +55,7 @@ def sha1_file(filename, block_size_factor=128):
     :returns: a string with the hexdigest sha1.
 
     :raises: No checks are done on the file, so if it doesn't exists it may
-        raise IOError.
+        raise OSError.
     """
     sha1 = hashlib.sha1()
     with open(filename, 'rb', encoding=None) as fhandle:

@@ -22,8 +22,7 @@ RUN mamba install --yes \
 # Install erlang.
 RUN apt-get update --yes && \
      apt-get install --yes --no-install-recommends \
-     erlang \
-     xz-utils && \
+     erlang && \
      apt-get clean && rm -rf /var/lib/apt/lists/* && \
      # Install rabbitmq.
      wget -c --no-check-certificate https://github.com/rabbitmq/rabbitmq-server/releases/download/v${RMQ_VERSION}/rabbitmq-server-generic-unix-${RMQ_VERSION}.tar.xz && \
@@ -33,7 +32,6 @@ RUN apt-get update --yes && \
      fix-permissions /opt/rabbitmq_server-${RMQ_VERSION}
 
 # s6-overlay to start services
-COPY --chown="${SYSTEM_UID}:${SYSTEM_GID}" s6-assets/config-quick-setup.yaml "/aiida/assets/config-quick-setup.yaml"
 COPY s6-assets/s6-rc.d /etc/s6-overlay/s6-rc.d
 COPY s6-assets/init /etc/init
 

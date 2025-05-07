@@ -25,7 +25,7 @@ from .processes.process import Process
 from .runners import ResultAndPk
 from .utils import instantiate_process, is_process_scoped, prepare_inputs
 
-__all__ = ('run', 'run_get_pk', 'run_get_node', 'submit', 'await_processes')
+__all__ = ('await_processes', 'run', 'run_get_node', 'run_get_pk', 'submit')
 
 TYPE_RUN_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
 # run can also be process function, but it is not clear what type this should be
@@ -103,6 +103,8 @@ def submit(
     :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
     """
+    from aiida.common.docs import URL_NO_BROKER
+
     inputs = prepare_inputs(inputs, **kwargs)
 
     # Submitting from within another process requires ``self.submit``` unless it is a work function, in which case the
@@ -111,8 +113,17 @@ def submit(
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
     runner = manager.get_manager().get_runner()
+
+    if runner.controller is None:
+        raise InvalidOperation(
+            'Cannot submit because the runner does not have a process controller, probably because the profile does '
+            'not define a broker like RabbitMQ. If a RabbitMQ server is available, the profile can be configured to '
+            'use it with `verdi profile configure-rabbitmq`. Otherwise, use :meth:`aiida.engine.launch.run` instead to '
+            'run the process in the local Python interpreter instead of submitting it to the daemon. '
+            f'See {URL_NO_BROKER} for more details.'
+        )
+
     assert runner.persister is not None, 'runner does not have a persister'
-    assert runner.controller is not None, 'runner does not have a controller'
 
     process_inited = instantiate_process(runner, process, **inputs)
 

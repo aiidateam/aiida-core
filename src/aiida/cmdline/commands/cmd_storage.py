@@ -8,6 +8,9 @@
 ###########################################################################
 """`verdi storage` commands."""
 
+import logging
+import sys
+
 import click
 from click_spinner import spinner
 
@@ -24,14 +27,37 @@ def verdi_storage():
 
 @verdi_storage.command('version')
 def storage_version():
-    """Print the current version of the storage schema."""
-    from aiida import get_profile
+    """Print the current version of the storage schema.
 
-    profile = get_profile()
-    head_version = profile.storage_cls.version_head()
-    profile_version = profile.storage_cls.version_profile(profile)
-    echo.echo(f'Latest storage schema version: {head_version!r}')
-    echo.echo(f'Storage schema version of {profile.name!r}: {profile_version!r}')
+    The command returns the following exit codes:
+
+    * 0: If the storage schema is equal and compatible to the schema version of the code
+    * 3: If the storage cannot be reached or is corrupt
+    * 4: If the storage schema is compatible with the code schema version and probably needs to be migrated.
+    """
+    from aiida import get_profile
+    from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
+
+    try:
+        profile = get_profile()
+        head_version = profile.storage_cls.version_head()
+        profile_version = profile.storage_cls.version_profile(profile)
+        echo.echo(f'Latest storage schema version: {head_version!r}')
+        echo.echo(f'Storage schema version of {profile.name!r}: {profile_version!r}')
+    except Exception as exception:
+        echo.echo_critical(f'Failed to determine the storage version: {exception}')
+
+    try:
+        profile.storage_cls(profile)
+    except (CorruptStorage, UnreachableStorage) as exception:
+        echo.echo_error(f'The storage cannot be reached or is corrupt: {exception}')
+        sys.exit(3)
+    except IncompatibleStorageSchema:
+        echo.echo_error(
+            f'The storage schema version {profile_version} is incompatible with the code version {head_version}.'
+            'Run `verdi storage migrate` to migrate the storage.'
+        )
+        sys.exit(4)
 
 
 @verdi_storage.command('migrate')
@@ -41,12 +67,14 @@ def storage_migrate(force):
     from aiida.engine.daemon.client import get_daemon_client
     from aiida.manage import get_manager
 
-    client = get_daemon_client()
-    if client.is_daemon_running:
-        echo.echo_critical('Migration aborted, the daemon for the profile is still running.')
-
     manager = get_manager()
     profile = manager.get_profile()
+
+    if profile.process_control_backend:
+        client = get_daemon_client()
+        if client.is_daemon_running:
+            echo.echo_critical('Migration aborted, the daemon for the profile is still running.')
+
     storage_cls = profile.storage_cls
 
     if not force:
@@ -126,7 +154,9 @@ def storage_info(detailed):
 def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
     """Performs maintenance tasks on the repository."""
     from aiida.common.exceptions import LockingProfileError
+    from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.manage.manager import get_manager
+    from aiida.storage.log import STORAGE_LOGGER
 
     manager = get_manager()
     profile = ctx.obj.profile
@@ -156,6 +186,12 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
 
     if not dry_run and not force and not click.confirm('Are you sure you want continue in this mode?'):
         return
+
+    if STORAGE_LOGGER.level <= logging.REPORT:
+        # Only keep the first tqdm bar if it is info. To keep the nested bar information one needs report level
+        set_progress_bar_tqdm(leave=STORAGE_LOGGER.level <= logging.INFO)
+    else:
+        set_progress_reporter(None)
 
     try:
         if full and no_repack:

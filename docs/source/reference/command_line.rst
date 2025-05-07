@@ -80,7 +80,7 @@ Below is a list with all available subcommands.
       list       List the available codes.
       relabel    Relabel a code.
       reveal     Reveal one or more hidden codes in `verdi code list`.
-      setup      Setup a new code.
+      setup      (Deprecated) Setup a new code (use `verdi code create`).
       show       Display detailed information for a code.
       test       Run tests for the given code to check whether it is usable.
 
@@ -100,11 +100,12 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      configure  Configure the Authinfo details for a computer (and user).
+      configure  Configure the transport for a computer and user.
       delete     Delete a computer.
       disable    Disable the computer for the given user.
       duplicate  Duplicate a computer allowing to change some parameters.
       enable     Enable the computer for the given user.
+      export     Export the setup or configuration of a computer.
       list       List all available computers.
       relabel    Relabel a computer.
       setup      Create a new computer.
@@ -178,29 +179,6 @@ Below is a list with all available subcommands.
       --help                          Show this message and exit.
 
 
-.. _reference:command-line:verdi-database:
-
-``verdi database``
-------------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Inspect and manage the database.
-
-      .. deprecated:: v2.0.0
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      integrity  Check the integrity of the database and fix potential issues.
-      migrate    Migrate the database to the latest schema version.
-      summary    Summarise the entities in the database.
-      version    Show the version of the database.
-
-
 .. _reference:command-line:verdi-devel:
 
 ``verdi devel``
@@ -219,6 +197,7 @@ Below is a list with all available subcommands.
       check-load-time          Check for common indicators that slowdown `verdi`.
       check-undesired-imports  Check that verdi does not import python modules it shouldn't.
       launch-add               Launch an ``ArithmeticAddCalculation``.
+      launch-multiply-add      Launch a ``MultipylAddWorkChain``.
       rabbitmq                 Commands to interact with RabbitMQ.
       run-sql                  Run a raw SQL command on the profile database (only...
       validate-plugins         Validate all plugins by checking they can be loaded.
@@ -242,7 +221,7 @@ Below is a list with all available subcommands.
       add-nodes     Add nodes to a group.
       copy          Duplicate a group.
       create        Create an empty group with a given label.
-      delete        Delete a group and (optionally) the nodes it contains.
+      delete        Delete groups and (optionally) the nodes they contain.
       description   Change the description of a group.
       list          Show a list of existing groups.
       move-nodes    Move the specified NODES from one group to another.
@@ -324,31 +303,53 @@ Below is a list with all available subcommands.
 
       Set up a new profile in a jiffy.
 
-      This command aims to make setting up a new profile as easy as possible. It intentionally
-      provides only a limited amount of options to customize the profile and by default does
-      not require any options to be specified at all. For full control, please use `verdi
-      profile setup`.
+      This command aims to make setting up a new profile as easy as possible. It does not
+      require any services, such as PostgreSQL and RabbitMQ. It intentionally provides only a
+      limited amount of options to customize the profile and by default does not require any
+      options to be specified at all. To create a new profile with full control over its
+      configuration, please use `verdi profile setup` instead.
 
       After running `verdi presto` you can immediately start using AiiDA without additional
-      setup. The created profile uses the `core.sqlite_dos` storage plugin which does not
-      require any services, such as PostgreSQL. The broker service RabbitMQ is also optional.
-      The command tries to connect to it using default settings and configures it for the
-      profile if found. Otherwise, the profile is created without a broker, in which case some
-      functionality will be unavailable, most notably running the daemon and submitting
-      processes to said daemon.
-
-      The command performs the following actions:
+      setup. The command performs the following actions:
 
       * Create a new profile that is set as the new default
       * Create a default user for the profile (email can be configured through the `--email` option)
       * Set up the localhost as a `Computer` and configure it
       * Set a number of configuration options with sensible defaults
 
+      By default the command creates a profile that uses SQLite for the database. It
+      automatically checks for RabbitMQ running on the localhost, and, if it can connect,
+      configures that as the broker for the profile. Otherwise, the profile is created without
+      a broker, in which case some functionality will be unavailable, most notably running the
+      daemon and submitting processes to said daemon.
+
+      When the `--use-postgres` flag is toggled, the command tries to connect to the
+      PostgreSQL server with connection paramaters taken from the `--postgres-hostname`,
+      `--postgres-port`, `--postgres-username` and `--postgres-password` options. It uses
+      these credentials to try and automatically create a user and database. If successful,
+      the newly created profile uses the new PostgreSQL database instead of SQLite.
+
     Options:
-      --profile-name TEXT  Name of the profile. By default, a unique name starting with
-                           `presto` is automatically generated.  [default: (dynamic)]
-      --email TEXT         Email of the default user.  [default: aiida@localhost]
-      --help               Show this message and exit.
+      -p, --profile-name TEXT         Name of the profile. By default, a unique name starting
+                                      with `presto` is automatically generated.  [default:
+                                      (dynamic)]
+      --email TEXT                    Email of the default user.  [default: (dynamic)]
+      --use-postgres                  When toggled on, the profile uses a PostgreSQL database
+                                      instead of an SQLite one. The connection details to the
+                                      PostgreSQL server can be configured with the relevant
+                                      options. The command attempts to automatically create a
+                                      user and database to use for the profile, but this can
+                                      fail depending on the configuration of the server.
+      --postgres-hostname TEXT        The hostname of the PostgreSQL server.
+      --postgres-port INTEGER         The port of the PostgreSQL server.
+      --postgres-username TEXT        The username of the PostgreSQL user that is authorized
+                                      to create new databases.
+      --postgres-password TEXT        The password of the PostgreSQL user that is authorized
+                                      to create new databases.
+      -n, --non-interactive / -I, --interactive
+                                      Never prompt, such as for sudo password.  [default:
+                                      (--interactive)]
+      --help                          Show this message and exit.
 
 
 .. _reference:command-line:verdi-process:
@@ -366,16 +367,17 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      call-root  Show root process of the call stack for the given processes.
+      call-root  Show root process of processes.
+      dump       Dump process input and output files to disk.
       kill       Kill running processes.
-      list       Show a list of running or terminated processes.
+      list       Show a list of processes.
       pause      Pause running processes.
       play       Play (unpause) paused processes.
       repair     Automatically repair all stuck processes.
-      report     Show the log report for one or multiple processes.
-      show       Show details for one or multiple processes.
-      status     Print the status of one or multiple processes.
-      watch      Watch the state transitions for a process.
+      report     Show the log report of processes.
+      show       Show details of processes.
+      status     Show the status of processes.
+      watch      Watch the state transitions of processes.
 
 
 .. _reference:command-line:verdi-profile:
@@ -393,11 +395,13 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      delete      Delete one or more profiles.
-      list        Display a list of all available profiles.
-      setdefault  Set a profile as the default one.
-      setup       Set up a new profile.
-      show        Show details for a profile.
+      configure-rabbitmq  Configure RabbitMQ for a profile.
+      delete              Delete one or more profiles.
+      list                Display a list of all available profiles.
+      set-default         Set a profile as the default profile.
+      setdefault          (Deprecated) Set a profile as the default profile.
+      setup               Set up a new profile.
+      show                Show details for a profile.
 
 
 .. _reference:command-line:verdi-quicksetup:
@@ -409,11 +413,14 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      Setup a new profile in a fully automated fashion.
+      (Deprecated) Setup a new profile in a fully automated fashion.
 
     Options:
-      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
-                                      simply uses default values for options that define one.
+      -n, --non-interactive / -I, --interactive
+                                      In non-interactive mode, the CLI never prompts for
+                                      options but simply uses default values for options that
+                                      define one. In interactive mode, the CLI will prompt for
+                                      each interactive option.   [default: (--interactive)]
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when
@@ -421,7 +428,7 @@ Below is a list with all available subcommands.
       --first-name NONEMPTYSTRING     First name of the user.  [required]
       --last-name NONEMPTYSTRING      Last name of the user.  [required]
       --institution NONEMPTYSTRING    Institution of the user.  [required]
-      --db-engine [postgresql_psycopg2]
+      --db-engine [postgresql_psycopg]
                                       Engine to use to connect to the database.  [required]
       --db-backend [core.psql_dos]    Database backend to use.  [required]
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
@@ -444,7 +451,7 @@ Below is a list with all available subcommands.
       --broker-host HOSTNAME          Hostname for the message broker.  [default: 127.0.0.1]
       --broker-port INTEGER           Port for the message broker.  [default: 5672]
       --broker-virtual-host TEXT      Name of the virtual host for the message broker without
-                                      leading forward slash.
+                                      leading forward slash.  [default: ""]
       --repository DIRECTORY          Absolute path to the file repository.
       --test-profile                  Designate the profile to be used for running the test
                                       suite only.
@@ -510,14 +517,17 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      Setup a new profile.
+      (Deprecated) Setup a new profile (use `verdi profile setup`).
 
       This method assumes that an empty PSQL database has been created and that the database
       user has been created.
 
     Options:
-      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
-                                      simply uses default values for options that define one.
+      -n, --non-interactive / -I, --interactive
+                                      In non-interactive mode, the CLI never prompts for
+                                      options but simply uses default values for options that
+                                      define one. In interactive mode, the CLI will prompt for
+                                      each interactive option.   [default: (--interactive)]
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when
@@ -525,7 +535,7 @@ Below is a list with all available subcommands.
       --first-name NONEMPTYSTRING     First name of the user.  [required]
       --last-name NONEMPTYSTRING      Last name of the user.  [required]
       --institution NONEMPTYSTRING    Institution of the user.  [required]
-      --db-engine [postgresql_psycopg2]
+      --db-engine [postgresql_psycopg]
                                       Engine to use to connect to the database.  [required]
       --db-backend [core.psql_dos]    Database backend to use.  [required]
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
@@ -611,21 +621,6 @@ Below is a list with all available subcommands.
       maintain   Performs maintenance tasks on the repository.
       migrate    Migrate the storage to the latest schema version.
       version    Print the current version of the storage schema.
-
-
-.. _reference:command-line:verdi-tui:
-
-``verdi tui``
--------------
-
-.. code:: console
-
-    Usage:  [OPTIONS]
-
-      Open Textual TUI.
-
-    Options:
-      --help  Show this message and exit.
 
 
 .. _reference:command-line:verdi-user:

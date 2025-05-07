@@ -8,10 +8,13 @@
 ###########################################################################
 """Common utility functions for command line commands."""
 
+from __future__ import annotations
+
 import logging
 import os
 import sys
 import textwrap
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from click import style
@@ -481,3 +484,24 @@ def print_process_spec(process_spec):
 
         echo.echo(tabulate(table, tablefmt='plain'))
         echo.echo(style('\nExit codes that invalidate the cache are marked in bold red.\n', italic=True))
+
+
+def validate_output_filename(
+    output_file: Path | str,
+    overwrite: bool = False,
+):
+    """Validate output filename."""
+
+    if output_file is None:
+        raise TypeError('Output filename must be passed for validation.')
+
+    if isinstance(output_file, str):
+        output_file = Path(output_file)
+
+    if output_file.is_dir():
+        raise IsADirectoryError(
+            f'A directory with the name `{output_file.resolve()}` already exists. Remove manually and try again.'
+        )
+
+    if output_file.is_file() and not overwrite:
+        raise FileExistsError(f'File `{output_file}` already exists, use `--overwrite` to overwrite.')

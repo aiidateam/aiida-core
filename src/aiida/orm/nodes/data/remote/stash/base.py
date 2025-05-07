@@ -1,8 +1,16 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Data plugin that models an archived folder on a remote computer."""
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
-from aiida.orm.fields import add_field
+from aiida.common.pydantic import MetadataField
 
 from ...data import Data
 
@@ -28,13 +36,8 @@ class RemoteStashData(Data):
 
     _storable = False
 
-    __qb_fields__ = [
-        add_field(
-            'stash_mode',
-            dtype=str,
-            doc='The mode with which the data was stashed',
-        ),
-    ]
+    class Model(Data.Model):
+        stash_mode: StashMode = MetadataField(description='The mode with which the data was stashed')
 
     def __init__(self, stash_mode: StashMode, **kwargs):
         """Construct a new instance

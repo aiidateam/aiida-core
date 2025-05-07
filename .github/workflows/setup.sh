@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 set -ev
 
-ssh-keygen -q -t rsa -b 4096 -N "" -f "${HOME}/.ssh/id_rsa"
-ssh-keygen -y -f "${HOME}/.ssh/id_rsa" >> "${HOME}/.ssh/authorized_keys"
-ssh-keyscan -H localhost >> "${HOME}/.ssh/known_hosts"
-
-# The permissions on the GitHub runner are 777 which will cause SSH to refuse the keys and cause authentication to fail
-chmod 755 "${HOME}"
+# Setup SSH on localhost
+${GITHUB_WORKSPACE}/.github/workflows/setup_ssh.sh
 
 # Replace the placeholders in configuration files with actual values
 CONFIG="${GITHUB_WORKSPACE}/.github/config"
@@ -23,7 +19,7 @@ verdi computer configure core.local localhost --config "${CONFIG}/localhost-conf
 verdi computer test localhost
 verdi code create core.code.installed --non-interactive --config "${CONFIG}/doubler.yaml"
 verdi code create core.code.installed --non-interactive --config "${CONFIG}/add.yaml"
-verdi code create core.code.containerized --non-interactive --config "${CONFIG}/add-singularity.yaml"
+verdi code create core.code.containerized --non-interactive --config "${CONFIG}/add-containerized.yaml"
 
 # set up slurm-ssh computer
 verdi computer setup --non-interactive --config "${CONFIG}/slurm-ssh.yaml"

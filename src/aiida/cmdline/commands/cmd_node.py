@@ -15,6 +15,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
+from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo, echo_tabulate, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
@@ -327,9 +328,14 @@ def extras(nodes, keys, fmt, identifier, raw):
 @click.argument('identifier', nargs=-1, metavar='NODES')
 @options.DRY_RUN()
 @options.FORCE()
+@click.option(
+    '--clean-workdir',
+    is_flag=True,
+    help='Also clean the remote work directory, if applicable.',
+)
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(identifier, dry_run, force, **traversal_rules):
+def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
     """Delete nodes from the provenance graph.
 
     This will not only delete the nodes explicitly provided via the command line, but will also include
@@ -355,10 +361,62 @@ def node_delete(identifier, dry_run, force, **traversal_rules):
         echo.echo_info('The nodes with the following pks would be deleted: ' + ' '.join(map(str, pks)))
         return not click.confirm('Shall I continue?', abort=True)
 
-    _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+    def _perform_delete():
+        _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        if was_deleted:
+            echo.echo_success('Finished deletion.')
 
-    if was_deleted:
-        echo.echo_success('Finished deletion.')
+    if clean_workdir:
+        from aiida.manage import get_manager
+        from aiida.orm import CalcJobNode, QueryBuilder
+        from aiida.orm.utils.remote import clean_mapping_remote_paths, get_calcjob_remote_paths
+        from aiida.tools.graph.graph_traversers import get_nodes_delete
+
+        backend = get_manager().get_backend()
+        # For here we ignore missing nodes will be raised via func:``delete_nodes`` in the next block
+        pks_set_to_delete = get_nodes_delete(
+            pks, get_links=False, missing_callback=lambda missing_pks: None, backend=backend, **traversal_rules
+        )['nodes']
+
+        qb = QueryBuilder()
+        qb.append(CalcJobNode, filters={'id': {'in': pks_set_to_delete}}, project='id')
+        calcjobs_pks = [result[0] for result in qb.all()]
+
+        if not calcjobs_pks:
+            echo.echo_report('--clean-workdir ignored. No CalcJobNode associated with the given node, found.')
+            _perform_delete()
+            return
+
+        path_mapping = get_calcjob_remote_paths(
+            calcjobs_pks,
+            only_not_cleaned=True,
+        )
+
+        if not path_mapping:
+            echo.echo_report('--clean-workdir ignored. CalcJobNode work directories are already cleaned.')
+            _perform_delete()
+            return
+
+        descendant_pks = [remote_folder.pk for paths in path_mapping.values() for remote_folder in paths]
+
+        if not force and not dry_run:
+            echo.echo_warning(
+                f'YOU ARE ABOUT TO CLEAN {len(descendant_pks)} REMOTE DIRECTORIES! ' 'THIS CANNOT BE UNDONE!'
+            )
+            echo.echo_info(
+                'Remote directories of nodes with the following pks would be cleaned: '
+                + ' '.join(map(str, descendant_pks))
+            )
+            click.confirm('Shall I continue?', abort=True)
+
+        if dry_run:
+            echo.echo_report(
+                'Remote folders of these node are marked for deletion: ' + ' '.join(map(str, descendant_pks))
+            )
+        else:
+            clean_mapping_remote_paths(path_mapping)
+
+    _perform_delete()
 
 
 @verdi_node.command('rehash')
@@ -425,8 +483,7 @@ def verdi_graph():
 
 
 @verdi_graph.command('generate')
-@arguments.NODE('root_node', required=False)
-@options.NODES(help='The root node(s) whose provenance graph to include.')
+@arguments.NODES('root_nodes')
 @click.option(
     '-l',
     '--link-types',
@@ -440,8 +497,10 @@ def verdi_graph():
 )
 @click.option(
     '--identifier',
+    'identifiers',
     help='the type of identifier to use within the node text',
-    default='uuid',
+    default=('uuid',),
+    cls=MultipleValueOption,
     type=click.Choice(['pk', 'uuid', 'label']),
 )
 @click.option(
@@ -477,17 +536,14 @@ def verdi_graph():
 @click.option(
     '-O',
     '--output-file',
-    'output_filename',
     type=click.Path(dir_okay=False, path_type=pathlib.Path),
     help='The file to write the output to.',
 )
-@arguments.OUTPUT_FILE(required=False)
 @decorators.with_dbenv()
 def graph_generate(
-    root_node,
-    nodes,
+    root_nodes,
     link_types,
-    identifier,
+    identifiers,
     ancestor_depth,
     descendant_depth,
     process_out,
@@ -496,47 +552,21 @@ def graph_generate(
     output_format,
     highlight_classes,
     show,
-    output_filename,
     output_file,
 ):
     """Generate a graph from one or multiple root nodes."""
     from aiida.cmdline.utils import echo
     from aiida.tools.visualization import Graph
 
-    if root_node and nodes:
-        echo.echo_warning(
-            'Specifying the root node positionally and the `-N/--nodes` option at the same time is not supported, '
-            'ignoring the `ROOT_NODE`. Please use the `-N/--nodes` option only.'
-        )
-        root_node = None
+    if not root_nodes:
+        echo.echo_critical('No root node(s) specified.')
 
-    if root_node:
-        echo.echo_deprecated(
-            'Specifying the root node positionally is deprecated, please use the `-N/--nodes` option instead.'
-        )
-
-    root_nodes = nodes or [root_node]
-
-    if output_file and output_filename:
-        echo.echo_warning(
-            'Specifying the output file positionally and the `-O/--output-file` option at the same time is not '
-            'supported, ignoring the `OUTPUF_FILE`. Please use the `-O/--output-file` option only.'
-        )
-        output_file = None
-
-    if output_file:
-        echo.echo_deprecated(
-            'Specifying the output file positionally is deprecated, please use the `-O/--output-file` option instead.'
-        )
-
-    output_filename = output_file or output_filename
-
-    if not output_filename:
+    if not output_file:
         pks = '.'.join(str(n.pk) for n in root_nodes)
-        output_filename = pathlib.Path(f'{pks}.{engine}.{output_format}')
+        output_file = pathlib.Path(f'{pks}.{engine}.{output_format}')
 
     echo.echo_info(f'Initiating graphviz engine: {engine}')
-    graph = Graph(engine=engine, node_id_type=identifier)
+    graph = Graph(engine=engine, node_id_type=identifiers)
     link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
 
     for root_node in root_nodes:
@@ -559,7 +589,7 @@ def graph_generate(
             highlight_classes=highlight_classes,
         )
 
-    filename_written = graph.graphviz.render(outfile=output_filename, format=output_format, view=show, cleanup=True)
+    filename_written = graph.graphviz.render(outfile=output_file, format=output_format, view=show, cleanup=True)
 
     echo.echo_success(f'Output written to `{filename_written}`')
 

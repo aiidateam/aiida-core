@@ -78,15 +78,13 @@ def archive_info(path, detailed):
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
 
 
-@verdi_archive.command('inspect', hidden=True)
+@verdi_archive.command(
+    'inspect', hidden=True, deprecated='Use `verdi archive version` or `verdi archive info` instead.'
+)
 @click.argument('archive', nargs=1, type=click.Path(exists=True, readable=True))
 @click.option('-v', '--version', is_flag=True, help='Print the archive format version and exit.')
 @click.option('-m', '--meta-data', is_flag=True, help='Print the meta data contents and exit.')
 @click.option('-d', '--database', is_flag=True, help='Include information on entities in the database.')
-@decorators.deprecated_command(
-    'This command has been deprecated and will be removed soon. '
-    'Please call `verdi archive version` or `verdi archive info` instead.\n'
-)
 @click.pass_context
 def inspect(ctx, archive, version, meta_data, database):
     """Inspect contents of an archive without importing it.
@@ -488,10 +486,12 @@ def _import_archive_and_migrate(
 
     from aiida.common.folders import SandboxFolder
     from aiida.tools.archive.abstract import get_format
+    from aiida.tools.archive.exceptions import ImportTestRun
     from aiida.tools.archive.imports import import_archive as _import_archive
 
     archive_format = get_format()
     filepath = ctx.obj['config'].get_option('storage.sandbox') or None
+    dry_run_success = f'import dry-run of archive {archive} completed. Profile storage unmodified.'
 
     with SandboxFolder(filepath=filepath) as temp_folder:
         archive_path = archive
@@ -523,12 +523,19 @@ def _import_archive_and_migrate(
                 echo.echo_report('proceeding with import of migrated archive')
                 try:
                     _import_archive(archive_path, archive_format=archive_format, **import_kwargs)
+                except ImportTestRun:
+                    echo.echo_success(dry_run_success)
+                    return
                 except Exception as sub_exception:
                     _echo_exception(
                         f'an exception occurred while trying to import the migrated archive {archive}', sub_exception
                     )
             else:
                 _echo_exception(f'an exception occurred while trying to import the archive {archive}', exception)
+        except ImportTestRun:
+            echo.echo_success(dry_run_success)
+            return
+
         except Exception as exception:
             _echo_exception(f'an exception occurred while trying to import the archive {archive}', exception)
 

@@ -12,11 +12,12 @@ import collections
 import hashlib
 import itertools
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import numpy as np
 import pytest
+
 from aiida.common.exceptions import HashingError
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import chunked_file_hash, float_to_text, make_hash
@@ -150,7 +151,7 @@ class TestMakeHashTest:
             == '714138f1114daa5fdc74c3483260742952b71b568d634c6093bb838afad76646'
         )
         assert (
-            make_hash(datetime.utcfromtimestamp(0))
+            make_hash(datetime.fromtimestamp(0, timezone.utc))
             == 'b4d97d9d486937775bcc25a5cba073f048348c3cd93d4460174a4f72a6feb285'
         )
 
@@ -167,7 +168,7 @@ class TestMakeHashTest:
     def test_datetime_precision_hashing(self):
         dt_prec = DatetimePrecision(datetime(2018, 8, 18, 8, 18), 10)
         assert make_hash(dt_prec) == '837ab70b3b7bd04c1718834a0394a2230d81242c442e4aa088abeab15622df37'
-        dt_prec_utc = DatetimePrecision(datetime.utcfromtimestamp(0), 0)
+        dt_prec_utc = DatetimePrecision(datetime.fromtimestamp(0, timezone.utc), 0)
         assert make_hash(dt_prec_utc) == '8c756ee99eaf9655bb00166839b9d40aa44eac97684b28f6e3c07d4331ae644e'
 
     def test_numpy_types(self):

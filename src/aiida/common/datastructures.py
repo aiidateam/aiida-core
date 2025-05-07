@@ -15,13 +15,17 @@ from typing import TYPE_CHECKING
 
 from .extendeddicts import DefaultFieldsAttributeDict
 
-__all__ = ('StashMode', 'CalcJobState', 'CalcInfo', 'CodeInfo', 'CodeRunMode')
+__all__ = ('CalcInfo', 'CalcJobState', 'CodeInfo', 'CodeRunMode', 'StashMode')
 
 
 class StashMode(Enum):
     """Mode to use when stashing files from the working directory of a completed calculation job for safekeeping."""
 
     COPY = 'copy'
+    COMPRESS_TAR = 'tar'
+    COMPRESS_TARBZ2 = 'tar.bz2'
+    COMPRESS_TARGZ = 'tar.gz'
+    COMPRESS_TARXZ = 'tar.xz'
 
 
 class CalcJobState(Enum):

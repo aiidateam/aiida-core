@@ -1,0 +1,52 @@
+name: Test newly built images
+
+on:
+  workflow_call:
+    inputs:
+      runsOn:
+        description: GitHub Actions Runner image
+        required: true
+        type: string
+      images:
+        description: Images built in build step
+        required: true
+        type: string
+      target:
+        description: Target image for testing
+        required: true
+        type: string
+
+jobs:
+
+  test:
+    runs-on: ${{ inputs.runsOn }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: .docker
+
+    steps:
+
+    - name: Checkout Repo ⚡️
+      uses: actions/checkout@v4
+
+    - name: Login to GitHub Container Registry 🔑
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set Up Python 🐍
+      if: ${{ startsWith(inputs.runsOn, 'ubuntu') }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: pip
+
+    - name: Install dependencies 📦
+      run: pip install -r requirements.txt
+
+    - name: Run tests
+      run: pytest -s --variant ${{ inputs.target }} tests/
+      env: ${{ fromJSON(inputs.images) }}

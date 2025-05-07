@@ -39,9 +39,10 @@ import plumpy.exceptions
 import plumpy.futures
 import plumpy.persistence
 import plumpy.processes
-from aio_pika.exceptions import ConnectionClosed
 from kiwipy.communications import UnroutableError
 from plumpy.process_states import Finished, ProcessState
+from plumpy.processes import ConnectionClosed  # type: ignore[attr-defined]
+from plumpy.processes import Process as PlumpyProcess
 from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
@@ -66,7 +67,7 @@ __all__ = ('Process', 'ProcessState')
 
 
 @plumpy.persistence.auto_persist('_parent_pid', '_enable_persistence')
-class Process(plumpy.processes.Process):
+class Process(PlumpyProcess):
     """This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
     """
@@ -328,7 +329,7 @@ class Process(plumpy.processes.Process):
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
-    def kill(self, msg: Union[str, None] = None) -> Union[bool, plumpy.futures.Future]:
+    def kill(self, msg_text: str | None = None, force_kill: bool = False) -> Union[bool, plumpy.futures.Future]:
         """Kill the process and all the children calculations it called
 
         :param msg: message
@@ -337,7 +338,7 @@ class Process(plumpy.processes.Process):
 
         had_been_terminated = self.has_terminated()
 
-        result = super().kill(msg)
+        result = super().kill(msg_text, force_kill)
 
         # Only kill children if we could be killed ourselves
         if result is not False and not had_been_terminated:
@@ -347,7 +348,7 @@ class Process(plumpy.processes.Process):
                     self.logger.info('no controller available to kill child<%s>', child.pk)
                     continue
                 try:
-                    result = self.runner.controller.kill_process(child.pk, f'Killed by parent<{self.node.pk}>')
+                    result = self.runner.controller.kill_process(child.pk, msg_text=f'Killed by parent<{self.node.pk}>')
                     result = asyncio.wrap_future(result)  # type: ignore[arg-type]
                     if asyncio.isfuture(result):
                         killing.append(result)
@@ -414,11 +415,18 @@ class Process(plumpy.processes.Process):
     @override
     def on_entered(self, from_state: Optional[plumpy.process_states.State]) -> None:
         """After entering a new state, save a checkpoint and update the latest process state change timestamp."""
+        from plumpy import ProcessState
+
         from aiida.engine.utils import set_process_state_change_timestamp
 
-        # For reasons unknown, it is important to update the outputs first, before doing anything else, otherwise there
-        # is the risk that certain outputs do not get attached before the process reaches a terminal state. Nevertheless
-        # we need to guarantee that the process state gets updated even if the ``update_outputs`` call excepts, for
+        if self._state.LABEL is ProcessState.EXCEPTED:
+            # The process is already excepted so simply update the process state on the node and let the process
+            # complete the state transition to the terminal state. If another exception is raised during this exception
+            # handling, the process transitioning is cut short and never makes it to the terminal state.
+            self.node.set_process_state(self._state.LABEL)
+            return
+
+        # We need to guarantee that the process state gets updated even if the ``update_outputs`` call excepts, for
         # example if the process implementation attaches an invalid output through ``Process.out``, and so we call the
         # ``ProcessNode.set_process_state`` in the finally-clause. This way the state gets properly set on the node even
         # if the process is transitioning to the terminal excepted state.
@@ -430,7 +438,12 @@ class Process(plumpy.processes.Process):
             self.node.set_process_state(self._state.LABEL)  # type: ignore[arg-type]
 
         self._save_checkpoint()
-        set_process_state_change_timestamp(self)
+        set_process_state_change_timestamp(self.node)
+
+        # The updating of outputs and state has to be performed before the super is called because the super will
+        # broadcast state changes and parent processes may start running again before the state change is completed. It
+        # is possible that they will read the old process state and outputs that they check may not yet have been
+        # attached.
         super().on_entered(from_state)
 
     @override
@@ -841,7 +854,7 @@ class Process(plumpy.processes.Process):
         ):
             return [(parent_name, port_value)]
 
-        if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
+        if (port is None and isinstance(port_value, Mapping)) or isinstance(port, PortNamespace):
             items = []
             for name, value in port_value.items():
                 prefixed_key = parent_name + separator + name if parent_name else name
@@ -879,10 +892,10 @@ class Process(plumpy.processes.Process):
         :return: flat list of outputs
 
         """
-        if port is None and isinstance(port_value, orm.Node) or isinstance(port, OutputPort):
+        if (port is None and isinstance(port_value, orm.Node)) or isinstance(port, OutputPort):
             return [(parent_name, port_value)]
 
-        if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
+        if (port is None and isinstance(port_value, Mapping)) or isinstance(port, PortNamespace):
             items = []
             for name, value in port_value.items():
                 prefixed_key = parent_name + separator + name if parent_name else name

@@ -1,8 +1,8 @@
 codecov:
   notify:
-    after_n_builds: 2
-    wait_for_ci: yes
-  require_ci_to_pass: yes
+    after_n_builds: 1
+    wait_for_ci: no
+  require_ci_to_pass: no
 
 coverage:
   precision: 2  # default, here for transparency

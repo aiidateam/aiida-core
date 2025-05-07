@@ -10,6 +10,7 @@
 
 import contextlib
 import os
+import shutil
 import typing
 from pathlib import Path
 
@@ -18,8 +19,10 @@ import psutil
 from aiida.common.exceptions import LockedProfileError, LockingProfileError
 from aiida.common.lang import type_check
 from aiida.manage.configuration import Profile
+from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
 
+@typing.final
 class ProfileAccessManager:
     """Class to manage access to a profile.
 
@@ -45,12 +48,10 @@ class ProfileAccessManager:
 
         :param profile: the profile whose access to manage.
         """
-        from aiida.manage.configuration.settings import ACCESS_CONTROL_DIR
-
-        type_check(profile, Profile)
+        _ = type_check(profile, Profile)
         self.profile = profile
         self.process = psutil.Process(os.getpid())
-        self._dirpath_records = ACCESS_CONTROL_DIR / profile.name
+        self._dirpath_records = AiiDAConfigPathResolver().access_control_dir / profile.name
         self._dirpath_records.mkdir(exist_ok=True)
 
     def request_access(self) -> None:
@@ -76,7 +77,7 @@ class ProfileAccessManager:
             # it will read the incomplete command, won't be able to correctly compare it with its running
             # process, and will conclude the record is old and clean it up.
             filepath_tmp.write_text(str(self.process.cmdline()))
-            os.rename(filepath_tmp, filepath_pid)
+            shutil.move(filepath_tmp, filepath_pid)
 
             # Check again in case a lock was created in the time between the first check and creating the
             # access record file.

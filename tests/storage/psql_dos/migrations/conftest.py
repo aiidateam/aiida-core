@@ -8,27 +8,15 @@
 ###########################################################################
 """Tests for the migration engine (Alembic) as well as for the AiiDA migrations for SQLAlchemy."""
 
-from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from aiida.manage.configuration import Profile
-from aiida.storage.psql_dos.migrator import PsqlDosMigrator
-from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 from pgtest.pgtest import PGTest
 from sqlalchemy import text
 
-
-def pytest_collection_modifyitems(config, items):
-    """Dynamically add the ``nightly`` marker to all tests in ``django_branch`` and ``sqlalchemy_branch`` modules."""
-    filepath_django = Path(__file__).parent / 'django_branch'
-    filepath_sqla = Path(__file__).parent / 'sqlalchemy_branch'
-
-    for item in items:
-        filepath_item = Path(item.fspath)
-
-        if filepath_item.is_relative_to(filepath_django) or filepath_item.is_relative_to(filepath_sqla):
-            item.add_marker(getattr(pytest.mark, 'nightly'))
+from aiida.manage.configuration import Profile
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
+from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 
 
 @pytest.fixture(scope='session')
@@ -42,15 +30,16 @@ def empty_pg_cluster():
 @pytest.fixture
 def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):
     """Create a profile attached to an empty database and repository folder."""
-    import psycopg2
-    from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+    import psycopg
 
     database_name = f'test_{uuid4().hex}'
+    dsn = empty_pg_cluster.dsn
+    dsn['dbname'] = dsn.pop('database')
 
     conn = None
     try:
-        conn = psycopg2.connect(**empty_pg_cluster.dsn)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        conn = psycopg.connect(**dsn)
+        conn.autocommit = True
         with conn.cursor() as cursor:
             cursor.execute(f"CREATE DATABASE {database_name} ENCODING 'utf8';")
     finally:
@@ -64,7 +53,7 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):
             'storage': {
                 'backend': 'core.psql_dos',
                 'config': {
-                    'database_engine': 'postgresql_psycopg2',
+                    'database_engine': 'postgresql_psycopg',
                     'database_port': empty_pg_cluster.port,
                     'database_hostname': empty_pg_cluster.dsn['host'],
                     'database_name': database_name,
@@ -79,8 +68,8 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):
 
     conn = None
     try:
-        conn = psycopg2.connect(**empty_pg_cluster.dsn)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        conn = psycopg.connect(**dsn)
+        conn.autocommit = True
         with conn.cursor() as cursor:
             # note after postgresql 13 you can use 'DROP DATABASE name WITH (FORCE)'
             # but for now, we first close all possible open connections to the database, before dropping it

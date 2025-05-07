@@ -48,12 +48,44 @@ def sqlite_case_sensitive_like(dbapi_connection, _):
     cursor.close()
 
 
+def _contains(lhs: Union[dict, list], rhs: Union[dict, list]):
+    if isinstance(lhs, dict) and isinstance(rhs, dict):
+        for key in rhs:
+            if key not in lhs or not _contains(lhs[key], rhs[key]):
+                return False
+        return True
+
+    elif isinstance(lhs, list) and isinstance(rhs, list):
+        for item in rhs:
+            if not any(_contains(e, item) for e in lhs):
+                return False
+        return True
+    else:
+        return lhs == rhs
+
+
+def _json_contains(lhs: Union[str, bytes, bytearray, dict, list], rhs: Union[str, bytes, bytearray, dict, list]):
+    try:
+        if isinstance(lhs, (str, bytes, bytearray)):
+            lhs = json.loads(lhs)
+        if isinstance(rhs, (str, bytes, bytearray)):
+            rhs = json.loads(rhs)
+    except json.JSONDecodeError:
+        return 0
+    return int(_contains(lhs, rhs))  # type: ignore[arg-type]
+
+
+def register_json_contains(dbapi_connection, _):
+    dbapi_connection.create_function('json_contains', 2, _json_contains)
+
+
 def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = True, **kwargs) -> Engine:
     """Create a new engine instance."""
     engine = create_engine(f'sqlite:///{path}', json_serializer=json.dumps, json_deserializer=json.loads, **kwargs)
     event.listen(engine, 'connect', sqlite_case_sensitive_like)
     if enforce_foreign_keys:
         event.listen(engine, 'connect', sqlite_enforce_foreign_keys)
+    event.listen(engine, 'connect', register_json_contains)
     return engine
 
 

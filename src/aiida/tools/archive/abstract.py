@@ -111,7 +111,7 @@ class ArchiveWriterAbstract(ABC):
         """Delete the object from the archive.
 
         :param key: fully qualified identifier for the object within the repository.
-        :raise IOError: if the file could not be deleted.
+        :raise OSError: if the file could not be deleted.
         """
 
 

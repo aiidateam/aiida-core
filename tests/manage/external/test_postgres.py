@@ -10,9 +10,12 @@
 
 from unittest import TestCase
 
+import pytest
+
 from aiida.manage.external.postgres import Postgres
 
 
+@pytest.mark.requires_psql
 class PostgresTest(TestCase):
     """Test the public API provided by the `Postgres` class"""
 

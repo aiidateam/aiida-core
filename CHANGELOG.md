@@ -1,5 +1,306 @@
 # Changelog
 
+## v2.6.3 - 2024-11-6
+
+### Fixes
+- CLI: Fix exception for `verdi plugin list` (#6560) [[c3b10b7]](https://github.com/aiidateam/aiida-core/commit/c3b10b759a9cd062800ef120591d5c7fd0ae4ee7)
+- `DirectScheduler`: Ensure killing child processes (#6572) [[fddffca]](https://github.com/aiidateam/aiida-core/commit/fddffca67b4f7e3b76b19df7db8e1511c449d2d9)   
+- Engine: Fix state change broadcast before process node is updated  (#6580) [[867353c]](https://github.com/aiidateam/aiida-core/commit/867353c415c61d94a2427d5225dd5224a1b95fb9)
+
+### Devops
+- Docker: Replace sleep with `s6-notifyoncheck` (#6475) [[9579378b]](https://github.com/aiidateam/aiida-core/commit/9579378ba063237baa5b73380eb8e9f0a28529ee)
+- Fix failed docker CI using more reasoning grep regex to parse python version (#6581) [[332a4a91]](https://github.com/aiidateam/aiida-core/commit/332a4a915771afedcb144463b012558e4669e529)
+- DevOps: Fix json query in reading the docker names to filter out fields not starting with aiida (#6573) [[e1467edc]](https://github.com/aiidateam/aiida-core/commit/e1467edca902867e53605e0e60b67f8767bf8d3e)
+
+
+## v2.6.2 - 2024-08-07
+
+### Fixes
+- `LocalTransport`: Fix typo for `ignore_nonexisting` in `put` (#6471) [[ecda558d0]](https://github.com/aiidateam/aiida-core/commit/ecda558d08c5608880308f69a21c05fe918be89f)
+- CLI: `verdi computer test` report correct failed tests (#6536) [[9c3f2bb58]](https://github.com/aiidateam/aiida-core/commit/9c3f2bb589f1a6cc920ed2fbf0627924d8fce954)
+- CLI: Fix `verdi storage migrate` for profile without broker (#6550) [[389fc487d]](https://github.com/aiidateam/aiida-core/commit/389fc487d092c2e34713d228e38c8164608bab2d)
+- CLI: Fix bug `verdi presto` when tab-completing without config (#6535) [[efcf75e40]](https://github.com/aiidateam/aiida-core/commit/efcf75e405dcef8ca8c51b19d6262ca81f4413c3)
+- Engine: Change signature of `set_process_state_change_timestamp` [[923fd9f6e]](https://github.com/aiidateam/aiida-core/commit/923fd9f6ec3cb39b8985ac149985046e720438f8)
+- Engine: Ensure node is sealed when process excepts (#6549) [[e3ed9a2f3]](https://github.com/aiidateam/aiida-core/commit/e3ed9a2f3bf84e72cdc4c90e21494dc2b9c1cd56)
+- Engine: Fix bug in upload calculation for `PortableCode` with SSH (#6519) [[740ae2040]](https://github.com/aiidateam/aiida-core/commit/740ae20408e4e3047c26c91221de5b96b8d7afbe)
+- Engine: Ignore failing process state change for `core.sqlite_dos` [[fb4f9815f]](https://github.com/aiidateam/aiida-core/commit/fb4f9815fbd3bfe053cc0d1e3abb5b86bbc9dffd)
+
+### Dependencies
+- Pin requirement to minor version `sphinx~=7.2.0` (#6527) [[25cb73188]](https://github.com/aiidateam/aiida-core/commit/25cb731880d45045773f7674fee9367d792aeda9)
+
+### Documentation
+- Add `PluggableSchemaValidator` to nitpick exceptions (#6515) [[0ce3c0025]](https://github.com/aiidateam/aiida-core/commit/0ce3c0025384e95006d43e98da2a96b2cfadde70)
+- Add `robots.txt` to only allow indexing of `latest` and `stable` (#6517) [[a492e3492]](https://github.com/aiidateam/aiida-core/commit/a492e349288ee90896193575edf319c2b7ea4c85)
+- Add succint overview of limitations of no-services profile [[d7ca5657b]](https://github.com/aiidateam/aiida-core/commit/d7ca5657b0dec83cb8a440d0b8e11c9c84e38149)
+- Correct signature of `get_daemon_client` example snippet (#6554) [[92d391658]](https://github.com/aiidateam/aiida-core/commit/92d391658e5e92113ad9a32d61444e23342ee0ae)
+- Fix typo in pytest plugins codeblock (#6513) [[eb23688fe]](https://github.com/aiidateam/aiida-core/commit/eb23688febacb5b828d0f45ebdeedee65d0c00fe)
+- Move limitations warning to top of quick install [[493e529a7]](https://github.com/aiidateam/aiida-core/commit/493e529a7aec052f81d1bbfed33e5b44db9434e2)
+- Remove note in installation guide regarding Python requirement [[9aa2044e4]](https://github.com/aiidateam/aiida-core/commit/9aa2044e4ce665d64bb3a1c26f166512287aa28b)
+- Update `redirects.txt` for installation pages (#6509) [[508a9fb2a]](https://github.com/aiidateam/aiida-core/commit/508a9fb2a7f6eb6f31b40b3f28d13c96f7875503)
+
+### Devops
+- Fix pymatgen import causing mypy to fail (#6540) [[813374fe1]](https://github.com/aiidateam/aiida-core/commit/813374fe1ee003c8c05f9aa191147ec928dfa918)
+
+
+## v2.6.1 - 2024-07-01
+
+### Fixes
+- Fixtures: Make `pgtest` truly an optional dependency [[9fe8fd2e0]](https://github.com/aiidateam/aiida-core/commit/9fe8fd2e0b88e746ee2156eccb71b7adbab6b2c5)
+
+
+## v2.6.0 - 2024-07-01
+
+This minor release comes with a number of features that are focused on user friendliness and ease-of-use of the CLI and the API.
+The caching mechanism has received a number of improvements guaranteeing even greater savings of computational time.
+For existing calculations to be valid cache sources in the new version, their hash has to be regenerated (see [Improvements and changes to caching](#improvements-and-changes-to-caching) for details).
+
+- [Making RabbitMQ optional](#making-rabbitmq-optional)
+- [Simplifying profile setup](#simplifying-profile-setup)
+- [Improved test fixtures without services](#improved-test-fixtures-without-services)
+- [Improvements and changes to caching](#improvements-and-changes-to-caching)
+- [Programmatic syntax for query builder filters and projections](#programmatic-syntax-for-query-builder-filters-and-projections)
+- [Automated profile storage backups](#automated-profile-storage-backups)
+- [Full list of changes](#full-list-of-changes)
+    - [Features](#features)
+    - [Performance](#performance)
+    - [Changes](#changes)
+    - [Fixes](#fixes)
+    - [Deprecations](#deprecations)
+    - [Dependencies](#dependencies)
+    - [Refactoring](#refactoring)
+    - [Documentation](#documentation)
+    - [Devops](#devops)
+
+
+### Making RabbitMQ optional
+
+The RabbitMQ message broker service is now optional for running AiiDA.
+The requirement was added in AiiDA v1.0 when the engine was completely overhauled.
+Although it significantly improved the scaling and responsiveness, it also made it more difficult to start using AiiDA.
+As of v2.6, profiles can now be configured without RabbitMQ, at the cost that the daemon can not be used and all processes have to be run locally.
+
+### Simplifying profile setup
+
+With the removal of RabbitMQ as a hard requirement, combined with storage plugins that replace PostgreSQL with the serverless SQLite that were introduced in v2.5, it is now possible to setup a profile that requires no services.
+A new command is introduced, `verdi presto`, that automatically creates a profile with sensible defaults.
+This now in principle makes it possible to run just the two following commands on any operating system:
+```
+pip install aiida-core
+verdi presto
+```
+and get a working AiiDA installation that is ready to go.
+As a bonus, it also configures the localhost as a `Computer`.
+See the [documentation for more details](https://aiida.readthedocs.io/projects/aiida-core/en/v2.6.0/installation/guide_quick.html).
+
+### Improved test fixtures without services
+
+Up till now, running tests would always require a fully functional profile, which meant that PostgreSQL and RabbitMQ had to be available.
+As described in the section above, it is now possible to set up a profile without these services.
+This new feature is leveraged to provide a set of `pytest` fixtures that provide a test profile that can be used essentially on any system that just has AiiDA installed.
+To start writing tests, simply create a `conftest.py` and import the fixtures with:
+```python
+pytest_plugins = 'aiida.tools.pytest_fixtures'
+```
+The new fixtures include the `aiida_profile` fixture which is session-scoped and automatically loaded.
+The fixture creates a temporary test profile at the start of the test session and automatically deletes it when the session ends.
+For more information and an overview of all available fixtures, please refer to [the documentation on `pytest` fixtures](https://aiida.readthedocs.io/projects/aiida-core/en/v2.6.0/topics/plugins.html#plugin-test-fixtures).
+
+### Improvements and changes to caching
+
+A number of fixes and changes to the caching mechanism were introduced (see the [changes](#changes) subsection of the [full list of changes](#full-list-of-changes) for a more detailed overview).
+For existing calculations to be valid cache sources in the new version, their hash has to be regenerated by running `verdi node rehash`.
+Note that this can take a while for large databases.
+
+Since its introduction, the cache would essentially be reset each time AiiDA or any of the plugin packages would be updated, since the version of these packages were included in the calculation of the node hashes.
+This was originally done out of precaution to err on the safe-side and limit the possibility of false-positives in cache hits.
+However, this strategy has turned out to be unnecessarily cautious and severely limited the effectiveness of caching.
+
+The package version information is no longer included in the hash and therefore no longer impacts the caching.
+This change does now make it possible for false positives if the implementation of a `CalcJob` or `Parser` plugin changes signficantly.
+Therefore, a mechanism is introduced to give control to these plugins to effectively reset the cache of existing nodes.
+Please refer to the [documentation on controlling caching](https://aiida.readthedocs.io/projects/aiida-core/en/v2.6.0/topics/provenance/caching.html#calculation-jobs-and-parsers) for more details.
+
+### Programmatic syntax for query builder filters and projections
+
+In the `QueryBuilder`, fields to filter on or project always had to be provided with strings:
+```python
+QueryBuilder().append(Node, filters={'label': 'some-label'}, project=['id', 'ctime'])
+```
+and it is not always trivial to know what fields exist that _can_ be filtered on and can be projected.
+In addition, there was a discrepancy for some fields, most notably the `pk` property, which had to be converted to `id` in the query builder syntax.
+
+These limitations have been solved as each class in AiiDA's ORM now defines the `fields` property, which allows to discover these fields programmatically.
+The example above would convert to:
+```python
+QueryBuilder().append(Node, filters={Node.fields.label: 'some-label'}, project=[Node.fields.pk, Node.fields.ctime])
+```
+The `fields` property provides tab-completion allowing easy discovery of available fields for an ORM class in IDEs and interactive shells.
+The fields also allow to express logical conditions programmatically and more.
+For more details, please refer to the [documentation on programmatic field syntax](https://aiida.readthedocs.io/projects/aiida-core/en/v2.6.0/howto/query.html#programmatic-syntax-for-filters).
+
+Data plugins can also define custom fields, adding on top of the fields inherited from their base class(es).
+The [documentation on data plugin fields](https://aiida.readthedocs.io/projects/aiida-core/en/v2.6.0/topics/data_types.html#fields) provides more information, but the API is currently in beta and guaranteed to be changed in an upcoming version.
+It is therefore recommended for plugin developers to hold off making use of this new API.
+
+### Automated profile storage backups
+
+A generic mechanism has been implemented to allow easily backing up the data of a profile.
+The command `verdi storage backup` automatically maintains a directory structure of previous backups allowing efficient incremental backups.
+Note that the exact details of the backup mechanism is dependent on the storage plugin that is used by the profile and not all storage plugins necessarily implement it.
+For now the storage plugins `core.psql_dos`, and `core.sqlite_dos` implement the functionality.
+For more information, please refer [to the documentation](https://aiida.readthedocs.io/projects/aiida-core/en/v2.6.0/howto/installation.html#backing-up-your-installation).
+Please refer to [this section of the documentation](https://aiida.readthedocs.io/projects/aiida-core/en/v2.6.0/howto/installation.html#restoring-data-from-a-backup) for instructions to restore from a backup.
+
+### Full list of changes
+
+#### Features
+- `CalcJob`: Allow to define order of copying of input files [[6898ff4d8]](https://github.com/aiidateam/aiida-core/commit/6898ff4d8c263cf08707c61411a005f6a7f731dd)
+- `SqliteDosStorage`: Implement the backup functionality [[18e447c77]](https://github.com/aiidateam/aiida-core/commit/18e447c77f48a18f361e458186cd87b2355aea75)
+- `SshTransport`: Return `FileNotFoundError` if destination parent does not exist [[d86bb38bf]](https://github.com/aiidateam/aiida-core/commit/d86bb38bf9a0ced8029f8a4b895e1a6be1ccb339)
+- Add improved more configurable versions of `pytest` fixtures [[e3a60460e]](https://github.com/aiidateam/aiida-core/commit/e3a60460ef1208a5c46ecd6af35d891a88ee784e)
+- Add the `orm.Entity.fields` interface for `QueryBuilder` [[4b9abe2bd]](https://github.com/aiidateam/aiida-core/commit/4b9abe2bd0bb82449547a3377c2b6dbc7c174123)
+- CLI: `verdi computer test` make unexpected output check optional [[589a3b2c0]](https://github.com/aiidateam/aiida-core/commit/589a3b2c03d44cebd26e88243ca34fcdb0e23ff4)
+- CLI: `verdi node graph generate` root nodes as arguments [[06f8f4cfb]](https://github.com/aiidateam/aiida-core/commit/06f8f4cfb0731ff699d5c01ad85418b6db0f6778)
+- CLI: Add `--most-recent-node` option to `verdi process watch` [[72692fa5c]](https://github.com/aiidateam/aiida-core/commit/72692fa5cb667e2a7462770af18b7cedeaf8b3f0)
+- CLI: Add `--sort/--no-sort` to `verdi code export` [[80c606890]](https://github.com/aiidateam/aiida-core/commit/80c60689063f1517c3de91d86eef80f7852667e3)
+- CLI: Add `verdi process dump` and the `ProcessDumper` [[6291accf0]](https://github.com/aiidateam/aiida-core/commit/6291accf0538eafe7426e89bc4c1e9eb90ce0385)
+- CLI: Add RabbitMQ options to `verdi profile setup` [[f553f805e]](https://github.com/aiidateam/aiida-core/commit/f553f805e86d766da6208eb1682f7cf12c7907ac)
+- CLI: Add the `-M/--most-recent-node` option [[5aae874aa]](https://github.com/aiidateam/aiida-core/commit/5aae874aaa44459ce8cf3ddd3bf1a82d8a2e8d37)
+- CLI: Add the `verdi computer export` command [[9e3ebf6ea]](https://github.com/aiidateam/aiida-core/commit/9e3ebf6ea55d883c7857a1dbafe398b9579cca03)
+- CLI: Add the `verdi node list` command [[cf091e80f]](https://github.com/aiidateam/aiida-core/commit/cf091e80ff2b6aa03f41b56ba1976abb97298972)
+- CLI: Add the `verdi presto` command [[6b6e1520f]](https://github.com/aiidateam/aiida-core/commit/6b6e1520f2d3807e366dd672e7917f381ea7b524)
+- CLI: Add the `verdi profile configure-rabbitmq` command [[202a3ece9]](https://github.com/aiidateam/aiida-core/commit/202a3ece9705289a1f12c85e64cf90307ca85c39)
+- CLI: Allow `verdi computer delete` to delete associated nodes  [[348777571]](https://github.com/aiidateam/aiida-core/commit/3487775711e7412fb2cb82600fb266316d6ce12a)
+- CLI: Allow multiple root nodes in `verdi node graph generate` [[f16c432af]](https://github.com/aiidateam/aiida-core/commit/f16c432af107b1f9c01a12e03cbd0a9ecc2744ad)
+- Engine: Allow `CalcJob` monitors to return outputs [[b7e59a0db]](https://github.com/aiidateam/aiida-core/commit/b7e59a0dbc0dd629be5c8178e98c70e7a2c116e9)
+- Make `postgres_cluster` and `config_psql_dos` fixtures configurable [[35d7ca63b]](https://github.com/aiidateam/aiida-core/commit/35d7ca63b44f051a26d3f96d84e043919eb3f101)
+- Process: Add the `metadata.disable_cache` input [[4626b11f8]](https://github.com/aiidateam/aiida-core/commit/4626b11f85cd0d95a17d8f5766a90b88ddddd689)
+- Storage: Add backup mechanism to the interface [[bf79f23ee]](https://github.com/aiidateam/aiida-core/commit/bf79f23eef66d362a34aac170577ba8f5c2088ba)
+- Transports: fix overwrite behaviour for `puttree`/`gettree` [[a55451703]](https://github.com/aiidateam/aiida-core/commit/a55451703aa8f8d330b25bc5da95d41caf0db9ac)
+
+#### Performance
+- CLI: Speed up tab-completion by lazily importing `Config` [[9524cda0b]](https://github.com/aiidateam/aiida-core/commit/9524cda0b8c742fb5bf740d7b0035e326eace28f)
+- Improve import time of `aiida.orm` and `aiida.storage` [[fb9b6cc3b]](https://github.com/aiidateam/aiida-core/commit/fb9b6cc3b3df244549fdd78576c34f6d9dfd4568)
+- ORM: Cache the logger adapter for `ProcessNode` [[1d104d06b]](https://github.com/aiidateam/aiida-core/commit/1d104d06b95da36c71cab132c7b6fec52a005e18)
+
+#### Changes
+- Caching: `NodeCaching._get_objects_to_hash` return type to `dict` [[c9c7c4bd8]](https://github.com/aiidateam/aiida-core/commit/c9c7c4bd8e1cd306271b5cf267095d3cbd8aafe2)
+- Caching: Add `CACHE_VERSION` attribute to `CalcJob` and `Parser` [[39d0f312d]](https://github.com/aiidateam/aiida-core/commit/39d0f312d212a642d1537ca89e7622e48a23e701)
+- Caching: Include the node's class in objects to hash [[68ce11161]](https://github.com/aiidateam/aiida-core/commit/68ce111610c40e3d9146e128c0a698fc60b6e5e5)
+- Caching: Make `NodeCaching._get_object_to_hash` public [[e33000402]](https://github.com/aiidateam/aiida-core/commit/e330004024ad5121f9bc82cbe972cd283f25fec8)
+- Caching: Remove core and plugin information from hash calculation [[4c60bbef8]](https://github.com/aiidateam/aiida-core/commit/4c60bbef852eef55a06b48b813d3fbcc8fb5a43f)
+- Caching: Rename `get_hash` to `compute_hash` [[b544f7cf9]](https://github.com/aiidateam/aiida-core/commit/b544f7cf95a0e6e698224f36c1bea57d1cd99e7d)
+- CLI: Always do hard reset in `verdi daemon restart` [[8ac642410]](https://github.com/aiidateam/aiida-core/commit/8ac6424108d1528bd3279c81da62dd44855b6ebc)
+- CLI: Change `--profile` to `-p/--profile-name` for `verdi profile setup` [[8ea203cd9]](https://github.com/aiidateam/aiida-core/commit/8ea203cd9b1d2fbb4a3b38ba67beec97bb8c7145)
+- CLI: Let `-v/--verbosity` only affect `aiida` and `verdi` loggers [[487c6bf04]](https://github.com/aiidateam/aiida-core/commit/487c6bf047030ee19deed49d5fbf9a093253538e)
+- Engine: Set the `to_aiida_type` as default inport port serializer [[2fa7a5305]](https://github.com/aiidateam/aiida-core/commit/2fa7a530511a94ead83d79669efed71706a0a472)
+- `QueryBuilder`: Remove implementation for `has_key` in SQLite storage [[24cfbe27e]](https://github.com/aiidateam/aiida-core/commit/24cfbe27e7408b78fca8e6f69799ebad3659400b)
+
+#### Fixes
+- `BandsData`: Use f-strings in `_prepare_gnuplot` [[dba117437]](https://github.com/aiidateam/aiida-core/commit/dba117437782abc6d11f9ef208923f7e70f79ed2)
+- `BaseRestartWorkChain`: Fix handler overrides used only first iteration [[65786a6bd]](https://github.com/aiidateam/aiida-core/commit/65786a6bda1c74dfb4aea90becd0664de6b1abde)
+- `SlurmScheduler`: Make detailed job info fields dynamic [[4f9774a68]](https://github.com/aiidateam/aiida-core/commit/4f9774a689b81a446fac37ad8281b2d854eefa7a)
+- `SqliteDosStorage`: Fix exception when importing archive [[af0c260bb]](https://github.com/aiidateam/aiida-core/commit/af0c260bb1c32c3b33c50175d790907774561b3e)
+- `StructureData`: Fix the pbc constraints of `get_pymatgen_structure` [[adcce4bcd]](https://github.com/aiidateam/aiida-core/commit/adcce4bcd0b59c8371be73058a060bedcaba40f6)
+- Archive: Automatically create nested output directories [[212f6163b]](https://github.com/aiidateam/aiida-core/commit/212f6163b03b8762509ae2230c30172af8c02fed)
+- Archive: Respect `filter_size` in query for existing nodes [[ef60b66aa]](https://github.com/aiidateam/aiida-core/commit/ef60b66aa3ce76d654abe5e7caafef3f221defd0)
+- CLI: Ensure deprecation warnings are printed before any prompts [[deb293d0e]](https://github.com/aiidateam/aiida-core/commit/deb293d0e6a566256fac5069881de4846d77f6d1)
+- CLI: Fix `verdi archive create --dry-run` for empty file repository [[cc96c9d04]](https://github.com/aiidateam/aiida-core/commit/cc96c9d043c6616a068a5498f557fa21a728eb96)
+- CLI: Fix `verdi plugin list` incorrectly not displaying description [[e952d7717]](https://github.com/aiidateam/aiida-core/commit/e952d7717c1d8001555e8d19f54f4fa349da6c6e)
+- CLI: Fix `verdi process [show|report|status|watch|call-root]` no output [[a56a1389d]](https://github.com/aiidateam/aiida-core/commit/a56a1389dee5cb9ae70a5511d77aad248ea21731)
+- CLI: Fix `verdi process list` if no available workers [[b44afcb3c]](https://github.com/aiidateam/aiida-core/commit/b44afcb3c1a7efa452d4e72aa6f8a615f652aaa4)
+- CLI: Fix `verdi quicksetup` when profiles exist where storage is not `core.psql_dos` [[6cb91c181]](https://github.com/aiidateam/aiida-core/commit/6cb91c18163ac6228ed4a64c1c467dfd0398a624)
+- CLI: Fix dry-run resulting in critical error in `verdi archive import` [[36991c6c8]](https://github.com/aiidateam/aiida-core/commit/36991c6c84f4ba0b4553e8cd6689bbc1815dbd35)
+- CLI: Fix logging not showing in `verdi daemon worker` [[9bd8585bd]](https://github.com/aiidateam/aiida-core/commit/9bd8585bd5e7989e24646a0018710e86836e5a9f)
+- CLI: Fix the `ctx.obj.profile` attribute not being initialized [[8a286f26e]](https://github.com/aiidateam/aiida-core/commit/8a286f26e8d303c498ac2eabd49be5f1f4ced9ef)
+- CLI: Hide misleading message for `verdi archive create --test-run` [[7e42d7aa7]](https://github.com/aiidateam/aiida-core/commit/7e42d7aa7d16fa9e81cbd300ada14e4dea2426ce)
+- CLI: Improve error message of `PathOrUrl` and `FileOrUrl` [[ffc6e4f70]](https://github.com/aiidateam/aiida-core/commit/ffc6e4f706277854dbd454d6f3164cec31e7819a)
+- CLI: Only configure logging in `set_log_level` callback once [[66a2dcedd]](https://github.com/aiidateam/aiida-core/commit/66a2dcedd0a9428b5b2218b8c82bad9c9aff4956)
+- CLI: Unify help of `verdi process` commands [[d91e0a58d]](https://github.com/aiidateam/aiida-core/commit/d91e0a58dabfd242b5f886d692c8761499a6719c)
+- Config: Set existing user as default for read-only storages [[e66592509]](https://github.com/aiidateam/aiida-core/commit/e665925097bb3344fde4bcc66ee185a2d9207ac3)
+- Config: Use UUID in `Manager.load_profile` to identify profile [[b01038bf1]](https://github.com/aiidateam/aiida-core/commit/b01038bf1fca7d33c4915aee904acea89a847614)
+- Daemon: Log the worker's path and Python interpreter [[ae2094169]](https://github.com/aiidateam/aiida-core/commit/ae209416996ec361c474aeaf0fa06f49dd59f296)
+- Docker: Start and stop daemon only when a profile exists [[0a5b20023]](https://github.com/aiidateam/aiida-core/commit/0a5b200236419d8caf8e05bb04ba80d03a438e03)
+- Engine: Add positional inputs for `Process.submit` [[d1131fe94]](https://github.com/aiidateam/aiida-core/commit/d1131fe9450972080207db6e9615784490b3252b)
+- Engine: Catch `NotImplementedError`in `get_process_state_change_timestamp` [[04926fe20]](https://github.com/aiidateam/aiida-core/commit/04926fe20da15065f8f086f1ff3cb14cc163aa08)
+- Engine: Fix paused work chains not showing it in process status [[40b22d593]](https://github.com/aiidateam/aiida-core/commit/40b22d593875b97355996bbfc15e2850ad1f0495)
+- Fix passwords containing `@` not being accepted for Postgres databases [[d14c14db2]](https://github.com/aiidateam/aiida-core/commit/d14c14db2f82d3a678e9747bd463ec1a61642120)
+- ORM: Correct field type of `InstalledCode` and `PortableCode` models [[0079cc1e4]](https://github.com/aiidateam/aiida-core/commit/0079cc1e4b46c61edf2323b2d42af46367fe04b6)
+- ORM: Fix `ProcessNode.get_builder_restart` [[0dee9d8ef]](https://github.com/aiidateam/aiida-core/commit/0dee9d8efba5c48615e8510f5ada706724b4a2e8)
+- ORM: Fix deprecation warning being shown for new code types [[a9155713b]](https://github.com/aiidateam/aiida-core/commit/a9155713bbb10e57fe91cd320e2a12391d098a46)
+- Runner: Close event loop in `Runner.close()` [[53cc45837]](https://github.com/aiidateam/aiida-core/commit/53cc458377685e54179eb1e1b73bb0383c8dae13)
+
+#### Deprecations
+- CLI: Deprecate `verdi profile setdefault` and rename to `verdi profile set-default` [[ab48a4f62]](https://github.com/aiidateam/aiida-core/commit/ab48a4f627b4c9eec9133b5efa9fb888ce2c4914)
+- CLI: Deprecate accepting `0` for `default_mpiprocs_per_machine` [[acec0c190]](https://github.com/aiidateam/aiida-core/commit/acec0c190cbb45ba267c6eb8ee7ceba18cf3302b)
+- CLI: Deprecate the `deprecated_command` decorator [[4c11c0616]](https://github.com/aiidateam/aiida-core/commit/4c11c0616c583236119f838a1780a606c58b4ee2)
+- CLI: Remove the deprecated `verdi database` command [[3dbde9e31]](https://github.com/aiidateam/aiida-core/commit/3dbde9e311781509b738202ad6f1de3bbd4b7a82)
+- ORM: Undo deprecation of `Code.get_description` [[1b13014b1]](https://github.com/aiidateam/aiida-core/commit/1b13014b14274024dcb6bb0a721eb62665567987)
+
+### Dependencies
+- Update `tabulate>=0.8.0,<0.10.0` [[6db2f4060]](https://github.com/aiidateam/aiida-core/commit/6db2f4060d4ece4552f5fe757c0f7d938810f4d1)
+
+#### Refactoring
+- Abstract message broker functionality [[69389e038]](https://github.com/aiidateam/aiida-core/commit/69389e0387369d8437e1219487b88430b7b2e679)
+- Config: Refactor `get_configuration_directory_from_envvar` [[65739f524]](https://github.com/aiidateam/aiida-core/commit/65739f52446087439ba93158eb948b58ed081ce5)
+- Config: Refactor the `create_profile` function and method [[905e93444]](https://github.com/aiidateam/aiida-core/commit/905e93444cf996461e679cd458511d1c471a7e02)
+- Engine: Refactor handling of `remote_folder` and `retrieved` outputs [[28adacaf8]](https://github.com/aiidateam/aiida-core/commit/28adacaf8ae21357bf6e5a2a48c43ed56d3bd78b)
+- ORM: Switch to `pydantic` for code schema definition [[06189d528]](https://github.com/aiidateam/aiida-core/commit/06189d528c2362516f42e0d48840882812b97fe4)
+- Replace deprecated `IOError` with `OSError` [[7f9129fd1]](https://github.com/aiidateam/aiida-core/commit/7f9129fd193374bdbeaa7ba4dd8c3cdf706db97d)
+- Storage: Move profile locking to the abstract base class [[ea5f51bcb]](https://github.com/aiidateam/aiida-core/commit/ea5f51bcb6af172eb1a754df3981003bf7bad959)
+
+#### Documentation
+- Add more instructions on how to use docker image [[aaf44afcc]](https://github.com/aiidateam/aiida-core/commit/aaf44afcce0f90fff2eb38bc47d28b4adf87db24)
+- Add the updated cheat sheet [[09f9058a7]](https://github.com/aiidateam/aiida-core/commit/09f9058a7444f3ac1d3f243b608fa3f24f771f27)
+- Add tips for common problems with conda PostgreSQL setup [[cd5313825]](https://github.com/aiidateam/aiida-core/commit/cd5313825afdb1771ca19d899567e4ed4774a2bc)
+- Customize the color scheme through custom style sheet [[a6cf7fc7e]](https://github.com/aiidateam/aiida-core/commit/a6cf7fc7e02a48a7e3b9c4ba6ce5e2cd413e6b23)
+- Docs: Clarify `Transport.copy` requires `recursive=True` if source is a directory [[310ff1db7]](https://github.com/aiidateam/aiida-core/commit/310ff1db77bc75b6cadedf77394b96af05456f43)
+- Fix example of the `entry_points` fixture [[081fc5547]](https://github.com/aiidateam/aiida-core/commit/081fc5547370e1b5a19b1fb507681091c632bb7a)
+- Fixing several small issues [[6a3a59b29]](https://github.com/aiidateam/aiida-core/commit/6a3a59b29ba64401828d9ab51dc123060868278b)
+- Minor cheatsheet update for v2.6 release [[c3cc169c4]](https://github.com/aiidateam/aiida-core/commit/c3cc169c487a88e2357b7377e897f0521c23f05a)
+- Reorganize the tutorial content [[5bd960efa]](https://github.com/aiidateam/aiida-core/commit/5bd960efae5a7f916b978a420f5f43501c9bc529)
+- Rework the installation section [[0ee0a0c6a]](https://github.com/aiidateam/aiida-core/commit/0ee0a0c6ae13588e82edf1cf9e8cb9857c94c31b)
+- Standardize usage of `versionadded` directive [[bf5dac848]](https://github.com/aiidateam/aiida-core/commit/bf5dac8484638d7ba5c492e91975b5fcc0cc9770)
+- Update twitter logo [[5e4f60d83]](https://github.com/aiidateam/aiida-core/commit/5e4f60d83160774ca83defe4bf1f6c6381aaa1a0)
+- Use uv installer in readthedocs build [[be0db3cc4]](https://github.com/aiidateam/aiida-core/commit/be0db3cc49506294ae1845b6e746e40cd76f39a9)
+
+#### Devops
+- Add `check-jsonschema` pre-commit hook for GHA workflows [[14c5bb0f7]](https://github.com/aiidateam/aiida-core/commit/14c5bb0f764f0fd7933df205aa22d61c85ec0cf2)
+- Add Dependabot config for maintaining GH actions [[0812f4b9e]](https://github.com/aiidateam/aiida-core/commit/0812f4b9eeffdff5a8c3d0802aea94c8919d9922)
+- Add docker image `aiida-core-dev` for development [[6d0984109]](https://github.com/aiidateam/aiida-core/commit/6d0984109478ec1c0fd96dfd1d3f2b54e0b75dd2)
+- Add Python 3.12 tox environment [[6b0d43960]](https://github.com/aiidateam/aiida-core/commit/6b0d4396068a43b6823eca8c78b9048044b0b4b8)
+- Add the `slurm` service to nightly workflow [[5460a0414]](https://github.com/aiidateam/aiida-core/commit/5460a0414d55e3531eb86e6906ee963a6b712aae)
+- Add typing to `aiida.common.hashing` [[ba21ba1d4]](https://github.com/aiidateam/aiida-core/commit/ba21ba1d40a76df73a2e27ce6f1a4f68aba7fb9a)
+- Add workflow to build Docker images on PRs from forks [[23d2aa5ee]](https://github.com/aiidateam/aiida-core/commit/23d2aa5ee3c08438cfc4b4734e9670e19c090150)
+- Address internal deprecation warnings [[ceed7d55d]](https://github.com/aiidateam/aiida-core/commit/ceed7d55dfb7df8dbe52c4557d145593d83f788a)
+- Allow unit test suite to be ran against SQLite [[0dc8bbcb2]](https://github.com/aiidateam/aiida-core/commit/0dc8bbcb261b745683bc542c1aced2412ebd66a0)
+- Bump the gha-dependencies group with 4 updates [[ccb56286c]](https://github.com/aiidateam/aiida-core/commit/ccb56286c40f6be0d61a0c62442993e43faf1ba6)
+- Dependencies: Update the requirements files [[61ae1a55b]](https://github.com/aiidateam/aiida-core/commit/61ae1a55b94c50979b4e47bb7572e1d4c9b2391f)
+- Disable code coverage in `test-install.yml` [[4cecda517]](https://github.com/aiidateam/aiida-core/commit/4cecda5177c456cee252c16295416c3842bb5d2d)
+- Do not pin the mamba version [[82bba1307]](https://github.com/aiidateam/aiida-core/commit/82bba130792f6c965f0ede8b221eee70fd01d9f1)
+- Fix Docker build not defining `REGISTRY` [[e7953fd4d]](https://github.com/aiidateam/aiida-core/commit/e7953fd4dd14875e380b125b99f86c12ce15359b)
+- Fix publishing to DockerHub using incorrect secret name [[9c9ff7986]](https://github.com/aiidateam/aiida-core/commit/9c9ff79865225b125ba5f9fe23969d4c2c8fb9b2)
+- Fix Slack notification for nightly tests [[082589f45]](https://github.com/aiidateam/aiida-core/commit/082589f456201fbd79d3df809e2cfc5fb5f27922)
+- Fix the `test-install.yml` workflow [[22ea06362]](https://github.com/aiidateam/aiida-core/commit/22ea06362e9de5d314f103332da2e25ae6080f61)
+- Fix the Docker builds [[3404c0192]](https://github.com/aiidateam/aiida-core/commit/3404c01925da941c08f246e231b6587f53ce445b)
+- Increase timeout for the `test-install` workflow [[e36a3f11f]](https://github.com/aiidateam/aiida-core/commit/e36a3f11fdd165eea3af9f3337382e1bbd181390)
+- Move RabbitMQ CI to nightly and update versions [[b47a56698]](https://github.com/aiidateam/aiida-core/commit/b47a56698e8fdf350a10c7abfd8ba00443fabd8d)
+- Refactor the GHA Docker build [[e47932ee9]](https://github.com/aiidateam/aiida-core/commit/e47932ee9e0833dca546c7c7b5b584f2687d9073)
+- Remove `verdi tui` from CLI reference documentation [[1b4a19a44]](https://github.com/aiidateam/aiida-core/commit/1b4a19a44461271aea58e54acd93e896220b413d)
+- Run Docker workflow only for pushes to origin [[b1a714155]](https://github.com/aiidateam/aiida-core/commit/b1a714155ec9e51263e453a4354934fa91d04f33)
+- Tests: Convert hierarchy functions into fixtures [[a02abc470]](https://github.com/aiidateam/aiida-core/commit/a02abc4701e81b75284164510be966ff0fd04dab)
+- Tests: extend `node_and_calc_info` fixture to `core.ssh` [[9cf28f208]](https://github.com/aiidateam/aiida-core/commit/9cf28f20875fe6c3b0f2844bff16415b1dfc7b6f)
+- Tests: Remove test classes for transport plugins [[b77e51f8c]](https://github.com/aiidateam/aiida-core/commit/b77e51f8c15c7ddea80d7d6328737abb705c6ce8)
+- Tests: Unskip test in `tests/cmdline/commands/test_archive_import.py` [[7b7958c7a]](https://github.com/aiidateam/aiida-core/commit/7b7958c7aee150162cb4db0562a7352764a94c04)
+- Update codecov action [[fc2a84d9b]](https://github.com/aiidateam/aiida-core/commit/fc2a84d9bd045d48d46511153dfde389070bf552)
+- Update deprecated `whitelist_externals` option in tox config [[8feef5189]](https://github.com/aiidateam/aiida-core/commit/8feef5189ab9a2ba4b358bb6937d5d7c3f555ad8)
+- Update pre-commit hooks [[3dda84ff3]](https://github.com/aiidateam/aiida-core/commit/3dda84ff3057a97e422b809a6adc778cbf60c125)
+- Update pre-commit requirement `ruff==0.3.5` [[acd54543d]](https://github.com/aiidateam/aiida-core/commit/acd54543dffca05df7189f36c71afd2bb0065f34)
+- Update requirements `mypy` and `pre-commit`[[04b3260a0]](https://github.com/aiidateam/aiida-core/commit/04b3260a098f061301edb0f56f1675fe9283b41b)
+- Update requirements to address deprecation warnings [[566f681f7]](https://github.com/aiidateam/aiida-core/commit/566f681f72426a9a08200ff1d86c604f4c37bbcf)
+- Use `uv` to install package in CI and CD [[73a734ae3]](https://github.com/aiidateam/aiida-core/commit/73a734ae3cd0977a97c631f97ddb781fa293864a)
+- Use recursive dependencies for `pre-commit` extra [[6564e78dd]](https://github.com/aiidateam/aiida-core/commit/6564e78ddb349b89f6a3e9bfa81ce357ce865961)
+
 
 ## v2.5.1 - 2024-01-31
 

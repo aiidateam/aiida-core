@@ -27,7 +27,16 @@ def verdi_profile():
 
 
 def command_create_profile(
-    ctx: click.Context, storage_cls, non_interactive: bool, profile: Profile, set_as_default: bool = True, **kwargs
+    ctx: click.Context,
+    storage_cls,
+    profile: Profile,
+    set_as_default: bool = True,
+    email: str | None = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    institution: str | None = None,
+    use_rabbitmq: bool = True,
+    **kwargs,
 ):
     """Create a new profile, initialise its storage and create a default user.
 
@@ -37,40 +46,53 @@ def command_create_profile(
     :param profile: The profile instance. This is an empty ``Profile`` instance created by the command line argument
         which currently only contains the selected profile name for the profile that is to be created.
     :param set_as_default: Whether to set the created profile as the new default.
+    :param email: Email for the default user.
+    :param first_name: First name for the default user.
+    :param last_name: Last name for the default user.
+    :param institution: Institution for the default user.
+    :param use_rabbitmq: Whether to configure RabbitMQ as the broker.
     :param kwargs: Arguments to initialise instance of the selected storage implementation.
     """
+    from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
+    from aiida.common import docs
     from aiida.plugins.entry_point import get_entry_point_from_class
 
-    if not storage_cls.read_only and kwargs.get('email', None) is None:
+    if not storage_cls.read_only and email is None:
         raise click.BadParameter('The option is required for storages that are not read-only.', param_hint='--email')
-
-    email = kwargs.pop('email')
-    first_name = kwargs.pop('first_name')
-    last_name = kwargs.pop('last_name')
-    institution = kwargs.pop('institution')
 
     _, storage_entry_point = get_entry_point_from_class(storage_cls.__module__, storage_cls.__name__)
     assert storage_entry_point is not None
+
+    broker_backend = None
+    broker_config = None
+
+    if use_rabbitmq:
+        try:
+            broker_config = detect_rabbitmq_config()
+        except ConnectionError as exception:
+            echo.echo_warning(f'RabbitMQ server not reachable: {exception}.')
+        else:
+            echo.echo_success(f'RabbitMQ server detected with connection parameters: {broker_config}')
+            broker_backend = 'core.rabbitmq'
+
+        echo.echo_report('RabbitMQ can be reconfigured with `verdi profile configure-rabbitmq`.')
+    else:
+        echo.echo_report('Creating profile without RabbitMQ.')
+        echo.echo_report('It can be configured at a later point in time with `verdi profile configure-rabbitmq`.')
+        echo.echo_report(f'See {docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
 
     try:
         profile = create_profile(
             ctx.obj.config,
             name=profile.name,
-            email=email,
+            email=email,  # type: ignore[arg-type]
             first_name=first_name,
             last_name=last_name,
             institution=institution,
             storage_backend=storage_entry_point.name,
             storage_config=kwargs,
-            broker_backend='core.rabbitmq',
-            broker_config={
-                'broker_protocol': 'amqp',
-                'broker_username': 'guest',
-                'broker_password': 'guest',
-                'broker_host': '127.0.0.1',
-                'broker_port': 5672,
-                'broker_virtual_host': '',
-            },
+            broker_backend=broker_backend,
+            broker_config=broker_config,
         )
     except (ValueError, TypeError, exceptions.EntryPointError, exceptions.StorageMigrationError) as exception:
         echo.echo_critical(str(exception))
@@ -78,7 +100,7 @@ def command_create_profile(
     echo.echo_success(f'Created new profile `{profile.name}`.')
 
     if set_as_default:
-        ctx.invoke(profile_setdefault, profile=profile)
+        ctx.invoke(profile_set_default, profile=profile)
 
 
 @verdi_profile.group(
@@ -87,16 +109,54 @@ def command_create_profile(
     command=command_create_profile,
     entry_point_group='aiida.storage',
     shared_options=[
-        setup.SETUP_PROFILE(),
+        setup.SETUP_PROFILE_NAME(),
         setup.SETUP_PROFILE_SET_AS_DEFAULT(),
         setup.SETUP_USER_EMAIL(required=False),
         setup.SETUP_USER_FIRST_NAME(),
         setup.SETUP_USER_LAST_NAME(),
         setup.SETUP_USER_INSTITUTION(),
+        setup.SETUP_USE_RABBITMQ(),
     ],
 )
 def profile_setup():
     """Set up a new profile."""
+
+
+@verdi_profile.command('configure-rabbitmq')  # type: ignore[arg-type]
+@arguments.PROFILE(default=defaults.get_default_profile)
+@options.FORCE()
+@setup.SETUP_BROKER_PROTOCOL()
+@setup.SETUP_BROKER_USERNAME()
+@setup.SETUP_BROKER_PASSWORD()
+@setup.SETUP_BROKER_HOST()
+@setup.SETUP_BROKER_PORT()
+@setup.SETUP_BROKER_VIRTUAL_HOST()
+@options.NON_INTERACTIVE(default=True, show_default='--non-interactive')
+@click.pass_context
+def profile_configure_rabbitmq(ctx, profile, non_interactive, force, **kwargs):
+    """Configure RabbitMQ for a profile.
+
+    Enable RabbitMQ for a profile that was created without a broker, or reconfigure existing connection details.
+    """
+    from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
+
+    broker_config = {key: value for key, value in kwargs.items() if key.startswith('broker_')}
+    connection_params = {key.lstrip('broker_'): value for key, value in broker_config.items()}
+
+    try:
+        broker_config = detect_rabbitmq_config(**connection_params)
+    except ConnectionError as exception:
+        echo.echo_warning(f'Unable to connect to RabbitMQ server: {exception}')
+        if not force:
+            click.confirm('Do you want to continue with the provided configuration?', abort=True)
+    else:
+        echo.echo_success('Connected to RabbitMQ with the provided connection parameters')
+
+    profile.set_process_controller(name='core.rabbitmq', config=broker_config)
+    ctx.obj.config.update_profile(profile)
+    ctx.obj.config.store()
+
+    echo.echo_success(f'RabbitMQ configuration for `{profile.name}` updated to: {broker_config}')
 
 
 @verdi_profile.command('list')
@@ -108,9 +168,9 @@ def profile_list():
         # This can happen for a fresh install and the `verdi setup` has not yet been run. In this case it is still nice
         # to be able to see the configuration directory, for instance for those who have set `AIIDA_PATH`. This way
         # they can at least verify that it is correctly set.
-        from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+        from aiida.manage.configuration.settings import AiiDAConfigDir
 
-        echo.echo_report(f'configuration folder: {AIIDA_CONFIG_FOLDER}')
+        echo.echo_report(f'configuration folder: {AiiDAConfigDir.get()}')
         echo.echo_critical(str(exception))
     else:
         echo.echo_report(f'configuration folder: {config.dirpath}')
@@ -147,10 +207,21 @@ def profile_show(profile):
     echo.echo_dictionary(config, fmt='yaml')
 
 
-@verdi_profile.command('setdefault')
+@verdi_profile.command('setdefault', deprecated='Please use `verdi profile set-default` instead.')
 @arguments.PROFILE(required=True, default=None)
 def profile_setdefault(profile):
-    """Set a profile as the default one."""
+    """Set a profile as the default profile."""
+    _profile_set_default(profile)
+
+
+@verdi_profile.command('set-default')
+@arguments.PROFILE(required=True, default=None)
+def profile_set_default(profile):
+    """Set a profile as the default profile."""
+    _profile_set_default(profile)
+
+
+def _profile_set_default(profile):
     try:
         config = get_config()
     except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:

@@ -10,6 +10,7 @@
 
 import numpy
 import pytest
+
 from aiida.common.exceptions import NotExistent
 from aiida.orm import XyData, load_node
 

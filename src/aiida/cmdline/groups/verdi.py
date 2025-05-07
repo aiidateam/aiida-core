@@ -9,6 +9,7 @@ import typing as t
 
 import click
 
+from aiida.cmdline.utils.echo import echo_deprecated
 from aiida.common.exceptions import ConfigurationError
 from aiida.common.extendeddicts import AttributeDict
 from aiida.manage.configuration import get_config
@@ -79,6 +80,43 @@ class VerdiContext(click.Context):
             self.obj = LazyVerdiObjAttributeDict(self)
 
 
+class VerdiCommand(click.Command):
+    """Custom command implementation to customize the logic of printing deprecation messages.
+
+    If a command is deprecated, the :class:`click.Command` adds a deprecation marker in the short help and the full
+    help text, and prints a deprecation warning when the command is invoked. The problem is that the deprecation warning
+    is printed after the prompting for parameters, which for interactive commands mean the deprecation warning comes too
+    late, when the user has already provided all prompts.
+
+    Here, the :meth:`click.Command.parse_args` method is overridden, which is called before the interactive options
+    start to prompt, such that the deprecation warning can be printed. The :meth:`click.Command.invoke` method is also
+    overridden in order to skip the printing of the deprecation message handled by ``click`` as that would result in
+    the deprecation message being printed twice.
+    """
+
+    def parse_args(self, ctx: click.Context, args: t.List[str]) -> t.List[str]:
+        """Given a context and a list of arguments this creates the parser and parses the arguments.
+
+        Then context is modified as necessary.
+
+        This is automatically invoked by :meth:`click.BaseCommand.make_context`.
+        """
+        if self.deprecated:
+            # We are abusing click.Command `deprecated` member variable by using a
+            # string instead of a bool to also use it as optional deprecated message
+            echo_deprecated(
+                self.deprecated
+                if isinstance(self.deprecated, str)  # type: ignore[redundant-expr]
+                else 'This command is deprecated.'
+            )
+
+        return super().parse_args(ctx, args)
+
+    def invoke(self, ctx: click.Context) -> t.Any:
+        if self.callback is not None:
+            return ctx.invoke(self.callback, **ctx.params)
+
+
 class VerdiCommandGroup(click.Group):
     """Subclass of :class:`click.Group` for the ``verdi`` CLI.
 
@@ -87,6 +125,7 @@ class VerdiCommandGroup(click.Group):
     """
 
     context_class = VerdiContext
+    command_class = VerdiCommand
 
     @staticmethod
     def add_verbosity_option(cmd: click.Command) -> click.Command:

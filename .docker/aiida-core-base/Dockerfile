@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Inspired by jupyter's docker-stacks-fundation image:
-# https://github.com/jupyter/docker-stacks/blob/main/docker-stacks-foundation/Dockerfile
+# https://github.com/jupyter/docker-stacks/tree/main/images/docker-stacks-foundation/Dockerfile
 
 ARG BASE=ubuntu:22.04
 
@@ -24,7 +24,7 @@ ENV SYSTEM_USER="${SYSTEM_USER}"
 
 # Install all OS dependencies for notebook server that starts but lacks all
 # features (e.g., download as all possible file formats)
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update --yes && \
     # - apt-get upgrade is run to patch known vulnerabilities in apt-get packages as
     #   the ubuntu base image is rebuilt too seldom sometimes (less than once a month)
@@ -87,7 +87,7 @@ RUN sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /etc/skel/.bashr
    # Add call to conda init script see https://stackoverflow.com/a/58081608/4413446
    echo 'eval "$(command conda shell.bash hook 2> /dev/null)"' >> /etc/skel/.bashrc
 
-# Create SYSTEM_USER with name jovyan user with UID=1000 and in the 'users' group
+# Create $SYSTEM_USER user with UID=1000 and 'users' group
 # and make sure these dirs are writable by the `users` group.
 RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
     sed -i.bak -e 's/^%admin/#%admin/' /etc/sudoers && \
@@ -104,15 +104,12 @@ USER ${SYSTEM_UID}
 # Pin python version here
 ARG PYTHON_VERSION
 
-# Pin mamba version here
-ARG MAMBA_VERSION
-
 # Download and install Micromamba, and initialize Conda prefix.
 #   <https://github.com/mamba-org/mamba#micromamba>
 #   Similar projects using Micromamba:
 #     - Micromamba-Docker: <https://github.com/mamba-org/micromamba-docker>
 #     - repo2docker: <https://github.com/jupyterhub/repo2docker>
-# Install Python, Mamba and jupyter_core
+# Install Python, Mamba
 # Cleanup temporary files and remove Micromamba
 # Correct permissions
 # Do all this in a single RUN command to avoid duplicating all of the
@@ -137,17 +134,18 @@ RUN set -x && \
         --prefix="${CONDA_DIR}" \
         --yes \
         "${PYTHON_SPECIFIER}" \
-        "mamba=${MAMBA_VERSION}" && \
+        mamba && \
     rm micromamba && \
     # Pin major.minor version of python
-    mamba list python | grep '^python ' | tr -s ' ' | cut -d ' ' -f 1,2 >> "${CONDA_DIR}/conda-meta/pinned" && \
+    mamba list python | grep -oP 'python\s+\K[\d.]+' | tr -s ' ' | cut -d ' ' -f 1,2 >> "${CONDA_DIR}/conda-meta/pinned" && \
     mamba clean --all -f -y && \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${SYSTEM_USER}"
 
 # Add ~/.local/bin to PATH where the dependencies get installed via pip
-# This require the package installed with `--user` flag in pip
+# This require the package installed with `--user` flag in pip, which we set as default.
 ENV PATH=${PATH}:/home/${SYSTEM_USER}/.local/bin
+ENV PIP_USER=1
 
 # Switch to root to install AiiDA and set AiiDA as service
 # Install AiiDA from source code
@@ -163,7 +161,6 @@ RUN mkdir -p "${CONDA_DIR}/etc/conda/activate.d" && \
      fix-permissions "${CONDA_DIR}"
 
 # COPY AiiDA profile configuration for profile setup init script
-COPY --chown="${SYSTEM_UID}:${SYSTEM_GID}" s6-assets/config-quick-setup.yaml "/aiida/assets/config-quick-setup.yaml"
 COPY s6-assets/s6-rc.d /etc/s6-overlay/s6-rc.d
 COPY s6-assets/init /etc/init
 RUN mkdir /etc/init/run-before-daemon-start && \

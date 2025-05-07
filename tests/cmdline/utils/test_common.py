@@ -8,7 +8,12 @@
 ###########################################################################
 """Tests for the :mod:`aiida.cmdline.utils.common` module."""
 
+from pathlib import Path
+
+import pytest
+
 from aiida.cmdline.utils import common
+from aiida.cmdline.utils.common import validate_output_filename
 from aiida.common import LinkType
 from aiida.engine import Process, calcfunction
 from aiida.orm import CalcFunctionNode, CalculationNode, WorkflowNode
@@ -88,3 +93,33 @@ def test_print_process_info():
     common.print_process_info(TestProcessWithDocstring)
     common.print_process_info(test_without_docstring)
     common.print_process_info(test_with_docstring)
+
+
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_validate_output_filename():
+    test_entity_label = 'test_code'
+    test_appendix = '@test_computer'
+    fileformat = 'yaml'
+
+    expected_output_file = Path(f'{test_entity_label}{test_appendix}.{fileformat}')
+
+    # Test failure if no actual file to be validated is passed
+    with pytest.raises(TypeError, match='.*passed for validation.'):
+        validate_output_filename(output_file=None)
+
+    # Test failure if file exists, but overwrite False
+    expected_output_file.touch()
+    with pytest.raises(FileExistsError, match='.*use `--overwrite` to overwrite.'):
+        validate_output_filename(output_file=expected_output_file, overwrite=False)
+
+    # Test that overwrite does the job -> No exception raised
+    validate_output_filename(output_file=expected_output_file, overwrite=True)
+    expected_output_file.unlink()
+
+    # Test failure if directory exists
+    expected_output_file.mkdir()
+    with pytest.raises(IsADirectoryError, match='A directory with the name.*'):
+        validate_output_filename(
+            output_file=expected_output_file,
+            overwrite=False,
+        )

@@ -140,8 +140,11 @@ py:meth click.Option.get_default
 py:meth fail
 
 py:class ComputedFieldInfo
+py:class BaseModel
 py:class pydantic.fields.Field
+py:class pydantic.fields.FieldInfo
 py:class pydantic.main.BaseModel
+py:class PluggableSchemaValidator
 
 py:class requests.models.Response
 py:class requests.Response
@@ -156,6 +159,7 @@ py:class frozenset
 
 py:class numpy.bool_
 py:class numpy.ndarray
+py:class np.ndarray
 py:class ndarray
 
 py:class paramiko.proxy.ProxyCommand
@@ -192,8 +196,11 @@ py:class _asyncio.Future
 
 py:class tqdm.std.tqdm
 
+py:class _pytest.tmpdir.TempPathFactory
+py:class pytest.tmpdir.TempPathFactory
 py:class pytest.TempPathFactory
 py:class PGTest
+py:class pgtest.pgtest.PGTest
 
 py:class IPython.core.magic.Magics
 
@@ -206,8 +213,6 @@ py:class flask_restful.Api
 py:class flask_restful.Resource
 py:class flask.app.Flask
 py:class Flask
-
-py:class pytest.tmpdir.TempPathFactory
 
 py:class scoped_session
 py:class sqlalchemy.orm.decl_api.SqliteModel
@@ -233,8 +238,6 @@ py:class yaml.nodes.Node
 py:class yaml.nodes.MappingNode
 py:class yaml.nodes.ScalarNode
 py:class uuid.UUID
-
-py:class psycopg2.extensions.cursor
 
 py:class alembic.config.Config
 py:class alembic.op

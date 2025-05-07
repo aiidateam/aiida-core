@@ -60,7 +60,7 @@ def user_list():
 @click.option(
     '--set-default',
     prompt='Set as default?',
-    help='Set the user as the default user for the current profile.',
+    help='Set the user as the default user.',
     is_flag=True,
     cls=options.interactive.InteractiveOption,
     contextual_default=lambda ctx: ctx.params['user'].is_default,

@@ -9,6 +9,7 @@
 """Tests for `verdi status`."""
 
 import pytest
+
 from aiida import __version__, get_profile
 from aiida.cmdline.commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode
@@ -26,7 +27,7 @@ def test_status(run_cli_command):
     assert 'The daemon is not running' in result.output
     assert result.exit_code is ExitCode.SUCCESS.value
 
-    for string in ['config', 'profile', 'postgres', 'broker', 'daemon']:
+    for string in ['config', 'profile', 'storage', 'broker', 'daemon']:
         assert string in result.output
 
     assert __version__ in result.output
@@ -48,10 +49,11 @@ def test_status_no_rmq(run_cli_command):
     assert 'rabbitmq' not in result.output
     assert result.exit_code is ExitCode.SUCCESS.value
 
-    for string in ['config', 'profile', 'postgres', 'daemon']:
+    for string in ['config', 'profile', 'storage', 'daemon']:
         assert string in result.output
 
 
+@pytest.mark.requires_psql
 def test_storage_unable_to_connect(run_cli_command):
     """Test `verdi status` when there is an unknown error while connecting to the storage."""
     profile = get_profile()
@@ -67,6 +69,7 @@ def test_storage_unable_to_connect(run_cli_command):
         profile._attributes['storage']['config']['database_port'] = old_port
 
 
+@pytest.mark.requires_psql
 def test_storage_incompatible(run_cli_command, monkeypatch):
     """Test `verdi status` when storage schema version is incompatible with that of the code."""
 
@@ -82,6 +85,7 @@ def test_storage_incompatible(run_cli_command, monkeypatch):
     assert result.exit_code is ExitCode.CRITICAL
 
 
+@pytest.mark.requires_psql
 def test_storage_corrupted(run_cli_command, monkeypatch):
     """Test `verdi status` when the storage is found to be corrupt (e.g. non-matching repository UUIDs)."""
 
@@ -95,3 +99,32 @@ def test_storage_corrupted(run_cli_command, monkeypatch):
     result = run_cli_command(cmd_status.verdi_status, raises=True, use_subprocess=False)
     assert 'Storage is corrupted' in result.output
     assert result.exit_code is ExitCode.CRITICAL
+
+
+def test_sqlite_version(run_cli_command, monkeypatch):
+    """Test `verdi status` when the sqlite version is incompatible with the required version.
+    the main functionality of this test is triggered only by the pytest marker 'presto',
+    through `pytest -m 'presto'`"""
+
+    profile = get_profile()
+    storage_backend = profile._attributes['storage']['backend']
+    if storage_backend in ['core.sqlite_dos', 'core.sqlite_zip']:
+        # Should raise if installed version is lower than the supported one.
+        monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '100.0.0')
+        result = run_cli_command(cmd_status.verdi_status, use_subprocess=False, raises=True)
+        assert (
+            'IncompatibleExternalDependencies: Storage backend requires sqlite 100.0.0 or higher. But you have'
+            in result.stderr
+        )
+
+        # Should not raise if installed version is higher than the supported one.
+        monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '0.0.0')
+        result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+
+    else:
+        from unittest.mock import MagicMock
+
+        mock_ = MagicMock()
+        monkeypatch.setattr('aiida.storage.sqlite_zip.backend.validate_sqlite_version', mock_)
+        result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+        assert mock_.call_count == 0

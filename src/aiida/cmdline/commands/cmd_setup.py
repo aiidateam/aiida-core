@@ -8,6 +8,8 @@
 ###########################################################################
 """The `verdi setup` and `verdi quicksetup` commands."""
 
+import pathlib
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -17,7 +19,7 @@ from aiida.cmdline.utils import echo
 from aiida.manage.configuration import Profile, load_profile
 
 
-@verdi.command('setup')
+@verdi.command('setup', deprecated='Please use `verdi profile setup` instead.')
 @options.NON_INTERACTIVE()
 @options_setup.SETUP_PROFILE()
 @options_setup.SETUP_USER_EMAIL()
@@ -67,7 +69,7 @@ def setup(
     test_profile,
     profile_uuid,
 ):
-    """Setup a new profile.
+    """Setup a new profile (use `verdi profile setup`).
 
     This method assumes that an empty PSQL database has been created and that the database user has been created.
     """
@@ -88,7 +90,7 @@ def setup(
             'database_name': db_name,
             'database_username': db_username,
             'database_password': db_password,
-            'repository_uri': f'file://{repository}',
+            'repository_uri': pathlib.Path(f'{repository}').as_uri(),
         },
     )
     profile.set_process_controller(
@@ -136,7 +138,11 @@ def setup(
     echo.echo_success(f'created new profile `{profile.name}`.')
 
 
-@verdi.command('quicksetup')
+@verdi.command(
+    'quicksetup',
+    deprecated='This command is deprecated. For a fully automated alternative, use `verdi presto --use-postgres` '
+    'instead. For full control, use `verdi profile setup core.psql_dos`.',
+)
 @options.NON_INTERACTIVE()
 # Cannot use `default` because that will fail validation of the `ProfileParamType` if the profile already exists and it
 # will be validated before the prompt to choose another. The `contextual_default` however, will not trigger the
@@ -237,8 +243,8 @@ def quicksetup(
         'db_backend': db_backend,
         'db_name': db_name,
         # from now on we connect as the AiiDA DB user, which may be forbidden when going via sockets
-        'db_host': postgres.host_for_psycopg2,
-        'db_port': postgres.port_for_psycopg2,
+        'db_host': postgres.host_for_psycopg,
+        'db_port': postgres.port_for_psycopg,
         'db_username': db_username,
         'db_password': db_password,
         'broker_protocol': broker_protocol,

@@ -8,6 +8,8 @@
 ###########################################################################
 """`verdi computer` command."""
 
+import pathlib
+import traceback
 from copy import deepcopy
 from functools import partial
 from math import isclose
@@ -18,6 +20,7 @@ from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
+from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
@@ -131,18 +134,16 @@ def _computer_create_temp_file(transport, scheduler, authinfo, computer):
     file_content = f"Test from 'verdi computer test' on {datetime.datetime.now().isoformat()}"
     workdir = authinfo.get_workdir().format(username=transport.whoami())
 
-    try:
-        transport.chdir(workdir)
-    except IOError:
-        transport.makedirs(workdir)
-        transport.chdir(workdir)
+    transport.makedirs(workdir, ignore_existing=True)
 
-    with tempfile.NamedTemporaryFile(mode='w+') as tempf:
+    with tempfile.NamedTemporaryFile(mode='w+', delete=False) as tempf:
         fname = os.path.split(tempf.name)[1]
         remote_file_path = os.path.join(workdir, fname)
         tempf.write(file_content)
         tempf.flush()
+        tempf.close()
         transport.putfile(tempf.name, remote_file_path)
+        os.remove(tempf.name)
 
     if not transport.path_exists(remote_file_path):
         return False, f'failed to create the file `{remote_file_path}` on the remote'
@@ -602,7 +603,7 @@ def computer_test(user, print_traceback, computer):
             message += '\n  Use the `--print-traceback` option to see the full traceback.'
 
         echo.echo(message)
-        echo.echo_warning(f'{1} out of {num_tests} tests failed')
+        echo.echo_warning('1 out of 1 tests failed')
 
 
 @verdi_computer.command('delete')
@@ -627,30 +628,35 @@ def computer_delete(computer, dry_run):
     builder = QueryBuilder()
     builder.append(Computer, filters={'label': label}, tag='computer')
     builder.append(Node, with_computer='computer', project=Node.fields.pk)
-    node_pks = builder.all(flat=True)
+    associated_nodes_pk = builder.all(flat=True)
 
-    echo.echo_report(f'This computer has {len(node_pks)} associated nodes')
+    echo.echo_report(f'This computer has {len(associated_nodes_pk)} associated nodes')
 
     def _dry_run_callback(pks):
         if pks:
             echo.echo_report('The nodes with the following pks would be deleted: ' + ' '.join(map(str, pks)))
-            echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
-        confirm = click.prompt('Shall I continue? [yes/N]', type=str) == 'yes'
+            echo.echo_warning(
+                f'YOU ARE ABOUT TO DELETE {len(pks)} NODES AND COMPUTER {label!r}! THIS CANNOT BE UNDONE!'
+            )
+
+        confirm = click.confirm('Shall I continue?', default=False)
         if not confirm:
             raise click.Abort
         return not confirm
 
-    delete_nodes(node_pks, dry_run=dry_run or _dry_run_callback)
+    if associated_nodes_pk:
+        delete_nodes(associated_nodes_pk, dry_run=dry_run or _dry_run_callback)
 
     if dry_run:
         return
 
+    # We delete the computer separately from the associated nodes, since the computer pk is in a different table
     try:
         orm.Computer.collection.delete(computer.pk)
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 
-    echo.echo_success(f'Computer `{label}` {"and all its associated nodes" if node_pks else ""} deleted.')
+    echo.echo_success(f'Computer `{label}` {"and all its associated nodes " if associated_nodes_pk else ""}deleted.')
 
 
 class LazyConfigureGroup(VerdiCommandGroup):
@@ -673,7 +679,7 @@ class LazyConfigureGroup(VerdiCommandGroup):
 
 @verdi_computer.group('configure', cls=LazyConfigureGroup)
 def computer_configure():
-    """Configure the Authinfo details for a computer (and user)."""
+    """Configure the transport for a computer and user."""
 
 
 @computer_configure.command('show')
@@ -730,3 +736,99 @@ def computer_config_show(computer, user, defaults, as_option_string):
             else:
                 table.append((f'* {name}', '-'))
         echo_tabulate(table, tablefmt='plain')
+
+
+@verdi_computer.group('export')
+def computer_export():
+    """Export the setup or configuration of a computer."""
+
+
+@computer_export.command('setup')
+@arguments.COMPUTER()
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
+@options.OVERWRITE()
+@options.SORT()
+@with_dbenv()
+def computer_export_setup(computer, output_file, overwrite, sort):
+    """Export computer setup to a YAML file."""
+    import yaml
+
+    computer_setup = {
+        'label': computer.label,
+        'hostname': computer.hostname,
+        'description': computer.description,
+        'transport': computer.transport_type,
+        'scheduler': computer.scheduler_type,
+        'shebang': computer.get_shebang(),
+        'work_dir': computer.get_workdir(),
+        'mpirun_command': ' '.join(computer.get_mpirun_command()),
+        'mpiprocs_per_machine': computer.get_default_mpiprocs_per_machine(),
+        'default_memory_per_machine': computer.get_default_memory_per_machine(),
+        'use_double_quotes': computer.get_use_double_quotes(),
+        'prepend_text': computer.get_prepend_text(),
+        'append_text': computer.get_append_text(),
+    }
+
+    if output_file is None:
+        output_file = pathlib.Path(f'{computer.label}-setup.yaml')
+    try:
+        validate_output_filename(output_file=output_file, overwrite=overwrite)
+    except (FileExistsError, IsADirectoryError) as exception:
+        raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
+
+    try:
+        output_file.write_text(yaml.dump(computer_setup, sort_keys=sort), 'utf-8')
+    except Exception as e:
+        error_traceback = traceback.format_exc()
+        echo.CMDLINE_LOGGER.debug(error_traceback)
+        echo.echo_critical(
+            f'Unexpected error while exporting setup for Computer<{computer.pk}> {computer.label}:\n ({e!s}).'
+        )
+    else:
+        echo.echo_success(f"Computer<{computer.pk}> {computer.label} setup exported to file '{output_file}'.")
+
+
+@computer_export.command('config')
+@arguments.COMPUTER()
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
+@options.USER(
+    help='Email address of the AiiDA user from whom to export this computer (if different from default user).'
+)
+@options.OVERWRITE()
+@options.SORT()
+@with_dbenv()
+def computer_export_config(computer, output_file, user, overwrite, sort):
+    """Export computer transport configuration for a user to a YAML file."""
+    import yaml
+
+    if not computer.is_configured:
+        echo.echo_critical(
+            f'Computer<{computer.pk}> {computer.label} configuration cannot be exported,'
+            ' because computer has not been configured yet.'
+        )
+    else:
+        if output_file is None:
+            output_file = pathlib.Path(f'{computer.label}-config.yaml')
+        try:
+            validate_output_filename(output_file=output_file, overwrite=overwrite)
+        except (FileExistsError, IsADirectoryError) as exception:
+            raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
+
+    try:
+        computer_configuration = computer.get_configuration(user)
+        output_file.write_text(yaml.dump(computer_configuration, sort_keys=sort), 'utf-8')
+
+    except Exception as exception:
+        error_traceback = traceback.format_exc()
+        echo.CMDLINE_LOGGER.debug(error_traceback)
+        if user is None:
+            echo.echo_critical(
+                f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}: {exception!s}.'  # noqa: E501
+            )
+        else:
+            echo.echo_critical(
+                f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}'
+                f' and User<{user.pk}> {user.email}: {exception!s}.'
+            )
+    else:
+        echo.echo_success(f'Computer<{computer.pk}> {computer.label} configuration exported to file `{output_file}`.')

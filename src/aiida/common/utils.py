@@ -446,20 +446,6 @@ def join_labels(labels, join_symbol='|', threshold=1.0e-6):
     return new_labels
 
 
-def strip_prefix(full_string, prefix):
-    """Strip the prefix from the given string and return it. If the prefix is not present
-    the original string will be returned unaltered
-
-    :param full_string: the string from which to remove the prefix
-    :param prefix: the prefix to remove
-    :return: the string with prefix removed
-    """
-    if full_string.startswith(prefix):
-        return full_string.rsplit(prefix)[1]
-
-    return full_string
-
-
 class Capturing:
     """This class captures stdout and returns it
     (as a list, split by lines).
@@ -572,3 +558,34 @@ class DatetimePrecision:
 
         self.dtobj = dtobj
         self.precision = precision
+
+
+def format_directory_size(size_in_bytes: int) -> str:
+    """Converts a size in bytes to a human-readable string with the appropriate prefix.
+
+    :param size_in_bytes: Size in bytes.
+    :raises ValueError: If the size is negative.
+    :return: Human-readable size string with a prefix (e.g., "1.23 KB", "5.67 MB").
+
+    The function converts a given size in bytes to a more readable format by
+    adding the appropriate unit suffix (e.g., KB, MB, GB). It uses the binary
+    system (base-1024) for unit conversions.
+
+    Example:
+        >>> format_directory_size(123456789)
+        '117.74 MB'
+    """
+    if size_in_bytes < 0:
+        raise ValueError('Size cannot be negative.')
+
+    # Define size prefixes
+    prefixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+    factor = 1024  # 1 KB = 1024 B
+    index = 0
+
+    while size_in_bytes >= factor and index < len(prefixes) - 1:
+        size_in_bytes /= factor
+        index += 1
+
+    # Format the size to two decimal places
+    return f'{size_in_bytes:.2f} {prefixes[index]}'

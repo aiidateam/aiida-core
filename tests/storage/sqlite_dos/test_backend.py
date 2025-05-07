@@ -1,8 +1,10 @@
 """Tests for :mod:`aiida.storage.sqlite_dos.backend`."""
 
 import pathlib
+from unittest.mock import MagicMock
 
 import pytest
+
 from aiida.storage.sqlite_dos.backend import FILENAME_CONTAINER, FILENAME_DATABASE, SqliteDosStorage
 
 
@@ -18,7 +20,6 @@ def test_archive_import(aiida_config, aiida_profile_factory):
     """Test that archives can be imported."""
     from aiida.orm import Node, QueryBuilder
     from aiida.tools.archive.imports import import_archive
-
     from tests.utils.archives import get_archive_file
 
     with aiida_profile_factory(aiida_config, storage_backend='core.sqlite_dos'):
@@ -38,3 +39,16 @@ def test_backup(aiida_config, aiida_profile_factory, tmp_path, manager):
         dirpath_backup = filepath_last.resolve()
         assert (dirpath_backup / FILENAME_DATABASE).exists()
         assert (dirpath_backup / FILENAME_CONTAINER).exists()
+
+
+def test_initialise_version_check(tmp_path, monkeypatch):
+    """Test :meth:`aiida.storage.sqlite_zip.backend.SqliteZipBackend.create_profile`
+    only if calls on validate_sqlite_version."""
+
+    mock_ = MagicMock()
+    monkeypatch.setattr('aiida.storage.sqlite_dos.backend.validate_sqlite_version', mock_)
+
+    # Here, we don't care about functionality of initialise itself, but only that it calls validate_sqlite_version.
+    with pytest.raises(AttributeError):
+        SqliteDosStorage.initialise('')
+    mock_.assert_called_once()

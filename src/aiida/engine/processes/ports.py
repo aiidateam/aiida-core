@@ -8,6 +8,8 @@
 ###########################################################################
 """AiiDA specific implementation of plumpy Ports and PortNamespaces for the ProcessSpec."""
 
+from __future__ import annotations
+
 import re
 import warnings
 from collections.abc import Mapping
@@ -17,16 +19,16 @@ from plumpy import ports
 from plumpy.ports import breadcrumbs_to_port
 
 from aiida.common.links import validate_link_label
-from aiida.orm import Data, Node
+from aiida.orm import Data, Node, to_aiida_type
 
 __all__ = (
-    'PortNamespace',
+    'PORT_NAMESPACE_SEPARATOR',
+    'CalcJobOutputPort',
     'InputPort',
     'OutputPort',
-    'CalcJobOutputPort',
+    'PortNamespace',
     'WithNonDb',
     'WithSerialize',
-    'PORT_NAMESPACE_SEPARATOR',
 )
 
 PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES = 1
@@ -114,6 +116,11 @@ class WithSerialize:
         serializer = kwargs.pop('serializer', None)
         super().__init__(*args, **kwargs)
         self._serializer: Callable[[Any], 'Data'] = serializer
+
+    @property
+    def serializer(self) -> Callable[[Any], 'Data'] | None:
+        """Return the serializer."""
+        return self._serializer
 
     def serialize(self, value: Any) -> 'Data':
         """Serialize the given value, unless it is ``None``, already a Data type, or no serializer function is defined.
@@ -208,6 +215,15 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
 
         if hasattr(port, 'non_db_explicitly_set') and not port.non_db_explicitly_set:  # type: ignore[attr-defined]
             port.non_db = self.non_db  # type: ignore[attr-defined]
+
+        # If the port is not metadata (signified by ``is_metadata`` and ``non_db`` being ``False`` if defined) and it
+        # does not already define a serializer, set the default serializer to ``to_aiida_type``.
+        if (
+            ((hasattr(port, 'is_metadata') and not port.is_metadata) and (hasattr(port, 'non_db') and not port.non_db))
+            and hasattr(port, 'serializer')
+            and port.serializer is None
+        ):
+            port._serializer = to_aiida_type
 
         super().__setitem__(key, port)
 

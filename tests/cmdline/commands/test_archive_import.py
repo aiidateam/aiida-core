@@ -9,11 +9,11 @@
 """Tests for `verdi archive import`."""
 
 import pytest
+
 from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Group
 from aiida.storage.sqlite_zip.migrator import list_versions
 from aiida.tools.archive import ArchiveFormatSqlZip
-
 from tests.utils.archives import get_archive_file
 
 ARCHIVE_PATH = 'export/migrate'
@@ -47,6 +47,19 @@ def test_import_archive(run_cli_command, newest_archive):
 
     options = [] + archives
     run_cli_command(cmd_archive.import_archive, options)
+
+
+@pytest.mark.parametrize(
+    'archive',
+    (
+        get_archive_file('arithmetic.add.aiida', filepath='calcjob'),
+        get_archive_file('export_0.9_simple.aiida', filepath=ARCHIVE_PATH),
+    ),
+)
+def test_import_dry_run(run_cli_command, archive):
+    """Test import dry-run"""
+    result = run_cli_command(cmd_archive.import_archive, [archive, '--dry-run'])
+    assert f'import dry-run of archive {archive} completed' in result.output
 
 
 def test_import_to_group(run_cli_command, newest_archive):
@@ -130,7 +143,6 @@ def test_no_import_group(run_cli_command, newest_archive):
     assert Group.collection.count() == 6
 
 
-@pytest.mark.skip('Due to summary being logged, this can not be checked against `results.output`.')
 def test_comment_mode(run_cli_command, newest_archive):
     """Test toggling comment mode flag"""
     archives = [get_archive_file(newest_archive, filepath=ARCHIVE_PATH)]

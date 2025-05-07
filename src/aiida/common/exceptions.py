@@ -10,48 +10,48 @@
 
 __all__ = (
     'AiidaException',
+    'ClosedStorage',
+    'ConfigurationError',
+    'ConfigurationVersionError',
+    'ContentNotExistent',
+    'CorruptStorage',
+    'DbContentError',
+    'EntryPointError',
+    'FailedError',
+    'FeatureDisabled',
+    'FeatureNotAvailable',
+    'HashingError',
+    'IncompatibleStorageSchema',
+    'InputValidationError',
+    'IntegrityError',
+    'InternalError',
+    'InvalidEntryPointTypeError',
+    'InvalidOperation',
+    'LicensingException',
+    'LoadingEntryPointError',
+    'LockedProfileError',
+    'LockingProfileError',
+    'MissingConfigurationError',
+    'MissingEntryPointError',
+    'ModificationNotAllowed',
+    'MultipleEntryPointError',
+    'MultipleObjectsError',
     'NotExistent',
     'NotExistentAttributeError',
     'NotExistentKeyError',
-    'MultipleObjectsError',
-    'RemoteOperationError',
-    'ContentNotExistent',
-    'FailedError',
-    'StoringNotAllowed',
-    'ModificationNotAllowed',
-    'IntegrityError',
-    'UniquenessError',
-    'EntryPointError',
-    'MissingEntryPointError',
-    'MultipleEntryPointError',
-    'LoadingEntryPointError',
-    'InvalidEntryPointTypeError',
-    'InvalidOperation',
-    'ParsingError',
-    'InternalError',
-    'PluginInternalError',
-    'ValidationError',
-    'ConfigurationError',
-    'ProfileConfigurationError',
-    'MissingConfigurationError',
-    'ConfigurationVersionError',
-    'IncompatibleStorageSchema',
-    'CorruptStorage',
-    'DbContentError',
-    'InputValidationError',
-    'FeatureNotAvailable',
-    'FeatureDisabled',
-    'LicensingException',
-    'TestsNotAllowedError',
-    'UnsupportedSpeciesError',
-    'TransportTaskException',
     'OutputParsingError',
-    'HashingError',
-    'StorageMigrationError',
+    'ParsingError',
+    'PluginInternalError',
+    'ProfileConfigurationError',
+    'RemoteOperationError',
     'StorageBackupError',
-    'LockedProfileError',
-    'LockingProfileError',
-    'ClosedStorage',
+    'StorageMigrationError',
+    'StoringNotAllowed',
+    'TestsNotAllowedError',
+    'TransportTaskException',
+    'UniquenessError',
+    'UnsupportedSpeciesError',
+    'ValidationError',
 )
 
 
@@ -197,6 +197,13 @@ class IncompatibleDatabaseSchema(ConfigurationError):  # noqa: N818
     """Raised when the storage schema is incompatible with that of the code.
 
     Deprecated for ``IncompatibleStorageSchema``
+    """
+
+
+class IncompatibleExternalDependencies(ConfigurationError):  # noqa: N818
+    """Raised when incomptabale external depencies are found.
+
+    This could happen, when the dependency is not a python package and therefore not checked during installation.
     """
 
 

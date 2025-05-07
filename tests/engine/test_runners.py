@@ -13,6 +13,7 @@ import threading
 
 import plumpy
 import pytest
+
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.engine import Process, launch
 from aiida.manage import get_manager
@@ -37,7 +38,7 @@ class Proc(Process):
         super().define(spec)
         spec.input('a')
 
-    def run(self):
+    async def run(self):
         pass
 
 

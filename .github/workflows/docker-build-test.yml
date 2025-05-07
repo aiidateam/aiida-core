@@ -1,0 +1,73 @@
+# This workflow is only meant to be run on PRs from forked repositoritories.
+# The full workflow that is run on pushes to origin is in docker.yml
+# The difference here is that we do not upload to ghcr.io,
+# and thus don't need a GITHUB_TOKEN secret.
+name: Build & Test Docker Images
+
+env:
+  BUILDKIT_PROGRESS: plain
+  FORCE_COLOR: 1
+
+on:
+  pull_request:
+    paths-ignore:
+    - '**.md'
+    - '**.txt'
+    - docs/**
+    - tests/**
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    if: ${{ github.event.pull_request.head.repo.fork }}
+    name: build and test amd64 images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: .docker
+
+    steps:
+
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build images
+      uses: docker/bake-action@v5
+      with:
+        # Load to Docker engine for testing
+        load: true
+        workdir: .docker/
+        set: |
+          *.platform=amd64
+          *.cache-to=type=gha,scope=${{ github.workflow }},mode=min
+          *.cache-from=type=gha,scope=${{ github.workflow }}
+        files: |
+          docker-bake.hcl
+          build.json
+
+    - name: Set Up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: pip
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Test aiida-core-base
+      run: pytest -s --variant aiida-core-base tests/
+
+    - name: Test aiida-core-with-services
+      run: pytest -s --variant aiida-core-with-services tests/
+
+    - name: Test aiida-core-dev
+      run: pytest -s --variant aiida-core-dev tests/

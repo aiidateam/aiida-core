@@ -19,14 +19,13 @@ verdi config set warnings.development_version False
 if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
 
     # Create AiiDA profile.
-    verdi quicksetup              \
-        --non-interactive                            \
-        --profile "${AIIDA_PROFILE_NAME:-default}"            \
-        --email "${AIIDA_USER_EMAIL:-aiida@localhost}"                \
-        --first-name "${AIIDA_USER_FIRST_NAME:-Giuseppe}"      \
-        --last-name "${AIIDA_USER_LAST_NAME:-Verdi}"        \
-        --institution "${AIIDA_USER_INSTITUTION:-Khedivial}"    \
-        --config "${AIIDA_CONFIG_FILE:-/aiida/assets/config-quick-setup.yaml}"
+    verdi presto \
+        --verbosity info \
+        --profile-name "${AIIDA_PROFILE_NAME:-default}" \
+        --email "${AIIDA_USER_EMAIL:-aiida@localhost}" \
+        --use-postgres \
+        --postgres-hostname "${AIIDA_POSTGRES_HOSTNAME:-localhost}" \
+        --postgres-password "${AIIDA_POSTGRES_PASSWORD:-password}"
 
     # Setup and configure local computer.
     computer_name=localhost

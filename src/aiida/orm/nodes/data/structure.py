@@ -14,15 +14,15 @@ import copy
 import functools
 import itertools
 import json
-from typing import List, Optional
+import typing as t
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
-from aiida.orm.fields import add_field
+from aiida.common.pydantic import MetadataField
 
 from .data import Data
 
-__all__ = ('StructureData', 'Kind', 'Site')
+__all__ = ('Kind', 'Site', 'StructureData')
 
 # Threshold used to check if the mass of two different Site objects is the same.
 
@@ -696,42 +696,32 @@ class StructureData(Data):
     _dimensionality_label = {0: '', 1: 'length', 2: 'surface', 3: 'volume'}
     _internal_kind_tags = None
 
-    __qb_fields__ = [
-        add_field(
-            'pbc1',
-            dtype=bool,
-            doc='Whether periodic in the a direction',
-        ),
-        add_field(
-            'pbc2',
-            dtype=bool,
-            doc='Whether periodic in the b direction',
-        ),
-        add_field(
-            'pbc3',
-            dtype=bool,
-            doc='Whether periodic in the c direction',
-        ),
-        add_field(
-            'cell',
-            dtype=List[List[float]],
-            doc='The cell parameters',
-        ),
-        add_field(
-            'kinds',
-            dtype=Optional[List[dict]],
-            doc='The kinds of atoms',
-        ),
-        add_field(
-            'sites',
-            dtype=Optional[List[dict]],
-            doc='The atomic sites',
-        ),
-    ]
+    class Model(Data.Model):
+        pbc1: bool = MetadataField(description='Whether periodic in the a direction')
+        pbc2: bool = MetadataField(description='Whether periodic in the b direction')
+        pbc3: bool = MetadataField(description='Whether periodic in the c direction')
+        cell: t.List[t.List[float]] = MetadataField(description='The cell parameters')
+        kinds: t.Optional[t.List[dict]] = MetadataField(description='The kinds of atoms')
+        sites: t.Optional[t.List[dict]] = MetadataField(description='The atomic sites')
 
     def __init__(
-        self, cell=None, pbc=None, ase=None, pymatgen=None, pymatgen_structure=None, pymatgen_molecule=None, **kwargs
+        self,
+        cell=None,
+        pbc=None,
+        ase=None,
+        pymatgen=None,
+        pymatgen_structure=None,
+        pymatgen_molecule=None,
+        pbc1=None,
+        pbc2=None,
+        pbc3=None,
+        kinds=None,
+        sites=None,
+        **kwargs,
     ):
+        if pbc1 is not None and pbc2 is not None and pbc3 is not None:
+            pbc = [pbc1, pbc2, pbc3]
+
         args = {
             'cell': cell,
             'pbc': pbc,
@@ -768,6 +758,12 @@ class StructureData(Data):
             if pbc is None:
                 pbc = [True, True, True]
             self.set_pbc(pbc)
+
+            if kinds is not None:
+                self.base.attributes.set('kinds', kinds)
+
+            if sites is not None:
+                self.base.attributes.set('sites', sites)
 
     def get_dimensionality(self):
         """Return the dimensionality of the structure and its length/surface/volume.
@@ -1532,7 +1528,7 @@ class StructureData(Data):
         return [k.name for k in self.kinds]
 
     @property
-    def cell(self) -> List[List[float]]:
+    def cell(self) -> t.List[t.List[float]]:
         """Returns the cell shape.
 
         :return: a 3x3 list of lists.
@@ -1616,6 +1612,18 @@ class StructureData(Data):
             self.clear_sites()
             for this_new_site in new_sites:
                 self.append_site(this_new_site)
+
+    @property
+    def pbc1(self):
+        return self.base.attributes.get('pbc1')
+
+    @property
+    def pbc2(self):
+        return self.base.attributes.get('pbc2')
+
+    @property
+    def pbc3(self):
+        return self.base.attributes.get('pbc3')
 
     @property
     def pbc(self):

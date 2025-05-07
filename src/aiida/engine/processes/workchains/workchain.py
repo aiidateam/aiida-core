@@ -35,7 +35,7 @@ from .awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_aw
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner
 
-__all__ = ('WorkChain', 'if_', 'while_', 'return_')
+__all__ = ('WorkChain', 'if_', 'return_', 'while_')
 
 
 class WorkChainSpec(ProcessSpec, PlumpyWorkChainSpec):
@@ -208,7 +208,7 @@ class WorkChain(Process, metaclass=Protect):
             #   (subclasses of AttributeDict) but after resolution of an Awaitable this will be the value itself
             # * assumption: a resolved value is never a plain AttributeDict, on the other hand if a resolved Awaitable
             #   would be an AttributeDict we can append things to it since the order of tasks is maintained.
-            if type(ctx) != AttributeDict:
+            if type(ctx) is not AttributeDict:
                 raise ValueError(
                     f'Can not update the context for key `{key}`:'
                     f' found instance of `{type(ctx)}` at `{".".join(ctx_path[:index+1])}`, expected AttributeDict'
@@ -297,7 +297,7 @@ class WorkChain(Process, metaclass=Protect):
 
     @override
     @Protect.final
-    def run(self) -> t.Any:
+    async def run(self) -> t.Any:
         self._stepper = self.spec().get_outline().create_stepper(self)  # type: ignore[arg-type]
         return self._do_step()
 

@@ -20,14 +20,14 @@ There are several methods which the internal classes of AiiDA use to control the
 
 On the level of the generic :class:`orm.Node <aiida.orm.Node>` class:
 
-* The :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` property determines whether a particular node can be used as a cache.
+* The :attr:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` property determines whether a particular node can be used as a cache.
   This is used for example to disable caching from failed calculations.
 * Node classes have a ``_cachable`` attribute, which can be set to ``False`` to completely switch off caching for nodes of that class.
   This avoids performing queries for the hash altogether.
 
 On the level of the :class:`Process <aiida.engine.processes.process.Process>` and :class:`orm.ProcessNode <aiida.orm.ProcessNode>` classes:
 
-* The :meth:`ProcessNodeCaching.is_valid_cache <aiida.orm.nodes.process.process.ProcessNodeCaching.is_valid_cache>` calls :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>`, passing the node itself.
+* The :attr:`ProcessNodeCaching.is_valid_cache <aiida.orm.nodes.process.process.ProcessNodeCaching.is_valid_cache>` calls :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>`, passing the node itself.
   This can be used in :class:`~aiida.engine.processes.process.Process` subclasses (e.g. in calculation plugins) to implement custom ways of invalidating the cache.
 * The :meth:`ProcessNodeCaching._hash_ignored_inputs <aiida.orm.nodes.process.process.ProcessNodeCaching._hash_ignored_inputs>` attribute lists the inputs that should be ignored when creating the hash.
   This is checked by the :meth:`ProcessNodeCaching.get_objects_to_hash <aiida.orm.nodes.process.process.ProcessNodeCaching.get_objects_to_hash>` method.

@@ -10,6 +10,7 @@
 
 import numpy
 import pytest
+
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 from aiida.storage.psql_dos.backend import get_filepath_container
@@ -73,7 +74,7 @@ def test_traj_data(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('django@django_0027')
 
     # it should no longer be in the repository
-    with pytest.raises(IOError):
+    with pytest.raises(OSError):
         utils.load_numpy_array_from_repository(repo_path, node_uuid, name)
 
     # and instead, it should be in the attributes

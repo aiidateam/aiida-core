@@ -19,6 +19,7 @@ from functools import partial
 from unittest.mock import patch
 
 import pytest
+
 from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.common.datastructures import FileCopyOperation
@@ -1095,11 +1096,60 @@ def test_additional_retrieve_list(generate_process, fixture_sandbox):
         ({'target_base': '/path'}, '`metadata.options.stash.source_list` should be'),
         ({'target_base': '/path', 'source_list': ['/abspath']}, '`metadata.options.stash.source_list` should be'),
         (
-            {'target_base': '/path', 'source_list': ['rel/path'], 'mode': 'test'},
-            '`metadata.options.stash.mode` should be',
+            {'target_base': '/path', 'source_list': ['rel/path'], 'stash_mode': 'test'},
+            '`metadata.options.stash.stash_mode` should be',
         ),
-        ({'target_base': '/path', 'source_list': ['rel/path']}, None),
-        ({'target_base': '/path', 'source_list': ['rel/path'], 'mode': StashMode.COPY.value}, None),
+        ({'target_base': '/path', 'source_list': ['rel/path']}, '`metadata.options.stash.stash_mode` should be'),
+        ({'target_base': '/path', 'source_list': ['rel/path'], 'stash_mode': StashMode.COPY.value}, None),
+        (
+            {'target_base': '/path', 'source_list': ['rel/path'], 'stash_mode': StashMode.COMPRESS_TAR.value},
+            '`metadata.options.stash.dereference` should be',
+        ),
+        (
+            {
+                'target_base': '/path',
+                'source_list': ['rel/path'],
+                'stash_mode': StashMode.COMPRESS_TAR.value,
+                'dereference': 'True',
+            },
+            '`metadata.options.stash.dereference` should be',
+        ),
+        (
+            {
+                'target_base': '/path',
+                'source_list': ['rel/path'],
+                'stash_mode': StashMode.COMPRESS_TARBZ2.value,
+                'dereference': True,
+            },
+            None,
+        ),
+        (
+            {
+                'target_base': '/path',
+                'source_list': ['rel/path'],
+                'stash_mode': StashMode.COMPRESS_TARGZ.value,
+                'dereference': True,
+            },
+            None,
+        ),
+        (
+            {
+                'target_base': '/path',
+                'source_list': ['rel/path'],
+                'stash_mode': StashMode.COMPRESS_TARXZ.value,
+                'dereference': True,
+            },
+            None,
+        ),
+        (
+            {
+                'target_base': '/path',
+                'source_list': ['rel/path'],
+                'stash_mode': StashMode.COPY.value,
+                'dereference': True,
+            },
+            '`metadata.options.stash.dereference` is only valid for compression stashing modes',
+        ),
     ),
 )
 def test_validate_stash_options(stash_options, expected):
@@ -1273,10 +1323,10 @@ def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, c
 
 
 def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
-    """Test that a job is terminated if ``Scheduler.submit_from_script`` returns an exit code.
+    """Test that a job is terminated if ``Scheduler.submit_job`` returns an exit code.
 
     To simulate this situation we monkeypatch ``DirectScheduler._parse_submit_output`` because that is the method that
-    is called internally by ``Scheduler.submit_from_script`` and it returns its result, and the ``DirectScheduler`` is
+    is called internally by ``Scheduler.submit_job`` and it returns its result, and the ``DirectScheduler`` is
     the plugin that is used by the localhost computer used in the inputs for this calcjob.
     """
     from aiida.schedulers.plugins.direct import DirectScheduler
@@ -1292,6 +1342,7 @@ def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
     assert node.exit_status == 418
 
 
+@pytest.mark.requires_rmq
 def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_and_await):
     """Test that a job can be restarted when it is launched and the daemon is restarted.
 

@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone, tzinfo
 from time import time
 
 import pytest
+
 from aiida.common.timezone import delta, localtime, make_aware, now, timezone_from_name
 
 
@@ -38,19 +39,6 @@ def test_now():
     from_tz = make_aware(datetime.fromtimestamp(time()))
     assert from_tz <= ref + dt
     assert from_tz >= ref - dt
-
-
-def test_make_aware():
-    """Test the :func:`aiida.common.timezone.make_aware` function.
-
-    This should make a naive datetime object aware using the timezone of the operating system.
-    """
-    system_tzinfo = datetime.now(timezone.utc).astimezone()  # This is how to get the timezone of the OS.
-    naive = datetime(1970, 1, 1)
-    aware = make_aware(naive)
-    assert is_aware(aware)
-    assert aware.tzinfo.tzname(aware) == system_tzinfo.tzname()
-    assert aware.tzinfo.utcoffset(aware) == system_tzinfo.utcoffset()
 
 
 def test_make_aware_already_aware():

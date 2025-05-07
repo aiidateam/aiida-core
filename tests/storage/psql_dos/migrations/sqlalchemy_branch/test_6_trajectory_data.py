@@ -12,6 +12,7 @@
 
 import numpy as np
 import pytest
+
 from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
@@ -96,5 +97,5 @@ def test_trajectory_data(perform_migrations: PsqlDosMigrator):
         assert node.attributes['symbols'] == ['H', 'O', 'C']
         assert get_node_array(node, repo_path, 'velocities').tolist() == velocities.tolist()
         assert get_node_array(node, repo_path, 'positions').tolist() == positions.tolist()
-        with pytest.raises(IOError):
+        with pytest.raises(OSError):
             get_node_array(node, repo_path, 'symbols')

@@ -29,7 +29,7 @@ __all__ = ('BaseRestartWorkChain',)
 
 
 def validate_handler_overrides(
-    process_class: 'BaseRestartWorkChain', handler_overrides: Optional[orm.Dict], ctx: 'PortNamespace'
+    process_class: type['BaseRestartWorkChain'], handler_overrides: Optional[orm.Dict], ctx: 'PortNamespace'
 ) -> Optional[str]:
     """Validator for the ``handler_overrides`` input port of the ``BaseRestartWorkChain``.
 
@@ -424,7 +424,7 @@ class BaseRestartWorkChain(WorkChain):
                 try:
                     called_descendant.outputs.remote_folder._clean()
                     cleaned_calcs.append(str(called_descendant.pk))
-                except (IOError, OSError, KeyError):
+                except (OSError, OSError, KeyError):
                     pass
 
         if cleaned_calcs:

@@ -68,6 +68,8 @@ class Manager:
 
     def __init__(self) -> None:
         """Construct a new instance."""
+        from aiida.common.log import AIIDA_LOGGER
+
         # note: the config currently references the global variables
         self._broker: Optional['Broker'] = None
         self._profile: Optional['Profile'] = None
@@ -76,6 +78,7 @@ class Manager:
         self._process_controller: Optional['RemoteProcessThreadController'] = None
         self._persister: Optional['AiiDAPersister'] = None
         self._runner: Optional['Runner'] = None
+        self.logger = AIIDA_LOGGER.getChild(__name__)
 
     @staticmethod
     def get_config(create=False) -> 'Config':
@@ -165,8 +168,15 @@ class Manager:
 
     def reset_broker(self) -> None:
         """Reset the communicator."""
+        from concurrent import futures
+
         if self._broker is not None:
+            try:
+                self._broker.close()
+            except futures.TimeoutError as exception:
+                self.logger.warning(f'Call to close the broker timed out: {exception}')
             self._broker.close()
+
         self._broker = None
         self._process_controller = None
 
@@ -420,7 +430,7 @@ class Manager:
         if with_persistence and 'persister' not in settings:
             settings['persister'] = self.get_persister()
 
-        return runners.Runner(**settings)
+        return runners.Runner(**settings)  # type: ignore[arg-type]
 
     def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
         """Create and return a new daemon runner.

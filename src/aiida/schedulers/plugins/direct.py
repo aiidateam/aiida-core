@@ -8,10 +8,14 @@
 ###########################################################################
 """Plugin for direct execution."""
 
+from typing import Union
+
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError
 from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
+
+from .bash import BashCliScheduler
 
 ## From the ps man page on Mac OS X 10.12
 #     state     The state is given by a sequence of characters, for example,
@@ -74,7 +78,7 @@ class DirectJobResource(NodeNumberJobResource):
         return False
 
 
-class DirectScheduler(aiida.schedulers.Scheduler):
+class DirectScheduler(BashCliScheduler):
     """Support for the direct execution bypassing schedulers."""
 
     _logger = aiida.schedulers.Scheduler._logger.getChild('direct')
@@ -188,7 +192,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             directory.
             IMPORTANT: submit_script should be already escaped.
         """
-        submit_command = f'bash {submit_script} > /dev/null 2>&1 & echo $!'
+        submit_command = f'(bash {submit_script} > /dev/null 2>&1 & echo $!) &'
 
         self.logger.info(f'submitting with: {submit_command}')
 
@@ -352,13 +356,28 @@ class DirectScheduler(aiida.schedulers.Scheduler):
 
         return stdout.strip()
 
-    def _get_kill_command(self, jobid):
-        """Return the command to kill the job with specified jobid."""
-        submit_command = f'kill {jobid}'
+    def _get_kill_command(self, jobid: Union[int, str]) -> str:
+        """Return the command to kill the process with specified id and all its descendants.
+
+        :param jobid: The job id is in the case of the
+                :py:class:`~aiida.schedulers.plugins.direct.DirectScheduler` the process id.
+
+        :return: A string containing the kill command.
+        """
+        from psutil import Process
+
+        # get a list of the process id of all descendants
+        process = Process(int(jobid))
+        children = process.children(recursive=True)
+        jobids = [str(jobid)]
+        jobids.extend([str(child.pid) for child in children])
+        jobids_str = ' '.join(jobids)
+
+        kill_command = f'kill {jobids_str}'
 
         self.logger.info(f'killing job {jobid}')
 
-        return submit_command
+        return kill_command
 
     def _parse_kill_output(self, retval, stdout, stderr):
         """Parse the output of the kill command.

@@ -10,13 +10,13 @@
 
 import os
 import pathlib
-from typing import Optional
+import typing as t
 
 from aiida.common import exceptions
 from aiida.common.log import override_log_level
+from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.orm import Computer
-from aiida.orm.fields import add_field
 
 from .abstract import AbstractCode
 
@@ -39,38 +39,21 @@ class Code(AbstractCode):
     for the code to be run).
     """
 
-    __qb_fields__ = [
-        add_field(
-            'prepend_text',
-            dtype=Optional[str],
-            doc='The code that will be put in the scheduler script before the execution of the code',
-        ),
-        add_field(
-            'append_text',
-            dtype=Optional[str],
-            doc='The code that will be put in the scheduler script after the execution of the code',
-        ),
-        add_field(
-            'input_plugin',
-            dtype=Optional[str],
-            doc='The name of the input plugin to be used for this code',
-        ),
-        add_field(
-            'local_executable',
-            dtype=Optional[str],
-            doc='Path to a local executable',
-        ),
-        add_field(
-            'remote_exec_path',
-            dtype=Optional[str],
-            doc='Remote path to executable',
-        ),
-        add_field(
-            'is_local',
-            dtype=Optional[bool],
-            doc='Whether the code is local or remote',
-        ),
-    ]
+    class Model(AbstractCode.Model):
+        prepend_text: str = MetadataField(
+            '',
+            description='The code that will be put in the scheduler script before the execution of the code',
+        )
+        append_text: str = MetadataField(
+            '',
+            description='The code that will be put in the scheduler script after the execution of the code',
+        )
+        input_plugin: t.Optional[str] = MetadataField(
+            description='The name of the input plugin to be used for this code'
+        )
+        local_executable: t.Optional[str] = MetadataField(description='Path to a local executable')
+        remote_exec_path: t.Optional[str] = MetadataField(description='Remote path to executable')
+        is_local: t.Optional[bool] = MetadataField(description='Whether the code is local or remote')
 
     def __init__(self, remote_computer_exec=None, local_executable=None, input_plugin_name=None, files=None, **kwargs):
         super().__init__(**kwargs)
@@ -123,7 +106,7 @@ class Code(AbstractCode):
         type_check(computer, orm.Computer)
         return computer.pk == self.get_remote_computer().pk
 
-    def get_executable(self) -> pathlib.PurePosixPath:
+    def get_executable(self) -> pathlib.PurePath:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
@@ -133,7 +116,7 @@ class Code(AbstractCode):
         else:
             exec_path = self.get_remote_exec_path()
 
-        return pathlib.PurePosixPath(exec_path)
+        return pathlib.PurePath(exec_path)
 
     def hide(self):
         """Hide the code (prevents from showing it in the verdi code list)"""

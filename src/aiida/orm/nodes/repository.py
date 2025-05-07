@@ -14,13 +14,12 @@ from aiida.common import exceptions
 from aiida.manage import get_config_option
 
 if t.TYPE_CHECKING:
+    from aiida.common.typing import FilePath
     from aiida.repository import File, Repository
 
     from .node import Node
 
 __all__ = ('NodeRepository',)
-
-FilePath = t.Union[str, pathlib.PurePosixPath]
 
 
 class NodeRepository:
@@ -133,6 +132,20 @@ class NodeRepository:
         :param repo: the repository to clone.
         """
         self._repository.clone(repo._repository)
+
+    def serialize_content(self) -> dict[str, bytes]:
+        """Serialize the content of the repository content into a JSON-serializable format.
+
+        :return: dictionary with the content metadata.
+        """
+        serialized = {}
+
+        for dirpath, _, filenames in self.walk():
+            for filename in filenames:
+                filepath = dirpath / filename
+                serialized[str(filepath)] = self.get_object_content(str(filepath), mode='rb')
+
+        return serialized
 
     def serialize(self) -> dict:
         """Serialize the metadata of the repository content into a JSON-serializable format.
@@ -317,7 +330,7 @@ class NodeRepository:
         self._repository.put_object_from_tree(filepath, path)
         self._update_repository_metadata()
 
-    def walk(self, path: FilePath | None = None) -> t.Iterable[tuple[pathlib.PurePosixPath, list[str], list[str]]]:
+    def walk(self, path: FilePath | None = None) -> t.Iterable[tuple[pathlib.PurePath, list[str], list[str]]]:
         """Walk over the directories and files contained within this repository.
 
         .. note:: the order of the dirname and filename lists that are returned is not necessarily sorted. This is in
@@ -326,11 +339,11 @@ class NodeRepository:
         :param path: the relative path of the directory within the repository whose contents to walk.
         :return: tuples of root, dirnames and filenames just like ``os.walk``, with the exception that the root path is
             always relative with respect to the repository root, instead of an absolute path and it is an instance of
-            ``pathlib.PurePosixPath`` instead of a normal string
+            ``pathlib.PurePath`` instead of a normal string
         """
         yield from self._repository.walk(path)
 
-    def glob(self) -> t.Iterable[pathlib.PurePosixPath]:
+    def glob(self) -> t.Iterable[pathlib.PurePath]:
         """Yield a recursive list of all paths (files and directories)."""
         for dirpath, dirnames, filenames in self.walk():
             for dirname in dirnames:

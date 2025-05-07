@@ -9,6 +9,7 @@
 """`verdi data core.remote` command."""
 
 import stat
+from pathlib import Path
 
 import click
 
@@ -39,7 +40,7 @@ def remote_ls(ls_long, path, datum):
 
     try:
         content = datum.listdir_withattributes(path=path)
-    except (IOError, OSError) as err:
+    except OSError as err:
         echo.echo_critical(f'Unable to access the remote folder or file, check if it exists.\nOriginal error: {err!s}')
     for metadata in content:
         if ls_long:
@@ -71,7 +72,7 @@ def remote_cat(datum, path):
             datum.getfile(path, tmpf.name)
             with open(tmpf.name, encoding='utf8') as fhandle:
                 sys.stdout.write(fhandle.read())
-    except IOError as err:
+    except OSError as err:
         echo.echo_critical(f'{err.errno}: {err!s}')
 
     try:
@@ -87,3 +88,43 @@ def remote_show(datum):
     """Show information for a RemoteData object."""
     echo.echo(f'- Remote computer name: {datum.computer.label}')
     echo.echo(f'- Remote folder full path: {datum.get_remote_path()}')
+
+
+@remote.command('size')
+@arguments.NODE()
+@click.option(
+    '-m',
+    '--method',
+    type=click.STRING,
+    default='du',
+    help='The method that should be used to evaluate the size (either ``du`` or ``stat``.)',
+)
+@click.option(
+    '-p',
+    '--path',
+    type=click.Path(),
+    default=None,
+    help='Relative path of the object of the ``RemoteData`` node for which the size should be evaluated.',
+)
+@click.option(
+    '-b',
+    '--bytes',
+    'return_bytes',
+    type=bool,
+    is_flag=True,
+    default=False,
+    help='Return the size in bytes or human-readable format?',
+)
+def remote_size(node, method, path, return_bytes):
+    """Obtain the total size of a file or directory at a given path that is stored via a ``RemoteData`` object."""
+    try:
+        # `method` might change, if `du` fails, so assigning to new variable here
+        total_size, used_method = node.get_size_on_disk(relpath=path, method=method, return_bytes=return_bytes)
+        remote_path = Path(node.get_remote_path())
+        full_path = remote_path / path if path is not None else remote_path
+        echo.echo_success(
+            f'Estimated total size of path `{full_path}` on the Computer '
+            f'<{node.computer.label}> obtained via `{used_method}`: {total_size}'
+        )
+    except (OSError, FileNotFoundError, NotImplementedError) as exc:
+        echo.echo_critical(str(exc))

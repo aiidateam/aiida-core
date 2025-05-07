@@ -10,19 +10,21 @@
 
 from contextlib import suppress
 
+import pytest
 import yaml
-from aiida import get_profile
-from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
-from aiida.storage.sqlite_zip import models, utils
-from aiida.storage.sqlite_zip.migrator import get_schema_version_head, migrate
 from archive_path import extract_file_in_zip
 from sqlalchemy import String, inspect
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Inspector
 
+from aiida import get_profile
+from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
+from aiida.storage.sqlite_zip import models, utils
+from aiida.storage.sqlite_zip.migrator import get_schema_version_head, migrate
 from tests.utils.archives import get_archive_file
 
 
+@pytest.mark.requires_psql
 def test_psql_sync_init(tmp_path):
     """Test the schema is in-sync with the ``psql_dos`` backend, when initialising a new archive."""
     # note, directly using the global profile's engine here left connections open
@@ -38,6 +40,7 @@ def test_psql_sync_init(tmp_path):
             raise AssertionError(f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}')
 
 
+@pytest.mark.requires_psql
 def test_psql_sync_migrate(tmp_path):
     """Test the schema is in-sync with the ``psql_dos`` backend, when migrating an old archive to the latest version."""
     # note, directly using the global profile's engine here left connections open

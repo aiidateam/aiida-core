@@ -9,6 +9,7 @@
 """Tests for the `verdi group` command."""
 
 import pytest
+
 from aiida import orm
 from aiida.cmdline.commands import cmd_group
 from aiida.cmdline.utils.echo import ExitCode
@@ -109,48 +110,217 @@ class TestVerdiGroup:
         orm.Group(label='group_test_delete_01').store()
         orm.Group(label='group_test_delete_02').store()
         orm.Group(label='group_test_delete_03').store()
+        do_not_delete_user = orm.User(email='user0@example.com')
+        do_not_delete_group = orm.Group(label='do_not_delete_group', user=do_not_delete_user).store()
+        do_not_delete_node = orm.CalculationNode().store()
+        do_not_delete_group.add_nodes(do_not_delete_node)
+        do_not_delete_user.store()
 
-        # dry run
-        result = run_cli_command(cmd_group.group_delete, ['--dry-run', 'group_test_delete_01'], use_subprocess=True)
+        # 0) do nothing if no groups or no filters are passed
+        result = run_cli_command(cmd_group.group_delete, ['--force'])
+        assert 'Nothing happened' in result.output
+
+        # 1) dry run
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--dry-run', 'group_test_delete_01'],
+        )
         orm.load_group(label='group_test_delete_01')
 
-        result = run_cli_command(cmd_group.group_delete, ['--force', 'group_test_delete_01'], use_subprocess=True)
+        # 2) Delete group, basic test
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', 'group_test_delete_01'],
+        )
+        assert 'do_not_delete_group' not in result.output
 
-        # Verify that removed group is not present in list
-        result = run_cli_command(cmd_group.group_list, use_subprocess=True)
+        result = run_cli_command(
+            cmd_group.group_list,
+        )
         assert 'group_test_delete_01' not in result.output
 
+        # 3) Add some nodes and then use `verdi group delete` to delete a group that contains nodes
         node_01 = orm.CalculationNode().store()
         node_02 = orm.CalculationNode().store()
         node_pks = {node_01.pk, node_02.pk}
 
-        # Add some nodes and then use `verdi group delete` to delete a group that contains nodes
         group = orm.load_group(label='group_test_delete_02')
         group.add_nodes([node_01, node_02])
         assert group.count() == 2
 
-        result = run_cli_command(cmd_group.group_delete, ['--force', 'group_test_delete_02'], use_subprocess=True)
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', 'group_test_delete_02'],
+        )
 
         with pytest.raises(exceptions.NotExistent):
             orm.load_group(label='group_test_delete_02')
 
-        # check nodes still exist
         for pk in node_pks:
             orm.load_node(pk)
 
-        # delete the group and the nodes it contains
+        # 4) Delete the group and the nodes it contains
         group = orm.load_group(label='group_test_delete_03')
         group.add_nodes([node_01, node_02])
         result = run_cli_command(
-            cmd_group.group_delete, ['--force', '--delete-nodes', 'group_test_delete_03'], use_subprocess=True
+            cmd_group.group_delete,
+            ['--force', '--delete-nodes', 'group_test_delete_03'],
         )
 
-        # check group and nodes no longer exist
         with pytest.raises(exceptions.NotExistent):
             orm.load_group(label='group_test_delete_03')
         for pk in node_pks:
             with pytest.raises(exceptions.NotExistent):
                 orm.load_node(pk)
+
+        # 5) Should delete an empty group even if --delete-nodes option is passed
+        group = orm.Group(label='group_test_delete_04').store()
+        result = run_cli_command(cmd_group.group_delete, ['--force', '--delete-nodes', 'group_test_delete_04'])
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_group(label='group_test_delete_04')
+
+        # 6) Should raise if a group does not exist
+        result = run_cli_command(cmd_group.group_delete, ['--force', 'non_existent_group'], raises=True)
+        assert b'no Group found with LABEL<non_existent_group>' in result.stderr_bytes
+
+        # 7) Should delete multiple groups
+        orm.Group(label='group_test_delete_05').store()
+        orm.Group(label='group_test_delete_06').store()
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', 'group_test_delete_05', 'group_test_delete_06'],
+        )
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_group(label='group_test_delete_05')
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_group(label='group_test_delete_06')
+        assert 'do_not_delete_group' not in result.output
+
+        # 8) Should raise if both groups and query options are passed
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', 'do_not_delete_group', '--all-users'],
+            raises=True,
+        )
+        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', 'do_not_delete_group', '--user', do_not_delete_user.email],
+            raises=True,
+        )
+        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', 'do_not_delete_group', '--type-string', 'non_existent'],
+            raises=True,
+        )
+        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', 'do_not_delete_group', '--past-days', '1'],
+            raises=True,
+        )
+        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', 'do_not_delete_group', '--startswith', 'non_existent'],
+            raises=True,
+        )
+        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', 'do_not_delete_group', '--endswith', 'non_existent'],
+            raises=True,
+        )
+        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', 'do_not_delete_group', '--contains', 'non_existent'],
+            raises=True,
+        )
+        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', 'do_not_delete_group', '--node', do_not_delete_node.pk],
+            raises=True,
+        )
+        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+
+        # 9) --user should delete groups for a specific user
+        #   --all-users should delete groups for all users
+        user1 = orm.User(email='user1@example.com')
+        user2 = orm.User(email='user2@example.com')
+        user3 = orm.User(email='user3@example.com')
+        user1.store()
+        user2.store()
+        user3.store()
+
+        orm.Group(label='group_test_delete_08', user=user1).store()
+        orm.Group(label='group_test_delete_09', user=user2).store()
+        orm.Group(label='group_test_delete_10', user=user3).store()
+
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', '--user', user1.email],
+        )
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_group(label='group_test_delete_08')
+        assert 'group_test_delete_09' not in result.output
+        assert 'group_test_delete_10' not in result.output
+
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', '--all-users'],
+        )
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_group(label='group_test_delete_09')
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_group(label='group_test_delete_10')
+
+        # 10) --startswith, --endswith, --contains should delete groups with labels that match the filter
+        orm.Group(label='START_13').store()
+        orm.Group(label='14_END').store()
+        orm.Group(label='contains_SOMETHING_').store()
+
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', '--startswith', 'START'],
+        )
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_group(label='START_13')
+        assert '14_END' not in result.output
+        assert 'contains_SOMETHING_' not in result.output
+        assert 'do_not_delete_group' not in result.output
+
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', '--endswith', 'END'],
+        )
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_group(label='14_END')
+        assert 'contains_SOMETHING_' not in result.output
+        assert 'do_not_delete_group' not in result.output
+
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', '--contains', 'SOMETHING'],
+        )
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_group(label='contains_SOMETHING_')
+        assert 'do_not_delete_group' not in result.output
+
+        # 11) --node should delete only groups that contain a specific node
+        node = orm.CalculationNode().store()
+        group = orm.Group(label='group_test_delete_15').store()
+        group.add_nodes(node)
+
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', '--node', node.uuid],
+        )
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_group(label='group_test_delete_15')
+        assert 'do_not_delete_group' not in result.output
 
     def test_show(self, run_cli_command):
         """Test `verdi group show` command."""

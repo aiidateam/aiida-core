@@ -6,6 +6,7 @@ import pathlib
 import typing as t
 
 import pytest
+
 from aiida.repository import File, FileType, Repository
 from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
 
@@ -71,31 +72,6 @@ def tmp_path_parametrized(request, tmp_path_factory) -> t.Union[str, pathlib.Pat
     yield tmp_path
 
 
-def serialize_file_hierarchy(dirpath: pathlib.Path):
-    """Serialize the file hierarchy at ``dirpath``.
-
-    .. note:: empty directories are ignored.
-
-    :param dirpath: the base path.
-    :return: a mapping representing the file hierarchy, where keys are filenames. The leafs correspond to files and the
-        values are the text contents.
-    """
-    import os
-
-    serialized = {}
-
-    for root, _, files in os.walk(dirpath):
-        for filepath in files:
-            relpath = pathlib.Path(root).relative_to(dirpath)
-            subdir = serialized
-            if relpath.parts:
-                for part in relpath.parts:
-                    subdir = subdir.setdefault(part, {})
-            subdir[filepath] = (pathlib.Path(root) / filepath).read_bytes()
-
-    return serialized
-
-
 def test_uuid(repository_uninitialised):
     """Test the ``uuid`` property."""
     repository = repository_uninitialised
@@ -122,7 +98,7 @@ def test_initialise(repository_uninitialised):
 
 def test_pre_process_path():
     """Test the ``Repository.pre_process_path`` classmethod."""
-    with pytest.raises(TypeError, match=r'path is not of type `str` nor `pathlib.PurePosixPath`.'):
+    with pytest.raises(TypeError, match=r'path is not of type `str` nor `pathlib.PurePath`.'):
         Repository._pre_process_path(path=1)
 
     with pytest.raises(TypeError, match=r'path `.*` is not a relative path.'):
@@ -401,7 +377,7 @@ def test_put_object_from_filelike(repository, generate_directory):
 
 def test_put_object_from_tree_raises(repository):
     """Test the ``Repository.put_object_from_tree`` method when it should raise."""
-    with pytest.raises(TypeError, match=r'filepath `.*` is not of type `str` nor `pathlib.PurePosixPath`.'):
+    with pytest.raises(TypeError, match=r'filepath `.*` is not of type `str` nor `pathlib.PurePath`.'):
         repository.put_object_from_tree(None)
 
     with pytest.raises(TypeError, match=r'filepath `.*` is not an absolute path.'):
@@ -588,7 +564,9 @@ def test_walk(repository, generate_directory):
         ('relative/sub', {'file_c': b'c'}),
     ),
 )
-def test_copy_tree(repository, generate_directory, tmp_path_parametrized, path, expected_hierarchy):
+def test_copy_tree(
+    repository, generate_directory, tmp_path_parametrized, path, expected_hierarchy, serialize_file_hierarchy
+):
     """Test the ``Repository.copy_tree`` method."""
     directory = generate_directory({'file_a': b'a', 'relative': {'file_b': b'b', 'sub': {'file_c': b'c'}}})
     repository.put_object_from_tree(str(directory))

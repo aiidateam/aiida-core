@@ -14,6 +14,7 @@ from decimal import Decimal
 from io import BytesIO
 
 import pytest
+
 from aiida.common import LinkType, exceptions, timezone
 from aiida.manage import get_manager
 from aiida.orm import CalculationNode, Computer, Data, Int, Log, Node, User, WorkflowNode, load_node
@@ -843,6 +844,7 @@ class TestNodeDelete:
 
         data_one = Data().store()
         data_two = Data().store()
+        data_two_pk = data_two.pk
         calculation = CalculationNode()
         calculation.base.links.add_incoming(data_one, LinkType.INPUT_CALC, 'input_one')
         calculation.base.links.add_incoming(data_two, LinkType.INPUT_CALC, 'input_two')
@@ -861,7 +863,7 @@ class TestNodeDelete:
 
         assert len(Log.collection.get_logs_for(data_one)) == 1
         assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk
-        assert len(Log.collection.get_logs_for(data_two)) == 0
+        assert len(Log.collection.find({'dbnode_id': data_two_pk})) == 0
 
     def test_delete_collection_logs(self):
         """Test deletion works correctly through objects collection."""

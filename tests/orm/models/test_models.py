@@ -142,7 +142,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
     if request.param is StructureData:
         return StructureData, {'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]]}
     if request.param is RemoteData:
-        return RemoteData, {'remote_path': '/some/path', 'computer': aiida_localhost}
+        return RemoteData, {'remote_path': '/some/path'}
     if request.param is RemoteStashData:
         return RemoteStashData, {'stash_mode': StashMode.COMPRESS_TAR}
     if request.param is RemoteStashCompressedData:
@@ -151,7 +151,6 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             'target_basepath': '/some/path',
             'source_list': ['/some/file'],
             'dereference': True,
-            'computer': aiida_localhost,
         }
 
     raise NotImplementedError()

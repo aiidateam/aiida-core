@@ -852,13 +852,15 @@ class TestQueryBuilderCornerCases:
         qb = orm.QueryBuilder().append(orm.Data, filters={'or': [{}, {}]})
         assert qb.count() == count
 
-    def test_abstract_code_filtering(self):
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_abstract_code_filtering(self, tmp_path):
         """Test that querying for AbstractCode correctly returns all code instances.
 
         This tests the fix for issue #6687, where QueryBuilder couldn't find codes
         when looking for AbstractCode due to a node_type mismatch.
         """
         # Set up test environment
+
         computer = orm.Computer(
             label='test_computer_abstract',
             hostname='localhost',
@@ -873,35 +875,34 @@ class TestQueryBuilderCornerCases:
             filepath_executable='/bin/bash',
         ).store()
 
+        (tmp_path / 'exec').touch()
         portable_code = orm.PortableCode(
             label='test_portable_abstract',
-            filepath_executable='/bin/bash',
+            filepath_executable='exec',
+            filepath_files=tmp_path,
         ).store()
 
-        try:
-            # Test 1: AbstractCode query should find all code types
-            qb_abstract = orm.QueryBuilder().append(orm.AbstractCode)
-            abstract_results = qb_abstract.all(flat=True)
-            assert installed_code in abstract_results, 'InstalledCode not found with AbstractCode query'
-            assert portable_code in abstract_results, 'PortableCode not found with AbstractCode query'
+        # Test 1: AbstractCode query should find all code types
+        qb_abstract = orm.QueryBuilder().append(orm.AbstractCode)
+        abstract_results = qb_abstract.all(flat=True)
+        assert (
+            installed_code in abstract_results
+        ), f'InstalledCode not found with AbstractCode query. Result: {abstract_results}'
+        assert (
+            portable_code in abstract_results
+        ), f'PortableCode not found with AbstractCode query. Result: {abstract_results}'
 
-            # Test 2: Verify specific code type queries work as expected
-            qb_installed = orm.QueryBuilder().append(orm.InstalledCode)
-            installed_results = qb_installed.all(flat=True)
-            assert installed_code in installed_results
-            assert portable_code not in installed_results
+        # Test 2: Verify specific code type queries work as expected
+        qb_installed = orm.QueryBuilder().append(orm.InstalledCode)
+        installed_results = qb_installed.all(flat=True)
+        assert installed_code in installed_results
+        assert portable_code not in installed_results
 
-            # Test 3: Test with basic filtering
-            qb_filtered = orm.QueryBuilder().append(orm.AbstractCode, filters={'label': 'test_installed_abstract'})
-            filtered_results = qb_filtered.all(flat=True)
-            assert len(filtered_results) == 1
-            assert installed_code in filtered_results
-
-        finally:
-            # Clean up
-            portable_code.delete()
-            installed_code.delete()
-            computer.delete()
+        # Test 3: Test with basic filtering
+        qb_filtered = orm.QueryBuilder().append(orm.AbstractCode, filters={'label': 'test_installed_abstract'})
+        filtered_results = qb_filtered.all(flat=True)
+        assert len(filtered_results) == 1
+        assert installed_code in filtered_results
 
 
 class TestAttributes:

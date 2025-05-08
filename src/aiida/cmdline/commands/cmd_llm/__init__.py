@@ -8,6 +8,6 @@
 ###########################################################################
 """The `verdi smart` command line interface."""
 
-from .cmd_smart import verdi_smart
+from .cmd_llm import verdi_llm
 
-__all__ = ['verdi_smart']
+__all__ = ['verdi_llm']

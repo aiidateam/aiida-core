@@ -246,6 +246,25 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
 
+.. _reference:command-line:verdi-llm:
+
+``verdi llm``
+-------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Use LLM to query to find out how to do things.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      cli
+      configure  Choose and configure an LLM backend.
+
+
 .. _reference:command-line:verdi-node:
 
 ``verdi node``
@@ -581,25 +600,6 @@ Below is a list with all available subcommands.
       -i, --interface [ipython|bpython]
                                       Specify an interactive interpreter interface.
       --help                          Show this message and exit.
-
-
-.. _reference:command-line:verdi-smart:
-
-``verdi smart``
----------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Use LLM to query to find out how to do things.
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      cli
-      configure  Choose and configure an LLM backend.
 
 
 .. _reference:command-line:verdi-status:

@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""The `verdi smart` command line interface."""
+"""The `verdi llm` command line interface."""
 
 import json
 import subprocess
@@ -20,8 +20,8 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from .llm_backend import LLM_DIRECTORY, RAG, groc_command_generator
 
 
-@verdi.group('smart')
-def verdi_smart():
+@verdi.group('llm')
+def verdi_llm():
     """Use LLM to query to find out how to do things."""
 
 
@@ -83,7 +83,7 @@ def load_smart_config(func):
     return wrapper
 
 
-@verdi_smart.command('configure')
+@verdi_llm.command('configure')
 @click.option(
     '-b',
     '--backend',
@@ -130,7 +130,7 @@ def smart_configure(ctx, backend, api_key):
     click.echo('You can now use the `verdi smart` command to interact with the LLM backend.\n')
 
 
-@verdi_smart.command('cli')
+@verdi_llm.command('cli')
 @click.argument('something-to-ask', type=str)
 @load_smart_config
 def smart_generate(backend, api_key, something_to_ask):

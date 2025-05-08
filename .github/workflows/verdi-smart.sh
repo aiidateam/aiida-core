@@ -19,9 +19,9 @@ set -e  # Exit immediately if a command exits with a non-zero status
 
 # Define paths
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-VERDI_CLI_JSON="${REPO_ROOT}/src/aiida/cmdline/commands/cmd_smart/utils/verdi_cli.json"
+VERDI_CLI_JSON="${REPO_ROOT}/src/aiida/cmdline/commands/cmd_llm/utils/verdi_cli.json"
 TEMP_JSON="/tmp/verdi_cli_temp.json"
-GENERATOR_SCRIPT="${REPO_ROOT}/src/aiida/cmdline/commands/cmd_smart/utils/generate_verdi_cli_json.py"
+GENERATOR_SCRIPT="${REPO_ROOT}/src/aiida/cmdline/commands/cmd_llm/utils/generate_verdi_cli_json.py"
 
 echo "Checking if verdi-cli.json is up to date..."
 

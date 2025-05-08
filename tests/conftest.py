@@ -954,9 +954,11 @@ def cat_path() -> Path:
     path = run_process.stdout.decode('utf-8').strip()
     return Path(path)
 
+
 def await_condition(condition: t.Callable, timeout: int = 1) -> t.Any:
     """Wait for the ``condition`` to evaluate to ``True`` within the ``timeout`` or raise."""
     import time
+
     start_time = time.time()
 
     while not (result := condition()):

@@ -10,14 +10,12 @@
 
 import functools
 import re
-import time
 import typing as t
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from tests.conftest import await_condition
 
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
@@ -27,6 +25,7 @@ from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
+from tests.conftest import await_condition
 from tests.utils.processes import WaitProcess
 
 FuncArgs = tuple[t.Any, ...]

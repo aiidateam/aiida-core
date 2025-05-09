@@ -193,6 +193,7 @@ async def exponential_backoff_retry(
     :param ignore_exceptions: exceptions to ignore, i.e. when caught do nothing and simply re-raise
     :return: result if the ``coro`` call completes within ``max_attempts`` retries without raising
     """
+
     if logger is None:
         logger = LOGGER
 

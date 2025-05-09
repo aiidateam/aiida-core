@@ -241,7 +241,12 @@ def test_process_kill_failng_ebm(
             timeout=kill_timeout,
         )
 
+        # should restart EBM and be again not successful
         run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        await_condition(lambda: not node.is_killed, timeout=kill_timeout)
+
+        # should skip EBM and successfully kill the process
+        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
 
 

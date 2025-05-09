@@ -10,7 +10,6 @@
 
 import functools
 import re
-import time
 import typing as t
 import uuid
 from contextlib import contextmanager
@@ -26,6 +25,7 @@ from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
+from tests.conftest import await_condition
 from tests.utils.processes import WaitProcess
 
 FuncArgs = tuple[t.Any, ...]
@@ -116,18 +116,6 @@ def fork_worker_context(aiida_profile):
     client.increase_workers(nb_workers)
 
 
-def await_condition(condition: t.Callable, timeout: int = 1) -> t.Any:
-    """Wait for the ``condition`` to evaluate to ``True`` within the ``timeout`` or raise."""
-    start_time = time.time()
-
-    while not (result := condition()):
-        if time.time() - start_time > timeout:
-            raise RuntimeError(f'waiting for {condition} to evaluate to `True` timed out after {timeout} seconds.')
-        time.sleep(0.1)
-
-    return result
-
-
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill_failing_transport(
@@ -213,7 +201,7 @@ def test_process_kill_failing_transport_failed_kill(
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('started_daemon_client')
-def test_process_kill_failng_ebm(
+def test_process_kill_failing_ebm(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
     """9) Kill a process that is paused after EBM (5 times failed). It should be possible to kill it normally.
@@ -232,6 +220,7 @@ def test_process_kill_failng_ebm(
 
     kill_timeout = 10
 
+    # TODO instead of mocking it why didn't we just set the paramaters to 1 second?
     monkeypatch_args = ('aiida.engine.utils.exponential_backoff_retry', MockFunctions.mock_exponential_backoff_retry)
     with fork_worker_context(monkeypatch.setattr, monkeypatch_args):
         node = submit_and_await(make_a_builder(), ProcessState.WAITING)
@@ -242,6 +231,11 @@ def test_process_kill_failng_ebm(
         )
 
         run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        # It should *not* be killable after the EBM expected
+        await_condition(lambda: not node.is_killed, timeout=kill_timeout)
+
+        # It should be killable with the force kill option
+        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
 
 

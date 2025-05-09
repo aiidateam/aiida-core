@@ -543,7 +543,7 @@ class Waiting(plumpy.process_states.Waiting):
                     monitor_result = await self._monitor_job(node, transport_queue, self.monitors)
 
                     if monitor_result and monitor_result.action is CalcJobMonitorAction.KILL:
-                        await self._kill_job(node, transport_queue)
+                        await self.kill_job(node, transport_queue)
                         job_done = True
 
                     if monitor_result and not monitor_result.retrieve:
@@ -582,7 +582,6 @@ class Waiting(plumpy.process_states.Waiting):
         except TransportTaskException as exception:
             raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
         except plumpy.process_states.KillInterruption as exception:
-            await self._kill_job(node, transport_queue)
             node.set_process_status(str(exception))
             return self.retrieve(monitor_result=self._monitor_result)
         except (plumpy.futures.CancelledError, asyncio.CancelledError):
@@ -594,10 +593,13 @@ class Waiting(plumpy.process_states.Waiting):
         else:
             node.set_process_status(None)
             return result
-        finally:
-            # If we were trying to kill but we didn't deal with it, make sure it's set here
-            if self._killing and not self._killing.done():
-                self._killing.set_result(False)
+        # PR_COMMENT  We do not use the KillInterruption anymore to kill the job here as we kill the job where the KillInterruption is sent
+        # TODO remove
+        # finally:
+        #    # If we were trying to kill but we didn't deal with it, make sure it's set here
+        #    #if self._killing and not self._killing.done():
+        #    #    self._killing.set_result(False)
+        #    pass
 
     async def _monitor_job(self, node, transport_queue, monitors) -> CalcJobMonitorResult | None:
         """Process job monitors if any were specified as inputs."""
@@ -622,7 +624,7 @@ class Waiting(plumpy.process_states.Waiting):
 
         return monitor_result
 
-    async def _kill_job(self, node, transport_queue) -> None:
+    async def kill_job(self, node, transport_queue) -> None:
         """Kill the job."""
         await self._launch_task(task_kill_job, node, transport_queue)
         if self._killing is not None:

@@ -953,3 +953,17 @@ def cat_path() -> Path:
     run_process = subprocess.run(['which', 'cat'], capture_output=True, check=True)
     path = run_process.stdout.decode('utf-8').strip()
     return Path(path)
+
+
+def await_condition(condition: t.Callable, timeout: int = 1) -> t.Any:
+    """Wait for the ``condition`` to evaluate to ``True`` within the ``timeout`` or raise."""
+    import time
+
+    start_time = time.time()
+
+    while not (result := condition()):
+        if time.time() - start_time > timeout:
+            raise RuntimeError(f'waiting for {condition} to evaluate to `True` timed out after {timeout} seconds.')
+        time.sleep(0.1)
+
+    return result

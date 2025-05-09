@@ -116,7 +116,7 @@ class AsyncSshTransport(AsyncTransport):
             '',
             description='Machine name as in `ssh <your-host-name>` command. It should be a password-less setup',
             title='Password-less host-setup to connect, as in command `ssh <your-host-name>`. '
-            'You\'ll need to have a `Host <your-host-name>` entry defined in your `~/.ssh/config` file.',
+            "You'll need to have a `Host <your-host-name>` entry defined in your `~/.ssh/config` file.",
         )
         max_io_allowed: int = MetadataField(
             _DEFAULT_max_io_allowed,

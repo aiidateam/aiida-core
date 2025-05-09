@@ -6,13 +6,12 @@ from typing import Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, Tupl
 
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check
+from aiida.common.typing import FilePath
 
 from .backend import AbstractRepositoryBackend, SandboxRepositoryBackend
 from .common import File, FileType
 
 __all__ = ('Repository',)
-
-FilePath = Union[str, pathlib.PurePath]
 
 
 class Repository:

@@ -172,7 +172,7 @@ def multiply(x, y):
     return x * y
 ```
 
-This converts the `multiply` function into an AiIDA *calculation function*, the most basic execution unit in AiiDA.
+This converts the `multiply` function into an AiiDA *calculation function*, the most basic execution unit in AiiDA.
 Next, load the `Int` node you have created in the previous section using the `load_node` function and the PK of the data node:
 
 ```{code-cell} ipython3
@@ -251,7 +251,7 @@ graph.graphviz
 ```
 
 :::{note}
-Remember that the PK of the `CalcJob` can be different for your database.
+Remember that the PK of the `calcfunction` can be different for your database.
 :::
 
 (tutorial:basic:calcjob)=
@@ -500,7 +500,7 @@ class MultiplyAddWorkChain(WorkChain):
 ```
 
 :::{note}
-Besides WorkChain's, workflows can also be implemented as {ref}`work functions <topics:workflows:concepts:workfunctions>`.
+Besides WorkChains, workflows can also be implemented as {ref}`work functions <topics:workflows:concepts:workfunctions>`.
 These are ideal for workflows that are not very computationally intensive and can be easily implemented in a Python function.
 :::
 

@@ -207,7 +207,8 @@ repos:
     files: >-
       (?x)^(
         pyproject.toml|
-        utils/dependency_management.py
+        utils/dependency_management.py|
+        environment.yml|
       )$
 
   - id: validate-conda-environment

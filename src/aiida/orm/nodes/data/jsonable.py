@@ -4,11 +4,16 @@ import importlib
 import json
 import typing
 
+from pydantic import ConfigDict
+
+from aiida.common.pydantic import MetadataField
+
 from .data import Data
 
 __all__ = ('JsonableData',)
 
 
+@typing.runtime_checkable
 class JsonSerializableProtocol(typing.Protocol):
     def as_dict(self) -> typing.MutableMapping[typing.Any, typing.Any]: ...
 
@@ -44,6 +49,10 @@ class JsonableData(Data):
     Of course, this requires that the class of the originally wrapped instance can be imported in the current
     environment, or an ``ImportError`` will be raised.
     """
+
+    class Model(Data.Model):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        obj: JsonSerializableProtocol = MetadataField(description='The JSON-serializable object.')
 
     def __init__(self, obj: JsonSerializableProtocol, *args, **kwargs):
         """Construct the node for the to be wrapped object."""

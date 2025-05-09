@@ -173,6 +173,7 @@ def kill_processes(
     processes: list[ProcessNode] | None = None,
     *,
     msg_text: str = 'Killed through `aiida.engine.processes.control.kill_processes`',
+    force_kill: bool = False,
     all_entries: bool = False,
     timeout: float = 5.0,
     wait: bool = False,
@@ -201,7 +202,7 @@ def kill_processes(
         return
 
     controller = get_manager().get_process_controller()
-    action = functools.partial(controller.kill_process, msg_text=msg_text)
+    action = functools.partial(controller.kill_process, msg_text=msg_text, force_kill=force_kill)
     _perform_actions(processes, action, 'kill', 'killing', timeout, wait)
 
 
@@ -276,15 +277,17 @@ def _resolve_futures(
             LOGGER.error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
 
     try:
-        for future in concurrent.futures.as_completed(futures.keys(), timeout=timeout):
-            process = futures[future]
-
+        for future, process in futures.items():
+            # unwrap is need here since LoopCommunicator will also wrap a future
+            unwrapped = unwrap_kiwi_future(future)
             try:
-                # unwrap is need here since LoopCommunicator will also wrap a future
-                unwrapped = unwrap_kiwi_future(future)
-                result = unwrapped.result()
+                result = unwrapped.result(timeout=timeout)
             except communications.TimeoutError:
-                LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out')
+                cancelled = unwrapped.cancel()
+                if cancelled:
+                    LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out and was cancelled.')
+                else:
+                    LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out but could not be cancelled.')
             except Exception as exception:
                 LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
             else:

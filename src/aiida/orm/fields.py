@@ -396,6 +396,8 @@ class QbFields:
 class EntityFieldMeta(ABCMeta):
     """A metaclass for entity fields, which adds a `fields` class attribute."""
 
+    _model_fields_cache: t.Dict[t.Type[BaseModel], QbFields] = {}
+
     def __init__(cls, name, bases, classdict):
         super().__init__(name, bases, classdict)
 
@@ -404,12 +406,17 @@ class EntityFieldMeta(ABCMeta):
         if current_fields is not None and not isinstance(current_fields, QbFields):
             raise ValueError(f"class '{cls}' already has a `fields` attribute set")
 
-        fields = {}
-
         # If the class has an attribute ``Model`` that is a subclass of :class:`pydantic.BaseModel`, parse the model
         # fields to build up the ``fields`` class attribute, which is used to allow specifying ``QueryBuilder`` filters
         # programmatically.
         if hasattr(cls, 'Model') and issubclass(cls.Model, BaseModel):
+            # If the class has a ``Model``, check if we have already parsed it and cached
+            # the result. Use the cached result if available.
+            cache = cls._model_fields_cache
+            if cls.Model in cache:
+                cls.fields = cache[cls.Model]
+                return
+
             # If the class itself directly specifies the ``Model`` attribute, check that it is valid. Here, the check
             # ``cls.__dict__`` is used instead of ``hasattr`` as the former only returns true if the class itself
             # defines the attribute and does not just inherit it from a base class. In that case, this check will
@@ -461,8 +468,8 @@ class EntityFieldMeta(ABCMeta):
                         f'`class Model({", ".join(sorted(bases))}):`'
                     )
 
-            for key, field in cls.Model.model_fields.items():
-                fields[key] = add_field(
+            fields = {
+                key: add_field(
                     key,
                     alias=get_metadata(field, 'alias', None),
                     dtype=field.annotation,
@@ -470,8 +477,13 @@ class EntityFieldMeta(ABCMeta):
                     is_attribute=get_metadata(field, 'is_attribute', False),
                     is_subscriptable=get_metadata(field, 'is_subscriptable', False),
                 )
+                for key, field in cls.Model.model_fields.items()
+            }
 
-        cls.fields = QbFields({key: fields[key] for key in sorted(fields)})
+            cls.fields = QbFields({key: fields[key] for key in sorted(fields)})
+            cls._model_fields_cache[cls.Model] = cls.fields
+        else:
+            cls.fields = QbFields()
 
 
 class QbFieldArguments(t.TypedDict):

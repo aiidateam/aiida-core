@@ -178,7 +178,7 @@ requires-dist = [
     { name = "click", specifier = "~=8.1" },
     { name = "click-spinner", specifier = "~=0.1.8" },
     { name = "coverage", marker = "extra == 'tests'", specifier = "~=7.0" },
-    { name = "disk-objectstore", specifier = "~=1.3.0" },
+    { name = "disk-objectstore", git = "https://github.com/ahkole/disk-objectstore.git?branch=fhandle-attrs" },
     { name = "docstring-parser" },
     { name = "docutils", marker = "extra == 'tests'", specifier = "~=0.20" },
     { name = "flask", marker = "extra == 'rest'", specifier = "~=2.2" },
@@ -1197,14 +1197,10 @@ wheels = [
 [[package]]
 name = "disk-objectstore"
 version = "1.3.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/ahkole/disk-objectstore.git?branch=fhandle-attrs#361f332df360b555eb4f7890f538d94903e08332" }
 dependencies = [
     { name = "click" },
     { name = "sqlalchemy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8c/f8/028d480ffe1f331ca47663dc407ae443303b3db6da16e310866472dd3343/disk_objectstore-1.3.0.tar.gz", hash = "sha256:f0653574990402fd91a5d91b0a64ea541fb349baed02edfe7e90cf7bf3d5270c", size = 7390310 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0e/d7/e1f178515454ca4ba7e437db3e19b07854bc7573c2130a2dbf3f1beb6362/disk_objectstore-1.3.0-py3-none-any.whl", hash = "sha256:a97fd6cbb9636ff8b6515d15f6d5d8c021910c701267805382ed32540d294e79", size = 70538 },
 ]
 
 [[package]]

@@ -25,6 +25,7 @@ from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
+from aiida.engine.utils import exponential_backoff_retry
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
 from tests.utils.processes import WaitProcess
 
@@ -53,6 +54,7 @@ def start_daemon_worker_in_foreground_and_redirect_streams(
 
     try:
         pid = os.getpid()
+        # For easier debugging you can change these to stdout
         sys.stdout = open(log_dir / f'worker-{pid}.out', 'w')
         sys.stderr = open(log_dir / f'worker-{pid}.err', 'w')
         start_daemon_worker(False, aiida_profile_name)
@@ -72,10 +74,22 @@ class MockFunctions:
         raise Exception('Mock open exception')
 
     @staticmethod
-    async def mock_exponential_backoff_retry(*_, **__):
+    async def exponential_backoff_retry_fail_upload(fct: t.Callable[..., t.Any], *args, **kwargs):
         from aiida.common.exceptions import TransportTaskException
 
-        raise TransportTaskException
+        if 'do_upload' in fct.__name__:
+            raise TransportTaskException
+        else:
+            return await exponential_backoff_retry(fct, *args, **kwargs)
+
+    @staticmethod
+    async def exponential_backoff_retry_fail_kill(fct: t.Callable[..., t.Any], *args, **kwargs):
+        from aiida.common.exceptions import TransportTaskException
+
+        if 'do_kill' in fct.__name__:
+            raise TransportTaskException
+        else:
+            return await exponential_backoff_retry(fct, *args, **kwargs)
 
 
 @pytest.fixture(scope='function')
@@ -213,11 +227,12 @@ def test_process_kill_failing_transport_failed_kill(
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('started_daemon_client')
-def test_process_kill_failng_ebm(
+def test_process_kill_failing_ebm_upload(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
-    """9) Kill a process that is paused after EBM (5 times failed). It should be possible to kill it normally.
-    # (e.g. in scenarios that transport is working again)
+    """Kill a process that is waiting after failed EBM during upload. It should be possible to kill it normally.
+
+    A process that failed upload (e.g. in scenarios that transport is working again) and is then killed with
     """
     from aiida.orm import Int
 
@@ -232,7 +247,10 @@ def test_process_kill_failng_ebm(
 
     kill_timeout = 10
 
-    monkeypatch_args = ('aiida.engine.utils.exponential_backoff_retry', MockFunctions.mock_exponential_backoff_retry)
+    monkeypatch_args = (
+        'aiida.engine.utils.exponential_backoff_retry',
+        MockFunctions.exponential_backoff_retry_fail_upload,
+    )
     with fork_worker_context(monkeypatch.setattr, monkeypatch_args):
         node = submit_and_await(make_a_builder(), ProcessState.WAITING)
         await_condition(
@@ -241,7 +259,57 @@ def test_process_kill_failng_ebm(
             timeout=kill_timeout,
         )
 
+        # kill should start EBM and should successfully kill
         run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        await_condition(lambda: node.is_killed, timeout=kill_timeout)
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('started_daemon_client')
+def test_process_kill_failing_ebm_kill(
+    fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
+):
+    """Kill a process that with a failng EBM during the kill.
+
+    Killing a process tries to gracefully cancel the job on the remote node. If there are connection problems it retries
+    it in using the EBM. If this fails another kill command can be send to restart the cancelation of the job scheduler.
+    """
+    from aiida.orm import Int
+
+    code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
+
+    def make_a_builder(sleep_seconds=0):
+        builder = code.get_builder()
+        builder.x = Int(1)
+        builder.y = Int(1)
+        builder.metadata.options.sleep = sleep_seconds
+        return builder
+
+    kill_timeout = 10
+
+    monkeypatch_args = (
+        'aiida.engine.utils.exponential_backoff_retry',
+        MockFunctions.exponential_backoff_retry_fail_kill,
+    )
+    # from aiida.engine.utils import exponential_backoff_retry
+    # monkeypatch_args = ('aiida.engine.utils.exponential_backoff_retry', exponential_backoff_retry)
+    with fork_worker_context(monkeypatch.setattr, monkeypatch_args):
+        node = submit_and_await(make_a_builder(kill_timeout + 10), ProcessState.WAITING, timeout=kill_timeout)
+        await_condition(
+            lambda: node.process_status == 'Monitoring scheduler: job state RUNNING',
+            timeout=kill_timeout,
+        )
+
+        # kill should start EBM and be not successful in EBM
+        run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        await_condition(lambda: not node.is_killed, timeout=kill_timeout)
+
+        # kill should restart EBM and be not successful in EBM
+        run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        await_condition(lambda: not node.is_killed, timeout=kill_timeout)
+
+        # force kill should skip EBM and successfully kill the process
+        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
 
 

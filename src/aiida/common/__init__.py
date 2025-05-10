@@ -16,7 +16,6 @@
 
 # fmt: off
 
-from .asserts import *
 from .datastructures import *
 from .exceptions import *
 from .extendeddicts import *

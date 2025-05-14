@@ -25,7 +25,7 @@ dependencies = [
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click~=8.1',
-  'disk-objectstore~=1.3.0',
+  'disk-objectstore',
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
   'graphviz~=0.19',
@@ -536,3 +536,6 @@ commands = molecule {posargs:test}
 # .github/actions/install-aiida-core/action.yml
 # .readthedocs.yml
 required-version = ">=0.5.21"
+
+[tool.uv.sources]
+disk-objectstore = {git = "https://github.com/ahkole/disk-objectstore.git", branch = "fhandle-attrs"}

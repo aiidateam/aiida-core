@@ -62,10 +62,11 @@ def validate_machine(ctx, param, value: str):
     return value
 
 
+_DEFAULT_max_io_allowed = 8
+
+
 class AsyncSshTransport(AsyncTransport):
     """Transport plugin via SSH, asynchronously."""
-
-    _DEFAULT_max_io_allowed = 8
 
     # note, I intentionally wanted to keep connection parameters as simple as possible.
     _valid_auth_options = [
@@ -116,7 +117,7 @@ class AsyncSshTransport(AsyncTransport):
             '',
             description='Machine name as in `ssh <your-host-name>` command. It should be a password-less setup',
             title='Password-less host-setup to connect, as in command `ssh <your-host-name>`. '
-            'You\'ll need to have a `Host <your-host-name>` entry defined in your `~/.ssh/config` file.',
+            "You'll need to have a `Host <your-host-name>` entry defined in your `~/.ssh/config` file.",
         )
         max_io_allowed: int = MetadataField(
             _DEFAULT_max_io_allowed,
@@ -150,7 +151,7 @@ class AsyncSshTransport(AsyncTransport):
         # NOTE: to guarantee a connection,
         # a computer with core.ssh_async transport plugin should be configured before any instantiation.
         self.machine = kwargs.pop('machine_or_host', kwargs.pop('machine'))
-        self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
+        self._max_io_allowed = kwargs.pop('max_io_allowed', _DEFAULT_max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
 
         self._concurrent_io = 0

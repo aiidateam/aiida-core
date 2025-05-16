@@ -17,6 +17,7 @@ import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 from aiida import orm
 from aiida.common import timezone
@@ -237,7 +238,9 @@ class DumpPaths:
         return Path('-'.join(path_entities))
 
     @staticmethod
-    def _get_default_profile_dump_path(profile: Profile, prefix: str = 'profile', appendix: str = 'dump') -> Path:
+    def _get_default_profile_dump_path(
+        profile: Profile, prefix: Optional[str] = None, appendix: Optional[str] = None
+    ) -> Path:
         """_summary_
 
         :param profile: _description_
@@ -245,48 +248,34 @@ class DumpPaths:
         :param appendix: _description_, defaults to "dump"
         :return: _description_
         """
-        return Path(f'{prefix}-{profile.name}-{appendix}')
+        label_elements = []
 
-    @staticmethod
-    def _get_default_group_dump_path(group: orm.Group | None, prefix: str = 'group', appendix: str = 'dump') -> Path:
-        if not group:
-            label_elements = ['ungrouped']
-
-        elif 'group' in group.label:
-            if appendix == 'group' and prefix != 'group':
-                label_elements = [prefix, group.label]
-            elif prefix == 'group' and appendix != 'group':
-                label_elements = [group.label, appendix]
-            elif prefix == 'group' and appendix == 'group':
-                label_elements = [group.label]
-            else:
-                label_elements = [prefix, group.label, appendix]
-
-        elif 'dump' in group.label:
-            if appendix == 'dump' and prefix != 'dump':
-                label_elements = [prefix, group.label]
-            elif prefix == 'dump' and appendix != 'dump':
-                label_elements = [group.label, appendix]
-            elif prefix == 'dump' and appendix == 'dump':
-                label_elements = [group.label]
-            else:
-                label_elements = [prefix, group.label, appendix]
-
-        else:
-            label_elements = [prefix, group.label, appendix]
+        if prefix:
+            label_elements.append(prefix)
+        label_elements.append(profile.name)
+        if appendix:
+            label_elements.append(appendix)
 
         return Path('-'.join(label_elements))
 
-    # NOTE: Not ideal using None for entity that points to profile (default)
+    @staticmethod
+    def _get_default_group_dump_path(
+        group: orm.Group, prefix: Optional[str] = None, appendix: Optional[str] = None
+    ) -> Path:
+        label_elements = []
+
+        if prefix:
+            label_elements.append(prefix)
+        label_elements.append(group.label)
+        if appendix:
+            label_elements.append(appendix)
+
+        return Path('-'.join(label_elements))
+
     @staticmethod
     def _resolve_click_path_for_dump(
-        path: Path | None | str, entity: Profile | orm.ProcessNode | orm.Group | None = None
+        entity: Profile | orm.ProcessNode | orm.Group, path: Path | None | str
     ) -> DumpPaths:
-        if not isinstance(entity, (orm.ProcessNode, orm.Group, Profile)) and entity is not None:
-            supported_types = 'ProcessNode, Group, Profile'
-            msg = f"Unsupported entity type '{type(entity).__name__}'. Supported types: {supported_types}."
-            raise ValueError(msg)
-
         if path:
             path = Path(path)
             if path.is_absolute():
@@ -303,8 +292,8 @@ class DumpPaths:
                 dump_sub_path = DumpPaths._get_default_group_dump_path(entity)
             elif isinstance(entity, orm.ProcessNode):
                 dump_sub_path = DumpPaths._get_default_process_dump_path(entity)
-            elif entity is None:
-                dump_sub_path = DumpPaths._get_default_profile_dump_path(entity)
+            else:
+                raise ValueError
 
             dump_parent_path = Path.cwd()
 

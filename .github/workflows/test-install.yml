@@ -104,13 +104,14 @@ jobs:
     # Verify that we can install AiiDA with conda.
 
     if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 25
 
     strategy:
       fail-fast: false
       matrix:
 
+        os: [ubuntu-24.04]
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
 
         # Not being able to install with conda on a specific Python version is
@@ -122,6 +123,11 @@ jobs:
           # not fail since this is advocated as part of the user documentation.
         - python-version: ''
           optional: false
+          os: ubuntu-24.04
+
+        - python-version: ''
+          optional: true
+          os: ubuntu-24.04-arm
 
     steps:
     - uses: actions/checkout@v4

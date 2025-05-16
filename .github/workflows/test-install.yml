@@ -136,6 +136,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3
       with:
         channels: conda-forge
+        conda-remove-defaults: true
 
     - name: Test installation
       id: test_installation

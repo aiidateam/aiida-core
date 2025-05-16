@@ -142,7 +142,7 @@ jobs:
       id: test_installation
       continue-on-error: ${{ matrix.optional }}
       run: >
-        conda create --dry-run -n test-install aiida-core
+        conda create --dry-run -n test-install "aiida-core>2.6.3"
         ${{ matrix.python-version && format('python={0}', matrix.python-version) }}
 
     - name: Warn about failure

@@ -525,7 +525,7 @@ def process_repair(manager, broker, dry_run):
     """
     from aiida.engine.processes.control import get_active_processes, get_process_tasks, iterate_process_tasks
 
-    active_processes = get_active_processes(project='id')
+    active_processes = [process.pk for process in get_active_processes() if process.user.is_default]
     process_tasks = get_process_tasks(broker)
 
     set_active_processes = set(active_processes)

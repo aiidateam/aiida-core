@@ -709,7 +709,7 @@ def group_dump(
 
     # --- Initial Setup ---
     final_dump_config = None
-    resolved_base_output_path: Path # Will be set
+    resolved_base_output_path: Path  # Will be set
 
     try:
         if path is None:

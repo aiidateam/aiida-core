@@ -191,10 +191,7 @@ class DumpPathPolicy:
 
         elif self.config.dump_mode == DumpMode.OVERWRITE:
             if path_to_prepare.exists():
-                if (
-                    os.listdir(path_to_prepare)
-                    and not (path_to_prepare / self.SAFEGUARD_FILE_NAME).exists()
-                ):
+                if os.listdir(path_to_prepare) and not (path_to_prepare / self.SAFEGUARD_FILE_NAME).exists():
                     if is_leaf_node_dir:
                         self.safe_delete_directory(path_to_prepare)
                     else:

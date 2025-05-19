@@ -149,12 +149,12 @@ class DumpEngine:
         Selects and executes the appropriate dump strategy based on the entity.
         The base output directory is assumed to be prepared by DumpPathPolicy.__init__().
         """
-        entity_description = "profile"
+        entity_description = 'profile'
         if isinstance(entity, orm.Group):
             entity_description = f"group '{entity.label}' (PK: {entity.pk})"
         elif isinstance(entity, orm.ProcessNode):
-            entity_description = f"process node (PK: {entity.pk})"
-        logger.report(f"Starting dump of {entity_description} in mode: {self.config.dump_mode.name}")
+            entity_description = f'process node (PK: {entity.pk})'
+        logger.report(f'Starting dump of {entity_description} in mode: {self.config.dump_mode.name}')
 
         current_mapping: Optional[GroupNodeMapping] = None
 
@@ -162,23 +162,18 @@ class DumpEngine:
             logger.info(f'Executing ProcessNode dump for PK={entity.pk}')
             # For a single ProcessNode, its dump root is the base_output_path.
             # ProcessManager uses DumpPathPolicy to place content within this root.
-            self.process_manager.dump(
-                process_node=entity,
-                target_path=self.path_policy.base_output_path
-            )
+            self.process_manager.dump(process_node=entity, target_path=self.path_policy.base_output_path)
             try:
                 self.process_manager.readme_generator._generate(entity, self.path_policy.base_output_path)
             except Exception as e:
                 logger.warning(f'Failed to generate README for process {entity.pk}: {e}')
-            current_mapping = None # No group mapping relevant for single process dump for the main log
+            current_mapping = None  # No group mapping relevant for single process dump for the main log
 
         elif isinstance(entity, orm.Group):
             logger.info(f"Executing Group dump for '{entity.label}' (PK: {entity.pk})")
             node_changes, current_mapping = self.detector._detect_all_changes(group=entity)
             group_changes = self.detector._detect_group_changes(
-                stored_mapping=self.stored_mapping,
-                current_mapping=current_mapping,
-                specific_group_uuid=entity.uuid
+                stored_mapping=self.stored_mapping, current_mapping=current_mapping, specific_group_uuid=entity.uuid
             )
             all_changes = DumpChanges(nodes=node_changes, groups=group_changes)
 
@@ -188,12 +183,12 @@ class DumpEngine:
                     path_policy=self.path_policy,
                     dump_logger=self.dump_logger,
                     dump_changes=all_changes,
-                    stored_mapping=self.stored_mapping
+                    stored_mapping=self.stored_mapping,
                 )
                 deletion_manager._handle_deleted_entities()
 
             if self.config.dump_mode == DumpMode.DRY_RUN:
-                print(all_changes.to_table()) # Or use logger.report
+                print(all_changes.to_table())  # Or use logger.report
                 return
 
             # GroupDumpManager needs the specific group and the scoped changes.
@@ -204,18 +199,17 @@ class DumpEngine:
                 path_policy=self.path_policy,
                 dump_logger=self.dump_logger,
                 process_manager=self.process_manager,
-                current_mapping=current_mapping
+                current_mapping=current_mapping,
             )
             # The dump method of GroupDumpManager needs the root path for *this group's content*
             # This root path is determined by DumpPathPolicy.
             group_manager.dump(changes=all_changes)
 
-        else: # Profile Dump (entity is None)
-            logger.info("Executing Profile dump.")
+        else:  # Profile Dump (entity is None)
+            logger.info('Executing Profile dump.')
             node_changes, current_mapping = self.detector._detect_all_changes()
             group_changes = self.detector._detect_group_changes(
-                stored_mapping=self.stored_mapping,
-                current_mapping=current_mapping
+                stored_mapping=self.stored_mapping, current_mapping=current_mapping
             )
             all_changes = DumpChanges(nodes=node_changes, groups=group_changes)
 
@@ -228,12 +222,12 @@ class DumpEngine:
                         path_policy=self.path_policy,
                         dump_logger=self.dump_logger,
                         dump_changes=all_changes,
-                        stored_mapping=self.stored_mapping
+                        stored_mapping=self.stored_mapping,
                     )
                     deletion_manager._handle_deleted_entities()
 
                 if self.config.dump_mode == DumpMode.DRY_RUN:
-                    print(all_changes.to_table()) # Or use logger.report
+                    print(all_changes.to_table())  # Or use logger.report
                     return
 
                 profile_manager = ProfileDumpManager(
@@ -242,11 +236,11 @@ class DumpEngine:
                     dump_logger=self.dump_logger,
                     process_manager=self.process_manager,
                     detector=self.detector,
-                    current_mapping=current_mapping
+                    current_mapping=current_mapping,
                 )
                 profile_manager.dump(changes=all_changes)
 
         logger.report('Saving final dump log and configuration...')
         self.dump_logger.save(current_dump_time=self.dump_times.current, group_node_mapping=current_mapping)
         self._save_config()
-        logger.report(f"Dump of {entity_description} completed.")
+        logger.report(f'Dump of {entity_description} completed.')

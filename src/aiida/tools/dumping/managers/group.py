@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.managers.collection import CollectionDumpManager
 from aiida.tools.dumping.utils.helpers import DumpChanges
@@ -50,7 +49,6 @@ class GroupDumpManager(CollectionDumpManager):
         )
         self.group_to_dump = group_to_dump
 
-
     def dump(self, changes: DumpChanges) -> None:
         """
         Dumps the content of the specific group (self.group_to_dump).
@@ -77,10 +75,7 @@ class GroupDumpManager(CollectionDumpManager):
         self.path_policy.prepare_directory(current_group_content_root, is_leaf_node_dir=False)
 
         # Register this group in the logger with its actual content path.
-        self._register_group_and_prepare_path(
-            group=self.group_to_dump,
-            group_content_path=current_group_content_root
-        )
+        self._register_group_and_prepare_path(group=self.group_to_dump, group_content_path=current_group_content_root)
 
         # 2. Process lifecycle changes FOR THIS GROUP.
         #    The `changes.groups` object should have been pre-filtered by DumpEngine

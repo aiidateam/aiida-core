@@ -9,8 +9,8 @@
 """Manager that orchestrates dumping an AiiDA profile."""
 
 from __future__ import annotations
-import os
 
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, cast
 
@@ -28,8 +28,7 @@ if TYPE_CHECKING:
     from aiida.tools.dumping.logger import DumpLogger
     from aiida.tools.dumping.managers.process import ProcessDumpManager
     from aiida.tools.dumping.mapping import GroupNodeMapping
-    from aiida.tools.dumping.utils.helpers import GroupChanges
-    from aiida.tools.dumping.utils.helpers import GroupModificationInfo
+    from aiida.tools.dumping.utils.helpers import GroupChanges, GroupModificationInfo
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.managers.collection')
 
@@ -195,7 +194,7 @@ class CollectionDumpManager:
                         # group=group_context,
                         target_path=node_specific_dump_path,
                     )
-                except Exception as e:
+                except Exception:
                     raise
                 finally:
                     progress.update()
@@ -372,15 +371,12 @@ class CollectionDumpManager:
                 # current_group_path_abs is the content root for `group`
                 node_target_path_in_group = self.path_policy.get_path_for_node(
                     node=node,
-                    current_content_root=current_group_path_abs, # This is the new group's content root
-                    group_context_for_node=group # Provide the group context
+                    current_content_root=current_group_path_abs,  # This is the new group's content root
+                    group_context_for_node=group,  # Provide the group context
                 )
 
                 # Pass this explicit target_path to the process manager
-                self.process_manager.dump(
-                    process_node=node,
-                    target_path=node_target_path_in_group
-                )
+                self.process_manager.dump(process_node=node, target_path=node_target_path_in_group)
             except Exception as e:
                 logger.warning(f'Could not process node {node_uuid} added to group {group.label}: {e}')
 

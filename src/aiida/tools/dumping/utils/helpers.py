@@ -208,7 +208,15 @@ class DumpChanges:
     groups: GroupChanges = field(default_factory=GroupChanges)
 
     def is_empty(self) -> bool:
-        total_len = len(self.nodes.deleted) + len(self.nodes.new_or_modified) + len(self.groups.deleted) + len(self.groups.new) + len(self.groups.modified) + len(self.groups.renamed) + len(self.groups.node_membership)
+        total_len = (
+            len(self.nodes.deleted)
+            + len(self.nodes.new_or_modified)
+            + len(self.groups.deleted)
+            + len(self.groups.new)
+            + len(self.groups.modified)
+            + len(self.groups.renamed)
+            + len(self.groups.node_membership)
+        )
 
         return total_len == 0
 

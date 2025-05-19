@@ -355,6 +355,7 @@ def profile_dump(
     Otherwise, CLI flags will be used.
     """
     import traceback
+    from pathlib import Path
 
     from pydantic import ValidationError
 
@@ -362,7 +363,6 @@ def profile_dump(
     from aiida.common import NotExistent
     from aiida.tools.dumping import ProfileDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode, ProfileDumpSelection
-    from aiida.tools.dumping.utils.paths import DumpPaths
 
     warning_msg = (
         'This is a new feature which is still in its testing phase. '
@@ -374,15 +374,21 @@ def profile_dump(
     profile = ctx.obj['profile']
     final_dump_config = None
     try:
-        dump_paths = DumpPaths._resolve_click_path_for_dump(path=path, entity=profile)
-        config_file_path = dump_paths.config_path
+        if path is None:
+            resolved_base_output_path = Path.cwd() / profile.name
+            echo.echo_report(f"No output path specified. Using default: './{profile.name}'")
+        else:
+            resolved_base_output_path = Path(path).resolve()
+            echo.echo_report(f"Using specified output path: '{resolved_base_output_path}'")
+
+        config_file_path = resolved_base_output_path / 'aiida_dump_config.yaml'
 
         if config_file_path.is_file():
             # --- Config File Exists: Load ONLY from file ---
             try:
-                config_path_rel = config_file_path.relative_to(dump_paths.top_level.parent)
+                config_path_rel = config_file_path.relative_to(Path.cwd())
             except ValueError:
-                config_path_rel = config_file_path  # Fallback if not relative
+                config_path_rel = config_file_path
             echo.echo_report(f"Config file found at '{config_path_rel}'.")
             echo.echo_report('Using config file settings ONLY (ignoring other CLI flags).')
             try:
@@ -430,12 +436,14 @@ def profile_dump(
                 return
 
         # --- Check final determined scope (applies to both paths) ---
-        if final_dump_config.profile_dump_selection == ProfileDumpSelection.NONE:
+        if (
+            final_dump_config.profile_dump_selection == ProfileDumpSelection.NONE
+            and final_dump_config.dump_mode != DumpMode.DRY_RUN
+        ):
             echo.echo_warning('No specific data selection determined from config file or CLI arguments.')
             msg = 'Please specify `--all` to dump all profile data or filters such as `groups`, `user` etc.'
             echo.echo_warning(msg)
             echo.echo_warning('Use `--help` for all options and `--dry-run` to preview.')
-            return
 
         # --- Other logical checks ---
         if not final_dump_config.organize_by_groups and final_dump_config.update_groups:
@@ -447,11 +455,11 @@ def profile_dump(
             echo.echo_warning(msg)
 
         # --- Instantiate and Run ProfileDumper ---
-        profile_dumper = ProfileDumper(config=final_dump_config, output_path=dump_paths.top_level)
+        profile_dumper = ProfileDumper(config=final_dump_config, output_path=resolved_base_output_path)
         profile_dumper.dump()
 
         if final_dump_config.dump_mode != DumpMode.DRY_RUN:
-            msg = f'Raw files for profile `{profile.name}` dumped into folder `{dump_paths.child}`.'
+            msg = f'Raw files for profile `{profile.name}` dumped into folder `{resolved_base_output_path}`.'
             echo.echo_success(msg)
         else:
             echo.echo_success('Dry run completed.')

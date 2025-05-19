@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.config import DumpConfig, DumpMode, ProfileDumpSelection
+from aiida.tools.dumping.config import DumpConfig, DumpMode
 from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.managers.deletion import DeletionManager
+from aiida.tools.dumping.managers.group import GroupDumpManager
 from aiida.tools.dumping.managers.process import ProcessDumpManager
 from aiida.tools.dumping.managers.profile import ProfileDumpManager
-from aiida.tools.dumping.managers.group import GroupDumpManager
-from aiida.tools.dumping.utils.helpers import DumpChanges, DumpTimes, GroupChanges
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils.helpers import DumpChanges, DumpTimes
+from aiida.tools.dumping.utils.paths import DumpPathPolicy
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.mapping import GroupNodeMapping
@@ -24,32 +25,40 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.engine')
 class DumpEngine:
     """Core engine that orchestrates the dump process."""
 
-    def __init__(self, dump_paths: DumpPaths, config: DumpConfig | None = None):
+    def __init__(
+        self,
+        base_output_path: Path,
+        config: DumpConfig | None = None,
+        dump_target_entity: Optional[orm.Node | orm.Group] = None,
+    ):
         """Engine constructor that initializes all entities needed for dumping.
 
-        :param dump_paths: _description_
+        :param path_policy: _description_
         :param config: _description_, defaults to None
         """
 
-        self.dump_paths = dump_paths
-
-        # --- Resolve Configuration from file and possibly passed values ---
-        # Loads from YAML if present and merges with the passed config object
-        # if not isinstance(config, DumpConfig):
-        #     msg = f"DumpEngine expects a DumpConfig object, got {type(config)}"
-        #     raise TypeError(msg)
         self.config: DumpConfig = config
+
+        self.path_policy = DumpPathPolicy(
+            base_output_path=base_output_path,
+            config=self.config,
+            dump_target_entity=dump_target_entity,
+        )
+
+        self.path_policy.prepare_directory(path_to_prepare=base_output_path)
 
         # --- Initialize Times, Logger, and NodeGroupMapping ---
         self.dump_times, self.dump_logger, self.stored_mapping = self._initialize_times_logger_and_mapping()
 
         # --- Initialize detector for changes ---
-        self.detector = DumpChangeDetector(self.dump_logger, self.config, self.dump_times)
+        self.detector = DumpChangeDetector(
+            dump_logger=self.dump_logger, path_policy=self.path_policy, config=self.config, dump_times=self.dump_times
+        )
 
         # --- Initialize Managers (pass dependencies) ---
         self.process_manager = ProcessDumpManager(
             config=self.config,
-            dump_paths=dump_paths,
+            path_policy=self.path_policy,
             dump_logger=self.dump_logger,
             dump_times=self.dump_times,
         )
@@ -64,16 +73,16 @@ class DumpEngine:
         logger.debug('Initializing dump times and logger...')
 
         # Clear log file if overwriting
-        if self.config.dump_mode == DumpMode.OVERWRITE and self.dump_paths.log_path.exists():
+        if self.config.dump_mode == DumpMode.OVERWRITE and self.path_policy.log_file_path.exists():
             try:
-                logger.info(f'Overwrite mode: Deleting existing log file {self.dump_paths.log_path}')
-                self.dump_paths.log_path.unlink()
+                logger.info(f'Overwrite mode: Deleting existing log file {self.path_policy.log_file_path}')
+                self.path_policy.log_file_path.unlink()
             except OSError as e:
                 logger.error(f'Failed to delete existing log file: {e}')
                 # Decide whether to proceed or raise an error
 
         # Load log data, stored mapping, and last dump time string from file
-        stores_coll, stored_mapping, last_dump_time_str = DumpLogger.load(self.dump_paths)
+        stores_coll, stored_mapping, last_dump_time_str = DumpLogger.load(self.path_policy)
 
         # Initialize DumpTimes based on loaded time string
         dump_times = DumpTimes.from_last_log_time(last_dump_time_str)
@@ -81,7 +90,7 @@ class DumpEngine:
 
         # Initialize DumpLogger instance with loaded data
         dump_logger = DumpLogger(
-            dump_paths=self.dump_paths,
+            path_policy=self.path_policy,
             stores=stores_coll,
             last_dump_time_str=last_dump_time_str,
         )
@@ -105,14 +114,14 @@ class DumpEngine:
 
         :return: _description_
         """
-        config_path = self.dump_paths.config_path
+        config_path = self.path_policy.config_file_path
 
         if not config_path.exists():
             logger.debug(f'Config file {config_path} not found. Using default/provided config.')
             return None
 
-        assert self.dump_paths.top_level is not None
-        config_path_rel = config_path.relative_to(self.dump_paths.top_level)
+        assert self.path_policy.top_level is not None
+        config_path_rel = config_path.relative_to(self.path_policy.top_level)
         logger.info(f'Loading configuration from {config_path_rel}...')
         try:
             loaded_config = DumpConfig.parse_yaml_file(path=config_path)
@@ -128,192 +137,116 @@ class DumpEngine:
         try:
             # This calls self.config.model_dump(mode='json') internally via the serializer
             # and writes to the correct path using yaml.dump
-            self.config._save_yaml_file(self.dump_paths.config_path)
+            self.config._save_yaml_file(self.path_policy.config_file_path)
             # The logger message "Dump configuration saved to ..." is now inside save_yaml_file
         except Exception as e:
             # Log error but avoid raising another error during finalization if possible
             # Match original behavior of logging without re-raising here.
             logger.error(f'Failed to save dump configuration during engine finalization: {e}', exc_info=True)
 
-    def dump(self, entity: orm.ProcessNode | orm.Group | None = None) -> None:
-        """Selects and executes the appropriate dump strategy.
-
-        :param entity: _description_, defaults to None
+    def dump(self, entity: Optional[orm.ProcessNode | orm.Group] = None) -> None:
         """
-
-        entity_type_msg = 'Starting dump process of '
-        if entity is None:
-            entity_type_msg += 'default profile'
-        elif isinstance(entity, orm.Group):
-            entity_type_msg += f'group `{entity.label}`'
+        Selects and executes the appropriate dump strategy based on the entity.
+        The base output directory is assumed to be prepared by DumpPathPolicy.__init__().
+        """
+        entity_description = "profile"
+        if isinstance(entity, orm.Group):
+            entity_description = f"group '{entity.label}' (PK: {entity.pk})"
         elif isinstance(entity, orm.ProcessNode):
-            entity_type_msg += f'process with pk `{entity.pk}`'
+            entity_description = f"process node (PK: {entity.pk})"
+        logger.report(f"Starting dump of {entity_description} in mode: {self.config.dump_mode.name}")
 
-        entity_type_msg += f' in mode: {self.config.dump_mode.name}'
+        current_mapping: Optional[GroupNodeMapping] = None
 
-        logger.report(entity_type_msg)
-
-        # --- Prepare Top-Level Path ---
-        if not self.config.dump_mode == DumpMode.DRY_RUN:
-            try:
-                DumpPaths._prepare_dump_path(
-                    path_to_validate=self.dump_paths.absolute,
-                    dump_mode=self.config.dump_mode,
-                    safeguard_file=self.dump_paths.safeguard_file,
-                )
-            except (FileNotFoundError, FileExistsError, ValueError, OSError) as e:
-                logger.critical(f'Failed to prepare dump directory {self.dump_paths.child}: {e}')
-                raise e
-
-        # --- For process dump, I don't need any complicated logic
-        import ipdb; ipdb.set_trace()
         if isinstance(entity, orm.ProcessNode):
-            logger.info(f'Executing Process dump for node: PK={entity.pk}')
-            process_node = entity
-            process_top_level_path = self.dump_paths.absolute
-            logger.info(f'Dispatching node {process_node.pk} to ProcessManager...')
+            logger.info(f'Executing ProcessNode dump for PK={entity.pk}')
+            # For a single ProcessNode, its dump root is the base_output_path.
+            # ProcessManager uses DumpPathPolicy to place content within this root.
             self.process_manager.dump(
-                process_node=process_node,
-                target_path=process_top_level_path,
+                process_node=entity,
+                target_path=self.path_policy.base_output_path
             )
-            logger.info(f'ProcessManager finished processing node: PK={process_node.pk}')
             try:
-                self.process_manager.readme_generator._generate(process_node, process_top_level_path)
+                self.process_manager.readme_generator._generate(entity, self.path_policy.base_output_path)
             except Exception as e:
-                logger.warning(f'Failed to generate README for process {process_node.pk}: {e}')
-            logger.info(f'Finished Process dump for node: PK={entity.pk}')
-
-            # No mapping evaluated for ProcessNode
-            self.dump_logger.save(self.dump_times.current)
+                logger.warning(f'Failed to generate README for process {entity.pk}: {e}')
+            current_mapping = None # No group mapping relevant for single process dump for the main log
 
         elif isinstance(entity, orm.Group):
-            logger.info(f'Executing Group dump for group: PK={entity.pk}, Label={entity.label}')
-            # Change detection might still happen here or be scoped within the manager
+            logger.info(f"Executing Group dump for '{entity.label}' (PK: {entity.pk})")
             node_changes, current_mapping = self.detector._detect_all_changes(group=entity)
             group_changes = self.detector._detect_group_changes(
                 stored_mapping=self.stored_mapping,
                 current_mapping=current_mapping,
-                specific_group_uuid=entity.uuid,
+                specific_group_uuid=entity.uuid
             )
             all_changes = DumpChanges(nodes=node_changes, groups=group_changes)
 
-            # --- Handle Deletion First (if requested) ---
             if self.config.delete_missing:
-                logger.info('Deletion requested. Handling deleted entities...')
-                # --- Change Detection (needed *only* for deletion info) ---
-                logger.info('Detecting changes to identify deletions...')
-                # Detect node changes (yields NodeChanges and mapping)
-                # TODO: Independent of groups. Or is it?
                 deletion_manager = DeletionManager(
                     config=self.config,
-                    dump_paths=self.dump_paths,
+                    path_policy=self.path_policy,
                     dump_logger=self.dump_logger,
                     dump_changes=all_changes,
-                    stored_mapping=self.stored_mapping,
+                    stored_mapping=self.stored_mapping
                 )
                 deletion_manager._handle_deleted_entities()
 
             if self.config.dump_mode == DumpMode.DRY_RUN:
-                change_table = all_changes.to_table()
-                print(change_table)
+                print(all_changes.to_table()) # Or use logger.report
                 return
 
-            # Instantiate GroupDumpManager with the specific group
-            # A specific, possibly simplified, config could be passed here.
-            group_dump_config = self.config.model_copy() # Or a more tailored one
-
+            # GroupDumpManager needs the specific group and the scoped changes.
+            # The DumpPathPolicy instance within GroupDumpManager will be the same as DumpEngine's.
             group_manager = GroupDumpManager(
                 group_to_dump=entity,
-                config=group_dump_config,
-                dump_paths=self.dump_paths,
+                config=self.config,
+                path_policy=self.path_policy,
                 dump_logger=self.dump_logger,
                 process_manager=self.process_manager,
-                detector=self.detector,
                 current_mapping=current_mapping
             )
+            # The dump method of GroupDumpManager needs the root path for *this group's content*
+            # This root path is determined by DumpPathPolicy.
             group_manager.dump(changes=all_changes)
 
-            # No mapping evaluated for ProcessNode
-            self.dump_logger.save(self.dump_times.current, current_mapping)
-
-        else:
-
-            # --- Change Detection (for Dumping) ---
-            logger.info('Detecting node changes for dump...')
-            # node_changes now holds a NodeChanges object, current_mapping holds the mapping
-            node_changes, current_mapping = self.detector._detect_all_changes(
-                group=entity if isinstance(entity, orm.Group) else None
-            )
-            # TODO: See if I should pass the mapping here or create it in the Manager
-            self.current_mapping = current_mapping
-
-            logger.info('Detecting group changes for dump...')
-            group_changes: GroupChanges
+        else: # Profile Dump (entity is None)
+            logger.info("Executing Profile dump.")
+            node_changes, current_mapping = self.detector._detect_all_changes()
             group_changes = self.detector._detect_group_changes(
-                stored_mapping=self.stored_mapping,  # Use mapping loaded at init
-                current_mapping=current_mapping,  # Use mapping from node detection
-                specific_group_uuid=(entity.uuid if isinstance(entity, orm.Group) else None),
+                stored_mapping=self.stored_mapping,
+                current_mapping=current_mapping
             )
+            all_changes = DumpChanges(nodes=node_changes, groups=group_changes)
 
-            # Combine detected changes
-            all_changes = DumpChanges(
-                nodes=node_changes,
-                groups=group_changes,
-            )
+            if all_changes.is_empty() and not self.config.also_ungrouped:  # Not sure I need the also_ungrouped check
+                logger.report('No changes detected since last dump and not dumping ungrouped. Nothing to do.')
+            else:
+                if self.config.delete_missing:
+                    deletion_manager = DeletionManager(
+                        config=self.config,
+                        path_policy=self.path_policy,
+                        dump_logger=self.dump_logger,
+                        dump_changes=all_changes,
+                        stored_mapping=self.stored_mapping
+                    )
+                    deletion_manager._handle_deleted_entities()
 
-            # --- Check if any changes were detected ---
-            no_node_changes = len(all_changes.nodes.new_or_modified) == 0 and len(all_changes.nodes.deleted) == 0
-            no_group_changes = (
-                len(all_changes.groups.new) == 0
-                and len(all_changes.groups.deleted) == 0
-                and len(all_changes.groups.modified) == 0
-                and len(all_changes.groups.renamed) == 0
-                and len(all_changes.groups.node_membership) == 0
-            )
+                if self.config.dump_mode == DumpMode.DRY_RUN:
+                    print(all_changes.to_table()) # Or use logger.report
+                    return
 
-            # If `als_ungrouped`
-            if (no_node_changes and no_group_changes) and not self.config.also_ungrouped:
-                logger.report('No changes detected since last dump. Nothing to do.')
-                self.dump_logger.save(self.dump_times.current, self.current_mapping)
-                self._save_config()
-                return
-
-            # --- Handle Deletion First (if requested) ---
-            if self.config.delete_missing:
-                logger.info('Deletion requested. Handling deleted entities...')
-                # --- Change Detection (needed *only* for deletion info) ---
-                logger.info('Detecting changes to identify deletions...')
-                # Detect node changes (yields NodeChanges and mapping)
-                # TODO: Independent of groups. Or is it?
-                deletion_manager = DeletionManager(
+                profile_manager = ProfileDumpManager(
                     config=self.config,
-                    dump_paths=self.dump_paths,
+                    path_policy=self.path_policy,
                     dump_logger=self.dump_logger,
-                    dump_changes=all_changes,
-                    stored_mapping=self.stored_mapping,
+                    process_manager=self.process_manager,
+                    detector=self.detector,
+                    current_mapping=current_mapping
                 )
-                deletion_manager._handle_deleted_entities()
+                profile_manager.dump(changes=all_changes)
 
-            if self.config.dump_mode == DumpMode.DRY_RUN:
-                change_table = all_changes.to_table()
-                print(change_table)
-                return
-
-            profile_manager = ProfileDumpManager(
-                config=self.config,
-                dump_paths=self.dump_paths,
-                dump_logger=self.dump_logger,
-                process_manager=self.process_manager,
-                current_mapping=current_mapping,
-                detector=self.detector,
-            )
-
-            # Call the newly instantiated ProfileDumpManager
-            profile_manager.dump(changes=all_changes)
-
-            # No mapping evaluated for ProcessNode
-            self.dump_logger.save(self.dump_times.current, current_mapping)
-
-        # --- Finalize ---
-        logger.report('Saving final dump log, mapping, and configuration...')
+        logger.report('Saving final dump log and configuration...')
+        self.dump_logger.save(current_dump_time=self.dump_times.current, group_node_mapping=current_mapping)
         self._save_config()
+        logger.report(f"Dump of {entity_description} completed.")

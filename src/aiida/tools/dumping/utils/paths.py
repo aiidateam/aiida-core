@@ -9,12 +9,9 @@
 
 """Path utility functions and classes for the dumping feature."""
 
-# NOTE: Could manke many of the functions staticmethods of DumpPaths
-
 from __future__ import annotations
 
-import shutil
-from dataclasses import dataclass, field
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -23,190 +20,253 @@ from aiida import orm
 from aiida.common import timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import Profile
-from aiida.tools.dumping.config import DumpMode
+from aiida.tools.dumping.config import DumpConfig, DumpMode
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.utils.paths')
 
-__all__ = ('DumpPaths',)
+__all__ = ('DumpPathPolicy',)
 
 
-@dataclass
-class DumpPaths:
-    parent: Path = field(default_factory=Path.cwd)
-    child: Path = field(default_factory=lambda: Path('aiida-dump'))
-    _top_level: Path | None = field(default=None, init=False, repr=False)
+class DumpPathPolicy:
+    """
+    Manages the generation of paths and directory structures for an AiiDA dump,
+    acting as a central policy for the dump layout.
+    """
 
-    safeguard_file = '.aiida_dump_safeguard'
-    log_file: str = 'aiida_dump_log.json'
-    config_file: str = 'aiida_dump_config.yaml'
+    # --- Constants ---
+    # (Move constants like 'groups_folder_name', 'ungrouped_folder_name',
+    #  'calculations_folder_name', etc., here if they are universally used)
+    GROUPS_DIR_NAME = 'groups'
+    UNGROUPED_DIR_NAME = 'ungrouped'
+    CALCULATIONS_DIR_NAME = 'calculations'
+    WORKFLOWS_DIR_NAME = 'workflows'
+    DATA_DIR_NAME = 'data'
+    OTHER_NODES_DIR_NAME = 'other_nodes'
+    SAFEGUARD_FILE_NAME = '.aiida_dump_safeguard'
+    LOG_FILE_NAME = 'aiida_dump_log.json'
+    CONFIG_FILE_NAME = 'aiida_dump_config.yaml'
 
-    def __post_init__(self):
-        # Set top_level during initialization if not provided
-        # This should not change after construction, as it should always point at the top-level dump directory
-        self._top_level = self.parent / self.child
-
-    @property
-    def top_level(self) -> Path:
-        """Returns the top level path, guaranteed to be non-None."""
-        assert self._top_level is not None
-        return self._top_level
-
-    @classmethod
-    def from_path(cls, path: Path):
-        return cls(parent=path.parent, child=Path(path.name))
-
-    @property
-    def absolute(self) -> Path:
-        """Returns the absolute path by joining parent and child."""
-        return self.parent / self.child
-
-    @property
-    def safeguard_path(self) -> Path:
-        """Returns the relative path to a safeguard file."""
-        return self.absolute / self.safeguard_file
-
-    @property
-    def log_path(self) -> Path:
-        """Returns the path of the logger JSON."""
-        return self.absolute / self.log_file
-
-    # NOTE: Should this return a new instance?
-    def extend_paths(self, subdir: str) -> DumpPaths:
+    def __init__(
+        self, base_output_path: Path, config: DumpConfig, dump_target_entity: Optional[orm.Node | orm.Group] = None
+    ):
         """
-        Creates a new DumpPaths instance with an additional subdirectory.
+        Initializes the DumpPathPolicy policy.
 
-        Args:
-            subdir: The name of the subdirectory to add
-
-        Returns:
-            A new DumpPaths instance with the updated path structure
+        :param base_output_path: The absolute root path for this entire dump operation.
+                                 For a facade like `GroupDumper(group, output_path=...)`,
+                                 this `base_output_path` IS the `output_path` provided to the facade.
+        :param config: The DumpConfig object.
+        :param dump_target_entity: The primary entity this dump operation is targeting
+                                   (e.g., a specific Group if GroupDumper is used, a ProcessNode
+                                   if ProcessDumper is used, or None for ProfileDumper).
+                                   This helps in contextual path decisions.
         """
-        return DumpPaths(parent=self.absolute, child=Path(subdir))
+        self.base_output_path: Path = base_output_path.resolve()
+        self.config: DumpConfig = config
+        self.dump_target_entity: Optional[orm.Node | orm.Group] = dump_target_entity
+
+    # --- Path Property Accessors ---
+    @property
+    def log_file_path(self) -> Path:
+        """Path to the main aiida_dump_log.json file."""
+        return self.base_output_path / self.LOG_FILE_NAME
 
     @property
-    def config_path(self) -> Path:
-        """Returns the path of the top-level config YAML."""
-        assert self.top_level is not None
-        return self.top_level / self.config_file
+    def config_file_path(self) -> Path:
+        """Path to the aiida_dump_config.yaml file."""
+        return self.base_output_path / self.CONFIG_FILE_NAME
 
-    @staticmethod
-    def _prepare_dump_path(
-        path_to_validate: Path,
-        dump_mode: DumpMode,
-        safeguard_file: str = safeguard_file,
-        # top_level_caller: bool = True,
-    ) -> None:
-        # TODO: Add an option to clean the path here
-        """Create default dumping directory for a given process node and return it as absolute path.
+    def get_safeguard_path(self, directory: Path) -> Path:
+        """Returns the path to the safeguard file within a given directory."""
+        return directory / self.SAFEGUARD_FILE_NAME
 
-        :param validate_path: Path to validate for dumping.
-        :param safeguard_file: Dumping-specific file that indicates that the directory originated from AiiDA's
-            dump` command to avoid accidentally deleting wrong directory.
-        :return: The absolute created dump path.
-        :raises ValueError: If both `overwrite` and `incremental` are set to True.
-        :raises FileExistsError: If a file or non-empty directory exists at the given path and none of `overwrite` or
-            `incremental` are enabled.
-        :raises FileNotFoundError: If no `safeguard_file` is found."""
+    # --- Core Path Generation Methods ---
 
-        if path_to_validate.is_file():
-            msg = f'A file at the given path `{path_to_validate}` already exists.'
-            raise FileExistsError(msg)
+    def _get_group_subdirectory_segment(self, group: orm.Group) -> Path:
+        """
+        Determines the path segment for a group. If organize_by_groups is True,
+        it prepends 'groups/'. Assumes group.label is filesystem-safe.
+        """
+        # Assuming group.label is directly usable as a directory name.
+        # If special characters in group.label could be an issue,
+        # you would need some form of sanitization here.
+        group_label_part = Path(group.label)
 
-        if not path_to_validate.is_absolute():
-            msg = f'The path to validate must be an absolute path. Got `{path_to_validate}.'
+        if self.config.organize_by_groups:
+            return Path('groups') / group_label_part
+        return group_label_part
+
+    def get_path_for_group_content(
+        self,
+        group: orm.Group,
+        parent_group_content_path: Optional[Path] = None,
+    ) -> Path:
+        if not self.config.organize_by_groups:
+            return self.base_output_path
+
+        if parent_group_content_path is None:
+            if isinstance(self.dump_target_entity, orm.Group) and self.dump_target_entity.uuid == group.uuid:
+                return self.base_output_path
+            else:
+                return self.base_output_path / self._get_group_subdirectory_segment(group)
+        else:
+            # For nested groups, use the direct label as the subdirectory name
+            # under the parent_group_content_path.
+            return parent_group_content_path / Path(group.label)
+
+    def get_path_for_node(
+        self, node: orm.Node, current_content_root: Path, group_context_for_node: Optional[orm.Group] = None
+    ) -> Path:
+        """
+        Determines the absolute path for dumping a specific node.
+
+        :param node: The aiida.orm.Node object.
+        :param current_content_root: The absolute root path for the current context
+                                     (e.g., a specific group's content path, or the path
+                                     for ungrouped nodes, or the base_output_path for a
+                                     single process dump).
+        :param group_context_for_node: The group under whose direct hierarchy this node is being dumped.
+                                       This is important if the node itself is also part of other groups,
+                                       to decide its primary dump location vs. symlinks.
+                                       If None, the node is considered ungrouped or dumped standalone.
+        :return: Absolute Path for the node's dump directory.
+        """
+        node_type_folder_name = self._get_node_type_folder_name(node)
+        node_dir_name = self._get_node_directory_name(node)  # Uses existing static method
+
+        # Nodes are always placed in a type-specific subdirectory *within* the
+        # current_content_root. The current_content_root has already been determined
+        # by get_path_for_group_content or get_path_for_ungrouped_nodes_root.
+        return current_content_root / node_type_folder_name / node_dir_name
+
+    def get_path_for_ungrouped_nodes_root(self) -> Path:
+        """
+        Determines the absolute root path for storing ungrouped nodes.
+        Node type subdirectories will be created under this path.
+        """
+        if self.config.also_ungrouped:
+            if self.config.organize_by_groups:
+                # Ungrouped nodes go into "ungrouped/" at the top level
+                return self.base_output_path / self.UNGROUPED_DIR_NAME
+            else:
+                # Ungrouped nodes go into type folders directly at the base_output_path
+                return self.base_output_path
+        else:
+            # Should not be called if not dumping ungrouped, but return base as a fallback.
+            return self.base_output_path
+
+    # --- Helper methods for internal path component generation ---
+    def _get_node_type_folder_name(self, node: orm.Node) -> str:
+        if isinstance(node, orm.CalculationNode):
+            return self.CALCULATIONS_DIR_NAME
+        elif isinstance(node, orm.WorkflowNode):
+            return self.WORKFLOWS_DIR_NAME
+        elif isinstance(node, orm.Data):  # Assuming you add Data node dumping
+            return self.DATA_DIR_NAME
+        else:
+            msg = f'Wrong node type: {type(node)} was passed.'
             raise ValueError(msg)
 
-        # Handle existing non-empty directory
-        safeguard_path = path_to_validate / safeguard_file
-        if path_to_validate.is_dir() and any(path_to_validate.iterdir()):
-            # Check for safeguard first if directory is not empty
-            if not safeguard_path.is_file():
-                # If non-empty AND safeguard is missing, it's an error for OVERWRITE and INCREMENTAL
-                if dump_mode in (DumpMode.OVERWRITE, DumpMode.INCREMENTAL):
-                    msg = (
-                        f'Path `{path_to_validate}` exists and is not empty, but safeguard file '
-                        f'`{safeguard_file}` is missing. Cannot proceed in {dump_mode.name} mode '
-                        f'to prevent accidental data modification/loss.'
-                    )
-                    logger.error(msg)
-                    raise FileNotFoundError(msg)
-                # For DRY_RUN, we might just log a warning or proceed silently
-                # depending on desired dry-run feedback. Let's log for now.
-                elif dump_mode == DumpMode.DRY_RUN:
-                    logger.warning(
-                        f'DRY RUN: Path `{path_to_validate}` exists, is not empty, and safeguard file '
-                        f'`{safeguard_file}` is missing.'
-                    )
-            # Safeguard IS present and directory is non-empty
-            elif dump_mode == DumpMode.OVERWRITE:
-                DumpPaths._safe_delete_dir(
-                    path=path_to_validate,
-                    safeguard_file=safeguard_file,
-                )
-
-        # Check if path is symlink, otherwise `mkdir` fails
-        if path_to_validate.is_symlink():
-            return
-
-        # Finally, (re-)create directory
-        # Both shutil.rmtree and `_delete_dir_recursively` delete the original dir
-        # If it already existed, e.g. in the `incremental` case, exist_ok=True
-        path_to_validate.mkdir(exist_ok=True, parents=True)
-        path_to_safeguard_file = path_to_validate / safeguard_file
-        if not path_to_safeguard_file.is_file():
-            path_to_safeguard_file.touch()
-
     @staticmethod
-    def _safe_delete_dir(
-        path: Path,
-        safeguard_file: str = safeguard_file,
-    ) -> None:
-        """Safely delete a directory and its contents if it contains the safeguard file.
-        Uses shutil.rmtree for robust deletion. Also deletes the top-level directory itself.
+    def _get_node_directory_name(node: orm.ProcessNode, append_pk: bool = True) -> str:
         """
-        if not path.exists():
-            logger.debug(f"Path '{path}' does not exist, nothing to delete.")
+        Generates the directory name for a specific node (e.g., "NodeType-PK").
+        (This can reuse your existing DumpPathPolicy._get_default_process_dump_path logic)
+        """
+        # Assuming DumpPathPolicy._get_default_process_dump_path returns a Path, get .name
+        return str(DumpPathPolicy._get_default_process_dump_path(node, append_pk=append_pk))
+
+    # --- Filesystem Operation Methods ---
+    def prepare_directory(self, path_to_prepare: Path, is_leaf_node_dir: bool = False) -> None:
+        """
+        Prepares a directory for dumping, creating it and a safeguard file.
+        In OVERWRITE mode, if it's a leaf node directory and exists, it's deleted first.
+
+        :param path_to_prepare: The absolute directory path to prepare.
+        :param is_leaf_node_dir: True if this path is for a specific node's final dump,
+                                 False if it's an intermediate directory (like 'groups/' or 'calculations/').
+        """
+        if self.config.dump_mode == DumpMode.DRY_RUN:
             return
 
-        # If it's not a directory (e.g., a file or a symlink), handle differently
-        if not path.is_dir():
-            if path.is_symlink():
-                logger.debug(f"Path '{path}' is a symlink, unlinking.")
-                path.unlink()  # missing_ok=True requires Python 3.8+
-            else:
-                logger.debug(f"Path '{path}' is a file, unlinking.")
-                path.unlink()  # missing_ok=True requires Python 3.8+
+        elif self.config.dump_mode == DumpMode.OVERWRITE:
+            if path_to_prepare.exists():
+                if (
+                    os.listdir(path_to_prepare)
+                    and not (path_to_prepare / self.SAFEGUARD_FILE_NAME).exists()
+                ):
+                    if is_leaf_node_dir:
+                        self.safe_delete_directory(path_to_prepare)
+                    else:
+                        msg = f'Path {path_to_prepare} exists, is not empty, but safeguard file missing.'
+                        raise FileNotFoundError(msg)
+
+        path_to_prepare.mkdir(parents=True, exist_ok=True)
+        (path_to_prepare / self.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
+        # self.get_safeguard_path(path_to_prepare).touch(exist_ok=True)
+
+    def safe_delete_directory(self, directory_path: Path) -> None:
+        """
+        Safely deletes a directory if it contains a safeguard file.
+        """
+        if self.config.dump_mode == DumpMode.DRY_RUN:
+            # In dry run, we would report what would be deleted
+            # logger.report(f"[DRY RUN] Would delete directory: {directory_path}")
             return
 
-        # Check if directory is empty *before* safeguard check
-        is_empty = not any(path.iterdir())
-        if is_empty:
-            logger.debug(f"Path '{path}' is an empty directory, removing.")
-            path.rmdir()
-            return
+        safeguard = self.get_safeguard_path(directory_path)
+        if directory_path.is_dir() and safeguard.is_file():
+            import shutil
 
-        # Check for safeguard file existence
-        safeguard_path = path / safeguard_file
-        if not safeguard_path.is_file():
-            msg = (
-                f'Path `{path}` exists and is not empty, but safeguard file `{safeguard_file}` is missing. '
-                f'Not removing directory to prevent accidental data loss.'
-            )
-            logger.error(msg)  # Log as error as this is a safety stop
-            raise FileNotFoundError(msg)  # Raise exception to signal failure
+            try:
+                shutil.rmtree(directory_path)
+                # logger.info(f"Safely deleted directory: {directory_path}")
+            except OSError:
+                # logger.error(f"Error deleting directory {directory_path}: {e}")
+                raise  # Or handle more gracefully
+        elif directory_path.is_dir() and not safeguard.is_file():
+            # logger.warning(
+            # f"Directory {directory_path} does not contain safeguard file. Skipping deletion."
+            # )
+            pass  # Or raise an error
+        elif not directory_path.is_dir():
+            # logger.debug(f"Directory {directory_path} not found for deletion.")
+            pass
 
-        # Safeguard exists, proceed with deletion using shutil.rmtree
-        logger.debug(f"Safeguard file found in '{path}'. Proceeding with recursive deletion.")
-        try:
-            shutil.rmtree(path)
-            logger.debug(f"Successfully deleted directory tree: '{path}'")
-        except OSError as e:
-            # Catch potential errors during rmtree (e.g., permissions)
-            logger.error(
-                f"Error deleting directory tree '{path}' using shutil.rmtree: {e}",
-                exc_info=True,
-            )
-            raise  # Re-raise the error after logging
+    # --- Utility methods (can be static if they don't depend on config/base_path) ---
+    @staticmethod
+    def get_directory_stats(directory_path: Path) -> tuple[Optional[datetime], Optional[int]]:
+        """
+        Calculates the last modification time and total size of a directory.
+        (Reuses existing logic from self.path_policy.get_directory_stats)
+        """
+        # ... your existing implementation ...
+        if not directory_path.is_dir():
+            return None, None
+
+        total_size = 0
+        latest_mtime_ts = 0.0
+
+        for dirpath, _, filenames in os.walk(directory_path):
+            for filename in filenames:
+                filepath = Path(dirpath) / filename
+                try:
+                    if filepath.is_symlink():  # Skip symlinks for size, but consider their mtime if needed
+                        # For mtime, you might want to check link's mtime: os.lstat(filepath).st_mtime
+                        # or target's mtime if resolved: filepath.stat().st_mtime
+                        # For simplicity, let's use lstat for links
+                        current_mtime_ts = os.lstat(filepath).st_mtime
+                    else:
+                        stat_info = filepath.stat()
+                        total_size += stat_info.st_size
+                        current_mtime_ts = stat_info.st_mtime
+
+                    latest_mtime_ts = max(current_mtime_ts, latest_mtime_ts)
+                except FileNotFoundError:
+                    continue  # File might have been deleted during walk
+
+        dir_mtime = datetime.fromtimestamp(latest_mtime_ts, tz=timezone.utc) if latest_mtime_ts > 0 else None
+        return dir_mtime, total_size
 
     @staticmethod
     def _get_default_process_dump_path(
@@ -273,115 +333,15 @@ class DumpPaths:
         return Path('-'.join(label_elements))
 
     @staticmethod
-    def _resolve_click_path_for_dump(
-        entity: Profile | orm.ProcessNode | orm.Group, path: Path | None | str
-    ) -> DumpPaths:
-        if path:
-            path = Path(path)
-            if path.is_absolute():
-                dump_sub_path = Path(path.name)
-                dump_parent_path = path.parent
-            else:
-                dump_sub_path = path
-                dump_parent_path = Path.cwd()
-        else:
-            # Use direct isinstance checks to determine which generator to use
-            if isinstance(entity, Profile):
-                dump_sub_path = DumpPaths._get_default_profile_dump_path(entity)
-            elif isinstance(entity, orm.Group):
-                dump_sub_path = DumpPaths._get_default_group_dump_path(entity)
-            elif isinstance(entity, orm.ProcessNode):
-                dump_sub_path = DumpPaths._get_default_process_dump_path(entity)
-            else:
-                raise ValueError
+    def _get_default_group_dump_path(
+        group: orm.Group, prefix: Optional[str] = None, appendix: Optional[str] = None
+    ) -> Path:
+        label_elements = []
 
-            dump_parent_path = Path.cwd()
+        if prefix:
+            label_elements.append(prefix)
+        label_elements.append(group.label)
+        if appendix:
+            label_elements.append(appendix)
 
-        return DumpPaths(
-            parent=dump_parent_path,
-            child=dump_sub_path,
-        )
-
-    @staticmethod
-    def _get_group_path(group: orm.Group | None, organize_by_groups: bool = True) -> Path:
-        """Calculate and return the dump path for a specific group.
-
-        :param group: _description_
-        :param organize_by_groups: _description_, defaults to True
-        :return: _description_
-        """
-        if organize_by_groups:
-            if group:
-                # Calculate the subpath based on the group's entry point
-                group_entry_point = group.entry_point
-                if group_entry_point is None:
-                    group_subpath = Path(group.label)
-                else:
-                    group_entry_point_name = group_entry_point.name
-                    if group_entry_point_name == 'core':
-                        group_subpath = Path(f'{group.label}')
-                    elif group_entry_point_name == 'core.import':
-                        group_subpath = Path('import') / f'{group.label}'
-                    else:
-                        group_subpath = Path(*group_entry_point_name.split('.')) / f'{group.label}'
-
-                # Hierarchical structure under 'groups/' using entry point/label
-                group_path = Path('groups') / group_subpath
-            else:
-                group_path = Path('ungrouped')
-        else:
-            # Flat structure - return the main dump path
-            group_path = Path('.')
-
-        return group_path
-
-    @staticmethod
-    def _get_directory_stats(path: Path) -> tuple[datetime | None, int | None]:
-        """
-        Calculate the total size and last modification time of a directory's contents.
-
-        Args:
-            path: The directory path.
-
-        Returns:
-            A tuple containing:
-                - datetime | None: The most recent modification time among all files/dirs,
-                                made timezone-aware (UTC assumed if naive).
-                - int | None: The total size in bytes of all files within the directory.
-                            Returns None if the path doesn't exist or isn't a directory.
-        """
-        total_size = 0
-        latest_mtime_ts = 0.0
-
-        try:
-            if not path.is_dir():
-                logger.debug(f'Path {path} is not a directory, cannot calculate stats.')
-                return None, None
-
-            # Get mtime of the directory itself initially
-            latest_mtime_ts = path.stat().st_mtime
-
-            # Iterate through all files and directories recursively
-            for entry in path.rglob('*'):
-                try:
-                    stat_info = entry.stat()
-                    if entry.is_file():
-                        total_size += stat_info.st_size
-                    # Update latest mtime if this entry is newer
-                    latest_mtime_ts = max(stat_info.st_mtime, latest_mtime_ts)
-                except (OSError, FileNotFoundError) as stat_err:
-                    # Ignore errors for files/dirs that might disappear during iteration
-                    logger.debug(f'Could not stat entry {entry}: {stat_err}')
-
-            # Convert the latest timestamp to a timezone-aware datetime object
-            latest_mtime_dt = datetime.fromtimestamp(latest_mtime_ts)
-            latest_mtime_aware = timezone.make_aware(latest_mtime_dt)  # Assumes local time if naive
-
-            return latest_mtime_aware, total_size
-
-        except (FileNotFoundError, PermissionError) as e:
-            logger.error(f'Could not access path {path} to calculate stats: {e}')
-            return None, None
-        except Exception as e:
-            logger.error(f'Unexpected error calculating stats for {path}: {e}', exc_info=True)
-            return None, None
+        return Path('-'.join(label_elements))

@@ -692,6 +692,7 @@ def group_dump(
     Otherwise, CLI flags will be used.
     """
     import traceback
+    from pathlib import Path
 
     from pydantic import ValidationError
 
@@ -699,7 +700,6 @@ def group_dump(
     from aiida.common import NotExistent
     from aiida.tools.dumping import GroupDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode
-    from aiida.tools.dumping.utils.paths import DumpPaths
 
     warning_msg = (
         'This is a new feature which is still in its testing phase. '
@@ -709,14 +709,22 @@ def group_dump(
 
     # --- Initial Setup ---
     final_dump_config = None
-    try:
-        dump_paths = DumpPaths._resolve_click_path_for_dump(path=path, entity=group)
-        config_file_path = dump_paths.config_path
+    resolved_base_output_path: Path # Will be set
 
-        if config_file_path.is_file():
+    try:
+        if path is None:
+            resolved_base_output_path = Path.cwd() / group.label
+            echo.echo_report(f"No output path specified. Using default: './{group.label}'")
+        else:
+            resolved_base_output_path = Path(path).resolve()
+            echo.echo_report(f"Using specified output path: '{resolved_base_output_path}'")
+
+        config_file_path = resolved_base_output_path / 'aiida_dump_config.yaml'
+
+        if config_file_path.is_file() and not overwrite:
             # --- Config File Exists: Load ONLY from file ---
             try:
-                config_path_rel = config_file_path.relative_to(dump_paths.top_level.parent)
+                config_path_rel = config_file_path.relative_to(Path.cwd())
             except ValueError:
                 config_path_rel = config_file_path
             echo.echo_report(f"Config file found at '{config_path_rel}'.")
@@ -773,11 +781,11 @@ def group_dump(
             echo.echo_warning(msg)
 
         # --- Instantiate and Run GroupDumper ---
-        group_dumper = GroupDumper(group=group, config=final_dump_config, output_path=dump_paths.top_level)
+        group_dumper = GroupDumper(group=group, config=final_dump_config, output_path=resolved_base_output_path)
         group_dumper.dump()
 
         if final_dump_config.dump_mode != DumpMode.DRY_RUN:
-            msg = f'Raw files for group `{group.label}` dumped into folder `{dump_paths.child}`.'
+            msg = f'Raw files for group `{group.label}` dumped into folder `{resolved_base_output_path}`.'
             echo.echo_success(msg)
         else:
             echo.echo_success('Dry run completed.')

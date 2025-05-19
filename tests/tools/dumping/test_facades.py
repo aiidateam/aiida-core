@@ -32,10 +32,7 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.tests')
 profile_dump_label = 'profile-dump'
 add_group_label = 'add-group'
 multiply_add_group_label = 'multiply-add-group'
-add_group_dump_label = f'{add_group_label}-dump'
-multiply_add_group_dump_label = f'{multiply_add_group_label}-dump'
 sub_calc_group_label = 'sub-calc-group'
-sub_calc_group_dump_label = f'{sub_calc_group_label}-dump'
 
 # --- Content Definitions for Dumped Nodes ---
 
@@ -612,9 +609,9 @@ class TestGroupDumper:
         # Generate node tree
         calc_tree = get_expected_add_calc_tree(pk=node_pk)
         # Assemble group tree
-        expected_tree = get_expected_group_dump_tree(dump_label=add_group_dump_label, node_trees=[calc_tree])
+        expected_tree = get_expected_group_dump_tree(dump_label=add_group_label, node_trees=[calc_tree])
 
-        output_path = tmp_path / add_group_dump_label
+        output_path = tmp_path / add_group_label
         config = DumpConfig(filter_by_last_dump_time=False)  # Ensure all nodes are dumped initially
         group_dumper = GroupDumper(output_path=output_path, group=add_group, config=config)
         group_dumper.dump()
@@ -633,9 +630,9 @@ class TestGroupDumper:
         # Generate node tree
         wc_tree = get_expected_multiply_add_wc_tree(wc_pk=wc_pk, child_pks=child_pks)
         # Assemble group tree
-        expected_tree = get_expected_group_dump_tree(dump_label=multiply_add_group_dump_label, node_trees=[wc_tree])
+        expected_tree = get_expected_group_dump_tree(dump_label=multiply_add_group_label, node_trees=[wc_tree])
 
-        output_path = tmp_path / multiply_add_group_dump_label
+        output_path = tmp_path / multiply_add_group_label
         # Rely on default config for incremental filter_by_last_dump_time=True
         group_dumper = GroupDumper(output_path=output_path, group=multiply_add_group)
         group_dumper.dump()
@@ -648,14 +645,14 @@ class TestGroupDumper:
         node1 = add_group.nodes[0]
         node2 = generate_calculation_node_add()  # Created but not in group yet
 
-        output_path = tmp_path / add_group_dump_label
+        output_path = tmp_path / add_group_label
         config = DumpConfig(filter_by_last_dump_time=False, dump_mode=DumpMode.INCREMENTAL)
         group_dumper = GroupDumper(output_path=output_path, group=add_group, config=config)
 
         # Dump 1: Only node1
         group_dumper.dump()
         tree1 = get_expected_group_dump_tree(
-            dump_label=add_group_dump_label, node_trees=[get_expected_add_calc_tree(node1.pk)]
+            dump_label=add_group_label, node_trees=[get_expected_add_calc_tree(node1.pk)]
         )
         compare_tree(expected=tree1, base_path=tmp_path)
 
@@ -665,7 +662,7 @@ class TestGroupDumper:
         # Dump 2: Both nodes
         group_dumper.dump()  # Re-run dump, should pick up group change
         tree2 = get_expected_group_dump_tree(
-            dump_label=add_group_dump_label,
+            dump_label=add_group_label,
             node_trees=[get_expected_add_calc_tree(node1.pk), get_expected_add_calc_tree(node2.pk)],
         )
         compare_tree(expected=tree2, base_path=tmp_path)

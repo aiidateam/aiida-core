@@ -400,7 +400,7 @@ def profile_dump(
                     'dry_run': dry_run,
                     'overwrite': overwrite,
                     'all_entries': all_entries,
-                    'groups': list(groups),
+                    'groups': list(groups) if groups else [],
                     'past_days': past_days,
                     'start_date': start_date,
                     'end_date': end_date,

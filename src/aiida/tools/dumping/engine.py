@@ -9,6 +9,8 @@ from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.managers.deletion import DeletionManager
 from aiida.tools.dumping.managers.process import ProcessDumpManager
+from aiida.tools.dumping.managers.profile import ProfileDumpManager
+from aiida.tools.dumping.managers.group import GroupDumpManager
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpTimes, GroupChanges
 from aiida.tools.dumping.utils.paths import DumpPaths
 
@@ -164,6 +166,7 @@ class DumpEngine:
                 raise e
 
         # --- For process dump, I don't need any complicated logic
+        import ipdb; ipdb.set_trace()
         if isinstance(entity, orm.ProcessNode):
             logger.info(f'Executing Process dump for node: PK={entity.pk}')
             process_node = entity
@@ -183,16 +186,57 @@ class DumpEngine:
             # No mapping evaluated for ProcessNode
             self.dump_logger.save(self.dump_times.current)
 
-        else:
-            from aiida.tools.dumping.managers.profile import ProfileDumpManager
+        elif isinstance(entity, orm.Group):
+            logger.info(f'Executing Group dump for group: PK={entity.pk}, Label={entity.label}')
+            # Change detection might still happen here or be scoped within the manager
+            node_changes, current_mapping = self.detector._detect_all_changes(group=entity)
+            group_changes = self.detector._detect_group_changes(
+                stored_mapping=self.stored_mapping,
+                current_mapping=current_mapping,
+                specific_group_uuid=entity.uuid,
+            )
+            all_changes = DumpChanges(nodes=node_changes, groups=group_changes)
 
-            # TODO: This is a bit of a hack right now such that there
-            # TODO: is no additional unneccessary nesting for group dump
-            # TODO: We use the same code as for the dumping of a profile, but with only one group selected
-            if isinstance(entity, orm.Group):
-                self.config.organize_by_groups = False
-                self.config.profile_dump_selection = ProfileDumpSelection.SPECIFIC
-                self.config.groups = [entity.uuid]
+            # --- Handle Deletion First (if requested) ---
+            if self.config.delete_missing:
+                logger.info('Deletion requested. Handling deleted entities...')
+                # --- Change Detection (needed *only* for deletion info) ---
+                logger.info('Detecting changes to identify deletions...')
+                # Detect node changes (yields NodeChanges and mapping)
+                # TODO: Independent of groups. Or is it?
+                deletion_manager = DeletionManager(
+                    config=self.config,
+                    dump_paths=self.dump_paths,
+                    dump_logger=self.dump_logger,
+                    dump_changes=all_changes,
+                    stored_mapping=self.stored_mapping,
+                )
+                deletion_manager._handle_deleted_entities()
+
+            if self.config.dump_mode == DumpMode.DRY_RUN:
+                change_table = all_changes.to_table()
+                print(change_table)
+                return
+
+            # Instantiate GroupDumpManager with the specific group
+            # A specific, possibly simplified, config could be passed here.
+            group_dump_config = self.config.model_copy() # Or a more tailored one
+
+            group_manager = GroupDumpManager(
+                group_to_dump=entity,
+                config=group_dump_config,
+                dump_paths=self.dump_paths,
+                dump_logger=self.dump_logger,
+                process_manager=self.process_manager,
+                detector=self.detector,
+                current_mapping=current_mapping
+            )
+            group_manager.dump(changes=all_changes)
+
+            # No mapping evaluated for ProcessNode
+            self.dump_logger.save(self.dump_times.current, current_mapping)
+
+        else:
 
             # --- Change Detection (for Dumping) ---
             logger.info('Detecting node changes for dump...')
@@ -256,7 +300,6 @@ class DumpEngine:
                 return
 
             profile_manager = ProfileDumpManager(
-                selected_group=entity,
                 config=self.config,
                 dump_paths=self.dump_paths,
                 dump_logger=self.dump_logger,

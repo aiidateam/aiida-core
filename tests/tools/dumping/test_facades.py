@@ -18,7 +18,6 @@ from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping import GroupDumper, ProcessDumper, ProfileDumper
 from aiida.tools.dumping.config import DumpConfig, DumpMode, ProfileDumpSelection
-from aiida.tools.dumping.utils.paths import DumpPathPolicy
 
 from .utils import compare_tree
 

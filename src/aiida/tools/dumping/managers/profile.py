@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from aiida import orm
@@ -31,7 +30,6 @@ if TYPE_CHECKING:
     from aiida.tools.dumping.logger import DumpLogger
     from aiida.tools.dumping.managers.process import ProcessDumpManager
     from aiida.tools.dumping.mapping import GroupNodeMapping
-    from aiida.tools.dumping.utils.helpers import GroupModificationInfo
 
 
 class ProfileDumpManager(CollectionDumpManager):
@@ -270,10 +268,7 @@ class ProfileDumpManager(CollectionDumpManager):
             try:
                 ungrouped_path.mkdir(exist_ok=True, parents=True)
                 (ungrouped_path / DumpPathPolicy.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
-                self._dump_nodes(
-                    node_store=nodes_to_dump_ungrouped,
-                    group_context=None
-                    )
+                self._dump_nodes(node_store=nodes_to_dump_ungrouped, group_context=None)
                 nodes_processed_count = len(nodes_to_dump_ungrouped)
             except Exception as e:
                 logger.error(f'Failed processing nodes under ungrouped path: {e}', exc_info=True)
@@ -309,7 +304,6 @@ class ProfileDumpManager(CollectionDumpManager):
                 logger.error(f'Failed to calculate/update stats for group {group_uuid} at {group_path}: {e}')
 
     def dump(self, changes: DumpChanges) -> None:
-
         """Dumps the entire profile by orchestrating helper methods."""
         logger.info('Executing ProfileDumpManager')
         if self.config.profile_dump_selection == ProfileDumpSelection.NONE:

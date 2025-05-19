@@ -27,7 +27,7 @@ from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.dumping.config import DumpConfig
 from aiida.tools.dumping.logger import DumpLog
 from aiida.tools.dumping.utils.helpers import DumpStoreKeys
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils.paths import DumpPathPolicy
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.logger import DumpLogger
@@ -60,12 +60,12 @@ class ProcessDumpManager:
     def __init__(
         self,
         config: DumpConfig,
-        dump_paths: DumpPaths,
+        path_policy: DumpPathPolicy,
         dump_logger: DumpLogger,
         dump_times: DumpTimes,
     ):
         self.config: DumpConfig = config
-        self.dump_paths: DumpPaths = dump_paths
+        self.path_policy: DumpPathPolicy = path_policy
         self.dump_logger: DumpLogger = dump_logger
         self.dump_times: DumpTimes = dump_times
 
@@ -79,7 +79,6 @@ class ProcessDumpManager:
     def dump(
         self,
         process_node: orm.ProcessNode,
-        group: orm.Group | None = None,
         target_path: Path | None = None,
     ):
         """
@@ -87,7 +86,7 @@ class ProcessDumpManager:
         Determines the required action and delegates to execution methods.
         """
         if not target_path:
-            target_path = self._get_node_base_path(node=process_node, group=group)
+            raise Exception
 
         if not self._validate_node_for_dump(process_node):
             return  # Validation failed, logged inside helper
@@ -126,12 +125,11 @@ class ProcessDumpManager:
         self,
         process_node: orm.ProcessNode,
         target_path: Path,
-        group: orm.Group | None = None,  # Accept group context
     ):
         """Entry point for recursive calls from WorkflowWalker."""
         logger.debug(f'Recursive dump call for child node {process_node.pk} -> {target_path.name}')
         # Use the main dump logic for recursive calls as well
-        self.dump(process_node=process_node, group=group, target_path=target_path)
+        self.dump(process_node=process_node, target_path=target_path)
 
     def _check_log_and_determine_action(
         self,
@@ -257,11 +255,11 @@ class ProcessDumpManager:
         logger.info(f'Executing UPDATE for node {node.pk} at {target_path.name} due to mtime change.')
         try:
             # 1. Clean existing directory
-            DumpPaths._safe_delete_dir(target_path, safeguard_file=DumpPaths.safeguard_file)
+            self.path_policy.safe_delete_directory(directory_path=target_path)
             logger.debug(f'Cleaned existing directory for update: {target_path.name}')
 
             # 2. Prepare directory again
-            self._prepare_node_dump_directory(target_path)
+            self.path_policy.prepare_directory(path_to_prepare=target_path)
 
             # 3. Dump content
             self._dump_node_content(node, target_path)
@@ -279,7 +277,7 @@ class ProcessDumpManager:
         log_entry = None
         try:
             # 1. Prepare directory
-            self._prepare_node_dump_directory(target_path)
+            self.path_policy.prepare_directory(path_to_prepare=target_path)
 
             # 2. Create new log entry
             log_entry = DumpLog(path=target_path.resolve())
@@ -303,7 +301,7 @@ class ProcessDumpManager:
         logger.debug(f'Executing DUMP_DUPLICATE for node {node.pk} at {target_path.name}')
         try:
             # 1. Prepare directory
-            self._prepare_node_dump_directory(target_path)
+            self.path_policy.prepare_directory(path_to_prepare=target_path)
 
             # 2. Add path to duplicates list in existing log entry
             existing_log_entry.add_duplicate(target_path.resolve())
@@ -335,26 +333,6 @@ class ProcessDumpManager:
             raise ExportValidationError(msg)
         return True
 
-    def _prepare_node_dump_directory(self, target_path: Path):
-        logger.debug(f'Preparing dump directory: {target_path.name}')
-        try:
-            # Calling the utility function as in the original code
-            DumpPaths._prepare_dump_path(
-                path_to_validate=target_path,
-                dump_mode=self.config.dump_mode,
-                # TODO: Original used DumpPaths.safeguard_file
-                safeguard_file=DumpPaths.safeguard_file,
-            )
-            # Original code touched the safeguard file after preparation
-            (target_path / DumpPaths.safeguard_file).touch(exist_ok=True)
-            logger.debug(f'Directory {target_path.name} prepared successfully.')
-        except Exception as e:
-            logger.error(
-                f'Failed preparing target path {target_path.name}: {e}',
-                exc_info=True,
-            )
-            raise  # Re-raise to be caught by the main dump_process try-except
-
     def _dump_node_content(
         self,
         node: orm.ProcessNode,
@@ -368,7 +346,7 @@ class ProcessDumpManager:
         logger.debug(f'Metadata written for node {node.pk}')
 
         # 2. Ensure top-level safeguard exists (Original Logic)
-        (target_path / DumpPaths.safeguard_file).touch(exist_ok=True)
+        (target_path / DumpPathPolicy.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
 
         # 3. Dump Repo/IO or Recurse Children (Original Logic)
         if isinstance(node, orm.CalculationNode):
@@ -385,7 +363,7 @@ class ProcessDumpManager:
         logger.debug(f'Calculating stats for node {node_pk} directory: {path_to_stat.name}')
         try:
             # Calling the utility as in original code
-            dir_mtime, dir_size = DumpPaths._get_directory_stats(path_to_stat)
+            dir_mtime, dir_size = self.path_policy.get_directory_stats(path_to_stat)
             log_entry.dir_mtime = dir_mtime
             log_entry.dir_size = dir_size
             logger.debug(f'Updated stats for node {node_pk}: mtime={dir_mtime}, size={dir_size} bytes')
@@ -403,7 +381,7 @@ class ProcessDumpManager:
         logger.warning(f'Attempting cleanup for failed dump of node {node.pk} at {target_path.name}')
         try:
             # Calling the utility as in original code
-            DumpPaths._safe_delete_dir(target_path, safeguard_file=DumpPaths.safeguard_file)
+            self.path_policy.safe_delete_directory(directory_path=target_path)
             logger.info(f'Cleaned up directory {target_path.name} for failed node {node.pk}')
 
             if is_primary_dump:
@@ -418,40 +396,11 @@ class ProcessDumpManager:
             msg = (f'Failed during cleanup for node {node.pk} at {target_path.name}: {cleanup_e}',)
             logger.error(msg, exc_info=True)
 
-    def _get_node_base_path(self, node: orm.Node, group: orm.Group | None) -> Path:
-        """Determine the correct base directory path for dumping a specific node."""
-
-        group_path = self.dump_paths.absolute / DumpPaths._get_group_path(group=group)
-
-        if isinstance(node, orm.CalculationNode):
-            type_subdir = 'calculations'
-        elif isinstance(node, orm.WorkflowNode):
-            type_subdir = 'workflows'
-        elif isinstance(node, orm.Data):
-            type_subdir = 'data'
-        else:
-            type_subdir = 'unknown'
-
-        if self.config.organize_by_groups:
-            # If organizing by groups, place inside the type subdir within the group path
-            node_parent_path = group_path / type_subdir
-        else:
-            # Flat structure: place inside the type subdir directly under the main dump path
-            node_parent_path = self.dump_paths.absolute / type_subdir
-
-        node_parent_path.mkdir(parents=True, exist_ok=True)
-        # Generate the specific node directory name
-        node_directory_name: Path = self._generate_node_directory_name(node)
-        final_node_path = node_parent_path / node_directory_name
-
-        logger.debug(f'Determined final path for node {node.pk}: {final_node_path}')
-        return final_node_path
-
     @staticmethod
     def _generate_node_directory_name(node: orm.ProcessNode, append_pk: bool = True) -> Path:
         """Generates the directory name for a specific node."""
         # Calling the utility function as in the original code
-        return DumpPaths._get_default_process_dump_path(node, append_pk=append_pk)
+        return DumpPathPolicy._get_default_process_dump_path(node, append_pk=append_pk)
 
     @staticmethod
     def _generate_child_node_label(index: int, link_triple: LinkTriple, append_pk: bool = True) -> str:

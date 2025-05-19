@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.utils.helpers import DumpChanges
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils.paths import DumpPathPolicy
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.managers.deletion')
 
@@ -22,7 +22,7 @@ class DeletionManager:
     def __init__(
         self,
         config: DumpConfig,
-        dump_paths: DumpPaths,
+        path_policy: DumpPathPolicy,
         dump_logger: DumpLogger,
         dump_changes: DumpChanges,
         stored_mapping: GroupNodeMapping | None,
@@ -31,13 +31,13 @@ class DeletionManager:
 
 
         :param config: _description_
-        :param dump_paths: _description_
+        :param path_policy: _description_
         :param dump_logger: _description_
         :param dump_changes: _description_
         :param stored_mapping: _description_
         """
         self.config: DumpConfig = config
-        self.dump_paths: DumpPaths = dump_paths
+        self.path_policy: DumpPathPolicy = path_policy
         self.dump_logger: DumpLogger = dump_logger
         self.dump_changes: DumpChanges = dump_changes
         self.stored_mapping: GroupNodeMapping | None = stored_mapping
@@ -85,24 +85,24 @@ class DeletionManager:
 
         return something_deleted
 
-    def _delete_node_from_logger_and_disk(self, uuid: str) -> bool:
+    def _delete_node_from_logger_and_disk(self, node_uuid: str) -> bool:
         """
         Helper to remove a node's primary dump directory and its entire log entry.
 
         Returns:
             True if the node's log entry was successfully deleted, False otherwise.
         """
-        store = self.dump_logger.get_store_by_uuid(uuid)
+        store = self.dump_logger.get_store_by_uuid(node_uuid)
         if not store:
             # It might have already been deleted if associated with a deleted group below
             logger.debug(
-                f'Log store not found for deleted node UUID {uuid} (might be expected). Cannot remove further.'
+                f'Log store not found for deleted node UUID {node_uuid} (might be expected). Cannot remove further.'
             )
             return False  # Indicate log entry wasn't deleted *by this call*
 
-        entry = store.get_entry(uuid)
+        entry = store.get_entry(node_uuid)
         if not entry:
-            logger.warning(f'Log entry not found for node UUID {uuid} in its store. Cannot remove.')
+            logger.warning(f'Log entry not found for node UUID {node_uuid} in its store. Cannot remove.')
             return False  # Indicate log entry wasn't deleted
 
         path_to_delete = entry.path
@@ -116,7 +116,7 @@ class DeletionManager:
             None,
         )
         if not store_key:
-            logger.error(f'Consistency error: Could not determine store key name for node {uuid}.')
+            logger.error(f'Consistency error: Could not determine store key name for node {node_uuid}.')
             # Try deleting log entry anyway? Or return False? Let's try deleting.
             # Fallback: Attempt deletion without knowing the exact store key (less ideal)
             # deleted_from_log = store.del_entry(uuid) # Assumes store has del_entry
@@ -127,30 +127,30 @@ class DeletionManager:
         try:
             # Attempt to delete directory first (use appropriate safeguard)
             # TODO: Adjust safeguard if Data nodes use a different one
-            rel_path = path_to_delete.relative_to(self.dump_paths.parent)
-            msg = f"Deleting directory '{rel_path}' for deleted node UUID {uuid}"
+            rel_path = path_to_delete.relative_to(self.path_policy.base_output_path)
+            msg = f"Deleting directory '{rel_path}' for deleted node UUID {node_uuid}"
             logger.report(msg)
-            DumpPaths._safe_delete_dir(path=path_to_delete, safeguard_file=DumpPaths.safeguard_file)
+            self.path_policy.safe_delete_directory(directory_path=path_to_delete)
         except FileNotFoundError as e:
             logger.warning(
-                f'Directory or safeguard file not found for deleted node {uuid} at {path_to_delete}: {e}. '
+                f'Directory or safeguard file not found for deleted node {node_uuid} at {path_to_delete}: {e}. '
                 f'Proceeding to remove log entry.'
             )
         except Exception as e:
             logger.error(
-                f'Failed to delete directory for deleted node {uuid} at {path_to_delete}: {e}. '
+                f'Failed to delete directory for deleted node {node_uuid} at {path_to_delete}: {e}. '
                 f'Proceeding to remove log entry.',
                 exc_info=True,
             )
         finally:
             # Always attempt to remove the log entry
-            if self.dump_logger.del_entry(store_key=store_key, uuid=uuid):
-                logger.debug(f"Removed log entry for deleted node {uuid} from store '{store_key}'.")
+            if self.dump_logger.del_entry(store_key=store_key, uuid=node_uuid):
+                logger.debug(f"Removed log entry for deleted node {node_uuid} from store '{store_key}'.")
                 deleted_from_log = True
             else:
                 # This might happen if it was already removed via group deletion logic
                 logger.debug(
-                    f'Log entry for deleted node {uuid} potentially already removed '
+                    f'Log entry for deleted node {node_uuid} potentially already removed '
                     f'(e.g., via group deletion). Store: {store_key}.'
                 )
 
@@ -174,18 +174,18 @@ class DeletionManager:
         group_entry = self.dump_logger.groups.get_entry(group_uuid)
         if group_entry:
             path_to_delete = group_entry.path
-            should_delete_dir = self.config.organize_by_groups and path_to_delete != self.dump_paths.absolute
+            should_delete_dir = self.config.organize_by_groups and path_to_delete != self.path_policy.base_output_path
             if should_delete_dir:
                 try:
                     rel_path_str = 'unknown'
                     try:
-                        rel_path = path_to_delete.relative_to(self.dump_paths.absolute)
+                        rel_path = path_to_delete.relative_to(self.path_policy.base_output_path)
                         rel_path_str = str(rel_path)
                     except ValueError:
                         rel_path_str = str(path_to_delete)
 
                     logger.report(f"Deleting directory '{rel_path_str}' for deleted group UUID {group_uuid}")
-                    DumpPaths._safe_delete_dir(path=path_to_delete, safeguard_file=DumpPaths.safeguard_file)
+                    self.path_policy.safe_delete_directory(directory_path=path_to_delete)
                     path_deleted = path_to_delete  # Record that we deleted this path
                 except FileNotFoundError:
                     msg = (

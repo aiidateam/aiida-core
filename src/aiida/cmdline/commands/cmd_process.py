@@ -631,7 +631,7 @@ def process_dump(
     from aiida.tools.archive.exceptions import ExportValidationError
     from aiida.tools.dumping import ProcessDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode
-    from aiida.tools.dumping.utils.paths import DumpPaths
+    from aiida.tools.dumping.utils.paths import DumpPathPolicy
 
     warning_msg = (
         'The backend implementation of this command was recently refactored. '
@@ -643,13 +643,13 @@ def process_dump(
     final_dump_config = None
 
     try:
-        dump_paths = DumpPaths._resolve_click_path_for_dump(path=path, entity=process)
-        config_file_path = dump_paths.config_path
+        path_policy = DumpPathPolicy._resolve_click_path_for_dump(path=path, entity=process)
+        config_file_path = path_policy.config_file_path
 
         if config_file_path.is_file():
             # Config File Exists: Load ONLY from file
             try:
-                config_path_rel = config_file_path.relative_to(dump_paths.top_level.parent)
+                config_path_rel = config_file_path.relative_to(path_policy.top_level.parent)
             except ValueError:
                 config_path_rel = config_file_path
             echo.echo_report(f"Config file found at '{config_path_rel}'.")
@@ -686,11 +686,11 @@ def process_dump(
             echo.echo_warning(msg)
 
         # --- Instantiate and Run ProcessDumper ---
-        process_dumper = ProcessDumper(process=process, config=final_dump_config, output_path=dump_paths.top_level)
+        process_dumper = ProcessDumper(process=process, config=final_dump_config, output_path=path_policy.top_level)
         process_dumper.dump()
 
         if final_dump_config.dump_mode != DumpMode.DRY_RUN:
-            msg = f'Raw files for process `{process.pk}` dumped into folder `{dump_paths.child}`.'
+            msg = f'Raw files for process `{process.pk}` dumped into folder `{path_policy.child}`.'
             echo.echo_success(msg)
         else:
             echo.echo_success('Dry run completed.')

@@ -18,7 +18,7 @@ from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.config import DumpConfig
 from aiida.tools.dumping.engine import DumpEngine
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils.paths import DumpPathPolicy
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.facades')
 
@@ -81,12 +81,12 @@ class ProcessDumper:
         self.process_node = ProcessDumper._verify_process_node(process)
         self.config: DumpConfig = config if config is not None else DumpConfig()
 
-        # Resolve DumpPaths based on output_path and the node
+        # Resolve DumpPathPolicy based on output_path and the node
         if output_path is None:
-            default_path = DumpPaths._get_default_process_dump_path(process_node=self.process_node)
-            self.dump_paths = DumpPaths(parent=Path.cwd(), child=default_path)
+            default_child_dir_name = DumpPathPolicy._get_node_directory_name(node=self.process_node)
+            self.base_output_path: Path = Path.cwd() / default_child_dir_name
         else:
-            self.dump_paths = DumpPaths.from_path(Path(output_path).resolve())
+            self.base_output_path: Path = Path(output_path).resolve()
 
     @staticmethod
     def _verify_process_node(
@@ -122,7 +122,11 @@ class ProcessDumper:
         """Perform the dump operation by invoking the engine."""
         # Instantiate engine for dump operation rather than on construction such that
         # Successive incremental dumps can be achieved with one instance
-        engine = DumpEngine(config=self.config, dump_paths=self.dump_paths)
+        engine = DumpEngine(
+            base_output_path=self.base_output_path,
+            config=self.config,
+            dump_target_entity=self.process_node,
+        )
         engine.dump(entity=self.process_node)
 
 
@@ -185,10 +189,18 @@ class GroupDumper:
         self.config: DumpConfig = config if config is not None else DumpConfig()
 
         if output_path is None:
-            default_path = DumpPaths._get_default_group_dump_path(self.group)
-            self.dump_paths = DumpPaths(parent=Path.cwd(), child=default_path)
+            # Default behavior: create a directory named after the group
+            # in the current working directory.
+            # We use a static helper from DumpPathPolicy for consistent label cleaning.
+            self.base_output_path: Path = Path.cwd() / self.group.label
+            logger.info(f"No output_path specified for GroupDumper, using default: '{self.base_output_path}'")
         else:
-            self.dump_paths = DumpPaths.from_path(Path(output_path).resolve())
+            self.base_output_path: Path = Path(output_path).resolve()
+            logger.info(f"GroupDumper using specified output_path: '{self.base_output_path}'")
+
+        # The facade's responsibility is to determine `self.base_output_path`
+        # and `self.config`. It does NOT create the `DumpPathPolicy`
+        # instance itself; that will be done by the DumpEngine.
 
     @staticmethod
     def _verify_group(identifier: orm.Group | str | int) -> orm.Group:
@@ -218,7 +230,8 @@ class GroupDumper:
         """Perform the dump operation. Simply delegate to the engine."""
         # Instantiate engine for dump operation rather than on construction such that
         # Successive incremental dumps can be achieved with one instance
-        engine = DumpEngine(config=self.config, dump_paths=self.dump_paths)
+        engine = DumpEngine(base_output_path=self.base_output_path, config=self.config, dump_target_entity=self.group)
+
         engine.dump(entity=self.group)
 
 
@@ -272,16 +285,27 @@ class ProfileDumper:
         self.config: DumpConfig = config if config is not None else DumpConfig()
 
         if output_path is None:
-            default_path = DumpPaths._get_default_profile_dump_path()
-            self.dump_paths = DumpPaths(parent=Path.cwd(), child=default_path)
+            # Default behavior: create a directory named after the group
+            # in the current working directory.
+            # We use a static helper from DumpPathPolicy for consistent label cleaning.
+            from aiida import load_profile
+
+            profile = load_profile()
+
+            self.base_output_path: Path = Path.cwd() / profile.name
+            logger.info(f"No output_path specified for ProfileDumper, using default: '{self.base_output_path}'")
         else:
-            self.dump_paths = DumpPaths.from_path(Path(output_path).resolve())
+            self.base_output_path: Path = Path(output_path).resolve()
+            logger.info(f"ProfileDumper using specified output_path: '{self.base_output_path}'")
 
     def dump(self):
         """Perform the dump operation. This simply delegates to the engine."""
         # Instantiate engine for dump operation rather than on construction such that
         # Successive incremental dumps can be achieved with one instance
-        engine = DumpEngine(config=self.config, dump_paths=self.dump_paths)
+        engine = DumpEngine(
+            base_output_path=self.base_output_path,
+            config=self.config,
+        )
         engine.dump()
 
 

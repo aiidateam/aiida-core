@@ -29,7 +29,7 @@ from aiida.tools.dumping.utils.helpers import (
     NodeChanges,
     NodeMembershipChange,
 )
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils.paths import DumpPathPolicy
 
 if TYPE_CHECKING:
     from aiida.orm import Group, Node, QueryBuilder
@@ -44,7 +44,9 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.detect')
 class DumpChangeDetector:
     """Detects changes in the database since the last dump"""
 
-    def __init__(self, dump_logger: DumpLogger, config: DumpConfig, dump_times: DumpTimes) -> None:
+    def __init__(
+        self, dump_logger: DumpLogger, path_policy: DumpPathPolicy, config: DumpConfig, dump_times: DumpTimes
+    ) -> None:
         """
         Initializes the DumpChangeDetector.
 
@@ -56,6 +58,7 @@ class DumpChangeDetector:
         self.dump_logger: DumpLogger = dump_logger
         self.config: DumpConfig = config
         self.dump_times: DumpTimes = dump_times
+        self.path_policy: DumpPathPolicy = path_policy
         # Instantiate the new query handler
         self.node_query = DumpNodeQuery(config)
         # Cache grouped node UUIDs to avoid rebuilding mapping multiple times per run
@@ -408,11 +411,10 @@ class DumpChangeDetector:
                     current_label = current_group.label
 
                     # Calculate expected current path based on current label
-                    # Use the absolute path from DumpLogger's perspective
-                    # Need dump_paths from the logger instance
-                    organize_by_groups = self.config.organize_by_groups  # Use config from detector
-                    current_path_rel = DumpPaths._get_group_path(current_group, organize_by_groups)
-                    current_path_abs = self.dump_logger.dump_paths.absolute / current_path_rel
+                    current_path_abs = self.path_policy.get_path_for_group_content(
+                        group=current_group,
+                        parent_group_content_path=None,
+                    )
 
                     # Compare old path with expected current path
                     if old_path_abs.resolve() != current_path_abs.resolve():

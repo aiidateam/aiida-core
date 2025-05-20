@@ -173,7 +173,7 @@ def test_process_kill_failing_transport(
         assert 'exponential_backoff_retry' in result
 
         # force kill the process
-        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
+        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F'])
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
         assert node.is_killed
         assert node.process_status == 'Force killed through `verdi process kill`'
@@ -214,11 +214,11 @@ def test_process_kill_failing_transport_failed_kill(
         assert 'exponential_backoff_retry' in result
 
         # practice a normal kill, which should fail
-        result = run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait', '--timeout', '1.0'])
+        result = run_cli_command(cmd_process.process_kill, [str(node.pk), '--timeout', '1.0'])
         assert f'Error: call to kill Process<{node.pk}> timed out' in result.stdout
 
         # force kill the process
-        result = run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
+        result = run_cli_command(cmd_process.process_kill, [str(node.pk), '-F'])
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
         assert node.process_status == 'Force killed through `verdi process kill`'
 
@@ -257,7 +257,7 @@ def test_process_kill_failing_ebm_transport(
         )
 
         # kill should start EBM and should successfully kill
-        run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        run_cli_command(cmd_process.process_kill, [str(node.pk)])
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
 
 
@@ -296,12 +296,12 @@ def test_process_kill_failing_ebm_kill(
         )
 
         # kill should start EBM and be not successful in EBM
-        run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        run_cli_command(cmd_process.process_kill, [str(node.pk)])
         await_condition(lambda: not node.is_killed, timeout=kill_timeout)
 
         # kill should restart EBM and be not successful in EBM
         # this tests if the old task is cancelled and restarted successfully
-        run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        run_cli_command(cmd_process.process_kill, [str(node.pk)])
         await_condition(
             lambda: 'Found active scheduler job cancelation that will be rescheduled.'
             in get_process_function_report(node),
@@ -309,7 +309,7 @@ def test_process_kill_failing_ebm_kill(
         )
 
         # force kill should skip EBM and successfully kill the process
-        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
+        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F'])
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
 
 
@@ -767,7 +767,7 @@ def test_process_pause(submit_and_await, run_cli_command):
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
-    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node.pk)])
     await_condition(lambda: node.paused)
 
     # Running without identifiers should except and print something
@@ -783,10 +783,10 @@ def test_process_play(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node.pk)])
     await_condition(lambda: node.paused)
 
-    run_cli_command(cmd_process.process_play, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_play, [str(node.pk)])
     await_condition(lambda: not node.paused)
 
     # Running without identifiers should except and print something
@@ -803,11 +803,11 @@ def test_process_play_all(submit_and_await, run_cli_command):
     node_one = submit_and_await(WaitProcess, ProcessState.WAITING)
     node_two = submit_and_await(WaitProcess, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_pause, ['--all', '--wait'])
+    run_cli_command(cmd_process.process_pause, ['--all'])
     await_condition(lambda: node_one.paused)
     await_condition(lambda: node_two.paused)
 
-    run_cli_command(cmd_process.process_play, ['--all', '--wait'])
+    run_cli_command(cmd_process.process_play, ['--all'])
     await_condition(lambda: not node_one.paused)
     await_condition(lambda: not node_two.paused)
 
@@ -835,32 +835,32 @@ def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
     # Kill a paused process
     node = submit_and_await(builder, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node.pk)])
     await_condition(lambda: node.paused)
     assert node.process_status == 'Paused through `verdi process pause`'
 
-    run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_kill, [str(node.pk)])
     await_condition(lambda: node.is_killed)
     assert node.process_status == 'Killed through `verdi process kill`'
 
     # Force kill a paused process
     node = submit_and_await(builder, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node.pk)])
     await_condition(lambda: node.paused)
     assert node.process_status == 'Paused through `verdi process pause`'
 
-    run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
+    run_cli_command(cmd_process.process_kill, [str(node.pk), '-F'])
     await_condition(lambda: node.is_killed)
     assert node.process_status == 'Force killed through `verdi process kill`'
 
     # `verdi process kill --all` should kill all processes
     node_1 = submit_and_await(builder, ProcessState.WAITING)
-    run_cli_command(cmd_process.process_pause, [str(node_1.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node_1.pk)])
     await_condition(lambda: node_1.paused)
     node_2 = submit_and_await(builder, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_kill, ['--all', '--wait'], user_input='y')
+    run_cli_command(cmd_process.process_kill, ['--all'], user_input='y')
     await_condition(lambda: node_1.is_killed, timeout=kill_timeout)
     await_condition(lambda: node_2.is_killed, timeout=kill_timeout)
     assert node_1.process_status == 'Killed through `verdi process kill`'
@@ -868,11 +868,11 @@ def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
 
     # `verdi process kill --all -F` should Force kill all processes (running / not running)
     node_1 = submit_and_await(builder, ProcessState.WAITING)
-    run_cli_command(cmd_process.process_pause, [str(node_1.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node_1.pk)])
     await_condition(lambda: node_1.paused)
     node_2 = submit_and_await(builder, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_kill, ['--all', '--wait', '-F'], user_input='y')
+    run_cli_command(cmd_process.process_kill, ['--all', '-F'], user_input='y')
     await_condition(lambda: node_1.is_killed, timeout=kill_timeout)
     await_condition(lambda: node_2.is_killed, timeout=kill_timeout)
     assert node_1.process_status == 'Force killed through `verdi process kill`'
@@ -885,7 +885,7 @@ def test_process_kill_all(submit_and_await, run_cli_command):
     """Test the ``verdi process kill --all`` command."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_kill, ['--all', '--wait'], user_input='y')
+    run_cli_command(cmd_process.process_kill, ['--all'], user_input='y')
     await_condition(lambda: node.is_killed)
     assert node.process_status == 'Killed through `verdi process kill`'
 

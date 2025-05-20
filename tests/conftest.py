@@ -150,6 +150,9 @@ def non_interactive_editor(request):
     non-interactive, and escaping it makes bash interpret the command and its arguments as a single command instead.
     Here we patch the method to remove the escaping of the editor command.
 
+    TODO-DH: We don't support click 7.1 anymore and click 8 doesn't seem to use to escaping:
+    https://github.com/yashrathi-git/click/commit/0d1b8eab4d44047b52746639d7836cc849626e59
+
     :param request: the command to set for the editor that is to be called
     """
     from unittest.mock import patch
@@ -159,8 +162,13 @@ def non_interactive_editor(request):
     os.environ['EDITOR'] = request.param
     os.environ['VISUAL'] = request.param
 
-    def edit_file(self, filename):
+    def edit_file(self, filename: str | list[str]):
         import subprocess
+
+        # Compatibility for click 8.2
+        filenames = filename
+        if isinstance(filename, list):
+            filenames = ' '.join(f'"{filename}"' for filename in filenames)
 
         editor = self.get_editor()
         if self.env:
@@ -170,7 +178,7 @@ def non_interactive_editor(request):
             environ = None
         try:
             with subprocess.Popen(
-                f'{editor} {filename}',  # This is the line that we change removing `shlex_quote`
+                f'{editor} {filenames}',  # This is the line that we change removing `shlex_quote`
                 env=environ,
                 shell=True,
             ) as process:

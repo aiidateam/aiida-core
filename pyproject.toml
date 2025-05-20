@@ -372,7 +372,7 @@ ignore_errors = true
 module = 'plumpy'
 
 [tool.pytest.ini_options]
-addopts = '--benchmark-skip --durations=50 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
+addopts = '--benchmark-skip --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
 filterwarnings = [
   'ignore:.*and will be removed in NumPy 2.0.*:DeprecationWarning:ase:',
   'ignore:datetime.datetime.utcfromtimestamp:DeprecationWarning:pytz|dateutil|tqdm|aio_pika:',

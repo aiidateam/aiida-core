@@ -143,45 +143,15 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
 
 @pytest.fixture()
 def non_interactive_editor(request):
-    """Fixture to patch click's `Editor.edit_file`.
+    """Fixture to patch default editor.
 
-    In `click==7.1` the `Editor.edit_file` command was changed to escape the `os.environ['EDITOR']` command. Our tests
-    are currently abusing this variable to define an automated vim command in order to make an interactive command
-    non-interactive, and escaping it makes bash interpret the command and its arguments as a single command instead.
-    Here we patch the method to remove the escaping of the editor command.
+    We (ab)use the `os.environ['EDITOR']` variable to define an automated
+    vim command in order to make an interactive command non-interactive
 
     :param request: the command to set for the editor that is to be called
     """
-    from unittest.mock import patch
-
-    from click._termui_impl import Editor
-
     os.environ['EDITOR'] = request.param
     os.environ['VISUAL'] = request.param
-
-    def edit_file(self, filename):
-        import subprocess
-
-        editor = self.get_editor()
-        if self.env:
-            environ = os.environ.copy()
-            environ.update(self.env)
-        else:
-            environ = None
-        try:
-            with subprocess.Popen(
-                f'{editor} {filename}',  # This is the line that we change removing `shlex_quote`
-                env=environ,
-                shell=True,
-            ) as process:
-                exit_code = process.wait()
-                if exit_code != 0:
-                    raise click.ClickException(f'{editor}: Editing failed!')
-        except OSError as exception:
-            raise click.ClickException(f'{editor}: Editing failed: {exception}')
-
-    with patch.object(Editor, 'edit_file', edit_file):
-        yield
 
 
 @pytest.fixture(scope='function')

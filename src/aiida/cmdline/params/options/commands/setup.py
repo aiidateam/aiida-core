@@ -8,6 +8,8 @@
 ###########################################################################
 """Reusable command line interface options for the setup commands."""
 
+from __future__ import annotations
+
 import functools
 import getpass
 import typing as t

@@ -8,6 +8,8 @@
 ###########################################################################
 """Tools and an option class for interactive parameter entry with additional features such as help lookup."""
 
+from __future__ import annotations
+
 import typing as t
 
 import click
@@ -65,7 +67,7 @@ class InteractiveOption(ConditionalOption):
         return click.style(self._prompt, fg=self.PROMPT_COLOR)
 
     @prompt.setter
-    def prompt(self, value: str) -> None:
+    def prompt(self, value: str | None) -> None:
         """Set the prompt text."""
         self._prompt = value
 

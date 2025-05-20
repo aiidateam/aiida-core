@@ -7,7 +7,7 @@ from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.config import DumpConfig, DumpMode
 from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.logger import DumpLogger
+from aiida.tools.dumping.logger import DumpTracker
 from aiida.tools.dumping.managers.deletion import DeletionManager
 from aiida.tools.dumping.managers.group import GroupDumpManager
 from aiida.tools.dumping.managers.process import ProcessDumpManager
@@ -65,7 +65,7 @@ class DumpEngine:
 
     def _initialize_times_logger_and_mapping(
         self,
-    ) -> tuple[DumpTimes, DumpLogger, GroupNodeMapping | None]:
+    ) -> tuple[DumpTimes, DumpTracker, GroupNodeMapping | None]:
         """Initialize dump times, load logger data, and load stored mapping.
 
         :return: _description_
@@ -82,14 +82,14 @@ class DumpEngine:
                 # Decide whether to proceed or raise an error
 
         # Load log data, stored mapping, and last dump time string from file
-        stores_coll, stored_mapping, last_dump_time_str = DumpLogger.load(self.dump_paths)
+        stores_coll, stored_mapping, last_dump_time_str = DumpTracker.load(self.dump_paths)
 
         # Initialize DumpTimes based on loaded time string
         dump_times = DumpTimes.from_last_log_time(last_dump_time_str)
         logger.debug(f'Dump times initialized: Current={dump_times.current}, Last={dump_times.last}')
 
         # Initialize DumpLogger instance with loaded data
-        dump_logger = DumpLogger(
+        dump_logger = DumpTracker(
             dump_paths=self.dump_paths,
             stores=stores_coll,
             last_dump_time_str=last_dump_time_str,

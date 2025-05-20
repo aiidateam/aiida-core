@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from aiida.tools.dumping.config import DumpConfig
-from aiida.tools.dumping.logger import DumpLogger, DumpLogStoreCollection
+from aiida.tools.dumping.logger import DumpTracker, DumpRegistryCollection
 from aiida.tools.dumping.managers.process import ProcessDumpManager
 from aiida.tools.dumping.utils.helpers import DumpTimes
 from aiida.tools.dumping.utils.paths import DumpPaths
@@ -14,8 +14,8 @@ def mock_dump_logger(tmp_path):
     """Fixture providing a DumpLogger instance without loading from file."""
     # Use a dummy path for the logger, actual file interaction is bypassed
     dump_paths = DumpPaths(parent=tmp_path, child=Path('mock_dump'))
-    stores = DumpLogStoreCollection()
-    return DumpLogger(dump_paths=dump_paths, stores=stores, last_dump_time_str=None)
+    stores = DumpRegistryCollection()
+    return DumpTracker(dump_paths=dump_paths, stores=stores, last_dump_time_str=None)
 
 
 @pytest.fixture

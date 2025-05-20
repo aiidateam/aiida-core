@@ -18,7 +18,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.orm import Group, QueryBuilder, WorkflowNode
 from aiida.tools.dumping.config import GroupDumpScope, ProfileDumpSelection
 from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.logger import DumpLogger
+from aiida.tools.dumping.logger import DumpTracker
 from aiida.tools.dumping.managers.collection import CollectionDumpManager
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpNodeStore
 from aiida.tools.dumping.utils.paths import DumpPaths
@@ -27,7 +27,7 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.strategies.profile')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.logger import DumpLogger
+    from aiida.tools.dumping.logger import DumpTracker
     from aiida.tools.dumping.managers.process import ProcessDumpManager
     from aiida.tools.dumping.mapping import GroupNodeMapping
 
@@ -39,7 +39,7 @@ class ProfileDumpManager(CollectionDumpManager):
         self,
         config: DumpConfig,
         dump_paths: DumpPaths,
-        dump_logger: DumpLogger,
+        dump_logger: DumpTracker,
         detector: DumpChangeDetector,
         process_manager: ProcessDumpManager,
         current_mapping: GroupNodeMapping,

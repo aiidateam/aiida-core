@@ -83,7 +83,7 @@ For details refer to the next section :ref:`"How to add support for custom data 
 Dumping data to disk
 ====================
 
-Profile dumping
+Process dumping
 ---------------
 
 .. versionadded:: 2.6
@@ -156,7 +156,7 @@ Group Dumping
 
 .. versionadded:: 2.7
 
-The functionality has been expanded to also dump data from groups:
+The functionality has recently been expanded to also dump data contained in groups:
 
 .. code-block:: shell
 

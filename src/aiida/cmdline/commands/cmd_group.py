@@ -724,6 +724,7 @@ def group_dump(
         config_file_path = resolved_base_output_path / 'aiida_dump_config.yaml'
 
         if config_file_path.is_file() and not overwrite:
+
             # --- Config File Exists: Load ONLY from file ---
             try:
                 config_path_rel = config_file_path.relative_to(Path.cwd())

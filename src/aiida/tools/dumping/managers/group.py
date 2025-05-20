@@ -99,40 +99,6 @@ class GroupDumpManager(CollectionDumpManager):
         # 4. Update stats for this specific group.
         self._update_single_group_stats(self.group_to_dump, current_group_content_root)
 
-        # # 5. Recursive dump of child groups (if applicable)
-        # if self.config.recursive_groups:
-        #     logger.info(f"Checking for child groups of '{self.group_to_dump.label}' for recursive dump.")
-        #     # This part requires careful implementation:
-        #     #   - How to get child groups (e.g., from DB, or from `current_mapping` if comprehensive).
-        #     #   - How to get scoped `DumpChanges` for each child.
-        #     #   - The `DumpEngine` is likely better suited to manage the recursive calls to
-        #     #     `GroupDumpManager` instances, providing each with its correct context and changes.
-        #     #   - If GroupDumpManager handles recursion itself, it becomes much more complex.
-
-        #     # Conceptual placeholder for how child group dumping would be initiated:
-        #     # child_groups = self.detector.get_child_groups(self.group_to_dump, self.current_mapping)
-        #     # for child_group in child_groups:
-        #     #     logger.info(f"Recursively processing child group '{child_group.label}'.")
-        #     #     # Path for the child group's content, nested under the current group's content root
-        #     #     child_content_root = self.dump_paths.get_path_for_group_content(
-        #     #         group=child_group,
-        #     #         parent_group_content_path=current_group_content_root # Key for nesting
-        #     #     )
-        #     #     # Get scoped changes for the child group
-        #     #     child_node_changes, child_current_mapping = self.detector._detect_all_changes(group=child_group)
-        #     #     child_group_changes = self.detector._detect_group_changes(
-        #     #                                 stored_mapping=self.stored_mapping, # Or a relevant subset
-        #     #                                 current_mapping=child_current_mapping,
-        #     #                                 specific_group_uuid=child_group.uuid)
-        #     #     scoped_child_changes = DumpChanges(nodes=child_node_changes, groups=child_group_changes)
-
-        #     #     # Either recursively call self.dump (if re-entrant and state is managed)
-        #     #     # OR, more cleanly, the DumpEngine would manage this loop and create
-        #     #     # new GroupDumpManager instances for children.
-        #     #     # For now, let's assume DumpEngine would handle the iteration and calls.
-        #     #     # If this manager calls itself, it needs to be careful about state.
-        #     pass  # End conceptual recursion block
-
         logger.info(f"Finished GroupDumpManager for group '{self.group_to_dump.label}'.")
 
     def _update_single_group_stats(self, group: orm.Group, group_content_path: Path) -> None:

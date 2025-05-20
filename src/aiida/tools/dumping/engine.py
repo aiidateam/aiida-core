@@ -154,7 +154,7 @@ class DumpEngine:
             entity_description = f"group '{entity.label}' (PK: {entity.pk})"
         elif isinstance(entity, orm.ProcessNode):
             entity_description = f'process node (PK: {entity.pk})'
-        logger.report(f'Starting dump of {entity_description} in mode: {self.config.dump_mode.name}')
+        logger.report(f'Starting dump of {entity_description} in {self.config.dump_mode.name.lower()} mode.')
 
         current_mapping: Optional[GroupNodeMapping] = None
 
@@ -240,7 +240,8 @@ class DumpEngine:
                 )
                 profile_manager.dump(changes=all_changes)
 
-        logger.report('Saving final dump log and configuration...')
-        self.dump_logger.save(current_dump_time=self.dump_times.current, group_node_mapping=current_mapping)
-        self._save_config()
-        logger.report(f'Dump of {entity_description} completed.')
+        if not isinstance(entity, orm.ProcessNode):
+            logger.report('Saving final dump log and configuration...')
+            self.dump_logger.save(current_dump_time=self.dump_times.current, group_node_mapping=current_mapping)
+            self._save_config()
+            logger.report(f'Dump of {entity_description} completed.')

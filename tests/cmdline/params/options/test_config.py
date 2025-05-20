@@ -68,5 +68,5 @@ def test_invalid_unknown_keys(run_cli_command, tmp_path):
     )
 
     result = run_cli_command(cmd, ['--config', str(filepath)], raises=True)
-    assert "Error: Invalid value for '--config': Invalid configuration file" in result.stderr
-    assert "the following keys are not supported: {'unknown'}" in result.stderr
+    assert "Error: Invalid value for '--config': Invalid configuration file" in result.output
+    assert "the following keys are not supported: {'unknown'}" in result.stdout

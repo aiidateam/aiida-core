@@ -25,12 +25,12 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.dumping.config import DumpConfig
-from aiida.tools.dumping.logger import DumpLog
+from aiida.tools.dumping.logger import DumpRecord
 from aiida.tools.dumping.utils.helpers import DumpStoreKeys
 from aiida.tools.dumping.utils.paths import DumpPaths
 
 if TYPE_CHECKING:
-    from aiida.tools.dumping.logger import DumpLogger
+    from aiida.tools.dumping.logger import DumpTracker
     from aiida.tools.dumping.utils.helpers import DumpTimes
 
 __all__ = ('NodeMetadataWriter', 'NodeRepoIoDumper', 'ProcessDumpManager', 'ReadmeGenerator', 'WorkflowWalker')
@@ -61,12 +61,12 @@ class ProcessDumpManager:
         self,
         config: DumpConfig,
         dump_paths: DumpPaths,
-        dump_logger: DumpLogger,
+        dump_logger: DumpTracker,
         dump_times: DumpTimes,
     ):
         self.config: DumpConfig = config
         self.dump_paths: DumpPaths = dump_paths
-        self.dump_logger: DumpLogger = dump_logger
+        self.dump_logger: DumpTracker = dump_logger
         self.dump_times: DumpTimes = dump_times
 
         # Instantiate helper classes
@@ -135,7 +135,7 @@ class ProcessDumpManager:
         self,
         node: orm.ProcessNode,
         target_path: Path,
-    ) -> Tuple[NodeDumpAction, Optional[DumpLog]]:
+    ) -> Tuple[NodeDumpAction, Optional[DumpRecord]]:
         """
         Checks the logger and node status to determine the appropriate dump action.
         This method should NOT have side effects like creating files/dirs or modifying logs.
@@ -213,7 +213,7 @@ class ProcessDumpManager:
         logger.debug(f'Skipping node {node.pk} (already dumped and up-to-date or symlinked).')
         # No file operations needed
 
-    def _execute_symlink(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpLog):
+    def _execute_symlink(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpRecord):
         """Action: Create a relative symlink to the primary dump location."""
         logger.debug(f'Executing SYMLINK for node {node.pk} at {target_path.name}')
 
@@ -250,7 +250,7 @@ class ProcessDumpManager:
         except Exception as e:
             logger.error(f'Unexpected error during symlink creation for node {node.pk}: {e}', exc_info=True)
 
-    def _execute_update(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpLog):
+    def _execute_update(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpRecord):
         """Action: Clean existing directory and perform a full dump."""
         logger.info(f'Executing UPDATE for node {node.pk} at {target_path.name} due to mtime change.')
         try:
@@ -280,7 +280,7 @@ class ProcessDumpManager:
             self.dump_paths.prepare_directory(path_to_prepare=target_path)
 
             # 2. Create new log entry
-            log_entry = DumpLog(path=target_path.resolve())
+            log_entry = DumpRecord(path=target_path.resolve())
             store_key = DumpStoreKeys.from_instance(node)
             self.dump_logger.get_store_by_name(store_key).add_entry(node.uuid, log_entry)
             logger.debug(f'Created primary log entry for node {node.pk}')
@@ -296,7 +296,7 @@ class ProcessDumpManager:
             # Cleanup directory and log entry if primary dump failed
             self._cleanup_failed_dump(node, target_path, True)
 
-    def _execute_dump_duplicate(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpLog):
+    def _execute_dump_duplicate(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpRecord):
         """Action: Perform a full dump at a secondary location."""
         logger.debug(f'Executing DUMP_DUPLICATE for node {node.pk} at {target_path.name}')
         try:
@@ -358,7 +358,7 @@ class ProcessDumpManager:
             self.workflow_walker._dump_children(node, target_path)  # Must ensure walker passes group context
             logger.debug(f'Workflow children dumped for node {node.pk}')
 
-    def _calculate_and_update_stats(self, node_pk: int, path_to_stat: Path, log_entry: DumpLog):
+    def _calculate_and_update_stats(self, node_pk: int, path_to_stat: Path, log_entry: DumpRecord):
         """Calculates directory stats and updates the log entry (Original Logic)."""
         logger.debug(f'Calculating stats for node {node_pk} directory: {path_to_stat.name}')
         try:

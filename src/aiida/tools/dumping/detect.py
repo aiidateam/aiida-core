@@ -34,7 +34,7 @@ from aiida.tools.dumping.utils.paths import DumpPaths
 if TYPE_CHECKING:
     from aiida.orm import Group, Node, QueryBuilder
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.logger import DumpLogger
+    from aiida.tools.dumping.logger import DumpTracker
 
 __all__ = ('DumpChangeDetector', 'DumpNodeQuery')
 
@@ -45,7 +45,7 @@ class DumpChangeDetector:
     """Detects changes in the database since the last dump"""
 
     def __init__(
-        self, dump_logger: DumpLogger, dump_paths: DumpPaths, config: DumpConfig, dump_times: DumpTimes
+        self, dump_logger: DumpTracker, dump_paths: DumpPaths, config: DumpConfig, dump_times: DumpTimes
     ) -> None:
         """
         Initializes the DumpChangeDetector.
@@ -55,7 +55,7 @@ class DumpChangeDetector:
             config: The current dump configuration.
             dump_times: Object holding relevant timestamps for the current dump.
         """
-        self.dump_logger: DumpLogger = dump_logger
+        self.dump_logger: DumpTracker = dump_logger
         self.config: DumpConfig = config
         self.dump_times: DumpTimes = dump_times
         self.dump_paths: DumpPaths = dump_paths

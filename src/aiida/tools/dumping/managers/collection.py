@@ -19,13 +19,13 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm
 from aiida.orm import Group, WorkflowNode
 from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.logger import DumpLog, DumpLogger
+from aiida.tools.dumping.logger import DumpRecord, DumpTracker
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpNodeStore
 from aiida.tools.dumping.utils.paths import DumpPaths
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.logger import DumpLogger
+    from aiida.tools.dumping.logger import DumpTracker
     from aiida.tools.dumping.managers.process import ProcessDumpManager
     from aiida.tools.dumping.mapping import GroupNodeMapping
     from aiida.tools.dumping.utils.helpers import GroupChanges, GroupModificationInfo
@@ -38,7 +38,7 @@ class CollectionDumpManager:
         self,
         config: DumpConfig,
         dump_paths: DumpPaths,
-        dump_logger: DumpLogger,
+        dump_logger: DumpTracker,
         process_manager: ProcessDumpManager,
         current_mapping: GroupNodeMapping,
     ) -> None:
@@ -46,7 +46,7 @@ class CollectionDumpManager:
         self.dump_paths: DumpPaths = dump_paths
         self.process_manager: ProcessDumpManager = process_manager
         self.current_mapping: GroupNodeMapping = current_mapping
-        self.dump_logger: DumpLogger = dump_logger
+        self.dump_logger: DumpTracker = dump_logger
 
     def _register_group_and_prepare_path(self, group: orm.Group, group_content_path: Path) -> None:
         """
@@ -70,7 +70,7 @@ class CollectionDumpManager:
             self.dump_logger.add_entry(
                 store_key='groups',
                 uuid=group.uuid,
-                entry=DumpLog(path=group_content_path),  # Log the absolute path
+                entry=DumpRecord(path=group_content_path),  # Log the absolute path
             )
         # else: Group already logged. Path updates due to renames should be handled
         # by the group rename logic (e.g., in _handle_group_changes or DumpLogger.update_paths)

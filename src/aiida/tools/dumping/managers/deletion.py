@@ -11,7 +11,7 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.managers.deletion')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.logger import DumpLogger
+    from aiida.tools.dumping.logger import DumpTracker
     from aiida.tools.dumping.mapping import GroupNodeMapping
     from aiida.tools.dumping.utils.helpers import GroupInfo
 
@@ -23,7 +23,7 @@ class DeletionManager:
         self,
         config: DumpConfig,
         dump_paths: DumpPaths,
-        dump_logger: DumpLogger,
+        dump_logger: DumpTracker,
         dump_changes: DumpChanges,
         stored_mapping: GroupNodeMapping | None,
     ):
@@ -38,7 +38,7 @@ class DeletionManager:
         """
         self.config: DumpConfig = config
         self.dump_paths: DumpPaths = dump_paths
-        self.dump_logger: DumpLogger = dump_logger
+        self.dump_logger: DumpTracker = dump_logger
         self.dump_changes: DumpChanges = dump_changes
         self.stored_mapping: GroupNodeMapping | None = stored_mapping
 

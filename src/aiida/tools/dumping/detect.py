@@ -34,7 +34,7 @@ from aiida.tools.dumping.utils.paths import DumpPaths
 if TYPE_CHECKING:
     from aiida.orm import Group, Node, QueryBuilder
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.logger import DumpTracker
+    from aiida.tools.dumping.tracking import DumpTracker
 
 __all__ = ('DumpChangeDetector', 'DumpNodeQuery')
 
@@ -45,17 +45,17 @@ class DumpChangeDetector:
     """Detects changes in the database since the last dump"""
 
     def __init__(
-        self, dump_logger: DumpTracker, dump_paths: DumpPaths, config: DumpConfig, dump_times: DumpTimes
+        self, dump_tracker: DumpTracker, dump_paths: DumpPaths, config: DumpConfig, dump_times: DumpTimes
     ) -> None:
         """
         Initializes the DumpChangeDetector.
 
         Args:
-            dump_logger: The logger instance holding data from the previous dump.
+            dump_tracker: The tracker instance holding data from the previous dump.
             config: The current dump configuration.
             dump_times: Object holding relevant timestamps for the current dump.
         """
-        self.dump_logger: DumpTracker = dump_logger
+        self.dump_tracker: DumpTracker = dump_tracker
         self.config: DumpConfig = config
         self.dump_times: DumpTimes = dump_times
         self.dump_paths: DumpPaths = dump_paths
@@ -121,7 +121,7 @@ class DumpChangeDetector:
         return raw_nodes
 
     def _apply_logged_status_filter(self, raw_nodes: dict[str, list[Node]]) -> dict[str, list[Node]]:
-        """Filter out nodes that are already present in the dump log.
+        """Filter out nodes that are already present in the dump tracker.
 
         :param raw_nodes: _description_
         :return: _description_
@@ -139,7 +139,7 @@ class DumpChangeDetector:
                 continue
             try:
                 # Get the appropriate log store (calculations, workflows, etc.)
-                log_store = self.dump_logger.get_store_by_name(store_key)  # type: ignore[arg-type]
+                log_store = self.dump_tracker.get_store_by_name(store_key)  # type: ignore[arg-type]
                 logged_uuids = set(log_store.entries.keys())
 
                 if not logged_uuids:  # If log store is empty, keep all nodes
@@ -306,7 +306,7 @@ class DumpChangeDetector:
         ):
             store_name = DumpStoreKeys.from_class(orm_class=orm_type)
             try:
-                dump_store = self.dump_logger.get_store_by_name(name=store_name)
+                dump_store = self.dump_tracker.get_store_by_name(name=store_name)
                 if not dump_store:
                     # Store might not exist if no nodes of this type were ever logged
                     continue
@@ -401,7 +401,7 @@ class DumpChangeDetector:
             for group_uuid in common_group_uuids:
                 try:
                     # Get old path from logger
-                    old_path_abs = self.dump_logger.get_dump_path_by_uuid(group_uuid)
+                    old_path_abs = self.dump_tracker.get_dump_path_by_uuid(group_uuid)
                     if not old_path_abs:
                         logger.debug(f'Could not find old path for common group UUID {group_uuid} in logger.')
                         continue

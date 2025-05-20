@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.logger import DumpTracker
+from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.managers.collection import CollectionDumpManager
 from aiida.tools.dumping.utils.helpers import DumpChanges
 from aiida.tools.dumping.utils.paths import DumpPaths
@@ -24,7 +24,7 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.strategies.profile')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.logger import DumpTracker
+    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.managers.collection import CollectionDumpManager
     from aiida.tools.dumping.managers.process import ProcessDumpManager
     from aiida.tools.dumping.mapping import GroupNodeMapping
@@ -35,7 +35,7 @@ class GroupDumpManager(CollectionDumpManager):
         self,
         config: DumpConfig,
         dump_paths: DumpPaths,
-        dump_logger: DumpTracker,
+        dump_tracker: DumpTracker,
         process_manager: ProcessDumpManager,
         current_mapping: GroupNodeMapping,
         group_to_dump: orm.Group,
@@ -45,7 +45,7 @@ class GroupDumpManager(CollectionDumpManager):
             dump_paths=dump_paths,
             process_manager=process_manager,
             current_mapping=current_mapping,
-            dump_logger=dump_logger,
+            dump_tracker=dump_tracker,
         )
         self.group_to_dump = group_to_dump
 
@@ -104,7 +104,7 @@ class GroupDumpManager(CollectionDumpManager):
     def _update_single_group_stats(self, group: orm.Group, group_content_path: Path) -> None:
         # ... (implementation as before) ...
         logger.info(f"Calculating final directory stats for group '{group.label}'.")
-        group_log_entry = self.dump_logger.groups.get_entry(group.uuid)
+        group_log_entry = self.dump_tracker.groups.get_entry(group.uuid)
 
         if not group_log_entry:
             logger.warning(f"Log entry for group '{group.label}' not found. Cannot update stats.")

@@ -11,7 +11,7 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.managers.deletion')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.logger import DumpTracker
+    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.mapping import GroupNodeMapping
     from aiida.tools.dumping.utils.helpers import GroupInfo
 
@@ -23,7 +23,7 @@ class DeletionManager:
         self,
         config: DumpConfig,
         dump_paths: DumpPaths,
-        dump_logger: DumpTracker,
+        dump_tracker: DumpTracker,
         dump_changes: DumpChanges,
         stored_mapping: GroupNodeMapping | None,
     ):
@@ -32,13 +32,13 @@ class DeletionManager:
 
         :param config: _description_
         :param dump_paths: _description_
-        :param dump_logger: _description_
+        :param dump_tracker: _description_
         :param dump_changes: _description_
         :param stored_mapping: _description_
         """
         self.config: DumpConfig = config
         self.dump_paths: DumpPaths = dump_paths
-        self.dump_logger: DumpTracker = dump_logger
+        self.dump_tracker: DumpTracker = dump_tracker
         self.dump_changes: DumpChanges = dump_changes
         self.stored_mapping: GroupNodeMapping | None = stored_mapping
 
@@ -92,7 +92,7 @@ class DeletionManager:
         Returns:
             True if the node's log entry was successfully deleted, False otherwise.
         """
-        store = self.dump_logger.get_store_by_uuid(node_uuid)
+        store = self.dump_tracker.get_store_by_uuid(node_uuid)
         if not store:
             # It might have already been deleted if associated with a deleted group below
             logger.debug(
@@ -111,7 +111,7 @@ class DeletionManager:
             (
                 s_name
                 for s_name in ['calculations', 'workflows', 'data']
-                if getattr(self.dump_logger, s_name, None) == store
+                if getattr(self.dump_tracker, s_name, None) == store
             ),
             None,
         )
@@ -144,7 +144,7 @@ class DeletionManager:
             )
         finally:
             # Always attempt to remove the log entry
-            if self.dump_logger.del_entry(store_key=store_key, uuid=node_uuid):
+            if self.dump_tracker.del_entry(store_key=store_key, uuid=node_uuid):
                 logger.debug(f"Removed log entry for deleted node {node_uuid} from store '{store_key}'.")
                 deleted_from_log = True
             else:
@@ -171,7 +171,7 @@ class DeletionManager:
         path_deleted: Path | None = None  # Keep track of the path we deleted
 
         # --- 1. Delete Group Directory (if applicable) ---
-        group_entry = self.dump_logger.groups.get_entry(group_uuid)
+        group_entry = self.dump_tracker.groups.get_entry(group_uuid)
         if group_entry:
             path_to_delete = group_entry.path
             should_delete_dir = self.config.organize_by_groups and path_to_delete != self.dump_paths.base_output_path
@@ -206,7 +206,7 @@ class DeletionManager:
             logger.warning(f'Log entry not found for deleted group UUID {group_uuid}. Cannot remove directory.')
 
         # --- 2. Delete Group Log Entry ---
-        if self.dump_logger.del_entry(store_key='groups', uuid=group_uuid):
+        if self.dump_tracker.del_entry(store_key='groups', uuid=group_uuid):
             logger.debug(f'Removed log entry for deleted group {group_uuid}.')
             group_log_deleted = True
         else:
@@ -219,7 +219,7 @@ class DeletionManager:
             logger.info(f'Scanning node logs for entries within deleted group path: {path_deleted}')
             # Iterate through all potential node stores
             for store_key in ['calculations', 'workflows', 'data']:
-                node_store = getattr(self.dump_logger, store_key, None)
+                node_store = getattr(self.dump_tracker, store_key, None)
                 if not node_store or not hasattr(node_store, 'entries'):
                     continue
 
@@ -239,7 +239,7 @@ class DeletionManager:
                                 "group path '{path_deleted}'. Removing log entry."
                             )
                             logger.debug(msg)
-                            if self.dump_logger.del_entry(store_key=store_key, uuid=node_uuid):
+                            if self.dump_tracker.del_entry(store_key=store_key, uuid=node_uuid):
                                 nodes_removed_count += 1
                             # else: No warning needed if removal fails, might be race condition or prior removal
                     except (OSError, ValueError):

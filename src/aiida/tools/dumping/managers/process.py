@@ -25,12 +25,12 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.dumping.config import DumpConfig
-from aiida.tools.dumping.logger import DumpRecord
+from aiida.tools.dumping.tracking import DumpRecord
 from aiida.tools.dumping.utils.helpers import DumpStoreKeys
 from aiida.tools.dumping.utils.paths import DumpPaths
 
 if TYPE_CHECKING:
-    from aiida.tools.dumping.logger import DumpTracker
+    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.utils.helpers import DumpTimes
 
 __all__ = ('NodeMetadataWriter', 'NodeRepoIoDumper', 'ProcessDumpManager', 'ReadmeGenerator', 'WorkflowWalker')
@@ -61,12 +61,12 @@ class ProcessDumpManager:
         self,
         config: DumpConfig,
         dump_paths: DumpPaths,
-        dump_logger: DumpTracker,
+        dump_tracker: DumpTracker,
         dump_times: DumpTimes,
     ):
         self.config: DumpConfig = config
         self.dump_paths: DumpPaths = dump_paths
-        self.dump_logger: DumpTracker = dump_logger
+        self.dump_tracker: DumpTracker = dump_tracker
         self.dump_times: DumpTimes = dump_times
 
         # Instantiate helper classes
@@ -141,7 +141,7 @@ class ProcessDumpManager:
         This method should NOT have side effects like creating files/dirs or modifying logs.
         """
         store_key = DumpStoreKeys.from_instance(node)
-        node_store = self.dump_logger.get_store_by_name(store_key)
+        node_store = self.dump_tracker.get_store_by_name(store_key)
         existing_log_entry = node_store.get_entry(node.uuid)
 
         if not existing_log_entry:
@@ -282,7 +282,7 @@ class ProcessDumpManager:
             # 2. Create new log entry
             log_entry = DumpRecord(path=target_path.resolve())
             store_key = DumpStoreKeys.from_instance(node)
-            self.dump_logger.get_store_by_name(store_key).add_entry(node.uuid, log_entry)
+            self.dump_tracker.get_store_by_name(store_key).add_entry(node.uuid, log_entry)
             logger.debug(f'Created primary log entry for node {node.pk}')
 
             # 3. Dump content
@@ -386,7 +386,7 @@ class ProcessDumpManager:
 
             if is_primary_dump:
                 store_key = DumpStoreKeys.from_instance(node)
-                node_store = self.dump_logger.get_store_by_name(store_key)
+                node_store = self.dump_tracker.get_store_by_name(store_key)
                 if node_store.del_entry(node.uuid):
                     logger.info(f'Removed log entry for failed primary dump of node {node.pk}')
                 else:

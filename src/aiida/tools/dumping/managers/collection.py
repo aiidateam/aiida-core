@@ -19,13 +19,13 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm
 from aiida.orm import Group, WorkflowNode
 from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.logger import DumpRecord, DumpTracker
+from aiida.tools.dumping.tracking import DumpRecord, DumpTracker
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpNodeStore
 from aiida.tools.dumping.utils.paths import DumpPaths
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.logger import DumpTracker
+    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.managers.process import ProcessDumpManager
     from aiida.tools.dumping.mapping import GroupNodeMapping
     from aiida.tools.dumping.utils.helpers import GroupChanges, GroupModificationInfo
@@ -38,7 +38,7 @@ class CollectionDumpManager:
         self,
         config: DumpConfig,
         dump_paths: DumpPaths,
-        dump_logger: DumpTracker,
+        dump_tracker: DumpTracker,
         process_manager: ProcessDumpManager,
         current_mapping: GroupNodeMapping,
     ) -> None:
@@ -46,7 +46,7 @@ class CollectionDumpManager:
         self.dump_paths: DumpPaths = dump_paths
         self.process_manager: ProcessDumpManager = process_manager
         self.current_mapping: GroupNodeMapping = current_mapping
-        self.dump_logger: DumpTracker = dump_logger
+        self.dump_tracker: DumpTracker = dump_tracker
 
     def _register_group_and_prepare_path(self, group: orm.Group, group_content_path: Path) -> None:
         """
@@ -62,18 +62,18 @@ class CollectionDumpManager:
         # In non-dry_run modes, prepare_directory also creates the safeguard.
         self.dump_paths.prepare_directory(group_content_path, is_leaf_node_dir=False)
 
-        if group.uuid not in self.dump_logger.groups.entries:
+        if group.uuid not in self.dump_tracker.groups.entries:
             logger.debug(
                 f"Registering group '{group.label}' ({group.uuid}) in logger "
                 f'with content path: {group_content_path}'
             )
-            self.dump_logger.add_entry(
+            self.dump_tracker.add_entry(
                 store_key='groups',
                 uuid=group.uuid,
                 entry=DumpRecord(path=group_content_path),  # Log the absolute path
             )
         # else: Group already logged. Path updates due to renames should be handled
-        # by the group rename logic (e.g., in _handle_group_changes or DumpLogger.update_paths)
+        # by the group rename logic (e.g., in _handle_group_changes or DumpTracker.update_paths)
 
     def _identify_nodes_for_group(self, group: Group, changes: DumpChanges) -> tuple[DumpNodeStore, list[WorkflowNode]]:
         """Identifies nodes explicitly belonging to a given group from the provided changes."""
@@ -102,7 +102,7 @@ class CollectionDumpManager:
                     )
         return nodes_explicitly_in_group, workflows_explicitly_in_group
 
-    def _add_and_dump_group_descendants_if_needed(
+    def _add_and_dump_group_descendants(
         self,
         group: Group,
         workflows_in_group: list[WorkflowNode],
@@ -126,7 +126,7 @@ class CollectionDumpManager:
                 logger.debug(f"No calculation descendants found for workflows in group '{group.label}'.")
                 return
 
-            logged_calc_uuids = set(self.dump_logger.calculations.entries.keys())
+            logged_calc_uuids = set(self.dump_tracker.calculations.entries.keys())
             unique_unlogged_descendants = [desc for desc in descendants if desc.uuid not in logged_calc_uuids]
 
             if unique_unlogged_descendants:
@@ -224,7 +224,7 @@ class CollectionDumpManager:
 
         # 2. Find and immediately dump calculation descendants if required.
         #    These are dumped into the group_content_root_path.
-        self._add_and_dump_group_descendants_if_needed(
+        self._add_and_dump_group_descendants(
             group=group, workflows_in_group=workflows_in_group, current_group_content_root=group_content_root_path
         )
 
@@ -324,7 +324,7 @@ class CollectionDumpManager:
                 # 2. Update logger paths
                 try:
                     # Call the refined update_paths method
-                    self.dump_logger.update_paths(old_base_path=old_path, new_base_path=new_path)
+                    self.dump_tracker.update_paths(old_base_path=old_path, new_base_path=new_path)
                 except Exception as e:
                     logger.error(
                         f'Failed to update logger paths for renamed group {rename_info.uuid}: {e}', exc_info=True
@@ -392,13 +392,13 @@ class CollectionDumpManager:
         Find and remove a node's dump dir/symlink within a specific group path.
         Handles nodes potentially deleted from the DB by checking filesystem paths.
         """
-        node_path_in_logger = self.dump_logger.get_dump_path_by_uuid(node_uuid)
-        # store = self.dump_logger.get_store_by_uuid(node_uuid)
+        node_path_in_logger = self.dump_tracker.get_dump_path_by_uuid(node_uuid)
+        # store = self.dump_tracker.get_store_by_uuid(node_uuid)
         if not node_path_in_logger:
             logger.warning(f'Cannot find logger path for node {node_uuid} to remove from group.')
             return
 
-        # Even if node is deleted from DB, we expect the dump_logger to know the original path name
+        # Even if node is deleted from DB, we expect the dump_tracker to know the original path name
         node_filename = node_path_in_logger.name
 
         # Construct potential paths within the group dir where the node might be represented
@@ -453,7 +453,7 @@ class CollectionDumpManager:
                     # Unlink works even if the symlink target doesn't exist
                     found_path.unlink()
                     # TODO: Remove symlink from logger
-                    self.dump_logger.remove_symlink_from_log_entry(node_uuid, found_path)
+                    self.dump_tracker.remove_symlink_from_log_entry(node_uuid, found_path)
                     # store.remove_symlink(found_path)
                 except OSError as e:
                     logger.error(f'Failed to remove symlink {found_path}: {e}')

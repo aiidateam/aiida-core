@@ -91,23 +91,14 @@ _IO_CALC_NODE_CONTENT_NESTED_NO_OUTPUTS = [
     # No 'node_outputs' key here
 ]
 
-# Content list for a flat dump of the IO Calc
-# NOTE: Assumes flat dump copies files directly. Exact structure might vary.
 _IO_CALC_NODE_CONTENT_FLAT = [
-    'README.md',  # Standard file added by ProcessDumper
-    'aiida_dump_log.json',
+    'README.md',
+    'aiida_dump_track.json',
     'aiida_dump_config.yaml',
     '.aiida_dump_safeguard',
     '.aiida_node_metadata.yaml',
-    # Files from repo/nodes flattened
     'file.txt',
-    # From inputs repo, node_inputs/singlefile, node_inputs/folderdata,
-    # node_outputs/singlefile, node_outputs/folderdata (potentially overwritten if names clash)
-    'default.npy',  # From node_inputs/arraydata
-    # Note: Representing folders in flat structure is ambiguous in this dict format.
-    # The original tree_dump_calculation_io_flat seemed incomplete/potentially incorrect.
-    # This flat representation might need adjustment based on actual dumper behavior.
-    # For robustness, testing flat dumps might be better done via content verification (Strategy 2).
+    'default.npy',
 ]
 
 
@@ -223,8 +214,6 @@ def get_expected_nested_io_wc_tree(
     child2_content = _IO_CALC_NODE_CONTENT_NESTED_NO_OUTPUTS
 
     # Build the sub-workflow's content, nesting the calculations
-    # Keys now use: {prefix}-{link_label}-{CHILD_PK}
-    # *** ADJUSTED KEYS ***
     wc_sub_content = [
         '.aiida_dump_safeguard',
         '.aiida_node_metadata.yaml',
@@ -281,7 +270,7 @@ def get_expected_profile_dump_tree(
         A dictionary representing the expected file/directory tree structure.
     """
     top_level_content = [
-        'aiida_dump_log.json',
+        'aiida_dump_track.json',
         'aiida_dump_config.yaml',
         '.aiida_dump_safeguard',
     ]
@@ -336,7 +325,7 @@ def get_expected_profile_dump_tree(
 def get_expected_group_dump_tree(dump_label: str, node_trees: List[Dict]) -> Dict[str, List[Any]]:
     """Generates the expected tree for a GroupDumper output."""
     content = [
-        'aiida_dump_log.json',
+        'aiida_dump_track.json',
         '.aiida_dump_safeguard',
         'aiida_dump_config.yaml',
     ]
@@ -409,7 +398,7 @@ class TestProcessDumper:
         expected_tree_final = {
             dump_label: [
                 'README.md',
-                'aiida_dump_log.json',
+                'aiida_dump_track.json',
                 'aiida_dump_config.yaml',
             ]
             + expected_tree_content  # Add standard files to node content list
@@ -418,7 +407,7 @@ class TestProcessDumper:
         compare_tree(expected=expected_tree_final, base_path=tmp_path)
         assert (dump_target_path / 'README.md').is_file()
         assert (dump_target_path / 'aiida_dump_config.yaml').is_file()
-        assert (dump_target_path / 'aiida_dump_log.json').is_file()
+        assert (dump_target_path / 'aiida_dump_track.json').is_file()
 
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_dump_facade_multiply_add(self, tmp_path, generate_workchain_multiply_add):
@@ -443,7 +432,7 @@ class TestProcessDumper:
         expected_tree_nested = {
             dump_label: [
                 'README.md',
-                'aiida_dump_log.json',
+                'aiida_dump_track.json',
                 'aiida_dump_config.yaml',
             ]
             + expected_tree_content_nested
@@ -484,7 +473,7 @@ class TestProcessDumper:
         expected_tree = {
             dump_label: [
                 'README.md',
-                'aiida_dump_log.json',
+                'aiida_dump_track.json',
                 'aiida_dump_config.yaml',
             ]
             + expected_tree_content
@@ -520,7 +509,7 @@ class TestProcessDumper:
 
         # Perform basic checks instead of full compare_tree for flat dump
         assert (dump_target_path / '.aiida_node_metadata.yaml').is_file()
-        assert (dump_target_path / 'aiida_dump_log.json').is_file()
+        assert (dump_target_path / 'aiida_dump_track.json').is_file()
         assert (dump_target_path / 'file.txt').is_file()  # Check a key file is flattened
         assert (dump_target_path / 'default.npy').is_file()
         # Add more specific checks if needed based on expected flat output
@@ -543,7 +532,7 @@ class TestProcessDumper:
         expected_tree = {
             dump_label: [
                 'README.md',
-                'aiida_dump_log.json',
+                'aiida_dump_track.json',
                 'aiida_dump_config.yaml',
             ]
             + expected_node_content

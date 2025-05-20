@@ -108,7 +108,6 @@ repos:
         src/aiida/cmdline/commands/cmd_shell.py|
         src/aiida/cmdline/commands/cmd_storage.py|
         src/aiida/cmdline/params/options/commands/setup.py|
-        src/aiida/cmdline/params/options/main.py|
         src/aiida/cmdline/utils/ascii_vis.py|
         src/aiida/cmdline/utils/common.py|
         src/aiida/cmdline/utils/echo.py|

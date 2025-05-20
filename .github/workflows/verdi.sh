@@ -36,15 +36,18 @@ done
 
 # Test that we can also run the CLI via `python -m aiida`,
 # that it returns a 0 exit code, and contains the expected stdout.
-echo "Invoking verdi via `python -m aiida`"
+echo "Invoking verdi via 'python -m aiida'"
 OUTPUT=$(python -m aiida 2>&1)
 RETVAL=$?
-echo $OUTPUT
 if [ $RETVAL -ne 0 ]; then
     echo "'python -m aiida' exitted with code $RETVAL"
+    echo "=== OUTPUT ==="
+    echo $OUTPUT
     exit 2
 fi
 if [[ $OUTPUT != *"command line interface of AiiDA"* ]]; then
     echo "'python -m aiida' did not contain the expected stdout:"
+    echo "=== OUTPUT ==="
+    echo $OUTPUT
     exit 2
 fi

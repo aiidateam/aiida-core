@@ -180,7 +180,11 @@ def non_interactive_editor(request):
         except OSError as exception:
             raise click.ClickException(f'{editor}: Editing failed: {exception}')
 
-    with patch.object(Editor, 'edit_file', edit_file):
+    attr_name = 'edit_file'
+    # The attribute was renamed in click 8.2.0 to edit_files
+    if hasattr(Editor, 'edit_files'):
+        attr_name = 'edit_files'
+    with patch.object(Editor, attr_name, edit_file):
         yield
 
 

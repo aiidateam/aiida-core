@@ -10,29 +10,13 @@
 
 from __future__ import annotations
 
-import functools
 import typing as t
 
 import click
 
+from .._shims import shim_add_ctx
+
 __all__ = ('MultipleValueParamType',)
-
-
-C = t.TypeVar('C', bound=t.Callable[..., t.Any])
-
-
-# Compatibility between click 8.1 and 8.2
-# https://github.com/pallets/click/pull/2929
-def shim_get_metavar(f: C) -> C:
-    @functools.wraps(f)
-    def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-        if 'ctx' not in kwargs:
-            # DH modification
-            # kwargs["ctx"] = click.get_current_context(silent=True)
-            kwargs['ctx'] = None
-        return f(*args, **kwargs)
-
-    return wrapper  # type: ignore[return-value]
 
 
 class MultipleValueParamType(click.ParamType):
@@ -50,7 +34,7 @@ class MultipleValueParamType(click.ParamType):
         else:
             self.name = ''
 
-    @shim_get_metavar
+    @shim_add_ctx
     def get_metavar(self, param: click.Parameter, ctx: click.Context | None) -> str | None:
         try:
             if ctx is not None:

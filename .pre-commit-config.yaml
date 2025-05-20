@@ -110,7 +110,6 @@ repos:
         src/aiida/cmdline/params/options/commands/setup.py|
         src/aiida/cmdline/params/options/interactive.py|
         src/aiida/cmdline/params/options/main.py|
-        src/aiida/cmdline/params/options/multivalue.py|
         src/aiida/cmdline/params/types/group.py|
         src/aiida/cmdline/utils/ascii_vis.py|
         src/aiida/cmdline/utils/common.py|

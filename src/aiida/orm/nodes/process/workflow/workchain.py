@@ -10,8 +10,8 @@
 
 from typing import TYPE_CHECKING, Optional, Tuple
 
-from aiida.common.lang import classproperty
 from aiida.common import exceptions
+from aiida.common.lang import classproperty
 
 from .workflow import WorkflowNode
 
@@ -59,7 +59,6 @@ class WorkChainNode(WorkflowNode):
                     )
 
         return self._tools
-
 
     @classproperty
     def _updatable_attributes(cls) -> Tuple[str, ...]:  # type: ignore[override]  # noqa: N805

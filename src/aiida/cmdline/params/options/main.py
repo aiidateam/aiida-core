@@ -8,11 +8,12 @@
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 
+from __future__ import annotations
+
 import pathlib
 import typing as t
 
 import click
-import click.types
 
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
 from aiida.common.log import LOG_LEVELS, configure_logging

@@ -8,6 +8,8 @@
 ###########################################################################
 """Tools and an option class for interactive parameter entry with additional features such as help lookup."""
 
+from __future__ import annotations
+
 import typing as t
 
 import click

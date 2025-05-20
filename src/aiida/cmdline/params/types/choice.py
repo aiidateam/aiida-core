@@ -8,6 +8,8 @@
 ###########################################################################
 """A custom click type that defines a lazy choice"""
 
+from __future__ import annotations
+
 import typing as t
 
 import click

@@ -20,7 +20,7 @@ from aiida.common import timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.mapping import GroupNodeMapping
 from aiida.tools.dumping.utils.helpers import DumpStoreKeys, StoreNameType
-from aiida.tools.dumping.utils.paths import DumpPathPolicy
+from aiida.tools.dumping.utils.paths import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.logger')
 
@@ -195,14 +195,14 @@ class DumpLogger:
 
     def __init__(
         self,
-        path_policy: DumpPathPolicy,
+        dump_paths: DumpPaths,
         stores: DumpLogStoreCollection,
         last_dump_time_str: str | None = None,
     ) -> None:
         """
         Initialize the DumpLogger. Should typically be instantiated via `load`.
         """
-        self.path_policy = path_policy
+        self.dump_paths = dump_paths
         # Stores are now passed in directly
         self.calculations = stores.calculations
         self.workflows = stores.workflows
@@ -213,7 +213,7 @@ class DumpLogger:
 
     @staticmethod
     def load(
-        path_policy: DumpPathPolicy,
+        dump_paths: DumpPaths,
     ) -> Tuple[DumpLogStoreCollection, GroupNodeMapping | None, str | None]:
         """Load log data and mapping from the log file.
 
@@ -223,19 +223,19 @@ class DumpLogger:
                 - GroupNodeMapping | None: The loaded group mapping, or None if not found/error.
                 - str | None: The ISO timestamp string of the last dump, or None.
 
-        :param path_policy: _description_
+        :param dump_paths: _description_
         :return: _description_
         """
         stores = DumpLogStoreCollection()  # Default empty stores
         group_node_mapping = None
         last_dump_time_str = None
 
-        if not path_policy.log_file_path.exists():
-            logger.debug(f'Log file not found at {path_policy.log_file_path}, returning empty log data.')
+        if not dump_paths.log_file_path.exists():
+            logger.debug(f'Log file not found at {dump_paths.log_file_path}, returning empty log data.')
             return stores, group_node_mapping, last_dump_time_str
 
         try:
-            with path_policy.log_file_path.open('r', encoding='utf-8') as f:
+            with dump_paths.log_file_path.open('r', encoding='utf-8') as f:
                 prev_dump_data = json.load(f)
 
             # Load last dump time string
@@ -250,16 +250,16 @@ class DumpLogger:
 
             # Load store data using deserialize_logs helper
             stores.calculations = DumpLogger._deserialize_logs(
-                prev_dump_data.get('calculations', {}), path_policy=path_policy
+                prev_dump_data.get('calculations', {}), dump_paths=dump_paths
             )
             stores.workflows = DumpLogger._deserialize_logs(
-                prev_dump_data.get('workflows', {}), path_policy=path_policy
+                prev_dump_data.get('workflows', {}), dump_paths=dump_paths
             )
-            stores.groups = DumpLogger._deserialize_logs(prev_dump_data.get('groups', {}), path_policy=path_policy)
-            stores.data = DumpLogger._deserialize_logs(prev_dump_data.get('data', {}), path_policy=path_policy)
+            stores.groups = DumpLogger._deserialize_logs(prev_dump_data.get('groups', {}), dump_paths=dump_paths)
+            stores.data = DumpLogger._deserialize_logs(prev_dump_data.get('data', {}), dump_paths=dump_paths)
 
         except (json.JSONDecodeError, OSError, ValueError) as e:
-            logger.warning(f'Error loading dump log file {path_policy.log_file_path}: {e!s}')
+            logger.warning(f'Error loading dump log file {dump_paths.log_file_path}: {e!s}')
             # Return default empty data on error
             return DumpLogStoreCollection(), None, None
 
@@ -315,11 +315,11 @@ class DumpLogger:
             log_dict['group_node_mapping'] = group_node_mapping.to_dict()
 
         try:
-            with self.path_policy.log_file_path.open('w', encoding='utf-8') as f:
+            with self.dump_paths.log_file_path.open('w', encoding='utf-8') as f:
                 json.dump(log_dict, f, indent=4)
-            logger.debug(f'Dump log saved to {self.path_policy.log_file_path}')
+            logger.debug(f'Dump log saved to {self.dump_paths.log_file_path}')
         except OSError as e:
-            logger.error(f'Failed to save dump log to {self.path_policy.log_file_path}: {e!s}')
+            logger.error(f'Failed to save dump log to {self.dump_paths.log_file_path}: {e!s}')
 
     def _serialize_logs(self, container: DumpLogStore) -> Dict:
         """Serialize log entries to a dictionary format relative to dump parent."""
@@ -332,14 +332,14 @@ class DumpLogger:
                 # Convert paths to relative strings for serialization
                 # Ensure keys exist before attempting conversion
                 if 'path' in entry_dict and entry_dict['path'] is not None:
-                    entry_dict['path'] = str(Path(entry_dict['path']).relative_to(self.path_policy.base_output_path))
+                    entry_dict['path'] = str(Path(entry_dict['path']).relative_to(self.dump_paths.base_output_path))
                 if 'symlinks' in entry_dict:
                     entry_dict['symlinks'] = [
-                        str(Path(p).relative_to(self.path_policy.base_output_path)) for p in entry_dict['symlinks']
+                        str(Path(p).relative_to(self.dump_paths.base_output_path)) for p in entry_dict['symlinks']
                     ]
                 if 'duplicates' in entry_dict:
                     entry_dict['duplicates'] = [
-                        str(Path(p).relative_to(self.path_policy.base_output_path)) for p in entry_dict['duplicates']
+                        str(Path(p).relative_to(self.dump_paths.base_output_path)) for p in entry_dict['duplicates']
                     ]
 
                 # Add the complete entry dict (including mtime/size) to serialized output
@@ -348,7 +348,7 @@ class DumpLogger:
             except ValueError:
                 # Fallback if path is not relative - use absolute paths from to_dict()
                 msg = (
-                    f'Path {entry.path} or its links/duplicates not relative to {self.path_policy.base_output_path}.'
+                    f'Path {entry.path} or its links/duplicates not relative to {self.dump_paths.base_output_path}.'
                     'Storing absolute.'
                 )
                 logger.warning(msg)
@@ -360,7 +360,7 @@ class DumpLogger:
         return serialized
 
     @staticmethod
-    def _deserialize_logs(category_data: Dict, path_policy: DumpPathPolicy) -> DumpLogStore:
+    def _deserialize_logs(category_data: Dict, dump_paths: DumpPaths) -> DumpLogStore:
         """Deserialize log entries using DumpLog.from_dict and make paths absolute."""
         container = DumpLogStore()
         for uuid, entry_data in category_data.items():
@@ -370,11 +370,11 @@ class DumpLogger:
                 if isinstance(entry_data, dict) and 'path' in entry_data:
                     # Use from_dict to get all fields correctly
                     log_entry = DumpLog.from_dict(entry_data)
-                    # Now make paths absolute based on path_policy.base_output_path
-                    # Note: Assumes paths in JSON are relative to path_policy.base_output_path
-                    log_entry.path = path_policy.base_output_path / log_entry.path
-                    log_entry.symlinks = [path_policy.base_output_path / p for p in log_entry.symlinks]
-                    log_entry.duplicates = [path_policy.base_output_path / p for p in log_entry.duplicates]
+                    # Now make paths absolute based on dump_paths.base_output_path
+                    # Note: Assumes paths in JSON are relative to dump_paths.base_output_path
+                    log_entry.path = dump_paths.base_output_path / log_entry.path
+                    log_entry.symlinks = [dump_paths.base_output_path / p for p in log_entry.symlinks]
+                    log_entry.duplicates = [dump_paths.base_output_path / p for p in log_entry.duplicates]
 
                 if log_entry:
                     container.add_entry(uuid, log_entry)

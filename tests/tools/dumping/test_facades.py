@@ -580,13 +580,13 @@ class TestProcessDumper:
     #         dumper_over_fail.dump()
 
     #     # # 3. Test overwrite works with safeguard
-    #     # (dump_path / DumpPathPolicy.SAFEGUARD_FILE_NAME).touch()  # Add safeguard
+    #     # (dump_path / DumpPaths.SAFEGUARD_FILE_NAME).touch()  # Add safeguard
     #     # config_over_ok = DumpConfig(dump_mode=DumpMode.OVERWRITE, include_outputs=True)
     #     # dumper_over_ok = ProcessDumper(process=node, config=config_over_ok, output_path=dump_path)
     #     # dumper_over_ok.dump()
     #     # assert not (dump_path / 'dummy.txt').exists()  # Should be removed
     #     # assert (dump_path / 'inputs' / '_aiidasubmit.sh').is_file()  # Dump content exists
-    #     # assert (dump_path / DumpPathPolicy.log_file_path).is_file()  # Log file created
+    #     # assert (dump_path / DumpPaths.log_file_path).is_file()  # Log file created
 
     #     # # 4. Test incremental works with safeguard (on existing dump)
     #     # (dump_path / 'extra_file.txt').touch()  # Add another file

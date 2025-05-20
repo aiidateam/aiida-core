@@ -700,6 +700,7 @@ def group_dump(
     from aiida.common import NotExistent
     from aiida.tools.dumping import GroupDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode
+    from aiida.tools.dumping.utils.paths import DumpPaths
 
     warning_msg = (
         'This is a new feature which is still in its testing phase. '
@@ -709,12 +710,13 @@ def group_dump(
 
     # --- Initial Setup ---
     final_dump_config = None
-    resolved_base_output_path: Path  # Will be set
 
     try:
         if path is None:
-            resolved_base_output_path = Path.cwd() / group.label
-            echo.echo_report(f"No output path specified. Using default: './{group.label}'")
+            # TODO:
+            group_path = DumpPaths._get_default_group_dump_path(group)
+            resolved_base_output_path = Path.cwd() / group_path
+            echo.echo_report(f"No output path specified. Using default: './{group_path}'")
         else:
             resolved_base_output_path = Path(path).resolve()
             echo.echo_report(f"Using specified output path: '{resolved_base_output_path}'")

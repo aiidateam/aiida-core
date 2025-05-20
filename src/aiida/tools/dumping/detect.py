@@ -29,7 +29,7 @@ from aiida.tools.dumping.utils.helpers import (
     NodeChanges,
     NodeMembershipChange,
 )
-from aiida.tools.dumping.utils.paths import DumpPathPolicy
+from aiida.tools.dumping.utils.paths import DumpPaths
 
 if TYPE_CHECKING:
     from aiida.orm import Group, Node, QueryBuilder
@@ -45,7 +45,7 @@ class DumpChangeDetector:
     """Detects changes in the database since the last dump"""
 
     def __init__(
-        self, dump_logger: DumpLogger, path_policy: DumpPathPolicy, config: DumpConfig, dump_times: DumpTimes
+        self, dump_logger: DumpLogger, dump_paths: DumpPaths, config: DumpConfig, dump_times: DumpTimes
     ) -> None:
         """
         Initializes the DumpChangeDetector.
@@ -58,7 +58,7 @@ class DumpChangeDetector:
         self.dump_logger: DumpLogger = dump_logger
         self.config: DumpConfig = config
         self.dump_times: DumpTimes = dump_times
-        self.path_policy: DumpPathPolicy = path_policy
+        self.dump_paths: DumpPaths = dump_paths
         # Instantiate the new query handler
         self.node_query = DumpNodeQuery(config)
         # Cache grouped node UUIDs to avoid rebuilding mapping multiple times per run
@@ -411,7 +411,7 @@ class DumpChangeDetector:
                     current_label = current_group.label
 
                     # Calculate expected current path based on current label
-                    current_path_abs = self.path_policy.get_path_for_group_content(
+                    current_path_abs = self.dump_paths.get_path_for_group_content(
                         group=current_group,
                         parent_group_content_path=None,
                     )

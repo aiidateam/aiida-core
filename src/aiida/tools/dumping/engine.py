@@ -13,7 +13,7 @@ from aiida.tools.dumping.managers.group import GroupDumpManager
 from aiida.tools.dumping.managers.process import ProcessDumpManager
 from aiida.tools.dumping.managers.profile import ProfileDumpManager
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpTimes
-from aiida.tools.dumping.utils.paths import DumpPathPolicy
+from aiida.tools.dumping.utils.paths import DumpPaths
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.mapping import GroupNodeMapping
@@ -33,32 +33,32 @@ class DumpEngine:
     ):
         """Engine constructor that initializes all entities needed for dumping.
 
-        :param path_policy: _description_
+        :param dump_paths: _description_
         :param config: _description_, defaults to None
         """
 
         self.config: DumpConfig = config
 
-        self.path_policy = DumpPathPolicy(
+        self.dump_paths = DumpPaths(
             base_output_path=base_output_path,
             config=self.config,
             dump_target_entity=dump_target_entity,
         )
 
-        self.path_policy.prepare_directory(path_to_prepare=base_output_path)
+        self.dump_paths.prepare_directory(path_to_prepare=base_output_path)
 
         # --- Initialize Times, Logger, and NodeGroupMapping ---
         self.dump_times, self.dump_logger, self.stored_mapping = self._initialize_times_logger_and_mapping()
 
         # --- Initialize detector for changes ---
         self.detector = DumpChangeDetector(
-            dump_logger=self.dump_logger, path_policy=self.path_policy, config=self.config, dump_times=self.dump_times
+            dump_logger=self.dump_logger, dump_paths=self.dump_paths, config=self.config, dump_times=self.dump_times
         )
 
         # --- Initialize Managers (pass dependencies) ---
         self.process_manager = ProcessDumpManager(
             config=self.config,
-            path_policy=self.path_policy,
+            dump_paths=self.dump_paths,
             dump_logger=self.dump_logger,
             dump_times=self.dump_times,
         )
@@ -73,16 +73,16 @@ class DumpEngine:
         logger.debug('Initializing dump times and logger...')
 
         # Clear log file if overwriting
-        if self.config.dump_mode == DumpMode.OVERWRITE and self.path_policy.log_file_path.exists():
+        if self.config.dump_mode == DumpMode.OVERWRITE and self.dump_paths.log_file_path.exists():
             try:
-                logger.info(f'Overwrite mode: Deleting existing log file {self.path_policy.log_file_path}')
-                self.path_policy.log_file_path.unlink()
+                logger.info(f'Overwrite mode: Deleting existing log file {self.dump_paths.log_file_path}')
+                self.dump_paths.log_file_path.unlink()
             except OSError as e:
                 logger.error(f'Failed to delete existing log file: {e}')
                 # Decide whether to proceed or raise an error
 
         # Load log data, stored mapping, and last dump time string from file
-        stores_coll, stored_mapping, last_dump_time_str = DumpLogger.load(self.path_policy)
+        stores_coll, stored_mapping, last_dump_time_str = DumpLogger.load(self.dump_paths)
 
         # Initialize DumpTimes based on loaded time string
         dump_times = DumpTimes.from_last_log_time(last_dump_time_str)
@@ -90,7 +90,7 @@ class DumpEngine:
 
         # Initialize DumpLogger instance with loaded data
         dump_logger = DumpLogger(
-            path_policy=self.path_policy,
+            dump_paths=self.dump_paths,
             stores=stores_coll,
             last_dump_time_str=last_dump_time_str,
         )
@@ -114,14 +114,14 @@ class DumpEngine:
 
         :return: _description_
         """
-        config_path = self.path_policy.config_file_path
+        config_path = self.dump_paths.config_file_path
 
         if not config_path.exists():
             logger.debug(f'Config file {config_path} not found. Using default/provided config.')
             return None
 
-        assert self.path_policy.top_level is not None
-        config_path_rel = config_path.relative_to(self.path_policy.top_level)
+        assert self.dump_paths.top_level is not None
+        config_path_rel = config_path.relative_to(self.dump_paths.top_level)
         logger.info(f'Loading configuration from {config_path_rel}...')
         try:
             loaded_config = DumpConfig.parse_yaml_file(path=config_path)
@@ -137,7 +137,7 @@ class DumpEngine:
         try:
             # This calls self.config.model_dump(mode='json') internally via the serializer
             # and writes to the correct path using yaml.dump
-            self.config._save_yaml_file(self.path_policy.config_file_path)
+            self.config._save_yaml_file(self.dump_paths.config_file_path)
             # The logger message "Dump configuration saved to ..." is now inside save_yaml_file
         except Exception as e:
             # Log error but avoid raising another error during finalization if possible
@@ -147,7 +147,7 @@ class DumpEngine:
     def dump(self, entity: Optional[orm.ProcessNode | orm.Group] = None) -> None:
         """
         Selects and executes the appropriate dump strategy based on the entity.
-        The base output directory is assumed to be prepared by DumpPathPolicy.__init__().
+        The base output directory is assumed to be prepared by DumpPaths.__init__().
         """
         entity_description = 'profile'
         if isinstance(entity, orm.Group):
@@ -161,10 +161,10 @@ class DumpEngine:
         if isinstance(entity, orm.ProcessNode):
             logger.info(f'Executing ProcessNode dump for PK={entity.pk}')
             # For a single ProcessNode, its dump root is the base_output_path.
-            # ProcessManager uses DumpPathPolicy to place content within this root.
-            self.process_manager.dump(process_node=entity, target_path=self.path_policy.base_output_path)
+            # ProcessManager uses DumpPaths to place content within this root.
+            self.process_manager.dump(process_node=entity, target_path=self.dump_paths.base_output_path)
             try:
-                self.process_manager.readme_generator._generate(entity, self.path_policy.base_output_path)
+                self.process_manager.readme_generator._generate(entity, self.dump_paths.base_output_path)
             except Exception as e:
                 logger.warning(f'Failed to generate README for process {entity.pk}: {e}')
             current_mapping = None  # No group mapping relevant for single process dump for the main log
@@ -180,7 +180,7 @@ class DumpEngine:
             if self.config.delete_missing:
                 deletion_manager = DeletionManager(
                     config=self.config,
-                    path_policy=self.path_policy,
+                    dump_paths=self.dump_paths,
                     dump_logger=self.dump_logger,
                     dump_changes=all_changes,
                     stored_mapping=self.stored_mapping,
@@ -192,17 +192,17 @@ class DumpEngine:
                 return
 
             # GroupDumpManager needs the specific group and the scoped changes.
-            # The DumpPathPolicy instance within GroupDumpManager will be the same as DumpEngine's.
+            # The DumpPaths instance within GroupDumpManager will be the same as DumpEngine's.
             group_manager = GroupDumpManager(
                 group_to_dump=entity,
                 config=self.config,
-                path_policy=self.path_policy,
+                dump_paths=self.dump_paths,
                 dump_logger=self.dump_logger,
                 process_manager=self.process_manager,
                 current_mapping=current_mapping,
             )
             # The dump method of GroupDumpManager needs the root path for *this group's content*
-            # This root path is determined by DumpPathPolicy.
+            # This root path is determined by DumpPaths.
             group_manager.dump(changes=all_changes)
 
         else:  # Profile Dump (entity is None)
@@ -219,7 +219,7 @@ class DumpEngine:
                 if self.config.delete_missing:
                     deletion_manager = DeletionManager(
                         config=self.config,
-                        path_policy=self.path_policy,
+                        dump_paths=self.dump_paths,
                         dump_logger=self.dump_logger,
                         dump_changes=all_changes,
                         stored_mapping=self.stored_mapping,
@@ -232,7 +232,7 @@ class DumpEngine:
 
                 profile_manager = ProfileDumpManager(
                     config=self.config,
-                    path_policy=self.path_policy,
+                    dump_paths=self.dump_paths,
                     dump_logger=self.dump_logger,
                     process_manager=self.process_manager,
                     detector=self.detector,

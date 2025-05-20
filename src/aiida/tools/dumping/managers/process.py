@@ -27,7 +27,7 @@ from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.dumping.config import DumpConfig
 from aiida.tools.dumping.logger import DumpLog
 from aiida.tools.dumping.utils.helpers import DumpStoreKeys
-from aiida.tools.dumping.utils.paths import DumpPathPolicy
+from aiida.tools.dumping.utils.paths import DumpPaths
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.logger import DumpLogger
@@ -60,12 +60,12 @@ class ProcessDumpManager:
     def __init__(
         self,
         config: DumpConfig,
-        path_policy: DumpPathPolicy,
+        dump_paths: DumpPaths,
         dump_logger: DumpLogger,
         dump_times: DumpTimes,
     ):
         self.config: DumpConfig = config
-        self.path_policy: DumpPathPolicy = path_policy
+        self.dump_paths: DumpPaths = dump_paths
         self.dump_logger: DumpLogger = dump_logger
         self.dump_times: DumpTimes = dump_times
 
@@ -255,11 +255,11 @@ class ProcessDumpManager:
         logger.info(f'Executing UPDATE for node {node.pk} at {target_path.name} due to mtime change.')
         try:
             # 1. Clean existing directory
-            self.path_policy.safe_delete_directory(directory_path=target_path)
+            self.dump_paths.safe_delete_directory(directory_path=target_path)
             logger.debug(f'Cleaned existing directory for update: {target_path.name}')
 
             # 2. Prepare directory again
-            self.path_policy.prepare_directory(path_to_prepare=target_path)
+            self.dump_paths.prepare_directory(path_to_prepare=target_path)
 
             # 3. Dump content
             self._dump_node_content(node, target_path)
@@ -277,7 +277,7 @@ class ProcessDumpManager:
         log_entry = None
         try:
             # 1. Prepare directory
-            self.path_policy.prepare_directory(path_to_prepare=target_path)
+            self.dump_paths.prepare_directory(path_to_prepare=target_path)
 
             # 2. Create new log entry
             log_entry = DumpLog(path=target_path.resolve())
@@ -301,7 +301,7 @@ class ProcessDumpManager:
         logger.debug(f'Executing DUMP_DUPLICATE for node {node.pk} at {target_path.name}')
         try:
             # 1. Prepare directory
-            self.path_policy.prepare_directory(path_to_prepare=target_path)
+            self.dump_paths.prepare_directory(path_to_prepare=target_path)
 
             # 2. Add path to duplicates list in existing log entry
             existing_log_entry.add_duplicate(target_path.resolve())
@@ -346,7 +346,7 @@ class ProcessDumpManager:
         logger.debug(f'Metadata written for node {node.pk}')
 
         # 2. Ensure top-level safeguard exists (Original Logic)
-        (target_path / DumpPathPolicy.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
+        (target_path / DumpPaths.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
 
         # 3. Dump Repo/IO or Recurse Children (Original Logic)
         if isinstance(node, orm.CalculationNode):
@@ -363,7 +363,7 @@ class ProcessDumpManager:
         logger.debug(f'Calculating stats for node {node_pk} directory: {path_to_stat.name}')
         try:
             # Calling the utility as in original code
-            dir_mtime, dir_size = self.path_policy.get_directory_stats(path_to_stat)
+            dir_mtime, dir_size = self.dump_paths.get_directory_stats(path_to_stat)
             log_entry.dir_mtime = dir_mtime
             log_entry.dir_size = dir_size
             logger.debug(f'Updated stats for node {node_pk}: mtime={dir_mtime}, size={dir_size} bytes')
@@ -381,7 +381,7 @@ class ProcessDumpManager:
         logger.warning(f'Attempting cleanup for failed dump of node {node.pk} at {target_path.name}')
         try:
             # Calling the utility as in original code
-            self.path_policy.safe_delete_directory(directory_path=target_path)
+            self.dump_paths.safe_delete_directory(directory_path=target_path)
             logger.info(f'Cleaned up directory {target_path.name} for failed node {node.pk}')
 
             if is_primary_dump:
@@ -400,7 +400,7 @@ class ProcessDumpManager:
     def _generate_node_directory_name(node: orm.ProcessNode, append_pk: bool = True) -> Path:
         """Generates the directory name for a specific node."""
         # Calling the utility function as in the original code
-        return DumpPathPolicy._get_default_process_dump_path(node, append_pk=append_pk)
+        return DumpPaths._get_default_process_dump_path(node, append_pk=append_pk)
 
     @staticmethod
     def _generate_child_node_label(index: int, link_triple: LinkTriple, append_pk: bool = True) -> str:

@@ -623,6 +623,7 @@ def process_dump(
     node data for further inspection.
     """
     import traceback
+    from pathlib import Path
 
     from pydantic import ValidationError
 
@@ -643,15 +644,23 @@ def process_dump(
     final_dump_config = None
 
     try:
-        dump_paths = DumpPaths._resolve_click_path_for_dump(path=path, entity=process)
-        config_file_path = dump_paths.config_file_path
+        if path is None:
 
-        if config_file_path.is_file():
-            # Config File Exists: Load ONLY from file
+            process_path = DumpPaths._get_default_process_dump_path(process_node=process)
+            echo.echo_report(f"No output path specified. Using default: './{process_path}'")
+            resolved_base_output_path = Path.cwd() / process_path
+        else:
+            echo.echo_report(f"Using specified output path: '{path}'")
+            resolved_base_output_path = Path(path).resolve()
+
+        config_file_path = resolved_base_output_path / 'aiida_dump_config.yaml'
+
+        if config_file_path.is_file() and not overwrite:
+            # --- Config File Exists: Load ONLY from file ---
             try:
-                config_path_rel = config_file_path.relative_to(dump_paths.top_level.parent)
+                config_path_rel = config_file_path.relative_to(Path.cwd())
             except ValueError:
-                config_path_rel = config_file_path
+                    config_path_rel = config_file_path
             echo.echo_report(f"Config file found at '{config_path_rel}'.")
             echo.echo_report('Using config file settings ONLY (ignoring other CLI flags).')
             try:
@@ -660,10 +669,10 @@ def process_dump(
                 echo.echo_critical(f'Error loading or validating config file {config_file_path}: {e}')
                 return
         else:
-            # Config File Does NOT Exist: Use ONLY CLI args
+            # --- Config File Does NOT Exist: Use ONLY CLI args ---
             echo.echo_report('No config file found. Using command-line arguments.')
             try:
-                # Gather relevant CLI args specific to process dump
+                # Gather relevant CLI args for group dump
                 config_input_data = {
                     'dry_run': dry_run,
                     'overwrite': overwrite,
@@ -686,11 +695,11 @@ def process_dump(
             echo.echo_warning(msg)
 
         # --- Instantiate and Run ProcessDumper ---
-        process_dumper = ProcessDumper(process=process, config=final_dump_config, output_path=dump_paths.top_level)
+        process_dumper = ProcessDumper(process=process, config=final_dump_config, output_path=resolved_base_output_path)
         process_dumper.dump()
 
         if final_dump_config.dump_mode != DumpMode.DRY_RUN:
-            msg = f'Raw files for process `{process.pk}` dumped into folder `{dump_paths.child}`.'
+            msg = f'Raw files for process `{process.pk}` dumped into folder `{resolved_base_output_path}`.'
             echo.echo_success(msg)
         else:
             echo.echo_success('Dry run completed.')

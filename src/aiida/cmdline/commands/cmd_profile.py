@@ -363,6 +363,7 @@ def profile_dump(
     from aiida.common import NotExistent
     from aiida.tools.dumping import ProfileDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode, ProfileDumpSelection
+    from aiida.tools.dumping.utils.paths import DumpPathPolicy
 
     warning_msg = (
         'This is a new feature which is still in its testing phase. '
@@ -375,8 +376,8 @@ def profile_dump(
     final_dump_config = None
     try:
         if path is None:
-            resolved_base_output_path = Path.cwd() / profile.name
-            echo.echo_report(f"No output path specified. Using default: './{profile.name}'")
+            profile_path = DumpPathPolicy._get_default_process_dump_path()
+            echo.echo_report(f"No output path specified. Using default: '{profile_path}'")
         else:
             resolved_base_output_path = Path(path).resolve()
             echo.echo_report(f"Using specified output path: '{resolved_base_output_path}'")

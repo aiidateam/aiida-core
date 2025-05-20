@@ -230,12 +230,12 @@ class DumpTracker:
         group_node_mapping = None
         last_dump_time_str = None
 
-        if not dump_paths.tracker_file_path.exists():
-            logger.debug(f'Log file not found at {dump_paths.tracker_file_path}, returning empty log data.')
+        if not dump_paths.tracking_log_file_path.exists():
+            logger.debug(f'Log file not found at {dump_paths.tracking_log_file_path}, returning empty log data.')
             return stores, group_node_mapping, last_dump_time_str
 
         try:
-            with dump_paths.tracker_file_path.open('r', encoding='utf-8') as f:
+            with dump_paths.tracking_log_file_path.open('r', encoding='utf-8') as f:
                 prev_dump_data = json.load(f)
 
             # Load last dump time string
@@ -259,7 +259,7 @@ class DumpTracker:
             stores.data = DumpTracker._deserialize_logs(prev_dump_data.get('data', {}), dump_paths=dump_paths)
 
         except (json.JSONDecodeError, OSError, ValueError) as e:
-            logger.warning(f'Error loading dump log file {dump_paths.tracker_file_path}: {e!s}')
+            logger.warning(f'Error loading dump log file {dump_paths.tracking_log_file_path}: {e!s}')
             # Return default empty data on error
             return DumpRegistryCollection(), None, None
 
@@ -315,11 +315,11 @@ class DumpTracker:
             log_dict['group_node_mapping'] = group_node_mapping.to_dict()
 
         try:
-            with self.dump_paths.tracker_file_path.open('w', encoding='utf-8') as f:
+            with self.dump_paths.tracking_log_file_path.open('w', encoding='utf-8') as f:
                 json.dump(log_dict, f, indent=4)
-            logger.debug(f'Dump log saved to {self.dump_paths.tracker_file_path}')
+            logger.debug(f'Dump log saved to {self.dump_paths.tracking_log_file_path}')
         except OSError as e:
-            logger.error(f'Failed to save dump log to {self.dump_paths.tracker_file_path}: {e!s}')
+            logger.error(f'Failed to save dump log to {self.dump_paths.tracking_log_file_path}: {e!s}')
 
     def _serialize_logs(self, container: DumpRegistry) -> Dict:
         """Serialize log entries to a dictionary format relative to dump parent."""

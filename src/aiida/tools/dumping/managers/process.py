@@ -400,7 +400,7 @@ class ProcessDumpManager:
     def _generate_node_directory_name(node: orm.ProcessNode, append_pk: bool = True) -> Path:
         """Generates the directory name for a specific node."""
         # Calling the utility function as in the original code
-        return DumpPaths._get_default_process_dump_path(node, append_pk=append_pk)
+        return DumpPaths.get_default_dump_path(node)
 
     @staticmethod
     def _generate_child_node_label(index: int, link_triple: LinkTriple, append_pk: bool = True) -> str:

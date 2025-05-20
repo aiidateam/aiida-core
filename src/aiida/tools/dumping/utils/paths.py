@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from functools import singledispatch
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from aiida import orm
 from aiida.common import timezone
@@ -43,7 +44,7 @@ class DumpPaths:
     DATA_DIR_NAME = 'data'
     OTHER_NODES_DIR_NAME = 'other_nodes'
     SAFEGUARD_FILE_NAME = '.aiida_dump_safeguard'
-    TRACKER_FILE_NAME = 'aiida_dump_track.json'
+    TRACKING_LOG_FILE_NAME = 'aiida_dump_log.json'
     CONFIG_FILE_NAME = 'aiida_dump_config.yaml'
 
     def __init__(
@@ -66,9 +67,9 @@ class DumpPaths:
         self.dump_target_entity: Optional[orm.Node | orm.Group] = dump_target_entity
 
     @property
-    def tracker_file_path(self) -> Path:
-        """Path to the main aiida_dump_track.json file."""
-        return self.base_output_path / self.TRACKER_FILE_NAME
+    def tracking_log_file_path(self) -> Path:
+        """Path to the main aiida_dump_log.json file."""
+        return self.base_output_path / self.TRACKING_LOG_FILE_NAME
 
     @property
     def config_file_path(self) -> Path:
@@ -121,17 +122,17 @@ class DumpPaths:
 
         :param node: The aiida.orm.Node object.
         :param current_content_root: The absolute root path for the current context
-                                     (e.g., a specific group's content path, or the path
-                                     for ungrouped nodes, or the base_output_path for a
-                                     single process dump).
+            (e.g., a specific group's content path, or the path
+            for ungrouped nodes, or the base_output_path for a
+            single process dump).
         :param group_context_for_node: The group under whose direct hierarchy this node is being dumped.
-                                       This is important if the node itself is also part of other groups,
-                                       to decide its primary dump location vs. symlinks.
-                                       If None, the node is considered ungrouped or dumped standalone.
+            This is important if the node itself is also part of other groups,
+            to decide its primary dump location vs. symlinks.
+            If None, the node is considered ungrouped or dumped standalone.
         :return: Absolute Path for the node's dump directory.
         """
         node_type_folder_name = self._get_node_type_folder_name(node)
-        node_dir_name = self._get_node_directory_name(node)  # Uses existing static method
+        node_dir_name = self._get_node_directory_name(node)
 
         # Nodes are always placed in a type-specific subdirectory *within* the
         # current_content_root. The current_content_root has already been determined
@@ -154,28 +155,24 @@ class DumpPaths:
             # Should not be called if not dumping ungrouped, but return base as a fallback.
             return self.base_output_path
 
-    # --- Helper methods for internal path component generation ---
     def _get_node_type_folder_name(self, node: orm.Node) -> str:
         if isinstance(node, orm.CalculationNode):
             return self.CALCULATIONS_DIR_NAME
         elif isinstance(node, orm.WorkflowNode):
             return self.WORKFLOWS_DIR_NAME
-        elif isinstance(node, orm.Data):  # Assuming you add Data node dumping
+        elif isinstance(node, orm.Data):
             return self.DATA_DIR_NAME
         else:
             msg = f'Wrong node type: {type(node)} was passed.'
             raise ValueError(msg)
 
     @staticmethod
-    def _get_node_directory_name(node: orm.ProcessNode, append_pk: bool = True) -> str:
+    def _get_node_directory_name(node: orm.ProcessNode) -> str:
         """
         Generates the directory name for a specific node (e.g., "NodeType-PK").
-        (This can reuse your existing DumpPaths._get_default_process_dump_path logic)
         """
-        # Assuming DumpPaths._get_default_process_dump_path returns a Path, get .name
-        return str(DumpPaths._get_default_process_dump_path(node, append_pk=append_pk))
+        return str(DumpPaths.get_default_dump_path(node))
 
-    # --- Filesystem Operation Methods ---
     def prepare_directory(self, path_to_prepare: Path, is_leaf_node_dir: bool = False) -> None:
         """
         Prepares a directory for dumping, creating it and a safeguard file.
@@ -229,7 +226,6 @@ class DumpPaths:
             # logger.debug(f"Directory {directory_path} not found for deletion.")
             pass
 
-    # --- Utility methods (can be static if they don't depend on config/base_path) ---
     @staticmethod
     def get_directory_stats(directory_path: Path) -> tuple[Optional[datetime], Optional[int]]:
         """
@@ -265,79 +261,72 @@ class DumpPaths:
         return dir_mtime, total_size
 
     @staticmethod
-    def _get_default_process_dump_path(
-        process_node: orm.ProcessNode, prefix: str | None = None, append_pk: bool = True
+    def get_default_dump_path(
+        entity: Union[orm.ProcessNode, Profile, orm.Group],
+        prefix: Optional[str] = None,
+        appendix: Optional[str] = None,
     ) -> Path:
-        """Simple helper function to generate the default parent-dumping directory if none given.
+        """Generate default dump path for any supported entity type.
 
-        This function is not called for the recursive sub-calls of `_dump_calculation` as it just creates the default
-        parent folder for the dumping, if no name is given.
-
-        :param process_node: The `ProcessNode` for which the directory is created.
-        :return: The absolute default parent dump path.
+        :param entity: The entity (ProcessNode, Profile, or Group) to generate path for
+        :param prefix: Optional prefix for the path
+        :param appendix: Optional appendix for the path
+        :return: The default dump path
         """
+        return _get_default_dump_path_impl(entity, prefix, appendix)
 
-        path_entities = []
 
-        if prefix is not None:
-            path_entities += [prefix]
+@singledispatch
+def _get_default_dump_path_impl(entity, prefix: Optional[str], appendix: Optional[str]) -> Path:
+    """Single dispatch implementation for default dump paths."""
+    msg =f"No default dump path implementation for type {type(entity)}"
+    raise NotImplementedError(msg)
 
-        if process_node.label:
-            path_entities.append(process_node.label)
-        elif process_node.process_label is not None:
-            path_entities.append(process_node.process_label)
-        elif process_node.process_type is not None:
-            path_entities.append(process_node.process_type)
 
-        if append_pk:
-            path_entities += [str(process_node.pk)]
-        return Path('-'.join(path_entities))
+@_get_default_dump_path_impl.register
+def _(process_node: orm.ProcessNode, prefix: Optional[str], appendix: Optional[str]) -> Path:
+    """Generate default dump path for ProcessNode."""
+    path_entities = []
 
-    @staticmethod
-    def _get_default_profile_dump_path(
-        profile: Profile, prefix: Optional[str] = None, appendix: Optional[str] = None
-    ) -> Path:
-        """_summary_
+    if prefix is not None:
+        path_entities.append(prefix)
 
-        :param profile: _description_
-        :param prefix: _description_, defaults to "profile"
-        :param appendix: _description_, defaults to "dump"
-        :return: _description_
-        """
-        label_elements = []
+    if process_node.label:
+        path_entities.append(process_node.label)
+    elif process_node.process_label is not None:
+        path_entities.append(process_node.process_label)
+    elif process_node.process_type is not None:
+        path_entities.append(process_node.process_type)
 
-        if prefix:
-            label_elements.append(prefix)
-        label_elements.append(profile.name)
-        if appendix:
-            label_elements.append(appendix)
+    if not appendix:
+        path_entities.append(str(process_node.pk))
 
-        return Path('-'.join(label_elements))
+    return Path('-'.join(path_entities))
 
-    @staticmethod
-    def _get_default_group_dump_path(
-        group: orm.Group, prefix: Optional[str] = None, appendix: Optional[str] = None
-    ) -> Path:
-        label_elements = []
 
-        if prefix:
-            label_elements.append(prefix)
-        label_elements.append(group.label)
-        if appendix:
-            label_elements.append(appendix)
+@_get_default_dump_path_impl.register
+def _(profile: Profile, prefix: Optional[str], appendix: Optional[str]) -> Path:
+    """Generate default dump path for Profile."""
+    label_elements = []
 
-        return Path('-'.join(label_elements))
+    if prefix:
+        label_elements.append(prefix)
+    label_elements.append(profile.name)
+    if appendix:
+        label_elements.append(appendix)
 
-    @staticmethod
-    def _get_default_group_dump_path(
-        group: orm.Group, prefix: Optional[str] = None, appendix: Optional[str] = None
-    ) -> Path:
-        label_elements = []
+    return Path('-'.join(label_elements))
 
-        if prefix:
-            label_elements.append(prefix)
-        label_elements.append(group.label)
-        if appendix:
-            label_elements.append(appendix)
 
-        return Path('-'.join(label_elements))
+@_get_default_dump_path_impl.register
+def _(group: orm.Group, prefix: Optional[str], appendix: Optional[str]) -> Path:
+    """Generate default dump path for Group."""
+    label_elements = []
+
+    if prefix:
+        label_elements.append(prefix)
+    label_elements.append(group.label)
+    if appendix:
+        label_elements.append(appendix)
+
+    return Path('-'.join(label_elements))

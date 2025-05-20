@@ -102,7 +102,7 @@ class CollectionDumpManager:
                     )
         return nodes_explicitly_in_group, workflows_explicitly_in_group
 
-    def _add_and_dump_group_descendants(
+    def _dump_group_descendants(
         self,
         group: Group,
         workflows_in_group: list[WorkflowNode],
@@ -182,16 +182,14 @@ class CollectionDumpManager:
         with get_progress_reporter()(desc=desc, total=len(nodes_to_dump)) as progress:
             for node in nodes_to_dump:
                 try:
-                    # Determine the specific, absolute path for this node's own directory
+                    # Determine the specific, absolute path for this node's dump directory
                     node_specific_dump_path = self.dump_paths.get_path_for_node(
                         node=node,
                         current_content_root=current_dump_root_for_nodes,
-                        group_context_for_node=group_context,
                     )
                     # ProcessManager.dump takes the final, specific path for the node.
                     self.process_manager.dump(
                         process_node=node,
-                        # group=group_context,
                         target_path=node_specific_dump_path,
                     )
                 except Exception:
@@ -207,7 +205,7 @@ class CollectionDumpManager:
         :param group: The orm.Group to process.
         :param changes: DumpChanges object, hopefully scoped to this group or the current operation.
         :param group_content_root_path: The absolute filesystem path where this group's
-                                        direct content (safeguard, type subdirs) should reside.
+            direct content (safeguard, type subdirs) should reside.
         """
         logger.debug(
             f"Processing group: '{group.label}' ({group.uuid}) " f"with content root: '{group_content_root_path}'"
@@ -215,21 +213,18 @@ class CollectionDumpManager:
 
         # Ensure the group's own content directory is prepared and logged.
         # _register_group_and_prepare_path should use group_content_root_path.
-        # The prepare_directory call is now inside _register_group_and_prepare_path implicitly
-        # via self.dump_paths.prepare_directory() if it's not already done by the caller.
         self._register_group_and_prepare_path(group=group, group_content_path=group_content_root_path)
 
         # 1. Identify nodes explicitly in this group from the (hopefully scoped) changes.
         nodes_explicitly_in_group, workflows_in_group = self._identify_nodes_for_group(group, changes)
 
         # 2. Find and immediately dump calculation descendants if required.
-        #    These are dumped into the group_content_root_path.
-        self._add_and_dump_group_descendants(
+        # These are dumped into the group_content_root_path.
+        self._dump_group_descendants(
             group=group, workflows_in_group=workflows_in_group, current_group_content_root=group_content_root_path
         )
 
         # 3. Dump the nodes explicitly identified for this group.
-        #    (This will primarily be workflows, and any top-level calcs/data not handled as descendants)
         store_for_explicit_dump = DumpNodeStore(
             calculations=nodes_explicitly_in_group.calculations,
             workflows=nodes_explicitly_in_group.workflows,
@@ -372,7 +367,6 @@ class CollectionDumpManager:
                 node_target_path_in_group = self.dump_paths.get_path_for_node(
                     node=node,
                     current_content_root=current_group_path_abs,  # This is the new group's content root
-                    group_context_for_node=group,  # Provide the group context
                 )
 
                 # Pass this explicit target_path to the process manager

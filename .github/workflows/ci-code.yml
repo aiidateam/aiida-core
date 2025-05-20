@@ -67,6 +67,10 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Test legacy pytest fixtures
+      run: |
+        pytest src/aiida/manage/tests/test_pytest_fixtures.py
+
     - name: Setup environment
       run: .github/workflows/setup.sh
 

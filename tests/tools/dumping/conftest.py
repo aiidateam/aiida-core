@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from aiida.tools.dumping.config import DumpConfig
-from aiida.tools.dumping.tracking import DumpTracker, DumpRegistryCollection
 from aiida.tools.dumping.managers.process import ProcessDumpManager
+from aiida.tools.dumping.tracking import DumpRegistryCollection, DumpTracker
 from aiida.tools.dumping.utils.helpers import DumpTimes
 from aiida.tools.dumping.utils.paths import DumpPaths
 

@@ -279,7 +279,7 @@ class DumpPaths:
 @singledispatch
 def _get_default_dump_path_impl(entity, prefix: Optional[str], appendix: Optional[str]) -> Path:
     """Single dispatch implementation for default dump paths."""
-    msg =f"No default dump path implementation for type {type(entity)}"
+    msg = f'No default dump path implementation for type {type(entity)}'
     raise NotImplementedError(msg)
 
 

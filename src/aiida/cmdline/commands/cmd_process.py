@@ -646,7 +646,7 @@ def process_dump(
         if path is None:
             process_path = DumpPaths.get_default_dump_path(process)
             dump_base_output_path = Path.cwd() / process_path
-            msg = f"No output path specified. Using default: `{dump_base_output_path}`"
+            msg = f'No output path specified. Using default: `{dump_base_output_path}`'
             echo.echo_report(msg)
         else:
             echo.echo_report(f"Using specified output path: '{path}'")

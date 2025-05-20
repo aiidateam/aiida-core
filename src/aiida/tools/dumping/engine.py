@@ -148,7 +148,7 @@ class DumpEngine:
         The base output directory is assumed to be prepared by DumpPaths.__init__().
         """
         if isinstance(entity, orm.Group):
-            entity_description = f"group `{entity.label}` (PK: {entity.pk})"
+            entity_description = f'group `{entity.label}` (PK: {entity.pk})'
         elif isinstance(entity, orm.ProcessNode):
             entity_description = f'process node (PK: {entity.pk})'
         elif isinstance(entity, Profile):

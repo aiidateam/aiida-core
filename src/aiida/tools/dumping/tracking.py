@@ -252,9 +252,7 @@ class DumpTracker:
             stores.calculations = DumpTracker._deserialize_logs(
                 prev_dump_data.get('calculations', {}), dump_paths=dump_paths
             )
-            stores.workflows = DumpTracker._deserialize_logs(
-                prev_dump_data.get('workflows', {}), dump_paths=dump_paths
-            )
+            stores.workflows = DumpTracker._deserialize_logs(prev_dump_data.get('workflows', {}), dump_paths=dump_paths)
             stores.groups = DumpTracker._deserialize_logs(prev_dump_data.get('groups', {}), dump_paths=dump_paths)
             stores.data = DumpTracker._deserialize_logs(prev_dump_data.get('data', {}), dump_paths=dump_paths)
 

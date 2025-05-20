@@ -301,6 +301,7 @@ class ProfileDumper:
     def dump(self):
         """Perform the dump operation. This simply delegates to the engine."""
         from aiida import load_profile
+
         # Instantiate engine for dump operation rather than on construction such that
         # Successive incremental dumps can be achieved with one instance
         engine = DumpEngine(

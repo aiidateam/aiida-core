@@ -25,9 +25,9 @@ from aiida.tools.dumping.utils.paths import DumpPaths
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.managers.process import ProcessDumpManager
     from aiida.tools.dumping.mapping import GroupNodeMapping
+    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.utils.helpers import GroupChanges, GroupModificationInfo
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.managers.collection')

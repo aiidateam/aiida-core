@@ -18,8 +18,8 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.orm import Group, QueryBuilder, WorkflowNode
 from aiida.tools.dumping.config import GroupDumpScope, ProfileDumpSelection
 from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.managers.collection import CollectionDumpManager
+from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpNodeStore
 from aiida.tools.dumping.utils.paths import DumpPaths
 
@@ -27,9 +27,9 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.strategies.profile')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.managers.process import ProcessDumpManager
     from aiida.tools.dumping.mapping import GroupNodeMapping
+    from aiida.tools.dumping.tracking import DumpTracker
 
 
 class ProfileDumpManager(CollectionDumpManager):
@@ -325,9 +325,7 @@ class ProfileDumpManager(CollectionDumpManager):
         for group in groups_to_process:
             # _process_group handles finding nodes for this group,
             # adding descendants if needed, and calling node_manager.dump_nodes
-            group_content_root = self.dump_paths.get_path_for_group_content(
-                group=group, parent_group_content_path=None
-            )
+            group_content_root = self.dump_paths.get_path_for_group_content(group=group, parent_group_content_path=None)
             self._process_group(group=group, changes=changes, group_content_root_path=group_content_root)
 
         # 4. Process ungrouped nodes if requested by config

@@ -11,8 +11,8 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.managers.deletion')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.mapping import GroupNodeMapping
+    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.utils.helpers import GroupInfo
 
 

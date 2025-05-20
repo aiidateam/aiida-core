@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.managers.collection import CollectionDumpManager
+from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.utils.helpers import DumpChanges
 from aiida.tools.dumping.utils.paths import DumpPaths
 
@@ -24,10 +24,10 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.strategies.profile')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.managers.collection import CollectionDumpManager
     from aiida.tools.dumping.managers.process import ProcessDumpManager
     from aiida.tools.dumping.mapping import GroupNodeMapping
+    from aiida.tools.dumping.tracking import DumpTracker
 
 
 class GroupDumpManager(CollectionDumpManager):

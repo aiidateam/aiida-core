@@ -360,7 +360,6 @@ def profile_dump(
     from pydantic import ValidationError
 
     from aiida.cmdline.utils import echo
-    from aiida.common import NotExistent
     from aiida.tools.dumping import ProfileDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode, ProfileDumpSelection
     from aiida.tools.dumping.utils.paths import DumpPaths

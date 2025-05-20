@@ -714,7 +714,7 @@ def group_dump(
         if path is None:
             group_path = DumpPaths.get_default_dump_path(group)
             dump_base_output_path = Path.cwd() / group_path
-            echo.echo_report(f"No output path specified. Using default: `{dump_base_output_path}`")
+            echo.echo_report(f'No output path specified. Using default: `{dump_base_output_path}`')
         else:
             dump_base_output_path = Path(path).resolve()
             echo.echo_report(f"Using specified output path: '{dump_base_output_path}'")
@@ -722,7 +722,6 @@ def group_dump(
         config_file_path = dump_base_output_path / DumpPaths.CONFIG_FILE_NAME
 
         if config_file_path.is_file() and not overwrite:
-
             # --- Config File Exists: Load ONLY from file ---
             try:
                 config_path_rel = config_file_path.relative_to(Path.cwd())

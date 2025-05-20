@@ -22,7 +22,7 @@ from aiida.tools.dumping.mapping import GroupNodeMapping
 from aiida.tools.dumping.utils.helpers import DumpStoreKeys, StoreNameType
 from aiida.tools.dumping.utils.paths import DumpPaths
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.logger')
+logger = AIIDA_LOGGER.getChild('tools.dumping.tracking')
 
 
 @dataclass
@@ -68,7 +68,7 @@ class DumpRecord:
             except ValueError:
                 logger.warning(f'Could not parse dir_mtime string: {dir_mtime_str}')
 
-        dir_size = data.get('dir_size')  # Size should be stored as int
+        dir_size = data.get('dir_size')
 
         return cls(
             path=Path(data['path']),
@@ -110,7 +110,7 @@ class DumpRecord:
 
 @dataclass
 class DumpRegistry:
-    """A store for DumpLog entries, indexed by UUID."""
+    """A registry for DumpRecord entries, indexed by UUID."""
 
     entries: Dict[str, DumpRecord] = field(default_factory=dict)
 
@@ -152,10 +152,10 @@ class DumpRegistry:
 
     @classmethod
     def from_dict(cls, data: Dict) -> DumpRegistry:
-        store = cls()
+        registry = cls()
         for uuid, entry_data in data.items():
-            store.entries[uuid] = DumpRecord.from_dict(entry_data)
-        return store
+            registry.entries[uuid] = DumpRecord.from_dict(entry_data)
+        return registry
 
     def update_paths(self, old_str: str, new_str: str) -> None:
         """Update paths by replacing substrings."""
@@ -200,7 +200,7 @@ class DumpTracker:
         last_dump_time_str: str | None = None,
     ) -> None:
         """
-        Initialize the DumpLogger. Should typically be instantiated via `load`.
+        Initialize the DumpTracker. Should typically be instantiated via `load`.
         """
         self.dump_paths = dump_paths
         # Stores are now passed in directly
@@ -230,12 +230,12 @@ class DumpTracker:
         group_node_mapping = None
         last_dump_time_str = None
 
-        if not dump_paths.log_file_path.exists():
-            logger.debug(f'Log file not found at {dump_paths.log_file_path}, returning empty log data.')
+        if not dump_paths.tracker_file_path.exists():
+            logger.debug(f'Log file not found at {dump_paths.tracker_file_path}, returning empty log data.')
             return stores, group_node_mapping, last_dump_time_str
 
         try:
-            with dump_paths.log_file_path.open('r', encoding='utf-8') as f:
+            with dump_paths.tracker_file_path.open('r', encoding='utf-8') as f:
                 prev_dump_data = json.load(f)
 
             # Load last dump time string
@@ -259,7 +259,7 @@ class DumpTracker:
             stores.data = DumpTracker._deserialize_logs(prev_dump_data.get('data', {}), dump_paths=dump_paths)
 
         except (json.JSONDecodeError, OSError, ValueError) as e:
-            logger.warning(f'Error loading dump log file {dump_paths.log_file_path}: {e!s}')
+            logger.warning(f'Error loading dump log file {dump_paths.tracker_file_path}: {e!s}')
             # Return default empty data on error
             return DumpRegistryCollection(), None, None
 
@@ -315,11 +315,11 @@ class DumpTracker:
             log_dict['group_node_mapping'] = group_node_mapping.to_dict()
 
         try:
-            with self.dump_paths.log_file_path.open('w', encoding='utf-8') as f:
+            with self.dump_paths.tracker_file_path.open('w', encoding='utf-8') as f:
                 json.dump(log_dict, f, indent=4)
-            logger.debug(f'Dump log saved to {self.dump_paths.log_file_path}')
+            logger.debug(f'Dump log saved to {self.dump_paths.tracker_file_path}')
         except OSError as e:
-            logger.error(f'Failed to save dump log to {self.dump_paths.log_file_path}: {e!s}')
+            logger.error(f'Failed to save dump log to {self.dump_paths.tracker_file_path}: {e!s}')
 
     def _serialize_logs(self, container: DumpRegistry) -> Dict:
         """Serialize log entries to a dictionary format relative to dump parent."""

@@ -54,7 +54,7 @@ class DumpTimes:
 class DumpNodeStore:
     """Store for nodes to be dumped.
 
-    This class follows a similar structure to DumpLogger, making it easier
+    This class follows a similar structure to DumpTracker, making it easier
     to convert between the two.
     """
 

@@ -18,7 +18,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.orm import Group, QueryBuilder, WorkflowNode
 from aiida.tools.dumping.config import GroupDumpScope, ProfileDumpSelection
 from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.logger import DumpTracker
+from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.managers.collection import CollectionDumpManager
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpNodeStore
 from aiida.tools.dumping.utils.paths import DumpPaths
@@ -27,7 +27,7 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.strategies.profile')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.logger import DumpTracker
+    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.managers.process import ProcessDumpManager
     from aiida.tools.dumping.mapping import GroupNodeMapping
 
@@ -39,7 +39,7 @@ class ProfileDumpManager(CollectionDumpManager):
         self,
         config: DumpConfig,
         dump_paths: DumpPaths,
-        dump_logger: DumpTracker,
+        dump_tracker: DumpTracker,
         detector: DumpChangeDetector,
         process_manager: ProcessDumpManager,
         current_mapping: GroupNodeMapping,
@@ -49,7 +49,7 @@ class ProfileDumpManager(CollectionDumpManager):
             dump_paths=dump_paths,
             process_manager=process_manager,
             current_mapping=current_mapping,
-            dump_logger=dump_logger,
+            dump_tracker=dump_tracker,
         )
         self.detector = detector
 
@@ -119,7 +119,7 @@ class ProfileDumpManager(CollectionDumpManager):
             descendants = DumpChangeDetector._get_calculation_descendants(ungrouped_workflows)
             if descendants:
                 existing_calc_uuids = {calc.uuid for calc in ungrouped_nodes_store.calculations}
-                logged_calc_uuids = set(self.dump_logger.calculations.entries.keys())
+                logged_calc_uuids = set(self.dump_tracker.calculations.entries.keys())
                 unique_descendants = [
                     desc
                     for desc in descendants
@@ -219,7 +219,7 @@ class ProfileDumpManager(CollectionDumpManager):
                 continue
             for node in node_list:
                 node_uuid = node.uuid
-                log_entry = self.dump_logger.get_store_by_uuid(node_uuid)
+                log_entry = self.dump_tracker.get_store_by_uuid(node_uuid)
 
                 has_ungrouped_representation = False
                 if log_entry:
@@ -280,11 +280,11 @@ class ProfileDumpManager(CollectionDumpManager):
     def _update_group_stats(self) -> None:
         """Calculate and update final directory stats for all logged groups."""
         logger.info('Calculating final directory stats for all registered groups...')
-        for group_uuid, group_log_entry in self.dump_logger.groups.entries.items():
+        for group_uuid, group_log_entry in self.dump_tracker.groups.entries.items():
             group_path = group_log_entry.path
             if not group_path.is_absolute():
                 try:
-                    group_path = self.dump_logger.dump_paths.base_output_path / group_path
+                    group_path = self.dump_tracker.dump_paths.base_output_path / group_path
                     logger.debug(f'Resolved relative group path for {group_uuid} to {group_path}')
                 except Exception as path_e:
                     logger.error(f'Failed to resolve relative path for group {group_uuid}: {path_e}')

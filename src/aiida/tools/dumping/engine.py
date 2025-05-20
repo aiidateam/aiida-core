@@ -7,7 +7,7 @@ from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.config import DumpConfig, DumpMode
 from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.logger import DumpTracker
+from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.managers.deletion import DeletionManager
 from aiida.tools.dumping.managers.group import GroupDumpManager
 from aiida.tools.dumping.managers.process import ProcessDumpManager
@@ -48,22 +48,22 @@ class DumpEngine:
         self.dump_paths.prepare_directory(path_to_prepare=base_output_path)
 
         # --- Initialize Times, Logger, and NodeGroupMapping ---
-        self.dump_times, self.dump_logger, self.stored_mapping = self._initialize_times_logger_and_mapping()
+        self.dump_times, self.dump_tracker, self.stored_mapping = self._initialize_times_tracker_and_mapping()
 
         # --- Initialize detector for changes ---
         self.detector = DumpChangeDetector(
-            dump_logger=self.dump_logger, dump_paths=self.dump_paths, config=self.config, dump_times=self.dump_times
+            dump_tracker=self.dump_tracker, dump_paths=self.dump_paths, config=self.config, dump_times=self.dump_times
         )
 
         # --- Initialize Managers (pass dependencies) ---
         self.process_manager = ProcessDumpManager(
             config=self.config,
             dump_paths=self.dump_paths,
-            dump_logger=self.dump_logger,
+            dump_tracker=self.dump_tracker,
             dump_times=self.dump_times,
         )
 
-    def _initialize_times_logger_and_mapping(
+    def _initialize_times_tracker_and_mapping(
         self,
     ) -> tuple[DumpTimes, DumpTracker, GroupNodeMapping | None]:
         """Initialize dump times, load logger data, and load stored mapping.
@@ -73,10 +73,10 @@ class DumpEngine:
         logger.debug('Initializing dump times and logger...')
 
         # Clear log file if overwriting
-        if self.config.dump_mode == DumpMode.OVERWRITE and self.dump_paths.log_file_path.exists():
+        if self.config.dump_mode == DumpMode.OVERWRITE and self.dump_paths.tracker_file_path.exists():
             try:
-                logger.info(f'Overwrite mode: Deleting existing log file {self.dump_paths.log_file_path}')
-                self.dump_paths.log_file_path.unlink()
+                logger.info(f'Overwrite mode: Deleting existing log file {self.dump_paths.tracker_file_path}')
+                self.dump_paths.tracker_file_path.unlink()
             except OSError as e:
                 logger.error(f'Failed to delete existing log file: {e}')
                 # Decide whether to proceed or raise an error
@@ -88,15 +88,15 @@ class DumpEngine:
         dump_times = DumpTimes.from_last_log_time(last_dump_time_str)
         logger.debug(f'Dump times initialized: Current={dump_times.current}, Last={dump_times.last}')
 
-        # Initialize DumpLogger instance with loaded data
-        dump_logger = DumpTracker(
+        # Initialize DumpTracker instance with loaded data
+        dump_tracker = DumpTracker(
             dump_paths=self.dump_paths,
             stores=stores_coll,
             last_dump_time_str=last_dump_time_str,
         )
         msg = (
-            f'Dump logger initialized. Found {len(dump_logger.calculations)} calc logs, '
-            f'{len(dump_logger.workflows)} wf logs, {len(dump_logger.groups)} group logs.'
+            f'Dump logger initialized. Found {len(dump_tracker.calculations)} calc logs, '
+            f'{len(dump_tracker.workflows)} wf logs, {len(dump_tracker.groups)} group logs.'
         )
         logger.debug(msg)
 
@@ -107,7 +107,7 @@ class DumpEngine:
             msg = 'No stored group mapping found in log file.'
             logger.debug(msg)
 
-        return dump_times, dump_logger, stored_mapping
+        return dump_times, dump_tracker, stored_mapping
 
     def _load_config_from_yaml(self) -> DumpConfig | None:
         """Attempts to load DumpConfig from the YAML file in the dump path.
@@ -181,7 +181,7 @@ class DumpEngine:
                 deletion_manager = DeletionManager(
                     config=self.config,
                     dump_paths=self.dump_paths,
-                    dump_logger=self.dump_logger,
+                    dump_tracker=self.dump_tracker,
                     dump_changes=all_changes,
                     stored_mapping=self.stored_mapping,
                 )
@@ -197,7 +197,7 @@ class DumpEngine:
                 group_to_dump=entity,
                 config=self.config,
                 dump_paths=self.dump_paths,
-                dump_logger=self.dump_logger,
+                dump_tracker=self.dump_tracker,
                 process_manager=self.process_manager,
                 current_mapping=current_mapping,
             )
@@ -220,7 +220,7 @@ class DumpEngine:
                     deletion_manager = DeletionManager(
                         config=self.config,
                         dump_paths=self.dump_paths,
-                        dump_logger=self.dump_logger,
+                        dump_tracker=self.dump_tracker,
                         dump_changes=all_changes,
                         stored_mapping=self.stored_mapping,
                     )
@@ -233,15 +233,13 @@ class DumpEngine:
                 profile_manager = ProfileDumpManager(
                     config=self.config,
                     dump_paths=self.dump_paths,
-                    dump_logger=self.dump_logger,
+                    dump_tracker=self.dump_tracker,
                     process_manager=self.process_manager,
                     detector=self.detector,
                     current_mapping=current_mapping,
                 )
                 profile_manager.dump(changes=all_changes)
 
-        if not isinstance(entity, orm.ProcessNode):
-            logger.report('Saving final dump log and configuration...')
-            self.dump_logger.save(current_dump_time=self.dump_times.current, group_node_mapping=current_mapping)
-            self._save_config()
-            logger.report(f'Dump of {entity_description} completed.')
+        logger.report('Saving final dump log and configuration...')
+        self.dump_tracker.save(current_dump_time=self.dump_times.current, group_node_mapping=current_mapping)
+        self._save_config()

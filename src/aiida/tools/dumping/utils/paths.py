@@ -43,7 +43,7 @@ class DumpPaths:
     DATA_DIR_NAME = 'data'
     OTHER_NODES_DIR_NAME = 'other_nodes'
     SAFEGUARD_FILE_NAME = '.aiida_dump_safeguard'
-    LOG_FILE_NAME = 'aiida_dump_log.json'
+    TRACKER_FILE_NAME = 'aiida_dump_track.json'
     CONFIG_FILE_NAME = 'aiida_dump_config.yaml'
 
     def __init__(
@@ -65,11 +65,10 @@ class DumpPaths:
         self.config: DumpConfig = config
         self.dump_target_entity: Optional[orm.Node | orm.Group] = dump_target_entity
 
-    # --- Path Property Accessors ---
     @property
-    def log_file_path(self) -> Path:
-        """Path to the main aiida_dump_log.json file."""
-        return self.base_output_path / self.LOG_FILE_NAME
+    def tracker_file_path(self) -> Path:
+        """Path to the main aiida_dump_track.json file."""
+        return self.base_output_path / self.TRACKER_FILE_NAME
 
     @property
     def config_file_path(self) -> Path:
@@ -79,8 +78,6 @@ class DumpPaths:
     def get_safeguard_path(self, directory: Path) -> Path:
         """Returns the path to the safeguard file within a given directory."""
         return directory / self.SAFEGUARD_FILE_NAME
-
-    # --- Core Path Generation Methods ---
 
     def _get_group_subdirectory_segment(self, group: orm.Group) -> Path:
         """
@@ -115,7 +112,9 @@ class DumpPaths:
             return parent_group_content_path / Path(group.label)
 
     def get_path_for_node(
-        self, node: orm.Node, current_content_root: Path, group_context_for_node: Optional[orm.Group] = None
+        self,
+        node: orm.Node,
+        current_content_root: Path,
     ) -> Path:
         """
         Determines the absolute path for dumping a specific node.

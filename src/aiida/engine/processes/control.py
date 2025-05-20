@@ -104,7 +104,7 @@ def revive_processes(processes: list[ProcessNode], *, wait: bool = False) -> Non
 
 
 def play_processes(
-    processes: list[ProcessNode] | None = None, *, all_entries: bool = False, timeout: float = 5.0, wait: bool = False
+    processes: list[ProcessNode] | None = None, *, all_entries: bool = False, timeout: float = 5.0
 ) -> None:
     """Play (unpause) paused processes.
 
@@ -113,7 +113,6 @@ def play_processes(
     :param processes: List of processes to play.
     :param all_entries: Play all paused processes.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
-    :param wait: Set to ``True`` to wait for process response, for ``False`` the action is fire-and-forget.
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
     if not get_daemon_client().is_daemon_running:
@@ -130,7 +129,7 @@ def play_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.play_process, 'play', 'playing', timeout, wait)
+    _perform_actions(processes, controller.play_process, 'play', 'playing', timeout)
 
 
 def pause_processes(
@@ -139,7 +138,6 @@ def pause_processes(
     msg_text: str = 'Paused through `aiida.engine.processes.control.pause_processes`',
     all_entries: bool = False,
     timeout: float = 5.0,
-    wait: bool = False,
 ) -> None:
     """Pause running processes.
 
@@ -148,7 +146,6 @@ def pause_processes(
     :param processes: List of processes to play.
     :param all_entries: Pause all playing processes.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
-    :param wait: Set to ``True`` to wait for process response, for ``False`` the action is fire-and-forget.
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
     if not get_daemon_client().is_daemon_running:
@@ -166,7 +163,7 @@ def pause_processes(
 
     controller = get_manager().get_process_controller()
     action = functools.partial(controller.pause_process, msg_text=msg_text)
-    _perform_actions(processes, action, 'pause', 'pausing', timeout, wait)
+    _perform_actions(processes, action, 'pause', 'pausing', timeout)
 
 
 def kill_processes(
@@ -176,7 +173,6 @@ def kill_processes(
     force: bool = False,
     all_entries: bool = False,
     timeout: float = 5.0,
-    wait: bool = False,
 ) -> None:
     """Kill running processes.
 
@@ -185,7 +181,6 @@ def kill_processes(
     :param processes: List of processes to play.
     :param all_entries: Kill all active processes.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
-    :param wait: Set to ``True`` to wait for process response, for ``False`` the action is fire-and-forget.
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
     if not get_daemon_client().is_daemon_running:
@@ -203,7 +198,7 @@ def kill_processes(
 
     controller = get_manager().get_process_controller()
     action = functools.partial(controller.kill_process, msg_text=msg_text, force_kill=force)
-    _perform_actions(processes, action, 'kill', 'killing', timeout, wait)
+    _perform_actions(processes, action, 'kill', 'killing', timeout)
 
 
 def _perform_actions(
@@ -212,7 +207,6 @@ def _perform_actions(
     infinitive: str,
     present: str,
     timeout: t.Optional[float] = None,
-    wait: bool = False,
     **kwargs: t.Any,
 ) -> None:
     """Perform an action on a list of processes.
@@ -223,7 +217,6 @@ def _perform_actions(
     :param present: The present tense of the verb that represents the action.
     :param past: The past tense of the verb that represents the action.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
-    :param wait: Set to ``True`` to wait for process response, for ``False`` the action is fire-and-forget.
     :param kwargs: Keyword arguments that will be passed to the method ``action``.
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
@@ -241,49 +234,40 @@ def _perform_actions(
         else:
             futures[future] = process
 
-    _resolve_futures(futures, infinitive, present, wait, timeout)
+    _resolve_futures(futures, infinitive, present, timeout)
 
 
 def _resolve_futures(
     futures: dict[concurrent.futures.Future, ProcessNode],
     infinitive: str,
     present: str,
-    wait: bool = False,
     timeout: t.Optional[float] = None,
 ) -> None:
     """Process a mapping of futures representing an action on an active process.
 
     This function will echo the correct information strings based on the outcomes of the futures and the given verb
     conjugations. You can optionally wait for any pending actions to be completed before the functions returns and use a
-    timeout to put a maximum wait time on the actions.
+    timeout to put a maximum wait time on the actions. TODO fix docstring
 
     :param futures: The map of action futures and the corresponding processes.
     :param infinitive: The infinitive form of the action verb.
     :param present: The present tense form of the action verb.
-    :param wait: Set to ``True`` to wait for process response, for ``False`` the action is fire-and-forget.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
     """
-    scheduled = {}
+    if not timeout:
+        return
 
-    def handle_result(result):
-        if result is True:
-            LOGGER.report(f'request to {infinitive} Process<{process.pk}> sent')
-        elif result is False:
-            LOGGER.error(f'problem {present} Process<{process.pk}>')
-        elif isinstance(result, kiwipy.Future):
-            LOGGER.report(f'scheduled {infinitive} Process<{process.pk}>')
-            scheduled[result] = process
-        else:
-            LOGGER.error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
+    LOGGER.report(f"waiting for process(es) {','.join([str(proc.pk) for proc in futures.values()])}")
 
     try:
         for future, process in futures.items():
-            # unwrap is need here since LoopCommunicator will also wrap a future
+            # we unwrap to the end
             unwrapped = unwrap_kiwi_future(future)
             try:
-                result = unwrapped.result(timeout=timeout)
+                # future does not interpret float('inf') correctly by changing it to None we get the intended behavior
+                result = unwrapped.result(timeout=None if timeout == float('inf') else timeout)
             except communications.TimeoutError:
-                cancelled = unwrapped.cancel()
+                cancelled = future.cancel()
                 if cancelled:
                     LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out and was cancelled.')
                 else:
@@ -291,27 +275,12 @@ def _resolve_futures(
             except Exception as exception:
                 LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
             else:
-                if isinstance(result, kiwipy.Future):
-                    LOGGER.report(f'scheduled {infinitive} Process<{process.pk}>')
-                    scheduled[result] = process
+                if result is True:
+                    LOGGER.report(f'request to {infinitive} Process<{process.pk}> sent')
+                elif result is False:
+                    LOGGER.error(f'problem {present} Process<{process.pk}>')
                 else:
-                    handle_result(result)
-
-        if not wait or not scheduled:
-            return
-
-        LOGGER.report(f"waiting for process(es) {','.join([str(proc.pk) for proc in scheduled.values()])}")
-
-        for future in concurrent.futures.as_completed(scheduled.keys(), timeout=timeout):
-            process = scheduled[future]
-
-            try:
-                result = future.result()
-            except Exception as exception:
-                LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
-            else:
-                handle_result(result)
-
+                    LOGGER.error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
     except concurrent.futures.TimeoutError:
         raise ProcessTimeoutException(
             f'timed out trying to {infinitive} processes {futures.values()}\n'

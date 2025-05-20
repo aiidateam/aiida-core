@@ -25,6 +25,16 @@ If one ore more processes are unreachable, you can run the following commands to
     verdi daemon start
 """
 
+ACTION_TIMEOUT = OverridableOption(
+    '-t',
+    '--timeout',
+    type=click.FLOAT,
+    default=float('inf'),
+    show_default=True,
+    help='Time in seconds to wait for a response before timing out. '
+    'If timeout <= 0 the command does not wait for response.',
+)
+
 
 def valid_projections():
     """Return list of valid projections for the ``--project`` option of ``verdi process list``.
@@ -320,15 +330,7 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
 @verdi_process.command('kill')
 @arguments.PROCESSES()
 @options.ALL(help='Kill all processes if no specific processes are specified.')
-@OverridableOption(
-    '-t',
-    '--timeout',
-    type=click.FLOAT,
-    default=5.0,
-    show_default=True,
-    help='Time in seconds to wait for a response of the kill task before timing out.',
-)()
-@options.WAIT()
+@ACTION_TIMEOUT()
 @OverridableOption(
     '-F',
     '--force',
@@ -338,7 +340,7 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
     'Note: This may lead to orphaned jobs on your HPC and should be used with caution.',
 )()
 @decorators.with_dbenv()
-def process_kill(processes, all_entries, timeout, wait, force):
+def process_kill(processes, all_entries, timeout, force):
     """Kill running processes.
 
     Kill one or multiple running processes."""
@@ -368,7 +370,6 @@ def process_kill(processes, all_entries, timeout, wait, force):
                 force=force,
                 all_entries=all_entries,
                 timeout=timeout,
-                wait=wait,
             )
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
@@ -380,10 +381,9 @@ def process_kill(processes, all_entries, timeout, wait, force):
 @verdi_process.command('pause')
 @arguments.PROCESSES()
 @options.ALL(help='Pause all active processes if no specific processes are specified.')
-@options.TIMEOUT()
-@options.WAIT()
+@ACTION_TIMEOUT()
 @decorators.with_dbenv()
-def process_pause(processes, all_entries, timeout, wait):
+def process_pause(processes, all_entries, timeout):
     """Pause running processes.
 
     Pause one or multiple running processes."""
@@ -404,7 +404,6 @@ def process_pause(processes, all_entries, timeout, wait):
                 msg_text='Paused through `verdi process pause`',
                 all_entries=all_entries,
                 timeout=timeout,
-                wait=wait,
             )
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
@@ -416,10 +415,9 @@ def process_pause(processes, all_entries, timeout, wait):
 @verdi_process.command('play')
 @arguments.PROCESSES()
 @options.ALL(help='Play all paused processes if no specific processes are specified.')
-@options.TIMEOUT()
-@options.WAIT()
+@ACTION_TIMEOUT()
 @decorators.with_dbenv()
-def process_play(processes, all_entries, timeout, wait):
+def process_play(processes, all_entries, timeout):
     """Play (unpause) paused processes.
 
     Play (unpause) one or multiple paused processes."""
@@ -435,7 +433,7 @@ def process_play(processes, all_entries, timeout, wait):
 
     with capture_logging() as stream:
         try:
-            control.play_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait)
+            control.play_processes(processes, all_entries=all_entries, timeout=timeout)
         except control.ProcessTimeoutException as exception:
             echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
 

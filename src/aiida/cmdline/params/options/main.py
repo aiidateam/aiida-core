@@ -125,7 +125,6 @@ __all__ = (
     'USER_LAST_NAME',
     'VERBOSITY',
     'VISUALIZATION_FORMAT',
-    'WAIT',
     'WITH_ELEMENTS',
     'WITH_ELEMENTS_EXCLUSIVE',
     'active_process_states',
@@ -688,12 +687,6 @@ TIMEOUT = OverridableOption(
     default=5.0,
     show_default=True,
     help='Time in seconds to wait for a response before timing out.',
-)
-
-WAIT = OverridableOption(
-    '--wait/--no-wait',
-    default=False,
-    help='Wait for the action to be completed otherwise return as soon as it is scheduled.',
 )
 
 FORMULA_MODE = OverridableOption(

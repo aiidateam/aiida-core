@@ -697,7 +697,6 @@ def group_dump(
     from pydantic import ValidationError
 
     from aiida.cmdline.utils import echo
-    from aiida.common import NotExistent
     from aiida.tools.dumping import GroupDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode
     from aiida.tools.dumping.utils.paths import DumpPaths
@@ -713,15 +712,14 @@ def group_dump(
 
     try:
         if path is None:
-            # TODO:
-            group_path = DumpPaths._get_default_group_dump_path(group)
-            resolved_base_output_path = Path.cwd() / group_path
-            echo.echo_report(f"No output path specified. Using default: './{group_path}'")
+            group_path = DumpPaths.get_default_dump_path(group)
+            dump_base_output_path = Path.cwd() / group_path
+            echo.echo_report(f"No output path specified. Using default: `{dump_base_output_path}`")
         else:
-            resolved_base_output_path = Path(path).resolve()
-            echo.echo_report(f"Using specified output path: '{resolved_base_output_path}'")
+            dump_base_output_path = Path(path).resolve()
+            echo.echo_report(f"Using specified output path: '{dump_base_output_path}'")
 
-        config_file_path = resolved_base_output_path / 'aiida_dump_config.yaml'
+        config_file_path = dump_base_output_path / DumpPaths.CONFIG_FILE_NAME
 
         if config_file_path.is_file() and not overwrite:
 
@@ -784,17 +782,15 @@ def group_dump(
             echo.echo_warning(msg)
 
         # --- Instantiate and Run GroupDumper ---
-        group_dumper = GroupDumper(group=group, config=final_dump_config, output_path=resolved_base_output_path)
+        group_dumper = GroupDumper(group=group, config=final_dump_config, output_path=dump_base_output_path)
         group_dumper.dump()
 
         if final_dump_config.dump_mode != DumpMode.DRY_RUN:
-            msg = f'Raw files for group `{group.label}` dumped into folder `{resolved_base_output_path}`.'
+            msg = f'Raw files for group `{group.label}` dumped into folder `{dump_base_output_path.name}`.'
             echo.echo_success(msg)
         else:
             echo.echo_success('Dry run completed.')
 
-    except NotExistent as e:
-        echo.echo_critical(f'Error: Required AiiDA entity not found: {e!s}')
     except Exception as e:
         msg = f'Unexpected error during dump of group {group.label}:\n ({e!s}).\n'
         echo.echo_critical(msg + traceback.format_exc())

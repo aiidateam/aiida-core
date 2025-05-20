@@ -363,7 +363,7 @@ def profile_dump(
     from aiida.common import NotExistent
     from aiida.tools.dumping import ProfileDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode, ProfileDumpSelection
-    from aiida.tools.dumping.utils.paths import DumpPathPolicy
+    from aiida.tools.dumping.utils.paths import DumpPaths
 
     warning_msg = (
         'This is a new feature which is still in its testing phase. '
@@ -376,13 +376,14 @@ def profile_dump(
     final_dump_config = None
     try:
         if path is None:
-            profile_path = DumpPathPolicy._get_default_process_dump_path()
-            echo.echo_report(f"No output path specified. Using default: '{profile_path}'")
+            profile_path = DumpPaths.get_default_dump_path(entity=profile)
+            dump_base_output_path = Path.cwd() / profile_path
+            echo.echo_report(f"No output path specified. Using default: '{dump_base_output_path}'")
         else:
-            resolved_base_output_path = Path(path).resolve()
-            echo.echo_report(f"Using specified output path: '{resolved_base_output_path}'")
+            dump_base_output_path = Path(path).resolve()
+            echo.echo_report(f"Using specified output path: '{dump_base_output_path}'")
 
-        config_file_path = resolved_base_output_path / 'aiida_dump_config.yaml'
+        config_file_path = dump_base_output_path / DumpPaths.CONFIG_FILE_NAME
 
         if config_file_path.is_file():
             # --- Config File Exists: Load ONLY from file ---
@@ -436,7 +437,7 @@ def profile_dump(
                 echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
                 return
 
-        # --- Check final determined scope (applies to both paths) ---
+        # --- Check final determined scope ---
         if (
             final_dump_config.profile_dump_selection == ProfileDumpSelection.NONE
             and final_dump_config.dump_mode != DumpMode.DRY_RUN
@@ -456,17 +457,18 @@ def profile_dump(
             echo.echo_warning(msg)
 
         # --- Instantiate and Run ProfileDumper ---
-        profile_dumper = ProfileDumper(config=final_dump_config, output_path=resolved_base_output_path)
+        profile_dumper = ProfileDumper(config=final_dump_config, output_path=dump_base_output_path)
         profile_dumper.dump()
 
-        if final_dump_config.dump_mode != DumpMode.DRY_RUN:
-            msg = f'Raw files for profile `{profile.name}` dumped into folder `{resolved_base_output_path}`.'
+        if (
+            final_dump_config.dump_mode != DumpMode.DRY_RUN
+            and final_dump_config.profile_dump_selection != ProfileDumpSelection.NONE
+        ):
+            msg = f'Raw files for profile `{profile.name}` dumped into folder `{dump_base_output_path.name}`.'
             echo.echo_success(msg)
         else:
             echo.echo_success('Dry run completed.')
 
-    except NotExistent as e:
-        echo.echo_critical(f'Error: Required AiiDA entity not found: {e!s}')
     except Exception as e:
         msg = f'Unexpected error during dump of {profile.name}:\n ({e!s}).\n'
         echo.echo_critical(msg + traceback.format_exc())

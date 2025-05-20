@@ -628,15 +628,14 @@ def process_dump(
     from pydantic import ValidationError
 
     from aiida.cmdline.utils import echo
-    from aiida.common import NotExistent
     from aiida.tools.archive.exceptions import ExportValidationError
     from aiida.tools.dumping import ProcessDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode
     from aiida.tools.dumping.utils.paths import DumpPaths
 
     warning_msg = (
-        'The backend implementation of this command was recently refactored. '
-        'If you encounter unexpected behavior or bugs, please reach out via Discourse.'
+        'This is a new feature which is still in its testing phase. '
+        'If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.'
     )
     echo.echo_warning(warning_msg)
 
@@ -645,22 +644,22 @@ def process_dump(
 
     try:
         if path is None:
-
-            process_path = DumpPaths._get_default_process_dump_path(process_node=process)
-            echo.echo_report(f"No output path specified. Using default: './{process_path}'")
-            resolved_base_output_path = Path.cwd() / process_path
+            process_path = DumpPaths.get_default_dump_path(process)
+            dump_base_output_path = Path.cwd() / process_path
+            msg = f"No output path specified. Using default: `{dump_base_output_path}`"
+            echo.echo_report(msg)
         else:
             echo.echo_report(f"Using specified output path: '{path}'")
-            resolved_base_output_path = Path(path).resolve()
+            dump_base_output_path = Path(path).resolve()
 
-        config_file_path = resolved_base_output_path / 'aiida_dump_config.yaml'
+        config_file_path = dump_base_output_path / DumpPaths.CONFIG_FILE_NAME
 
         if config_file_path.is_file() and not overwrite:
             # --- Config File Exists: Load ONLY from file ---
             try:
                 config_path_rel = config_file_path.relative_to(Path.cwd())
             except ValueError:
-                    config_path_rel = config_file_path
+                config_path_rel = config_file_path
             echo.echo_report(f"Config file found at '{config_path_rel}'.")
             echo.echo_report('Using config file settings ONLY (ignoring other CLI flags).')
             try:
@@ -695,17 +694,15 @@ def process_dump(
             echo.echo_warning(msg)
 
         # --- Instantiate and Run ProcessDumper ---
-        process_dumper = ProcessDumper(process=process, config=final_dump_config, output_path=resolved_base_output_path)
+        process_dumper = ProcessDumper(process=process, config=final_dump_config, output_path=dump_base_output_path)
         process_dumper.dump()
 
         if final_dump_config.dump_mode != DumpMode.DRY_RUN:
-            msg = f'Raw files for process `{process.pk}` dumped into folder `{resolved_base_output_path}`.'
+            msg = f'Raw files for process `{process.pk}` dumped into folder `{dump_base_output_path.name}`.'
             echo.echo_success(msg)
         else:
             echo.echo_success('Dry run completed.')
 
-    except NotExistent as e:
-        echo.echo_critical(f'Error: Required AiiDA entity not found: {e!s}')
     except ExportValidationError as e:
         echo.echo_critical(f'Data validation error during dump: {e!s}')
     except Exception as e:

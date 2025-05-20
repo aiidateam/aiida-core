@@ -5,13 +5,11 @@ from typing import TYPE_CHECKING, Optional
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
+from aiida.manage.configuration.profile import Profile
 from aiida.tools.dumping.config import DumpConfig, DumpMode
 from aiida.tools.dumping.detect import DumpChangeDetector
+from aiida.tools.dumping.managers import DeletionManager, GroupDumpManager, ProcessDumpManager, ProfileDumpManager
 from aiida.tools.dumping.tracking import DumpTracker
-from aiida.tools.dumping.managers.deletion import DeletionManager
-from aiida.tools.dumping.managers.group import GroupDumpManager
-from aiida.tools.dumping.managers.process import ProcessDumpManager
-from aiida.tools.dumping.managers.profile import ProfileDumpManager
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpTimes
 from aiida.tools.dumping.utils.paths import DumpPaths
 
@@ -73,10 +71,10 @@ class DumpEngine:
         logger.debug('Initializing dump times and logger...')
 
         # Clear log file if overwriting
-        if self.config.dump_mode == DumpMode.OVERWRITE and self.dump_paths.tracker_file_path.exists():
+        if self.config.dump_mode == DumpMode.OVERWRITE and self.dump_paths.tracking_log_file_path.exists():
             try:
-                logger.info(f'Overwrite mode: Deleting existing log file {self.dump_paths.tracker_file_path}')
-                self.dump_paths.tracker_file_path.unlink()
+                logger.info(f'Overwrite mode: Deleting existing log file {self.dump_paths.tracking_log_file_path}')
+                self.dump_paths.tracking_log_file_path.unlink()
             except OSError as e:
                 logger.error(f'Failed to delete existing log file: {e}')
                 # Decide whether to proceed or raise an error
@@ -144,30 +142,30 @@ class DumpEngine:
             # Match original behavior of logging without re-raising here.
             logger.error(f'Failed to save dump configuration during engine finalization: {e}', exc_info=True)
 
-    def dump(self, entity: Optional[orm.ProcessNode | orm.Group] = None) -> None:
+    def dump(self, entity: Optional[orm.ProcessNode | orm.Group | Profile] = None) -> None:
         """
         Selects and executes the appropriate dump strategy based on the entity.
         The base output directory is assumed to be prepared by DumpPaths.__init__().
         """
-        entity_description = 'profile'
         if isinstance(entity, orm.Group):
-            entity_description = f"group '{entity.label}' (PK: {entity.pk})"
+            entity_description = f"group `{entity.label}` (PK: {entity.pk})"
         elif isinstance(entity, orm.ProcessNode):
             entity_description = f'process node (PK: {entity.pk})'
-        logger.report(f'Starting dump of {entity_description} in {self.config.dump_mode.name.lower()} mode.')
+        elif isinstance(entity, Profile):
+            entity_description = f'profile `{entity.name}`'
 
-        current_mapping: Optional[GroupNodeMapping] = None
+        msg = f'Starting dump of {entity_description} in `{self.config.dump_mode.name.lower()}` mode.'
+        if self.config.dump_mode != DumpMode.DRY_RUN:
+            logger.report(msg)
+
+        current_mapping = None
 
         if isinstance(entity, orm.ProcessNode):
             logger.info(f'Executing ProcessNode dump for PK={entity.pk}')
             # For a single ProcessNode, its dump root is the base_output_path.
             # ProcessManager uses DumpPaths to place content within this root.
             self.process_manager.dump(process_node=entity, target_path=self.dump_paths.base_output_path)
-            try:
-                self.process_manager.readme_generator._generate(entity, self.dump_paths.base_output_path)
-            except Exception as e:
-                logger.warning(f'Failed to generate README for process {entity.pk}: {e}')
-            current_mapping = None  # No group mapping relevant for single process dump for the main log
+            self.process_manager.readme_generator._generate(entity, self.dump_paths.base_output_path)
 
         elif isinstance(entity, orm.Group):
             logger.info(f"Executing Group dump for '{entity.label}' (PK: {entity.pk})")
@@ -201,11 +199,9 @@ class DumpEngine:
                 process_manager=self.process_manager,
                 current_mapping=current_mapping,
             )
-            # The dump method of GroupDumpManager needs the root path for *this group's content*
-            # This root path is determined by DumpPaths.
             group_manager.dump(changes=all_changes)
 
-        else:  # Profile Dump (entity is None)
+        elif isinstance(entity, Profile):
             logger.info('Executing Profile dump.')
             node_changes, current_mapping = self.detector._detect_all_changes()
             group_changes = self.detector._detect_group_changes(
@@ -227,7 +223,7 @@ class DumpEngine:
                     deletion_manager._handle_deleted_entities()
 
                 if self.config.dump_mode == DumpMode.DRY_RUN:
-                    print(all_changes.to_table())  # Or use logger.report
+                    print(all_changes.to_table())
                     return
 
                 profile_manager = ProfileDumpManager(
@@ -240,6 +236,6 @@ class DumpEngine:
                 )
                 profile_manager.dump(changes=all_changes)
 
-        logger.report('Saving final dump log and configuration...')
+        logger.report('Saving final dump log and configuration.')
         self.dump_tracker.save(current_dump_time=self.dump_times.current, group_node_mapping=current_mapping)
         self._save_config()

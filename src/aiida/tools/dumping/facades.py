@@ -18,7 +18,7 @@ from aiida.common.exceptions import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.config import DumpConfig
 from aiida.tools.dumping.engine import DumpEngine
-from aiida.tools.dumping.utils.paths import DumpPathPolicy
+from aiida.tools.dumping.utils.paths import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.facades')
 
@@ -81,9 +81,9 @@ class ProcessDumper:
         self.process_node = ProcessDumper._verify_process_node(process)
         self.config: DumpConfig = config if config is not None else DumpConfig()
 
-        # Resolve DumpPathPolicy based on output_path and the node
+        # Resolve DumpPaths based on output_path and the node
         if output_path is None:
-            default_child_dir_name = DumpPathPolicy._get_node_directory_name(node=self.process_node)
+            default_child_dir_name = DumpPaths._get_node_directory_name(node=self.process_node)
             self.base_output_path: Path = Path.cwd() / default_child_dir_name
         else:
             self.base_output_path: Path = Path(output_path).resolve()
@@ -191,7 +191,7 @@ class GroupDumper:
         if output_path is None:
             # Default behavior: create a directory named after the group
             # in the current working directory.
-            # We use a static helper from DumpPathPolicy for consistent label cleaning.
+            # We use a static helper from DumpPaths for consistent label cleaning.
             self.base_output_path: Path = Path.cwd() / self.group.label
             logger.info(f"No output_path specified for GroupDumper, using default: '{self.base_output_path}'")
         else:
@@ -199,7 +199,7 @@ class GroupDumper:
             logger.info(f"GroupDumper using specified output_path: '{self.base_output_path}'")
 
         # The facade's responsibility is to determine `self.base_output_path`
-        # and `self.config`. It does NOT create the `DumpPathPolicy`
+        # and `self.config`. It does NOT create the `DumpPaths`
         # instance itself; that will be done by the DumpEngine.
 
     @staticmethod
@@ -287,7 +287,7 @@ class ProfileDumper:
         if output_path is None:
             # Default behavior: create a directory named after the group
             # in the current working directory.
-            # We use a static helper from DumpPathPolicy for consistent label cleaning.
+            # We use a static helper from DumpPaths for consistent label cleaning.
             from aiida import load_profile
 
             profile = load_profile()

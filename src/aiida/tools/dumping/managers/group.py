@@ -18,7 +18,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.managers.collection import CollectionDumpManager
 from aiida.tools.dumping.utils.helpers import DumpChanges
-from aiida.tools.dumping.utils.paths import DumpPathPolicy
+from aiida.tools.dumping.utils.paths import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.strategies.profile')
 
@@ -34,7 +34,7 @@ class GroupDumpManager(CollectionDumpManager):
     def __init__(
         self,
         config: DumpConfig,
-        path_policy: DumpPathPolicy,
+        dump_paths: DumpPaths,
         dump_logger: DumpLogger,
         process_manager: ProcessDumpManager,
         current_mapping: GroupNodeMapping,
@@ -42,7 +42,7 @@ class GroupDumpManager(CollectionDumpManager):
     ) -> None:
         super().__init__(
             config=config,
-            path_policy=path_policy,
+            dump_paths=dump_paths,
             process_manager=process_manager,
             current_mapping=current_mapping,
             dump_logger=dump_logger,
@@ -52,16 +52,16 @@ class GroupDumpManager(CollectionDumpManager):
     def dump(self, changes: DumpChanges) -> None:
         """
         Dumps the content of the specific group (self.group_to_dump).
-        The path for this group's content is determined using self.path_policy.
+        The path for this group's content is determined using self.dump_paths.
 
         :param changes: Scoped DumpChanges relevant to this group, as determined by DumpEngine.
         """
         # --- Determine the root path for THIS group's content ---
-        # The PathPolicy instance (self.path_policy) was initialized by DumpEngine.
+        # The PathPolicy instance (self.dump_paths) was initialized by DumpEngine.
         # It knows the overall base_output_path and the dump_target_entity (which is self.group_to_dump).
         # It can therefore correctly determine if self.group_to_dump should be directly in
         # base_output_path or nested under a "groups/" subdirectory.
-        current_group_content_root = self.path_policy.get_path_for_group_content(
+        current_group_content_root = self.dump_paths.get_path_for_group_content(
             group=self.group_to_dump,
             parent_group_content_path=None,  # This is the top-level group for this manager's operation
         )
@@ -72,7 +72,7 @@ class GroupDumpManager(CollectionDumpManager):
         )
 
         # 1. Prepare the specific directory for this group's content.
-        self.path_policy.prepare_directory(current_group_content_root, is_leaf_node_dir=False)
+        self.dump_paths.prepare_directory(current_group_content_root, is_leaf_node_dir=False)
 
         # Register this group in the logger with its actual content path.
         self._register_group_and_prepare_path(group=self.group_to_dump, group_content_path=current_group_content_root)
@@ -114,7 +114,7 @@ class GroupDumpManager(CollectionDumpManager):
         #     # for child_group in child_groups:
         #     #     logger.info(f"Recursively processing child group '{child_group.label}'.")
         #     #     # Path for the child group's content, nested under the current group's content root
-        #     #     child_content_root = self.path_policy.get_path_for_group_content(
+        #     #     child_content_root = self.dump_paths.get_path_for_group_content(
         #     #         group=child_group,
         #     #         parent_group_content_path=current_group_content_root # Key for nesting
         #     #     )
@@ -150,7 +150,7 @@ class GroupDumpManager(CollectionDumpManager):
             return
         logger.debug(f'Calculating stats for group directory: {group_content_path} (UUID: {group.uuid})')
         try:
-            dir_mtime, dir_size = DumpPathPolicy.get_directory_stats(group_content_path)
+            dir_mtime, dir_size = DumpPaths.get_directory_stats(group_content_path)
             group_log_entry.dir_mtime = dir_mtime
             group_log_entry.dir_size = dir_size
             logger.debug(f'Updated stats for group {group.uuid}: mtime={dir_mtime}, size={dir_size}')

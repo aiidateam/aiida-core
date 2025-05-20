@@ -24,10 +24,10 @@ from aiida.tools.dumping.config import DumpConfig, DumpMode
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.utils.paths')
 
-__all__ = ('DumpPathPolicy',)
+__all__ = ('DumpPaths',)
 
 
-class DumpPathPolicy:
+class DumpPaths:
     """
     Manages the generation of paths and directory structures for an AiiDA dump,
     acting as a central policy for the dump layout.
@@ -50,7 +50,7 @@ class DumpPathPolicy:
         self, base_output_path: Path, config: DumpConfig, dump_target_entity: Optional[orm.Node | orm.Group] = None
     ):
         """
-        Initializes the DumpPathPolicy policy.
+        Initializes the DumpPaths policy.
 
         :param base_output_path: The absolute root path for this entire dump operation.
                                  For a facade like `GroupDumper(group, output_path=...)`,
@@ -171,10 +171,10 @@ class DumpPathPolicy:
     def _get_node_directory_name(node: orm.ProcessNode, append_pk: bool = True) -> str:
         """
         Generates the directory name for a specific node (e.g., "NodeType-PK").
-        (This can reuse your existing DumpPathPolicy._get_default_process_dump_path logic)
+        (This can reuse your existing DumpPaths._get_default_process_dump_path logic)
         """
-        # Assuming DumpPathPolicy._get_default_process_dump_path returns a Path, get .name
-        return str(DumpPathPolicy._get_default_process_dump_path(node, append_pk=append_pk))
+        # Assuming DumpPaths._get_default_process_dump_path returns a Path, get .name
+        return str(DumpPaths._get_default_process_dump_path(node, append_pk=append_pk))
 
     # --- Filesystem Operation Methods ---
     def prepare_directory(self, path_to_prepare: Path, is_leaf_node_dir: bool = False) -> None:
@@ -235,7 +235,7 @@ class DumpPathPolicy:
     def get_directory_stats(directory_path: Path) -> tuple[Optional[datetime], Optional[int]]:
         """
         Calculates the last modification time and total size of a directory.
-        (Reuses existing logic from self.path_policy.get_directory_stats)
+        (Reuses existing logic from self.dump_paths.get_directory_stats)
         """
         # ... your existing implementation ...
         if not directory_path.is_dir():

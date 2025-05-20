@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.utils.helpers import DumpChanges
-from aiida.tools.dumping.utils.paths import DumpPathPolicy
+from aiida.tools.dumping.utils.paths import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.managers.deletion')
 
@@ -22,7 +22,7 @@ class DeletionManager:
     def __init__(
         self,
         config: DumpConfig,
-        path_policy: DumpPathPolicy,
+        dump_paths: DumpPaths,
         dump_logger: DumpLogger,
         dump_changes: DumpChanges,
         stored_mapping: GroupNodeMapping | None,
@@ -31,13 +31,13 @@ class DeletionManager:
 
 
         :param config: _description_
-        :param path_policy: _description_
+        :param dump_paths: _description_
         :param dump_logger: _description_
         :param dump_changes: _description_
         :param stored_mapping: _description_
         """
         self.config: DumpConfig = config
-        self.path_policy: DumpPathPolicy = path_policy
+        self.dump_paths: DumpPaths = dump_paths
         self.dump_logger: DumpLogger = dump_logger
         self.dump_changes: DumpChanges = dump_changes
         self.stored_mapping: GroupNodeMapping | None = stored_mapping
@@ -127,10 +127,10 @@ class DeletionManager:
         try:
             # Attempt to delete directory first (use appropriate safeguard)
             # TODO: Adjust safeguard if Data nodes use a different one
-            rel_path = path_to_delete.relative_to(self.path_policy.base_output_path)
+            rel_path = path_to_delete.relative_to(self.dump_paths.base_output_path)
             msg = f"Deleting directory '{rel_path}' for deleted node UUID {node_uuid}"
             logger.report(msg)
-            self.path_policy.safe_delete_directory(directory_path=path_to_delete)
+            self.dump_paths.safe_delete_directory(directory_path=path_to_delete)
         except FileNotFoundError as e:
             logger.warning(
                 f'Directory or safeguard file not found for deleted node {node_uuid} at {path_to_delete}: {e}. '
@@ -174,18 +174,18 @@ class DeletionManager:
         group_entry = self.dump_logger.groups.get_entry(group_uuid)
         if group_entry:
             path_to_delete = group_entry.path
-            should_delete_dir = self.config.organize_by_groups and path_to_delete != self.path_policy.base_output_path
+            should_delete_dir = self.config.organize_by_groups and path_to_delete != self.dump_paths.base_output_path
             if should_delete_dir:
                 try:
                     rel_path_str = 'unknown'
                     try:
-                        rel_path = path_to_delete.relative_to(self.path_policy.base_output_path)
+                        rel_path = path_to_delete.relative_to(self.dump_paths.base_output_path)
                         rel_path_str = str(rel_path)
                     except ValueError:
                         rel_path_str = str(path_to_delete)
 
                     logger.report(f"Deleting directory '{rel_path_str}' for deleted group UUID {group_uuid}")
-                    self.path_policy.safe_delete_directory(directory_path=path_to_delete)
+                    self.dump_paths.safe_delete_directory(directory_path=path_to_delete)
                     path_deleted = path_to_delete  # Record that we deleted this path
                 except FileNotFoundError:
                     msg = (

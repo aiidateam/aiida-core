@@ -21,7 +21,7 @@ from aiida.orm import Group, WorkflowNode
 from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.logger import DumpLog, DumpLogger
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpNodeStore
-from aiida.tools.dumping.utils.paths import DumpPathPolicy
+from aiida.tools.dumping.utils.paths import DumpPaths
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
@@ -37,13 +37,13 @@ class CollectionDumpManager:
     def __init__(
         self,
         config: DumpConfig,
-        path_policy: DumpPathPolicy,
+        dump_paths: DumpPaths,
         dump_logger: DumpLogger,
         process_manager: ProcessDumpManager,
         current_mapping: GroupNodeMapping,
     ) -> None:
         self.config: DumpConfig = config
-        self.path_policy: DumpPathPolicy = path_policy
+        self.dump_paths: DumpPaths = dump_paths
         self.process_manager: ProcessDumpManager = process_manager
         self.current_mapping: GroupNodeMapping = current_mapping
         self.dump_logger: DumpLogger = dump_logger
@@ -55,12 +55,12 @@ class CollectionDumpManager:
         """
         # Directory preparation for group_content_path is now expected to be done
         # by the caller (e.g., GroupDumpManager.dump() or ProfileDumpManager loop)
-        # using self.path_policy.prepare_directory().
+        # using self.dump_paths.prepare_directory().
         # However, this method is also where the logger entry is made, so it's crucial.
 
         # Ensure the directory exists (might be redundant if caller prepares, but safe)
         # In non-dry_run modes, prepare_directory also creates the safeguard.
-        self.path_policy.prepare_directory(group_content_path, is_leaf_node_dir=False)
+        self.dump_paths.prepare_directory(group_content_path, is_leaf_node_dir=False)
 
         if group.uuid not in self.dump_logger.groups.entries:
             logger.debug(
@@ -174,16 +174,16 @@ class CollectionDumpManager:
         if current_dump_root_for_nodes is None:
             # This is a fallback, the caller should ideally always provide the explicit root.
             if group_context:
-                current_dump_root_for_nodes = self.path_policy.get_path_for_group_content(group_context)
+                current_dump_root_for_nodes = self.dump_paths.get_path_for_group_content(group_context)
             else:  # Ungrouped nodes
-                current_dump_root_for_nodes = self.path_policy.get_path_for_ungrouped_nodes_root()
+                current_dump_root_for_nodes = self.dump_paths.get_path_for_ungrouped_nodes_root()
             logger.warning(f'current_dump_root_for_nodes was None, derived as: {current_dump_root_for_nodes}')
 
         with get_progress_reporter()(desc=desc, total=len(nodes_to_dump)) as progress:
             for node in nodes_to_dump:
                 try:
                     # Determine the specific, absolute path for this node's own directory
-                    node_specific_dump_path = self.path_policy.get_path_for_node(
+                    node_specific_dump_path = self.dump_paths.get_path_for_node(
                         node=node,
                         current_content_root=current_dump_root_for_nodes,
                         group_context_for_node=group_context,
@@ -216,7 +216,7 @@ class CollectionDumpManager:
         # Ensure the group's own content directory is prepared and logged.
         # _register_group_and_prepare_path should use group_content_root_path.
         # The prepare_directory call is now inside _register_group_and_prepare_path implicitly
-        # via self.path_policy.prepare_directory() if it's not already done by the caller.
+        # via self.dump_paths.prepare_directory() if it's not already done by the caller.
         self._register_group_and_prepare_path(group=group, group_content_path=group_content_root_path)
 
         # 1. Identify nodes explicitly in this group from the (hopefully scoped) changes.
@@ -290,7 +290,7 @@ class CollectionDumpManager:
                     ):
                         continue
 
-                    group_path = self.path_policy.get_path_for_group_content(group=group)
+                    group_path = self.dump_paths.get_path_for_group_content(group=group)
                     self._register_group_and_prepare_path(group=group, group_content_path=group_path)
                     # Dumping nodes within this new group will happen if they
                     # are picked up by the NodeChanges detection based on the config.
@@ -338,8 +338,8 @@ class CollectionDumpManager:
                 # Ensure group path exists (might have been renamed above)
                 try:
                     current_group = orm.load_group(uuid=mod_info.uuid)
-                    current_group_path_rel = self.path_policy.get_path_for_group_content(group=current_group)
-                    current_group_path_abs = self.path_policy.base_output_path / current_group_path_rel
+                    current_group_path_rel = self.dump_paths.get_path_for_group_content(group=current_group)
+                    current_group_path_abs = self.dump_paths.base_output_path / current_group_path_rel
                     # Ensure path exists in logger and on disk after potential rename
                     self._register_group_and_prepare_path(current_group, current_group_path_abs)
                     # Pass the *current* absolute path to _update_group_membership
@@ -369,7 +369,7 @@ class CollectionDumpManager:
                 logger.debug(f"Node {node_uuid} added to group {group.label}. Ensuring it's dumped/linked.")
                 # Determine the correct target_path for the node within this group
                 # current_group_path_abs is the content root for `group`
-                node_target_path_in_group = self.path_policy.get_path_for_node(
+                node_target_path_in_group = self.dump_paths.get_path_for_node(
                     node=node,
                     current_content_root=current_group_path_abs,  # This is the new group's content root
                     group_context_for_node=group,  # Provide the group context
@@ -463,7 +463,7 @@ class CollectionDumpManager:
                 logger.info(f"Removing directory '{found_path.name}'{log_suffix}.")
                 try:
                     # Ensure safe_delete_dir handles non-empty dirs and potential errors
-                    self.path_policy.safe_delete_directory(directory_path=found_path)
+                    self.dump_paths.safe_delete_directory(directory_path=found_path)
                 except Exception as e:
                     logger.error(f'Failed to safely delete directory {found_path}: {e}')
 

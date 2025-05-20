@@ -21,7 +21,7 @@ from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.logger import DumpLogger
 from aiida.tools.dumping.managers.collection import CollectionDumpManager
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpNodeStore
-from aiida.tools.dumping.utils.paths import DumpPathPolicy
+from aiida.tools.dumping.utils.paths import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.strategies.profile')
 
@@ -38,7 +38,7 @@ class ProfileDumpManager(CollectionDumpManager):
     def __init__(
         self,
         config: DumpConfig,
-        path_policy: DumpPathPolicy,
+        dump_paths: DumpPaths,
         dump_logger: DumpLogger,
         detector: DumpChangeDetector,
         process_manager: ProcessDumpManager,
@@ -46,7 +46,7 @@ class ProfileDumpManager(CollectionDumpManager):
     ) -> None:
         super().__init__(
             config=config,
-            path_policy=path_policy,
+            dump_paths=dump_paths,
             process_manager=process_manager,
             current_mapping=current_mapping,
             dump_logger=dump_logger,
@@ -149,7 +149,7 @@ class ProfileDumpManager(CollectionDumpManager):
 
         # 1. Determine the target path for ungrouped nodes
         try:
-            ungrouped_path = self.path_policy.get_path_for_ungrouped_nodes_root()
+            ungrouped_path = self.dump_paths.get_path_for_ungrouped_nodes_root()
             logger.debug(f'Target path for ungrouped nodes: {ungrouped_path}')
         except Exception as e:
             logger.error(f'Failed to determine or create ungrouped path: {e}', exc_info=True)
@@ -267,7 +267,7 @@ class ProfileDumpManager(CollectionDumpManager):
             logger.report(f'Dumping/linking {len(nodes_to_dump_ungrouped)} nodes under ungrouped path...')
             try:
                 ungrouped_path.mkdir(exist_ok=True, parents=True)
-                (ungrouped_path / DumpPathPolicy.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
+                (ungrouped_path / DumpPaths.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
                 self._dump_nodes(node_store=nodes_to_dump_ungrouped, group_context=None)
                 nodes_processed_count = len(nodes_to_dump_ungrouped)
             except Exception as e:
@@ -284,7 +284,7 @@ class ProfileDumpManager(CollectionDumpManager):
             group_path = group_log_entry.path
             if not group_path.is_absolute():
                 try:
-                    group_path = self.dump_logger.path_policy.base_output_path / group_path
+                    group_path = self.dump_logger.dump_paths.base_output_path / group_path
                     logger.debug(f'Resolved relative group path for {group_uuid} to {group_path}')
                 except Exception as path_e:
                     logger.error(f'Failed to resolve relative path for group {group_uuid}: {path_e}')
@@ -296,7 +296,7 @@ class ProfileDumpManager(CollectionDumpManager):
 
             logger.debug(f'Calculating stats for group directory: {group_path} (UUID: {group_uuid})')
             try:
-                dir_mtime, dir_size = self.path_policy.get_directory_stats(group_path)
+                dir_mtime, dir_size = self.dump_paths.get_directory_stats(group_path)
                 group_log_entry.dir_mtime = dir_mtime
                 group_log_entry.dir_size = dir_size
                 logger.debug(f'Updated stats for group {group_uuid}: mtime={dir_mtime}, size={dir_size}')
@@ -325,7 +325,7 @@ class ProfileDumpManager(CollectionDumpManager):
         for group in groups_to_process:
             # _process_group handles finding nodes for this group,
             # adding descendants if needed, and calling node_manager.dump_nodes
-            group_content_root = self.path_policy.get_path_for_group_content(
+            group_content_root = self.dump_paths.get_path_for_group_content(
                 group=group, parent_group_content_path=None
             )
             self._process_group(group=group, changes=changes, group_content_root_path=group_content_root)

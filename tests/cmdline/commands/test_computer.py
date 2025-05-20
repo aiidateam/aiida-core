@@ -878,8 +878,7 @@ class TestVerdiComputerCommands:
         """Test if `verdi computer delete` command behaves correctly when deleting a nonexisting computer"""
         # See if the command complains about not getting an existing computer
         result = self.cli_runner(computer_delete, ['computer_that_does_not_exist'], user_input='y', raises=True)
-        # TODO-DH: Why is the error message suddenly in stdout?
-        assert 'no Computer found with LABEL<computer_that_does_not_exist>' in result.stdout
+        assert 'no Computer found with LABEL<computer_that_does_not_exist>' in result.output
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)

@@ -239,7 +239,7 @@ class TestVerdiNode:
             file_handle.write(some_file_content)
         options = [str(folder_node.uuid), str(out_path)]
         res = run_cli_command(cmd_node.repo_dump, options, raises=True)
-        assert 'exists' in res.stdout
+        assert 'exists' in res.output
 
         # Make sure the directory content is still there
         with some_file.open('r') as file_handle:

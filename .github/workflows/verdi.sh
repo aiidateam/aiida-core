@@ -13,7 +13,7 @@ VERDI=`which verdi`
 # Typically these types of tests are fragile. But with a load limit of more than twice
 # the ideal loading time, if exceeded, should give a reasonably sure indication
 # that the loading of `verdi` is unacceptably slowed down.
-LOAD_LIMIT=0.4
+LOAD_LIMIT=0.3
 MAX_NUMBER_ATTEMPTS=5
 
 iteration=0

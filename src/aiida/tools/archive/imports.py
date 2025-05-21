@@ -544,12 +544,24 @@ def _import_logs(
 
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
+
+    # TODO put somewhere else
+    def chunk_dict(d, chunk_size):
+        from itertools import islice
+        it = iter(d.items())
+        while True:
+            chunk = dict(islice(it, chunk_size))
+            if not chunk:
+                break
+            yield chunk
+
+    from itertools import chain
     if input_id_uuid:
-        backend_uuid_id = dict(
+        backend_uuid_id = dict(chain.from_iterable([dict(
             orm.QueryBuilder(backend=backend_to)
-            .append(orm.Log, filters={'uuid': {'in': list(input_id_uuid.values())}}, project=['uuid', 'id'])
+            .append(orm.Log, filters={'uuid': {'in': list(chunk.values())}}, project=['uuid', 'id'])
             .all(batch_size=query_params.batch_size)
-        )
+        ).items() for chunk in chunk_dict(input_id_uuid, 500)]))
 
     new_logs = len(input_id_uuid) - len(backend_uuid_id)
     existing_logs = len(backend_uuid_id)

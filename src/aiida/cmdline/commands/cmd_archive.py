@@ -510,25 +510,30 @@ def _import_archive_and_migrate(
                     archive_format.migrate(archive_path, new_path, archive_format.latest_version, compression=0)
                     archive_path = new_path
                 except Exception as sub_exception:
+                    raise
                     _echo_exception(f'an exception occurred while migrating the archive {archive}', sub_exception)
 
                 echo.echo_report('proceeding with import of migrated archive')
                 try:
                     _import_archive(archive_path, archive_format=archive_format, **import_kwargs)
                 except ImportTestRun:
+                    raise
                     echo.echo_success(dry_run_success)
                     return
                 except Exception as sub_exception:
+                    raise
                     _echo_exception(
                         f'an exception occurred while trying to import the migrated archive {archive}', sub_exception
                     )
             else:
                 _echo_exception(f'an exception occurred while trying to import the archive {archive}', exception)
         except ImportTestRun:
+            raise
             echo.echo_success(dry_run_success)
             return
 
         except Exception as exception:
+            raise
             _echo_exception(f'an exception occurred while trying to import the archive {archive}', exception)
 
         echo.echo_success(f'imported archive {archive}')

@@ -293,7 +293,7 @@ class CollectionDumpManager:
                     logger.warning(f'Could not process new group {group_info.uuid}: {e}')
 
         # --- Handle Renamed Groups ---
-        if self.config.update_groups and group_changes.renamed:
+        if self.config.relabel_groups and group_changes.renamed:
             logger.report(f'Processing {len(group_changes.renamed)} renamed groups...')
             for rename_info in group_changes.renamed:
                 old_path = rename_info.old_path

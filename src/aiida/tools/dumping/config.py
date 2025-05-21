@@ -19,6 +19,7 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
+    computed_field,
     field_validator,
     model_serializer,
     model_validator,
@@ -34,13 +35,6 @@ class DumpMode(Enum):
     INCREMENTAL = auto()
     OVERWRITE = auto()
     DRY_RUN = auto()
-
-
-# TODO: See if this can be removed
-class ProfileDumpSelection(Enum):
-    NONE = auto()
-    ALL = auto()
-    SPECIFIC = auto()
 
 
 class GroupDumpScope(Enum):
@@ -150,11 +144,22 @@ class DumpConfig(BaseModel):
     delete_missing: bool = True
     organize_by_groups: bool = True
     also_ungrouped: bool = False
-    update_groups: bool = True
-    profile_dump_selection: ProfileDumpSelection = Field(
-        default=ProfileDumpSelection.NONE,
-        exclude=True,  # Exclude from standard serialization, internal class
-    )
+    relabel_groups: bool = True
+    all_entries: bool = False
+
+    @computed_field
+    @property
+    def filters_set(self) -> bool:
+        """Check if any filters are configured."""
+        return bool(
+            self.codes
+            or self.computers
+            or self.groups
+            or self.past_days
+            or self.start_date
+            or self.end_date
+            or self.user
+        )
 
     # --- Pydantic Field Validators ---
     @field_validator('groups', mode='before')
@@ -226,45 +231,6 @@ class DumpConfig(BaseModel):
         elif values.pop('overwrite', False):
             values['dump_mode'] = DumpMode.OVERWRITE
 
-        # Handle Filters: map keys and determine if specific filters were set
-        # No need to map 'groups' anymore as field name matches
-        filter_map_from_option = {
-            # "groups": "groups", # No longer needed
-            'user': 'user',
-            'codes': 'codes',
-            'computers': 'computers',
-            'start_date': 'start_date',
-            'end_date': 'end_date',
-        }
-        has_specific_filters = False
-        # Check original Click option names + 'groups' which now matches
-        click_filter_keys = list(filter_map_from_option.keys()) + ['groups']
-        for key in click_filter_keys:
-            if key in values and values[key] is not None:
-                has_specific_filters = True
-                # Move value if key names differ (only for start/end_date now)
-                target_field = filter_map_from_option.get(key, key)
-                if key != target_field:
-                    values[target_field] = values.pop(key)
-
-        # Determine Profile Scope
-        all_entries_set = values.get('all_entries', False)  # Default to False if key missing
-
-        if all_entries_set:
-            values['profile_dump_selection'] = ProfileDumpSelection.ALL
-        else:
-            # Check for specific filters using internal field names
-            specific_filter_fields = {'groups', 'user', 'codes', 'computers', 'start_date', 'end_date', 'past_days'}
-            has_specific_filters = any(
-                field in values and values[field] is not None and values[field] != []
-                for field in specific_filter_fields
-            )
-
-            if has_specific_filters:
-                values['profile_dump_selection'] = ProfileDumpSelection.SPECIFIC
-            # Default to NONE only if not set otherwise
-            elif 'profile_dump_selection' not in values:
-                values['profile_dump_selection'] = ProfileDumpSelection.NONE
         return values
 
     # --- Serialization override ---
@@ -283,7 +249,7 @@ class DumpConfig(BaseModel):
         data.pop('dump_mode', None)
 
         # 2. Profile Scope -> all_entries flag
-        data['all_entries'] = self.profile_dump_selection == ProfileDumpSelection.ALL
+        data['all_entries'] = self.all_entries
 
         # 3. Filter fields -> option names & identifier serialization
         # No need to map 'groups' name
@@ -294,6 +260,7 @@ class DumpConfig(BaseModel):
             'computers': 'computers',
             'start_date': 'start_date',
             'end_date': 'end_date',
+            'past_days': 'past_days',
         }
         orm_fields_map = {'user': 'email', 'computers': 'uuid', 'codes': 'uuid'}
 

@@ -309,7 +309,7 @@ def profile_delete(force, delete_data, profiles):
 @options.SYMLINK_CALCS()
 @options.ORGANIZE_BY_GROUPS()
 @options.ALSO_UNGROUPED()
-@options.UPDATE_GROUPS()
+@options.RELABEL_GROUPS()
 @options.INCLUDE_INPUTS()
 @options.INCLUDE_OUTPUTS()
 @options.INCLUDE_ATTRIBUTES()
@@ -340,7 +340,7 @@ def profile_dump(
     symlink_calcs,
     organize_by_groups,
     also_ungrouped,
-    update_groups,
+    relabel_groups,
     include_inputs,
     include_outputs,
     include_attributes,
@@ -361,7 +361,7 @@ def profile_dump(
 
     from aiida.cmdline.utils import echo
     from aiida.tools.dumping import ProfileDumper
-    from aiida.tools.dumping.config import DumpConfig, DumpMode, ProfileDumpSelection
+    from aiida.tools.dumping.config import DumpConfig, DumpMode
     from aiida.tools.dumping.utils.paths import DumpPaths
 
     warning_msg = (
@@ -423,7 +423,7 @@ def profile_dump(
                     'symlink_calcs': symlink_calcs,
                     'organize_by_groups': organize_by_groups,
                     'also_ungrouped': also_ungrouped,
-                    'update_groups': update_groups,
+                    'relabel_groups': relabel_groups,
                     'include_inputs': include_inputs,
                     'include_outputs': include_outputs,
                     'include_attributes': include_attributes,
@@ -438,17 +438,17 @@ def profile_dump(
 
         # --- Check final determined scope ---
         if (
-            final_dump_config.profile_dump_selection == ProfileDumpSelection.NONE
+            not (final_dump_config.all_entries or final_dump_config.filters_set)
             and final_dump_config.dump_mode != DumpMode.DRY_RUN
         ):
             echo.echo_warning('No specific data selection determined from config file or CLI arguments.')
-            msg = 'Please specify `--all` to dump all profile data or filters such as `groups`, `user` etc.'
+            msg = 'Please specify `--all` to dump all profile data or filters such as `groups`, `user`, etc.'
             echo.echo_warning(msg)
             echo.echo_warning('Use `--help` for all options and `--dry-run` to preview.')
 
         # --- Other logical checks ---
-        if not final_dump_config.organize_by_groups and final_dump_config.update_groups:
-            echo.echo_warning('`update_groups` is True, but `organize_by_groups` is False.')
+        if not final_dump_config.organize_by_groups and final_dump_config.relabel_groups:
+            echo.echo_warning('`relabel_groups` is True, but `organize_by_groups` is False.')
         if final_dump_config.dump_mode == DumpMode.DRY_RUN and overwrite:
             msg = (
                 '`--dry-run` and `--overwrite` selected (or set in config). Overwrite operation will NOT be performed.'
@@ -459,13 +459,13 @@ def profile_dump(
         profile_dumper = ProfileDumper(config=final_dump_config, output_path=dump_base_output_path)
         profile_dumper.dump()
 
-        if (
-            final_dump_config.dump_mode != DumpMode.DRY_RUN
-            and final_dump_config.profile_dump_selection != ProfileDumpSelection.NONE
+        if final_dump_config.dump_mode != DumpMode.DRY_RUN and (
+            final_dump_config.all_entries or final_dump_config.filters_set
         ):
             msg = f'Raw files for profile `{profile.name}` dumped into folder `{dump_base_output_path.name}`.'
             echo.echo_success(msg)
-        else:
+
+        if final_dump_config.dump_mode == DumpMode.DRY_RUN:
             echo.echo_success('Dry run completed.')
 
     except Exception as e:

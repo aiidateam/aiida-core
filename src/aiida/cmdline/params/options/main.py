@@ -108,6 +108,7 @@ __all__ = (
     'PROFILE_SET_DEFAULT',
     'PROJECT',
     'RAW',
+    'RELABEL_GROUPS',
     'REPOSITORY_PATH',
     'SCHEDULER',
     'SILENT',
@@ -119,7 +120,6 @@ __all__ = (
     'TRANSPORT',
     'TRAVERSAL_RULE_HELP_STRING',
     'TYPE_STRING',
-    'UPDATE_GROUPS',
     'USER',
     'USER_EMAIL',
     'USER_FIRST_NAME',
@@ -897,11 +897,11 @@ ONLY_TOP_LEVEL_WORKFLOWS = OverridableOption(
     help='If a top-level workflow calls sub-workflows, create a designated directory only for the top-level workflow.',
 )
 
-UPDATE_GROUPS = OverridableOption(
-    '--update-groups/--no-update-groups',
+RELABEL_GROUPS = OverridableOption(
+    '--relabel-groups/--no-relabel-groups',
     default=True,
     show_default=True,
-    help='Update directories if nodes have been added to other groups, or organized differently in terms of groups.',
+    help='Update directories and log entries for the dumping if groups have been relabeled since the last dump.',
 )
 
 DUMP_UNSEALED = OverridableOption(

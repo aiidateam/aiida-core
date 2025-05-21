@@ -10,6 +10,7 @@
 
 import enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from pathlib import Path
 
 from plumpy.process_states import ProcessState
 
@@ -25,6 +26,7 @@ from ..node import Node, NodeLinks
 if TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, Process
     from aiida.engine.processes.builder import ProcessBuilder
+    from aiida.tools.dumping.config import DumpConfig
 
 __all__ = ('ProcessNode',)
 
@@ -603,3 +605,25 @@ class ProcessNode(Sealable, Node):
         except ValueError:
             return None
         return caller
+
+    def dump(self, config: Optional['DumpConfig'] = None, output_path: Optional[Union[str, Path]] = None) -> Path:
+
+        from aiida.tools.dumping.config import DumpConfig
+        from aiida.tools.dumping.engine import DumpEngine
+        from aiida.tools.dumping.utils.paths import DumpPaths
+
+        if not config:
+            config = DumpConfig()
+
+        if output_path:
+            target_path: Path = Path(output_path).resolve()
+        else:
+            target_path = DumpPaths.get_default_dump_path(entity=self)
+
+        engine = DumpEngine(
+            base_output_path=target_path,
+            config=config,
+        )
+        engine.dump(entity=self)
+
+        return target_path

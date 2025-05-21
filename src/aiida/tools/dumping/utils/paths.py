@@ -34,9 +34,6 @@ class DumpPaths:
     acting as a central policy for the dump layout.
     """
 
-    # --- Constants ---
-    # (Move constants like 'groups_folder_name', 'ungrouped_folder_name',
-    #  'calculations_folder_name', etc., here if they are universally used)
     GROUPS_DIR_NAME = 'groups'
     UNGROUPED_DIR_NAME = 'ungrouped'
     CALCULATIONS_DIR_NAME = 'calculations'
@@ -51,16 +48,12 @@ class DumpPaths:
         self, base_output_path: Path, config: DumpConfig, dump_target_entity: Optional[orm.Node | orm.Group] = None
     ):
         """
-        Initializes the DumpPaths policy.
+        Initializes the DumpPaths.
 
         :param base_output_path: The absolute root path for this entire dump operation.
-                                 For a facade like `GroupDumper(group, output_path=...)`,
-                                 this `base_output_path` IS the `output_path` provided to the facade.
         :param config: The DumpConfig object.
         :param dump_target_entity: The primary entity this dump operation is targeting
-                                   (e.g., a specific Group if GroupDumper is used, a ProcessNode
-                                   if ProcessDumper is used, or None for ProfileDumper).
-                                   This helps in contextual path decisions.
+            This helps in contextual path decisions.
         """
         self.base_output_path: Path = base_output_path.resolve()
         self.config: DumpConfig = config
@@ -273,17 +266,17 @@ class DumpPaths:
         :param appendix: Optional appendix for the path
         :return: The default dump path
         """
-        return _get_default_dump_path_impl(entity, prefix, appendix)
+        return _get_default_dump_path(entity, prefix, appendix)
 
 
 @singledispatch
-def _get_default_dump_path_impl(entity, prefix: Optional[str], appendix: Optional[str]) -> Path:
+def _get_default_dump_path(entity, prefix: Optional[str], appendix: Optional[str]) -> Path:
     """Single dispatch implementation for default dump paths."""
     msg = f'No default dump path implementation for type {type(entity)}'
     raise NotImplementedError(msg)
 
 
-@_get_default_dump_path_impl.register
+@_get_default_dump_path.register
 def _(process_node: orm.ProcessNode, prefix: Optional[str], appendix: Optional[str]) -> Path:
     """Generate default dump path for ProcessNode."""
     path_entities = []
@@ -304,7 +297,7 @@ def _(process_node: orm.ProcessNode, prefix: Optional[str], appendix: Optional[s
     return Path('-'.join(path_entities))
 
 
-@_get_default_dump_path_impl.register
+@_get_default_dump_path.register
 def _(profile: Profile, prefix: Optional[str], appendix: Optional[str]) -> Path:
     """Generate default dump path for Profile."""
     label_elements = []
@@ -318,7 +311,7 @@ def _(profile: Profile, prefix: Optional[str], appendix: Optional[str]) -> Path:
     return Path('-'.join(label_elements))
 
 
-@_get_default_dump_path_impl.register
+@_get_default_dump_path.register
 def _(group: orm.Group, prefix: Optional[str], appendix: Optional[str]) -> Path:
     """Generate default dump path for Group."""
     label_elements = []

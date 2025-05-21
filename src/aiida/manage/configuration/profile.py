@@ -14,7 +14,8 @@ import collections
 import os
 import pathlib
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, Type
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, Type, Union
 
 from aiida.common import exceptions
 
@@ -22,6 +23,7 @@ from .options import parse_option
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
+    from aiida.tools.dumping import DumpConfig
 
 __all__ = ('Profile',)
 
@@ -261,3 +263,37 @@ class Profile:
                 'pid': str(daemon_dir / f'aiida-{self.name}.pid'),
             },
         }
+
+    def dump(self, config: Optional[DumpConfig] = None, output_path: Optional[Union[str, Path]] = None) -> Path:
+
+        from aiida.common.log import AIIDA_LOGGER
+        from aiida.tools.dumping.config import DumpConfig, DumpMode
+        from aiida.tools.dumping.engine import DumpEngine
+        from aiida.tools.dumping.utils.paths import DumpPaths
+
+        logger = AIIDA_LOGGER.getChild('tools.dumping.profile')
+        # logger = AIIDA_LOGGER.getChild('profile.dump')
+
+        if not config:
+            config = DumpConfig()
+
+        # --- Check final determined scope ---
+        if (
+            not (config.all_entries or config.filters_set)
+            and config.dump_mode != DumpMode.DRY_RUN
+        ):
+            msg = 'No profile data explicitly selected. No dump will be performed.'
+            logger.warning(msg)
+
+        if output_path:
+            target_path: Path = Path(output_path).resolve()
+        else:
+            target_path = DumpPaths.get_default_dump_path(entity=self)
+
+        engine = DumpEngine(
+            base_output_path=target_path,
+            config=config,
+        )
+        engine.dump(entity=self)
+
+        return target_path

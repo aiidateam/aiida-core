@@ -697,7 +697,6 @@ def group_dump(
     from pydantic import ValidationError
 
     from aiida.cmdline.utils import echo
-    from aiida.tools.dumping import GroupDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode
     from aiida.tools.dumping.utils.paths import DumpPaths
 
@@ -780,9 +779,8 @@ def group_dump(
             )
             echo.echo_warning(msg)
 
-        # --- Instantiate and Run GroupDumper ---
-        group_dumper = GroupDumper(group=group, config=final_dump_config, output_path=dump_base_output_path)
-        group_dumper.dump()
+        # Run the dumping
+        group.dump(config=final_dump_config, output_path=dump_base_output_path)
 
         if final_dump_config.dump_mode != DumpMode.DRY_RUN:
             msg = f'Raw files for group `{group.label}` dumped into folder `{dump_base_output_path.name}`.'

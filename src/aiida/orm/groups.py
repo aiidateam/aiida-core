@@ -10,6 +10,7 @@
 
 import datetime
 import warnings
+from pathlib import Path
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
     from aiida.orm import Node, User
     from aiida.orm.implementation import StorageBackend
     from aiida.orm.implementation.groups import BackendGroup  # noqa: F401
+    from aiida.tools.dumping.config import DumpConfig
 
 __all__ = ('AutoGroup', 'Group', 'ImportGroup', 'UpfFamily')
 
@@ -357,6 +359,28 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     def is_user_defined(self) -> bool:
         """:return: True if the group is user defined, False otherwise"""
         return not self.type_string
+
+    def dump(self, config: Optional['DumpConfig'] = None, output_path: Optional[Union[str, Path]] = None) -> Path:
+
+        from aiida.tools.dumping.config import DumpConfig
+        from aiida.tools.dumping.engine import DumpEngine
+        from aiida.tools.dumping.utils.paths import DumpPaths
+
+        if not config:
+            config = DumpConfig()
+
+        if output_path:
+            target_path: Path = Path(output_path).resolve()
+        else:
+            target_path = DumpPaths.get_default_dump_path(entity=self)
+
+        engine = DumpEngine(
+            base_output_path=target_path,
+            config=config,
+        )
+        engine.dump(entity=self)
+
+        return target_path
 
     _deprecated_extra_methods = {
         'extras': 'all',

@@ -468,29 +468,24 @@ computationally demanding).
 Python API
 ----------
 
-The dump functionality is also available through a Python API:
+The dump functionality is also available via the Python API:
 
 .. code-block:: python
 
-    # Dump a single process
     from aiida import orm, load_profile
-    from aiida.tools.dumping import ProcessDumper, GroupDumper, ProfileDumper
 
-    load_profile()
+    # Dump the default profile
     process_node = orm.load_node(4)  # ArithmeticAddCalculation node
-    process_dumper = ProcessDumper(process_node=process_node)
-    process_dumper.dump()
+    process_node.dump()
 
     # Dump a group
-    group = orm.load_group('my-calculations')
-    group_dumper = GroupDumper(group=group)
-    group_dumper.dump()
+    group = orm.load_group("my-calculations")
+    group.dump()
 
-    # Dump all data in the default profile
-    profile_dumper = ProfileDumper()
-    profile_dumper.config.all_entries = True
-    profile_dumper.dump()
-
+    # Dump the default profile -> Need to  explicitly select all entries
+    from aiida.tools.dumping.config import DumpConfig
+    profile = load_profile()
+    profile.dump(config=DumpConfig(all_entries=True))
 
 Usage Scenarios
 ---------------

@@ -629,7 +629,6 @@ def process_dump(
 
     from aiida.cmdline.utils import echo
     from aiida.tools.archive.exceptions import ExportValidationError
-    from aiida.tools.dumping import ProcessDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode
     from aiida.tools.dumping.utils.paths import DumpPaths
 
@@ -693,11 +692,8 @@ def process_dump(
             msg = 'Config specifies both `dry_run` and `overwrite` as True. Overwrite will NOT be performed.'
             echo.echo_warning(msg)
 
-        # --- Instantiate and Run ProcessDumper ---
-        process_dumper = ProcessDumper(
-            process_node=process, config=final_dump_config, output_path=dump_base_output_path
-        )
-        process_dumper.dump()
+        # Execute dumping
+        process.dump(config=final_dump_config, output_path=dump_base_output_path)
 
         if final_dump_config.dump_mode != DumpMode.DRY_RUN:
             msg = f'Raw files for process `{process.pk}` dumped into folder `{dump_base_output_path.name}`.'

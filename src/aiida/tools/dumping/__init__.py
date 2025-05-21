@@ -8,7 +8,4 @@
 ###########################################################################
 """Public API for data dumping functionality."""
 
-from aiida.tools.dumping.config import DumpConfig, DumpMode
-from aiida.tools.dumping.facades import GroupDumper, ProcessDumper, ProfileDumper
-
-__all__ = ('DumpConfig', 'DumpMode', 'GroupDumper', 'ProcessDumper', 'ProfileDumper')
+# gotcha

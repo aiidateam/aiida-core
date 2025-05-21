@@ -360,7 +360,6 @@ def profile_dump(
     from pydantic import ValidationError
 
     from aiida.cmdline.utils import echo
-    from aiida.tools.dumping import ProfileDumper
     from aiida.tools.dumping.config import DumpConfig, DumpMode
     from aiida.tools.dumping.utils.paths import DumpPaths
 
@@ -436,16 +435,6 @@ def profile_dump(
                 echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
                 return
 
-        # --- Check final determined scope ---
-        if (
-            not (final_dump_config.all_entries or final_dump_config.filters_set)
-            and final_dump_config.dump_mode != DumpMode.DRY_RUN
-        ):
-            echo.echo_warning('No specific data selection determined from config file or CLI arguments.')
-            msg = 'Please specify `--all` to dump all profile data or filters such as `groups`, `user`, etc.'
-            echo.echo_warning(msg)
-            echo.echo_warning('Use `--help` for all options and `--dry-run` to preview.')
-
         # --- Other logical checks ---
         if not final_dump_config.organize_by_groups and final_dump_config.relabel_groups:
             echo.echo_warning('`relabel_groups` is True, but `organize_by_groups` is False.')
@@ -455,9 +444,8 @@ def profile_dump(
             )
             echo.echo_warning(msg)
 
-        # --- Instantiate and Run ProfileDumper ---
-        profile_dumper = ProfileDumper(config=final_dump_config, output_path=dump_base_output_path)
-        profile_dumper.dump()
+        # Run the dumping
+        _ = profile.dump(config=final_dump_config, output_path=dump_base_output_path)
 
         if final_dump_config.dump_mode != DumpMode.DRY_RUN and (
             final_dump_config.all_entries or final_dump_config.filters_set

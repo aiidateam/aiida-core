@@ -1338,6 +1338,14 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
 
     value = classifiers.ormclass_type_string
 
+    # Users searching for `AbstractCode` (sub)classes want to get all the codes (Portable, Installed etc.)
+    # Unfortunately, because AbstractCode was introduced later, its entry point is 'data.core.code.abstract',
+    # while the 'core.code' entry point is claimed by the Legacy Code class.
+    # So to get all the code types, including the Legacy Code, we adjust the filter to 'data.core.code'.
+    # Note, this only make sense if `subclassing` parameter is True!
+    if value == 'data.core.code.abstract.AbstractCode.':
+        value = 'data.core.code.'
+
     if not subclassing:
         filters = {'==': value}
     else:

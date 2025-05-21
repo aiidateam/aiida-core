@@ -20,6 +20,8 @@ build:
     - asdf install uv 0.5.22
     - asdf global uv 0.5.22
     create_environment:
+    # Create a virtual environment in '.venv/' folder
+    # which is picked up automatically by `uv sync` and `uv run` commands below
     - uv venv
     install:
     - uv sync --extra docs --extra tests --extra rest --extra atomic_tools

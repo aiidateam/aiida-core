@@ -15,19 +15,21 @@ classifiers = [
   'Programming Language :: Python :: 3.10',
   'Programming Language :: Python :: 3.11',
   'Programming Language :: Python :: 3.12',
+  'Programming Language :: Python :: 3.13',
   'Topic :: Scientific/Engineering'
 ]
 dependencies = [
   'alembic~=1.2',
   'archive-path~=0.4.2',
   "asyncssh~=2.19.0",
-  'circus~=0.18.0',
+  'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click~=8.1',
-  'disk-objectstore~=1.2',
+  'disk-objectstore~=1.3.0',
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
   'graphviz~=0.19',
+  'plumpy~=0.25.0',
   'ipython>=7',
   'jedi<0.19',
   'jinja2~=3.0',
@@ -35,7 +37,6 @@ dependencies = [
   'importlib-metadata~=6.0',
   'numpy~=1.21',
   'paramiko~=3.0',
-  'plumpy~=0.24.0',
   'pgsu~=0.3.0',
   'psutil~=5.6',
   'psycopg[binary]~=3.0',
@@ -64,6 +65,7 @@ requires-python = '>=3.9'
 
 [project.entry-points.'aiida.calculations']
 'core.arithmetic.add' = 'aiida.calculations.arithmetic.add:ArithmeticAddCalculation'
+'core.stash' = 'aiida.calculations.stash:StashCalculation'
 'core.templatereplacer' = 'aiida.calculations.templatereplacer:TemplatereplacerCalculation'
 'core.transfer' = 'aiida.calculations.transfer:TransferCalculation'
 
@@ -101,6 +103,7 @@ requires-python = '>=3.9'
 'core.bool' = 'aiida.orm.nodes.data.bool:Bool'
 'core.cif' = 'aiida.orm.nodes.data.cif:CifData'
 'core.code' = 'aiida.orm.nodes.data.code.legacy:Code'
+'core.code.abstract' = 'aiida.orm.nodes.data.code.abstract:AbstractCode'
 'core.code.containerized' = 'aiida.orm.nodes.data.code.containerized:ContainerizedCode'
 'core.code.installed' = 'aiida.orm.nodes.data.code.installed:InstalledCode'
 'core.code.portable' = 'aiida.orm.nodes.data.code.portable:PortableCode'
@@ -137,6 +140,17 @@ requires-python = '>=3.9'
 'process.workflow' = 'aiida.orm.nodes.process.workflow.workflow:WorkflowNode'
 'process.workflow.workchain' = 'aiida.orm.nodes.process.workflow.workchain:WorkChainNode'
 'process.workflow.workfunction' = 'aiida.orm.nodes.process.workflow.workfunction:WorkFunctionNode'
+
+[project.entry-points.'aiida.orm']
+'core.auth_info' = 'aiida.orm.authinfos:AuthInfo'
+'core.comment' = 'aiida.orm.comments:Comment'
+'core.computer' = 'aiida.orm.computers:Computer'
+'core.data' = 'aiida.orm.nodes.data.data:Data'
+'core.entity' = 'aiida.orm.entities:Entity'
+'core.group' = 'aiida.orm.groups:Group'
+'core.log' = 'aiida.orm.logs:Log'
+'core.node' = 'aiida.orm.nodes.node:Node'
+'core.user' = 'aiida.orm.users:User'
 
 [project.entry-points.'aiida.parsers']
 'core.arithmetic.add' = 'aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser'
@@ -179,7 +193,6 @@ requires-python = '>=3.9'
 'core.local' = 'aiida.transports.plugins.local:LocalTransport'
 'core.ssh' = 'aiida.transports.plugins.ssh:SshTransport'
 'core.ssh_async' = 'aiida.transports.plugins.ssh_async:AsyncSshTransport'
-'core.ssh_auto' = 'aiida.transports.plugins.ssh_auto:SshAutoTransport'
 
 [project.entry-points.'aiida.workflows']
 'core.arithmetic.add_multiply' = 'aiida.workflows.arithmetic.add_multiply:add_multiply'

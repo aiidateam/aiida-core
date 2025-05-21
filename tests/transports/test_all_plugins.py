@@ -63,14 +63,6 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
 
     if request.param == 'core.ssh':
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
-    elif request.param == 'core.ssh_auto':
-        kwargs = {'machine': 'localhost'}
-        # The transport config is store in a independent temporary path per test to not mix up
-        # with the files under operating.
-        filepath_config = tmp_path_factory.mktemp('transport') / 'config'
-        monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
-        if not filepath_config.exists():
-            filepath_config.write_text('Host localhost')
     elif request.param == 'core.ssh_async':
         kwargs = {
             'machine': 'localhost',
@@ -569,6 +561,12 @@ def test_put_and_get_tree(custom_transport, tmp_path_remote, tmp_path_local):
             {'local': {'file.txt': 'Viva verdi'}},
             ('local', 'local'),
             {'local': {'file.txt': 'Viva verdi', 'local': {'file.txt': 'Viva verdi'}}},
+        ),
+        (
+            {'local': {'sub': {'file.txt': 'Viva verdi'}}},
+            {},
+            ('local/sub', 'local/sub'),
+            {'local': {'sub': {'file.txt': 'Viva verdi'}}},
         ),
     ),
 )

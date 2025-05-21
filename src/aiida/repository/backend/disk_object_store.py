@@ -90,12 +90,10 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self._container as container:
             return container.add_streamed_object(handle)
 
-    def _put_objects_from_filelike_packed(self, handle_list) -> str:
+    def _put_objects_from_filelike_packed(self, handle_list) -> list[str]:
         """Store the byte contents of a list of files in the repository."""
         with self._container as container:
-            return container.add_streamed_objects_to_pack(
-                stream_list=handle_list,
-            )
+            return container.add_streamed_objects_to_pack(stream_list=handle_list)
 
     def has_objects(self, keys: t.List[str]) -> t.List[bool]:
         with self._container as container:
@@ -119,7 +117,9 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             with container.get_object_stream(key) as handle:
                 yield handle  # type: ignore[misc]
 
-    def iter_object_streams(self, keys: t.List[str]) -> t.Iterator[t.Tuple[str, t.BinaryIO]]:
+    def iter_object_streams(
+        self, keys: t.List[str]
+    ) -> t.Iterator[t.Tuple[str, t.BinaryIO | t.ContextManager[t.BinaryIO]]]:
         with self._container.get_objects_stream_and_meta(keys) as triplets:
             for key, stream, _ in triplets:
                 assert stream is not None

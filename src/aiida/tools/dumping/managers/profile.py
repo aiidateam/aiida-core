@@ -16,7 +16,7 @@ from aiida import orm
 from aiida.common import NotExistent
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm import Group, QueryBuilder, WorkflowNode
-from aiida.tools.dumping.config import GroupDumpScope, ProfileDumpSelection
+from aiida.tools.dumping.config import GroupDumpScope
 from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.managers.collection import CollectionDumpManager
 from aiida.tools.dumping.tracking import DumpTracker
@@ -56,7 +56,8 @@ class ProfileDumpManager(CollectionDumpManager):
     def _determine_groups_to_process(self) -> list[Group]:
         """Determine which groups to process based on config."""
         groups_to_process: list[Group] = []
-        if self.config.profile_dump_selection == ProfileDumpSelection.ALL:
+        # NOTE: Verify
+        if not self.config.groups or self.config.all_entries:
             logger.info('Dumping all groups as requested by configuration.')
             try:
                 qb_groups = QueryBuilder().append(orm.Group)
@@ -306,7 +307,7 @@ class ProfileDumpManager(CollectionDumpManager):
     def dump(self, changes: DumpChanges) -> None:
         """Dumps the entire profile by orchestrating helper methods."""
         logger.info('Executing ProfileDumpManager')
-        if self.config.profile_dump_selection == ProfileDumpSelection.NONE:
+        if not self.config.all_entries or self.config.filters_set:
             logger.report('Default profile dump scope is NONE, skipping profile content dump.')
             return
 

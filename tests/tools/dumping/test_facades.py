@@ -1180,7 +1180,7 @@ class TestProfileDumper:
         # Re-instantiate dumper or ensure config update is picked up
         config_update = DumpConfig(
             profile_dump_selection=ProfileDumpSelection.ALL,
-            update_groups=True,
+            relabel_groups=True,
             dump_mode=DumpMode.INCREMENTAL,
             filter_by_last_dump_time=False,
         )

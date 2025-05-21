@@ -611,7 +611,7 @@ def process_dump(
 
     Child calculations/workflows (also called `CalcJob`s/`CalcFunction`s and `WorkChain`s/`WorkFunction`s in AiiDA
     jargon) run by the parent workflow are contained in the directory tree as sub-folders and are sorted by their
-    creation time.  The directory tree thus dumps the logical execution of the workflow, which can also be queried by
+    creation time. The directory tree thus mirrors the logical execution of the workflow, which can also be queried by
     running `verdi process status <pk>` on the command line.
 
     By default, input and output files of each calculation can be found in the corresponding "inputs" and
@@ -694,7 +694,9 @@ def process_dump(
             echo.echo_warning(msg)
 
         # --- Instantiate and Run ProcessDumper ---
-        process_dumper = ProcessDumper(process=process, config=final_dump_config, output_path=dump_base_output_path)
+        process_dumper = ProcessDumper(
+            process_node=process, config=final_dump_config, output_path=dump_base_output_path
+        )
         process_dumper.dump()
 
         if final_dump_config.dump_mode != DumpMode.DRY_RUN:

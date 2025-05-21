@@ -102,7 +102,6 @@ class GroupDumpManager(CollectionDumpManager):
         logger.info(f"Finished GroupDumpManager for group '{self.group_to_dump.label}'.")
 
     def _update_single_group_stats(self, group: orm.Group, group_content_path: Path) -> None:
-        # ... (implementation as before) ...
         logger.info(f"Calculating final directory stats for group '{group.label}'.")
         group_log_entry = self.dump_tracker.groups.get_entry(group.uuid)
 

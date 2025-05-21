@@ -29,7 +29,7 @@ class ProcessDumper:
     @classmethod
     def from_config(
         cls,
-        process: orm.ProcessNode | int | str,
+        process_node: orm.ProcessNode | int | str,
         config_path: str | Path,
         output_path: Path | str | None = None,
         **kwargs,
@@ -42,7 +42,7 @@ class ProcessDumper:
         :return: ProcessDumper instance.
         """
 
-        verified_process = cls._verify_process_node(process)
+        verified_process = cls._verify_process_node(process_node)
         config_path = Path(config_path).resolve()
 
         # Determine the final output path
@@ -66,7 +66,7 @@ class ProcessDumper:
 
     def __init__(
         self,
-        process: orm.ProcessNode | int | str,
+        process_node: orm.ProcessNode | int | str,
         config: DumpConfig | None = None,
         output_path: str | Path | None = None,
     ) -> None:
@@ -78,7 +78,7 @@ class ProcessDumper:
         :param output_path: Optional base path to write the dump to. Can be a string or ``Path``.
             If ``None``, a default path based on the profile name will be used.
         """
-        self.process_node = ProcessDumper._verify_process_node(process)
+        self.process_node = ProcessDumper._verify_process_node(process_node)
         self.config: DumpConfig = config if config is not None else DumpConfig()
 
         # Resolve DumpPaths based on output_path and the node
@@ -226,12 +226,11 @@ class GroupDumper:
             msg = f'Invalid type for group identifier: {type(identifier)}'
             raise TypeError(msg)
 
-    def dump(self):
+    def dump(self) -> None:
         """Perform the dump operation. Simply delegate to the engine."""
         # Instantiate engine for dump operation rather than on construction such that
         # Successive incremental dumps can be achieved with one instance
         engine = DumpEngine(base_output_path=self.base_output_path, config=self.config, dump_target_entity=self.group)
-
         engine.dump(entity=self.group)
 
 

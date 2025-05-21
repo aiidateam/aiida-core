@@ -118,9 +118,6 @@ class DumpEngine:
             logger.debug(f'Config file {config_path} not found. Using default/provided config.')
             return None
 
-        assert self.dump_paths.top_level is not None
-        config_path_rel = config_path.relative_to(self.dump_paths.top_level)
-        logger.info(f'Loading configuration from {config_path_rel}...')
         try:
             loaded_config = DumpConfig.parse_yaml_file(path=config_path)
             logger.info('Successfully loaded configuration from file.')
@@ -147,10 +144,10 @@ class DumpEngine:
         Selects and executes the appropriate dump strategy based on the entity.
         The base output directory is assumed to be prepared by DumpPaths.__init__().
         """
-        if isinstance(entity, orm.Group):
-            entity_description = f'group `{entity.label}` (PK: {entity.pk})'
-        elif isinstance(entity, orm.ProcessNode):
+        if isinstance(entity, orm.ProcessNode):
             entity_description = f'process node (PK: {entity.pk})'
+        elif isinstance(entity, orm.Group):
+            entity_description = f'group `{entity.label}` (PK: {entity.pk})'
         elif isinstance(entity, Profile):
             entity_description = f'profile `{entity.name}`'
 
@@ -202,7 +199,12 @@ class DumpEngine:
             group_manager.dump(changes=all_changes)
 
         elif isinstance(entity, Profile):
-            logger.info('Executing Profile dump.')
+            if not self.config.all_entries and not self.config.filters_set:
+                # NOTE: Hack for now, delete empty directory again. Ideally don't even create in the first place
+                # Need to check again where it is actually created...
+                self.dump_paths.safe_delete_directory(directory_path=self.dump_paths.base_output_path)
+                return
+
             node_changes, current_mapping = self.detector._detect_all_changes()
             group_changes = self.detector._detect_group_changes(
                 stored_mapping=self.stored_mapping, current_mapping=current_mapping

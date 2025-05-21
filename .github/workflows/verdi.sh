@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 # Test the loading time of `verdi`. This is an attempt to catch changes to the imports in `aiida.cmdline` that
 # would slow down `verdi` invocations and make tab-completion unusable.
 VERDI=`which verdi`
@@ -16,7 +18,7 @@ iteration=0
 while true; do
 
     iteration=$((iteration+1))
-    load_time=$(/usr/bin/time -q -f "%e" $VERDI 2>&1 > /dev/null)
+    load_time=$(/usr/bin/time -q -f "%e" $VERDI -h 2>&1 > /dev/null)
 
     if (( $(echo "$load_time < $LOAD_LIMIT" | bc -l) )); then
         echo "SUCCESS: loading time $load_time at iteration $iteration below $LOAD_LIMIT"

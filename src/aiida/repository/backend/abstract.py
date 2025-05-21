@@ -100,9 +100,9 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         #     raise TypeError(f'handle does not seem to be a byte stream: {type(handle)}.')
         return self._put_objects_from_filelike_packed(streams)
 
-    @abc.abstractmethod
-    def _put_objects_from_filelike_packed(self, streams: list[BinaryIO]) -> list[str]:
-        pass
+    # @abc.abstractmethod
+    # def _put_objects_from_filelike_packed(self, streams: list[BinaryIO]) -> list[str]:
+    #     pass
 
     def put_object_from_file(self, filepath: Union[str, pathlib.Path]) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.

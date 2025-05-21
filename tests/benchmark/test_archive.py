@@ -33,13 +33,16 @@ def recursive_provenance(in_node, depth, breadth, num_objects=0):
         calcfunc = CalcFunctionNode()
         calcfunc.set_process_state(ProcessState.FINISHED)
         calcfunc.set_exit_status(0)
-        calcfunc.base.links.add_incoming(in_node, link_type=LinkType.INPUT_CALC, link_label='input')
+        calcfunc.base.links.add_incoming(
+            in_node, link_type=LinkType.INPUT_CALC, link_label='input')
         calcfunc.store()
 
         out_node = Dict(dict={str(i): i for i in range(10)})
         for idx in range(num_objects):
-            out_node.base.repository.put_object_from_filelike(StringIO('a' * 10000), f'key{idx!s}')
-        out_node.base.links.add_incoming(calcfunc, link_type=LinkType.CREATE, link_label='output')
+            out_node.base.repository.put_object_from_filelike(
+                StringIO('a' * 10000), f'key{idx!s}')
+        out_node.base.links.add_incoming(
+            calcfunc, link_type=LinkType.CREATE, link_label='output')
         out_node.store()
 
         calcfunc.seal()
@@ -64,15 +67,21 @@ def get_export_kwargs(**kwargs):
     return obj
 
 
-TREE = {'no-objects': (4, 3, 0), 'with-objects': (4, 3, 2)}
+TREE = {
+    'no-objects': (4, 3, 0, False),
+    'with-objects': (4, 3, 2, False),
+    'import-to-packed': (1, 5, 10000, True),
+    'import-to-packed-control': (1, 5, 10000, False),
+}
 
 
-@pytest.mark.parametrize('depth,breadth,num_objects', TREE.values(), ids=TREE.keys())
+@pytest.mark.parametrize('depth,breadth,num_objects,packed', TREE.values(), ids=TREE.keys())
 @pytest.mark.benchmark(group='import-export')
-def test_export(benchmark, tmp_path, depth, breadth, num_objects):
+def test_export(benchmark, tmp_path, depth, breadth, num_objects, packed):
     """Benchmark exporting a provenance graph."""
     root_node = Dict()
-    recursive_provenance(root_node, depth=depth, breadth=breadth, num_objects=num_objects)
+    recursive_provenance(root_node, depth=depth,
+                         breadth=breadth, num_objects=num_objects)
     out_path = tmp_path / 'test.aiida'
     kwargs = get_export_kwargs(filename=str(out_path))
 
@@ -83,17 +92,19 @@ def test_export(benchmark, tmp_path, depth, breadth, num_objects):
     def _run():
         create_archive([root_node], **kwargs)
 
-    benchmark.pedantic(_run, setup=_setup, iterations=1, rounds=12, warmup_rounds=1)
+    benchmark.pedantic(_run, setup=_setup, iterations=1,
+                       rounds=12, warmup_rounds=1)
     assert out_path.exists()
 
 
-@pytest.mark.parametrize('depth,breadth,num_objects', TREE.values(), ids=TREE.keys())
+@pytest.mark.parametrize('depth,breadth,num_objects,packed', TREE.values(), ids=TREE.keys())
 @pytest.mark.benchmark(group='import-export')
-def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects):
+def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects, packed):
     """Benchmark importing a provenance graph."""
     aiida_profile.reset_storage()
     root_node = Dict()
-    recursive_provenance(root_node, depth=depth, breadth=breadth, num_objects=num_objects)
+    recursive_provenance(root_node, depth=depth,
+                         breadth=breadth, num_objects=num_objects)
     root_uuid = root_node.uuid
     out_path = tmp_path / 'test.aiida'
     kwargs = get_export_kwargs(filename=str(out_path))
@@ -103,7 +114,8 @@ def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects)
         aiida_profile.reset_storage()
 
     def _run():
-        import_archive(str(out_path))
+        import_archive(str(out_path), packed=packed)
 
-    benchmark.pedantic(_run, setup=_setup, iterations=1, rounds=12, warmup_rounds=1)
+    benchmark.pedantic(_run, setup=_setup, iterations=1,
+                       rounds=12, warmup_rounds=1)
     load_node(root_uuid)

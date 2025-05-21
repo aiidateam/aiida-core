@@ -2,11 +2,14 @@
 
 set -euo pipefail
 
+verdi devel check-load-time
+verdi devel check-undesired-imports
+
 # Test the loading time of `verdi`. This is an attempt to catch changes to the imports in `aiida.cmdline` that
 # would slow down `verdi` invocations and make tab-completion unusable.
 VERDI=`which verdi`
 
-# Typically, the loading time of `verdi` should be around ~0.2 seconds.
+# Typically, the loading time of `verdi` should be around <0.2 seconds.
 # Typically these types of tests are fragile. But with a load limit of more than twice
 # the ideal loading time, if exceeded, should give a reasonably sure indication
 # that the loading of `verdi` is unacceptably slowed down.

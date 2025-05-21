@@ -353,7 +353,7 @@ class PsqlDosBackend(StorageBackend):
 
         if session.bind is not None and session.bind.dialect.name == 'sqlite':
             # TODO: A dirty workaround:
-            #   SQLite DOS now doesn't have a dedicated background, and SQLite don't have JSONB type,
+            #   sqlite_dos now doesn't have a dedicated backend, and SQLite doesn't have JSONB type,
             #   so the casting need to be implement specifically.
             def to_json(x: dict[str, Any]):
                 return json.dumps(x)
@@ -380,7 +380,6 @@ class PsqlDosBackend(StorageBackend):
                         update_value = func.json_patch(mapper.c[key], update_value)
                 cases[key].append((when, update_value))
 
-        session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             values = {k: case(*v, else_=mapper.c[k]) for k, v in cases.items()}
             stmt = update(mapper).where(mapper.c.id.in_(id_list)).values(**values)

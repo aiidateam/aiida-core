@@ -80,7 +80,7 @@ class Process(PlumpyProcess):
     class SaveKeys(enum.Enum):
         """Keys used to identify things in the saved instance state bundle."""
 
-        CALC_ID: str = 'calc_id'
+        CALC_ID = 'calc_id'
 
     @classmethod
     def spec(cls) -> ProcessSpec:

@@ -1,6 +1,12 @@
 # Changelog
 
 
+## v2.6.4 - 2025-05-22
+
+### Fixes
+- Dependencies: Pin click to `~=8.1.0` (#6888) [[e1d55fa]](https://github.com/aiidateam/aiida-core/commit/e1d55fa0d6c268db7a25e9740679a5a0fbe412b8)
+
+
 ## v2.6.3 - 2024-11-06
 
 ### Fixes

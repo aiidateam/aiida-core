@@ -43,6 +43,7 @@ def test_user_configure_create(run_cli_command, create_user):
     options = list(
         itertools.chain(*zip(['--email', '--first-name', '--last-name', '--institution'], list(new_user.values())))
     )
+    options.append('--set-default')
 
     result = run_cli_command(cmd_user.user_configure, options)
     assert new_user['email'] in result.output
@@ -59,10 +60,11 @@ def test_user_configure_update(run_cli_command, create_user):
     """Reconfigure an existing user with `verdi user configure`."""
     new_user = create_user
     default_user = orm.User.collection.get_default()
-    new_user['email'] = default_user
+    new_user['email'] = default_user.email
     options = list(
         itertools.chain(*zip(['--email', '--first-name', '--last-name', '--institution'], list(new_user.values())))
     )
+    options.append('--set-default')
 
     result = run_cli_command(cmd_user.user_configure, options)
     assert default_user.email in result.output

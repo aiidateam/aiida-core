@@ -289,7 +289,7 @@ def reset_config():
     CONFIG = None
 
 
-def get_config(create=False):
+def get_config(create=False) -> Config:
     """Return the current configuration.
 
     If the configuration has not been loaded yet

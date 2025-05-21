@@ -8,6 +8,10 @@
 ###########################################################################
 """Definition of modules that are to be automatically loaded for `verdi shell`."""
 
+from __future__ import annotations
+
+import typing as t
+
 DEFAULT_MODULES_LIST = [
     ('aiida.common.links', 'LinkType', 'LinkType'),
     ('aiida.orm', 'Node', 'Node'),
@@ -41,7 +45,7 @@ DEFAULT_MODULES_LIST = [
 ]
 
 
-def ipython():
+def ipython() -> None:
     """Start any version of IPython"""
     for ipy_version in (_ipython, _ipython_pre_100, _ipython_pre_011):
         try:
@@ -54,7 +58,7 @@ def ipython():
     raise ImportError('No IPython available')
 
 
-def bpython():
+def bpython() -> None:
     """Start a bpython shell."""
     import bpython as bpy_shell
 
@@ -68,7 +72,7 @@ def bpython():
 AVAILABLE_SHELLS = {'ipython': ipython, 'bpython': bpython}
 
 
-def run_shell(interface=None):
+def run_shell(interface: str | None = None) -> None:
     """Start the chosen external shell."""
     available_shells = [AVAILABLE_SHELLS[interface]] if interface else AVAILABLE_SHELLS.values()
 
@@ -85,7 +89,7 @@ def run_shell(interface=None):
     raise ImportError
 
 
-def get_start_namespace():
+def get_start_namespace() -> dict[str, t.Any]:
     """Load all default and custom modules"""
     from aiida.manage import get_config_option
 
@@ -110,7 +114,7 @@ def get_start_namespace():
     return user_ns
 
 
-def _ipython_pre_011():
+def _ipython_pre_011() -> None:
     """Start IPython pre-0.11"""
     from IPython.Shell import IPShell
 
@@ -122,7 +126,7 @@ def _ipython_pre_011():
     ipy_shell.mainloop()
 
 
-def _ipython_pre_100():
+def _ipython_pre_100() -> None:
     """Start IPython pre-1.0.0"""
     from IPython.frontend.terminal.ipapp import TerminalIPythonApp
 
@@ -134,7 +138,7 @@ def _ipython_pre_100():
     app.start()
 
 
-def _ipython():
+def _ipython() -> None:
     """Start IPython >= 1.0"""
     from IPython import start_ipython
 

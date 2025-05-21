@@ -84,6 +84,7 @@ py:class aiida.tools.archive.abstract.EntityType
 py:class aiida.tools.archive.abstract.SelfType
 py:class aiida.common.lang.SelfType
 py:class aiida.common.lang.ReturnType
+py:class aiida.cmdline.params._shims.C
 py:obj aiida.common.ReturnType
 py:obj aiida.common.SelfType
 py:obj aiida.common.lang.ReturnType
@@ -135,6 +136,7 @@ py:class click.types.Choice
 py:class click.types.Path
 py:class click.types.File
 py:class click.types.StringParamType
+py:class click.parser._OptionParser
 py:func click.shell_completion._start_of_option
 py:meth click.Option.get_default
 py:meth fail

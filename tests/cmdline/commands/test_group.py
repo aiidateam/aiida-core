@@ -181,7 +181,8 @@ class TestVerdiGroup:
 
         # 6) Should raise if a group does not exist
         result = run_cli_command(cmd_group.group_delete, ['--force', 'non_existent_group'], raises=True)
-        assert b'no Group found with LABEL<non_existent_group>' in result.stderr_bytes
+        # TODO-DH: Why is this suddenly in stdout?
+        assert 'no Group found with LABEL<non_existent_group>' in result.output
 
         # 7) Should delete multiple groups
         orm.Group(label='group_test_delete_05').store()
@@ -202,49 +203,49 @@ class TestVerdiGroup:
             ['--force', 'do_not_delete_group', '--all-users'],
             raises=True,
         )
-        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        assert 'Cannot specify both GROUPS and any of the other filters' in result.output
         result = run_cli_command(
             cmd_group.group_delete,
             ['--force', 'do_not_delete_group', '--user', do_not_delete_user.email],
             raises=True,
         )
-        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        assert 'Cannot specify both GROUPS and any of the other filters' in result.output
         result = run_cli_command(
             cmd_group.group_delete,
             ['--force', 'do_not_delete_group', '--type-string', 'non_existent'],
             raises=True,
         )
-        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        assert 'Cannot specify both GROUPS and any of the other filters' in result.output
         result = run_cli_command(
             cmd_group.group_delete,
             ['--force', 'do_not_delete_group', '--past-days', '1'],
             raises=True,
         )
-        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        assert 'Cannot specify both GROUPS and any of the other filters' in result.output
         result = run_cli_command(
             cmd_group.group_delete,
             ['--force', 'do_not_delete_group', '--startswith', 'non_existent'],
             raises=True,
         )
-        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        assert 'Cannot specify both GROUPS and any of the other filters' in result.output
         result = run_cli_command(
             cmd_group.group_delete,
             ['--force', 'do_not_delete_group', '--endswith', 'non_existent'],
             raises=True,
         )
-        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        assert 'Cannot specify both GROUPS and any of the other filters' in result.output
         result = run_cli_command(
             cmd_group.group_delete,
             ['--force', 'do_not_delete_group', '--contains', 'non_existent'],
             raises=True,
         )
-        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        assert 'Cannot specify both GROUPS and any of the other filters' in result.output
         result = run_cli_command(
             cmd_group.group_delete,
             ['--force', 'do_not_delete_group', '--node', do_not_delete_node.pk],
             raises=True,
         )
-        assert b'Cannot specify both GROUPS and any of the other filters' in result.stderr_bytes
+        assert 'Cannot specify both GROUPS and any of the other filters' in result.output
 
         # 9) --user should delete groups for a specific user
         #   --all-users should delete groups for all users

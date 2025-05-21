@@ -878,7 +878,7 @@ class TestVerdiComputerCommands:
         """Test if `verdi computer delete` command behaves correctly when deleting a nonexisting computer"""
         # See if the command complains about not getting an existing computer
         result = self.cli_runner(computer_delete, ['computer_that_does_not_exist'], user_input='y', raises=True)
-        assert 'no Computer found with LABEL<computer_that_does_not_exist>' in result.stderr
+        assert 'no Computer found with LABEL<computer_that_does_not_exist>' in result.output
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
@@ -1013,7 +1013,9 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
 # comment on 'core.ssh_async':
 # It is important that 'ssh localhost' is functional in your test environment.
 # It should connect without asking for a password.
-@pytest.mark.parametrize('transport_type, config', [('core.ssh_async', ['--machine-or-host', 'localhost'])])
+@pytest.mark.parametrize(
+    'transport_type, config', [('core.ssh_async', ['--machine-or-host', 'localhost', '-n', '--safe-interval', '0.0'])]
+)
 def test_computer_setup_with_various_transport(run_cli_command, aiida_computer, transport_type, config):
     """Test setup of computer with ``core.ssh_async`` entry points.
 

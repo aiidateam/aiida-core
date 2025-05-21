@@ -52,14 +52,16 @@ def test_code_setup_deprecation(run_cli_command):
     # Checks if the deprecation warning is present when invoking the help page
     result = run_cli_command(cmd_code.setup_code, ['--help'])
     assert 'Deprecated:' in result.output
-    assert 'Deprecated:' in result.stderr
+    # Since click 8.2.0 the 'Deprecated:' message is in stdout
+    # assert 'Deprecated:' in result.stderr
 
     # Checks if the deprecation warning is present when invoking the command
     # Runs setup in interactive mode and sends Ctrl+D (\x04) as input so we exit the prompts.
     # This way we can check if the deprecated message was printed with the first prompt.
     result = run_cli_command(cmd_code.setup_code, user_input='\x04', use_subprocess=True, raises=True)
     assert 'Deprecated:' in result.output
-    assert 'Deprecated:' in result.stderr
+    # Since click 8.2.0 the 'Deprecated:' message is in stdout
+    # assert 'Deprecated:' in result.stderr
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

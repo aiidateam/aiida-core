@@ -22,7 +22,7 @@ dependencies:
 - kiwipy[rmq]~=0.7.7
 - importlib-metadata~=6.0
 - numpy~=1.21
-- paramiko>=2.7.2,~=2.7
+- paramiko<3.0.0,>=2.7.2
 - plumpy~=0.21.6
 - pgsu~=0.2.1
 - psutil~=5.6

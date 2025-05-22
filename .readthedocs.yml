@@ -24,6 +24,7 @@ build:
 
 # Let the build fail if there are any warnings
 sphinx:
+  configuration: docs/source/conf.py
   builder: html
   fail_on_warning: true
 

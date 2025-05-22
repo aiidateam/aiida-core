@@ -42,6 +42,6 @@ def MetadataField(  # noqa: N802
 
     for key, value in (('priority', priority), ('short_name', short_name), ('option_cls', option_cls)):
         if value is not None:
-            field_info.metadata.append({key: value})
+            field_info.metadata.append({key: value})  # type: ignore[union-attr]
 
     return field_info

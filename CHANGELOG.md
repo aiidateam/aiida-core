@@ -1,6 +1,7 @@
 # Changelog
 
-## v2.6.3 - 2024-11-TODO
+
+## v2.6.3 - 2024-11-06
 
 ### Fixes
 - CLI: Fix exception for `verdi plugin list` (#6560) [[c3b10b7]](https://github.com/aiidateam/aiida-core/commit/c3b10b759a9cd062800ef120591d5c7fd0ae4ee7)
@@ -16,30 +17,30 @@
 ## v2.6.2 - 2024-08-07
 
 ### Fixes
-- `LocalTransport`: Fix typo for `ignore_nonexisting` in `put` (#6471) [[ecda558d0]](https://github.com/v2.6.1/commit/ecda558d08c5608880308f69a21c05fe918be89f)
-- CLI: `verdi computer test` report correct failed tests (#6536) [[9c3f2bb58]](https://github.com/v2.6.1/commit/9c3f2bb589f1a6cc920ed2fbf0627924d8fce954)
-- CLI: Fix `verdi storage migrate` for profile without broker (#6550) [[389fc487d]](https://github.com/v2.6.1/commit/389fc487d092c2e34713d228e38c8164608bab2d)
-- CLI: Fix bug `verdi presto` when tab-completing without config (#6535) [[efcf75e40]](https://github.com/v2.6.1/commit/efcf75e405dcef8ca8c51b19d6262ca81f4413c3)
-- Engine: Change signature of `set_process_state_change_timestamp` [[923fd9f6e]](https://github.com/v2.6.1/commit/923fd9f6ec3cb39b8985ac149985046e720438f8)
-- Engine: Ensure node is sealed when process excepts (#6549) [[e3ed9a2f3]](https://github.com/v2.6.1/commit/e3ed9a2f3bf84e72cdc4c90e21494dc2b9c1cd56)
-- Engine: Fix bug in upload calculation for `PortableCode` with SSH (#6519) [[740ae2040]](https://github.com/v2.6.1/commit/740ae20408e4e3047c26c91221de5b96b8d7afbe)
-- Engine: Ignore failing process state change for `core.sqlite_dos` [[fb4f9815f]](https://github.com/v2.6.1/commit/fb4f9815fbd3bfe053cc0d1e3abb5b86bbc9dffd)
+- `LocalTransport`: Fix typo for `ignore_nonexisting` in `put` (#6471) [[ecda558d0]](https://github.com/aiidteam/commit/ecda558d08c5608880308f69a21c05fe918be89f)
+- CLI: `verdi computer test` report correct failed tests (#6536) [[9c3f2bb58]](https://github.com/aiidateam/commit/9c3f2bb589f1a6cc920ed2fbf0627924d8fce954)
+- CLI: Fix `verdi storage migrate` for profile without broker (#6550) [[389fc487d]](https://github.com/aiidateam/commit/389fc487d092c2e34713d228e38c8164608bab2d)
+- CLI: Fix bug `verdi presto` when tab-completing without config (#6535) [[efcf75e40]](https://github.com/aiidateam/commit/efcf75e405dcef8ca8c51b19d6262ca81f4413c3)
+- Engine: Change signature of `set_process_state_change_timestamp` [[923fd9f6e]](https://github.com/aiidateam/commit/923fd9f6ec3cb39b8985ac149985046e720438f8)
+- Engine: Ensure node is sealed when process excepts (#6549) [[e3ed9a2f3]](https://github.com/aiidateam/commit/e3ed9a2f3bf84e72cdc4c90e21494dc2b9c1cd56)
+- Engine: Fix bug in upload calculation for `PortableCode` with SSH (#6519) [[740ae2040]](https://github.com/aiidateam/commit/740ae20408e4e3047c26c91221de5b96b8d7afbe)
+- Engine: Ignore failing process state change for `core.sqlite_dos` [[fb4f9815f]](https://github.com/aiidateam/commit/fb4f9815fbd3bfe053cc0d1e3abb5b86bbc9dffd)
 
 ### Dependencies
-- Pin requirement to minor version `sphinx~=7.2.0` (#6527) [[25cb73188]](https://github.com/v2.6.1/commit/25cb731880d45045773f7674fee9367d792aeda9)
+- Pin requirement to minor version `sphinx~=7.2.0` (#6527) [[25cb73188]](https://github.com/aiidateam/commit/25cb731880d45045773f7674fee9367d792aeda9)
 
 ### Documentation
-- Add `PluggableSchemaValidator` to nitpick exceptions (#6515) [[0ce3c0025]](https://github.com/v2.6.1/commit/0ce3c0025384e95006d43e98da2a96b2cfadde70)
-- Add `robots.txt` to only allow indexing of `latest` and `stable` (#6517) [[a492e3492]](https://github.com/v2.6.1/commit/a492e349288ee90896193575edf319c2b7ea4c85)
-- Add succint overview of limitations of no-services profile [[d7ca5657b]](https://github.com/v2.6.1/commit/d7ca5657b0dec83cb8a440d0b8e11c9c84e38149)
-- Correct signature of `get_daemon_client` example snippet (#6554) [[92d391658]](https://github.com/v2.6.1/commit/92d391658e5e92113ad9a32d61444e23342ee0ae)
-- Fix typo in pytest plugins codeblock (#6513) [[eb23688fe]](https://github.com/v2.6.1/commit/eb23688febacb5b828d0f45ebdeedee65d0c00fe)
-- Move limitations warning to top of quick install [[493e529a7]](https://github.com/v2.6.1/commit/493e529a7aec052f81d1bbfed33e5b44db9434e2)
-- Remove note in installation guide regarding Python requirement [[9aa2044e4]](https://github.com/v2.6.1/commit/9aa2044e4ce665d64bb3a1c26f166512287aa28b)
-- Update `redirects.txt` for installation pages (#6509) [[508a9fb2a]](https://github.com/v2.6.1/commit/508a9fb2a7f6eb6f31b40b3f28d13c96f7875503)
+- Add `PluggableSchemaValidator` to nitpick exceptions (#6515) [[0ce3c0025]](https://github.com/aiidateam/commit/0ce3c0025384e95006d43e98da2a96b2cfadde70)
+- Add `robots.txt` to only allow indexing of `latest` and `stable` (#6517) [[a492e3492]](https://github.com/aiidateam/commit/a492e349288ee90896193575edf319c2b7ea4c85)
+- Add succint overview of limitations of no-services profile [[d7ca5657b]](https://github.com/aiidateam/commit/d7ca5657b0dec83cb8a440d0b8e11c9c84e38149)
+- Correct signature of `get_daemon_client` example snippet (#6554) [[92d391658]](https://github.com/aiidateam/commit/92d391658e5e92113ad9a32d61444e23342ee0ae)
+- Fix typo in pytest plugins codeblock (#6513) [[eb23688fe]](https://github.com/aiidateam/commit/eb23688febacb5b828d0f45ebdeedee65d0c00fe)
+- Move limitations warning to top of quick install [[493e529a7]](https://github.com/aiidateam/commit/493e529a7aec052f81d1bbfed33e5b44db9434e2)
+- Remove note in installation guide regarding Python requirement [[9aa2044e4]](https://github.com/aiidateam/commit/9aa2044e4ce665d64bb3a1c26f166512287aa28b)
+- Update `redirects.txt` for installation pages (#6509) [[508a9fb2a]](https://github.com/aiidateam/commit/508a9fb2a7f6eb6f31b40b3f28d13c96f7875503)
 
 ### Devops
-- Fix pymatgen import causing mypy to fail (#6540) [[813374fe1]](https://github.com/v2.6.1/commit/813374fe1ee003c8c05f9aa191147ec928dfa918)
+- Fix pymatgen import causing mypy to fail (#6540) [[813374fe1]](https://github.com/aiidateam/commit/813374fe1ee003c8c05f9aa191147ec928dfa918)
 
 
 ## v2.6.1 - 2024-07-01

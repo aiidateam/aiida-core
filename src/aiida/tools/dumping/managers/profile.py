@@ -190,8 +190,6 @@ class ProfileDumpManager(CollectionDumpManager):
                     nodes_by_type['calculations'].append(node)
                 elif isinstance(node, orm.WorkflowNode):
                     nodes_by_type['workflows'].append(node)
-                # Add elif for orm.Data if needed
-                # else: logger.debug(f"Node {node.pk} is not Calc/Work, ignoring for now.")
             except Exception as e:
                 logger.warning(f'Error classifying node {node.pk} by type: {e}')
 

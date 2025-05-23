@@ -38,8 +38,6 @@ class DumpPaths:
     UNGROUPED_DIR_NAME = 'ungrouped'
     CALCULATIONS_DIR_NAME = 'calculations'
     WORKFLOWS_DIR_NAME = 'workflows'
-    DATA_DIR_NAME = 'data'
-    OTHER_NODES_DIR_NAME = 'other_nodes'
     SAFEGUARD_FILE_NAME = '.aiida_dump_safeguard'
     TRACKING_LOG_FILE_NAME = 'aiida_dump_log.json'
     CONFIG_FILE_NAME = 'aiida_dump_config.yaml'
@@ -153,8 +151,6 @@ class DumpPaths:
             return self.CALCULATIONS_DIR_NAME
         elif isinstance(node, orm.WorkflowNode):
             return self.WORKFLOWS_DIR_NAME
-        elif isinstance(node, orm.Data):
-            return self.DATA_DIR_NAME
         else:
             msg = f'Wrong node type: {type(node)} was passed.'
             raise ValueError(msg)

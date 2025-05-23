@@ -32,6 +32,7 @@ class BashCliScheduler(Scheduler, metaclass=abc.ABCMeta):
         result = self.transport.exec_command_wait(
             self._get_submit_command(escape_for_bash(filename)), workdir=working_directory
         )
+
         return self._parse_submit_output(*result)
 
     def get_jobs(

@@ -31,7 +31,7 @@ class RemoteStashCopyData(RemoteStashData):
         target_basepath: str = MetadataField(description='The the target basepath')
         source_list: List[str] = MetadataField(description='The list of source files that were stashed')
 
-    def __init__(self, stash_mode: StashMode, str, target_basepath: str, source_list: List, **kwargs):
+    def __init__(self, stash_mode: StashMode, str, target_basepath: str, source_list: List[str], **kwargs):
         """Construct a new instance
 
         :param stash_mode: the stashing mode with which the data was stashed on the remote.

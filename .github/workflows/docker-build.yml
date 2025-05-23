@@ -34,6 +34,10 @@ jobs:
       images: ${{ steps.bake_metadata.outputs.images }}
 
     steps:
+    - name: Check access to GitHub secrets
+      run: echo "Pull request that trigger this workflow need to be on upstream repo to access GitHub secrets."; exit 1
+      # if a pull request is merged from a fork
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.owner.login != 'aiidateam'
 
     - name: Checkout Repo ⚡️
       uses: actions/checkout@v4

@@ -54,6 +54,11 @@ jobs:
         - 5001:22
 
     steps:
+    - name: Check access to GitHub secrets
+      run: echo "Pull request that trigger this workflow need to be on upstream repo to access GitHub secrets."; exit 1
+      # if a pull request is merged from a fork
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.owner.login != 'aiidateam'
+
     - uses: actions/checkout@v4
 
     - name: Install system dependencies
@@ -117,6 +122,11 @@ jobs:
         - 15672:15672
 
     steps:
+    - name: Check access to GitHub secrets
+      run: echo "Pull request that trigger this workflow need to be on upstream repo to access GitHub secrets."; exit 1
+      # if a pull request is merged from a fork
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.owner.login != 'aiidateam'
+
     - uses: actions/checkout@v4
 
     - name: Install aiida-core

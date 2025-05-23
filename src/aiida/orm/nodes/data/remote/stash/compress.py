@@ -39,7 +39,7 @@ class RemoteStashCompressedData(RemoteStashData):
         self,
         stash_mode: StashMode,
         target_basepath: str,
-        source_list: List,
+        source_list: List[str],
         dereference: bool,
         **kwargs,
     ):

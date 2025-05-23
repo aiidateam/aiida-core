@@ -37,7 +37,7 @@ class RemoteStashFolderData(RemoteStashData):
         target_basepath: str = MetadataField(description='The the target basepath')
         source_list: List[str] = MetadataField(description='The list of source files that were stashed')
 
-    def __init__(self, stash_mode: StashMode, target_basepath: str, source_list: List, **kwargs):
+    def __init__(self, stash_mode: StashMode, target_basepath: str, source_list: List[str], **kwargs):
         FOLDER_LOGGER.warning(
             '`RemoteStashFolderData` is deprecated, it can only be used to load already stored data. '
             'Not possible to make any new instance of it. Use `RemoteStashCopyData` instead.',

@@ -21,9 +21,17 @@ from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
 
-__all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
+__all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath', 'has_magic')
 
 TransportPath = Union[str, Path, PurePosixPath]
+
+_MAGIC_CHECK = re.compile('[*?[]')
+
+
+def has_magic(string: TransportPath):
+    string = str(string)
+    """Return True if the given string contains any special shell characters."""
+    return _MAGIC_CHECK.search(string) is not None
 
 
 def validate_positive_number(ctx, param, value):
@@ -71,7 +79,6 @@ class Transport(abc.ABC):
     # is a dictionary with the following
     # keys: 'default', 'prompt', 'help', 'non_interactive_default'
     _valid_auth_params = None
-    _MAGIC_CHECK = re.compile('[*?[]')
     _valid_auth_options: list = []
     _common_auth_options = [
         (
@@ -269,11 +276,6 @@ class Transport(abc.ABC):
         :rtype: float
         """
         return self._safe_open_interval
-
-    def has_magic(self, string: TransportPath):
-        string = str(string)
-        """Return True if the given string contains any special shell characters."""
-        return self._MAGIC_CHECK.search(string) is not None
 
     def _gotocomputer_string(self, remotedir):
         """Command executed when goto computer."""
@@ -901,7 +903,7 @@ class Transport(abc.ABC):
 
         :param pathname: the pathname pattern to match.
         """
-        if not self.has_magic(pathname):
+        if not has_magic(pathname):
             # if os.path.lexists(pathname): # ORIGINAL
             # our implementation
             if self.path_exists(pathname):
@@ -913,11 +915,11 @@ class Transport(abc.ABC):
             for name in self.glob1(self.getcwd(), basename):
                 yield name
             return
-        if self.has_magic(dirname):
+        if has_magic(dirname):
             dirs = self.iglob(dirname)
         else:
             dirs = [dirname]
-        if self.has_magic(basename):
+        if has_magic(basename):
             glob_in_dir = self.glob1
         else:
             glob_in_dir = self.glob0
@@ -1567,7 +1569,7 @@ class BlockingTransport(Transport):
         copy_list = []
 
         for source in remotesources:
-            if self.has_magic(source):
+            if has_magic(source):
                 copy_list = self.glob(source)
                 if not copy_list:
                     raise OSError(

@@ -641,7 +641,7 @@ Using the ``COPY`` mode, the target path defines another location (on the same f
    This means that the stashing happens before the parsing of the output files (which occurs after the retrieving step), such that that the files will be stashed independent of the final exit status that the parser will assign to the calculation job.
    This may cause files to be stashed for calculations that will later be considered to have failed.
 
-The stashed files and folders are represented by an output node that is attached to the calculation node through the label ``remote_stash``, as a ``RemoteStashFolderData`` node.
+The stashed files and folders are represented by an output node that is attached to the calculation node through the label ``remote_stash``, as a ``RemoteStashCopyData`` node.
 Just like the ``remote_folder`` node, this represents a location or files on a remote machine and so is equivalent to a "symbolic link".
 
 .. important::

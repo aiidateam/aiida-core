@@ -37,7 +37,6 @@ class DumpEngine:
 
         self.config: DumpConfig = config or DumpConfig()
 
-        import ipdb; ipdb.set_trace()
         self.dump_paths = DumpPaths(
             base_output_path=base_output_path,
             config=self.config,
@@ -55,7 +54,7 @@ class DumpEngine:
         )
 
         # --- Initialize Managers (pass dependencies) ---
-        self.process_manager = ProcessDumpExecutor(
+        self.process_dump_executor = ProcessDumpExecutor(
             config=self.config,
             dump_paths=self.dump_paths,
             dump_tracker=self.dump_tracker,
@@ -162,8 +161,8 @@ class DumpEngine:
             logger.info(f'Executing ProcessNode dump for PK={entity.pk}')
             # For a single ProcessNode, its dump root is the base_output_path.
             # ProcessManager uses DumpPaths to place content within this root.
-            self.process_manager.dump(process_node=entity, target_path=self.dump_paths.base_output_path)
-            self.process_manager.readme_generator._generate(entity, self.dump_paths.base_output_path)
+            self.process_dump_executor.dump(process_node=entity, target_path=self.dump_paths.base_output_path)
+            self.process_dump_executor.readme_generator._generate(entity, self.dump_paths.base_output_path)
 
         elif isinstance(entity, orm.Group):
             logger.info(f"Executing Group dump for '{entity.label}' (PK: {entity.pk})")
@@ -189,15 +188,15 @@ class DumpEngine:
 
             # GroupDumpExecutor needs the specific group and the scoped changes.
             # The DumpPaths instance within GroupDumpExecutor will be the same as DumpEngine's.
-            group_manager = GroupDumpExecutor(
+            group_dump_executor = GroupDumpExecutor(
                 group_to_dump=entity,
                 config=self.config,
                 dump_paths=self.dump_paths,
                 dump_tracker=self.dump_tracker,
-                process_manager=self.process_manager,
+                process_dump_executor=self.process_dump_executor,
                 current_mapping=current_mapping,
             )
-            group_manager.dump(changes=all_changes)
+            group_dump_executor.dump(changes=all_changes)
 
         elif isinstance(entity, Profile):
             if not self.config.all_entries and not self.config.filters_set:
@@ -229,15 +228,15 @@ class DumpEngine:
                     print(all_changes.to_table())
                     return
 
-                profile_manager = ProfileDumpExecutor(
+                profile_dump_executor = ProfileDumpExecutor(
                     config=self.config,
                     dump_paths=self.dump_paths,
                     dump_tracker=self.dump_tracker,
-                    process_manager=self.process_manager,
+                    process_dump_executor=self.process_dump_executor,
                     detector=self.detector,
                     current_mapping=current_mapping,
                 )
-                profile_manager.dump(changes=all_changes)
+                profile_dump_executor.dump(changes=all_changes)
 
         logger.report('Saving final dump log and configuration.')
         self.dump_tracker.save(current_dump_time=self.dump_times.current, group_node_mapping=current_mapping)

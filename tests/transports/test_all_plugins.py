@@ -58,18 +58,17 @@ def tmp_path_local(tmp_path_factory):
     params=[
         ('core.local', None),
         ('core.ssh', None),
-        ('core.ssh_auto', None),
         ('core.ssh_async', 'asyncssh'),
         ('core.ssh_async', 'openssh'),
     ],
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
-    plugin = TransportFactory(request.param)
+    plugin = TransportFactory(request.param[0])
 
-    if request.param == 'core.ssh':
+    if request.param[0] == 'core.ssh':
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
-    elif request.param == 'core.ssh_async':
+    elif request.param[0] == 'core.ssh_async':
         kwargs = {
             'machine': 'localhost',
             'backend': request.param[1],

@@ -9,7 +9,6 @@
 """Transport interface."""
 
 import abc
-import asyncio
 import fnmatch
 import os
 import re
@@ -1793,7 +1792,11 @@ class AsyncTransport(Transport):
     """
 
     def run_command_blocking(self, func, *args, **kwargs):
-        loop = asyncio.get_event_loop()
+        """The event loop must be the one of manager."""
+
+        from aiida.manage import get_manager
+
+        loop = get_manager().get_runner()
         return loop.run_until_complete(func(*args, **kwargs))
 
     def open(self):

@@ -15,6 +15,7 @@ classifiers = [
   'Programming Language :: Python :: 3.10',
   'Programming Language :: Python :: 3.11',
   'Programming Language :: Python :: 3.12',
+  'Programming Language :: Python :: 3.13',
   'Topic :: Scientific/Engineering'
 ]
 dependencies = [
@@ -23,7 +24,7 @@ dependencies = [
   "asyncssh~=2.19.0",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
-  'click~=8.1',
+  'click~=8.1.0',
   'disk-objectstore~=1.3.0',
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
@@ -102,6 +103,7 @@ requires-python = '>=3.9'
 'core.bool' = 'aiida.orm.nodes.data.bool:Bool'
 'core.cif' = 'aiida.orm.nodes.data.cif:CifData'
 'core.code' = 'aiida.orm.nodes.data.code.legacy:Code'
+'core.code.abstract' = 'aiida.orm.nodes.data.code.abstract:AbstractCode'
 'core.code.containerized' = 'aiida.orm.nodes.data.code.containerized:ContainerizedCode'
 'core.code.installed' = 'aiida.orm.nodes.data.code.installed:InstalledCode'
 'core.code.portable' = 'aiida.orm.nodes.data.code.portable:PortableCode'

@@ -27,7 +27,7 @@ Below is a list with all available subcommands.
     Commands:
       create   Create an archive from all or part of a profiles's data.
       import   Import archived data to a profile.
-      info     Summarise the contents of an archive.
+      info     Summaries the contents of an archive.
       migrate  Migrate an archive to a more recent schema version.
       version  Print the current version of an archive's schema.
 
@@ -244,6 +244,25 @@ Below is a list with all available subcommands.
 
     Options:
       --help  Show this message and exit.
+
+
+.. _reference:command-line:verdi-llm:
+
+``verdi llm``
+-------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Use LLM to query to find out how to do things.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      cli
+      configure  Choose and configure an LLM backend.
 
 
 .. _reference:command-line:verdi-node:

@@ -10,24 +10,18 @@
 
 from typing import List, Tuple, Union
 
-from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField
 
 from .base import RemoteStashData
 
-EXEC_LOGGER = AIIDA_LOGGER.getChild('folder')
+__all__ = ('RemoteStashCopyData',)
 
 
-class RemoteStashFolderData(RemoteStashData):
-    """
-    .. warning::
-        **Deprecated!** Use `RemoteStashCopyData` instead.
-        The plugin is kept for backwards compatibility (to load already stored nodes, only)
-        and will be removed in AiiDA 3.0
+class RemoteStashCopyData(RemoteStashData):
+    """Data plugin that models a folder with files of a completed calculation job that has been stashed through a copy.
 
-    Data plugin that models a folder with files of a completed calculation job that has been stashed through a copy.
     This data plugin can and should be used to stash files if and only if the stash mode is `StashMode.COPY`.
     """
 
@@ -37,12 +31,19 @@ class RemoteStashFolderData(RemoteStashData):
         target_basepath: str = MetadataField(description='The the target basepath')
         source_list: List[str] = MetadataField(description='The list of source files that were stashed')
 
-    def __init__(self, stash_mode: StashMode, target_basepath: str, source_list: List, **kwargs):
-        EXEC_LOGGER.warning(
-            '`RemoteStashFolderData` is deprecated, it can only be used to load already stored data. '
-            'Not possible to make any new instance of it. Use `RemoteStashCopyData` instead.',
-        )
-        raise RuntimeError('`RemoteStashFolderData` instantiation is not allowed. Use `RemoteStashCopyData` instead.')
+    def __init__(self, stash_mode: StashMode, str, target_basepath: str, source_list: List, **kwargs):
+        """Construct a new instance
+
+        :param stash_mode: the stashing mode with which the data was stashed on the remote.
+        :param target_basepath: the target basepath.
+        :param source_list: the list of source files.
+        """
+        super().__init__(stash_mode, **kwargs)
+        self.target_basepath = target_basepath
+        self.source_list = source_list
+
+        if stash_mode != StashMode.COPY:
+            raise ValueError('`RemoteStashCopyData` can only be used with `stash_mode == StashMode.COPY`.')
 
     @property
     def target_basepath(self) -> str:

@@ -635,7 +635,7 @@ Using the ``COPY`` mode, the target path defines another location (on the same f
     In addition to the ``COPY`` mode, the following modes, these storage efficient modes are also are available:
     ``COMPRESS_TAR``, ``COMPRESS_TARBZ2``, ``COMPRESS_TARGZ``, ``COMPRESS_TARXZ``.
 
-The stashed files and folders are represented by an output node that is attached to the calculation node through the label ``remote_stash``, as a ``RemoteStashFolderData`` node.
+The stashed files and folders are represented by an output node that is attached to the calculation node through the label ``remote_stash``, as a ``RemoteStashCopyData`` node.
 Just like the ``remote_folder`` node, this represents a location or files on a remote machine and so is equivalent to a "symbolic link".
 
 .. important::

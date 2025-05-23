@@ -48,6 +48,7 @@ class RemoteStashCompressedData(RemoteStashData):
         :param stash_mode: the stashing mode with which the data was stashed on the remote.
         :param target_basepath: absolute path to place the compressed file (path+filename).
         :param source_list: the list of source files.
+        :param dereference: whether to dereference symbolic links when compressing.
         """
         super().__init__(stash_mode, **kwargs)
         self.target_basepath = target_basepath

@@ -12,7 +12,7 @@ import pytest
 
 from aiida.common.datastructures import StashMode
 from aiida.common.exceptions import StoringNotAllowed
-from aiida.orm import RemoteStashCompressedData, RemoteStashData, RemoteStashFolderData
+from aiida.orm import RemoteStashCompressedData, RemoteStashCopyData, RemoteStashData
 
 
 def test_base_class():
@@ -32,7 +32,7 @@ def test_constructor_folder(store):
     target_basepath = '/absolute/path'
     source_list = ['relative/folder', 'relative/file']
 
-    data = RemoteStashFolderData(stash_mode, target_basepath, source_list)
+    data = RemoteStashCopyData(stash_mode, target_basepath, source_list)
 
     assert data.stash_mode == stash_mode
     assert data.target_basepath == target_basepath
@@ -66,7 +66,7 @@ def test_constructor_invalid_folder(argument, value):
 
     with pytest.raises(TypeError):
         kwargs[argument] = value
-        RemoteStashFolderData(**kwargs)
+        RemoteStashCopyData(**kwargs)
 
 
 @pytest.mark.parametrize('store', (False, True))
@@ -124,7 +124,7 @@ def test_constructor_invalid_compressed(argument, value):
 @pytest.mark.parametrize(
     'dataclass, valid_stash_modes',
     (
-        (RemoteStashFolderData, [StashMode.COPY]),
+        (RemoteStashCopyData, [StashMode.COPY]),
         (
             RemoteStashCompressedData,
             [StashMode.COMPRESS_TAR, StashMode.COMPRESS_TARBZ2, StashMode.COMPRESS_TARGZ, StashMode.COMPRESS_TARXZ],

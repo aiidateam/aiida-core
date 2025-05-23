@@ -39,12 +39,12 @@ class CollectionDumpExecutor:
         config: DumpConfig,
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
-        process_manager: ProcessDumpExecutor,
+        process_dump_executor: ProcessDumpExecutor,
         current_mapping: GroupNodeMapping,
     ) -> None:
         self.config: DumpConfig = config
         self.dump_paths: DumpPaths = dump_paths
-        self.process_manager: ProcessDumpExecutor = process_manager
+        self.process_dump_executor: ProcessDumpExecutor = process_dump_executor
         self.current_mapping: GroupNodeMapping = current_mapping
         self.dump_tracker: DumpTracker = dump_tracker
 
@@ -187,7 +187,7 @@ class CollectionDumpExecutor:
                         current_content_root=current_dump_root_for_nodes,
                     )
                     # ProcessManager.dump takes the final, specific path for the node.
-                    self.process_manager.dump(
+                    self.process_dump_executor.dump(
                         process_node=node,
                         target_path=node_specific_dump_path,
                     )
@@ -368,7 +368,7 @@ class CollectionDumpExecutor:
                 )
 
                 # Pass this explicit target_path to the process manager
-                self.process_manager.dump(process_node=node, target_path=node_target_path_in_group)
+                self.process_dump_executor.dump(process_node=node, target_path=node_target_path_in_group)
             except Exception as e:
                 logger.warning(f'Could not process node {node_uuid} added to group {group.label}: {e}')
 

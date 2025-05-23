@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.managers.collection import CollectionDumpManager
+from aiida.tools.dumping.executors.collection import CollectionDumpExecutor
 from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.utils.helpers import DumpChanges
 from aiida.tools.dumping.utils.paths import DumpPaths
@@ -24,19 +24,19 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.strategies.profile')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.managers.collection import CollectionDumpManager
-    from aiida.tools.dumping.managers.process import ProcessDumpManager
+    from aiida.tools.dumping.executors.collection import CollectionDumpExecutor
+    from aiida.tools.dumping.executors.process import ProcessDumpExecutor
     from aiida.tools.dumping.mapping import GroupNodeMapping
     from aiida.tools.dumping.tracking import DumpTracker
 
 
-class GroupDumpManager(CollectionDumpManager):
+class GroupDumpExecutor(CollectionDumpExecutor):
     def __init__(
         self,
         config: DumpConfig,
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
-        process_manager: ProcessDumpManager,
+        process_manager: ProcessDumpExecutor,
         current_mapping: GroupNodeMapping,
         group_to_dump: orm.Group,
     ) -> None:
@@ -67,7 +67,7 @@ class GroupDumpManager(CollectionDumpManager):
         )
 
         logger.info(
-            f"Executing GroupDumpManager for group '{self.group_to_dump.label}' "
+            f"Executing GroupDumpExecutor for group '{self.group_to_dump.label}' "
             f"into determined path '{current_group_content_root}'"
         )
 
@@ -80,7 +80,7 @@ class GroupDumpManager(CollectionDumpManager):
         # 2. Process lifecycle changes FOR THIS GROUP.
         #    The `changes.groups` object should have been pre-filtered by DumpEngine
         #    to only contain changes relevant to `self.group_to_dump`.
-        #    If _handle_group_changes in CollectionDumpManager is designed to work on
+        #    If _handle_group_changes in CollectionDumpExecutor is designed to work on
         #    scoped GroupChanges for a single group, this is fine.
         if changes.groups.modified or changes.groups.renamed or changes.groups.node_membership:
             logger.info(f"Processing lifecycle/membership for group '{self.group_to_dump.label}'.")
@@ -88,7 +88,7 @@ class GroupDumpManager(CollectionDumpManager):
 
         # 3. Process nodes within this group.
         logger.info(f"Processing nodes for group '{self.group_to_dump.label}'.")
-        # _process_group is inherited from CollectionDumpManager.
+        # _process_group is inherited from CollectionDumpExecutor.
         # It needs to use current_group_content_root as the base for placing nodes.
         self._process_group(
             group=self.group_to_dump,
@@ -99,7 +99,7 @@ class GroupDumpManager(CollectionDumpManager):
         # 4. Update stats for this specific group.
         self._update_single_group_stats(self.group_to_dump, current_group_content_root)
 
-        logger.info(f"Finished GroupDumpManager for group '{self.group_to_dump.label}'.")
+        logger.info(f"Finished GroupDumpExecutor for group '{self.group_to_dump.label}'.")
 
     def _update_single_group_stats(self, group: orm.Group, group_content_path: Path) -> None:
         logger.info(f"Calculating final directory stats for group '{group.label}'.")

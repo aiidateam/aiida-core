@@ -188,7 +188,7 @@ class NodeChanges:
     new_or_modified: DumpNodeStore = field(default_factory=DumpNodeStore)
     # UUIDs of *nodes* detected as deleted from the database
     # Note: We separate deleted nodes from deleted groups based on Option 1.
-    # If you need deleted group UUIDs elsewhere (like DeletionManager),
+    # If you need deleted group UUIDs elsewhere (like DeletionExecutor),
     # they are available in GroupChangeInfo.deleted[...].uuid
     deleted: Set[str] = field(default_factory=set)
 

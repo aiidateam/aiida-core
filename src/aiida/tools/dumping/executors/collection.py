@@ -25,7 +25,7 @@ from aiida.tools.dumping.utils.paths import DumpPaths
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.managers.process import ProcessDumpManager
+    from aiida.tools.dumping.executors.process import ProcessDumpExecutor
     from aiida.tools.dumping.mapping import GroupNodeMapping
     from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.utils.helpers import GroupChanges, GroupModificationInfo
@@ -33,18 +33,18 @@ if TYPE_CHECKING:
 logger = AIIDA_LOGGER.getChild('tools.dumping.managers.collection')
 
 
-class CollectionDumpManager:
+class CollectionDumpExecutor:
     def __init__(
         self,
         config: DumpConfig,
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
-        process_manager: ProcessDumpManager,
+        process_manager: ProcessDumpExecutor,
         current_mapping: GroupNodeMapping,
     ) -> None:
         self.config: DumpConfig = config
         self.dump_paths: DumpPaths = dump_paths
-        self.process_manager: ProcessDumpManager = process_manager
+        self.process_manager: ProcessDumpExecutor = process_manager
         self.current_mapping: GroupNodeMapping = current_mapping
         self.dump_tracker: DumpTracker = dump_tracker
 
@@ -54,7 +54,7 @@ class CollectionDumpManager:
         with its absolute content path.
         """
         # Directory preparation for group_content_path is now expected to be done
-        # by the caller (e.g., GroupDumpManager.dump() or ProfileDumpManager loop)
+        # by the caller (e.g., GroupDumpExecutor.dump() or ProfileDumpExecutor loop)
         # using self.dump_paths.prepare_directory().
         # However, this method is also where the logger entry is made, so it's crucial.
 
@@ -259,7 +259,7 @@ class CollectionDumpManager:
         """
         logger.report('Processing group changes...')
 
-        # 1. Handle Deleted Groups (Directory deletion handled by DeletionManager)
+        # 1. Handle Deleted Groups (Directory deletion handled by DeletionExecutor)
         # We might still need to log this or perform other cleanup
         if group_changes.deleted:
             group_labels = [group_info.label for group_info in group_changes.deleted]

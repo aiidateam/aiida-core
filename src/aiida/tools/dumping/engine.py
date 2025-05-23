@@ -8,7 +8,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration.profile import Profile
 from aiida.tools.dumping.config import DumpConfig, DumpMode
 from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.managers import DeletionManager, GroupDumpManager, ProcessDumpManager, ProfileDumpManager
+from aiida.tools.dumping.executors import DeletionExecutor, GroupDumpExecutor, ProcessDumpExecutor, ProfileDumpExecutor
 from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpTimes
 from aiida.tools.dumping.utils.paths import DumpPaths
@@ -54,7 +54,7 @@ class DumpEngine:
         )
 
         # --- Initialize Managers (pass dependencies) ---
-        self.process_manager = ProcessDumpManager(
+        self.process_manager = ProcessDumpExecutor(
             config=self.config,
             dump_paths=self.dump_paths,
             dump_tracker=self.dump_tracker,
@@ -173,7 +173,7 @@ class DumpEngine:
             all_changes = DumpChanges(nodes=node_changes, groups=group_changes)
 
             if self.config.delete_missing:
-                deletion_manager = DeletionManager(
+                deletion_manager = DeletionExecutor(
                     config=self.config,
                     dump_paths=self.dump_paths,
                     dump_tracker=self.dump_tracker,
@@ -186,9 +186,9 @@ class DumpEngine:
                 print(all_changes.to_table())  # Or use logger.report
                 return
 
-            # GroupDumpManager needs the specific group and the scoped changes.
-            # The DumpPaths instance within GroupDumpManager will be the same as DumpEngine's.
-            group_manager = GroupDumpManager(
+            # GroupDumpExecutor needs the specific group and the scoped changes.
+            # The DumpPaths instance within GroupDumpExecutor will be the same as DumpEngine's.
+            group_manager = GroupDumpExecutor(
                 group_to_dump=entity,
                 config=self.config,
                 dump_paths=self.dump_paths,
@@ -215,7 +215,7 @@ class DumpEngine:
                 logger.report('No changes detected since last dump and not dumping ungrouped. Nothing to do.')
             else:
                 if self.config.delete_missing:
-                    deletion_manager = DeletionManager(
+                    deletion_manager = DeletionExecutor(
                         config=self.config,
                         dump_paths=self.dump_paths,
                         dump_tracker=self.dump_tracker,
@@ -228,7 +228,7 @@ class DumpEngine:
                     print(all_changes.to_table())
                     return
 
-                profile_manager = ProfileDumpManager(
+                profile_manager = ProfileDumpExecutor(
                     config=self.config,
                     dump_paths=self.dump_paths,
                     dump_tracker=self.dump_tracker,

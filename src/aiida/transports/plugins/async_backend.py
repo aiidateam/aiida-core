@@ -379,6 +379,8 @@ class AsyncSSH(BasicAdapter):
                     f'The remote path {remotedestination} is not reachable,'
                     f'perhaps the parent folder does not exists: {exc}'
                 )
+            except asyncssh.sftp.SFTPFailure as exc:
+                raise OSError(f'Error while copying {remotesource} to {remotedestination}: {exc}')
         else:
             self.logger.warning('The remote copy is not supported, using the `cp` command to copy the file/folder')
             # I copy pasted the whole logic below from SshTransport class:

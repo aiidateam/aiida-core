@@ -15,12 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   run-and-upload:
 
-    # Only run on pushes and when the job is on the main repository and not on forks
+    # Only run if branch or PR base is pointing to the upstream repo
     if: github.repository == 'aiidateam/aiida-core'
-
     strategy:
       fail-fast: false
       matrix:
@@ -51,6 +49,12 @@ jobs:
         - 5672:5672
 
     steps:
+
+    - name: Check access to GitHub secrets
+      run: echo "Pull request that trigger this workflow need to be on upstream repo to access GitHub secrets."; exit 1
+      # if a pull request is merged from a fork
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.owner.login != 'aiidateam'
+
     - uses: actions/checkout@v4
 
     - name: Install aiida-core

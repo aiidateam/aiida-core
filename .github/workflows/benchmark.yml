@@ -18,8 +18,6 @@ jobs:
 
   run-and-upload:
 
-    # Only run on pushes and when the job is on the main repository and not on forks
-    if: github.repository == 'aiidateam/aiida-core'
 
     strategy:
       fail-fast: false
@@ -28,6 +26,8 @@ jobs:
         postgres: ['12.14']
         rabbitmq: [3.8.14-management]
 
+    # Only run on pushes and when the job is on the main repository and not on forks
+    if: github.repository == 'aiidateam/aiida-core'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
 

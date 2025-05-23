@@ -30,7 +30,7 @@ class StashCalculation(CalcJob):
                 'options': {
                     'resources': {'num_machines': 1},
                     'stash': {
-                        'stash_mode': StashMode.COPY.value,
+                        'stash_mode': StashMode.COPY,
                         'target_base': '/scratch/my_stashing/',
                         'source_list': ['aiida.in', '_aiidasubmit.sh'],
                     },

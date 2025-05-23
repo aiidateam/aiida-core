@@ -625,7 +625,7 @@ Using the ``COPY`` mode, the target path defines another location (on the same f
                'stash': {
                    'source_list': ['aiida.out', 'output.txt'],
                    'target_base': '/storage/project/stash_folder',
-                   'stash_mode': StashMode.COPY.value,
+                   'stash_mode': StashMode.COPY,
                }
            }
        }
@@ -663,7 +663,7 @@ To avoid this scenario, you can instead, stash via a separate calculation job, f
                 'stash': {
                 'source_list': ['aiida.out', 'output.txt'],
                 'target_base': '/scratch/',
-                'stash_mode': StashMode.COPY.value,
+                'stash_mode': StashMode.COPY,
                 },
             },
         },

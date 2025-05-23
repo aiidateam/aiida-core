@@ -377,6 +377,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         engine = DumpEngine(
             base_output_path=target_path,
             config=config,
+            dump_target_entity=self
         )
         engine.dump(entity=self)
 

@@ -43,7 +43,10 @@ class DumpPaths:
     CONFIG_FILE_NAME = 'aiida_dump_config.yaml'
 
     def __init__(
-        self, base_output_path: Path, config: DumpConfig, dump_target_entity: Optional[orm.Node | orm.Group] = None
+        self,
+        base_output_path: Path,
+        config: DumpConfig,
+        dump_target_entity: Optional[orm.Node | orm.Group | Profile] = None,
     ):
         """
         Initializes the DumpPaths.
@@ -55,7 +58,7 @@ class DumpPaths:
         """
         self.base_output_path: Path = base_output_path.resolve()
         self.config: DumpConfig = config
-        self.dump_target_entity: Optional[orm.Node | orm.Group] = dump_target_entity
+        self.dump_target_entity: Optional[orm.Node | orm.Group | Profile] = dump_target_entity
 
     @property
     def tracking_log_file_path(self) -> Path:
@@ -85,7 +88,7 @@ class DumpPaths:
             return Path('groups') / group_label_part
         return group_label_part
 
-    def get_path_for_group_content(
+    def get_path_for_group(
         self,
         group: orm.Group,
         parent_group_content_path: Optional[Path] = None,
@@ -127,10 +130,10 @@ class DumpPaths:
 
         # Nodes are always placed in a type-specific subdirectory *within* the
         # current_content_root. The current_content_root has already been determined
-        # by get_path_for_group_content or get_path_for_ungrouped_nodes_root.
+        # by get_path_for_group or get_path_for_ungrouped_nodes.
         return current_content_root / node_type_folder_name / node_dir_name
 
-    def get_path_for_ungrouped_nodes_root(self) -> Path:
+    def get_path_for_ungrouped_nodes(self) -> Path:
         """
         Determines the absolute root path for storing ungrouped nodes.
         Node type subdirectories will be created under this path.

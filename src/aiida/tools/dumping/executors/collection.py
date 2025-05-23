@@ -173,9 +173,9 @@ class CollectionDumpExecutor:
         if current_dump_root_for_nodes is None:
             # This is a fallback, the caller should ideally always provide the explicit root.
             if group_context:
-                current_dump_root_for_nodes = self.dump_paths.get_path_for_group_content(group_context)
+                current_dump_root_for_nodes = self.dump_paths.get_path_for_group(group_context)
             else:  # Ungrouped nodes
-                current_dump_root_for_nodes = self.dump_paths.get_path_for_ungrouped_nodes_root()
+                current_dump_root_for_nodes = self.dump_paths.get_path_for_ungrouped_nodes()
             logger.warning(f'current_dump_root_for_nodes was None, derived as: {current_dump_root_for_nodes}')
 
         with get_progress_reporter()(desc=desc, total=len(nodes_to_dump)) as progress:
@@ -283,7 +283,7 @@ class CollectionDumpExecutor:
                     ):
                         continue
 
-                    group_path = self.dump_paths.get_path_for_group_content(group=group)
+                    group_path = self.dump_paths.get_path_for_group(group=group)
                     self._register_group_and_prepare_path(group=group, group_content_path=group_path)
                     # Dumping nodes within this new group will happen if they
                     # are picked up by the NodeChanges detection based on the config.
@@ -331,7 +331,7 @@ class CollectionDumpExecutor:
                 # Ensure group path exists (might have been renamed above)
                 try:
                     current_group = orm.load_group(uuid=mod_info.uuid)
-                    current_group_path_rel = self.dump_paths.get_path_for_group_content(group=current_group)
+                    current_group_path_rel = self.dump_paths.get_path_for_group(group=current_group)
                     current_group_path_abs = self.dump_paths.base_output_path / current_group_path_rel
                     # Ensure path exists in logger and on disk after potential rename
                     self._register_group_and_prepare_path(current_group, current_group_path_abs)

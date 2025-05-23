@@ -402,7 +402,7 @@ class DumpChangeDetector:
                     current_label = current_group.label
 
                     # Calculate expected current path based on current label
-                    current_path_abs = self.dump_paths.get_path_for_group_content(
+                    current_path_abs = self.dump_paths.get_path_for_group(
                         group=current_group,
                         parent_group_content_path=None,
                     )

@@ -35,8 +35,9 @@ class DumpEngine:
         :param config: _description_, defaults to None
         """
 
-        self.config: DumpConfig = config
+        self.config: DumpConfig = config or DumpConfig()
 
+        import ipdb; ipdb.set_trace()
         self.dump_paths = DumpPaths(
             base_output_path=base_output_path,
             config=self.config,

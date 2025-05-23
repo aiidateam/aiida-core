@@ -61,7 +61,7 @@ class GroupDumpExecutor(CollectionDumpExecutor):
         # It knows the overall base_output_path and the dump_target_entity (which is self.group_to_dump).
         # It can therefore correctly determine if self.group_to_dump should be directly in
         # base_output_path or nested under a "groups/" subdirectory.
-        current_group_content_root = self.dump_paths.get_path_for_group_content(
+        current_group_content_root = self.dump_paths.get_path_for_group(
             group=self.group_to_dump,
             parent_group_content_path=None,  # This is the top-level group for this manager's operation
         )

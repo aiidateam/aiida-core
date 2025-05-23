@@ -17,7 +17,7 @@ from aiida.common.pydantic import MetadataField
 
 from .base import RemoteStashData
 
-EXEC_LOGGER = AIIDA_LOGGER.getChild('folder')
+FOLDER_LOGGER = AIIDA_LOGGER.getChild('folder')
 
 
 class RemoteStashFolderData(RemoteStashData):
@@ -38,7 +38,7 @@ class RemoteStashFolderData(RemoteStashData):
         source_list: List[str] = MetadataField(description='The list of source files that were stashed')
 
     def __init__(self, stash_mode: StashMode, target_basepath: str, source_list: List, **kwargs):
-        EXEC_LOGGER.warning(
+        FOLDER_LOGGER.warning(
             '`RemoteStashFolderData` is deprecated, it can only be used to load already stored data. '
             'Not possible to make any new instance of it. Use `RemoteStashCopyData` instead.',
         )

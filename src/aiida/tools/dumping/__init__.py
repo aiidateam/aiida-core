@@ -6,6 +6,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Modules related to the dumping of AiiDA data."""
+"""Public API for data dumping functionality."""
 
-__all__ = ('processes',)
+# gotcha

@@ -301,8 +301,6 @@ def profile_delete(force, delete_data, profiles):
 @options.START_DATE()
 @options.END_DATE()
 @options.FILTER_BY_LAST_DUMP_TIME()
-@options.DUMP_PROCESSES()
-@options.DUMP_DATA()
 @options.ONLY_TOP_LEVEL_CALCS()
 @options.ONLY_TOP_LEVEL_WORKFLOWS()
 @options.DELETE_MISSING()
@@ -332,8 +330,6 @@ def profile_dump(
     start_date,
     end_date,
     filter_by_last_dump_time,
-    dump_processes,
-    dump_data,
     only_top_level_calcs,
     only_top_level_workflows,
     delete_missing,
@@ -414,8 +410,6 @@ def profile_dump(
                     'codes': codes,
                     'computers': computers,
                     'filter_by_last_dump_time': filter_by_last_dump_time,
-                    'dump_processes': dump_processes,
-                    'dump_data': dump_data,
                     'only_top_level_calcs': only_top_level_calcs,
                     'only_top_level_workflows': only_top_level_workflows,
                     'delete_missing': delete_missing,

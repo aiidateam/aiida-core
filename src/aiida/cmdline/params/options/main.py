@@ -59,8 +59,6 @@ __all__ = (
     'DICT_FORMAT',
     'DICT_KEYS',
     'DRY_RUN',
-    'DUMP_DATA',
-    'DUMP_PROCESSES',
     'DUMP_UNSEALED',
     'END_DATE',
     'EXIT_STATUS',
@@ -798,22 +796,6 @@ SORT = OverridableOption(
     default=True,
     help='Sort the keys of the output YAML.',
     show_default=True,
-)
-
-DUMP_DATA = OverridableOption(
-    '--dump-data/--no-dump-data',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Dump data nodes.',
-)
-
-DUMP_PROCESSES = OverridableOption(
-    '--dump-processes/--no-dump-processes',
-    is_flag=True,
-    default=True,
-    show_default=True,
-    help='Dump process data.',
 )
 
 ORGANIZE_BY_GROUPS = OverridableOption(

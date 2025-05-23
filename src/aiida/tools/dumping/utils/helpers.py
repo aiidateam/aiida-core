@@ -17,9 +17,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Set, Type,
 from aiida import orm
 from aiida.common import timezone
 
-DumpEntityType = Union[orm.CalculationNode, orm.WorkflowNode, orm.Data]
-QbDumpEntityType = Union[Type[orm.CalculationNode], Type[orm.WorkflowNode], Type[orm.Data]]
-# StoreNameType = Literal["calculations", "workflows", "groups", "data"]
+DumpEntityType = Union[orm.CalculationNode, orm.WorkflowNode]
+QbDumpEntityType = Union[Type[orm.CalculationNode], Type[orm.WorkflowNode]]
 
 # NOTE: Using Literal for type safety.
 # NOTE: Though, possibly allow for selection via entry point
@@ -60,7 +59,6 @@ class DumpNodeStore:
 
     calculations: list = field(default_factory=list)
     workflows: list = field(default_factory=list)
-    data: list = field(default_factory=list)
     groups: list = field(default_factory=list)
 
     @property
@@ -69,7 +67,6 @@ class DumpNodeStore:
         return {
             DumpStoreKeys.CALCULATIONS.value: self.calculations,
             DumpStoreKeys.WORKFLOWS.value: self.workflows,
-            DumpStoreKeys.DATA.value: self.data,
             DumpStoreKeys.GROUPS.value: self.groups,
         }
 
@@ -77,12 +74,8 @@ class DumpNodeStore:
     def should_dump_processes(self) -> bool:
         return len(self.calculations) > 0 or len(self.workflows) > 0
 
-    @property
-    def should_dump_data(self) -> bool:
-        return len(self.data) > 0
-
     def __len__(self) -> int:
-        return len(self.calculations) + len(self.workflows) + len(self.data) + len(self.groups)
+        return len(self.calculations) + len(self.workflows) + len(self.groups)
 
     def num_processes(self) -> int:
         return len(self.calculations) + len(self.workflows)
@@ -234,12 +227,10 @@ class DumpChanges:
         # Add new or modified nodes by type
         new_calcs = len(self.nodes.new_or_modified.calculations)
         new_workflows = len(self.nodes.new_or_modified.workflows)
-        new_data = len(self.nodes.new_or_modified.data)
-        total_new = new_calcs + new_workflows + new_data
+        total_new = new_calcs + new_workflows
 
         node_rows.append(['Calculations', new_calcs, 'new/modified'])
         node_rows.append(['Workflows', new_workflows, 'new/modified'])
-        node_rows.append(['Data', new_data, 'new/modified'])
         node_rows.append(['Total', total_new, 'new/modified'])
 
         # Add deleted nodes
@@ -287,7 +278,6 @@ class DumpStoreKeys(str, Enum):
     CALCULATIONS = 'calculations'
     WORKFLOWS = 'workflows'
     GROUPS = 'groups'
-    DATA = 'data'
 
     @classmethod
     def from_instance(cls, node_inst: orm.Node | orm.Group) -> StoreNameType:
@@ -295,8 +285,6 @@ class DumpStoreKeys(str, Enum):
             return cls.CALCULATIONS.value
         elif isinstance(node_inst, orm.WorkflowNode):
             return cls.WORKFLOWS.value
-        elif isinstance(node_inst, orm.Data):
-            return cls.DATA.value
         elif isinstance(node_inst, orm.Group):
             return cls.GROUPS.value
         else:
@@ -309,8 +297,6 @@ class DumpStoreKeys(str, Enum):
             return cls.CALCULATIONS.value
         elif issubclass(orm_class, orm.WorkflowNode):
             return cls.WORKFLOWS.value
-        elif issubclass(orm_class, orm.Data):
-            return cls.DATA.value
         elif issubclass(orm_class, orm.Group):
             return cls.GROUPS.value
         else:
@@ -322,7 +308,6 @@ class DumpStoreKeys(str, Enum):
         mapping = {
             cls.CALCULATIONS: orm.CalculationNode,
             cls.WORKFLOWS: orm.WorkflowNode,
-            cls.DATA: orm.Data,
             cls.GROUPS: orm.Group,
         }
         if key in mapping:

@@ -23,7 +23,7 @@ from .options import parse_option
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
-    from aiida.tools.dumping import DumpConfig
+    from aiida.tools.dumping.config import DumpConfig
 
 __all__ = ('Profile',)
 
@@ -265,23 +265,18 @@ class Profile:
         }
 
     def dump(self, config: Optional[DumpConfig] = None, output_path: Optional[Union[str, Path]] = None) -> Path:
-
         from aiida.common.log import AIIDA_LOGGER
         from aiida.tools.dumping.config import DumpConfig, DumpMode
         from aiida.tools.dumping.engine import DumpEngine
         from aiida.tools.dumping.utils.paths import DumpPaths
 
         logger = AIIDA_LOGGER.getChild('tools.dumping.profile')
-        # logger = AIIDA_LOGGER.getChild('profile.dump')
 
         if not config:
             config = DumpConfig()
 
         # --- Check final determined scope ---
-        if (
-            not (config.all_entries or config.filters_set)
-            and config.dump_mode != DumpMode.DRY_RUN
-        ):
+        if not (config.all_entries or config.filters_set) and config.dump_mode != DumpMode.DRY_RUN:
             msg = 'No profile data explicitly selected. No dump will be performed.'
             logger.warning(msg)
 

@@ -84,15 +84,10 @@ class DumpChangeDetector:
         raw_nodes: dict[str, list[Node]] = {
             'workflows': [],
             'calculations': [],
-            'data': [],
         }
         nodes_to_query: list[tuple[type[Node], str]] = []
 
-        # Determine which node types to query based on config
-        if self.config.dump_processes:
-            nodes_to_query.extend([(orm.WorkflowNode, 'workflows'), (orm.CalculationNode, 'calculations')])
-        if self.config.dump_data:
-            logger.warning('Data node detection not implemented.')
+        nodes_to_query.extend([(orm.WorkflowNode, 'workflows'), (orm.CalculationNode, 'calculations')])
 
         # Resolve base time filters ONCE before looping
         base_filters = self.node_query._resolve_time_filters(
@@ -131,7 +126,6 @@ class DumpChangeDetector:
         logged_filtered_nodes: dict[str, list[Node]] = {
             'workflows': [],
             'calculations': [],
-            'data': [],
         }
         nodes_removed_by_log_filter = 0
         for store_key, nodes in raw_nodes.items():
@@ -282,14 +276,12 @@ class DumpChangeDetector:
         # 4. Populate final Node Store
         final_node_store.workflows = final_filtered_nodes.get('workflows', [])
         final_node_store.calculations = final_filtered_nodes.get('calculations', [])
-        final_node_store.data = final_filtered_nodes.get('data', [])
 
         wf_count = len(final_node_store.workflows)
         calc_count = len(final_node_store.calculations)
-        data_count = len(final_node_store.data)
         logger.debug(
             f'Finished detecting new/modified nodes (scope {scope.name}). Final counts: '
-            f'Workflows={wf_count}, Calculations={calc_count}, Data={data_count}.'
+            f'Workflows={wf_count}, Calculations={calc_count}'
         )
         return final_node_store
 
@@ -302,7 +294,6 @@ class DumpChangeDetector:
         for orm_type in (
             orm.CalculationNode,
             orm.WorkflowNode,
-            orm.Data,
         ):
             store_name = DumpStoreKeys.from_class(orm_class=orm_type)
             try:

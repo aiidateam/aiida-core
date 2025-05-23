@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.utils.helpers import DumpTimes
 
-__all__ = ('NodeMetadataWriter', 'NodeRepoIoDumper', 'ProcessDumpManager', 'ReadmeGenerator', 'WorkflowWalker')
+__all__ = ('NodeMetadataWriter', 'NodeRepoIoDumper', 'ProcessDumpExecutor', 'ReadmeGenerator', 'WorkflowWalker')
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.managers.process')
 
@@ -54,7 +54,7 @@ class NodeDumpAction(Enum):
     ERROR = auto()
 
 
-class ProcessDumpManager:
+class ProcessDumpExecutor:
     """Handles the processing and dumping of individual process nodes"""
 
     def __init__(
@@ -630,9 +630,9 @@ class WorkflowWalker:
         for index, link_triple in enumerate(called_links, start=1):
             child_node = link_triple.node
             # Use static method from NodeManager to generate label consistently
-            from aiida.tools.dumping.managers.process import ProcessDumpManager
+            from aiida.tools.dumping.executors.process import ProcessDumpExecutor
 
-            child_label = ProcessDumpManager._generate_child_node_label(index=index, link_triple=link_triple)
+            child_label = ProcessDumpExecutor._generate_child_node_label(index=index, link_triple=link_triple)
             child_output_path = output_path / child_label
             assert isinstance(child_node, orm.ProcessNode)
             try:

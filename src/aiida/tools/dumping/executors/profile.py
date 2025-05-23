@@ -18,7 +18,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.orm import Group, QueryBuilder, WorkflowNode
 from aiida.tools.dumping.config import GroupDumpScope
 from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.managers.collection import CollectionDumpManager
+from aiida.tools.dumping.executors.collection import CollectionDumpExecutor
 from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.utils.helpers import DumpChanges, DumpNodeStore
 from aiida.tools.dumping.utils.paths import DumpPaths
@@ -27,12 +27,12 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.strategies.profile')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.managers.process import ProcessDumpManager
+    from aiida.tools.dumping.executors.process import ProcessDumpExecutor
     from aiida.tools.dumping.mapping import GroupNodeMapping
     from aiida.tools.dumping.tracking import DumpTracker
 
 
-class ProfileDumpManager(CollectionDumpManager):
+class ProfileDumpExecutor(CollectionDumpExecutor):
     """Strategy for dumping an entire profile."""
 
     def __init__(
@@ -41,7 +41,7 @@ class ProfileDumpManager(CollectionDumpManager):
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
         detector: DumpChangeDetector,
-        process_manager: ProcessDumpManager,
+        process_manager: ProcessDumpExecutor,
         current_mapping: GroupNodeMapping,
     ) -> None:
         super().__init__(
@@ -304,14 +304,14 @@ class ProfileDumpManager(CollectionDumpManager):
 
     def dump(self, changes: DumpChanges) -> None:
         """Dumps the entire profile by orchestrating helper methods."""
-        logger.info('Executing ProfileDumpManager')
+        logger.info('Executing ProfileDumpExecutor')
         if not self.config.all_entries or self.config.filters_set:
             logger.report('Default profile dump scope is NONE, skipping profile content dump.')
             return
 
         # 1. Handle Group Lifecycle (using Group Manager)
         #    This applies changes detected earlier (new/deleted groups, membership)
-        #    Directory creation/deletion for groups happens here or in DeletionManager
+        #    Directory creation/deletion for groups happens here or in DeletionExecutor
         logger.info('Processing group lifecycle and membership changes...')
         self._handle_group_changes(changes.groups)
 
@@ -334,4 +334,4 @@ class ProfileDumpManager(CollectionDumpManager):
         # 5. Update final stats for logged groups after all dumping is done
         self._update_group_stats()
 
-        logger.info('Finished ProfileDumpManager.')
+        logger.info('Finished ProfileDumpExecutor.')

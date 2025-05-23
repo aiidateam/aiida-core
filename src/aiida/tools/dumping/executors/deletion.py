@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from aiida.tools.dumping.utils.helpers import GroupInfo
 
 
-class DeletionManager:
+class DeletionExecutor:
     """Executes deletion of dumped artifacts for entities deleted from the DB."""
 
     def __init__(
@@ -27,7 +27,7 @@ class DeletionManager:
         dump_changes: DumpChanges,
         stored_mapping: GroupNodeMapping | None,
     ):
-        """Initializes the DeletionManager.
+        """Initializes the DeletionExecutor.
 
 
         :param config: _description_

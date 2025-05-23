@@ -46,42 +46,37 @@ class GroupDumpScope(Enum):
 logger = AIIDA_LOGGER.getChild('tools.dumping.config')
 
 
-def _load_computer_validator(v: Any) -> orm.Computer | None:
+def _load_computer_validator(value: int | str | orm.Computer) -> orm.Computer | None:
     """Pydantic validator function to load Computer from identifier."""
-    if v is None or isinstance(v, orm.Computer):
-        return v
-    if isinstance(v, str):
+    if value is None or isinstance(value, orm.Computer):
+        return value
+    if isinstance(value, (str, int)):
         try:
-            return orm.load_computer(identifier=v)
+            return orm.load_computer(identifier=value)
         except NotExistent:
-            logger.warning(f"Computer with identifier '{v}' not found in DB. Returning None for this item.")
+            logger.warning(f"Computer with identifier '{value}' not found in DB. Returning None for this item.")
             return None
-        except Exception as e:
-            logger.error(f"Error loading Computer '{v}': {e}. Returning None for this item.")
-            return None
-    logger.warning(f'Invalid input type for computer validation: {type(v)}. Returning None.')
+    logger.warning(f'Invalid input type for computer validation: {type(value)}. Returning None.')
     return None
 
 
-def _load_code_validator(v: Any) -> orm.Code | None:
+def _load_code_validator(value: int | str | orm.Code) -> orm.Code | None:
     """Pydantic validator function to load Code from identifier."""
-    if v is None or isinstance(v, orm.Code):
-        return v
-    if isinstance(v, str):
+    if value is None or isinstance(value, orm.Code):
+        return value
+    if isinstance(value, (str, int)):
         try:
-            node = orm.load_node(identifier=v)
+            node = orm.load_node(identifier=value)
             if isinstance(node, orm.Code):
                 return node
             else:
-                logger.warning(f"Node identifier '{v}' does not correspond to a Code. Returning None for this item.")
+                msg = f"Node identifier '{value}' does not correspond to a Code. Returning None for this item."
+                logger.warning(msg)
                 return None
         except NotExistent:
-            logger.warning(f"Code with identifier '{v}' not found in DB. Returning None for this item.")
+            logger.warning(f"Code with identifier '{value}' not found in DB. Returning None for this item.")
             return None
-        except Exception as e:
-            logger.error(f"Error loading Code '{v}': {e}. Returning None for this item.")
-            return None
-    logger.warning(f'Invalid input type for code validation: {type(v)}. Returning None.')
+    logger.warning(f'Invalid input type for code validation: {type(value)}. Returning None.')
     return None
 
 
@@ -121,8 +116,6 @@ class DumpConfig(BaseModel):
     dump_mode: DumpMode = DumpMode.INCREMENTAL
 
     # --- Node collection options ---
-    dump_processes: bool = True
-    dump_data: bool = False
     filter_by_last_dump_time: bool = True
     only_top_level_calcs: bool = True
     only_top_level_workflows: bool = True

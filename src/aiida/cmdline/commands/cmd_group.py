@@ -648,8 +648,6 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
 @options.START_DATE()
 @options.END_DATE()
 @options.FILTER_BY_LAST_DUMP_TIME()
-@options.DUMP_PROCESSES()
-@options.DUMP_DATA()
 @options.ONLY_TOP_LEVEL_CALCS()
 @options.ONLY_TOP_LEVEL_WORKFLOWS()
 @options.DELETE_MISSING()
@@ -672,8 +670,6 @@ def group_dump(
     start_date,
     end_date,
     filter_by_last_dump_time,
-    dump_processes,
-    dump_data,
     delete_missing,
     only_top_level_calcs,
     only_top_level_workflows,
@@ -754,8 +750,6 @@ def group_dump(
                     'start_date': start_date,
                     'end_date': end_date,
                     'filter_by_last_dump_time': filter_by_last_dump_time,
-                    'dump_processes': dump_processes,
-                    'dump_data': dump_data,
                     'only_top_level_calcs': only_top_level_calcs,
                     'only_top_level_workflows': only_top_level_workflows,
                     'delete_missing': delete_missing,

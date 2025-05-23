@@ -50,8 +50,6 @@ class DumpRecord:
         symlinks = []
         if data.get('symlinks'):
             symlinks = [Path(path) for path in data['symlinks']]
-        # Add mtime deserialization if included
-        # mtime = datetime.fromisoformat(data['mtime']) if data.get('mtime') else None
         duplicates = []
         if data.get('duplicates'):
             duplicates = [Path(path) for path in data['duplicates']]
@@ -187,7 +185,6 @@ class DumpRegistryCollection:
     calculations: DumpRegistry = field(default_factory=DumpRegistry)
     workflows: DumpRegistry = field(default_factory=DumpRegistry)
     groups: DumpRegistry = field(default_factory=DumpRegistry)
-    data: DumpRegistry = field(default_factory=DumpRegistry)
 
 
 class DumpTracker:
@@ -207,7 +204,6 @@ class DumpTracker:
         self.calculations = stores.calculations
         self.workflows = stores.workflows
         self.groups = stores.groups
-        self.data = stores.data
         # Store the raw string time from the log
         self._last_dump_time_str = last_dump_time_str
 
@@ -254,7 +250,6 @@ class DumpTracker:
             )
             stores.workflows = DumpTracker._deserialize_logs(prev_dump_data.get('workflows', {}), dump_paths=dump_paths)
             stores.groups = DumpTracker._deserialize_logs(prev_dump_data.get('groups', {}), dump_paths=dump_paths)
-            stores.data = DumpTracker._deserialize_logs(prev_dump_data.get('data', {}), dump_paths=dump_paths)
 
         except (json.JSONDecodeError, OSError, ValueError) as e:
             logger.warning(f'Error loading dump log file {dump_paths.tracking_log_file_path}: {e!s}')
@@ -290,7 +285,6 @@ class DumpTracker:
             calculations=self.calculations,
             workflows=self.workflows,
             groups=self.groups,
-            data=self.data,
         )
 
     # TODO: This currently requires the dump time as argument, not sure if this is what I want
@@ -305,7 +299,6 @@ class DumpTracker:
             'calculations': self._serialize_logs(self.calculations),
             'workflows': self._serialize_logs(self.workflows),
             'groups': self._serialize_logs(self.groups),
-            'data': self._serialize_logs(self.data),
             'last_dump_time': current_dump_time.isoformat(),
         }
 

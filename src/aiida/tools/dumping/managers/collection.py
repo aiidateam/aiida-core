@@ -162,7 +162,6 @@ class CollectionDumpManager:
         nodes_to_dump = []
         nodes_to_dump.extend(node_store.calculations)
         nodes_to_dump.extend(node_store.workflows)
-        nodes_to_dump.extend(node_store.data)  # If you add data nodes
         if not nodes_to_dump:
             return
 
@@ -228,7 +227,6 @@ class CollectionDumpManager:
         store_for_explicit_dump = DumpNodeStore(
             calculations=nodes_explicitly_in_group.calculations,
             workflows=nodes_explicitly_in_group.workflows,
-            data=nodes_explicitly_in_group.data,
         )
 
         if len(store_for_explicit_dump) > 0:

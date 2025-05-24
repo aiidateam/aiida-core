@@ -21,7 +21,6 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-
     - uses: actions/checkout@v4
     - name: Set up Python 3.9
       uses: actions/setup-python@v5
@@ -79,11 +78,6 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-    - name: Check access to GitHub secrets
-      run: echo "Pull request that trigger this workflow need to be on upstream repo to access GitHub secrets."; exit 1
-      # if a pull request is merged from a fork
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.owner.login != 'aiidateam'
-
     - name: Checkout source
       uses: actions/checkout@v4
     - name: Set up Python 3.9

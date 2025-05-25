@@ -195,6 +195,7 @@ jobs:
       run: sudo apt update && sudo apt install postgresql graphviz
 
     - name: Install aiida-core
+      id: install
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: ${{ matrix.python-version }}
@@ -205,8 +206,18 @@ jobs:
       run: .github/workflows/setup.sh
 
     - name: Run test suite
+      id: tests
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
       run: |
         pytest -n auto --db-backend psql -m 'not nightly' tests/
+
+    - name: Slack notification
+      # Always run this step (otherwise it would be skipped if any of the previous steps fail)
+      # but only if the `install` or `tests` steps failed.
+      if: always() && (steps.install.outcome == 'failure' || steps.tests.outcome == 'failure')
+      uses: ./.github/actions/slack-notification
+      with:
+        title: Install tests of `aiida-core/main` failed
+        message: '`test-install.yml` for Python ${{ matrix.python-version }} failed.'

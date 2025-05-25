@@ -15,12 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   run-and-upload:
 
-    # Only run on pushes and when the job is on the main repository and not on forks
+    # Only run if branch or PR base is pointing to the upstream repo
     if: github.repository == 'aiidateam/aiida-core'
-
     strategy:
       fail-fast: false
       matrix:
@@ -51,6 +49,7 @@ jobs:
         - 5672:5672
 
     steps:
+
     - uses: actions/checkout@v4
 
     - name: Install aiida-core
@@ -63,6 +62,8 @@ jobs:
       run: uv run pytest --db-backend psql --benchmark-only --benchmark-json benchmark.json tests/
 
     - name: Store benchmark result
+      # Skip this for PRs from forks
+      if: ${{ github.event_name != 'pull_request' || ! github.event.pull_request.head.repo.fork }}
       uses: aiidateam/github-action-benchmark@v3
       with:
         benchmark-data-dir-path: dev/bench/${{ matrix.os }}/psql_dos

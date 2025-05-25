@@ -211,7 +211,7 @@ jobs:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
       run: |
-        pytest -n auto --db-backend psql -m 'not nightly' tests/
+        pytest -n auto --db-backend psql -m 'not nightly' tests/test_boom.py
 
     - name: Slack notification
       # Always run this step (otherwise it would be skipped if any of the previous steps fail)

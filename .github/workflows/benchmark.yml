@@ -63,7 +63,7 @@ jobs:
 
     - name: Store benchmark result
       # Skip this for PRs from forks
-      if: ${{ ! github.event.pull_request.head.repo.fork }}
+      if: ${{ github.event_name != 'pull_request' || ! github.event.pull_request.head.repo.fork }}
       uses: aiidateam/github-action-benchmark@v3
       with:
         benchmark-data-dir-path: dev/bench/${{ matrix.os }}/psql_dos

@@ -6,6 +6,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Helper classes for the dumping feature."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -19,14 +21,26 @@ from aiida.common import timezone
 
 DumpEntityType = Union[orm.CalculationNode, orm.WorkflowNode]
 QbDumpEntityType = Union[Type[orm.CalculationNode], Type[orm.WorkflowNode]]
-
-# NOTE: Using Literal for type safety.
-# NOTE: Though, possibly allow for selection via entry point
 StoreNameType = Literal['calculations', 'workflows', 'groups']
 
 
 if TYPE_CHECKING:
     pass
+
+
+__all__ = (
+    'DumpEntityType',
+    'DumpNodeStore',
+    'DumpStoreKeys',
+    'DumpTimes',
+    'DumpTimes',
+    'GroupChanges',
+    'GroupInfo',
+    'GroupRenameInfo',
+    'NodeChanges',
+    'NodeMembershipChange',
+    'QbDumpEntityType',
+)
 
 
 @dataclass
@@ -41,11 +55,7 @@ class DumpTimes:
         """Create DumpTimes initializing `last` from an ISO time string."""
         last = None
         if last_log_time:
-            try:
-                last = datetime.fromisoformat(last_log_time)
-            except ValueError:
-                # Handle potential parsing errors if necessary
-                pass  # Or log a warning
+            last = datetime.fromisoformat(last_log_time)
         return cls(last=last)
 
 
@@ -131,7 +141,6 @@ class DumpNodeStore:
         return getattr(self, attr)
 
 
-# --- Supporting Dataclasses for Group Changes ---
 @dataclass
 class GroupInfo:
     """Information about a group (typically for new or deleted groups)."""

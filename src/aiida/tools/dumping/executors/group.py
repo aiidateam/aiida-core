@@ -17,8 +17,7 @@ from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.executors.collection import CollectionDumpExecutor
 from aiida.tools.dumping.tracking import DumpTracker
-from aiida.tools.dumping.utils.helpers import DumpChanges
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils import DumpChanges, DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.executors.profile')
 
@@ -103,7 +102,7 @@ class GroupDumpExecutor(CollectionDumpExecutor):
 
     def _update_single_group_stats(self, group: orm.Group, group_content_path: Path) -> None:
         logger.info(f"Calculating final directory stats for group '{group.label}'.")
-        group_log_entry = self.dump_tracker.stores['groups'].get_entry(group.uuid)
+        group_log_entry = self.dump_tracker.registries['groups'].get_entry(group.uuid)
 
         if not group_log_entry:
             logger.warning(f"Log entry for group '{group.label}' not found. Cannot update stats.")

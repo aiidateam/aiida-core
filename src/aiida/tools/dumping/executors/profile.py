@@ -19,8 +19,7 @@ from aiida.tools.dumping.config import GroupDumpScope
 from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.executors.collection import CollectionDumpExecutor
 from aiida.tools.dumping.tracking import DumpTracker
-from aiida.tools.dumping.utils.helpers import DumpChanges, DumpNodeStore
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils import DumpChanges, DumpNodeStore, DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.executors.profile')
 
@@ -82,13 +81,13 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         ungrouped_nodes_store = DumpNodeStore()
         ungrouped_workflows: list[orm.WorkflowNode] = []
 
-        for store_key in ['calculations', 'workflows', 'data']:
-            store_nodes = getattr(changes.nodes.new_or_modified, store_key, [])
+        for registry_key in ['calculations', 'workflows', 'data']:
+            store_nodes = getattr(changes.nodes.new_or_modified, registry_key, [])
             # Node is ungrouped if its UUID is not in the node_to_groups mapping
             ungrouped = [node for node in store_nodes if node.uuid not in self.current_mapping.node_to_groups]
             if ungrouped:
-                setattr(ungrouped_nodes_store, store_key, ungrouped)
-                if store_key == 'workflows':
+                setattr(ungrouped_nodes_store, registry_key, ungrouped)
+                if registry_key == 'workflows':
                     ungrouped_workflows.extend(
                         cast(
                             list[orm.WorkflowNode],
@@ -110,7 +109,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         descendants = DumpChangeDetector._get_calculation_descendants(ungrouped_workflows)
         if descendants:
             existing_calc_uuids = {calc.uuid for calc in ungrouped_nodes_store.calculations}
-            logged_calc_uuids = set(self.dump_tracker.stores['calculations'].entries.keys())
+            logged_calc_uuids = set(self.dump_tracker.registries['calculations'].entries.keys())
             unique_descendants = [
                 desc
                 for desc in descendants
@@ -125,10 +124,11 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
                 logger.debug('All descendants for ungrouped workflows were already included or logged.')
 
     def _process_ungrouped_nodes(self) -> None:
-        """Identify ALL currently ungrouped nodes (ignoring time filter),
-        apply necessary filters (like top-level), and ensure they are
-        represented in the dump if config.also_ungrouped is True and
-        they don't already have an ungrouped representation.
+        """Identify ALL currently ungrouped nodes.
+
+        This ignores time filters, applies other necessary filters (like top-level), and ensures
+        they are represented in the dump if config.also_ungrouped is True and they don't already have an ungrouped
+        representation.
         """
         if not self.config.also_ungrouped:
             logger.info('Skipping ungrouped nodes processing (also_ungrouped=False).')
@@ -138,28 +138,23 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
 
         # 1. Determine the target path for ungrouped nodes
         ungrouped_path = self.dump_paths.get_path_for_ungrouped_nodes()
-        logger.debug(f'Target path for ungrouped nodes: {ungrouped_path}')
 
         # 2. Use Node Query logic, ignoring time filter, to get initial candidates
-        logger.debug('Querying detector for ungrouped nodes with ignore_time_filter=True...')
         try:
             # Ensure self.detector and self.dump_times are accessible
             # Query base Node type to get all potential candidates initially
-            initial_ungrouped_nodes: list[orm.Node] = self.detector.node_query._get_nodes(
-                orm_type=orm.Node,
-                dump_times=self.detector.dump_times,  # Need access to dump_times
+            initial_ungrouped_nodes: list[orm.ProcessNode] = self.detector.node_query._get_nodes(
+                orm_type=orm.ProcessNode,
+                dump_times=self.detector.dump_times,
                 scope=GroupDumpScope.NO_GROUP,
                 ignore_time_filter=True,
-            )
-            logger.debug(
-                f'Query returned {len(initial_ungrouped_nodes)} potential ungrouped nodes (ignoring time filter).'
             )
         except AttributeError:
             logger.error('Cannot access detector.node_query or detector.dump_times. Refactoring needed.')
             return
 
         # 3. Convert list to dictionary format required by filter methods
-        nodes_by_type: dict[str, list[orm.Node]] = {
+        nodes_by_type: dict[str, list[orm.ProcessNode]] = {
             'calculations': [],
             'workflows': [],
         }
@@ -171,29 +166,20 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
 
         # 4. Apply the Top-Level Filter (reuse detector's logic)
         logger.debug('Applying top-level filter to ungrouped nodes...')
-        try:
-            # Pass the dictionary grouped by type to the filter
-            filtered_ungrouped_nodes_by_type = self.detector._apply_top_level_filter(nodes_by_type)
-            wf_count = len(filtered_ungrouped_nodes_by_type.get('workflows', []))
-            calc_count = len(filtered_ungrouped_nodes_by_type.get('calculations', []))
-            logger.debug(f'After top-level filter: {wf_count} workflows, {calc_count} calculations remain.')
-        except AttributeError:
-            logger.error('Cannot access detector._apply_top_level_filter. Refactoring needed.')
-            return
+        filtered_ungrouped_nodes_by_type = self.detector._apply_top_level_filter(nodes_by_type)
 
         nodes_to_dump_ungrouped = DumpNodeStore()
-        nodes_processed_count = 0
 
         # 5. Check remaining nodes against logger for existing UNGROUPED representation
         # Iterate through the dictionary returned by the filter
-        for store_key, node_list in filtered_ungrouped_nodes_by_type.items():
-            if store_key not in ['calculations', 'workflows', 'data']:  # Ensure valid store key
+        for registry_key, node_list in filtered_ungrouped_nodes_by_type.stores.items():
+            if registry_key not in ['calculations', 'workflows']:
                 continue
             for node in node_list:
                 node_uuid = node.uuid
-                dump_record = self.dump_tracker.get_entry_by_uuid(node_uuid)
-
+                dump_record = self.dump_tracker.get_entry(node_uuid)
                 has_ungrouped_representation = False
+
                 if dump_record:
                     try:
                         primary_path = dump_record.path
@@ -208,7 +194,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
                                 ):
                                     has_ungrouped_representation = True
                                     break
-                        if not has_ungrouped_representation:
+
                             for duplicate_path in dump_record.duplicates:
                                 if duplicate_path.exists() and duplicate_path.resolve().is_relative_to(
                                     ungrouped_path.resolve()
@@ -226,7 +212,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
                     )
                     logger.debug(msg)
                     # Add to the correct list within nodes_to_dump_ungrouped
-                    getattr(nodes_to_dump_ungrouped, store_key).append(node)
+                    getattr(nodes_to_dump_ungrouped, registry_key).append(node)
 
         # 7. Dump the collected nodes
         if len(nodes_to_dump_ungrouped) > 0:
@@ -234,16 +220,11 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
             ungrouped_path.mkdir(exist_ok=True, parents=True)
             (ungrouped_path / DumpPaths.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
             self._dump_nodes(node_store=nodes_to_dump_ungrouped, group_context=None)
-            nodes_processed_count = len(nodes_to_dump_ungrouped)
-        else:
-            logger.info('No ungrouped nodes required a new representation in the dump after applying filters.')
-
-        logger.info(f'Finished processing ungrouped nodes. Processed {nodes_processed_count} nodes.')
 
     def _update_group_stats(self) -> None:
         """Calculate and update final directory stats for all logged groups."""
         logger.info('Calculating final directory stats for all registered groups...')
-        for group_uuid, group_log_entry in self.dump_tracker.stores['groups'].entries.items():
+        for group_uuid, group_log_entry in self.dump_tracker.registries['groups'].entries.items():
             group_path = group_log_entry.path
             if not group_path.is_absolute():
                 group_path = self.dump_paths.base_output_path / group_path
@@ -290,5 +271,3 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
 
         # 5. Update final stats for logged groups after all dumping is done
         self._update_group_stats()
-
-        logger.info('Finished ProfileDumpExecutor.')

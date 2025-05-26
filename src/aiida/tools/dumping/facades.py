@@ -17,7 +17,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.tools.dumping.config import DumpConfig
 from aiida.tools.dumping.engine import DumpEngine
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.facades')
 
@@ -51,7 +51,7 @@ class ProcessDumper:
 
         # Resolve DumpPaths based on output_path and the node
         if not output_path:
-            default_child_dir_name = DumpPaths._get_node_directory_name(node=self.process_node)
+            default_child_dir_name = str(DumpPaths.get_default_dump_path(self.process_node))
             self.base_output_path = Path.cwd() / default_child_dir_name
         else:
             self.base_output_path = Path(output_path).resolve()

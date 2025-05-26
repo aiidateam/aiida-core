@@ -19,8 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from aiida.common import timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.mapping import GroupNodeMapping
-from aiida.tools.dumping.utils.helpers import StoreNameType
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils import DumpPaths, StoreNameType
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.tracking')
 
@@ -157,7 +156,7 @@ class DumpRegistry:
 
     def update_paths(self, old_str: str, new_str: str) -> None:
         """Update paths by replacing substrings."""
-        # Keep this method as it operates solely on paths within the store
+        # Keep this method as it operates solely on paths within the registry
         for uuid, entry in self.entries.items():
             path_str = str(entry.path)
             if old_str in path_str:
@@ -190,7 +189,7 @@ class DumpTracker:
         Initialize the DumpTracker. Should typically be instantiated via `load`.
         """
         self.dump_paths = dump_paths
-        self.stores = {'calculations': DumpRegistry(), 'workflows': DumpRegistry(), 'groups': DumpRegistry()}
+        self.registries = {'calculations': DumpRegistry(), 'workflows': DumpRegistry(), 'groups': DumpRegistry()}
         # Store the raw string time from the log
         self._last_dump_time_str: Optional[str] = last_dump_time_str
 
@@ -203,7 +202,7 @@ class DumpTracker:
 
         Returns:
             A tuple containing:
-                - DumpLogStoreCollection: The loaded stores.
+                - DumpLogStoreCollection: The loaded registrys.
                 - GroupNodeMapping | None: The loaded group mapping, or None if not found/error.
                 - str | None: The ISO timestamp string of the last dump, or None.
 
@@ -228,11 +227,11 @@ class DumpTracker:
             if 'group_node_mapping' in data:
                 group_node_mapping = GroupNodeMapping.from_dict(data['group_node_mapping'])
 
-            # Load store data using deserialize_logs helper
-            for store_name in tracker.stores:
-                if store_name in data:
-                    registry_data = data[store_name]
-                    tracker.stores[store_name] = tracker._deserialize_registry(registry_data)
+            # Load registry data using deserialize_logs helper
+            for registry_name in tracker.registries:
+                if registry_name in data:
+                    registry_data = data[registry_name]
+                    tracker.registries[registry_name] = tracker._deserialize_registry(registry_data)
 
         except (json.JSONDecodeError, OSError, ValueError) as e:
             logger.warning(f'Error loading dump log file {dump_paths.tracking_log_file_path}: {e!s}')
@@ -248,15 +247,17 @@ class DumpTracker:
                 logger.warning(f'Could not parse last dump time string: {self._last_dump_time_str}')
         return None
 
-    def add_entry(self, store_key: StoreNameType, uuid: str, entry: DumpRecord) -> None:
-        """Add a log entry for a node to the specified store."""
-        store = self.get_store_by_name(store_key)
-        store.add_entry(uuid, entry)
+    def add_entry(self, registry_key: StoreNameType, uuid: str, entry: DumpRecord) -> None:
+        """Add a log entry for a node to the specified registry."""
+        registry = self.get_registry_by_name(registry_key)
+        registry.add_entry(uuid, entry)
 
-    def del_entry(self, store_key: StoreNameType, uuid: str) -> bool:
-        """Delete a log entry from the specified store."""
-        store = self.get_store_by_name(store_key)
-        return store.del_entry(uuid)
+    def del_entry(self, uuid: str) -> bool:
+        """Delete a log entry by UUID (automatically finds the correct registry)."""
+        for registry in self.registries.values():
+            if uuid in registry.entries:
+                return registry.del_entry(uuid)
+        return False
 
     # TODO: This currently requires the dump time as argument, not sure if this is what I want
     def save(
@@ -266,7 +267,7 @@ class DumpTracker:
     ) -> None:
         """Save the current log state and mapping to the JSON file."""
         log_dict: dict[str, Any] = {
-            store_name: self._serialize_registry(registry) for store_name, registry in self.stores.items()
+            registry_name: self._serialize_registry(registry) for registry_name, registry in self.registries.items()
         }
         log_dict['last_dump_time'] = current_dump_time.isoformat()
 
@@ -334,28 +335,28 @@ class DumpTracker:
 
         return container
 
-    def get_store_by_name(self, name: StoreNameType) -> DumpRegistry:
-        """Get store by name."""
-        if name not in self.stores:
-            raise ValueError(f'Invalid store key: {name}. Available: {list(self.stores.keys())}')
-        return self.stores[name]
+    def get_registry_by_name(self, name: StoreNameType) -> DumpRegistry:
+        """Get registry by name."""
+        if name not in self.registries:
+            raise ValueError(f'Invalid registry key: {name}. Available: {list(self.registries.keys())}')
+        return self.registries[name]
 
-    def get_store_by_uuid(self, uuid: str) -> Optional[DumpRegistry]:
-        """Find store containing the UUID."""
-        for store in self.stores.values():
-            if uuid in store.entries:
-                return store
+    def get_registry_from_entry(self, uuid: str) -> Optional[DumpRegistry]:
+        """Find registry containing the UUID."""
+        for registry in self.registries.values():
+            if uuid in registry.entries:
+                return registry
         return None
 
-    def get_entry_by_uuid(self, uuid: str) -> Optional[DumpRecord]:
+    def get_entry(self, uuid: str) -> Optional[DumpRecord]:
         """Find the dump record for an entity with the given UUID."""
-        store = self.get_store_by_uuid(uuid=uuid)
-        if store and uuid in store.entries:
-            return store.entries[uuid]
+        registry = self.get_registry_from_entry(uuid=uuid)
+        if registry and uuid in registry.entries:
+            return registry.entries[uuid]
         return None
 
     def update_paths(self, old_base_path: Path, new_base_path: Path) -> int:
-        """Update all paths across all stores if they start with old_base_path.
+        """Update all paths across all registrys if they start with old_base_path.
 
         Replaces the old_base_path prefix with new_base_path.
 
@@ -377,8 +378,8 @@ class DumpTracker:
             logger.error(f'Error resolving paths for update: {e}. Aborting path update.')
             return 0
 
-        for store in self.stores.values():
-            for uuid, entry in store.entries.items():
+        for registry in self.registries.values():
+            for uuid, entry in registry.entries.items():
                 updated_entry = False
                 # --- Update entry.path ---
                 try:
@@ -443,11 +444,11 @@ class DumpTracker:
 
     def remove_symlink_from_log_entry(self, node_uuid: str, symlink_path_to_remove: Path) -> bool:
         """Finds the log entry for a node and removes a specific symlink path from it."""
-        store = self.get_store_by_uuid(node_uuid)
-        if not store:
-            logger.warning(f'Cannot find store for node UUID {node_uuid} to remove symlink.')
+        registry = self.get_registry_from_entry(node_uuid)
+        if not registry:
+            logger.warning(f'Cannot find registry for node UUID {node_uuid} to remove symlink.')
             return False
-        entry = store.get_entry(node_uuid)
+        entry = registry.get_entry(node_uuid)
         if not entry:
             logger.warning(f'Cannot find log entry for node UUID {node_uuid} to remove symlink.')
             return False

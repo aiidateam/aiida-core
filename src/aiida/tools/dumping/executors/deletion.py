@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.utils.helpers import DumpChanges, StoreNameType
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils import DumpChanges, DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.managers.deletion')
 
@@ -13,7 +12,7 @@ if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
     from aiida.tools.dumping.mapping import GroupNodeMapping
     from aiida.tools.dumping.tracking import DumpTracker
-    from aiida.tools.dumping.utils.helpers import GroupInfo
+    from aiida.tools.dumping.utils import GroupInfo
 
 
 class DeletionExecutor:
@@ -86,69 +85,30 @@ class DeletionExecutor:
         return something_deleted
 
     def _delete_node_from_logger_and_disk(self, node_uuid: str) -> bool:
-        """
-        Helper to remove a node's primary dump directory and its entire log entry.
+        """Remove a node's dump directory and log entry."""
 
-        Returns:
-            True if the node's log entry was successfully deleted, False otherwise.
-        """
-        store = self.dump_tracker.get_store_by_uuid(node_uuid)
-        if not store:
-            # It might have already been deleted if associated with a deleted group below
-            logger.debug(
-                f'Log store not found for deleted node UUID {node_uuid} (might be expected). Cannot remove further.'
-            )
-            return False  # Indicate log entry wasn't deleted *by this call*
-
-        entry = store.get_entry(node_uuid)
-        if not entry:
-            logger.warning(f'Log entry not found for node UUID {node_uuid} in its store. Cannot remove.')
-            return False  # Indicate log entry wasn't deleted
-
-        path_to_delete = entry.path
-        # Determine store key for deletion from logger
-        store_key = next(
-            (
-                s_name
-                for s_name in ['calculations', 'workflows', 'data']
-                if getattr(self.dump_tracker, s_name, None) == store
-            ),
-            None,
-        )
-        if not store_key:
-            logger.error(f'Consistency error: Could not determine store key name for node {node_uuid}.')
-            # Try deleting log entry anyway? Or return False? Let's try deleting.
-            # Fallback: Attempt deletion without knowing the exact store key (less ideal)
-            # deleted_from_log = store.del_entry(uuid) # Assumes store has del_entry
-            # For now, return False as we couldn't guarantee deletion from the main logger structure
+        # Get entry and store type in one call (using simplified tracker interface)
+        result = self.dump_tracker.get_entry(node_uuid)
+        if not result:
+            logger.debug(f'Node {node_uuid} not found in log (may have been deleted already)')
             return False
 
-        deleted_from_log = False
+        # Delete directory if it exists
         try:
-            # Attempt to delete directory first (use appropriate safeguard)
-            # TODO: Adjust safeguard if Data nodes use a different one
-            rel_path = path_to_delete.relative_to(self.dump_paths.base_output_path)
-            msg = f"Deleting directory '{rel_path}' for deleted node UUID {node_uuid}"
-            logger.report(msg)
-            self.dump_paths.safe_delete_directory(directory_path=path_to_delete)
-        except FileNotFoundError as e:
-            logger.warning(
-                f'Directory or safeguard file not found for deleted node {node_uuid} at {path_to_delete}: {e}. '
-                f'Proceeding to remove log entry.'
-            )
-        finally:
-            # Always attempt to remove the log entry
-            if self.dump_tracker.del_entry(store_key=cast(StoreNameType, store_key), uuid=node_uuid):
-                logger.debug(f"Removed log entry for deleted node {node_uuid} from store '{store_key}'.")
-                deleted_from_log = True
-            else:
-                # This might happen if it was already removed via group deletion logic
-                logger.debug(
-                    f'Log entry for deleted node {node_uuid} potentially already removed '
-                    f'(e.g., via group deletion). Store: {store_key}.'
-                )
+            if result.path.exists():
+                rel_path = result.path.relative_to(self.dump_paths.base_output_path)
+                logger.report(f"Deleting directory '{rel_path}' for deleted node {node_uuid}")
+                self.dump_paths.safe_delete_directory(result.path)
 
-        return deleted_from_log
+        except (FileNotFoundError, ValueError) as e:
+            logger.warning(f'Could not delete directory for node {node_uuid}: {e}')
+
+        # Remove log entry
+        success = self.dump_tracker.del_entry(uuid=node_uuid)
+        if success:
+            logger.debug(f'Removed log entry for node {node_uuid}.')
+
+        return success
 
     def _delete_group_and_associated_node_logs(self, group_uuid: str) -> bool:
         """
@@ -165,7 +125,7 @@ class DeletionExecutor:
         path_deleted: Path | None = None  # Keep track of the path we deleted
 
         # --- 1. Delete Group Directory (if applicable) ---
-        group_entry = self.dump_tracker.stores['groups'].get_entry(group_uuid)
+        group_entry = self.dump_tracker.registries['groups'].get_entry(group_uuid)
         if group_entry:
             path_to_delete = group_entry.path
             should_delete_dir = self.config.organize_by_groups and path_to_delete != self.dump_paths.base_output_path
@@ -179,7 +139,7 @@ class DeletionExecutor:
                         rel_path_str = str(path_to_delete)
 
                     logger.report(f"Deleting directory '{rel_path_str}' for deleted group UUID {group_uuid}")
-                    self.dump_paths.safe_delete_directory(directory_path=path_to_delete)
+                    self.dump_paths.safe_delete_directory(path=path_to_delete)
                     path_deleted = path_to_delete  # Record that we deleted this path
                 except FileNotFoundError:
                     msg = (
@@ -195,7 +155,7 @@ class DeletionExecutor:
             logger.warning(f'Log entry not found for deleted group UUID {group_uuid}. Cannot remove directory.')
 
         # --- 2. Delete Group Log Entry ---
-        if self.dump_tracker.del_entry(store_key='groups', uuid=group_uuid):
+        if self.dump_tracker.del_entry(uuid=group_uuid):
             logger.debug(f'Removed log entry for deleted group {group_uuid}.')
             group_log_deleted = True
         else:
@@ -207,15 +167,15 @@ class DeletionExecutor:
         if path_deleted:
             logger.info(f'Scanning node logs for entries within deleted group path: {path_deleted}')
             # Iterate through all potential node stores
-            for store_key in ['calculations', 'workflows', 'data']:
-                node_store = getattr(self.dump_tracker, store_key, None)
-                if not node_store or not hasattr(node_store, 'entries'):
+            for registry_key in ['calculations', 'workflows']:
+                node_registry = getattr(self.dump_tracker, registry_key, None)
+                if not node_registry or not hasattr(node_registry, 'entries'):
                     continue
 
                 # Need to copy keys as we modify the dictionary during iteration
-                node_uuids_in_store = list(node_store.entries.keys())
+                node_uuids_in_store = list(node_registry.entries.keys())
                 for node_uuid in node_uuids_in_store:
-                    node_log_entry = node_store.get_entry(node_uuid)
+                    node_log_entry = node_registry.get_entry(node_uuid)
                     if not node_log_entry or not node_log_entry.path:
                         continue  # Skip if entry or path is missing
 
@@ -228,9 +188,8 @@ class DeletionExecutor:
                                 "group path '{path_deleted}'. Removing log entry."
                             )
                             logger.debug(msg)
-                            if self.dump_tracker.del_entry(store_key=cast(StoreNameType, store_key), uuid=node_uuid):
+                            if self.dump_tracker.del_entry(uuid=node_uuid):
                                 nodes_removed_count += 1
-                            # else: No warning needed if removal fails, might be race condition or prior removal
                     except (OSError, ValueError):
                         # Errors can happen if paths don't exist when resolve() is called
                         msg = (

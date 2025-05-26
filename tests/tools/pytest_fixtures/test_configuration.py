@@ -1,5 +1,8 @@
 """Test the pytest fixtures."""
 
+# This is needed for when we run this file in isolation using the `--noconftest` option
+pytest_plugins = ['aiida.tools.pytest_fixtures']
+
 
 def test_aiida_config(tmp_path_factory):
     """Test that ``aiida_config`` fixture is loaded by default and creates a config instance in temp directory."""

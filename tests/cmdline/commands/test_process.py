@@ -586,7 +586,7 @@ class TestVerdiProcess:
     #     assert 'Success:' in result.output
 
     #     # Set overwrite=True but provide bad directory, i.e. missing metadata file
-    #     (test_path / '.aiida_node_metadata.yaml').unlink()
+    #     (test_path / 'aiida_node_metadata.yaml').unlink()
 
     #     options = [str(node.pk), '-p', str(test_path), '-o']
     #     result = run_cli_command(cmd_process.process_dump, options, raises=True)

@@ -619,7 +619,7 @@ def process_dump(
     settings). Additional input and output files (depending on the type of calculation) are placed in the "node_inputs"
     and "node_outputs", respectively.
 
-    Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
+    Lastly, every folder also contains a hidden, human-readable `aiida_node_metadata.yaml` file with the relevant AiiDA
     node data for further inspection.
     """
     import traceback
@@ -651,40 +651,22 @@ def process_dump(
             echo.echo_report(f"Using specified output path: '{path}'")
             dump_base_output_path = Path(path).resolve()
 
-        config_file_path = dump_base_output_path / DumpPaths.CONFIG_FILE_NAME
-
-        if config_file_path.is_file() and not overwrite:
-            # --- Config File Exists: Load ONLY from file ---
-            try:
-                config_path_rel = config_file_path.relative_to(Path.cwd())
-            except ValueError:
-                config_path_rel = config_file_path
-            echo.echo_report(f"Config file found at '{config_path_rel}'.")
-            echo.echo_report('Using config file settings ONLY (ignoring other CLI flags).')
-            try:
-                final_dump_config = DumpConfig.parse_yaml_file(config_file_path)
-            except (ValidationError, FileNotFoundError, ValueError) as e:
-                echo.echo_critical(f'Error loading or validating config file {config_file_path}: {e}')
-                return
-        else:
-            # --- Config File Does NOT Exist: Use ONLY CLI args ---
-            echo.echo_report('No config file found. Using command-line arguments.')
-            try:
-                # Gather relevant CLI args for group dump
-                config_input_data = {
-                    'dry_run': dry_run,
-                    'overwrite': overwrite,
-                    'include_inputs': include_inputs,
-                    'include_outputs': include_outputs,
-                    'include_attributes': include_attributes,
-                    'include_extras': include_extras,
-                    'flat': flat,
-                    'dump_unsealed': dump_unsealed,
-                }
-                final_dump_config = DumpConfig.model_validate(config_input_data)
-            except ValidationError as e:
-                echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
-                return
+        try:
+            # Gather relevant CLI args for group dump
+            config_input_data = {
+                'dry_run': dry_run,
+                'overwrite': overwrite,
+                'include_inputs': include_inputs,
+                'include_outputs': include_outputs,
+                'include_attributes': include_attributes,
+                'include_extras': include_extras,
+                'flat': flat,
+                'dump_unsealed': dump_unsealed,
+            }
+            final_dump_config = DumpConfig.model_validate(config_input_data)
+        except ValidationError as e:
+            echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
+            return
 
         # --- Logical Checks ---
         # Check for dry_run + overwrite based on final config

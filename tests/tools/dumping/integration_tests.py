@@ -49,14 +49,14 @@ _ADD_CALC_OUTPUT_CONTENT = [
 # Content for a simple calculation node like ArithmeticAddCalculation
 _ADD_CALC_NODE_CONTENT = [
     ".aiida_dump_safeguard",
-    ".aiida_node_metadata.yaml",
+    "aiida_node_metadata.yaml",
     {"inputs": _ADD_CALC_INPUT_CONTENT},
     {"outputs": _ADD_CALC_OUTPUT_CONTENT},
 ]
 
 # Content for a simple function node like 'multiply'
 _MULTIPLY_FUNC_NODE_CONTENT = [
-    ".aiida_node_metadata.yaml",
+    "aiida_node_metadata.yaml",
     ".aiida_dump_safeguard",
     {"inputs": ["source_file"]},  # Assuming multiply function only has this repo file
 ]
@@ -78,7 +78,7 @@ _IO_CALC_OUTPUT_NODE_CONTENT = [
 # Content list for a standard nested dump of the IO Calc
 _IO_CALC_NODE_CONTENT_NESTED = [
     ".aiida_dump_safeguard",
-    ".aiida_node_metadata.yaml",
+    "aiida_node_metadata.yaml",
     {"inputs": _IO_CALC_INPUT_REPO_CONTENT},
     {"node_inputs": _IO_CALC_INPUT_NODE_CONTENT},
     {"node_outputs": _IO_CALC_OUTPUT_NODE_CONTENT},
@@ -86,7 +86,7 @@ _IO_CALC_NODE_CONTENT_NESTED = [
 
 _IO_CALC_NODE_CONTENT_NESTED_NO_OUTPUTS = [
     ".aiida_dump_safeguard",
-    ".aiida_node_metadata.yaml",
+    "aiida_node_metadata.yaml",
     {"inputs": _IO_CALC_INPUT_REPO_CONTENT},
     {"node_inputs": _IO_CALC_INPUT_NODE_CONTENT},
     # No 'node_outputs' key here
@@ -95,9 +95,8 @@ _IO_CALC_NODE_CONTENT_NESTED_NO_OUTPUTS = [
 _IO_CALC_NODE_CONTENT_FLAT = [
     "README.md",
     "aiida_dump_log.json",
-    "aiida_dump_config.yaml",
     ".aiida_dump_safeguard",
-    ".aiida_node_metadata.yaml",
+    "aiida_node_metadata.yaml",
     "file.txt",
     "default.npy",
 ]
@@ -151,7 +150,7 @@ def get_expected_multiply_add_wc_tree(
     return {
         node_dir_name: [
             ".aiida_dump_safeguard",
-            ".aiida_node_metadata.yaml",
+            "aiida_node_metadata.yaml",
             {f"01-{multiply_dir_key}": multiply_child_tree[multiply_dir_key]},
             {f"02-{add_dir_key}": add_child_tree[add_dir_key]},
         ]
@@ -179,7 +178,7 @@ def get_expected_io_wc_tree(
 
     wc_content = [
         ".aiida_dump_safeguard",
-        ".aiida_node_metadata.yaml",
+        "aiida_node_metadata.yaml",
         # Nest child 1 (assuming 01- prefix)
         {
             f"01-{child1_dir_name}": _IO_CALC_NODE_CONTENT_NESTED  # Use the predefined content list
@@ -225,7 +224,7 @@ def get_expected_nested_io_wc_tree(
     # Build the sub-workflow's content, nesting the calculations
     wc_sub_content = [
         ".aiida_dump_safeguard",
-        ".aiida_node_metadata.yaml",
+        "aiida_node_metadata.yaml",
         # Assuming calculations are called in sequence (01-, 02-)
         {
             f"01-{sub_to_calc_link_label}-{child_calc_pks[0]}": child1_content
@@ -239,7 +238,7 @@ def get_expected_nested_io_wc_tree(
     # Key now uses: {prefix}-{link_label}-{CHILD_PK}
     wc_content = [
         ".aiida_dump_safeguard",
-        ".aiida_node_metadata.yaml",
+        "aiida_node_metadata.yaml",
         # Assuming sub-workflow is the first thing called (01-)
         {
             f"01-{wc_to_sub_link_label}-{wc_sub_pk}": wc_sub_content
@@ -290,7 +289,6 @@ def get_expected_profile_dump_tree(
     """
     top_level_content = [
         "aiida_dump_log.json",
-        "aiida_dump_config.yaml",
         ".aiida_dump_safeguard",
     ]
 
@@ -354,7 +352,6 @@ def get_expected_group_dump_tree(
     content = [
         "aiida_dump_log.json",
         ".aiida_dump_safeguard",
-        "aiida_dump_config.yaml",
     ]
     nodes_by_type = _assemble_nodes_by_type(node_trees)
 
@@ -432,14 +429,12 @@ class TestProcessDumping:
             dump_label: [
                 "README.md",
                 "aiida_dump_log.json",
-                "aiida_dump_config.yaml",
             ]
             + expected_tree_content  # Add standard files to node content list
         }
 
         compare_tree(expected=expected_tree_final, base_path=tmp_path)
         assert (dump_target_path / "README.md").is_file()
-        assert (dump_target_path / "aiida_dump_config.yaml").is_file()
         assert (dump_target_path / "aiida_dump_log.json").is_file()
 
     @pytest.mark.usefixtures("aiida_profile_clean")
@@ -469,7 +464,7 @@ class TestProcessDumping:
             dump_label: [
                 "README.md",
                 "aiida_dump_log.json",
-                "aiida_dump_config.yaml",
+                ".aiida_dump_safeguard",
             ]
             + expected_tree_content_nested
         }
@@ -500,7 +495,7 @@ class TestProcessDumping:
             dump_label: [
                 "README.md",
                 "aiida_dump_log.json",
-                "aiida_dump_config.yaml",
+                ".aiida_dump_safeguard",
             ]
             + expected_tree_content
         }
@@ -540,7 +535,7 @@ class TestProcessDumping:
         calculation_node.dump(config=config, output_path=dump_target_path)
 
         # Perform basic checks instead of full compare_tree for flat dump
-        assert (dump_target_path / ".aiida_node_metadata.yaml").is_file()
+        assert (dump_target_path / "aiida_node_metadata.yaml").is_file()
         assert (dump_target_path / "aiida_dump_log.json").is_file()
         assert (
             dump_target_path / "file.txt"
@@ -567,7 +562,7 @@ class TestProcessDumping:
             dump_label: [
                 "README.md",
                 "aiida_dump_log.json",
-                "aiida_dump_config.yaml",
+                ".aiida_dump_safeguard",
             ]
             + expected_node_content
         }

@@ -15,12 +15,12 @@ import yaml
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.tools.dumping.config import DumpConfig
-from aiida.tools.dumping.managers.process import NodeRepoIoDumper, WorkflowWalker
+from aiida.tools.dumping.executors.process import NodeRepoIoDumper, WorkflowWalker
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-class TestProcessDumpManager:
-    """Tests the ProcessDumpManager logic."""
+class TestProcessDumpExecutor:
+    """Tests the ProcessDumpExecutor logic."""
 
     def test_dump_calculation_content(self, process_dump_manager, generate_calculation_node_io, tmp_path):
         """Test the internal _dump_calculation_content method."""
@@ -94,7 +94,7 @@ class TestProcessDumpManager:
         dump_target_path.mkdir()
 
         process_dump_manager.metadata_writer._write(node, dump_target_path)
-        yaml_path = dump_target_path / '.aiida_node_metadata.yaml'
+        yaml_path = dump_target_path / 'aiida_node_metadata.yaml'
         assert yaml_path.is_file()
 
         with open(yaml_path) as f:
@@ -135,12 +135,12 @@ class TestProcessDumpManager:
         assert 'ArithmeticAddCalculation' in content  # Check for child node name
 
 
-# === Tests for classes used by ProcessDumpManager ===
+# === Tests for classes used by ProcessDumpExecutor ===
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 class TestProcessManagerHelpers:
-    """Tests helper classes used by ProcessDumpManager."""
+    """Tests helper classes used by ProcessDumpExecutor."""
 
     def test_node_repo_io_dumper_mapping(self):
         """Test the IO mapping generation."""

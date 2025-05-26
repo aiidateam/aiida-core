@@ -48,7 +48,7 @@ class TestProcessDumpExecutor:
         dump_target_path.mkdir()
 
         process_dump_manager.config.include_inputs = False
-        process_dump_manager.config.include_outputs = True  # Keep outputs
+        process_dump_manager.config.include_outputs = True
         process_dump_manager.repo_io_dumper._dump_calculation_content(node, dump_target_path)
 
         assert not (dump_target_path / 'node_inputs').exists()

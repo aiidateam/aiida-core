@@ -11,15 +11,15 @@ from __future__ import annotations
 
 import json
 from collections.abc import Collection
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from aiida.common import timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.mapping import GroupNodeMapping
-from aiida.tools.dumping.utils.helpers import DumpStoreKeys, StoreNameType
+from aiida.tools.dumping.utils.helpers import StoreNameType
 from aiida.tools.dumping.utils.paths import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.tracking')
@@ -178,39 +178,27 @@ class DumpRegistry:
             entry.duplicates = updated_duplicates
 
 
-@dataclass
-class DumpRegistryCollection:
-    """Represents the entire log data."""
-
-    calculations: DumpRegistry = field(default_factory=DumpRegistry)
-    workflows: DumpRegistry = field(default_factory=DumpRegistry)
-    groups: DumpRegistry = field(default_factory=DumpRegistry)
-
-
 class DumpTracker:
     """Handles loading, saving, and accessing dump log data."""
 
     def __init__(
         self,
         dump_paths: DumpPaths,
-        stores: DumpRegistryCollection,
         last_dump_time_str: str | None = None,
     ) -> None:
         """
         Initialize the DumpTracker. Should typically be instantiated via `load`.
         """
         self.dump_paths = dump_paths
-        # Stores are now passed in directly
-        self.calculations = stores.calculations
-        self.workflows = stores.workflows
-        self.groups = stores.groups
+        self.stores = {'calculations': DumpRegistry(), 'workflows': DumpRegistry(), 'groups': DumpRegistry()}
         # Store the raw string time from the log
-        self._last_dump_time_str = last_dump_time_str
+        self._last_dump_time_str: Optional[str] = last_dump_time_str
 
-    @staticmethod
+    @classmethod
     def load(
+        cls,
         dump_paths: DumpPaths,
-    ) -> Tuple[DumpRegistryCollection, GroupNodeMapping | None, str | None]:
+    ) -> Tuple['DumpTracker', GroupNodeMapping | None]:
         """Load log data and mapping from the log file.
 
         Returns:
@@ -222,38 +210,34 @@ class DumpTracker:
         :param dump_paths: _description_
         :return: _description_
         """
-        stores = DumpRegistryCollection()  # Default empty stores
+        tracker = cls(dump_paths)
         group_node_mapping = None
-        last_dump_time_str = None
 
         if not dump_paths.tracking_log_file_path.exists():
             logger.debug(f'Log file not found at {dump_paths.tracking_log_file_path}, returning empty log data.')
-            return stores, group_node_mapping, last_dump_time_str
+            return tracker, group_node_mapping
 
         try:
             with dump_paths.tracking_log_file_path.open('r', encoding='utf-8') as f:
-                prev_dump_data = json.load(f)
+                data = json.load(f)
 
             # Load last dump time string
-            last_dump_time_str = prev_dump_data.get('last_dump_time')
+            tracker._last_dump_time_str = data.get('last_dump_time')
 
             # Load group-node mapping if present
-            if 'group_node_mapping' in prev_dump_data:
-                group_node_mapping = GroupNodeMapping.from_dict(prev_dump_data['group_node_mapping'])
+            if 'group_node_mapping' in data:
+                group_node_mapping = GroupNodeMapping.from_dict(data['group_node_mapping'])
 
             # Load store data using deserialize_logs helper
-            stores.calculations = DumpTracker._deserialize_logs(
-                prev_dump_data.get('calculations', {}), dump_paths=dump_paths
-            )
-            stores.workflows = DumpTracker._deserialize_logs(prev_dump_data.get('workflows', {}), dump_paths=dump_paths)
-            stores.groups = DumpTracker._deserialize_logs(prev_dump_data.get('groups', {}), dump_paths=dump_paths)
+            for store_name in tracker.stores:
+                if store_name in data:
+                    registry_data = data[store_name]
+                    tracker.stores[store_name] = tracker._deserialize_registry(registry_data)
 
         except (json.JSONDecodeError, OSError, ValueError) as e:
             logger.warning(f'Error loading dump log file {dump_paths.tracking_log_file_path}: {e!s}')
-            # Return default empty data on error
-            return DumpRegistryCollection(), None, None
 
-        return stores, group_node_mapping, last_dump_time_str
+        return tracker, group_node_mapping
 
     def get_last_dump_time(self) -> datetime | None:
         """Parse and return the last dump time, if available."""
@@ -274,16 +258,6 @@ class DumpTracker:
         store = self.get_store_by_name(store_key)
         return store.del_entry(uuid)
 
-    @property
-    def stores_collection(self) -> DumpRegistryCollection:
-        """Retrieve the current state of the log stores as a dataclass."""
-        # Corrected: use the instance's stores
-        return DumpRegistryCollection(
-            calculations=self.calculations,
-            workflows=self.workflows,
-            groups=self.groups,
-        )
-
     # TODO: This currently requires the dump time as argument, not sure if this is what I want
     def save(
         self,
@@ -291,13 +265,10 @@ class DumpTracker:
         group_node_mapping: GroupNodeMapping | None = None,
     ) -> None:
         """Save the current log state and mapping to the JSON file."""
-        log_dict = {
-            # Use the _serialize_logs helper method
-            'calculations': self._serialize_logs(self.calculations),
-            'workflows': self._serialize_logs(self.workflows),
-            'groups': self._serialize_logs(self.groups),
-            'last_dump_time': current_dump_time.isoformat(),
+        log_dict: dict[str, Any] = {
+            store_name: self._serialize_registry(registry) for store_name, registry in self.stores.items()
         }
+        log_dict['last_dump_time'] = current_dump_time.isoformat()
 
         if group_node_mapping:
             log_dict['group_node_mapping'] = group_node_mapping.to_dict()
@@ -309,7 +280,7 @@ class DumpTracker:
         except OSError as e:
             logger.error(f'Failed to save dump log to {self.dump_paths.tracking_log_file_path}: {e!s}')
 
-    def _serialize_logs(self, container: DumpRegistry) -> Dict:
+    def _serialize_registry(self, container: DumpRegistry) -> Dict:
         """Serialize log entries to a dictionary format relative to dump parent."""
         serialized = {}
         for uuid, entry in container.entries.items():
@@ -343,11 +314,10 @@ class DumpTracker:
                 serialized[uuid] = entry.to_dict()  # Store absolute paths using full dict
         return serialized
 
-    @staticmethod
-    def _deserialize_logs(category_data: Dict, dump_paths: DumpPaths) -> DumpRegistry:
+    def _deserialize_registry(self, data: Dict) -> DumpRegistry:
         """Deserialize log entries using DumpLog.from_dict and make paths absolute."""
         container = DumpRegistry()
-        for uuid, entry_data in category_data.items():
+        for uuid, entry_data in data.items():
             log_entry: Optional[DumpRecord] = None
             # Handle new format (dict)
             if isinstance(entry_data, dict) and 'path' in entry_data:
@@ -355,35 +325,27 @@ class DumpTracker:
                 log_entry = DumpRecord.from_dict(entry_data)
                 # Now make paths absolute based on dump_paths.base_output_path
                 # Note: Assumes paths in JSON are relative to dump_paths.base_output_path
-                log_entry.path = dump_paths.base_output_path / log_entry.path
-                log_entry.symlinks = [dump_paths.base_output_path / p for p in log_entry.symlinks]
-                log_entry.duplicates = [dump_paths.base_output_path / p for p in log_entry.duplicates]
+                log_entry.path = self.dump_paths.base_output_path / log_entry.path
+                log_entry.symlinks = [self.dump_paths.base_output_path / p for p in log_entry.symlinks]
+                log_entry.duplicates = [self.dump_paths.base_output_path / p for p in log_entry.duplicates]
 
             if log_entry:
                 container.add_entry(uuid, log_entry)
 
         return container
 
-    def get_store_by_uuid(self, uuid: str) -> DumpRegistry | None:
-        """Find the store that contains the given UUID."""
-        stores_coll = self.stores_collection  # Use the property
-        for field_ in fields(stores_coll):
-            store = getattr(stores_coll, field_.name)
+    def get_store_by_name(self, name: StoreNameType) -> DumpRegistry:
+        """Get store by name."""
+        if name not in self.stores:
+            raise ValueError(f'Invalid store key: {name}. Available: {list(self.stores.keys())}')
+        return self.stores[name]
+
+    def get_store_by_uuid(self, uuid: str) -> Optional[DumpRegistry]:
+        """Find store containing the UUID."""
+        for store in self.stores.values():
             if uuid in store.entries:
                 return store
-        # Return None instead of raising NotExistent for easier checking
-        logger.debug(f'UUID {uuid} not found in any log store.')
         return None
-
-    def get_store_by_name(self, name: StoreNameType) -> DumpRegistry:
-        """Get the store by its string literal name."""
-        stores_coll = self.stores_collection  # Use the property
-        if hasattr(stores_coll, name):
-            return getattr(stores_coll, name)
-        else:
-            store_names = [field.name for field in fields(stores_coll)]
-            msg = f'Wrong store key <{name}> selected. Choose one of {store_names}.'
-            raise ValueError(msg)
 
     def get_dump_path_by_uuid(self, uuid: str) -> Optional[Path]:
         """Find the dump path for an entity with the given UUID."""
@@ -391,11 +353,6 @@ class DumpTracker:
         if store and uuid in store.entries:
             return store.entries[uuid].path
         return None
-
-    def get_store_by_orm(self, orm_type) -> DumpRegistry:
-        """Get the appropriate store for a given ORM type using DumpStoreKeys."""
-        store_key_str = DumpStoreKeys.from_class(orm_type)
-        return self.get_store_by_name(store_key_str)  # Use existing method
 
     def update_paths(self, old_base_path: Path, new_base_path: Path) -> int:
         """Update all paths across all stores if they start with old_base_path.
@@ -420,9 +377,7 @@ class DumpTracker:
             logger.error(f'Error resolving paths for update: {e}. Aborting path update.')
             return 0
 
-        stores_coll = self.stores_collection
-        for field_ in fields(stores_coll):
-            store: DumpRegistry = getattr(stores_coll, field_.name)
+        for store in self.stores.values():
             for uuid, entry in store.entries.items():
                 updated_entry = False
                 # --- Update entry.path ---

@@ -186,12 +186,9 @@ class ProcessDumpExecutor:
 
         # --- Case 2: Target path is DIFFERENT from primary logged path ---
         is_calc_node = isinstance(node, orm.CalculationNode)
-        try:
-            is_sub_process = (
-                len(node.base.links.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()) > 0
-            )
-        except Exception:
-            is_sub_process = False  # Default if link check fails
+        is_sub_process = (
+            len(node.base.links.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()) > 0
+        )
 
         # Option A: Symlink Calculation
         if self.config.symlink_calcs and is_calc_node:
@@ -247,29 +244,23 @@ class ProcessDumpExecutor:
 
         except OSError as e:
             logger.error(f'Failed symlink creation for node {node.pk} at {target_path.name}: {e}')
-        except Exception as e:
-            logger.error(f'Unexpected error during symlink creation for node {node.pk}: {e}', exc_info=True)
 
     def _execute_update(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpRecord):
         """Action: Clean existing directory and perform a full dump."""
         logger.info(f'Executing UPDATE for node {node.pk} at {target_path.name} due to mtime change.')
-        try:
-            # 1. Clean existing directory
-            self.dump_paths.safe_delete_directory(directory_path=target_path)
-            logger.debug(f'Cleaned existing directory for update: {target_path.name}')
+        # 1. Clean existing directory
+        self.dump_paths.safe_delete_directory(directory_path=target_path)
+        logger.debug(f'Cleaned existing directory for update: {target_path.name}')
 
-            # 2. Prepare directory again
-            self.dump_paths.prepare_directory(path_to_prepare=target_path)
+        # 2. Prepare directory again
+        self.dump_paths.prepare_directory(path_to_prepare=target_path)
 
-            # 3. Dump content
-            self._dump_node_content(node, target_path)
+        # 3. Dump content
+        self._dump_node_content(node, target_path)
 
-            # 4. Update stats on the existing log entry using the primary path
-            self._calculate_and_update_stats(node.pk, existing_log_entry.path, existing_log_entry)
+        # 4. Update stats on the existing log entry using the primary path
+        self._calculate_and_update_stats(node.pk, existing_log_entry.path, existing_log_entry)
 
-        except Exception as e:
-            logger.error(f'Failed during UPDATE execution for node {node.pk}: {e}', exc_info=True)
-            # If update fails, we might be left in a partial state. Avoid cleanup of primary log entry.
 
     def _execute_dump_primary(self, node: orm.ProcessNode, target_path: Path):
         """Action: Perform a full dump as the primary location."""
@@ -361,15 +352,11 @@ class ProcessDumpExecutor:
     def _calculate_and_update_stats(self, node_pk: int, path_to_stat: Path, log_entry: DumpRecord):
         """Calculates directory stats and updates the log entry (Original Logic)."""
         logger.debug(f'Calculating stats for node {node_pk} directory: {path_to_stat.name}')
-        try:
-            # Calling the utility as in original code
-            dir_mtime, dir_size = self.dump_paths.get_directory_stats(path_to_stat)
-            log_entry.dir_mtime = dir_mtime
-            log_entry.dir_size = dir_size
-            logger.debug(f'Updated stats for node {node_pk}: mtime={dir_mtime}, size={dir_size} bytes')
-        except Exception as e:
-            # Original code didn't explicitly catch errors here, but added logging is good
-            logger.warning(f'Could not calculate/update stats for node {node_pk} at {path_to_stat}: {e}')
+        # Calling the utility as in original code
+        dir_mtime, dir_size = self.dump_paths.get_directory_stats(path_to_stat)
+        log_entry.dir_mtime = dir_mtime
+        log_entry.dir_size = dir_size
+        logger.debug(f'Updated stats for node {node_pk}: mtime={dir_mtime}, size={dir_size} bytes')
 
     def _cleanup_failed_dump(
         self,
@@ -379,22 +366,17 @@ class ProcessDumpExecutor:
     ):
         """Cleans up directory and potentially log entry on failure (Original Logic)."""
         logger.warning(f'Attempting cleanup for failed dump of node {node.pk} at {target_path.name}')
-        try:
-            # Calling the utility as in original code
-            self.dump_paths.safe_delete_directory(directory_path=target_path)
-            logger.info(f'Cleaned up directory {target_path.name} for failed node {node.pk}')
+        # Calling the utility as in original code
+        self.dump_paths.safe_delete_directory(directory_path=target_path)
+        logger.info(f'Cleaned up directory {target_path.name} for failed node {node.pk}')
 
-            if is_primary_dump:
-                store_key = DumpStoreKeys.from_instance(node)
-                node_store = self.dump_tracker.get_store_by_name(store_key)
-                if node_store.del_entry(node.uuid):
-                    logger.info(f'Removed log entry for failed primary dump of node {node.pk}')
-                else:
-                    logger.warning(f'Could not find log entry to remove for failed primary dump of node {node.pk}')
-
-        except Exception as cleanup_e:
-            msg = (f'Failed during cleanup for node {node.pk} at {target_path.name}: {cleanup_e}',)
-            logger.error(msg, exc_info=True)
+        if is_primary_dump:
+            store_key = DumpStoreKeys.from_instance(node)
+            node_store = self.dump_tracker.get_store_by_name(store_key)
+            if node_store.del_entry(node.uuid):
+                logger.info(f'Removed log entry for failed primary dump of node {node.pk}')
+            else:
+                logger.warning(f'Could not find log entry to remove for failed primary dump of node {node.pk}')
 
     @staticmethod
     def _generate_node_directory_name(node: orm.ProcessNode, append_pk: bool = True) -> Path:
@@ -484,18 +466,15 @@ class NodeMetadataWriter:
                 node_dict['Node extras'] = node_extras
 
         output_file = output_path / output_filename
-        try:
-            with output_file.open('w', encoding='utf-8') as handle:
-                # Use default_flow_style=None for better readability of nested structures
-                yaml.dump(
-                    node_dict,
-                    handle,
-                    sort_keys=False,
-                    default_flow_style=None,
-                    indent=2,
-                )
-        except Exception as e:
-            logger.error(f'Failed to write YAML metadata for node {process_node.pk}: {e}')
+        with output_file.open('w', encoding='utf-8') as handle:
+            # Use default_flow_style=None for better readability of nested structures
+            yaml.dump(
+                node_dict,
+                handle,
+                sort_keys=False,
+                default_flow_style=None,
+                indent=2,
+            )
 
 
 class NodeRepoIoDumper:
@@ -509,39 +488,30 @@ class NodeRepoIoDumper:
         io_dump_mapping = self._generate_calculation_io_mapping(flat=self.config.flat)
 
         # Dump the main repository contents
-        try:
-            repo_target = output_path / io_dump_mapping.repository
-            repo_target.mkdir(parents=True, exist_ok=True)
+        repo_target = output_path / io_dump_mapping.repository
+        repo_target.mkdir(parents=True, exist_ok=True)
 
-            calculation_node.base.repository.copy_tree(repo_target)
-        except Exception as e:
-            logger.error(f'Failed copying repository for calc {calculation_node.pk}: {e}')
+        calculation_node.base.repository.copy_tree(repo_target)
 
         # Dump the repository contents of `outputs.retrieved` if it exists
         if hasattr(calculation_node.outputs, 'retrieved'):
-            try:
-                retrieved_target = output_path / io_dump_mapping.retrieved
-                retrieved_target.mkdir(parents=True, exist_ok=True)
-                calculation_node.outputs.retrieved.base.repository.copy_tree(retrieved_target)
-            except Exception as e:
-                logger.error(f'Failed copying retrieved output for calc {calculation_node.pk}: {e}')
+            retrieved_target = output_path / io_dump_mapping.retrieved
+            retrieved_target.mkdir(parents=True, exist_ok=True)
+            calculation_node.outputs.retrieved.base.repository.copy_tree(retrieved_target)
         else:
             logger.debug(f"No 'retrieved' output node found for calc {calculation_node.pk}.")
 
         # Dump the node_inputs (linked Data nodes)
         if self.config.include_inputs:
-            try:
-                input_links = calculation_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC).all()
-                if input_links:
-                    input_path = output_path / io_dump_mapping.inputs
-                    # NOTE: Not needed, done in _dump_calculation_io_files
-                    # input_path.mkdir(parents=True, exist_ok=True)
-                    self._dump_calculation_io_files(
-                        parent_path=input_path,
-                        link_triples=input_links,
-                    )
-            except Exception as e:
-                logger.error(f'Failed dumping inputs for calc {calculation_node.pk}: {e}')
+            input_links = calculation_node.base.links.get_incoming(link_type=LinkType.INPUT_CALC).all()
+            if input_links:
+                input_path = output_path / io_dump_mapping.inputs
+                # NOTE: Not needed, done in _dump_calculation_io_files
+                # input_path.mkdir(parents=True, exist_ok=True)
+                self._dump_calculation_io_files(
+                    parent_path=input_path,
+                    link_triples=input_links,
+                )
 
         # Dump the node_outputs (created Data nodes, excluding 'retrieved')
         if self.config.include_outputs:
@@ -575,19 +545,16 @@ class NodeRepoIoDumper:
         for link_triple in link_triples:
             node = link_triple.node
             link_label = link_triple.link_label
-            try:
-                if not self.config.flat:
-                    relative_parts = link_label.split('__')
-                    linked_node_path = parent_path.joinpath(*relative_parts)
-                else:
-                    # Dump content directly into parent_path, letting copy_tree handle structure
-                    linked_node_path = parent_path
+            if not self.config.flat:
+                relative_parts = link_label.split('__')
+                linked_node_path = parent_path.joinpath(*relative_parts)
+            else:
+                # Dump content directly into parent_path, letting copy_tree handle structure
+                linked_node_path = parent_path
 
-                if node.base.repository.list_object_names():
-                    linked_node_path.parent.mkdir(parents=True, exist_ok=True)
-                    node.base.repository.copy_tree(linked_node_path)
-            except Exception as e:
-                logger.warning(f'Failed copying IO node {node.pk} (link: {link_label}): {e}')
+            if node.base.repository.list_object_names():
+                linked_node_path.parent.mkdir(parents=True, exist_ok=True)
+                node.base.repository.copy_tree(linked_node_path)
 
     @staticmethod
     def _generate_calculation_io_mapping(flat: bool = False) -> SimpleNamespace:
@@ -618,14 +585,10 @@ class WorkflowWalker:
 
     def _dump_children(self, workflow_node: orm.WorkflowNode, output_path: Path) -> None:
         """Find and recursively dump children of a WorkflowNode."""
-        try:
-            called_links = workflow_node.base.links.get_outgoing(
-                link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)
-            ).all()
-            called_links = sorted(called_links, key=lambda link_triple: link_triple.node.ctime)
-        except Exception as e:
-            logger.error(f'Failed getting children for workflow {workflow_node.pk}: {e}')
-            return
+        called_links = workflow_node.base.links.get_outgoing(
+            link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)
+        ).all()
+        called_links = sorted(called_links, key=lambda link_triple: link_triple.node.ctime)
 
         for index, link_triple in enumerate(called_links, start=1):
             child_node = link_triple.node
@@ -635,17 +598,11 @@ class WorkflowWalker:
             child_label = ProcessDumpExecutor._generate_child_node_label(index=index, link_triple=link_triple)
             child_output_path = output_path / child_label
             assert isinstance(child_node, orm.ProcessNode)
-            try:
-                # Call the provided dump_processor function for the child
-                self.dump_processor(
-                    child_node,
-                    child_output_path,
-                )
-            except Exception as e:
-                logger.error(
-                    f'Failed dumping child node {child_node.pk} of workflow {workflow_node.pk}: {e}',
-                    exc_info=True,
-                )
+            # Call the provided dump_processor function for the child
+            self.dump_processor(
+                child_node,
+                child_output_path,
+            )
 
 
 class ReadmeGenerator:
@@ -684,34 +641,22 @@ class ReadmeGenerator:
         )
 
         # Add status, report, show info
-        try:
-            _readme_string += (
-                f'\n## Process Status (`verdi process status {pk}`)\n\n```\n{format_call_graph(process_node)}\n```\n'
-            )
-        except Exception as e:
-            logger.debug(f'Could not format call graph for README: {e}')
+        _readme_string += (
+            f'\n## Process Status (`verdi process status {pk}`)\n\n```\n{format_call_graph(process_node)}\n```\n'
+        )
 
-        try:
-            if isinstance(process_node, orm.CalcJobNode):
-                report = get_calcjob_report(process_node)
-            elif isinstance(process_node, orm.WorkChainNode):
-                report = get_workchain_report(node=process_node, levelname='REPORT', indent_size=2, max_depth=None)
-            elif isinstance(process_node, (orm.CalcFunctionNode, orm.WorkFunctionNode)):
-                report = get_process_function_report(process_node)
-            else:
-                report = 'N/A'
-            _readme_string += f'\n## Process Report (`verdi process report {pk}`)\n\n```\n{report}\n```\n'
-        except Exception as e:
-            logger.debug(f'Could not generate process report for README: {e}')
+        if isinstance(process_node, orm.CalcJobNode):
+            report = get_calcjob_report(process_node)
+        elif isinstance(process_node, orm.WorkChainNode):
+            report = get_workchain_report(node=process_node, levelname='REPORT', indent_size=2, max_depth=None)
+        elif isinstance(process_node, (orm.CalcFunctionNode, orm.WorkFunctionNode)):
+            report = get_process_function_report(process_node)
+        else:
+            report = 'N/A'
+        _readme_string += f'\n## Process Report (`verdi process report {pk}`)\n\n```\n{report}\n```\n'
 
-        try:
-            _readme_string += (
-                f'\n## Node Info (`verdi node show {process_node.uuid}`)\n\n```\n{{get_node_info(process_node)}}\n```\n'
-            )
-        except Exception as e:
-            logger.debug(f'Could not get node info for README: {e}')
+        _readme_string += (
+            f'\n## Node Info (`verdi node show {process_node.uuid}`)\n\n```\n{{get_node_info(process_node)}}\n```\n'
+        )
 
-        try:
-            (output_path / 'README.md').write_text(_readme_string, encoding='utf-8')
-        except Exception as e:
-            logger.error(f'Failed to write README for node {process_node.pk}: {e}')
+        (output_path / 'README.md').write_text(_readme_string, encoding='utf-8')

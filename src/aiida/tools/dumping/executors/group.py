@@ -114,10 +114,7 @@ class GroupDumpExecutor(CollectionDumpExecutor):
             )
             return
         logger.debug(f'Calculating stats for group directory: {group_content_path} (UUID: {group.uuid})')
-        try:
-            dir_mtime, dir_size = DumpPaths.get_directory_stats(group_content_path)
-            group_log_entry.dir_mtime = dir_mtime
-            group_log_entry.dir_size = dir_size
-            logger.debug(f'Updated stats for group {group.uuid}: mtime={dir_mtime}, size={dir_size}')
-        except Exception as e:
-            logger.error(f'Failed to calculate/update stats for group {group.uuid} at {group_content_path}: {e}')
+        dir_mtime, dir_size = DumpPaths.get_directory_stats(group_content_path)
+        group_log_entry.dir_mtime = dir_mtime
+        group_log_entry.dir_size = dir_size
+        logger.debug(f'Updated stats for group {group.uuid}: mtime={dir_mtime}, size={dir_size}')

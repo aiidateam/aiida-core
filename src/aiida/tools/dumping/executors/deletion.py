@@ -136,12 +136,6 @@ class DeletionExecutor:
                 f'Directory or safeguard file not found for deleted node {node_uuid} at {path_to_delete}: {e}. '
                 f'Proceeding to remove log entry.'
             )
-        except Exception as e:
-            logger.error(
-                f'Failed to delete directory for deleted node {node_uuid} at {path_to_delete}: {e}. '
-                f'Proceeding to remove log entry.',
-                exc_info=True,
-            )
         finally:
             # Always attempt to remove the log entry
             if self.dump_tracker.del_entry(store_key=store_key, uuid=node_uuid):
@@ -195,11 +189,6 @@ class DeletionExecutor:
                     logger.warning(msg)
                     # If directory wasn't found, still potentially record its path for log cleanup
                     path_deleted = path_to_delete
-                except Exception as e:
-                    logger.error(
-                        f'Failed to delete directory for deleted group {group_uuid} at {path_to_delete}: {e}',
-                        exc_info=True,
-                    )
             else:
                 logger.debug(f'Not deleting directory for group {group_uuid} (flat structure or root path).')
         else:
@@ -249,8 +238,6 @@ class DeletionExecutor:
                             '({node_log_entry.path}) relative to {path_deleted}: {e}'
                         )
                         logger.warning(msg)
-                    except Exception as e:
-                        logger.error(f'Unexpected error checking path for node {node_uuid}: {e}', exc_info=True)
 
             if nodes_removed_count > 0:
                 msg = (

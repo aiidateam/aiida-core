@@ -239,10 +239,7 @@ class DumpTracker:
 
             # Load group-node mapping if present
             if 'group_node_mapping' in prev_dump_data:
-                try:
-                    group_node_mapping = GroupNodeMapping.from_dict(prev_dump_data['group_node_mapping'])
-                except Exception as e:
-                    logger.warning(f'Error loading group-node mapping: {e!s}')
+                group_node_mapping = GroupNodeMapping.from_dict(prev_dump_data['group_node_mapping'])
 
             # Load store data using deserialize_logs helper
             stores.calculations = DumpTracker._deserialize_logs(
@@ -344,10 +341,6 @@ class DumpTracker:
                 )
                 logger.warning(msg)
                 serialized[uuid] = entry.to_dict()  # Store absolute paths using full dict
-            except Exception as e:
-                logger.error(f'Error serializing log entry for {uuid}: {e}', exc_info=True)
-                # Optionally add a marker for the failed entry
-                serialized[uuid] = {'error': 'Serialization failed'}
         return serialized
 
     @staticmethod
@@ -355,23 +348,20 @@ class DumpTracker:
         """Deserialize log entries using DumpLog.from_dict and make paths absolute."""
         container = DumpRegistry()
         for uuid, entry_data in category_data.items():
-            try:
-                log_entry: Optional[DumpRecord] = None
-                # Handle new format (dict)
-                if isinstance(entry_data, dict) and 'path' in entry_data:
-                    # Use from_dict to get all fields correctly
-                    log_entry = DumpRecord.from_dict(entry_data)
-                    # Now make paths absolute based on dump_paths.base_output_path
-                    # Note: Assumes paths in JSON are relative to dump_paths.base_output_path
-                    log_entry.path = dump_paths.base_output_path / log_entry.path
-                    log_entry.symlinks = [dump_paths.base_output_path / p for p in log_entry.symlinks]
-                    log_entry.duplicates = [dump_paths.base_output_path / p for p in log_entry.duplicates]
+            log_entry: Optional[DumpRecord] = None
+            # Handle new format (dict)
+            if isinstance(entry_data, dict) and 'path' in entry_data:
+                # Use from_dict to get all fields correctly
+                log_entry = DumpRecord.from_dict(entry_data)
+                # Now make paths absolute based on dump_paths.base_output_path
+                # Note: Assumes paths in JSON are relative to dump_paths.base_output_path
+                log_entry.path = dump_paths.base_output_path / log_entry.path
+                log_entry.symlinks = [dump_paths.base_output_path / p for p in log_entry.symlinks]
+                log_entry.duplicates = [dump_paths.base_output_path / p for p in log_entry.duplicates]
 
-                if log_entry:
-                    container.add_entry(uuid, log_entry)
+            if log_entry:
+                container.add_entry(uuid, log_entry)
 
-            except Exception as e:
-                logger.warning(f'Failed to deserialize log entry for UUID {uuid}: {e}', exc_info=True)  # Add exc_info
         return container
 
     def get_store_by_uuid(self, uuid: str) -> DumpRegistry | None:
@@ -447,8 +437,6 @@ class DumpTracker:
                             updated_entry = True
                 except (OSError, ValueError):  # Handle resolve() errors or path not relative
                     logger.warning(f'Could not compare/update primary path for {uuid}: {entry.path}')
-                except Exception as e:
-                    logger.error(f'Unexpected error updating primary path for {uuid}: {e}', exc_info=True)
 
                 # --- Update entry.symlinks ---
                 updated_symlinks = []
@@ -466,9 +454,6 @@ class DumpTracker:
                             updated_symlinks.append(symlink_path)  # Keep unchanged
                     except (OSError, ValueError):
                         logger.warning(f'Could not compare/update symlink for {uuid}: {symlink_path}')
-                        updated_symlinks.append(symlink_path)  # Keep original on error
-                    except Exception as e:
-                        logger.error(f'Unexpected error updating symlink for {uuid}: {e}', exc_info=True)
                         updated_symlinks.append(symlink_path)  # Keep original on error
                 entry.symlinks = updated_symlinks
 
@@ -492,9 +477,7 @@ class DumpTracker:
                     except (OSError, ValueError):
                         logger.warning(f'Could not compare/update duplicate for {uuid}: {duplicate_path}')
                         updated_duplicates.append(duplicate_path)
-                    except Exception as e:
-                        logger.error(f'Unexpected error updating duplicate for {uuid}: {e}', exc_info=True)
-                        updated_duplicates.append(duplicate_path)
+
                 entry.duplicates = updated_duplicates
 
                 if updated_entry:

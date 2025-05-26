@@ -175,8 +175,8 @@ jobs:
         from-lock: 'true'
         extras: tests
 
-    - name: Test legacy pytest fixtures
-      run: pytest --noconftest src/aiida/manage/tests/test_pytest_fixtures.py
-
     - name: Test new pytest fixtures
       run: pytest --noconftest tests/tools/pytest_fixtures/test_configuration.py
+
+    - name: Test legacy pytest fixtures
+      run: pytest --noconftest src/aiida/manage/tests/test_pytest_fixtures.py

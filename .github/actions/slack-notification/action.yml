@@ -14,9 +14,6 @@ runs:
   steps:
 
   - name: Slack notification
-    # Run only when the `secrets.SLACK_WEBHOOK` is available, which is not the case for
-    # pull requests that come from forks. This is a limitation of secrets on GHA
-    if: env.SLACK_WEBHOOK != null
     uses: rtCamp/action-slack-notify@v2
     env:
       SLACK_ICON: https://www.materialscloud.org/discover/images/0ba0a17d.aiida-logo-128.png

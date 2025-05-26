@@ -103,7 +103,7 @@ class GroupDumpExecutor(CollectionDumpExecutor):
 
     def _update_single_group_stats(self, group: orm.Group, group_content_path: Path) -> None:
         logger.info(f"Calculating final directory stats for group '{group.label}'.")
-        group_log_entry = self.dump_tracker.groups.get_entry(group.uuid)
+        group_log_entry = self.dump_tracker.stores['groups'].get_entry(group.uuid)
 
         if not group_log_entry:
             logger.warning(f"Log entry for group '{group.label}' not found. Cannot update stats.")

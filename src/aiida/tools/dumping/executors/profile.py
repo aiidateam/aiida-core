@@ -111,7 +111,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         descendants = DumpChangeDetector._get_calculation_descendants(ungrouped_workflows)
         if descendants:
             existing_calc_uuids = {calc.uuid for calc in ungrouped_nodes_store.calculations}
-            logged_calc_uuids = set(self.dump_tracker.calculations.entries.keys())
+            logged_calc_uuids = set(self.dump_tracker.stores['calculations'].entries.keys())
             unique_descendants = [
                 desc
                 for desc in descendants
@@ -249,7 +249,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
     def _update_group_stats(self) -> None:
         """Calculate and update final directory stats for all logged groups."""
         logger.info('Calculating final directory stats for all registered groups...')
-        for group_uuid, group_log_entry in self.dump_tracker.groups.entries.items():
+        for group_uuid, group_log_entry in self.dump_tracker.stores['groups'].entries.items():
             group_path = group_log_entry.path
             if not group_path.is_absolute():
                 group_path = self.dump_paths.base_output_path / group_path

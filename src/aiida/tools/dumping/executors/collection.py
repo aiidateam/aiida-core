@@ -62,7 +62,7 @@ class CollectionDumpExecutor:
         # In non-dry_run modes, prepare_directory also creates the safeguard.
         self.dump_paths.prepare_directory(group_content_path, is_leaf_node_dir=False)
 
-        if group.uuid not in self.dump_tracker.groups.entries:
+        if group.uuid not in self.dump_tracker.stores['groups'].entries:
             logger.debug(
                 f"Registering group '{group.label}' ({group.uuid}) in logger "
                 f'with content path: {group_content_path}'
@@ -70,10 +70,8 @@ class CollectionDumpExecutor:
             self.dump_tracker.add_entry(
                 store_key='groups',
                 uuid=group.uuid,
-                entry=DumpRecord(path=group_content_path),  # Log the absolute path
+                entry=DumpRecord(path=group_content_path),
             )
-        # else: Group already logged. Path updates due to renames should be handled
-        # by the group rename logic (e.g., in _handle_group_changes or DumpTracker.update_paths)
 
     def _identify_nodes_for_group(self, group: Group, changes: DumpChanges) -> tuple[DumpNodeStore, list[WorkflowNode]]:
         """Identifies nodes explicitly belonging to a given group from the provided changes."""
@@ -125,7 +123,7 @@ class CollectionDumpExecutor:
             logger.debug(f"No calculation descendants found for workflows in group '{group.label}'.")
             return
 
-        logged_calc_uuids = set(self.dump_tracker.calculations.entries.keys())
+        logged_calc_uuids = set(self.dump_tracker.stores['calculations'].entries.keys())
         unique_unlogged_descendants = [desc for desc in descendants if desc.uuid not in logged_calc_uuids]
 
         if unique_unlogged_descendants:
@@ -433,4 +431,3 @@ class CollectionDumpExecutor:
                 f'for removal in this context (is_dir={found_path.is_dir()}, is_target_dir={is_target_dir}). '
                 'Skipping removal.'
             )
-

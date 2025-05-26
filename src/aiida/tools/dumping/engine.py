@@ -80,21 +80,19 @@ class DumpEngine:
                 # Decide whether to proceed or raise an error
 
         # Load log data, stored mapping, and last dump time string from file
-        stores_coll, stored_mapping, last_dump_time_str = DumpTracker.load(self.dump_paths)
+        dump_tracker, stored_mapping = DumpTracker.load(self.dump_paths)
+        last_dump_time_str = dump_tracker._last_dump_time_str
 
         # Initialize DumpTimes based on loaded time string
         dump_times = DumpTimes.from_last_log_time(last_dump_time_str)
         logger.debug(f'Dump times initialized: Current={dump_times.current}, Last={dump_times.last}')
 
         # Initialize DumpTracker instance with loaded data
-        dump_tracker = DumpTracker(
-            dump_paths=self.dump_paths,
-            stores=stores_coll,
-            last_dump_time_str=last_dump_time_str,
-        )
-        msg = (
-            f'Dump logger initialized. Found {len(dump_tracker.calculations)} calc logs, '
-            f'{len(dump_tracker.workflows)} wf logs, {len(dump_tracker.groups)} group logs.'
+        msg: str = (
+            f'Dump logger initialized. '
+            f'Found {len(dump_tracker.stores["calculations"])} calculation logs, '
+            f'{len(dump_tracker.stores["workflows"])} workflow logs, '
+            f'{len(dump_tracker.stores["groups"])} group logs.'
         )
         logger.debug(msg)
 
@@ -118,6 +116,9 @@ class DumpEngine:
             entity_description = f'group `{entity.label}` (PK: {entity.pk})'
         elif isinstance(entity, Profile):
             entity_description = f'profile `{entity.name}`'
+        else:
+            msg = f'Entity type {type(entity)} not supported.'
+            raise ValueError(msg)
 
         msg = f'Starting dump of {entity_description} in {self.config.dump_mode.name.lower()} mode.'
         if self.config.dump_mode != DumpMode.DRY_RUN:

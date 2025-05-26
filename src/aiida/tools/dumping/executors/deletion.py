@@ -165,7 +165,7 @@ class DeletionExecutor:
         path_deleted: Path | None = None  # Keep track of the path we deleted
 
         # --- 1. Delete Group Directory (if applicable) ---
-        group_entry = self.dump_tracker.groups.get_entry(group_uuid)
+        group_entry = self.dump_tracker.stores['groups'].get_entry(group_uuid)
         if group_entry:
             path_to_delete = group_entry.path
             should_delete_dir = self.config.organize_by_groups and path_to_delete != self.dump_paths.base_output_path

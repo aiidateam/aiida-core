@@ -180,3 +180,5 @@ jobs:
 
     - name: Test legacy pytest fixtures
       run: pytest --noconftest src/aiida/manage/tests/test_pytest_fixtures.py
+      env:
+        AIIDA_WARN_v3: 0

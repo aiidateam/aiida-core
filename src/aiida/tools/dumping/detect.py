@@ -68,15 +68,10 @@ class DumpChangeDetector:
         """Gets and caches the set of UUIDs for all nodes in any group."""
         if self._grouped_node_uuids_cache is None:
             logger.debug('Building and caching grouped node UUID set...')
-            try:
-                mapping = GroupNodeMapping.build_from_db()
-                # Union of all sets of node UUIDs from the group_to_nodes mapping
-                self._grouped_node_uuids_cache = set().union(*mapping.group_to_nodes.values())
-                logger.debug(f'Cached {len(self._grouped_node_uuids_cache)} grouped node UUIDs.')
-            except Exception as e:
-                logger.error(f'Failed to build group mapping for caching: {e}', exc_info=True)
-                # Cache empty set on error to avoid repeated attempts within the same run
-                self._grouped_node_uuids_cache = set()
+            mapping = GroupNodeMapping.build_from_db()
+            # Union of all sets of node UUIDs from the group_to_nodes mapping
+            self._grouped_node_uuids_cache = set().union(*mapping.group_to_nodes.values())
+            logger.debug(f'Cached {len(self._grouped_node_uuids_cache)} grouped node UUIDs.')
         return self._grouped_node_uuids_cache
 
     def _query_initial_candidates(self, scope: GroupDumpScope, group: Optional[Group] = None) -> dict[str, list[Node]]:
@@ -98,21 +93,17 @@ class DumpChangeDetector:
 
         for orm_type, store_key in nodes_to_query:
             logger.debug(f'Querying candidate nodes of type {orm_type.__name__} with scope {scope.name}...')
-            try:
-                # Use the unified querier
-                nodes = self.node_query._get_nodes(
-                    orm_type=orm_type,
-                    dump_times=self.dump_times,
-                    scope=scope,
-                    group=group,
-                    base_filters=base_filters,  # Pass pre-resolved base filters
-                )
-                logger.debug(
-                    f'Query returned {len(nodes)} candidate nodes for {store_key} (scope: {scope.name}, pre-filtering).'
-                )
-                raw_nodes[store_key] = nodes
-            except Exception as e:
-                logger.warning(f'Failed to query candidate nodes for {store_key} (scope: {scope.name}): {e}')
+            nodes = self.node_query._get_nodes(
+                orm_type=orm_type,
+                dump_times=self.dump_times,
+                scope=scope,
+                group=group,
+                base_filters=base_filters,  # Pass pre-resolved base filters
+            )
+            logger.debug(
+                f'Query returned {len(nodes)} candidate nodes for {store_key} (scope: {scope.name}, pre-filtering).'
+            )
+            raw_nodes[store_key] = nodes
         return raw_nodes
 
     def _apply_logged_status_filter(self, raw_nodes: dict[str, list[Node]]) -> dict[str, list[Node]]:
@@ -149,12 +140,6 @@ class DumpChangeDetector:
                     nodes_removed_by_log_filter += removed_count
             except ValueError as e:  # Catch potential errors from get_store_by_name
                 logger.error(f"Error getting log store for key '{store_key}': {e}")
-                logged_filtered_nodes[store_key] = nodes  # Keep original nodes on error
-            except Exception as e:
-                logger.error(
-                    f"Unexpected error applying log filter for '{store_key}': {e}",
-                    exc_info=True,
-                )
                 logged_filtered_nodes[store_key] = nodes  # Keep original nodes on error
 
         logger.debug(f'Removed {nodes_removed_by_log_filter} total nodes already present in log.')
@@ -201,19 +186,9 @@ class DumpChangeDetector:
             original_count = len(node_list)
 
             for node in node_list:
-                try:
-                    # Check if node has a caller (i.e., is sub-node)
-                    # Use getattr with default to avoid exception if 'caller' doesn't exist
-                    is_sub_node = bool(getattr(node, 'caller', None))
-                except Exception:
-                    # Log specific exceptions if possible, but catch broad for robustness
-                    msg = (
-                        f'Could not check caller for {node_type[:-1]} {getattr(node, "pk", "N/A")}.'
-                        'Assuming top-level. Error: {e}'
-                    )
-                    logger.warning(msg)
-                    is_sub_node = False  # Assume top-level if check fails
-
+                # Check if node has a caller (i.e., is sub-node)
+                # Use getattr with default to avoid exception if 'caller' doesn't exist
+                is_sub_node = bool(getattr(node, 'caller', None))
                 is_explicitly_grouped = node.uuid in grouped_uuids
 
                 # Keep if: not a sub-node OR is explicitly grouped
@@ -318,11 +293,6 @@ class DumpChangeDetector:
                     deleted_node_uuids.update(missing_uuids)
             except ValueError as e:  # Catch potential errors from get_store_by_name
                 logger.error(f"Error accessing log store for type '{orm_type.__name__}': {e}")
-            except Exception as e:
-                logger.error(
-                    f"Unexpected error detecting deleted nodes for '{orm_type.__name__}': {e}",
-                    exc_info=True,
-                )
 
         logger.debug(f'Total deleted node UUIDs detected: {len(deleted_node_uuids)}')
         return deleted_node_uuids
@@ -334,12 +304,8 @@ class DumpChangeDetector:
         new_groups = []
         for group_uuid, node_uuids in current_mapping.group_to_nodes.items():
             # Load the group to get its label
-            try:
-                group = orm.load_group(group_uuid)
-                group_label = group.label
-            except Exception as e:
-                logger.warning(f'Failed to load group {group_uuid}: {e}')
-                group_label = None
+            group = orm.load_group(group_uuid)
+            group_label = group.label
 
             # Create GroupInfo with label
             group_info = GroupInfo(uuid=group_uuid, node_count=len(node_uuids), label=group_label)
@@ -371,16 +337,12 @@ class DumpChangeDetector:
             group_changes = GroupChanges(new=new_groups)
             logger.debug(f'Initial group detection: Found {len(group_changes.new)} groups.')
         else:
-            try:
-                # Calculate the difference using the mapping's diff method
-                group_changes = stored_mapping.diff(current_mapping)
-                logger.debug(
-                    f'Group mapping diff calculated: {len(group_changes.new)} new, '
-                    f'{len(group_changes.deleted)} deleted, {len(group_changes.modified)} modified.'
-                )
-            except Exception as e:
-                logger.error(f'Error calculating group mapping diff: {e}', exc_info=True)
-                return GroupChanges()
+            # Calculate the difference using the mapping's diff method
+            group_changes = stored_mapping.diff(current_mapping)
+            logger.debug(
+                f'Group mapping diff calculated: {len(group_changes.new)} new, '
+                f'{len(group_changes.deleted)} deleted, {len(group_changes.modified)} modified.'
+            )
 
         # --- Detect Renames (only if stored_mapping exists) ---
         if stored_mapping:
@@ -427,8 +389,6 @@ class DumpChangeDetector:
                 except NotExistent:
                     # Should not happen for common UUIDs, but handle defensively
                     logger.error(f'Could not load group with common UUID {group_uuid} from DB.')
-                except Exception as e:
-                    logger.error(f'Error checking rename for group UUID {group_uuid}: {e}', exc_info=True)
 
         # If a specific group is requested, filter the results
         if specific_group_uuid:
@@ -451,12 +411,8 @@ class DumpChangeDetector:
         self._grouped_node_uuids_cache = None
 
         # --- Get Current Mapping ---
-        try:
-            current_group_mapping = GroupNodeMapping.build_from_db()
-            logger.debug('Successfully built current group-node mapping from DB.')
-        except Exception as e:
-            logger.error(f'Failed to build current group-node mapping: {e}', exc_info=True)
-            current_group_mapping = GroupNodeMapping()
+        current_group_mapping = GroupNodeMapping.build_from_db()
+        logger.debug('Successfully built current group-node mapping from DB.')
 
         # --- Determine Scope for Node Detection (Assign Enum member) ---
         node_detection_scope: GroupDumpScope
@@ -471,21 +427,13 @@ class DumpChangeDetector:
             logger.debug(f"Node detection scope set to '{node_detection_scope.name}'")
 
         # --- Detect Node Changes ---
-        try:
-            # Call detect_new_nodes with the determined scope Enum member
-            new_nodes_store: DumpNodeStore = self._detect_new_nodes(
-                scope=node_detection_scope,
-                group=group,  # Pass the specific group if scope is IN_GROUP
-            )
-        except Exception as e:
-            logger.error(f'Error detecting new/modified nodes: {e}', exc_info=True)
-            new_nodes_store = DumpNodeStore()
+        # Call detect_new_nodes with the determined scope Enum member
+        new_nodes_store: DumpNodeStore = self._detect_new_nodes(
+            scope=node_detection_scope,
+            group=group,  # Pass the specific group if scope is IN_GROUP
+        )
 
-        try:
-            deleted_node_uuids: set[str] = self._detect_deleted_nodes()
-        except Exception as e:
-            logger.error(f'Error detecting deleted nodes: {e}', exc_info=True)
-            deleted_node_uuids = set()
+        deleted_node_uuids: set[str] = self._detect_deleted_nodes()
 
         node_changes = NodeChanges(
             new_or_modified=new_nodes_store,
@@ -551,13 +499,10 @@ class DumpChangeDetector:
         """
         descendants: list[orm.CalculationNode] = []
         for workflow in workflows:
-            try:
-                # Use the `called_descendants` property which handles the traversal
-                descendants.extend(
-                    node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)
-                )
-            except Exception as e:
-                logger.warning(f'Could not get descendants for workflow {workflow.pk}: {e}')
+            # Use the `called_descendants` property which handles the traversal
+            descendants.extend(
+                node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)
+            )
         # Ensure uniqueness using UUIDs as keys in a dict
         unique_descendants = list(set(descendants))
         logger.debug(f'Found {len(unique_descendants)} unique calculation descendants for {len(workflows)} workflows.')
@@ -815,17 +760,10 @@ class DumpNodeQuery:
         scope_detail = (
             f" in group '{group.label}'" if scope == GroupDumpScope.IN_GROUP and group else f' ({scope.name})'
         )
-        try:
-            # Ensure we project the node itself with the correct tag
-            if self.NODE_TAG not in qb._projections:
-                qb.add_projection(self.NODE_TAG, '*')
+        # Ensure we project the node itself with the correct tag
+        if self.NODE_TAG not in qb._projections:
+            qb.add_projection(self.NODE_TAG, '*')
 
-            results: list[orm.Node] = cast(list[orm.Node], qb.all(flat=True))
-            logger.debug(f'Query for {orm_type_name}{scope_detail} returned {len(results)} candidate nodes.')
-            return results
-        except Exception as e:
-            logger.error(
-                f'Query failed for {orm_type_name}{scope_detail}: {e}',
-                exc_info=True,
-            )
-            return []
+        results: list[orm.Node] = cast(list[orm.Node], qb.all(flat=True))
+        logger.debug(f'Query for {orm_type_name}{scope_detail} returned {len(results)} candidate nodes.')
+        return results

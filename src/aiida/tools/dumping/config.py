@@ -138,7 +138,7 @@ class DumpConfig(BaseModel):
     relabel_groups: bool = True
     all_entries: bool = False
 
-    @computed_field
+    @computed_field  # type: ignore[misc]
     @property
     def filters_set(self) -> bool:
         """Check if any filters are configured."""
@@ -155,21 +155,21 @@ class DumpConfig(BaseModel):
     # --- Pydantic Field Validators ---
     @field_validator('groups', mode='before')
     @classmethod
-    def _validate_groups_input(cls, v: Any) -> Optional[List[str]]:
+    def _validate_groups_input(cls, value: Any) -> Optional[List[str]]:
         """
         Validate and transform the input for the 'groups' field.
         Accepts a list containing orm.Group objects or strings (labels/UUIDs),
         and converts all elements to strings (using group label).
         """
-        if v is None:
+        if value is None:
             return None
-        if not isinstance(v, list):
+        if not isinstance(value, list):
             # According to the error, a list is expected.
             # If other types are possible at this stage from Click, adjust as needed.
-            raise ValueError(f'Invalid input type for groups: {type(v)}. Expected a list.')
+            raise ValueError(f'Invalid input type for groups: {type(value)}. Expected a list.')
 
         processed_groups: List[str] = []
-        for item_idx, item in enumerate(v):
+        for item_idx, item in enumerate(value):
             if isinstance(item, orm.Group):
                 # Using group's label as the string representation.
                 # Change to item.uuid if UUIDs are preferred.
@@ -187,21 +187,18 @@ class DumpConfig(BaseModel):
         return processed_groups if processed_groups else None
 
     @field_validator('user', mode='before')
-    def _validate_user(cls, v: Any) -> User | None:  # noqa: N805
+    def _validate_user(cls, value: Any) -> User | None:  # noqa: N805
         """Load User object from email string."""
-        if v is None or isinstance(v, orm.User):
-            return v
-        if isinstance(v, str):
+        if value is None or isinstance(value, orm.User):
+            return value
+        if isinstance(value, str):
             try:
-                return orm.User.collection.get(email=v)
+                return orm.User.collection.get(email=value)
             except NotExistent:
-                logger.warning(f"User with email '{v}' not found in DB. Returning None.")
-                return None
-            except Exception as e:
-                logger.error(f"Error loading User '{v}': {e}. Returning None.")
+                logger.warning(f"User with email '{value}' not found in DB. Returning None.")
                 return None
         # Raise error for completely invalid input types during validation
-        msg = f'Invalid input type for user: {type(v)}. Expected email string or User object.'
+        msg = f'Invalid input type for user: {type(value)}. Expected email string or User object.'
         raise ValueError(msg)
 
     @model_validator(mode='after')

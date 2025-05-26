@@ -59,12 +59,8 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         # NOTE: Verify
         if not self.config.groups or self.config.all_entries:
             logger.info('Dumping all groups as requested by configuration.')
-            try:
-                qb_groups = QueryBuilder().append(orm.Group)
-                groups_to_process = qb_groups.all(flat=True)
-            except Exception as e:
-                logger.error(f'Failed to query groups for profile dump: {e}')
-                groups_to_process = []
+            qb_groups = QueryBuilder().append(orm.Group)
+            groups_to_process = qb_groups.all(flat=True)
         elif self.config.groups:
             group_identifiers = self.config.groups
             logger.info(f'Dumping specific groups: {group_identifiers}')
@@ -76,10 +72,6 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
                         groups_to_process = [orm.load_group(identifier=str(gid)) for gid in group_identifiers]
                     except NotExistent as e:
                         logger.error(f'Error loading specified group: {e}. Aborting group processing.')
-                    except Exception as e:
-                        logger.error(f'Unexpected error loading groups: {e}. Aborting group processing.')
-                    # NOTE: Tests failed bc of this
-                    # groups_to_process = []  # Ensure it's empty on error
             else:
                 logger.warning('Scope set to SPECIFIC but no group identifiers provided.')
 
@@ -116,25 +108,22 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
             return
 
         logger.debug('Finding calculation descendants for ungrouped workflows (only_top_level_calcs=False)')
-        try:
-            descendants = DumpChangeDetector._get_calculation_descendants(ungrouped_workflows)
-            if descendants:
-                existing_calc_uuids = {calc.uuid for calc in ungrouped_nodes_store.calculations}
-                logged_calc_uuids = set(self.dump_tracker.calculations.entries.keys())
-                unique_descendants = [
-                    desc
-                    for desc in descendants
-                    if desc.uuid not in existing_calc_uuids and desc.uuid not in logged_calc_uuids
-                ]
-                if unique_descendants:
-                    logger.debug(f'Adding {len(unique_descendants)} unique, unlogged descendants to ungrouped dump.')
-                    if not hasattr(ungrouped_nodes_store, 'calculations') or ungrouped_nodes_store.calculations is None:
-                        ungrouped_nodes_store.calculations = []
-                    ungrouped_nodes_store.calculations.extend(unique_descendants)
-                else:
-                    logger.debug('All descendants for ungrouped workflows were already included or logged.')
-        except Exception as e:
-            logger.warning(f'Could not retrieve/process descendants for ungrouped workflows: {e}')
+        descendants = DumpChangeDetector._get_calculation_descendants(ungrouped_workflows)
+        if descendants:
+            existing_calc_uuids = {calc.uuid for calc in ungrouped_nodes_store.calculations}
+            logged_calc_uuids = set(self.dump_tracker.calculations.entries.keys())
+            unique_descendants = [
+                desc
+                for desc in descendants
+                if desc.uuid not in existing_calc_uuids and desc.uuid not in logged_calc_uuids
+            ]
+            if unique_descendants:
+                logger.debug(f'Adding {len(unique_descendants)} unique, unlogged descendants to ungrouped dump.')
+                if not hasattr(ungrouped_nodes_store, 'calculations') or ungrouped_nodes_store.calculations is None:
+                    ungrouped_nodes_store.calculations = []
+                ungrouped_nodes_store.calculations.extend(unique_descendants)
+            else:
+                logger.debug('All descendants for ungrouped workflows were already included or logged.')
 
     def _process_ungrouped_nodes(self) -> None:
         """Identify ALL currently ungrouped nodes (ignoring time filter),
@@ -149,12 +138,8 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         logger.info('Processing ungrouped nodes (also_ungrouped=True)...')
 
         # 1. Determine the target path for ungrouped nodes
-        try:
-            ungrouped_path = self.dump_paths.get_path_for_ungrouped_nodes()
-            logger.debug(f'Target path for ungrouped nodes: {ungrouped_path}')
-        except Exception as e:
-            logger.error(f'Failed to determine or create ungrouped path: {e}', exc_info=True)
-            return
+        ungrouped_path = self.dump_paths.get_path_for_ungrouped_nodes()
+        logger.debug(f'Target path for ungrouped nodes: {ungrouped_path}')
 
         # 2. Use Node Query logic, ignoring time filter, to get initial candidates
         logger.debug('Querying detector for ungrouped nodes with ignore_time_filter=True...')
@@ -173,9 +158,6 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         except AttributeError:
             logger.error('Cannot access detector.node_query or detector.dump_times. Refactoring needed.')
             return
-        except Exception as e:
-            logger.error(f'Query for ungrouped nodes failed: {e}', exc_info=True)
-            return
 
         # 3. Convert list to dictionary format required by filter methods
         nodes_by_type: dict[str, list[orm.Node]] = {
@@ -184,14 +166,10 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
             'data': [],  # Include data if relevant
         }
         for node in initial_ungrouped_nodes:
-            try:
-                # Use isinstance for robust type checking
-                if isinstance(node, orm.CalculationNode):
-                    nodes_by_type['calculations'].append(node)
-                elif isinstance(node, orm.WorkflowNode):
-                    nodes_by_type['workflows'].append(node)
-            except Exception as e:
-                logger.warning(f'Error classifying node {node.pk} by type: {e}')
+            if isinstance(node, orm.CalculationNode):
+                nodes_by_type['calculations'].append(node)
+            elif isinstance(node, orm.WorkflowNode):
+                nodes_by_type['workflows'].append(node)
 
         # 4. Apply the Top-Level Filter (reuse detector's logic)
         logger.debug('Applying top-level filter to ungrouped nodes...')
@@ -203,9 +181,6 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
             logger.debug(f'After top-level filter: {wf_count} workflows, {calc_count} calculations remain.')
         except AttributeError:
             logger.error('Cannot access detector._apply_top_level_filter. Refactoring needed.')
-            return
-        except Exception as e:
-            logger.error(f'Applying top-level filter failed: {e}', exc_info=True)
             return
 
         nodes_to_dump_ungrouped = DumpNodeStore()
@@ -248,8 +223,6 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
                                     break
                     except (OSError, ValueError, AttributeError) as e:
                         logger.warning(f'Error resolving/checking paths for logged node {node_uuid}: {e}')
-                    except Exception as e:
-                        logger.error(f'Unexpected error checking paths for logged node {node_uuid}: {e}', exc_info=True)
 
                 # 6. Schedule dump if needed
                 if not has_ungrouped_representation:
@@ -264,13 +237,10 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         # 7. Dump the collected nodes
         if len(nodes_to_dump_ungrouped) > 0:
             logger.report(f'Dumping/linking {len(nodes_to_dump_ungrouped)} nodes under ungrouped path...')
-            try:
-                ungrouped_path.mkdir(exist_ok=True, parents=True)
-                (ungrouped_path / DumpPaths.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
-                self._dump_nodes(node_store=nodes_to_dump_ungrouped, group_context=None)
-                nodes_processed_count = len(nodes_to_dump_ungrouped)
-            except Exception as e:
-                logger.error(f'Failed processing nodes under ungrouped path: {e}', exc_info=True)
+            ungrouped_path.mkdir(exist_ok=True, parents=True)
+            (ungrouped_path / DumpPaths.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
+            self._dump_nodes(node_store=nodes_to_dump_ungrouped, group_context=None)
+            nodes_processed_count = len(nodes_to_dump_ungrouped)
         else:
             logger.info('No ungrouped nodes required a new representation in the dump after applying filters.')
 
@@ -282,25 +252,18 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         for group_uuid, group_log_entry in self.dump_tracker.groups.entries.items():
             group_path = group_log_entry.path
             if not group_path.is_absolute():
-                try:
-                    group_path = self.dump_tracker.dump_paths.base_output_path / group_path
-                    logger.debug(f'Resolved relative group path for {group_uuid} to {group_path}')
-                except Exception as path_e:
-                    logger.error(f'Failed to resolve relative path for group {group_uuid}: {path_e}')
-                    continue
+                group_path = self.dump_paths.base_output_path / group_path
+                logger.debug(f'Resolved relative group path for {group_uuid} to {group_path}')
 
             if not group_path.is_dir():
                 logger.warning(f'Group path {group_path} for UUID {group_uuid} is not a directory. Skipping stats.')
                 continue
 
             logger.debug(f'Calculating stats for group directory: {group_path} (UUID: {group_uuid})')
-            try:
-                dir_mtime, dir_size = self.dump_paths.get_directory_stats(group_path)
-                group_log_entry.dir_mtime = dir_mtime
-                group_log_entry.dir_size = dir_size
-                logger.debug(f'Updated stats for group {group_uuid}: mtime={dir_mtime}, size={dir_size}')
-            except Exception as e:
-                logger.error(f'Failed to calculate/update stats for group {group_uuid} at {group_path}: {e}')
+            dir_mtime, dir_size = self.dump_paths.get_directory_stats(group_path)
+            group_log_entry.dir_mtime = dir_mtime
+            group_log_entry.dir_size = dir_size
+            logger.debug(f'Updated stats for group {group_uuid}: mtime={dir_mtime}, size={dir_size}')
 
     def dump(self, changes: DumpChanges) -> None:
         """Dumps the entire profile by orchestrating helper methods."""

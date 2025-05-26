@@ -10,10 +10,8 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum, auto
-from pathlib import Path
-from typing import Annotated, Any, Dict, List, Optional, Type, Union
+from typing import Annotated, Any, Dict, List, Optional, Union
 
-import yaml
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -286,44 +284,6 @@ class DumpConfig(BaseModel):
         data = {k: v for k, v in data.items() if v is not None}
 
         return data
-
-    # --- File Handling Methods ---
-    @classmethod
-    def parse_yaml_file(cls: Type['DumpConfig'], path: str | Path) -> 'DumpConfig':
-        """Loads configuration from a YAML file using Pydantic validation."""
-        # (Implementation remains the same)
-        file_path = Path(path)
-        if not file_path.is_file():
-            logger.error(f'Configuration file not found: {file_path}')
-            raise FileNotFoundError(f'Configuration file not found: {file_path}')
-        logger.info(f'Loading configuration from YAML: {file_path}')
-        try:
-            with file_path.open('r', encoding='utf-8') as f:
-                config_data = yaml.safe_load(f) or {}
-            instance = cls.model_validate(config_data)
-            logger.info('Successfully validated configuration from file.')
-            return instance
-        except Exception as e:
-            logger.error(
-                f'Failed to load or validate config file {file_path}: {e}',
-                exc_info=True,
-            )
-            raise ValueError(f'Failed to load/validate configuration from {file_path}') from e
-
-    def _save_yaml_file(self, path: str | Path) -> None:
-        """Saves the configuration to a YAML file."""
-        # (Implementation remains the same)
-        file_path = Path(path)
-        logger.info(f'Saving configuration to YAML: {file_path}')
-        try:
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            config_dict = self.model_dump(mode='json')  # Triggers serializer
-            with file_path.open('w', encoding='utf-8') as f:
-                yaml.dump(config_dict, f, indent=4, default_flow_style=False)
-            logger.info(f'Configuration saved successfully to {file_path}')
-        except Exception as e:
-            logger.error(f'Failed to save configuration to {file_path}: {e}', exc_info=True)
-            raise IOError(f'Failed to save configuration to {file_path}') from e
 
 
 # --- IMPORTANT: Finalize Pydantic Model ---

@@ -107,38 +107,6 @@ class DumpEngine:
 
         return dump_times, dump_tracker, stored_mapping
 
-    def _load_config_from_yaml(self) -> DumpConfig | None:
-        """Attempts to load DumpConfig from the YAML file in the dump path.
-
-        :return: _description_
-        """
-        config_path = self.dump_paths.config_file_path
-
-        if not config_path.exists():
-            logger.debug(f'Config file {config_path} not found. Using default/provided config.')
-            return None
-
-        try:
-            loaded_config = DumpConfig.parse_yaml_file(path=config_path)
-            logger.info('Successfully loaded configuration from file.')
-            return loaded_config
-        except Exception as e:
-            logger.error(f'Failed to load or parse config file {config_path}: {e}', exc_info=True)
-            return None
-
-    def _save_config(self) -> None:
-        """Save the Pydantic config object to the dump's YAML file."""
-        # Use the save method defined on the Pydantic DumpConfig model
-        try:
-            # This calls self.config.model_dump(mode='json') internally via the serializer
-            # and writes to the correct path using yaml.dump
-            self.config._save_yaml_file(self.dump_paths.config_file_path)
-            # The logger message "Dump configuration saved to ..." is now inside save_yaml_file
-        except Exception as e:
-            # Log error but avoid raising another error during finalization if possible
-            # Match original behavior of logging without re-raising here.
-            logger.error(f'Failed to save dump configuration during engine finalization: {e}', exc_info=True)
-
     def dump(self, entity: Optional[orm.ProcessNode | orm.Group | Profile] = None) -> None:
         """
         Selects and executes the appropriate dump strategy based on the entity.
@@ -151,7 +119,7 @@ class DumpEngine:
         elif isinstance(entity, Profile):
             entity_description = f'profile `{entity.name}`'
 
-        msg = f'Starting dump of {entity_description} in `{self.config.dump_mode.name.lower()}` mode.'
+        msg = f'Starting dump of {entity_description} in {self.config.dump_mode.name.lower()} mode.'
         if self.config.dump_mode != DumpMode.DRY_RUN:
             logger.report(msg)
 
@@ -238,6 +206,5 @@ class DumpEngine:
                 )
                 profile_dump_executor.dump(changes=all_changes)
 
-        logger.report('Saving final dump log and configuration.')
+        logger.report(f'Saving final dump log to file `{DumpPaths.TRACKING_LOG_FILE_NAME}`.')
         self.dump_tracker.save(current_dump_time=self.dump_times.current, group_node_mapping=current_mapping)
-        self._save_config()

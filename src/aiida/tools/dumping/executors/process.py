@@ -433,7 +433,7 @@ class ProcessDumpExecutor:
 
 
 class NodeMetadataWriter:
-    """Handles writing the .aiida_node_metadata.yaml file."""
+    """Handles writing the aiida_node_metadata.yaml file."""
 
     def __init__(self, config: DumpConfig):
         self.config = config
@@ -442,7 +442,7 @@ class NodeMetadataWriter:
         self,
         process_node: orm.ProcessNode,
         output_path: Path,
-        output_filename: str = '.aiida_node_metadata.yaml',
+        output_filename: str = 'aiida_node_metadata.yaml',
     ) -> None:
         """Dump the selected ProcessNode properties, attributes, and extras to a YAML file."""
         node_properties = [
@@ -679,7 +679,7 @@ class ReadmeGenerator:
             `_scheduler-stderr.txt`).
             - `node_inputs/`: Contains repositories of input data nodes linked via `INPUT_CALC`.
             - `node_outputs/`: Contains repositories of output data nodes linked via `CREATE` (excluding `retrieved`).
-            - `.aiida_node_metadata.yaml`: Human-readable metadata, attributes, and extras of this node.
+            - `aiida_node_metadata.yaml`: Human-readable metadata, attributes, and extras of this node.
             """
         )
 

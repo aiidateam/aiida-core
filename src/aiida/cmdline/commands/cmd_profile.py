@@ -377,57 +377,38 @@ def profile_dump(
             dump_base_output_path = Path(path).resolve()
             echo.echo_report(f"Using specified output path: '{dump_base_output_path}'")
 
-        config_file_path = dump_base_output_path / DumpPaths.CONFIG_FILE_NAME
-
-        if config_file_path.is_file():
-            # --- Config File Exists: Load ONLY from file ---
-            try:
-                config_path_rel = config_file_path.relative_to(Path.cwd())
-            except ValueError:
-                config_path_rel = config_file_path
-            echo.echo_report(f"Config file found at '{config_path_rel}'.")
-            echo.echo_report('Using config file settings ONLY (ignoring other CLI flags).')
-            try:
-                # Validate and create config SOLELY from the file
-                final_dump_config = DumpConfig.parse_yaml_file(config_file_path)
-            except (ValidationError, FileNotFoundError, ValueError) as e:
-                echo.echo_critical(f'Error loading or validating config file {config_file_path}: {e}')
-                return
-        else:
-            # --- Config File Does NOT Exist: Use ONLY CLI args ---
-            echo.echo_report('No config file found. Using command-line arguments.')
-            try:
-                # Gather all relevant CLI args here
-                config_input_data = {
-                    'dry_run': dry_run,
-                    'overwrite': overwrite,
-                    'all_entries': all_entries,
-                    'groups': list(groups) if groups else [],
-                    'past_days': past_days,
-                    'start_date': start_date,
-                    'end_date': end_date,
-                    'user': user,
-                    'codes': codes,
-                    'computers': computers,
-                    'filter_by_last_dump_time': filter_by_last_dump_time,
-                    'only_top_level_calcs': only_top_level_calcs,
-                    'only_top_level_workflows': only_top_level_workflows,
-                    'delete_missing': delete_missing,
-                    'symlink_calcs': symlink_calcs,
-                    'organize_by_groups': organize_by_groups,
-                    'also_ungrouped': also_ungrouped,
-                    'relabel_groups': relabel_groups,
-                    'include_inputs': include_inputs,
-                    'include_outputs': include_outputs,
-                    'include_attributes': include_attributes,
-                    'include_extras': include_extras,
-                    'flat': flat,
-                    'dump_unsealed': dump_unsealed,
-                }
-                final_dump_config = DumpConfig.model_validate(config_input_data)
-            except ValidationError as e:
-                echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
-                return
+        try:
+            # Gather all relevant CLI args here
+            config_input_data = {
+                'dry_run': dry_run,
+                'overwrite': overwrite,
+                'all_entries': all_entries,
+                'groups': list(groups) if groups else [],
+                'past_days': past_days,
+                'start_date': start_date,
+                'end_date': end_date,
+                'user': user,
+                'codes': codes,
+                'computers': computers,
+                'filter_by_last_dump_time': filter_by_last_dump_time,
+                'only_top_level_calcs': only_top_level_calcs,
+                'only_top_level_workflows': only_top_level_workflows,
+                'delete_missing': delete_missing,
+                'symlink_calcs': symlink_calcs,
+                'organize_by_groups': organize_by_groups,
+                'also_ungrouped': also_ungrouped,
+                'relabel_groups': relabel_groups,
+                'include_inputs': include_inputs,
+                'include_outputs': include_outputs,
+                'include_attributes': include_attributes,
+                'include_extras': include_extras,
+                'flat': flat,
+                'dump_unsealed': dump_unsealed,
+            }
+            final_dump_config = DumpConfig.model_validate(config_input_data)
+        except ValidationError as e:
+            echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
+            return
 
         # --- Other logical checks ---
         if not final_dump_config.organize_by_groups and final_dump_config.relabel_groups:

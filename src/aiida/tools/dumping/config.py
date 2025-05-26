@@ -20,7 +20,6 @@ from pydantic import (
     Field,
     computed_field,
     field_validator,
-    model_serializer,
     model_validator,
 )
 
@@ -191,6 +190,7 @@ class DumpConfig(BaseModel):
             values['dump_mode'] = DumpMode.OVERWRITE
 
         return values
+
 
 # --- IMPORTANT: Finalize Pydantic Model ---
 # Call model_rebuild() after the class definition to resolve forward references

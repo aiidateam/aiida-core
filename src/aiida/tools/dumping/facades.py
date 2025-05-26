@@ -14,6 +14,7 @@ from pathlib import Path
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.warnings import warn_deprecation
 from aiida.tools.dumping.config import DumpConfig
 from aiida.tools.dumping.engine import DumpEngine
 from aiida.tools.dumping.utils.paths import DumpPaths
@@ -24,11 +25,9 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.facades')
 class ProcessDumper:
     """Dumps data of a single ProcessNode."""
 
-    # TODO: Adapt signature to work with previously released version of ProcessDumper
-    # TODO: Add deprecation warning
     def __init__(
         self,
-        process_node: orm.ProcessNode | int | str,
+        process_node: orm.ProcessNode,
         config: DumpConfig | None = None,
         output_path: str | Path | None = None,
     ) -> None:
@@ -40,15 +39,22 @@ class ProcessDumper:
         :param output_path: Optional base path to write the dump to. Can be a string or ``Path``.
             If ``None``, a default path based on the profile name will be used.
         """
-        self.process_node = ProcessDumper._verify_process_node(process_node)
+
+        warn_deprecation(
+            'The `ProcessDumper` class is deprecated. Use `orm.ProcessNode.dump()` instead.',
+            version=3,
+        )
+
+        self.process_node = process_node
         self.config: DumpConfig = config if config is not None else DumpConfig()
+        self.base_output_path: Path
 
         # Resolve DumpPaths based on output_path and the node
-        if output_path is None:
+        if not output_path:
             default_child_dir_name = DumpPaths._get_node_directory_name(node=self.process_node)
-            self.base_output_path: Path = Path.cwd() / default_child_dir_name
+            self.base_output_path = Path.cwd() / default_child_dir_name
         else:
-            self.base_output_path: Path = Path(output_path).resolve()
+            self.base_output_path = Path(output_path).resolve()
 
     def dump(self) -> None:
         """Perform the dump operation by invoking the engine."""

@@ -10,12 +10,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, List, cast
 
 from aiida import orm
 from aiida.common import NotExistent
 from aiida.common.log import AIIDA_LOGGER
-from aiida.orm import Group, QueryBuilder, WorkflowNode
 from aiida.tools.dumping.config import GroupDumpScope
 from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.executors.collection import CollectionDumpExecutor
@@ -53,20 +52,20 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         )
         self.detector = detector
 
-    def _determine_groups_to_process(self) -> list[Group]:
+    def _determine_groups_to_process(self) -> list[orm.Group]:
         """Determine which groups to process based on config."""
-        groups_to_process: list[Group] = []
+        groups_to_process: list[orm.Group] = []
         # NOTE: Verify
         if not self.config.groups or self.config.all_entries:
             logger.info('Dumping all groups as requested by configuration.')
-            qb_groups = QueryBuilder().append(orm.Group)
-            groups_to_process = qb_groups.all(flat=True)
+            qb_groups = orm.QueryBuilder().append(orm.Group)
+            groups_to_process = cast(List[orm.Group], qb_groups.all(flat=True))
         elif self.config.groups:
             group_identifiers = self.config.groups
             logger.info(f'Dumping specific groups: {group_identifiers}')
             if group_identifiers:
                 if isinstance(group_identifiers[0], orm.Group):
-                    groups_to_process = cast(list[Group], group_identifiers)
+                    groups_to_process = cast(list[orm.Group], group_identifiers)
                 else:
                     try:
                         groups_to_process = [orm.load_group(identifier=str(gid)) for gid in group_identifiers]
@@ -78,10 +77,10 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         logger.info(f'Will process {len(groups_to_process)} groups found in the profile.')
         return groups_to_process
 
-    def _identify_ungrouped_nodes(self, changes: DumpChanges) -> tuple[DumpNodeStore, list[WorkflowNode]]:
+    def _identify_ungrouped_nodes(self, changes: DumpChanges) -> tuple[DumpNodeStore, list[orm.WorkflowNode]]:
         """Identify nodes detected globally that do not belong to any group."""
         ungrouped_nodes_store = DumpNodeStore()
-        ungrouped_workflows: list[WorkflowNode] = []
+        ungrouped_workflows: list[orm.WorkflowNode] = []
 
         for store_key in ['calculations', 'workflows', 'data']:
             store_nodes = getattr(changes.nodes.new_or_modified, store_key, [])
@@ -92,16 +91,16 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
                 if store_key == 'workflows':
                     ungrouped_workflows.extend(
                         cast(
-                            list[WorkflowNode],
+                            list[orm.WorkflowNode],
                             [wf for wf in ungrouped if isinstance(wf, orm.WorkflowNode)],
                         )
                     )
         return ungrouped_nodes_store, ungrouped_workflows
 
-    def _add_ungrouped_descendants_if_needed(
+    def _add_ungrouped_descendants(
         self,
         ungrouped_nodes_store: DumpNodeStore,
-        ungrouped_workflows: list[WorkflowNode],
+        ungrouped_workflows: list[orm.WorkflowNode],
     ) -> None:
         """Add calculation descendants for ungrouped workflows if config requires."""
         if self.config.only_top_level_calcs or not ungrouped_workflows:
@@ -163,7 +162,6 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         nodes_by_type: dict[str, list[orm.Node]] = {
             'calculations': [],
             'workflows': [],
-            'data': [],  # Include data if relevant
         }
         for node in initial_ungrouped_nodes:
             if isinstance(node, orm.CalculationNode):
@@ -193,29 +191,25 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
                 continue
             for node in node_list:
                 node_uuid = node.uuid
-                log_entry = self.dump_tracker.get_store_by_uuid(node_uuid)
+                dump_record = self.dump_tracker.get_entry_by_uuid(node_uuid)
 
                 has_ungrouped_representation = False
-                if log_entry:
+                if dump_record:
                     try:
-                        primary_path = log_entry.path
+                        primary_path = dump_record.path
                         # Check if primary_path exists before resolving
-                        if (
-                            primary_path
-                            and primary_path.exists()
-                            and primary_path.resolve().is_relative_to(ungrouped_path.resolve())
-                        ):
+                        if primary_path.exists() and primary_path.resolve().is_relative_to(ungrouped_path.resolve()):
                             has_ungrouped_representation = True
 
                         if not has_ungrouped_representation:
-                            for symlink_path in log_entry.symlinks:
+                            for symlink_path in dump_record.symlinks:
                                 if symlink_path.exists() and symlink_path.resolve().is_relative_to(
                                     ungrouped_path.resolve()
                                 ):
                                     has_ungrouped_representation = True
                                     break
                         if not has_ungrouped_representation:
-                            for duplicate_path in log_entry.duplicates:
+                            for duplicate_path in dump_record.duplicates:
                                 if duplicate_path.exists() and duplicate_path.resolve().is_relative_to(
                                     ungrouped_path.resolve()
                                 ):

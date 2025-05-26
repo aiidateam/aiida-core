@@ -108,7 +108,7 @@ class DumpPaths:
 
     def get_path_for_node(
         self,
-        node: orm.Node,
+        node: orm.ProcessNode,
         current_content_root: Path,
     ) -> Path:
         """

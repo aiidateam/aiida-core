@@ -19,7 +19,6 @@ runs:
     if: env.SLACK_WEBHOOK != null
     uses: rtCamp/action-slack-notify@v2
     env:
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       SLACK_ICON: https://www.materialscloud.org/discover/images/0ba0a17d.aiida-logo-128.png
       SLACK_CHANNEL: dev-aiida-core
       SLACK_COLOR: b60205

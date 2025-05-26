@@ -218,6 +218,8 @@ jobs:
       # but only if the `install` or `tests` steps failed.
       if: always() && (steps.install.outcome == 'failure' || steps.tests.outcome == 'failure')
       uses: ./.github/actions/slack-notification
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       with:
         title: Install tests of `aiida-core/main` failed
         message: '`test-install.yml` for Python ${{ matrix.python-version }} failed.'

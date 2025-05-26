@@ -15,7 +15,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, cast
 
 from aiida import orm
-from aiida.common import AIIDA_LOGGER, NotExistent
+from aiida.common import AIIDA_LOGGER
 from aiida.orm import QueryBuilder
 from aiida.tools.dumping.config import GroupDumpScope
 from aiida.tools.dumping.mapping import GroupNodeMapping
@@ -171,9 +171,7 @@ class DumpChangeDetector:
 
         return filtered_nodes
 
-    def _apply_top_level_filter(
-        self, logged_filtered_nodes: dict[str, list[orm.ProcessNode]]
-    ) -> DumpNodeStore:
+    def _apply_top_level_filter(self, logged_filtered_nodes: dict[str, list[orm.ProcessNode]]) -> DumpNodeStore:
         """Apply the top-level calculation/workflow filter.
 
         If calculations or workflows are explicitly part of a group, they are kept,
@@ -687,4 +685,3 @@ class DumpQueryHandler:
                 logger.warning('Code filter provided, but no valid/loaded Code objects found. Skipping.')
 
         return qb, relationships_to_add
-

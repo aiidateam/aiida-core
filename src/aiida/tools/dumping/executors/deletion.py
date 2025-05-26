@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.utils.helpers import DumpChanges
+from aiida.tools.dumping.utils.helpers import DumpChanges, StoreNameType
 from aiida.tools.dumping.utils.paths import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.managers.deletion')
@@ -138,7 +138,7 @@ class DeletionExecutor:
             )
         finally:
             # Always attempt to remove the log entry
-            if self.dump_tracker.del_entry(store_key=store_key, uuid=node_uuid):
+            if self.dump_tracker.del_entry(store_key=cast(StoreNameType, store_key), uuid=node_uuid):
                 logger.debug(f"Removed log entry for deleted node {node_uuid} from store '{store_key}'.")
                 deleted_from_log = True
             else:
@@ -228,7 +228,7 @@ class DeletionExecutor:
                                 "group path '{path_deleted}'. Removing log entry."
                             )
                             logger.debug(msg)
-                            if self.dump_tracker.del_entry(store_key=store_key, uuid=node_uuid):
+                            if self.dump_tracker.del_entry(store_key=cast(StoreNameType, store_key), uuid=node_uuid):
                                 nodes_removed_count += 1
                             # else: No warning needed if removal fails, might be race condition or prior removal
                     except (OSError, ValueError):

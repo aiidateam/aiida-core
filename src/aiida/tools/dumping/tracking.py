@@ -347,11 +347,11 @@ class DumpTracker:
                 return store
         return None
 
-    def get_dump_path_by_uuid(self, uuid: str) -> Optional[Path]:
-        """Find the dump path for an entity with the given UUID."""
+    def get_entry_by_uuid(self, uuid: str) -> Optional[DumpRecord]:
+        """Find the dump record for an entity with the given UUID."""
         store = self.get_store_by_uuid(uuid=uuid)
         if store and uuid in store.entries:
-            return store.entries[uuid].path
+            return store.entries[uuid]
         return None
 
     def update_paths(self, old_base_path: Path, new_base_path: Path) -> int:

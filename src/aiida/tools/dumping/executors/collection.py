@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional, cast
 
 from aiida import orm
+from aiida.common import MultipleObjectsError, NotExistent
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm
 from aiida.orm import Group, WorkflowNode
@@ -322,8 +323,15 @@ class CollectionDumpExecutor:
 
         # Node addition handling remains the same - process manager places it correctly
         for node_uuid in mod_info.nodes_added:
-            node = orm.load_node(uuid=node_uuid)
-            logger.debug(f"Node {node_uuid} added to group {group.label}. Ensuring it's dumped/linked.")
+            try:
+                node = orm.load_node(uuid=node_uuid)
+            except (ValueError, NotExistent, MultipleObjectsError):
+                continue
+
+            if not isinstance(node, orm.ProcessNode):
+                logger.debug(f'Node {node_uuid} is not an `orm.ProcessNode`.')
+                continue
+
             # Determine the correct target_path for the node within this group
             # current_group_path_abs is the content root for `group`
             node_target_path_in_group = self.dump_paths.get_path_for_node(
@@ -346,14 +354,16 @@ class CollectionDumpExecutor:
         Find and remove a node's dump dir/symlink within a specific group path.
         Handles nodes potentially deleted from the DB by checking filesystem paths.
         """
-        node_path_in_logger = self.dump_tracker.get_dump_path_by_uuid(node_uuid)
+
+        dump_record = self.dump_tracker.get_entry_by_uuid(node_uuid)
         # store = self.dump_tracker.get_store_by_uuid(node_uuid)
-        if not node_path_in_logger:
+        if not dump_record:
             logger.warning(f'Cannot find logger path for node {node_uuid} to remove from group.')
             return
 
         # Even if node is deleted from DB, we expect the dump_tracker to know the original path name
-        node_filename = node_path_in_logger.name
+        node_path = dump_record.path
+        node_filename = dump_record.path.name
 
         # Construct potential paths within the group dir where the node might be represented
         # The order matters if duplicates could somehow exist; checks stop on first find.
@@ -386,13 +396,13 @@ class CollectionDumpExecutor:
             # Use resolve() for robust comparison, handles symlinks, '.', '..' etc.
             # This comparison is only meaningful if the original logged path *still exists*.
             # If node_path_in_logger points to a non-existent location, found_path cannot be it.
-            if node_path_in_logger.exists():
+            if node_path.exists():
                 # Resolving might fail if permissions are wrong, hence the inner try/except
-                is_target_dir = found_path.resolve() == node_path_in_logger.resolve()
+                is_target_dir = found_path.resolve() == node_path.resolve()
         except OSError as e:
             # Error resolving paths, cannot be certain it's not the target. Err on safe side.
             logger.error(
-                f'Error resolving path {found_path} or {node_path_in_logger}: {e}. '
+                f'Error resolving path {found_path} or {dump_record}: {e}. '
                 f"Cannot safely determine if it's the target directory. Skipping removal."
             )
             return

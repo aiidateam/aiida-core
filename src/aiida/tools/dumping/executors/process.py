@@ -51,7 +51,6 @@ class NodeDumpAction(Enum):
     DUMP_PRIMARY = auto()
     DUMP_DUPLICATE = auto()
     UPDATE = auto()
-    ERROR = auto()
 
 
 class ProcessDumpExecutor:
@@ -98,18 +97,17 @@ class ProcessDumpExecutor:
 
         # Delegate execution based on the determined action
         try:
-            if action == NodeDumpAction.SKIP:
-                self._execute_skip(process_node)
-            elif action == NodeDumpAction.SYMLINK:
-                self._execute_symlink(process_node, target_path, existing_log_entry)
-            elif action == NodeDumpAction.UPDATE:
-                self._execute_update(process_node, target_path, existing_log_entry)
-            elif action == NodeDumpAction.DUMP_PRIMARY:
+            if action == NodeDumpAction.DUMP_PRIMARY:
                 self._execute_dump_primary(process_node, target_path)
-            elif action == NodeDumpAction.DUMP_DUPLICATE:
-                self._execute_dump_duplicate(process_node, target_path, existing_log_entry)
-            elif action == NodeDumpAction.ERROR:
-                self._execute_error(process_node)
+            elif action == NodeDumpAction.SKIP:
+                self._execute_skip(process_node)
+            elif existing_log_entry is not None:
+                if action == NodeDumpAction.SYMLINK:
+                    self._execute_symlink(process_node, target_path, existing_log_entry)
+                elif action == NodeDumpAction.UPDATE:
+                    self._execute_update(process_node, target_path, existing_log_entry)
+                elif action == NodeDumpAction.DUMP_DUPLICATE:
+                    self._execute_dump_duplicate(process_node, target_path, existing_log_entry)
         except Exception as e:
             # Catch errors during execution phase
             logger.error(
@@ -148,17 +146,8 @@ class ProcessDumpExecutor:
             logger.debug(f'Node {node.pk} not found in log. Action: DUMP_PRIMARY')
             return NodeDumpAction.DUMP_PRIMARY, None
 
-        # Node is logged. Check paths.
-        try:
-            resolved_target_path = target_path.resolve()
-            resolved_logged_path = existing_log_entry.path.resolve()
-        except (OSError, ValueError) as e:
-            msg = (
-                f'Error resolving/comparing paths for node {node.pk} ({target_path} vs {existing_log_entry.path}): {e}.'
-                'Action: ERROR.'
-            )
-            logger.error(msg)
-            return NodeDumpAction.ERROR, existing_log_entry
+        resolved_target_path = target_path.resolve()
+        resolved_logged_path = existing_log_entry.path.resolve()
 
         # --- Case 1: Target path is the SAME as the primary logged path ---
         if resolved_target_path == resolved_logged_path:
@@ -186,9 +175,7 @@ class ProcessDumpExecutor:
 
         # --- Case 2: Target path is DIFFERENT from primary logged path ---
         is_calc_node = isinstance(node, orm.CalculationNode)
-        is_sub_process = (
-            len(node.base.links.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()) > 0
-        )
+        is_sub_process = len(node.base.links.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()) > 0
 
         # Option A: Symlink Calculation
         if self.config.symlink_calcs and is_calc_node:
@@ -248,6 +235,10 @@ class ProcessDumpExecutor:
     def _execute_update(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpRecord):
         """Action: Clean existing directory and perform a full dump."""
         logger.info(f'Executing UPDATE for node {node.pk} at {target_path.name} due to mtime change.')
+        node_pk = node.pk
+        if not node_pk:
+            return
+
         # 1. Clean existing directory
         self.dump_paths.safe_delete_directory(directory_path=target_path)
         logger.debug(f'Cleaned existing directory for update: {target_path.name}')
@@ -259,13 +250,17 @@ class ProcessDumpExecutor:
         self._dump_node_content(node, target_path)
 
         # 4. Update stats on the existing log entry using the primary path
-        self._calculate_and_update_stats(node.pk, existing_log_entry.path, existing_log_entry)
-
+        self._calculate_and_update_stats(node_pk, existing_log_entry.path, existing_log_entry)
 
     def _execute_dump_primary(self, node: orm.ProcessNode, target_path: Path):
         """Action: Perform a full dump as the primary location."""
         logger.debug(f'Executing DUMP_PRIMARY for node {node.pk} at {target_path.name}')
         log_entry = None
+
+        node_pk = node.pk
+        if not node_pk:
+            return
+
         try:
             # 1. Prepare directory
             self.dump_paths.prepare_directory(path_to_prepare=target_path)
@@ -280,7 +275,7 @@ class ProcessDumpExecutor:
             self._dump_node_content(node, target_path)
 
             # 4. Calculate and update stats for the new log entry
-            self._calculate_and_update_stats(node.pk, target_path, log_entry)
+            self._calculate_and_update_stats(node_pk, target_path, log_entry)
 
         except Exception as e:
             logger.error(f'Failed during DUMP_PRIMARY execution for node {node.pk}: {e}', exc_info=True)
@@ -290,6 +285,11 @@ class ProcessDumpExecutor:
     def _execute_dump_duplicate(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpRecord):
         """Action: Perform a full dump at a secondary location."""
         logger.debug(f'Executing DUMP_DUPLICATE for node {node.pk} at {target_path.name}')
+
+        node_pk = node.pk
+        if not node_pk:
+            return
+
         try:
             # 1. Prepare directory
             self.dump_paths.prepare_directory(path_to_prepare=target_path)
@@ -304,17 +304,12 @@ class ProcessDumpExecutor:
             # 4. Update stats on the *primary* log entry (optional, could skip for duplicates)
             #    Recalculating stats based on primary path might be redundant here unless content changed
             #    Let's keep it consistent for now.
-            self._calculate_and_update_stats(node.pk, existing_log_entry.path, existing_log_entry)
+            self._calculate_and_update_stats(node_pk, existing_log_entry.path, existing_log_entry)
 
         except Exception as e:
             logger.error(f'Failed during DUMP_DUPLICATE execution for node {node.pk}: {e}', exc_info=True)
             # If duplicate dump fails, potentially clean the partial duplicate directory?
             self._cleanup_failed_dump(node, target_path, False)  # is_primary_dump=False
-
-    def _execute_error(self, node: orm.ProcessNode):
-        """Action: Log error, do nothing else."""
-        logger.error(f'Executing ERROR action for node {node.pk}. Aborting dump for this node.')
-        # No file operations
 
     # --- Helper methods ---
     def _validate_node_for_dump(self, node: orm.ProcessNode) -> bool:
@@ -495,9 +490,10 @@ class NodeRepoIoDumper:
 
         # Dump the repository contents of `outputs.retrieved` if it exists
         if hasattr(calculation_node.outputs, 'retrieved'):
-            retrieved_target = output_path / io_dump_mapping.retrieved
-            retrieved_target.mkdir(parents=True, exist_ok=True)
-            calculation_node.outputs.retrieved.base.repository.copy_tree(retrieved_target)
+            if calculation_node.outputs.retrieved is not None:
+                retrieved_target = output_path / io_dump_mapping.retrieved
+                retrieved_target.mkdir(parents=True, exist_ok=True)
+                calculation_node.outputs.retrieved.base.repository.copy_tree(retrieved_target)
         else:
             logger.debug(f"No 'retrieved' output node found for calc {calculation_node.pk}.")
 
@@ -585,9 +581,7 @@ class WorkflowWalker:
 
     def _dump_children(self, workflow_node: orm.WorkflowNode, output_path: Path) -> None:
         """Find and recursively dump children of a WorkflowNode."""
-        called_links = workflow_node.base.links.get_outgoing(
-            link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)
-        ).all()
+        called_links = workflow_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
         called_links = sorted(called_links, key=lambda link_triple: link_triple.node.ctime)
 
         for index, link_triple in enumerate(called_links, start=1):

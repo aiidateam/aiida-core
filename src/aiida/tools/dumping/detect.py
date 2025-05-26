@@ -354,9 +354,11 @@ class DumpChangeDetector:
             for group_uuid in common_group_uuids:
                 try:
                     # Get old path from logger
-                    old_path_abs = self.dump_tracker.get_dump_path_by_uuid(group_uuid)
-                    if not old_path_abs:
-                        logger.debug(f'Could not find old path for common group UUID {group_uuid} in logger.')
+                    entry = self.dump_tracker.get_entry_by_uuid(group_uuid)
+                    if entry:
+                        old_path = entry.path
+                    else:
+                        logger.debug(f'Could not entry common group UUID {group_uuid} in logger.')
                         continue
 
                     # Get current group info from DB
@@ -370,17 +372,17 @@ class DumpChangeDetector:
                     )
 
                     # Compare old path with expected current path
-                    if old_path_abs.resolve() != current_path_abs.resolve():
+                    if old_path.resolve() != current_path_abs.resolve():
                         msg = (
                             f'Detected rename for group UUID {group_uuid}: '
-                            f"Old path '{old_path_abs.name}', New path '{current_path_abs.name}' "
+                            f"Old path '{old_path.name}', New path '{current_path_abs.name}' "
                             f"(New label: '{current_label}')"
                         )
                         logger.info(msg)
                         group_changes.renamed.append(
                             GroupRenameInfo(
                                 uuid=group_uuid,
-                                old_path=old_path_abs,
+                                old_path=old_path,
                                 new_path=current_path_abs,
                                 new_label=current_label,
                             )
@@ -500,9 +502,7 @@ class DumpChangeDetector:
         descendants: list[orm.CalculationNode] = []
         for workflow in workflows:
             # Use the `called_descendants` property which handles the traversal
-            descendants.extend(
-                node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode)
-            )
+            descendants.extend(node for node in workflow.called_descendants if isinstance(node, orm.CalculationNode))
         # Ensure uniqueness using UUIDs as keys in a dict
         unique_descendants = list(set(descendants))
         logger.debug(f'Found {len(unique_descendants)} unique calculation descendants for {len(workflows)} workflows.')

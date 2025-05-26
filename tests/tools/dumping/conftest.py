@@ -3,8 +3,7 @@ import pytest
 from aiida.tools.dumping.config import DumpConfig
 from aiida.tools.dumping.executors.process import ProcessDumpExecutor
 from aiida.tools.dumping.tracking import DumpTracker
-from aiida.tools.dumping.utils.helpers import DumpTimes
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils import DumpPaths, DumpTimes
 
 
 @pytest.fixture

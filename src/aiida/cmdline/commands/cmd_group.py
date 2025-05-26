@@ -694,7 +694,7 @@ def group_dump(
 
     from aiida.cmdline.utils import echo
     from aiida.tools.dumping.config import DumpConfig, DumpMode
-    from aiida.tools.dumping.utils.paths import DumpPaths
+    from aiida.tools.dumping.utils import DumpPaths
 
     warning_msg = (
         'This is a new feature which is still in its testing phase. '

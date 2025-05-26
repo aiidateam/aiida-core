@@ -43,7 +43,11 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.config')
 
 
 def _load_computer_validator(value: Optional[Union[int, str, orm.Computer]]) -> orm.Computer | None:
-    """Pydantic validator function to load Computer from identifier."""
+    """Pydantic validator to load an ``orm.Computer`` from identifier.
+
+    :param value: The passed identifier.
+    :return: Loaded Computer or None.
+    """
     if value is None or isinstance(value, orm.Computer):
         return value
     elif isinstance(value, (str, int)):
@@ -51,7 +55,11 @@ def _load_computer_validator(value: Optional[Union[int, str, orm.Computer]]) -> 
 
 
 def _load_code_validator(value: Optional[Union[int, str, orm.Code]]) -> orm.Code | None:
-    """Pydantic validator function to load Code from identifier."""
+    """Pydantic validator to load an ``orm.Code`` from identifier.
+
+    :param value: The passed identifier.
+    :return: Loaded Code or None.
+    """
     if value is None or isinstance(value, orm.Code):
         return value
     elif isinstance(value, (str, int)):
@@ -66,7 +74,6 @@ CodeOrNone = Annotated[Optional[orm.Code], BeforeValidator(_load_code_validator)
 class DumpConfig(BaseModel):
     """
     Unified Pydantic configuration for dump operations.
-    Handles serialization/deserialization to/from Click-option-like keys.
     """
 
     # --- Model Configuration ---
@@ -136,10 +143,12 @@ class DumpConfig(BaseModel):
     @field_validator('groups', mode='before')
     @classmethod
     def _validate_groups_input(cls, value: Any) -> Optional[List[str]]:
-        """
-        Validate and transform the input for the 'groups' field.
-        Accepts a list containing orm.Group objects or strings (labels/UUIDs),
-        and converts all elements to strings (using group label).
+        """Validate and transform the input for the 'groups' field.
+
+        :param value: A list containing orm.Group objects or strings (labels/UUIDs),
+        :raises ValueError: If passed value cannot be
+        :raises ValueError: _description_
+        :return: _description_
         """
         if value is None:
             return None

@@ -11,16 +11,17 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, cast
 
 from aiida import orm
-from aiida.common.exceptions import NotExistent
-from aiida.common.log import AIIDA_LOGGER
+from aiida.common import AIIDA_LOGGER, NotExistent
 from aiida.orm import QueryBuilder
 from aiida.tools.dumping.config import GroupDumpScope
 from aiida.tools.dumping.mapping import GroupNodeMapping
-from aiida.tools.dumping.utils.helpers import (
+from aiida.tools.dumping.utils import (
     DumpNodeStore,
+    DumpPaths,
     DumpStoreKeys,
     DumpTimes,
     GroupChanges,
@@ -28,15 +29,14 @@ from aiida.tools.dumping.utils.helpers import (
     GroupRenameInfo,
     NodeChanges,
     NodeMembershipChange,
+    StoreNameType,
 )
-from aiida.tools.dumping.utils.paths import DumpPaths
 
 if TYPE_CHECKING:
-    from aiida.orm import Group, Node, QueryBuilder
     from aiida.tools.dumping.config import DumpConfig
     from aiida.tools.dumping.tracking import DumpTracker
 
-__all__ = ('DumpChangeDetector', 'DumpNodeQuery')
+__all__ = ('DumpChangeDetector', 'DumpQueryHandler')
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.detect')
 
@@ -47,66 +47,75 @@ class DumpChangeDetector:
     def __init__(
         self, dump_tracker: DumpTracker, dump_paths: DumpPaths, config: DumpConfig, dump_times: DumpTimes
     ) -> None:
-        """
-        Initializes the DumpChangeDetector.
+        """Initializes the DumpChangeDetector.
 
-        Args:
-            dump_tracker: The tracker instance holding data from the previous dump.
-            config: The current dump configuration.
-            dump_times: Object holding relevant timestamps for the current dump.
+        :param dump_tracker: The tracker instance holding data from the previous dump.
+        :param dump_paths: Entity holding relevant timestamps for the current dump.
+        :param config: The current dump configuration object.
+        :param dump_times: Entity holding relevant timestamps for the current dump.
         """
         self.dump_tracker: DumpTracker = dump_tracker
         self.config: DumpConfig = config
         self.dump_times: DumpTimes = dump_times
         self.dump_paths: DumpPaths = dump_paths
-        # Instantiate the new query handler
-        self.node_query = DumpNodeQuery(config)
+        self.node_query = DumpQueryHandler(config)
         # Cache grouped node UUIDs to avoid rebuilding mapping multiple times per run
         self._grouped_node_uuids_cache: set[str] | None = None
 
-    def _get_all_grouped_node_uuids(self) -> set[str]:
-        """Gets and caches the set of UUIDs for all nodes in any group."""
-        if self._grouped_node_uuids_cache is None:
-            logger.debug('Building and caching grouped node UUID set...')
-            mapping = GroupNodeMapping.build_from_db()
-            # Union of all sets of node UUIDs from the group_to_nodes mapping
-            self._grouped_node_uuids_cache = set().union(*mapping.group_to_nodes.values())
-            logger.debug(f'Cached {len(self._grouped_node_uuids_cache)} grouped node UUIDs.')
-        return self._grouped_node_uuids_cache
+    @cached_property
+    def grouped_node_uuids(self) -> set[str]:
+        """Gets the set of UUIDs for all nodes in any group.
 
-    def _query_initial_candidates(self, scope: GroupDumpScope, group: Optional[Group] = None) -> dict[str, list[Node]]:
-        """Query broad candidate nodes using the unified DumpNodeQuery."""
-        raw_nodes: dict[str, list[Node]] = {
+        :return: Set of UUIDs of all nodes in any group.
+        """
+        logger.debug('Building grouped node UUID set...')
+        mapping = GroupNodeMapping.build_from_db()
+        # Union of all sets of node UUIDs from the group_to_nodes mapping
+        uuids = set().union(*mapping.group_to_nodes.values())
+        logger.debug(f'Cached {len(uuids)} grouped node UUIDs.')
+        return uuids
+
+    def _query_initial_candidates(
+        self, scope: GroupDumpScope, group: Optional[orm.Group] = None
+    ) -> dict[str, list[orm.ProcessNode]]:
+        """Query broad candidate nodes using the unified DumpNodeQuery.
+
+        :param scope: Group-scope (in given group, not in any group, any).
+        :param group: Query restricted to the given group, defaults to None
+        :return:
+        """
+        raw_nodes: dict[str, list[orm.ProcessNode]] = {
             'workflows': [],
             'calculations': [],
         }
-        nodes_to_query: list[tuple[type[Node], str]] = []
-
+        nodes_to_query: list[tuple[type[orm.ProcessNode], str]] = []
         nodes_to_query.extend([(orm.WorkflowNode, 'workflows'), (orm.CalculationNode, 'calculations')])
 
         # Resolve base time filters ONCE before looping
         base_filters = self.node_query._resolve_time_filters(
-            orm.Node,  # Use base Node type for generic time filter resolving
+            orm.ProcessNode,  # Use base Node type for generic time filter resolving
             dump_times=self.dump_times,
             include_time_filter=self.config.filter_by_last_dump_time,
         )
 
-        for orm_type, store_key in nodes_to_query:
+        for orm_type, registry_key in nodes_to_query:
             logger.debug(f'Querying candidate nodes of type {orm_type.__name__} with scope {scope.name}...')
             nodes = self.node_query._get_nodes(
                 orm_type=orm_type,
                 dump_times=self.dump_times,
                 scope=scope,
                 group=group,
-                base_filters=base_filters,  # Pass pre-resolved base filters
+                base_filters=base_filters,
             )
             logger.debug(
-                f'Query returned {len(nodes)} candidate nodes for {store_key} (scope: {scope.name}, pre-filtering).'
+                f'Query returned {len(nodes)} candidate nodes for {registry_key} (scope: {scope.name}, pre-filtering).'
             )
-            raw_nodes[store_key] = nodes
+            raw_nodes[registry_key] = nodes
         return raw_nodes
 
-    def _apply_logged_status_filter(self, raw_nodes: dict[str, list[Node]]) -> dict[str, list[Node]]:
+    def _apply_logged_status_filter(
+        self, raw_nodes: dict[str, list[orm.ProcessNode]]
+    ) -> dict[str, list[orm.ProcessNode]]:
         """Filter out nodes that are already present in the dump tracker.
 
         :param raw_nodes: _description_
@@ -114,155 +123,105 @@ class DumpChangeDetector:
         """
 
         logger.debug('Applying logged status filter...')
-        logged_filtered_nodes: dict[str, list[Node]] = {
+        logged_filtered_nodes: dict[str, list[orm.ProcessNode]] = {
             'workflows': [],
             'calculations': [],
         }
-        nodes_removed_by_log_filter = 0
-        for store_key, nodes in raw_nodes.items():
+        for registry_key, nodes in raw_nodes.items():
             if not nodes:
                 continue
             try:
                 # Get the appropriate log store (calculations, workflows, etc.)
-                log_store = self.dump_tracker.get_store_by_name(store_key)  # type: ignore[arg-type]
-                logged_uuids = set(log_store.entries.keys())
+                registry = self.dump_tracker.get_registry_by_name(cast(StoreNameType, registry_key))
+                logged_uuids = set(registry.entries.keys())
 
-                if not logged_uuids:  # If log store is empty, keep all nodes
+                if not logged_uuids:  # If registry is empty, keep all nodes
                     filtered_list = nodes
                 else:
                     # Keep nodes whose UUIDs are NOT in the logged set
                     filtered_list = [node for node in nodes if node.uuid not in logged_uuids]
 
-                logged_filtered_nodes[store_key] = filtered_list
-                removed_count = len(nodes) - len(filtered_list)
-                if removed_count > 0:
-                    logger.debug(f'Removed {removed_count} already logged nodes from {store_key}.')
-                    nodes_removed_by_log_filter += removed_count
+                logged_filtered_nodes[registry_key] = filtered_list
             except ValueError as e:  # Catch potential errors from get_store_by_name
-                logger.error(f"Error getting log store for key '{store_key}': {e}")
-                logged_filtered_nodes[store_key] = nodes  # Keep original nodes on error
+                logger.error(f"Error getting log store for key '{registry_key}': {e}")
+                logged_filtered_nodes[registry_key] = nodes  # Keep original nodes on error
 
-        logger.debug(f'Removed {nodes_removed_by_log_filter} total nodes already present in log.')
         return logged_filtered_nodes
 
-    def _apply_top_level_filter(self, logged_filtered_nodes: dict[str, list[Node]]) -> dict[str, list[Node]]:
+    def _filter_nodes_by_caller(self, node_list: list[orm.ProcessNode]) -> list[orm.ProcessNode]:
+        """Filter nodes keeping only top-level ones or those explicitly grouped.
+
+        :param node_list: List of nodes to filter.
+        :param node_type: Type of node ("workflows" or "calculations") for logging.
+        :param grouped_uuids: Set of UUIDs for nodes that are explicitly grouped.
+        :return: A tuple containing the filtered list of nodes and the count of removed nodes.
+        :rtype: tuple[list[TNode], int]
+        """
+        filtered_nodes: list[orm.ProcessNode] = []
+
+        for node in node_list:
+            # Check if node has a caller (i.e., is sub-node)
+            # Use getattr with default to avoid exception if 'caller' doesn't exist
+            is_sub_node = bool(getattr(node, 'caller', None))
+            is_explicitly_grouped = node.uuid in self.grouped_node_uuids
+
+            # Keep if: not a sub-node OR is explicitly grouped
+            if not is_sub_node or is_explicitly_grouped:
+                filtered_nodes.append(node)
+
+        return filtered_nodes
+
+    def _apply_top_level_filter(
+        self, logged_filtered_nodes: dict[str, list[orm.ProcessNode]]
+    ) -> DumpNodeStore:
         """Apply the top-level calculation/workflow filter.
 
         If calculations or workflows are explicitly part of a group, they are kept,
         even if they are sub-calculations of a workflow.
 
         :param logged_filtered_nodes: Dictionary containing lists of 'workflows' and 'calculations'.
-        :type logged_filtered_nodes: dict[str, list[Node]]
         :return: Dictionary with nodes filtered based on top-level status or grouping.
-        :rtype: dict[str, list[Node]]
         """
-        logger.debug('Applying top-level status filter...')
-        final_filtered_nodes: dict[str, list[Node]] = {
-            'workflows': [],
-            'calculations': [],
-        }
-        nodes_removed_by_top_level_filter = 0
 
-        # Get grouped node UUIDs (use cache) only if needed
-        # Check if any filtering is actually enabled before fetching UUIDs
-        needs_group_check = self.config.only_top_level_workflows or self.config.only_top_level_calcs
-        all_grouped_node_uuids: set[str] = set()
-        if needs_group_check:
-            all_grouped_node_uuids = self._get_all_grouped_node_uuids()
-
-        # --- Define the inner function ---
-        def _filter_nodes_by_caller(
-            node_list: list[Node], node_type: str, grouped_uuids: set[str]
-        ) -> tuple[list[Node], int]:
-            """Filter nodes keeping only top-level ones or those explicitly grouped.
-
-            :param node_list: List of nodes to filter.
-            :param node_type: Type of node ("workflows" or "calculations") for logging.
-            :param grouped_uuids: Set of UUIDs for nodes that are explicitly grouped.
-            :return: A tuple containing the filtered list of nodes and the count of removed nodes.
-            :rtype: tuple[list[TNode], int]
-            """
-            filtered_nodes: list[Node] = []
-            original_count = len(node_list)
-
-            for node in node_list:
-                # Check if node has a caller (i.e., is sub-node)
-                # Use getattr with default to avoid exception if 'caller' doesn't exist
-                is_sub_node = bool(getattr(node, 'caller', None))
-                is_explicitly_grouped = node.uuid in grouped_uuids
-
-                # Keep if: not a sub-node OR is explicitly grouped
-                if not is_sub_node or is_explicitly_grouped:
-                    filtered_nodes.append(node)
-
-            removed_count = original_count - len(filtered_nodes)
-            if removed_count > 0:
-                logger.debug(f'Removed {removed_count} non-top-level, non-grouped {node_type}.')
-
-            # Return both the filtered list and the count of removed items
-            return filtered_nodes, removed_count
+        final_filtered_nodes: DumpNodeStore = DumpNodeStore()
 
         # --- Filter Workflows ---
         wf_list = logged_filtered_nodes.get('workflows', [])
         if self.config.only_top_level_workflows and wf_list:
-            # Call the modified inner function and unpack the results
-            filtered_wfs, removed_wfs = _filter_nodes_by_caller(wf_list, 'workflows', all_grouped_node_uuids)
-            final_filtered_nodes['workflows'] = filtered_wfs
-            # Accumulate the count
-            nodes_removed_by_top_level_filter += removed_wfs
+            final_filtered_nodes.workflows = self._filter_nodes_by_caller(wf_list)
         else:
-            # If no filtering applied, assign the original list
-            final_filtered_nodes['workflows'] = wf_list
+            final_filtered_nodes.workflows = wf_list
 
         # --- Filter Calculations ---
         calc_list = logged_filtered_nodes.get('calculations', [])
         if self.config.only_top_level_calcs and calc_list:
-            # Call the modified inner function and unpack the results
-            filtered_calcs, removed_calcs = _filter_nodes_by_caller(calc_list, 'calculations', all_grouped_node_uuids)
-            final_filtered_nodes['calculations'] = filtered_calcs
-            # Accumulate the count
-            nodes_removed_by_top_level_filter += removed_calcs
+            final_filtered_nodes.calculations = self._filter_nodes_by_caller(calc_list)
         else:
-            # If no filtering applied, assign the original list
-            final_filtered_nodes['calculations'] = calc_list
+            final_filtered_nodes.calculations = calc_list
 
-        logger.debug(f'Removed {nodes_removed_by_top_level_filter} total nodes by top-level filter.')
         return final_filtered_nodes
 
-    def _detect_new_nodes(self, scope: GroupDumpScope, group: Optional[Group] = None) -> DumpNodeStore:
+    def _detect_new_nodes(self, scope: GroupDumpScope, group: Optional[orm.Group] = None) -> DumpNodeStore:
         """Detect new/modified nodes for a given scope, applying post-query filters.
 
-        :param scope: _description_
-        :param group: _description_, defaults to None
-        :return: _description_
+        :param scope: Determines the query scope (ANY, IN_GROUP, NO_GROUP), defaults to GroupDumpScope.ANY
+        :param group: The specific group to filter by when scope is IN_GROUP, defaults to None
+        :return: Returns a DumpNodeStore instance that holds the selected nodes.
         """
-        logger.debug(f'Detecting new/modified nodes with scope {scope.name}...')
-        final_node_store = DumpNodeStore()
 
-        # 1. Query initial candidates using the unified querier and scope
+        # Query initial candidates using the unified querier and scope
         raw_nodes = self._query_initial_candidates(scope, group)
 
-        # 2. Apply logged status filter
+        # Apply logged status filter
         logged_filtered_nodes = self._apply_logged_status_filter(raw_nodes)
 
-        # 3. Apply top-level filter (with exception for grouped calcs)
+        # Apply top-level filter (with exception for grouped calcs)
         final_filtered_nodes = self._apply_top_level_filter(logged_filtered_nodes)
 
-        # 4. Populate final Node Store
-        final_node_store.workflows = final_filtered_nodes.get('workflows', [])
-        final_node_store.calculations = final_filtered_nodes.get('calculations', [])
-
-        wf_count = len(final_node_store.workflows)
-        calc_count = len(final_node_store.calculations)
-        logger.debug(
-            f'Finished detecting new/modified nodes (scope {scope.name}). Final counts: '
-            f'Workflows={wf_count}, Calculations={calc_count}'
-        )
-        return final_node_store
+        return final_filtered_nodes
 
     def _detect_deleted_nodes(self) -> set[str]:
         """Detect nodes deleted from DB since last dump."""
-        logger.debug('Detecting deleted nodes...')
         deleted_node_uuids: set[str] = set()
 
         # Iterate through the ORM types we might have logged
@@ -272,19 +231,20 @@ class DumpChangeDetector:
         ):
             store_name = DumpStoreKeys.from_class(orm_class=orm_type)
             try:
-                dump_store = self.dump_tracker.get_store_by_name(name=store_name)
+                dump_store = self.dump_tracker.get_registry_by_name(name=store_name)
                 if not dump_store:
                     # Store might not exist if no nodes of this type were ever logged
                     continue
 
                 dumped_uuids = set(dump_store.entries.keys())
-                if not dumped_uuids:  # Skip if no nodes of this type were logged
+                if not dumped_uuids:
+                    # Skip if no nodes of this type were logged
                     continue
 
                 # Query for existing UUIDs of this type in the database
                 qb = QueryBuilder()
                 qb.append(orm_type, project=['uuid'])
-                all_db_uuids_for_type = set(qb.all(flat=True))
+                all_db_uuids_for_type = cast(Set[str], set(qb.all(flat=True)))
 
                 # Find UUIDs that were logged but are no longer in the DB
                 missing_uuids = dumped_uuids - all_db_uuids_for_type
@@ -326,7 +286,6 @@ class DumpChangeDetector:
         :param specific_group_uuid: _description_, defaults to None
         :return: _description_
         """
-        logger.debug('Calculating group changes diff...')
 
         group_changes: GroupChanges
 
@@ -335,14 +294,9 @@ class DumpChangeDetector:
             # If no previous mapping, consider all current groups as new
             new_groups = self._detect_new_groups(current_mapping)
             group_changes = GroupChanges(new=new_groups)
-            logger.debug(f'Initial group detection: Found {len(group_changes.new)} groups.')
         else:
             # Calculate the difference using the mapping's diff method
             group_changes = stored_mapping.diff(current_mapping)
-            logger.debug(
-                f'Group mapping diff calculated: {len(group_changes.new)} new, '
-                f'{len(group_changes.deleted)} deleted, {len(group_changes.modified)} modified.'
-            )
 
         # --- Detect Renames (only if stored_mapping exists) ---
         if stored_mapping:
@@ -350,47 +304,41 @@ class DumpChangeDetector:
             other_group_uuids = set(current_mapping.group_to_nodes.keys())
             common_group_uuids = self_group_uuids & other_group_uuids
 
-            logger.debug(f'Checking {len(common_group_uuids)} common groups for renames...')
             for group_uuid in common_group_uuids:
-                try:
-                    # Get old path from logger
-                    entry = self.dump_tracker.get_entry_by_uuid(group_uuid)
-                    if entry:
-                        old_path = entry.path
-                    else:
-                        logger.debug(f'Could not entry common group UUID {group_uuid} in logger.')
-                        continue
+                # Get old path from logger
+                entry = self.dump_tracker.get_entry(group_uuid)
+                if entry:
+                    old_path = entry.path
+                else:
+                    logger.debug(f'No entry for group UUID {group_uuid} in logger.')
+                    continue
 
-                    # Get current group info from DB
-                    current_group = orm.load_group(uuid=group_uuid)
-                    current_label = current_group.label
+                # Get current group info from DB
+                current_group = orm.load_group(uuid=group_uuid)
+                current_label = current_group.label
 
-                    # Calculate expected current path based on current label
-                    current_path_abs = self.dump_paths.get_path_for_group(
-                        group=current_group,
-                        parent_group_content_path=None,
+                # Calculate expected current path based on current label
+                current_path_abs = self.dump_paths.get_path_for_group(
+                    group=current_group,
+                    parent_group_content_path=None,
+                )
+
+                # Compare old path with expected current path
+                if old_path.resolve() != current_path_abs.resolve():
+                    msg = (
+                        f'Detected rename for group UUID {group_uuid}: '
+                        f"Old path '{old_path.name}', New path '{current_path_abs.name}' "
+                        f"(New label: '{current_label}')"
                     )
-
-                    # Compare old path with expected current path
-                    if old_path.resolve() != current_path_abs.resolve():
-                        msg = (
-                            f'Detected rename for group UUID {group_uuid}: '
-                            f"Old path '{old_path.name}', New path '{current_path_abs.name}' "
-                            f"(New label: '{current_label}')"
+                    logger.info(msg)
+                    group_changes.renamed.append(
+                        GroupRenameInfo(
+                            uuid=group_uuid,
+                            old_path=old_path,
+                            new_path=current_path_abs,
+                            new_label=current_label,
                         )
-                        logger.info(msg)
-                        group_changes.renamed.append(
-                            GroupRenameInfo(
-                                uuid=group_uuid,
-                                old_path=old_path,
-                                new_path=current_path_abs,
-                                new_label=current_label,
-                            )
-                        )
-
-                except NotExistent:
-                    # Should not happen for common UUIDs, but handle defensively
-                    logger.error(f'Could not load group with common UUID {group_uuid} from DB.')
+                    )
 
         # If a specific group is requested, filter the results
         if specific_group_uuid:
@@ -399,8 +347,7 @@ class DumpChangeDetector:
         else:
             return group_changes
 
-    # TODO: Maybe allow for multiple groups?
-    def _detect_all_changes(self, group: Optional[Group] = None) -> tuple[NodeChanges, GroupNodeMapping]:
+    def _detect_all_changes(self, group: Optional[orm.Group] = None) -> tuple[NodeChanges, GroupNodeMapping]:
         """Detect all node and group changes relevant for a dump operation.
 
         Orchestrates calls to more specific detection methods.
@@ -442,10 +389,6 @@ class DumpChangeDetector:
             deleted=deleted_node_uuids,
         )
 
-        # --- Return NodeChanges and current mapping ---
-        # TODO: Maybe centralize also calculating the group changes here?
-        # Group changes are calculated later by the Engine using the mappings
-        logger.info('Change detection finished.')
         return node_changes, current_group_mapping
 
     def _filter_group_changes_for_group(self, changes: GroupChanges, group_uuid: str) -> GroupChanges:
@@ -509,7 +452,7 @@ class DumpChangeDetector:
         return unique_descendants
 
 
-class DumpNodeQuery:
+class DumpQueryHandler:
     """Builds and executes database queries to find nodes for dumping."""
 
     # Tags used in QueryBuilder for consistency
@@ -524,13 +467,13 @@ class DumpNodeQuery:
 
     def _get_nodes(
         self,
-        orm_type: Type[Node],
+        orm_type: Type[orm.ProcessNode],
         dump_times: DumpTimes,
         scope: GroupDumpScope = GroupDumpScope.ANY,
-        group: Optional[Group] = None,
+        group: Optional[orm.Group] = None,
         base_filters: Optional[Dict] = None,
         ignore_time_filter: bool = False,
-    ) -> List[Node]:
+    ) -> List[orm.ProcessNode]:
         """Query nodes based on the specified type, time, scope, and filters.
 
         :param orm_type: The AiiDA ORM Node class to query (e.g., CalculationNode).
@@ -568,34 +511,37 @@ class DumpNodeQuery:
                     resolved_filters['uuid'] = {}
                 resolved_filters['uuid']['!in'] = list(grouped_node_uuids)
                 logger.debug(f'Query: Adding filter to exclude {len(grouped_node_uuids)} grouped nodes.')
-        # No specific filter needed for scope == GroupDumpScope.ANY
+        elif scope == GroupDumpScope.ANY:
+            pass
 
-        # --- Build Query ---
         qb = orm.QueryBuilder()
         relationships: Dict[str, Any] = {}
 
-        # 3. Append Group filter if scope is IN_GROUP
+        # Append Group filter if scope is IN_GROUP
         if scope == GroupDumpScope.IN_GROUP and group:
             qb.append(orm.Group, filters={'uuid': group.uuid}, tag=self.GROUP_TAG)
             relationships['with_group'] = self.GROUP_TAG
 
-        # 4. Append related entity filters (User, Computer, Code)
-        qb, entity_relationships = self._resolve_qb_appends(qb, orm_type)
+        # Append related entity filters (User, Computer, Code)
+        qb, entity_relationships = self._resolve_qb_appends(qb)
         relationships.update(entity_relationships)
 
         # Add edge filter specifically for Code links if Code was appended
-        # NOTE: Not sure if this is needed?
         if 'with_incoming' in relationships and relationships['with_incoming'] == self.CODE_TAG:
             relationships['edge_filters'] = {'label': 'code'}
 
-        # 5. Append the main node type with combined filters and relationships
+        # Append the main node type with combined filters and relationships
         qb.append(orm_type, filters=resolved_filters, tag=self.NODE_TAG, **relationships)
-        # --- End Build Query ---
 
         # 6. Execute query using shared helper
-        return self._execute_query(qb, orm_type.__name__, scope, group)
+        if self.NODE_TAG not in qb._projections:
+            qb.add_projection(self.NODE_TAG, '*')
 
-    def _query_grouped_node_uuids(self, orm_type: Type[Node]) -> Set[str]:
+        results: list[orm.ProcessNode] = cast(list[orm.ProcessNode], qb.all(flat=True))
+
+        return results
+
+    def _query_grouped_node_uuids(self, orm_type: Type[orm.ProcessNode]) -> Set[str]:
         """Helper to query UUIDs of nodes of orm_type present in any group.
 
         :param orm_type: _description_
@@ -607,11 +553,11 @@ class DumpNodeQuery:
         qb_in_group.append(orm_type, with_group='g_sub', project='uuid', tag='n_in_g')
         grouped_uuids = set(qb_in_group.all(flat=True))
         logger.debug(f'Found {len(grouped_uuids)} grouped nodes of type {orm_type.__name__}.')
-        return grouped_uuids
+        return cast(Set[str], grouped_uuids)
 
     def _resolve_time_filters(
         self,
-        orm_type: Type[Node],
+        orm_type: Type[orm.ProcessNode],
         dump_times: DumpTimes,
         include_time_filter: bool = True,
         ignore_time_filter: bool = False,
@@ -685,7 +631,7 @@ class DumpNodeQuery:
 
         return filters
 
-    def _resolve_qb_appends(self, qb: QueryBuilder, orm_type: Type[Node]) -> Tuple[QueryBuilder, Dict]:
+    def _resolve_qb_appends(self, qb: QueryBuilder) -> Tuple[QueryBuilder, Dict]:
         """Appends related entity filters (User, Computer, Code) based on config.
 
         :param qb: _description_
@@ -742,28 +688,3 @@ class DumpNodeQuery:
 
         return qb, relationships_to_add
 
-    def _execute_query(
-        self,
-        qb: QueryBuilder,
-        orm_type_name: str,
-        scope: GroupDumpScope,
-        group: Optional[Group],
-    ) -> List[Node]:
-        """Executes the QueryBuilder query and handles results/errors.
-
-        :param qb: _description_
-        :param orm_type_name: _description_
-        :param scope: _description_
-        :param group: _description_
-        :return: _description_
-        """
-        scope_detail = (
-            f" in group '{group.label}'" if scope == GroupDumpScope.IN_GROUP and group else f' ({scope.name})'
-        )
-        # Ensure we project the node itself with the correct tag
-        if self.NODE_TAG not in qb._projections:
-            qb.add_projection(self.NODE_TAG, '*')
-
-        results: list[orm.Node] = cast(list[orm.Node], qb.all(flat=True))
-        logger.debug(f'Query for {orm_type_name}{scope_detail} returned {len(results)} candidate nodes.')
-        return results

@@ -6,7 +6,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
 """Path utility functions and classes for the dumping feature."""
 
 from __future__ import annotations
@@ -126,7 +125,7 @@ class DumpPaths:
         :return: Absolute Path for the node's dump directory.
         """
         node_type_folder_name = self._get_node_type_folder_name(node)
-        node_dir_name = self._get_node_directory_name(node)
+        node_dir_name = str(self.get_default_dump_path(node))
 
         # Nodes are always placed in a type-specific subdirectory *within* the
         # current_content_root. The current_content_root has already been determined
@@ -158,21 +157,13 @@ class DumpPaths:
             msg = f'Wrong node type: {type(node)} was passed.'
             raise ValueError(msg)
 
-    @staticmethod
-    def _get_node_directory_name(node: orm.ProcessNode) -> str:
-        """
-        Generates the directory name for a specific node (e.g., "NodeType-PK").
-        """
-        return str(DumpPaths.get_default_dump_path(node))
-
     def prepare_directory(self, path_to_prepare: Path, is_leaf_node_dir: bool = False) -> None:
         """
         Prepares a directory for dumping, creating it and a safeguard file.
-        In OVERWRITE mode, if it's a leaf node directory and exists, it's deleted first.
 
         :param path_to_prepare: The absolute directory path to prepare.
         :param is_leaf_node_dir: True if this path is for a specific node's final dump,
-                                 False if it's an intermediate directory (like 'groups/' or 'calculations/').
+            False if it's an intermediate directory (like 'groups/' or 'calculations/').
         """
         if self.config.dump_mode == DumpMode.DRY_RUN:
             return
@@ -188,43 +179,25 @@ class DumpPaths:
 
         path_to_prepare.mkdir(parents=True, exist_ok=True)
         (path_to_prepare / self.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
-        # self.get_safeguard_path(path_to_prepare).touch(exist_ok=True)
 
-    def safe_delete_directory(self, directory_path: Path) -> None:
+    def safe_delete_directory(self, path: Path) -> None:
         """
         Safely deletes a directory if it contains a safeguard file.
         """
         if self.config.dump_mode == DumpMode.DRY_RUN:
-            # In dry run, we would report what would be deleted
-            # logger.report(f"[DRY RUN] Would delete directory: {directory_path}")
             return
 
-        safeguard = self.get_safeguard_path(directory_path)
-        if directory_path.is_dir() and safeguard.is_file():
+        safeguard = self.get_safeguard_path(path)
+        if path.is_dir() and safeguard.is_file():
             import shutil
 
-            try:
-                shutil.rmtree(directory_path)
-                # logger.info(f"Safely deleted directory: {directory_path}")
-            except OSError:
-                # logger.error(f"Error deleting directory {directory_path}: {e}")
-                raise  # Or handle more gracefully
-        elif directory_path.is_dir() and not safeguard.is_file():
-            # logger.warning(
-            # f"Directory {directory_path} does not contain safeguard file. Skipping deletion."
-            # )
-            pass  # Or raise an error
-        elif not directory_path.is_dir():
-            # logger.debug(f"Directory {directory_path} not found for deletion.")
-            pass
+            shutil.rmtree(path)
 
     @staticmethod
     def get_directory_stats(directory_path: Path) -> tuple[Optional[datetime], Optional[int]]:
         """
         Calculates the last modification time and total size of a directory.
-        (Reuses existing logic from self.dump_paths.get_directory_stats)
         """
-        # ... your existing implementation ...
         if not directory_path.is_dir():
             return None, None
 

@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Set
 
 from aiida import orm
-from aiida.tools.dumping.utils.helpers import GroupChanges, GroupInfo, GroupModificationInfo, NodeMembershipChange
+from aiida.tools.dumping.utils import GroupChanges, GroupInfo, GroupModificationInfo, NodeMembershipChange
 
 
 @dataclass

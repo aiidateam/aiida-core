@@ -1,17 +1,25 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 from aiida import orm
-from aiida.common.log import AIIDA_LOGGER
+from aiida.common import AIIDA_LOGGER
 from aiida.manage.configuration.profile import Profile
 from aiida.tools.dumping.config import DumpConfig, DumpMode
 from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.executors import DeletionExecutor, GroupDumpExecutor, ProcessDumpExecutor, ProfileDumpExecutor
 from aiida.tools.dumping.tracking import DumpTracker
-from aiida.tools.dumping.utils.helpers import DumpChanges, DumpTimes
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils import DumpChanges, DumpPaths, DumpTimes
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.mapping import GroupNodeMapping
@@ -27,7 +35,7 @@ class DumpEngine:
         self,
         base_output_path: Path,
         config: DumpConfig | None = None,
-        dump_target_entity: Optional[orm.Node | orm.Group] = None,
+        dump_target_entity: Optional[Union[orm.Node, orm.Group, Profile]] = None,
     ):
         """Engine constructor that initializes all entities needed for dumping.
 
@@ -90,9 +98,9 @@ class DumpEngine:
         # Initialize DumpTracker instance with loaded data
         msg: str = (
             f'Dump logger initialized. '
-            f'Found {len(dump_tracker.stores["calculations"])} calculation logs, '
-            f'{len(dump_tracker.stores["workflows"])} workflow logs, '
-            f'{len(dump_tracker.stores["groups"])} group logs.'
+            f'Found {len(dump_tracker.registries["calculations"])} calculation logs, '
+            f'{len(dump_tracker.registries["workflows"])} workflow logs, '
+            f'{len(dump_tracker.registries["groups"])} group logs.'
         )
         logger.debug(msg)
 
@@ -171,7 +179,7 @@ class DumpEngine:
             if not self.config.all_entries and not self.config.filters_set:
                 # NOTE: Hack for now, delete empty directory again. Ideally don't even create in the first place
                 # Need to check again where it is actually created...
-                self.dump_paths.safe_delete_directory(directory_path=self.dump_paths.base_output_path)
+                self.dump_paths.safe_delete_directory(path=self.dump_paths.base_output_path)
                 return
 
             node_changes, current_mapping = self.detector._detect_all_changes()
@@ -195,7 +203,7 @@ class DumpEngine:
 
                 if self.config.dump_mode == DumpMode.DRY_RUN:
                     print(all_changes.to_table())
-                    return
+                    return None
 
                 profile_dump_executor = ProfileDumpExecutor(
                     config=self.config,

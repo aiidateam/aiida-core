@@ -9,8 +9,8 @@
 """Module with `Node` sub class for processes."""
 
 import enum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from plumpy.process_states import ProcessState
 
@@ -607,10 +607,9 @@ class ProcessNode(Sealable, Node):
         return caller
 
     def dump(self, config: Optional['DumpConfig'] = None, output_path: Optional[Union[str, Path]] = None) -> Path:
-
         from aiida.tools.dumping.config import DumpConfig
         from aiida.tools.dumping.engine import DumpEngine
-        from aiida.tools.dumping.utils.paths import DumpPaths
+        from aiida.tools.dumping.utils import DumpPaths
 
         if not config:
             config = DumpConfig()
@@ -620,11 +619,7 @@ class ProcessNode(Sealable, Node):
         else:
             target_path = DumpPaths.get_default_dump_path(entity=self)
 
-        engine = DumpEngine(
-            base_output_path=target_path,
-            config=config,
-            dump_target_entity=self
-        )
+        engine = DumpEngine(base_output_path=target_path, config=config, dump_target_entity=self)
         engine.dump(entity=self)
 
         return target_path

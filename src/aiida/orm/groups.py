@@ -10,8 +10,8 @@
 
 import datetime
 import warnings
-from pathlib import Path
 from functools import cached_property
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 from aiida.common import exceptions
@@ -361,10 +361,9 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         return not self.type_string
 
     def dump(self, config: Optional['DumpConfig'] = None, output_path: Optional[Union[str, Path]] = None) -> Path:
-
         from aiida.tools.dumping.config import DumpConfig
         from aiida.tools.dumping.engine import DumpEngine
-        from aiida.tools.dumping.utils.paths import DumpPaths
+        from aiida.tools.dumping.utils import DumpPaths
 
         if not config:
             config = DumpConfig()
@@ -374,11 +373,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         else:
             target_path = DumpPaths.get_default_dump_path(entity=self)
 
-        engine = DumpEngine(
-            base_output_path=target_path,
-            config=config,
-            dump_target_entity=self
-        )
+        engine = DumpEngine(base_output_path=target_path, config=config, dump_target_entity=self)
         engine.dump(entity=self)
 
         return target_path

@@ -264,11 +264,19 @@ class Profile:
             },
         }
 
-    def dump(self, config: Optional[DumpConfig] = None, output_path: Optional[Union[str, Path]] = None) -> Path:
-        from aiida.common.log import AIIDA_LOGGER
+    def dump(
+        self, config: Optional[DumpConfig] = None, output_path: Optional[Union[str, Path]] = None
+    ) -> Optional[Path]:
+        """Dump data stored in an AiiDA profile to disk in a human-readable directory tree.
+
+        :param config: DumpConfig configuration object, defaults to None
+        :param output_path: Dumping output path, defaults to None
+        :return: Resolved output path where the profile data was dumped.
+        """
+        from aiida.common import AIIDA_LOGGER
         from aiida.tools.dumping.config import DumpConfig, DumpMode
         from aiida.tools.dumping.engine import DumpEngine
-        from aiida.tools.dumping.utils.paths import DumpPaths
+        from aiida.tools.dumping.utils import DumpPaths
 
         logger = AIIDA_LOGGER.getChild('tools.dumping.profile')
 
@@ -282,7 +290,7 @@ class Profile:
                 'Either select everything via `--all`, or filter via `--groups`, `--user`, etc.',
             )
             logger.warning(msg)
-            return
+            return None
 
         if output_path:
             target_path: Path = Path(output_path).resolve()

@@ -26,12 +26,11 @@ from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.dumping.config import DumpConfig
 from aiida.tools.dumping.tracking import DumpRecord
-from aiida.tools.dumping.utils.helpers import DumpStoreKeys
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils import DumpPaths, DumpStoreKeys
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.tracking import DumpTracker
-    from aiida.tools.dumping.utils.helpers import DumpTimes
+    from aiida.tools.dumping.utils import DumpTimes
 
 __all__ = ('NodeMetadataWriter', 'NodeRepoIoDumper', 'ProcessDumpExecutor', 'ReadmeGenerator', 'WorkflowWalker')
 
@@ -138,9 +137,7 @@ class ProcessDumpExecutor:
         Checks the logger and node status to determine the appropriate dump action.
         This method should NOT have side effects like creating files/dirs or modifying logs.
         """
-        store_key = DumpStoreKeys.from_instance(node)
-        node_store = self.dump_tracker.get_store_by_name(store_key)
-        existing_log_entry = node_store.get_entry(node.uuid)
+        existing_log_entry = self.dump_tracker.get_entry(node.uuid)
 
         if not existing_log_entry:
             logger.debug(f'Node {node.pk} not found in log. Action: DUMP_PRIMARY')
@@ -240,7 +237,7 @@ class ProcessDumpExecutor:
             return
 
         # 1. Clean existing directory
-        self.dump_paths.safe_delete_directory(directory_path=target_path)
+        self.dump_paths.safe_delete_directory(path=target_path)
         logger.debug(f'Cleaned existing directory for update: {target_path.name}')
 
         # 2. Prepare directory again
@@ -267,8 +264,8 @@ class ProcessDumpExecutor:
 
             # 2. Create new log entry
             log_entry = DumpRecord(path=target_path.resolve())
-            store_key = DumpStoreKeys.from_instance(node)
-            self.dump_tracker.get_store_by_name(store_key).add_entry(node.uuid, log_entry)
+            registry_key = DumpStoreKeys.from_instance(node)
+            self.dump_tracker.get_registry_by_name(registry_key).add_entry(node.uuid, log_entry)
             logger.debug(f'Created primary log entry for node {node.pk}')
 
             # 3. Dump content
@@ -362,13 +359,13 @@ class ProcessDumpExecutor:
         """Cleans up directory and potentially log entry on failure (Original Logic)."""
         logger.warning(f'Attempting cleanup for failed dump of node {node.pk} at {target_path.name}')
         # Calling the utility as in original code
-        self.dump_paths.safe_delete_directory(directory_path=target_path)
+        self.dump_paths.safe_delete_directory(path=target_path)
         logger.info(f'Cleaned up directory {target_path.name} for failed node {node.pk}')
 
         if is_primary_dump:
-            store_key = DumpStoreKeys.from_instance(node)
-            node_store = self.dump_tracker.get_store_by_name(store_key)
-            if node_store.del_entry(node.uuid):
+            registry_key = DumpStoreKeys.from_instance(node)
+            node_registry = self.dump_tracker.get_registry_by_name(registry_key)
+            if node_registry.del_entry(node.uuid):
                 logger.info(f'Removed log entry for failed primary dump of node {node.pk}')
             else:
                 logger.warning(f'Could not find log entry to remove for failed primary dump of node {node.pk}')

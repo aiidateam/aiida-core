@@ -21,15 +21,14 @@ from aiida.common.progress_reporter import get_progress_reporter, set_progress_b
 from aiida.orm import Group, WorkflowNode
 from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.tracking import DumpRecord, DumpTracker
-from aiida.tools.dumping.utils.helpers import DumpChanges, DumpNodeStore
-from aiida.tools.dumping.utils.paths import DumpPaths
+from aiida.tools.dumping.utils import DumpChanges, DumpNodeStore, DumpPaths
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
     from aiida.tools.dumping.executors.process import ProcessDumpExecutor
     from aiida.tools.dumping.mapping import GroupNodeMapping
     from aiida.tools.dumping.tracking import DumpTracker
-    from aiida.tools.dumping.utils.helpers import GroupChanges, GroupModificationInfo
+    from aiida.tools.dumping.utils import GroupChanges, GroupModificationInfo
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.managers.collection')
 
@@ -63,13 +62,13 @@ class CollectionDumpExecutor:
         # In non-dry_run modes, prepare_directory also creates the safeguard.
         self.dump_paths.prepare_directory(group_content_path, is_leaf_node_dir=False)
 
-        if group.uuid not in self.dump_tracker.stores['groups'].entries:
+        if group.uuid not in self.dump_tracker.registries['groups'].entries:
             logger.debug(
                 f"Registering group '{group.label}' ({group.uuid}) in logger "
                 f'with content path: {group_content_path}'
             )
             self.dump_tracker.add_entry(
-                store_key='groups',
+                registry_key='groups',
                 uuid=group.uuid,
                 entry=DumpRecord(path=group_content_path),
             )
@@ -84,15 +83,15 @@ class CollectionDumpExecutor:
         group_node_uuids = self.current_mapping.group_to_nodes.get(group.uuid, set())
         workflows_explicitly_in_group: list[WorkflowNode] = []
 
-        for store_key in ['calculations', 'workflows', 'data']:  # Assuming 'data' might be added
+        for registry_key in ['calculations', 'workflows', 'data']:  # Assuming 'data' might be added
             # `changes.nodes.new_or_modified` should be the set of nodes
             # identified by DumpEngine for the current operation (e.g., all new nodes in profile,
             # or all new nodes within a specific group if detector was scoped).
-            globally_detected_nodes = getattr(changes.nodes.new_or_modified, store_key, [])
+            globally_detected_nodes = getattr(changes.nodes.new_or_modified, registry_key, [])
             filtered_nodes = [node for node in globally_detected_nodes if node.uuid in group_node_uuids]
             if filtered_nodes:
-                setattr(nodes_explicitly_in_group, store_key, filtered_nodes)
-                if store_key == 'workflows':
+                setattr(nodes_explicitly_in_group, registry_key, filtered_nodes)
+                if registry_key == 'workflows':
                     workflows_explicitly_in_group.extend(
                         cast(
                             list[WorkflowNode],
@@ -124,7 +123,7 @@ class CollectionDumpExecutor:
             logger.debug(f"No calculation descendants found for workflows in group '{group.label}'.")
             return
 
-        logged_calc_uuids = set(self.dump_tracker.stores['calculations'].entries.keys())
+        logged_calc_uuids = set(self.dump_tracker.registries['calculations'].entries.keys())
         unique_unlogged_descendants = [desc for desc in descendants if desc.uuid not in logged_calc_uuids]
 
         if unique_unlogged_descendants:
@@ -355,8 +354,7 @@ class CollectionDumpExecutor:
         Handles nodes potentially deleted from the DB by checking filesystem paths.
         """
 
-        dump_record = self.dump_tracker.get_entry_by_uuid(node_uuid)
-        # store = self.dump_tracker.get_store_by_uuid(node_uuid)
+        dump_record = self.dump_tracker.get_entry(node_uuid)
         if not dump_record:
             logger.warning(f'Cannot find logger path for node {node_uuid} to remove from group.')
             return
@@ -424,7 +422,7 @@ class CollectionDumpExecutor:
             # It's a directory *within* the group structure (likely a copy), and NOT the original. Safe to remove.
             logger.info(f"Removing directory '{found_path.name}'{log_suffix}.")
             # Ensure safe_delete_dir handles non-empty dirs and potential errors
-            self.dump_paths.safe_delete_directory(directory_path=found_path)
+            self.dump_paths.safe_delete_directory(path=found_path)
 
         elif is_target_dir:
             # The path found *is* the primary logged path.

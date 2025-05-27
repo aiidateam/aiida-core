@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from functools import cached_property
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, cast
 
 from aiida import orm
@@ -58,7 +57,8 @@ class DumpChangeDetector:
         self.dump_paths: DumpPaths = dump_paths
         self.dump_times: DumpTimes = dump_times
 
-    @cached_property
+    # NOTE: Changed this from `cached_property`, as group-node-mapping changes between dumps
+    @property
     def grouped_node_uuids(self) -> set[str]:
         """Cached property holding the set of UUIDs for all nodes in any group."""
         mapping = GroupNodeMapping.build_from_db()
@@ -227,8 +227,11 @@ class DumpChangeDetector:
 
     def get_ungrouped_nodes(self) -> DumpNodeStore:
         """Get all ungrouped nodes, ignoring time filters."""
+        # Set `exclude_tracked` to False in the case that a node that was previously in a group, then the group got
+        # deleted (but not the node), and it now ends up being ungrouped, and because of `--also-ungrouped` it should be
+        # dumped in the `ungrouped` directory
         return self.get_nodes(
-            group_scope=GroupDumpScope.NO_GROUP, apply_filters=True, ignore_time_filters=True, exclude_tracked=True
+            group_scope=GroupDumpScope.NO_GROUP, apply_filters=True, ignore_time_filters=True, exclude_tracked=False
         )
 
     def _detect_node_changes(self, group: Optional[orm.Group] = None) -> NodeChanges:

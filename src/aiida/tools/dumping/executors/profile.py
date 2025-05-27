@@ -158,8 +158,6 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
             logger.info('Skipping ungrouped nodes processing (also_ungrouped=False).')
             return
 
-        logger.info('Processing ungrouped nodes (also_ungrouped=True)...')
-
         # Get filtered ungrouped nodes (includes top-level filtering)
         ungrouped_nodes = self.detector.get_ungrouped_nodes()
 
@@ -200,7 +198,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
     def dump(self, changes: DumpChanges) -> None:
         """Dumps the entire profile by orchestrating helper methods."""
         logger.info('Executing ProfileDumpExecutor')
-        if not self.config.all_entries or self.config.filters_set:
+        if not self.config.all_entries and not self.config.filters_set:
             logger.report('Default profile dump scope is NONE, skipping profile content dump.')
             return
 

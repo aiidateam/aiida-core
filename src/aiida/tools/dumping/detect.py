@@ -129,7 +129,7 @@ class DumpChangeDetector:
         :param group_scope: Determines the query scope (ANY, IN_GROUP, NO_GROUP)
         :param group: The specific group to filter by when scope is IN_GROUP
         :param base_filters: Pre-specified filters
-        :return: List of ``orm.ProcessNode``s obtained via the DB query
+        :return: List of ``orm.ProcessNode`` instances obtained via the DB query
         """
         filters = base_filters.copy()
 
@@ -326,10 +326,7 @@ class DumpChangeDetector:
 
                 old_path = entry.path
                 current_group = orm.load_group(uuid=group_uuid)
-                current_path_abs = self.dump_paths.get_path_for_group(
-                    group=current_group,
-                    parent_group_content_path=None,
-                )
+                current_path_abs = self.dump_paths.get_path_for_group(group=current_group)
 
                 if old_path.resolve() != current_path_abs.resolve():
                     msg = (

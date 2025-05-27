@@ -183,7 +183,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         for group in groups_to_process:
             # _process_group handles finding nodes for this group,
             # adding descendants if needed, and calling node_manager.dump_nodes
-            group_content_root = self.dump_paths.get_path_for_group(group=group, parent_group_content_path=None)
+            group_content_root = self.dump_paths.get_path_for_group(group=group)
             self._process_group(group=group, changes=changes, group_content_root_path=group_content_root)
 
         # 4. Process ungrouped nodes if requested by config

@@ -54,12 +54,11 @@ class GroupDumpExecutor(CollectionDumpExecutor):
 
         :param changes: Scoped DumpChanges relevant to this group, as determined by DumpEngine.
         """
-        # --- Determine the root path for THIS group's content ---
-        # The PathPolicy instance (self.dump_paths) was initialized by DumpEngine.
+        # The DumpPaths instance was initialized by DumpEngine.
         # It knows the overall base_output_path and the dump_target_entity (which is self.group_to_dump).
         # It can therefore correctly determine if self.group_to_dump should be directly in
         # base_output_path or nested under a "groups/" subdirectory.
-        current_group_content_root = self.dump_paths.get_path_for_group( group=self.group_to_dump)
+        current_group_content_root = self.dump_paths.get_path_for_group(group=self.group_to_dump)
 
         # Prepare the specific directory for this group's content.
         self.dump_paths.prepare_directory(current_group_content_root, is_leaf_node_dir=False)

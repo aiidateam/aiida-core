@@ -50,7 +50,7 @@ class CollectionDumpExecutor:
 
         :param entity_uuid: UUID of entity whose dumping output path should be evaluated
         :param path: The path for which the stats should be calculated
-        :param registry_key: The corresponding key for the ``DumpTracker``s registry
+        :param registry_key: The corresponding key for the ``DumpTracker`` registry
         """
 
         registry = self.dump_tracker.registries[registry_key]

@@ -176,7 +176,16 @@ jobs:
         extras: tests
 
     - name: Test new pytest fixtures
-      run: pytest --noconftest tests/tools/pytest_fixtures/test_configuration.py
+      run: pytest --cov aiida --noconftest tests/tools/pytest_fixtures/test_configuration.py
 
     - name: Test legacy pytest fixtures
-      run: pytest --noconftest src/aiida/manage/tests/test_pytest_fixtures.py
+      run: pytest --cov aiida --noconftest src/aiida/manage/tests/test_pytest_fixtures.py
+
+    - name: Upload coverage report
+      if: github.repository == 'aiidateam/aiida-core'
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: test-pytest-fixtures
+        files: ./coverage.xml
+        fail_ci_if_error: false  # don't fail job, if coverage upload fails

@@ -89,7 +89,7 @@ class ProcessDumpExecutor:
         if not self._validate_node_for_dump(process_node):
             return  # Validation failed, logged inside helper
 
-        action, existing_log_entry = self._check_log_and_determine_action(
+        action, existing_dump_record = self._check_log_and_determine_action(
             node=process_node,
             target_path=target_path,
         )
@@ -100,13 +100,13 @@ class ProcessDumpExecutor:
                 self._execute_dump_primary(process_node, target_path)
             elif action == NodeDumpAction.SKIP:
                 self._execute_skip()
-            elif existing_log_entry is not None:
+            elif existing_dump_record is not None:
                 if action == NodeDumpAction.SYMLINK:
-                    self._execute_symlink(process_node, target_path, existing_log_entry)
+                    self._execute_symlink(process_node, target_path, existing_dump_record)
                 elif action == NodeDumpAction.UPDATE:
-                    self._execute_update(process_node, target_path, existing_log_entry)
+                    self._execute_update(process_node, target_path, existing_dump_record)
                 elif action == NodeDumpAction.DUMP_DUPLICATE:
-                    self._execute_dump_duplicate(process_node, target_path, existing_log_entry)
+                    self._execute_dump_duplicate(process_node, target_path, existing_dump_record)
         except Exception as e:
             # Catch errors during execution phase
             logger.error(
@@ -127,19 +127,19 @@ class ProcessDumpExecutor:
         Checks the logger and node status to determine the appropriate dump action.
         This method should NOT have side effects like creating files/dirs or modifying logs.
         """
-        existing_log_entry = self.dump_tracker.get_entry(node.uuid)
+        existing_dump_record = self.dump_tracker.get_entry(node.uuid)
 
-        if not existing_log_entry:
+        if not existing_dump_record:
             return NodeDumpAction.DUMP_PRIMARY, None
 
         resolved_target_path = target_path.resolve()
-        resolved_logged_path = existing_log_entry.path.resolve()
+        resolved_logged_path = existing_dump_record.path.resolve()
 
         # --- Case 1: Target path is the SAME as the primary logged path ---
         if resolved_target_path == resolved_logged_path:
             # Check if node mtime is newer than logged dump mtime
             node_mtime = node.mtime
-            logged_dir_mtime = existing_log_entry.dir_mtime
+            logged_dir_mtime = existing_dump_record.dir_mtime
 
             needs_update = False
             if logged_dir_mtime is None:
@@ -149,9 +149,9 @@ class ProcessDumpExecutor:
                 needs_update = True
 
             if needs_update:
-                return NodeDumpAction.UPDATE, existing_log_entry
+                return NodeDumpAction.UPDATE, existing_dump_record
             else:
-                return NodeDumpAction.SKIP, existing_log_entry
+                return NodeDumpAction.SKIP, existing_dump_record
 
         # --- Case 2: Target path is DIFFERENT from primary logged path ---
         is_calc_node = isinstance(node, orm.CalculationNode)
@@ -159,36 +159,36 @@ class ProcessDumpExecutor:
 
         # Option A: Symlink Calculation
         if self.config.symlink_calcs and is_calc_node:
-            return NodeDumpAction.SYMLINK, existing_log_entry
+            return NodeDumpAction.SYMLINK, existing_dump_record
 
         # Option B: Force Duplicate Calculation Dump (if not symlinking)
         elif is_calc_node and is_sub_process and not self.config.only_top_level_calcs:
-            return NodeDumpAction.DUMP_DUPLICATE, existing_log_entry
+            return NodeDumpAction.DUMP_DUPLICATE, existing_dump_record
 
         # Option C: Standard Duplicate Dump (e.g., Workflows, non-symlinked Calcs)
         else:
-            return NodeDumpAction.DUMP_DUPLICATE, existing_log_entry
+            return NodeDumpAction.DUMP_DUPLICATE, existing_dump_record
 
     def _execute_skip(self):
         """Action: Skip dumping this node."""
         pass
 
-    def _execute_symlink(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpRecord):
+    def _execute_symlink(self, node: orm.ProcessNode, target_path: Path, existing_dump_record: DumpRecord):
         """Action: Create a relative symlink to the primary dump location."""
 
         # Avoid creating symlink if target already exists (idempotency)
         if target_path.exists() or target_path.is_symlink():
             logger.warning(f'Target path {target_path.name} already exists. Skipping symlink creation.')
             # Ensure log entry reflects this link target even if skipped
-            if target_path.resolve() not in {p.resolve() for p in existing_log_entry.symlinks if p.exists()}:
+            if target_path.resolve() not in {p.resolve() for p in existing_dump_record.symlinks if p.exists()}:
                 try:
-                    existing_log_entry.add_symlink(target_path.resolve())
+                    existing_dump_record.add_symlink(target_path.resolve())
                 except OSError as e:
                     logger.error(f'Could not resolve path {target_path} to add to symlinks log: {e}')
             return  # Skip actual symlink creation
 
         try:
-            source_path = existing_log_entry.path  # Absolute path to the original dump dir
+            source_path = existing_dump_record.path  # Absolute path to the original dump dir
             if not source_path.exists():
                 logger.error(f'Source path {source_path} for node {node.pk} does not exist. Cannot symlink.')
                 # No cleanup needed here, just log the error
@@ -201,12 +201,12 @@ class ProcessDumpExecutor:
             os.symlink(relative_src_path, target_path, target_is_directory=True)
 
             # Add this new symlink location to the log entry
-            existing_log_entry.add_symlink(target_path.resolve())
+            existing_dump_record.add_symlink(target_path.resolve())
 
         except OSError as e:
             logger.error(f'Failed symlink creation for node {node.pk} at {target_path.name}: {e}')
 
-    def _execute_update(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpRecord):
+    def _execute_update(self, node: orm.ProcessNode, target_path: Path, existing_dump_record: DumpRecord):
         """Action: Clean existing directory and perform a full dump."""
 
         node_pk = node.pk
@@ -223,11 +223,12 @@ class ProcessDumpExecutor:
         self._dump_node_content(node, target_path)
 
         # Update stats on the existing log entry using the primary path
-        self._calculate_and_update_stats(existing_log_entry.path, existing_log_entry)
+        existing_dump_record.update_stats()
+        # ._calculate_and_update_stats(existing_dump_record.path, existing_dump_record)
 
     def _execute_dump_primary(self, node: orm.ProcessNode, target_path: Path):
         """Action: Perform a full dump as the primary location."""
-        log_entry = None
+        dump_record = None
 
         node_pk = node.pk
         if not node_pk:
@@ -238,22 +239,22 @@ class ProcessDumpExecutor:
             self.dump_paths.prepare_directory(path_to_prepare=target_path)
 
             # Create new log entry
-            log_entry = DumpRecord(path=target_path.resolve())
+            dump_record = DumpRecord(path=target_path.resolve())
             registry_key = ORM_TYPE_TO_REGISTRY[type(node)]
-            self.dump_tracker.registries[cast(RegistryNameType, registry_key)].add_entry(node.uuid, log_entry)
+            self.dump_tracker.registries[cast(RegistryNameType, registry_key)].add_entry(node.uuid, dump_record)
 
             # Dump content
             self._dump_node_content(node, target_path)
 
             # Calculate and update stats for the new log entry
-            self._calculate_and_update_stats(target_path, log_entry)
+            self._calculate_and_update_stats(target_path, dump_record)
 
         except Exception as e:
             logger.error(f'Failed during DUMP_PRIMARY execution for node {node.pk}: {e}', exc_info=True)
             # Cleanup directory and log entry if primary dump failed
             self._cleanup_failed_dump(node, target_path, True)
 
-    def _execute_dump_duplicate(self, node: orm.ProcessNode, target_path: Path, existing_log_entry: DumpRecord):
+    def _execute_dump_duplicate(self, node: orm.ProcessNode, target_path: Path, existing_dump_record: DumpRecord):
         """Action: Perform a full dump at a secondary location."""
 
         node_pk = node.pk
@@ -265,7 +266,7 @@ class ProcessDumpExecutor:
             self.dump_paths.prepare_directory(path_to_prepare=target_path)
 
             # Add path to duplicates list in existing log entry
-            existing_log_entry.add_duplicate(target_path.resolve())
+            existing_dump_record.add_duplicate(target_path.resolve())
 
             # Dump content
             self._dump_node_content(node, target_path)
@@ -301,14 +302,6 @@ class ProcessDumpExecutor:
             # WorkflowWalker calls _dump_process_recursive_entry
             # Pass group context as potentially needed by recursive calls for symlink check
             self.workflow_walker._dump_children(node, target_path)  # Must ensure walker passes group context
-
-    # NOTE: Similar method in `CollectionDumpExecutor`
-    def _calculate_and_update_stats(self, path_to_stat: Path, log_entry: DumpRecord):
-        """Calculates directory stats and updates the log entry (Original Logic)."""
-        # Calling the utility as in original code
-        dir_mtime, dir_size = self.dump_paths.get_directory_stats(path_to_stat)
-        log_entry.dir_mtime = dir_mtime
-        log_entry.dir_size = dir_size
 
     def _cleanup_failed_dump(
         self,

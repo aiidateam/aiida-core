@@ -73,11 +73,7 @@ class DumpTimes:
 
 @dataclass
 class ProcessingQueue:
-    """Store for nodes to be dumped.
-
-    This class follows a similar structure to DumpTracker, making it easier
-    to convert between the two.
-    """
+    """Queue/stroe for nodes to be dumped."""
 
     calculations: list = field(default_factory=list)
     workflows: list = field(default_factory=list)
@@ -92,15 +88,6 @@ class ProcessingQueue:
     def all_process_nodes(self) -> list[orm.ProcessNode]:
         """Get all calculations and workflows as a single list."""
         return self.calculations + self.workflows
-
-    def iter_by_type(self):
-        """Iterate over (type_name, nodes) pairs for non-empty collections."""
-        if self.calculations:
-            yield ('calculations', self.calculations)
-        if self.workflows:
-            yield ('workflows', self.workflows)
-        if self.groups:
-            yield ('groups', self.groups)
 
 
 @dataclass

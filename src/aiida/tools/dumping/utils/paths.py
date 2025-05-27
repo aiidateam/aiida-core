@@ -87,23 +87,17 @@ class DumpPaths:
             return Path('groups') / group_label_part
         return group_label_part
 
-    def get_path_for_group(
-        self,
-        group: orm.Group,
-        parent_group_content_path: Optional[Path] = None,
-    ) -> Path:
+    def get_path_for_group(self, group: orm.Group) -> Path:
+        """Get the absolute path for a group's content."""
         if not self.config.organize_by_groups:
             return self.base_output_path
 
-        if parent_group_content_path is None:
-            if isinstance(self.dump_target_entity, orm.Group) and self.dump_target_entity.uuid == group.uuid:
-                return self.base_output_path
-            else:
-                return self.base_output_path / self._get_group_subdirectory_segment(group)
-        else:
-            # For nested groups, use the direct label as the subdirectory name
-            # under the parent_group_content_path.
-            return parent_group_content_path / Path(group.label)
+        # If this group is the main target, it goes at the root
+        if isinstance(self.dump_target_entity, orm.Group) and self.dump_target_entity.uuid == group.uuid:
+            return self.base_output_path
+
+        # Otherwise, it goes under groups/
+        return self.base_output_path / 'groups' / group.label
 
     def get_path_for_node(
         self,

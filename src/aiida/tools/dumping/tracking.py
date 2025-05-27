@@ -19,7 +19,7 @@ from typing import Any, Dict, Generator, List, Literal, Optional
 from aiida.common import timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.mapping import GroupNodeMapping
-from aiida.tools.dumping.utils import DumpPaths, RegistryNameType
+from aiida.tools.dumping.utils import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.tracking')
 
@@ -103,6 +103,13 @@ class DumpRecord:
             self.duplicates.remove(path)
             return True
         return False
+
+    def update_stats(self, path: Optional[Path]) -> None:
+        """Update directory stats from the path of the DumpRecord or an optional given path."""
+        if not path:
+            path = self.path
+
+        self.dir_mtime, self.dir_size = DumpPaths.get_directory_stats(path)
 
 
 @dataclass
@@ -241,10 +248,10 @@ class DumpTracker:
                 logger.warning(f'Could not parse last dump time string: {self._last_dump_time_str}')
         return None
 
-    def add_entry(self, registry_key: RegistryNameType, uuid: str, entry: DumpRecord) -> None:
-        """Add a log entry for a node to the specified registry."""
-        registry = self.registries[registry_key]
-        registry.add_entry(uuid, entry)
+    # def add_entry(self, registry_key: RegistryNameType, uuid: str, entry: DumpRecord) -> None:
+    #     """Add a log entry for a node to the specified registry."""
+    #     registry = self.registries[registry_key]
+    #     registry.add_entry(uuid, entry)
 
     def del_entry(self, uuid: str) -> bool:
         """Delete a log entry by UUID (automatically finds the correct registry)."""
@@ -313,27 +320,21 @@ class DumpTracker:
         """Deserialize log entries using DumpLog.from_dict and make paths absolute."""
         container = DumpRegistry()
         for uuid, entry_data in data.items():
-            log_entry: Optional[DumpRecord] = None
+            dump_record: Optional[DumpRecord] = None
             # Handle new format (dict)
             if isinstance(entry_data, dict) and 'path' in entry_data:
                 # Use from_dict to get all fields correctly
-                log_entry = DumpRecord.from_dict(entry_data)
+                dump_record = DumpRecord.from_dict(entry_data)
                 # Now make paths absolute based on dump_paths.base_output_path
                 # Note: Assumes paths in JSON are relative to dump_paths.base_output_path
-                log_entry.path = self.dump_paths.base_output_path / log_entry.path
-                log_entry.symlinks = [self.dump_paths.base_output_path / p for p in log_entry.symlinks]
-                log_entry.duplicates = [self.dump_paths.base_output_path / p for p in log_entry.duplicates]
+                dump_record.path = self.dump_paths.base_output_path / dump_record.path
+                dump_record.symlinks = [self.dump_paths.base_output_path / p for p in dump_record.symlinks]
+                dump_record.duplicates = [self.dump_paths.base_output_path / p for p in dump_record.duplicates]
 
-            if log_entry:
-                container.add_entry(uuid, log_entry)
+            if dump_record:
+                container.add_entry(uuid, dump_record)
 
         return container
-
-    def get_registry_by_name(self, name: RegistryNameType) -> DumpRegistry:
-        """Get registry by name."""
-        if name not in self.registries:
-            raise ValueError(f'Invalid registry key: {name}. Available: {list(self.registries.keys())}')
-        return self.registries[name]
 
     def get_registry_from_entry(self, uuid: str) -> Optional[DumpRegistry]:
         """Find registry containing the UUID."""

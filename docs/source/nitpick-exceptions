@@ -157,6 +157,7 @@ py:class disk_objectstore.backup_utils.BackupManager
 
 py:class frozenset
 
+py:class numpy.bool
 py:class numpy.bool_
 py:class numpy.ndarray
 py:class np.ndarray

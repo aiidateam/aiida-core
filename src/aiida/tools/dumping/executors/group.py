@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aiida import orm
@@ -36,15 +35,15 @@ class GroupDumpExecutor(CollectionDumpExecutor):
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
         process_dump_executor: ProcessDumpExecutor,
-        current_mapping: GroupNodeMapping,
         group_to_dump: orm.Group,
+        current_mapping: GroupNodeMapping,
     ) -> None:
         super().__init__(
             config=config,
             dump_paths=dump_paths,
+            dump_tracker=dump_tracker,
             process_dump_executor=process_dump_executor,
             current_mapping=current_mapping,
-            dump_tracker=dump_tracker,
         )
         self.group_to_dump = group_to_dump
 
@@ -65,16 +64,12 @@ class GroupDumpExecutor(CollectionDumpExecutor):
             parent_group_content_path=None,  # This is the top-level group for this manager's operation
         )
 
-        logger.info(
-            f"Executing GroupDumpExecutor for group '{self.group_to_dump.label}' "
-            f"into determined path '{current_group_content_root}'"
-        )
-
         # 1. Prepare the specific directory for this group's content.
         self.dump_paths.prepare_directory(current_group_content_root, is_leaf_node_dir=False)
 
-        # Register this group in the logger with its actual content path.
-        self._register_group_and_prepare_path(group=self.group_to_dump, group_content_path=current_group_content_root)
+        # Register this group in the logger with its actual content path. -> NOTE: This should be called in
+        # `_handle_group_changes`
+        # self._register_group_and_prepare_path(group=self.group_to_dump, group_content_path=current_group_content_root)
 
         # 2. Process lifecycle changes FOR THIS GROUP.
         #    The `changes.groups` object should have been pre-filtered by DumpEngine
@@ -82,11 +77,9 @@ class GroupDumpExecutor(CollectionDumpExecutor):
         #    If _handle_group_changes in CollectionDumpExecutor is designed to work on
         #    scoped GroupChanges for a single group, this is fine.
         if changes.groups.modified or changes.groups.renamed or changes.groups.node_membership:
-            logger.info(f"Processing lifecycle/membership for group '{self.group_to_dump.label}'.")
             self._handle_group_changes(changes.groups)
 
         # 3. Process nodes within this group.
-        logger.info(f"Processing nodes for group '{self.group_to_dump.label}'.")
         # _process_group is inherited from CollectionDumpExecutor.
         # It needs to use current_group_content_root as the base for placing nodes.
         self._process_group(
@@ -96,24 +89,6 @@ class GroupDumpExecutor(CollectionDumpExecutor):
         )
 
         # 4. Update stats for this specific group.
-        self._update_single_group_stats(self.group_to_dump, current_group_content_root)
-
-        logger.info(f"Finished GroupDumpExecutor for group '{self.group_to_dump.label}'.")
-
-    def _update_single_group_stats(self, group: orm.Group, group_content_path: Path) -> None:
-        logger.info(f"Calculating final directory stats for group '{group.label}'.")
-        group_log_entry = self.dump_tracker.registries['groups'].get_entry(group.uuid)
-
-        if not group_log_entry:
-            logger.warning(f"Log entry for group '{group.label}' not found. Cannot update stats.")
-            return
-        if not group_content_path.is_dir():
-            logger.warning(
-                f'Group content path {group_content_path} for UUID {group.uuid} is not a directory. Skipping stats.'
-            )
-            return
-        logger.debug(f'Calculating stats for group directory: {group_content_path} (UUID: {group.uuid})')
-        dir_mtime, dir_size = DumpPaths.get_directory_stats(group_content_path)
-        group_log_entry.dir_mtime = dir_mtime
-        group_log_entry.dir_size = dir_size
-        logger.debug(f'Updated stats for group {group.uuid}: mtime={dir_mtime}, size={dir_size}')
+        self._update_directory_stats(
+            entity_uuid=self.group_to_dump.uuid, path=current_group_content_root, registry_key='groups'
+        )

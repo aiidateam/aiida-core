@@ -14,12 +14,12 @@ from collections.abc import Collection
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Generator, List, Literal, Optional
 
 from aiida.common import timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.mapping import GroupNodeMapping
-from aiida.tools.dumping.utils import DumpPaths, StoreNameType
+from aiida.tools.dumping.utils import DumpPaths, RegistryNameType
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.tracking')
 
@@ -193,10 +193,8 @@ class DumpTracker:
         self.registries = {'calculations': DumpRegistry(), 'workflows': DumpRegistry(), 'groups': DumpRegistry()}
         # Store the raw string time from the log
         self._last_dump_time_str: Optional[str] = last_dump_time_str
-        self.group_node_mapping: GroupNodeMapping | None = group_node_mapping
+        self.group_node_mapping: GroupNodeMapping = group_node_mapping or GroupNodeMapping()
 
-
-    # TODO: A bit weird here that group_node_mapping isn't part of the tracker, but instead a tuple is returned
     @classmethod
     def load(
         cls,
@@ -243,9 +241,9 @@ class DumpTracker:
                 logger.warning(f'Could not parse last dump time string: {self._last_dump_time_str}')
         return None
 
-    def add_entry(self, registry_key: StoreNameType, uuid: str, entry: DumpRecord) -> None:
+    def add_entry(self, registry_key: RegistryNameType, uuid: str, entry: DumpRecord) -> None:
         """Add a log entry for a node to the specified registry."""
-        registry = self.get_registry_by_name(registry_key)
+        registry = self.registries[registry_key]
         registry.add_entry(uuid, entry)
 
     def del_entry(self, uuid: str) -> bool:
@@ -331,7 +329,7 @@ class DumpTracker:
 
         return container
 
-    def get_registry_by_name(self, name: StoreNameType) -> DumpRegistry:
+    def get_registry_by_name(self, name: RegistryNameType) -> DumpRegistry:
         """Get registry by name."""
         if name not in self.registries:
             raise ValueError(f'Invalid registry key: {name}. Available: {list(self.registries.keys())}')
@@ -459,3 +457,15 @@ class DumpTracker:
                 f"Symlink reference '{symlink_path_to_remove.name}' not found in log entry for node {node_uuid}."
             )
         return removed
+
+    def iter_by_type(
+        self,
+    ) -> Generator[
+        tuple[Literal['calculations'], DumpRegistry]
+        | tuple[Literal['workflows'], DumpRegistry]
+        | tuple[Literal['groups'], DumpRegistry]
+    ]:
+        """Iterate over node registries (excludes groups)"""
+        yield ('calculations', self.registries['calculations'])
+        yield ('workflows', self.registries['workflows'])
+        yield ('groups', self.registries['groups'])

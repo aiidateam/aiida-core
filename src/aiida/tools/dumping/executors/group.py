@@ -59,36 +59,26 @@ class GroupDumpExecutor(CollectionDumpExecutor):
         # It knows the overall base_output_path and the dump_target_entity (which is self.group_to_dump).
         # It can therefore correctly determine if self.group_to_dump should be directly in
         # base_output_path or nested under a "groups/" subdirectory.
-        current_group_content_root = self.dump_paths.get_path_for_group(
-            group=self.group_to_dump,
-            parent_group_content_path=None,  # This is the top-level group for this manager's operation
-        )
+        current_group_content_root = self.dump_paths.get_path_for_group( group=self.group_to_dump)
 
-        # 1. Prepare the specific directory for this group's content.
+        # Prepare the specific directory for this group's content.
         self.dump_paths.prepare_directory(current_group_content_root, is_leaf_node_dir=False)
 
-        # Register this group in the logger with its actual content path. -> NOTE: This should be called in
-        # `_handle_group_changes`
-        # self._register_group_and_prepare_path(group=self.group_to_dump, group_content_path=current_group_content_root)
-
-        # 2. Process lifecycle changes FOR THIS GROUP.
-        #    The `changes.groups` object should have been pre-filtered by DumpEngine
-        #    to only contain changes relevant to `self.group_to_dump`.
-        #    If _handle_group_changes in CollectionDumpExecutor is designed to work on
-        #    scoped GroupChanges for a single group, this is fine.
+        # Process lifecycle changes FOR THIS GROUP.
+        # The `changes.groups` object should have been pre-filtered by DumpEngine
+        # to only contain changes relevant to `self.group_to_dump`.
         if changes.groups.modified or changes.groups.renamed or changes.groups.node_membership:
             self._handle_group_changes(changes.groups)
 
-        # 3. Process nodes within this group.
-        # _process_group is inherited from CollectionDumpExecutor.
+        # Process nodes within this group.
         # It needs to use current_group_content_root as the base for placing nodes.
         self._process_group(
             group=self.group_to_dump,
-            changes=changes,  # Scoped changes
-            group_content_root_path=current_group_content_root,  # Explicitly pass the root
+            changes=changes,
+            group_content_root_path=current_group_content_root,
         )
 
-        # 4. Update stats for this specific group.
+        # Update stats for this specific group.
         self._update_directory_stats(
             entity_uuid=self.group_to_dump.uuid, path=current_group_content_root, registry_key='groups'
         )

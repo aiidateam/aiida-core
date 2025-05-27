@@ -52,24 +52,23 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
 
     def _determine_groups_to_process(self) -> list[orm.Group]:
         """Determine which groups to process based on config."""
-        groups_to_process: list[orm.Group]
         if self.config.all_entries:
             qb_groups = orm.QueryBuilder().append(orm.Group)
-            groups_to_process = cast(List[orm.Group], qb_groups.all(flat=True))
-        elif self.config.groups:
-            group_identifiers = self.config.groups
-            if group_identifiers:
-                if all(isinstance(identifier, orm.Group) for identifier in group_identifiers):
-                    groups_to_process = cast(list[orm.Group], group_identifiers)
-                else:
-                    try:
-                        groups_to_process = [orm.load_group(identifier=str(gid)) for gid in group_identifiers]
-                    except NotExistent as e:
-                        logger.error(f'Error loading specified group: {e}. Aborting group processing.')
-            else:
-                logger.warning('Scope set to SPECIFIC but no group identifiers provided.')
+            return cast(List[orm.Group], qb_groups.all(flat=True))
 
-        return groups_to_process
+        if not self.config.groups:
+            return []
+
+        # Handle specific groups
+        if all(isinstance(g, orm.Group) for g in self.config.groups):
+            return cast(List[orm.Group], self.config.groups)
+
+        # Load by identifier
+        try:
+            return [orm.load_group(identifier=str(gid)) for gid in self.config.groups]
+        except NotExistent as e:
+            logger.error(f'Error loading specified group: {e}')
+            return []
 
     def _add_ungrouped_descendants(
         self,

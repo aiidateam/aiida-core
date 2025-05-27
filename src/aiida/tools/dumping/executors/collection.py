@@ -54,9 +54,9 @@ class CollectionDumpExecutor:
         """
 
         registry = self.dump_tracker.registries[registry_key]
-        log_entry = registry.get_entry(entity_uuid)
+        dump_record = registry.get_entry(entity_uuid)
 
-        if not log_entry:
+        if not dump_record:
             logger.warning(f'Log entry not found for {registry_key[:-1]} UUID {entity_uuid}')
             return
 
@@ -65,8 +65,8 @@ class CollectionDumpExecutor:
             return
 
         dir_mtime, dir_size = self.dump_paths.get_directory_stats(path)
-        log_entry.dir_mtime = dir_mtime
-        log_entry.dir_size = dir_size
+        dump_record.dir_mtime = dir_mtime
+        dump_record.dir_size = dir_size
 
     def _register_group_and_prepare_path(self, group: orm.Group, group_content_path: Path) -> None:
         """Ensures the group's specific content directory is prepared and the group is logged.
@@ -80,8 +80,7 @@ class CollectionDumpExecutor:
         self.dump_paths.prepare_directory(group_content_path, is_leaf_node_dir=False)
 
         if group.uuid not in self.dump_tracker.registries['groups'].entries:
-            self.dump_tracker.add_entry(
-                registry_key='groups',
+            self.dump_tracker.registries['groups'].add_entry(
                 uuid=group.uuid,
                 entry=DumpRecord(path=group_content_path),
             )

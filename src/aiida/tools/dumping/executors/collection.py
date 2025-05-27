@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Manager that orchestrates dumping an AiiDA profile."""
+"""Executor that orchestrates dumping an AiiDA profile."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.utils import GroupChanges, GroupModificationInfo
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.managers.collection')
+logger = AIIDA_LOGGER.getChild('tools.dumping.executors.collection')
 
 
 class CollectionDumpExecutor:
@@ -176,7 +176,7 @@ class CollectionDumpExecutor:
                     node=node,
                     current_content_root=current_dump_root_for_nodes,
                 )
-                # ProcessManager.dump takes the final, specific path for the node.
+                # ProcessDumpExecutor.dump takes the final, specific path for the node.
                 self.process_dump_executor.dump(
                     process_node=node,
                     target_path=node_specific_dump_path,

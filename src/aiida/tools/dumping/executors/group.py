@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Manager that orchestrates dumping an AiiDA profile."""
+"""Executor that orchestrates dumping an AiiDA group."""
 
 from __future__ import annotations
 

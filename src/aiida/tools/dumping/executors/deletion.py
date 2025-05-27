@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.dumping.utils import DumpChanges, DumpPaths
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.managers.deletion')
+logger = AIIDA_LOGGER.getChild('tools.dumping.executors.deletion')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig

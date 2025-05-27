@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Manager that deals with dumping a single ProcessNode."""
+"""Executor that deals with dumping a single ProcessNode."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 __all__ = ('NodeMetadataWriter', 'NodeRepoIoDumper', 'ProcessDumpExecutor', 'ReadmeGenerator', 'WorkflowWalker')
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.managers.process')
+logger = AIIDA_LOGGER.getChild('tools.dumping.executors.process')
 
 # Type hint for the recursive dump function expected by WorkflowWalker
 DumpProcessorType = Callable[[orm.ProcessNode, Path], None]

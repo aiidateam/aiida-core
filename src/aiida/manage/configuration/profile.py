@@ -302,6 +302,6 @@ class Profile:
             config=config,
             dump_target_entity=self,
         )
-        engine.dump(entity=self)
+        engine.dump()
 
         return target_path

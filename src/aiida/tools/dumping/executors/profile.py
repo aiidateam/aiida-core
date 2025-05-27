@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Manager that orchestrates dumping an AiiDA profile."""
+"""Executor that orchestrates dumping an AiiDA profile."""
 
 from __future__ import annotations
 
@@ -202,7 +202,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
             logger.report('Default profile dump scope is NONE, skipping profile content dump.')
             return
 
-        # 1. Handle Group Lifecycle (using Group Manager)
+        # 1. Handle Group Lifecycle (using Group Executor)
         #    This applies changes detected earlier (new/deleted groups, membership)
         #    Directory creation/deletion for groups happens here or in DeletionExecutor
         logger.info('Processing group lifecycle and membership changes...')

@@ -620,6 +620,6 @@ class ProcessNode(Sealable, Node):
             target_path = DumpPaths.get_default_dump_path(entity=self)
 
         engine = DumpEngine(base_output_path=target_path, config=config, dump_target_entity=self)
-        engine.dump(entity=self)
+        engine.dump()
 
         return target_path

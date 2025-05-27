@@ -65,4 +65,4 @@ class ProcessDumper:
             config=self.config,
             dump_target_entity=self.process_node,
         )
-        engine.dump(entity=self.process_node)
+        engine.dump()

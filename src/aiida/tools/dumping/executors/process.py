@@ -223,8 +223,7 @@ class ProcessDumpExecutor:
         self._dump_node_content(node, target_path)
 
         # Update stats on the existing log entry using the primary path
-        existing_dump_record.update_stats()
-        # ._calculate_and_update_stats(existing_dump_record.path, existing_dump_record)
+        existing_dump_record.update_stats(path=target_path)
 
     def _execute_dump_primary(self, node: orm.ProcessNode, target_path: Path):
         """Action: Perform a full dump as the primary location."""
@@ -247,7 +246,7 @@ class ProcessDumpExecutor:
             self._dump_node_content(node, target_path)
 
             # Calculate and update stats for the new log entry
-            self._calculate_and_update_stats(target_path, dump_record)
+            dump_record.update_stats(path=target_path)
 
         except Exception as e:
             logger.error(f'Failed during DUMP_PRIMARY execution for node {node.pk}: {e}', exc_info=True)

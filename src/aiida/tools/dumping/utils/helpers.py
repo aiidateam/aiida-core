@@ -21,7 +21,7 @@ from aiida.common import timezone
 
 DumpEntityType = Union[orm.CalculationNode, orm.WorkflowNode]
 QbDumpEntityType = Union[Type[orm.CalculationNode], Type[orm.WorkflowNode]]
-StoreNameType = Literal['calculations', 'workflows', 'groups']
+StoreNameType = Literal['calculations', 'workflows']
 
 
 if TYPE_CHECKING:
@@ -77,7 +77,6 @@ class DumpNodeStore:
         return {
             DumpStoreKeys.CALCULATIONS.value: self.calculations,
             DumpStoreKeys.WORKFLOWS.value: self.workflows,
-            DumpStoreKeys.GROUPS.value: self.groups,
         }
 
     @property

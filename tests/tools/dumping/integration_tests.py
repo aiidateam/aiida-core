@@ -1015,7 +1015,7 @@ class TestProfileDumping:
         output_path = tmp_path / profile_dump_label
 
         profile = load_profile()
-        config = DumpConfig(all_entries=True, filter_by_last_dump_time=False)
+        config = DumpConfig(all_entries=True, filter_by_last_dump_time=False, also_ungrouped=True)
 
         # Dump 1: Full initial state
         profile.dump(output_path=output_path, config=config)

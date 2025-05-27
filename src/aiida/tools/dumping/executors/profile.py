@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, List, cast
 from aiida import orm
 from aiida.common import NotExistent
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.config import GroupDumpScope
 from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.executors.collection import CollectionDumpExecutor
 from aiida.tools.dumping.tracking import DumpTracker
@@ -54,7 +53,6 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
     def _determine_groups_to_process(self) -> list[orm.Group]:
         """Determine which groups to process based on config."""
         groups_to_process: list[orm.Group] = []
-        # NOTE: Verify
         if not self.config.groups or self.config.all_entries:
             logger.info('Dumping all groups as requested by configuration.')
             qb_groups = orm.QueryBuilder().append(orm.Group)
@@ -76,12 +74,14 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         logger.info(f'Will process {len(groups_to_process)} groups found in the profile.')
         return groups_to_process
 
+    # TODO: Move to DumpChangeDetector???
     def _identify_ungrouped_nodes(self, changes: DumpChanges) -> tuple[DumpNodeStore, list[orm.WorkflowNode]]:
         """Identify nodes detected globally that do not belong to any group."""
+
         ungrouped_nodes_store = DumpNodeStore()
         ungrouped_workflows: list[orm.WorkflowNode] = []
 
-        for registry_key in ['calculations', 'workflows', 'data']:
+        for registry_key in ['calculations', 'workflows']:
             store_nodes = getattr(changes.nodes.new_or_modified, registry_key, [])
             # Node is ungrouped if its UUID is not in the node_to_groups mapping
             ungrouped = [node for node in store_nodes if node.uuid not in self.current_mapping.node_to_groups]
@@ -106,7 +106,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
             return
 
         logger.debug('Finding calculation descendants for ungrouped workflows (only_top_level_calcs=False)')
-        descendants = DumpChangeDetector._get_calculation_descendants(ungrouped_workflows)
+        descendants = DumpChangeDetector.get_calculation_descendants(ungrouped_workflows)
         if descendants:
             existing_calc_uuids = {calc.uuid for calc in ungrouped_nodes_store.calculations}
             logged_calc_uuids = set(self.dump_tracker.registries['calculations'].entries.keys())
@@ -123,103 +123,60 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
             else:
                 logger.debug('All descendants for ungrouped workflows were already included or logged.')
 
-    def _process_ungrouped_nodes(self) -> None:
-        """Identify ALL currently ungrouped nodes.
+    def _has_ungrouped_representation(self, node: orm.ProcessNode, ungrouped_path) -> bool:
+        """Check if a node already has representation under the ungrouped path."""
+        node_uuid = node.uuid
+        dump_record = self.dump_tracker.get_entry(node_uuid)
 
-        This ignores time filters, applies other necessary filters (like top-level), and ensures
-        they are represented in the dump if config.also_ungrouped is True and they don't already have an ungrouped
-        representation.
-        """
+        if not dump_record:
+            return False
+
+        try:
+            # Check primary path
+            primary_path = dump_record.path
+            if primary_path.exists() and primary_path.resolve().is_relative_to(ungrouped_path.resolve()):
+                return True
+
+            # Check symlinks
+            for symlink_path in dump_record.symlinks:
+                if symlink_path.exists() and symlink_path.resolve().is_relative_to(ungrouped_path.resolve()):
+                    return True
+
+            # Check duplicates
+            for duplicate_path in dump_record.duplicates:
+                if duplicate_path.exists() and duplicate_path.resolve().is_relative_to(ungrouped_path.resolve()):
+                    return True
+
+        except (OSError, ValueError, AttributeError) as e:
+            logger.warning(f'Error resolving/checking paths for logged node {node_uuid}: {e}')
+
+        return False
+
+    def _process_ungrouped_nodes(self) -> None:
+        """Process ungrouped nodes for dumping."""
         if not self.config.also_ungrouped:
             logger.info('Skipping ungrouped nodes processing (also_ungrouped=False).')
             return
 
         logger.info('Processing ungrouped nodes (also_ungrouped=True)...')
 
-        # 1. Determine the target path for ungrouped nodes
+        # Get filtered ungrouped nodes (includes top-level filtering)
+        ungrouped_nodes = self.detector.get_ungrouped_nodes()
+
+        # Check against existing representations and dump as needed
+        nodes_to_dump = DumpNodeStore()
         ungrouped_path = self.dump_paths.get_path_for_ungrouped_nodes()
 
-        # 2. Use Node Query logic, ignoring time filter, to get initial candidates
-        try:
-            # Ensure self.detector and self.dump_times are accessible
-            # Query base Node type to get all potential candidates initially
-            initial_ungrouped_nodes: list[orm.ProcessNode] = self.detector.node_query._get_nodes(
-                orm_type=orm.ProcessNode,
-                dump_times=self.detector.dump_times,
-                scope=GroupDumpScope.NO_GROUP,
-                ignore_time_filter=True,
-            )
-        except AttributeError:
-            logger.error('Cannot access detector.node_query or detector.dump_times. Refactoring needed.')
-            return
+        for store_attr in ['calculations', 'workflows']:
+            for node in getattr(ungrouped_nodes, store_attr):
+                if not self._has_ungrouped_representation(node, ungrouped_path):
+                    getattr(nodes_to_dump, store_attr).append(node)
 
-        # 3. Convert list to dictionary format required by filter methods
-        nodes_by_type: dict[str, list[orm.ProcessNode]] = {
-            'calculations': [],
-            'workflows': [],
-        }
-        for node in initial_ungrouped_nodes:
-            if isinstance(node, orm.CalculationNode):
-                nodes_by_type['calculations'].append(node)
-            elif isinstance(node, orm.WorkflowNode):
-                nodes_by_type['workflows'].append(node)
-
-        # 4. Apply the Top-Level Filter (reuse detector's logic)
-        logger.debug('Applying top-level filter to ungrouped nodes...')
-        filtered_ungrouped_nodes_by_type = self.detector._apply_top_level_filter(nodes_by_type)
-
-        nodes_to_dump_ungrouped = DumpNodeStore()
-
-        # 5. Check remaining nodes against logger for existing UNGROUPED representation
-        # Iterate through the dictionary returned by the filter
-        for registry_key, node_list in filtered_ungrouped_nodes_by_type.stores.items():
-            if registry_key not in ['calculations', 'workflows']:
-                continue
-            for node in node_list:
-                node_uuid = node.uuid
-                dump_record = self.dump_tracker.get_entry(node_uuid)
-                has_ungrouped_representation = False
-
-                if dump_record:
-                    try:
-                        primary_path = dump_record.path
-                        # Check if primary_path exists before resolving
-                        if primary_path.exists() and primary_path.resolve().is_relative_to(ungrouped_path.resolve()):
-                            has_ungrouped_representation = True
-
-                        if not has_ungrouped_representation:
-                            for symlink_path in dump_record.symlinks:
-                                if symlink_path.exists() and symlink_path.resolve().is_relative_to(
-                                    ungrouped_path.resolve()
-                                ):
-                                    has_ungrouped_representation = True
-                                    break
-
-                            for duplicate_path in dump_record.duplicates:
-                                if duplicate_path.exists() and duplicate_path.resolve().is_relative_to(
-                                    ungrouped_path.resolve()
-                                ):
-                                    has_ungrouped_representation = True
-                                    break
-                    except (OSError, ValueError, AttributeError) as e:
-                        logger.warning(f'Error resolving/checking paths for logged node {node_uuid}: {e}')
-
-                # 6. Schedule dump if needed
-                if not has_ungrouped_representation:
-                    msg = (
-                        f'Ungrouped node {node_uuid} (passed filters) lacks representation under '
-                        "'{ungrouped_path_relative}'. Scheduling."
-                    )
-                    logger.debug(msg)
-                    # Add to the correct list within nodes_to_dump_ungrouped
-                    getattr(nodes_to_dump_ungrouped, registry_key).append(node)
-
-        # 7. Dump the collected nodes
-        if len(nodes_to_dump_ungrouped) > 0:
-            logger.report(f'Dumping/linking {len(nodes_to_dump_ungrouped)} nodes under ungrouped path...')
+        if len(nodes_to_dump) > 0:
+            logger.report(f'Dumping/linking {len(nodes_to_dump)} nodes under ungrouped path...')
             ungrouped_path.mkdir(exist_ok=True, parents=True)
             (ungrouped_path / DumpPaths.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
-            self._dump_nodes(node_store=nodes_to_dump_ungrouped, group_context=None)
+            self._dump_nodes(node_store=nodes_to_dump, group_context=None)
 
     def _update_group_stats(self) -> None:
         """Calculate and update final directory stats for all logged groups."""

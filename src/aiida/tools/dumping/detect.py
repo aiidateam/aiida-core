@@ -289,27 +289,25 @@ class DumpChangeDetector:
 
     def _detect_group_changes(
         self,
-        stored_mapping: GroupNodeMapping | None,
+        previous_mapping: GroupNodeMapping | None,
         current_mapping: GroupNodeMapping,
         specific_group_uuid: str | None = None,
     ) -> GroupChanges:
         """Detect changes between stored and current group mappings.
 
-        :param stored_mapping: ``GroupNodeMapping`` of a previous dump (if existing)
+        :param previous_mapping: ``GroupNodeMapping`` of a previous dump (if existing)
         :param current_mapping: ``GroupNodeMapping`` of the current DB state
         :param specific_group_uuid: Restrict changes to this group, defaults to None
         :return: Populated ``GroupChanges`` object
         """
-        # Calculate initial diff based on membership
-        if stored_mapping is None:
+
+        if not previous_mapping:
             new_groups = self._detect_new_groups(current_mapping)
             group_changes = GroupChanges(new=new_groups)
-        else:
-            group_changes = stored_mapping.diff(current_mapping)
 
-        # Detect renames (only if stored_mapping exists)
-        if stored_mapping:
-            self_group_uuids = set(stored_mapping.group_to_nodes.keys())
+        else:
+            group_changes = previous_mapping.diff(current_mapping)
+            self_group_uuids = set(previous_mapping.group_to_nodes.keys())
             other_group_uuids = set(current_mapping.group_to_nodes.keys())
             common_group_uuids = self_group_uuids & other_group_uuids
 
@@ -341,8 +339,7 @@ class DumpChangeDetector:
                     )
 
         # Filter for specific group if requested
-        # TODO: Improve this such that not all changes are evaluated and then filtered
-        # But from the beginning only the changes for one group are obtained
+        # TODO: Improve this such that not all changes are first evaluated and then filtered again
         if specific_group_uuid:
             return self._filter_group_changes_for_group(group_changes, specific_group_uuid)
 

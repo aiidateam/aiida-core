@@ -117,8 +117,7 @@ class CollectionDumpExecutor:
             f"Finding calculation descendants for workflows in group '{group.label}' "
             f"(only_top_level_calcs=False), to be dumped into '{current_group_content_root}'"
         )
-        # _get_calculation_descendants is a static method in DumpChangeDetector
-        descendants = DumpChangeDetector._get_calculation_descendants(workflows_in_group)
+        descendants = DumpChangeDetector.get_calculation_descendants(workflows_in_group)
         if not descendants:
             logger.debug(f"No calculation descendants found for workflows in group '{group.label}'.")
             return

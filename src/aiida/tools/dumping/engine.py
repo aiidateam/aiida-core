@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import Optional, Union
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
@@ -18,12 +18,9 @@ from aiida.manage.configuration.profile import Profile
 from aiida.tools.dumping.config import DumpConfig, DumpMode
 from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.executors import DeletionExecutor, GroupDumpExecutor, ProcessDumpExecutor, ProfileDumpExecutor
+from aiida.tools.dumping.mapping import GroupNodeMapping
 from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.utils import DumpChanges, DumpPaths, DumpTimes
-
-if TYPE_CHECKING:
-    from aiida.tools.dumping.mapping import GroupNodeMapping
-
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.engine')
 
@@ -143,7 +140,8 @@ class DumpEngine:
 
         elif isinstance(entity, orm.Group):
             logger.info(f"Executing Group dump for '{entity.label}' (PK: {entity.pk})")
-            node_changes, current_mapping = self.detector._detect_all_changes(group=entity)
+            node_changes = self.detector._detect_node_changes(group=entity)
+            current_mapping = GroupNodeMapping.build_from_db()
             group_changes = self.detector._detect_group_changes(
                 stored_mapping=self.stored_mapping, current_mapping=current_mapping, specific_group_uuid=entity.uuid
             )
@@ -182,7 +180,8 @@ class DumpEngine:
                 self.dump_paths.safe_delete_directory(path=self.dump_paths.base_output_path)
                 return
 
-            node_changes, current_mapping = self.detector._detect_all_changes()
+            node_changes = self.detector._detect_node_changes()
+            current_mapping = GroupNodeMapping.build_from_db()
             group_changes = self.detector._detect_group_changes(
                 stored_mapping=self.stored_mapping, current_mapping=current_mapping
             )

@@ -40,11 +40,6 @@ class ProcessDumper:
             If ``None``, a default path based on the profile name will be used.
         """
 
-        warn_deprecation(
-            'The `ProcessDumper` class is deprecated. Use `orm.ProcessNode.dump()` instead.',
-            version=3,
-        )
-
         self.process_node = process_node
         self.config: DumpConfig = config if config is not None else DumpConfig()
         self.base_output_path: Path
@@ -60,6 +55,10 @@ class ProcessDumper:
         """Perform the dump operation by invoking the engine."""
         # Instantiate engine for dump operation rather than on construction such that
         # Successive incremental dumps can be achieved with one instance
+        warn_deprecation(
+            'The `ProcessDumper` class is deprecated. Use `orm.ProcessNode.dump()` instead.',
+            version=3,
+        )
         engine = DumpEngine(
             base_output_path=self.base_output_path,
             config=self.config,

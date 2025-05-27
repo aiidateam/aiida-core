@@ -18,16 +18,16 @@ from aiida.common import AIIDA_LOGGER
 from aiida.tools.dumping.config import GroupDumpScope
 from aiida.tools.dumping.mapping import GroupNodeMapping
 from aiida.tools.dumping.utils import (
-    DumpNodeStore,
+    REGISTRY_TO_ORM_TYPE,
     DumpPaths,
-    DumpStoreKeys,
     DumpTimes,
     GroupChanges,
     GroupInfo,
     GroupRenameInfo,
     NodeChanges,
     NodeMembershipChange,
-    StoreNameType,
+    ProcessingQueue,
+    RegistryNameType,
 )
 
 if TYPE_CHECKING:
@@ -72,7 +72,7 @@ class DumpChangeDetector:
         apply_filters: bool = True,
         ignore_time_filters: bool = False,
         exclude_tracked: bool = True,
-    ) -> DumpNodeStore:
+    ) -> ProcessingQueue:
         """Unified method to get nodes with various filtering options.
 
         :param group_scope: Determines the query scope (ANY, IN_GROUP, NO_GROUP)
@@ -92,24 +92,29 @@ class DumpChangeDetector:
             base_filters['mtime'] = self._resolve_time_filters()
 
         # Get nodes by type
-        node_store = DumpNodeStore()
+        processing_queue = ProcessingQueue()
 
-        for orm_type, store_attr in [(orm.WorkflowNode, 'workflows'), (orm.CalculationNode, 'calculations')]:
-            nodes = self._query_single_type(
-                orm_type=orm_type, group_scope=group_scope, group=group, base_filters=base_filters
-            )
+        # Process calculations
+        calc_nodes = self._query_single_type(
+            orm_type=orm.CalculationNode, group_scope=group_scope, group=group, base_filters=base_filters
+        )
+        if exclude_tracked:
+            calc_nodes = self._exclude_tracked_nodes(calc_nodes, 'calculations')
+        if apply_filters:
+            calc_nodes = self._apply_behavioral_filters(calc_nodes, 'calculations')
+        processing_queue.calculations = calc_nodes
 
-            # Apply exclusion filters
-            if exclude_tracked:
-                nodes = self._exclude_tracked_nodes(nodes, store_attr)
+        # Process workflows
+        workflow_nodes = self._query_single_type(
+            orm_type=orm.WorkflowNode, group_scope=group_scope, group=group, base_filters=base_filters
+        )
+        if exclude_tracked:
+            workflow_nodes = self._exclude_tracked_nodes(workflow_nodes, 'workflows')
+        if apply_filters:
+            workflow_nodes = self._apply_behavioral_filters(workflow_nodes, 'workflows')
+        processing_queue.workflows = workflow_nodes
 
-            # Apply behavioral filters
-            if apply_filters:
-                nodes = self._apply_behavioral_filters(nodes, store_attr)
-
-            setattr(node_store, store_attr, nodes)
-
-        return node_store
+        return processing_queue
 
     def _query_single_type(
         self,
@@ -168,7 +173,7 @@ class DumpChangeDetector:
             return nodes
 
         try:
-            registry = self.dump_tracker.get_registry_by_name(cast(StoreNameType, store_type))
+            registry = self.dump_tracker.registries[cast(RegistryNameType, store_type)]
             tracked_uuids = set(registry.entries.keys())
 
             if not tracked_uuids:
@@ -209,7 +214,7 @@ class DumpChangeDetector:
 
         return filtered_nodes
 
-    def _detect_new_nodes(self, group: Optional[orm.Group] = None) -> DumpNodeStore:
+    def _detect_new_nodes(self, group: Optional[orm.Group] = None) -> ProcessingQueue:
         """Detect new/modified nodes for dumping.
 
         :param group: Specific group to detect changes for, or None for general detection
@@ -225,7 +230,7 @@ class DumpChangeDetector:
 
         return self.get_nodes(group_scope=scope, group=group, apply_filters=True, exclude_tracked=True)
 
-    def get_ungrouped_nodes(self) -> DumpNodeStore:
+    def get_ungrouped_nodes(self) -> ProcessingQueue:
         """Get all ungrouped nodes, ignoring time filters."""
         # Set `exclude_tracked` to False in the case that a node that was previously in a group, then the group got
         # deleted (but not the node), and it now ends up being ungrouped, and because of `--also-ungrouped` it should be
@@ -252,18 +257,21 @@ class DumpChangeDetector:
         """Detect nodes deleted from DB since last dump."""
         deleted_node_uuids: set[str] = set()
 
-        for orm_type in (orm.CalculationNode, orm.WorkflowNode):
-            registry_name = DumpStoreKeys.from_class(orm_class=orm_type)
-            dump_registry = self.dump_tracker.get_registry_by_name(name=registry_name)
+        for registry_name, dump_registry in self.dump_tracker.iter_by_type():
+            if registry_name == 'groups':
+                continue  # Skip groups registry if only processing nodes
+
             if not dump_registry:
                 continue
 
             dumped_uuids = set(dump_registry.entries.keys())
+
             if not dumped_uuids:
                 continue
 
             # Query existing UUIDs in DB
             qb = orm.QueryBuilder()
+            orm_type = REGISTRY_TO_ORM_TYPE[registry_name]
             qb.append(orm_type, project=['uuid'])
             all_db_uuids = cast(Set[str], set(qb.all(flat=True)))
 
@@ -378,9 +386,9 @@ class DumpChangeDetector:
 
         return filtered_changes
 
-    def _resolve_time_filters(self) -> Dict:
+    def _resolve_time_filters(self) -> Dict[str, Any]:
         """Create time-based query filters based on dump configuration."""
-        time_filters = {}
+        time_filters: Dict[str, Any] = {}
 
         # Skip if no time filters requested
         if not (

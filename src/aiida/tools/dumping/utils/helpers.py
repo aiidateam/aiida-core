@@ -12,26 +12,37 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Set, Type, Union
+from typing import TYPE_CHECKING, Dict, List, Literal, Optional, Set, Type, Union
 
 from aiida import orm
 from aiida.common import timezone
 
-DumpEntityType = Union[orm.CalculationNode, orm.WorkflowNode]
-QbDumpEntityType = Union[Type[orm.CalculationNode], Type[orm.WorkflowNode]]
-StoreNameType = Literal['calculations', 'workflows']
+RegistryNameType = Literal['calculations', 'workflows', 'groups']
 
 
 if TYPE_CHECKING:
     pass
 
+REGISTRY_TO_ORM_TYPE: dict[str, Type[Union[orm.CalculationNode, orm.WorkflowNode, orm.Group]]] = {
+    'calculations': orm.CalculationNode,
+    'workflows': orm.WorkflowNode,
+    'groups': orm.Group,
+}
+
+ORM_TYPE_TO_REGISTRY = {
+    orm.CalculationNode: 'calculations',
+    orm.CalcFunctionNode: 'calculations',
+    orm.CalcJobNode: 'calculations',
+    orm.WorkflowNode: 'workflows',
+    orm.WorkFunctionNode: 'workflows',
+    orm.WorkChainNode: 'workflows',
+    orm.Group: 'groups',
+}
 
 __all__ = (
-    'DumpEntityType',
-    'DumpNodeStore',
-    'DumpStoreKeys',
+    'ORM_TYPE_TO_REGISTRY',
+    'REGISTRY_TO_ORM_TYPE',
     'DumpTimes',
     'DumpTimes',
     'GroupChanges',
@@ -39,7 +50,8 @@ __all__ = (
     'GroupRenameInfo',
     'NodeChanges',
     'NodeMembershipChange',
-    'QbDumpEntityType',
+    'ProcessingQueue',
+    'RegistryNameType',
 )
 
 
@@ -60,7 +72,7 @@ class DumpTimes:
 
 
 @dataclass
-class DumpNodeStore:
+class ProcessingQueue:
     """Store for nodes to be dumped.
 
     This class follows a similar structure to DumpTracker, making it easier
@@ -71,73 +83,24 @@ class DumpNodeStore:
     workflows: list = field(default_factory=list)
     groups: list = field(default_factory=list)
 
-    @property
-    def stores(self) -> dict:
-        """Retrieve the current state of the container as a dataclass."""
-        return {
-            DumpStoreKeys.CALCULATIONS.value: self.calculations,
-            DumpStoreKeys.WORKFLOWS.value: self.workflows,
-        }
-
-    @property
-    def should_dump_processes(self) -> bool:
-        return len(self.calculations) > 0 or len(self.workflows) > 0
-
     def __len__(self) -> int:
         return len(self.calculations) + len(self.workflows) + len(self.groups)
-
-    def num_processes(self) -> int:
-        return len(self.calculations) + len(self.workflows)
-
-    def add_nodes(self, nodes: list, node_type: Any | None = None) -> None:
-        """Add nodes to the appropriate store based on node_type.
-
-        Args:
-            node_type: The type of nodes to add (can be a class or a string identifier)
-            nodes: List of nodes to add
-        """
-        if node_type:
-            attr = DumpStoreKeys.from_class(node_type)
-        elif len(nodes) > 0:
-            attr = DumpStoreKeys.from_instance(nodes[0])
-        else:
-            raise ValueError
-
-        store: list = getattr(self, attr)
-        store.extend(nodes)
 
     def is_empty(self) -> bool:
         return len(self) == 0
 
-    def get_store_by_name(self, name: StoreNameType) -> list:
-        """Get the appropriate store based on node_type.
+    def all_process_nodes(self) -> list[orm.ProcessNode]:
+        """Get all calculations and workflows as a single list."""
+        return self.calculations + self.workflows
 
-        Args:
-            node_type: The type of nodes (can be a class or a string identifier)
-
-        Returns:
-            The corresponding store list
-        """
-
-        store_names = list(self.stores.keys())
-        if name not in store_names:
-            msg = f'Wrong key <{name}> selected. Choose one of {store_names}.'
-            raise ValueError(msg)
-
-        return getattr(self.stores, name)
-
-    def get_store_by_type(self, node_type: Any) -> list:
-        """Get the appropriate store based on node_type.
-
-        Args:
-            node_type: The type of nodes (can be a class or a string identifier)
-
-        Returns:
-            The corresponding store list
-        """
-
-        attr = DumpStoreKeys.from_class(node_type)
-        return getattr(self, attr)
+    def iter_by_type(self):
+        """Iterate over (type_name, nodes) pairs for non-empty collections."""
+        if self.calculations:
+            yield ('calculations', self.calculations)
+        if self.workflows:
+            yield ('workflows', self.workflows)
+        if self.groups:
+            yield ('groups', self.groups)
 
 
 @dataclass
@@ -193,7 +156,7 @@ class NodeChanges:
     """Holds changes related to individual nodes (Calc, Work, Data)."""
 
     # Nodes detected as new or modified that require dumping
-    new_or_modified: DumpNodeStore = field(default_factory=DumpNodeStore)
+    new_or_modified: ProcessingQueue = field(default_factory=ProcessingQueue)
     # UUIDs of *nodes* detected as deleted from the database
     # Note: We separate deleted nodes from deleted groups based on Option 1.
     # If you need deleted group UUIDs elsewhere (like DeletionExecutor),
@@ -280,46 +243,3 @@ class DumpChanges:
             'Groups:\n'
             f'{group_table}'
         )
-
-
-class DumpStoreKeys(str, Enum):
-    CALCULATIONS = 'calculations'
-    WORKFLOWS = 'workflows'
-    GROUPS = 'groups'
-
-    @classmethod
-    def from_instance(cls, node_inst: orm.Node | orm.Group) -> StoreNameType:
-        if isinstance(node_inst, orm.CalculationNode):
-            return cls.CALCULATIONS.value
-        elif isinstance(node_inst, orm.WorkflowNode):
-            return cls.WORKFLOWS.value
-        elif isinstance(node_inst, orm.Group):
-            return cls.GROUPS.value
-        else:
-            msg = f'Dumping not implemented yet for node type: {type(node_inst)}'
-            raise NotImplementedError(msg)
-
-    @classmethod
-    def from_class(cls, orm_class: Type) -> StoreNameType:
-        if issubclass(orm_class, orm.CalculationNode):
-            return cls.CALCULATIONS.value
-        elif issubclass(orm_class, orm.WorkflowNode):
-            return cls.WORKFLOWS.value
-        elif issubclass(orm_class, orm.Group):
-            return cls.GROUPS.value
-        else:
-            msg = f'Dumping not implemented yet for node type: {orm_class}'
-            raise NotImplementedError(msg)
-
-    @classmethod
-    def to_class(cls, key: 'DumpStoreKeys') -> Type:
-        mapping = {
-            cls.CALCULATIONS: orm.CalculationNode,
-            cls.WORKFLOWS: orm.WorkflowNode,
-            cls.GROUPS: orm.Group,
-        }
-        if key in mapping:
-            return mapping[key]
-        else:
-            msg = f'No node type mapping exists for key: {key}'
-            raise ValueError(msg)

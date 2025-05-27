@@ -9,10 +9,9 @@
 """Utilities for the dumping feature."""
 
 from aiida.tools.dumping.utils.helpers import (
+    ORM_TYPE_TO_REGISTRY,
+    REGISTRY_TO_ORM_TYPE,
     DumpChanges,
-    DumpEntityType,
-    DumpNodeStore,
-    DumpStoreKeys,
     DumpTimes,
     GroupChanges,
     GroupInfo,
@@ -20,17 +19,16 @@ from aiida.tools.dumping.utils.helpers import (
     GroupRenameInfo,
     NodeChanges,
     NodeMembershipChange,
-    QbDumpEntityType,
-    StoreNameType,
+    ProcessingQueue,
+    RegistryNameType,
 )
 from aiida.tools.dumping.utils.paths import DumpPaths
 
 __all__ = (
+    'ORM_TYPE_TO_REGISTRY',
+    'REGISTRY_TO_ORM_TYPE',
     'DumpChanges',
-    'DumpEntityType',
-    'DumpNodeStore',
     'DumpPaths',
-    'DumpStoreKeys',
     'DumpTimes',
     'DumpTimes',
     'GroupChanges',
@@ -39,6 +37,6 @@ __all__ = (
     'GroupRenameInfo',
     'NodeChanges',
     'NodeMembershipChange',
-    'QbDumpEntityType',
-    'StoreNameType',
+    'ProcessingQueue',
+    'RegistryNameType',
 )

@@ -6,28 +6,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Executor that orchestrates dumping an AiiDA profile."""
+"""Common functionality for the GroupDumpExecutor and ProfileDumpExecutor."""
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Optional
 
 from aiida import orm
-from aiida.common import MultipleObjectsError, NotExistent
-from aiida.common.log import AIIDA_LOGGER
+from aiida.common import AIIDA_LOGGER, NotExistent
 from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm
-from aiida.orm import Group, WorkflowNode
 from aiida.tools.dumping.detect import DumpChangeDetector
 from aiida.tools.dumping.tracking import DumpRecord, DumpTracker
-from aiida.tools.dumping.utils import DumpChanges, DumpNodeStore, DumpPaths
+from aiida.tools.dumping.utils import DumpChanges, DumpPaths, ProcessingQueue
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
     from aiida.tools.dumping.executors.process import ProcessDumpExecutor
     from aiida.tools.dumping.mapping import GroupNodeMapping
-    from aiida.tools.dumping.tracking import DumpTracker
     from aiida.tools.dumping.utils import GroupChanges, GroupModificationInfo
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.executors.collection')
@@ -45,114 +42,125 @@ class CollectionDumpExecutor:
         self.config: DumpConfig = config
         self.dump_paths: DumpPaths = dump_paths
         self.process_dump_executor: ProcessDumpExecutor = process_dump_executor
-        self.current_mapping: GroupNodeMapping = current_mapping
         self.dump_tracker: DumpTracker = dump_tracker
+        self.current_mapping: GroupNodeMapping = current_mapping
+
+    def _update_directory_stats(self, entity_uuid: str, path: Path, registry_key: str) -> None:
+        """Common update logic for directory stats.
+
+        :param entity_uuid: UUID of entity whose dumping output path should be evaluated
+        :param path: The path for which the stats should be calculated
+        :param registry_key: The corresponding key for the ``DumpTracker``s registry
+        """
+
+        registry = self.dump_tracker.registries[registry_key]
+        log_entry = registry.get_entry(entity_uuid)
+
+        if not log_entry:
+            logger.warning(f'Log entry not found for {registry_key[:-1]} UUID {entity_uuid}')
+            return
+
+        if not path.is_dir():
+            logger.warning(f'Path {path} for UUID {entity_uuid} is not a directory. Skipping stats.')
+            return
+
+        dir_mtime, dir_size = self.dump_paths.get_directory_stats(path)
+        log_entry.dir_mtime = dir_mtime
+        log_entry.dir_size = dir_size
 
     def _register_group_and_prepare_path(self, group: orm.Group, group_content_path: Path) -> None:
+        """Ensures the group's specific content directory is prepared and the group is logged.
+
+        :param group: The passed group
+        :param group_content_path: The top-level dumping path for the group
         """
-        Ensures the group's specific content directory is prepared and the group is logged
-        with its absolute content path.
-        """
-        # Directory preparation for group_content_path is now expected to be done
-        # by the caller (e.g., GroupDumpExecutor.dump() or ProfileDumpExecutor loop)
-        # using self.dump_paths.prepare_directory().
-        # However, this method is also where the logger entry is made, so it's crucial.
 
         # Ensure the directory exists (might be redundant if caller prepares, but safe)
         # In non-dry_run modes, prepare_directory also creates the safeguard.
         self.dump_paths.prepare_directory(group_content_path, is_leaf_node_dir=False)
 
         if group.uuid not in self.dump_tracker.registries['groups'].entries:
-            logger.debug(
-                f"Registering group '{group.label}' ({group.uuid}) in logger "
-                f'with content path: {group_content_path}'
-            )
             self.dump_tracker.add_entry(
                 registry_key='groups',
                 uuid=group.uuid,
                 entry=DumpRecord(path=group_content_path),
             )
 
-    def _identify_nodes_for_group(self, group: Group, changes: DumpChanges) -> tuple[DumpNodeStore, list[WorkflowNode]]:
-        """Identifies nodes explicitly belonging to a given group from the provided changes."""
-        # (Implementation of this method can remain largely the same,
-        # as it filters `changes` based on `self.current_mapping`)
-        nodes_explicitly_in_group = DumpNodeStore()
-        # self.current_mapping should be scoped appropriately by the calling manager
-        # or reflect the global state if that's intended for this call.
-        group_node_uuids = self.current_mapping.group_to_nodes.get(group.uuid, set())
-        workflows_explicitly_in_group: list[WorkflowNode] = []
+    def _identify_nodes_for_group(self, group: orm.Group, changes: DumpChanges) -> ProcessingQueue:
+        """Identifies nodes explicitly belonging to a given group from the provided changes.
 
-        for registry_key in ['calculations', 'workflows', 'data']:  # Assuming 'data' might be added
-            # `changes.nodes.new_or_modified` should be the set of nodes
-            # identified by DumpEngine for the current operation (e.g., all new nodes in profile,
-            # or all new nodes within a specific group if detector was scoped).
-            globally_detected_nodes = getattr(changes.nodes.new_or_modified, registry_key, [])
-            filtered_nodes = [node for node in globally_detected_nodes if node.uuid in group_node_uuids]
-            if filtered_nodes:
-                setattr(nodes_explicitly_in_group, registry_key, filtered_nodes)
-                if registry_key == 'workflows':
-                    workflows_explicitly_in_group.extend(
-                        cast(
-                            list[WorkflowNode],
-                            [wf for wf in filtered_nodes if isinstance(wf, orm.WorkflowNode)],
-                        )
-                    )
-        return nodes_explicitly_in_group, workflows_explicitly_in_group
+        :param group: The specific group
+        :param changes: Populated ``DumpChanges`` object with all changes since the last dump
+        :return: DumpNodeStore containing nodes that belong to this group
+        """
+
+        nodes_explicitly_in_group = ProcessingQueue()
+        group_node_uuids = [node.uuid for node in group.nodes]
+
+        calc_nodes = [n for n in changes.nodes.new_or_modified.calculations if n.uuid in group_node_uuids]
+        workflow_nodes = [n for n in changes.nodes.new_or_modified.workflows if n.uuid in group_node_uuids]
+
+        if calc_nodes:
+            nodes_explicitly_in_group.calculations = calc_nodes
+        if workflow_nodes:
+            nodes_explicitly_in_group.workflows = workflow_nodes
+
+        return nodes_explicitly_in_group
 
     def _dump_group_descendants(
         self,
-        group: Group,
-        workflows_in_group: list[WorkflowNode],
-        current_group_content_root: Path,  # Nodes are dumped into this root
+        group: orm.Group,
+        nodes_in_group: ProcessingQueue,
+        group_root_path: Path,
     ) -> None:
+        """Finds and dumps calculation descendants for the group's workflows
+
+        :param group: The specific group
+        :param nodes_in_group: DumpNodeStore containing
+        :param group_root_path: _description_
         """
-        Finds and dumps calculation descendants for the group's workflows
-        into the 'current_group_content_root'.
-        """
-        if self.config.only_top_level_calcs or not workflows_in_group:
+        if self.config.only_top_level_calcs:
             return
 
-        logger.debug(
-            f"Finding calculation descendants for workflows in group '{group.label}' "
-            f"(only_top_level_calcs=False), to be dumped into '{current_group_content_root}'"
-        )
+        workflows_in_group = [wf for wf in nodes_in_group.workflows if isinstance(wf, orm.WorkflowNode)]
+
+        if not workflows_in_group:
+            return
+
         descendants = DumpChangeDetector.get_calculation_descendants(workflows_in_group)
         if not descendants:
-            logger.debug(f"No calculation descendants found for workflows in group '{group.label}'.")
             return
 
         logged_calc_uuids = set(self.dump_tracker.registries['calculations'].entries.keys())
         unique_unlogged_descendants = [desc for desc in descendants if desc.uuid not in logged_calc_uuids]
 
-        if unique_unlogged_descendants:
-            logger.info(
-                f'Immediately dumping {len(unique_unlogged_descendants)} unique, '
-                f"unlogged calculation descendants for group '{group.label}'."
-            )
-            descendant_store = DumpNodeStore(calculations=unique_unlogged_descendants)
-            # Descendants are dumped with the group context, into the group's content root.
-            self._dump_nodes(
-                node_store=descendant_store,
-                group_context=group,
-                current_dump_root_for_nodes=current_group_content_root,
-            )
-        else:
-            logger.debug(f"All descendants for group '{group.label}' were already logged.")
+        if not unique_unlogged_descendants:
+            return
+
+        # Descendants are dumped with the group context, into the group's content root.
+        descendant_store = ProcessingQueue(calculations=unique_unlogged_descendants)
+        self._dump_nodes(
+            processing_queue=descendant_store,
+            group_context=group,
+            current_dump_root_for_nodes=group_root_path,
+        )
 
     def _dump_nodes(
         self,
-        node_store: DumpNodeStore,
+        processing_queue: ProcessingQueue,
         group_context: Optional[orm.Group] = None,
         current_dump_root_for_nodes: Optional[Path] = None,
     ):
-        """
-        Dumps a collection of nodes. Nodes are placed relative to 'current_dump_root_for_nodes'.
+        """Dumps a collection of nodes. Nodes are placed relative to 'current_dump_root_for_nodes'.
+
+        :param processing_queue: _description_
+        :param group_context: _description_, defaults to None
+        :param current_dump_root_for_nodes: _description_, defaults to None
         """
         set_progress_bar_tqdm()
         nodes_to_dump = []
-        nodes_to_dump.extend(node_store.calculations)
-        nodes_to_dump.extend(node_store.workflows)
+        nodes_to_dump.extend(processing_queue.calculations)
+        nodes_to_dump.extend(processing_queue.workflows)
         if not nodes_to_dump:
             return
 
@@ -183,7 +191,7 @@ class CollectionDumpExecutor:
                 )
                 progress.update()
 
-    def _process_group(self, group: Group, changes: DumpChanges, group_content_root_path: Path) -> None:
+    def _process_group(self, group: orm.Group, changes: DumpChanges, group_content_root_path: Path) -> None:
         """
         Process a single group: find its nodes, dump descendants, dump explicit nodes,
         all operating within the provided 'group_content_root_path'.
@@ -193,44 +201,37 @@ class CollectionDumpExecutor:
         :param group_content_root_path: The absolute filesystem path where this group's
             direct content (safeguard, type subdirs) should reside.
         """
-        logger.debug(
-            f"Processing group: '{group.label}' ({group.uuid}) " f"with content root: '{group_content_root_path}'"
-        )
 
         # Ensure the group's own content directory is prepared and logged.
         # _register_group_and_prepare_path should use group_content_root_path.
         self._register_group_and_prepare_path(group=group, group_content_path=group_content_root_path)
 
-        # 1. Identify nodes explicitly in this group from the (hopefully scoped) changes.
-        nodes_explicitly_in_group, workflows_in_group = self._identify_nodes_for_group(group, changes)
+        # Identify nodes explicitly in this group from the scoped changes.
+        nodes_explicitly_in_group = self._identify_nodes_for_group(group, changes)
 
-        # 2. Find and immediately dump calculation descendants if required.
+        # Find and dump calculation descendants if required.
         # These are dumped into the group_content_root_path.
         self._dump_group_descendants(
-            group=group, workflows_in_group=workflows_in_group, current_group_content_root=group_content_root_path
+            group=group, nodes_in_group=nodes_explicitly_in_group, group_root_path=group_content_root_path
         )
 
-        # 3. Dump the nodes explicitly identified for this group.
-        store_for_explicit_dump = DumpNodeStore(
+        # Dump the nodes explicitly identified for this group.
+        store_for_explicit_dump = ProcessingQueue(
             calculations=nodes_explicitly_in_group.calculations,
             workflows=nodes_explicitly_in_group.workflows,
         )
 
-        if len(store_for_explicit_dump) > 0:
-            logger.info(f"Dumping {len(store_for_explicit_dump)} explicitly identified nodes for group '{group.label}'")
-            # These nodes are dumped into the group_content_root_path.
-            self._dump_nodes(
-                node_store=store_for_explicit_dump,
-                group_context=group,
-                current_dump_root_for_nodes=group_content_root_path,
-            )
-        else:
-            logger.debug(
-                f"No further explicitly identified nodes to dump in group '{group.label}' "
-                'after handling descendants.'
-            )
+        if len(store_for_explicit_dump) == 0:
+            return
 
-    def _handle_group_changes(self, group_changes: GroupChanges):
+        # These nodes are dumped into the group_content_root_path.
+        self._dump_nodes(
+            processing_queue=store_for_explicit_dump,
+            group_context=group,
+            current_dump_root_for_nodes=group_content_root_path,
+        )
+
+    def _handle_group_changes(self, group_changes: GroupChanges) -> None:
         """Handle changes in the group structure since the last dump.
 
         Apart from membership changes in the group-node mapping, this doesn't do much else actual work, as the actual
@@ -274,7 +275,6 @@ class CollectionDumpExecutor:
             for rename_info in group_changes.renamed:
                 old_path = rename_info.old_path
                 new_path = rename_info.new_path
-                logger.info(f"Handling rename for group {rename_info.uuid}: '{old_path.name}' -> '{new_path.name}'")
 
                 # 1. Rename directory on disk
                 if old_path.exists():
@@ -283,14 +283,10 @@ class CollectionDumpExecutor:
                         new_path.parent.mkdir(parents=True, exist_ok=True)
                         # os.rename is generally preferred for atomic rename if possible
                         os.rename(old_path, new_path)
-                        logger.debug(f"Renamed directory '{old_path}' to '{new_path}'")
                     except OSError as e:
                         logger.error(f'Failed to rename directory for group {rename_info.uuid}: {e}', exc_info=True)
                         # Decide whether to continue trying to update logger
-                        continue  # Skip logger update if rename failed
-                else:
-                    logger.warning(f"Old path '{old_path}' for renamed group {rename_info.uuid} not found on disk.")
-                    # Still attempt logger update, as the log might be inconsistent
+                        raise
 
                 # 2. Update logger paths
                 self.dump_tracker.update_paths(old_base_path=old_path, new_base_path=new_path)
@@ -311,23 +307,15 @@ class CollectionDumpExecutor:
 
     def _update_group_membership(self, mod_info: GroupModificationInfo, current_group_path_abs: Path) -> None:
         """Update dump structure for a group with added/removed nodes."""
-        msg = (
-            f'Updating group membership {mod_info.label}: {len(mod_info.nodes_added)} added, '
-            f'{len(mod_info.nodes_removed)} removed.'
-        )
-        logger.debug(msg)
-
-        group = orm.load_group(uuid=mod_info.uuid)
 
         # Node addition handling remains the same - process manager places it correctly
         for node_uuid in mod_info.nodes_added:
             try:
                 node = orm.load_node(uuid=node_uuid)
-            except (ValueError, NotExistent, MultipleObjectsError):
+            except (ValueError, NotExistent):
                 continue
 
             if not isinstance(node, orm.ProcessNode):
-                logger.debug(f'Node {node_uuid} is not an `orm.ProcessNode`.')
                 continue
 
             # Determine the correct target_path for the node within this group
@@ -342,7 +330,6 @@ class CollectionDumpExecutor:
 
         # Node removal handling uses the passed current_group_path_abs
         if self.config.organize_by_groups and mod_info.nodes_removed:
-            logger.debug(f"Handling {len(mod_info.nodes_removed)} nodes removed from group '{group.label}'")
             for node_uuid in mod_info.nodes_removed:
                 # Pass the correct current path for cleanup
                 self._remove_node_from_group_dir(current_group_path_abs, node_uuid)
@@ -375,14 +362,9 @@ class CollectionDumpExecutor:
             # Use exists() which works for files, dirs, and symlinks (even broken ones)
             if potential_path.exists():
                 found_path = potential_path
-                logger.debug(f'Found existing path for node {node_uuid} representation at: {found_path}')
-                break  # Stop searching once a potential candidate is found
+                break
 
         if not found_path:
-            logger.debug(
-                f"Node {node_uuid} representation ('{node_filename}') not found in standard "
-                f"group locations within '{group_path.name}'. No removal needed."
-            )
             return
 
         # --- Removal Logic applied to the found_path ---
@@ -404,11 +386,8 @@ class CollectionDumpExecutor:
             )
             return
 
-        log_suffix = f" from group directory '{group_path.name}'"
-
         # Proceed with removal based on what found_path is
         if found_path.is_symlink():
-            logger.info(f"Removing symlink '{found_path.name}'{log_suffix}.")
             try:
                 # Unlink works even if the symlink target doesn't exist
                 found_path.unlink()
@@ -419,22 +398,16 @@ class CollectionDumpExecutor:
 
         elif found_path.is_dir() and not is_target_dir:
             # It's a directory *within* the group structure (likely a copy), and NOT the original. Safe to remove.
-            logger.info(f"Removing directory '{found_path.name}'{log_suffix}.")
             # Ensure safe_delete_dir handles non-empty dirs and potential errors
             self.dump_paths.safe_delete_directory(path=found_path)
 
         elif is_target_dir:
             # The path found *is* the primary logged path.
             # Removing the node from a group shouldn't delete its primary data here.
-            logger.debug(
-                f'Node {node_uuid} representation found at {found_path} is the primary dump path. '
-                f'It is intentionally not deleted by this operation.'
-            )
+            pass
         else:
             # Exists, but isn't a symlink, and isn't a directory that's safe to remove
-            # (e.g., it's a file, or is_target_dir was True but it wasn't a dir?)
             logger.warning(
                 f'Path {found_path} exists but is not a symlink or a directory designated '
-                f'for removal in this context (is_dir={found_path.is_dir()}, is_target_dir={is_target_dir}). '
-                'Skipping removal.'
+                f'for removal in this context. Skipping removal.'
             )

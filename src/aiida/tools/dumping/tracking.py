@@ -184,6 +184,7 @@ class DumpTracker:
         self,
         dump_paths: DumpPaths,
         last_dump_time_str: str | None = None,
+        group_node_mapping: GroupNodeMapping | None = None,
     ) -> None:
         """
         Initialize the DumpTracker. Should typically be instantiated via `load`.
@@ -192,29 +193,24 @@ class DumpTracker:
         self.registries = {'calculations': DumpRegistry(), 'workflows': DumpRegistry(), 'groups': DumpRegistry()}
         # Store the raw string time from the log
         self._last_dump_time_str: Optional[str] = last_dump_time_str
+        self.group_node_mapping: GroupNodeMapping | None = group_node_mapping
 
+
+    # TODO: A bit weird here that group_node_mapping isn't part of the tracker, but instead a tuple is returned
     @classmethod
     def load(
         cls,
         dump_paths: DumpPaths,
-    ) -> Tuple['DumpTracker', GroupNodeMapping | None]:
-        """Load log data and mapping from the log file.
-
-        Returns:
-            A tuple containing:
-                - DumpLogStoreCollection: The loaded registrys.
-                - GroupNodeMapping | None: The loaded group mapping, or None if not found/error.
-                - str | None: The ISO timestamp string of the last dump, or None.
+    ) -> DumpTracker:
+        """Load log data from the log file to instantiate the DumpTracker.
 
         :param dump_paths: _description_
         :return: _description_
         """
         tracker = cls(dump_paths)
-        group_node_mapping = None
 
         if not dump_paths.tracking_log_file_path.exists():
-            logger.debug(f'Log file not found at {dump_paths.tracking_log_file_path}, returning empty log data.')
-            return tracker, group_node_mapping
+            return tracker
 
         try:
             with dump_paths.tracking_log_file_path.open('r', encoding='utf-8') as f:
@@ -225,7 +221,7 @@ class DumpTracker:
 
             # Load group-node mapping if present
             if 'group_node_mapping' in data:
-                group_node_mapping = GroupNodeMapping.from_dict(data['group_node_mapping'])
+                tracker.group_node_mapping = GroupNodeMapping.from_dict(data['group_node_mapping'])
 
             # Load registry data using deserialize_logs helper
             for registry_name in tracker.registries:
@@ -236,7 +232,7 @@ class DumpTracker:
         except (json.JSONDecodeError, OSError, ValueError) as e:
             logger.warning(f'Error loading dump log file {dump_paths.tracking_log_file_path}: {e!s}')
 
-        return tracker, group_node_mapping
+        return tracker
 
     def get_last_dump_time(self) -> datetime | None:
         """Parse and return the last dump time, if available."""

@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12' and sys_platform == 'win32'",
@@ -198,7 +197,7 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'pre-commit'", specifier = "~=1.13.0" },
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=1.0.0" },
     { name = "notebook", marker = "extra == 'notebook'", specifier = "~=6.1,>=6.1.5" },
-    { name = "numpy", specifier = "~=1.21" },
+    { name = "numpy", specifier = ">=1.21,<3" },
     { name = "packaging", marker = "extra == 'pre-commit'", specifier = "~=23.0" },
     { name = "paramiko", specifier = "~=3.0" },
     { name = "pg8000", marker = "extra == 'tests'", specifier = "~=1.13" },
@@ -250,7 +249,6 @@ requires-dist = [
     { name = "upf-to-json", specifier = "~=0.9.2" },
     { name = "wrapt", specifier = "~=1.11" },
 ]
-provides-extras = ["atomic-tools", "bpython", "docs", "notebook", "pre-commit", "rest", "ssh-kerberos", "tests", "tui"]
 
 [[package]]
 name = "aiida-export-migration-tests"

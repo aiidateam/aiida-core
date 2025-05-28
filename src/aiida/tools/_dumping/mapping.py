@@ -6,16 +6,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-"""GroupNodeMapping to handle group-node relationships."""
+"""GroupNodeMapping to handle group-node relationships during dumping."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Set
+from typing import Dict, List, Set
 
 from aiida import orm
-from aiida.tools.dumping.utils import GroupChanges, GroupInfo, GroupModificationInfo, NodeMembershipChange
+from aiida.tools._dumping.utils import GroupChanges, GroupInfo, GroupModificationInfo, NodeMembershipChange
 
 
 @dataclass
@@ -29,7 +28,12 @@ class GroupNodeMapping:
     node_to_groups: Dict[str, Set[str]] = field(default_factory=dict)
 
     def _add_node_to_group(self, group_uuid: str, node_uuid: str) -> None:
-        """Add a node to a group in the mapping."""
+        """Add a node to a group in the mapping.
+
+        :param group_uuid: The group to add to
+        :param node_uuid: The node to be added
+        """
+
         # Add to group->nodes mapping
         if group_uuid not in self.group_to_nodes:
             self.group_to_nodes[group_uuid] = set()
@@ -41,7 +45,12 @@ class GroupNodeMapping:
         self.node_to_groups[node_uuid].add(group_uuid)
 
     def _remove_node_from_group(self, group_uuid: str, node_uuid: str) -> None:
-        """Remove a node from a group in the mapping."""
+        """Remove a node from a group in the mapping.
+
+        :param group_uuid: The group from which the node should be removed
+        :param node_uuid: The node to be removed
+        """
+
         # Remove from group->nodes mapping
         if group_uuid in self.group_to_nodes and node_uuid in self.group_to_nodes[group_uuid]:
             self.group_to_nodes[group_uuid].remove(node_uuid)
@@ -57,7 +66,10 @@ class GroupNodeMapping:
                 del self.node_to_groups[node_uuid]
 
     def _remove_group(self, group_uuid: str) -> None:
-        """Remove a group and all its node associations."""
+        """Remove a group and all its node associations.
+
+        :param group_uuid: The node to be removed
+        """
         if group_uuid not in self.group_to_nodes:
             return
 
@@ -85,46 +97,45 @@ class GroupNodeMapping:
 
     @classmethod
     def from_dict(cls, data: Dict) -> 'GroupNodeMapping':
-        """Create from serialized dictionary."""
+        """Create from serialized dictionary.
+
+        :param data: Dictionary representation of the mapping
+        """
         mapping = cls()
 
-        # Handle old format (backward compatibility)
+        # Load group_to_nodes mapping if present
         if 'group_to_nodes' in data and isinstance(data['group_to_nodes'], dict):
             for group_uuid, node_uuids in data['group_to_nodes'].items():
                 for node_uuid in node_uuids:
-                    mapping._add_node_to_group(group_uuid, node_uuid)
+                    # Just add to the group_to_nodes mapping, we'll rebuild node_to_groups after
+                    if group_uuid not in mapping.group_to_nodes:
+                        mapping.group_to_nodes[group_uuid] = set()
+                    mapping.group_to_nodes[group_uuid].add(node_uuid)
 
-        # Handle new format with both mappings
-        elif isinstance(data, dict):
-            # Load group_to_nodes mapping if present
-            if 'group_to_nodes' in data and isinstance(data['group_to_nodes'], dict):
-                for group_uuid, node_uuids in data['group_to_nodes'].items():
-                    for node_uuid in node_uuids:
-                        # Just add to the group_to_nodes mapping, we'll rebuild node_to_groups after
-                        if group_uuid not in mapping.group_to_nodes:
-                            mapping.group_to_nodes[group_uuid] = set()
-                        mapping.group_to_nodes[group_uuid].add(node_uuid)
-
-            # Load node_to_groups mapping if present (or rebuild it)
-            if 'node_to_groups' in data and isinstance(data['node_to_groups'], dict):
-                for node_uuid, group_uuids in data['node_to_groups'].items():
-                    for group_uuid in group_uuids:
-                        if node_uuid not in mapping.node_to_groups:
-                            mapping.node_to_groups[node_uuid] = set()
-                        mapping.node_to_groups[node_uuid].add(group_uuid)
-            else:
-                # If node_to_groups is missing, rebuild it from group_to_nodes
-                for group_uuid, node_uuids in mapping.group_to_nodes.items():
-                    for node_uuid in node_uuids:
-                        if node_uuid not in mapping.node_to_groups:
-                            mapping.node_to_groups[node_uuid] = set()
-                        mapping.node_to_groups[node_uuid].add(group_uuid)
+        # Load node_to_groups mapping if present (or rebuild it)
+        if 'node_to_groups' in data and isinstance(data['node_to_groups'], dict):
+            for node_uuid, group_uuids in data['node_to_groups'].items():
+                for group_uuid in group_uuids:
+                    if node_uuid not in mapping.node_to_groups:
+                        mapping.node_to_groups[node_uuid] = set()
+                    mapping.node_to_groups[node_uuid].add(group_uuid)
+        else:
+            # If node_to_groups is missing, rebuild it from group_to_nodes
+            for group_uuid, node_uuids in mapping.group_to_nodes.items():
+                for node_uuid in node_uuids:
+                    if node_uuid not in mapping.node_to_groups:
+                        mapping.node_to_groups[node_uuid] = set()
+                    mapping.node_to_groups[node_uuid].add(group_uuid)
 
         return mapping
 
     @classmethod
     def build_from_db(cls) -> 'GroupNodeMapping':
-        """Build a mapping from the current database state."""
+        """Build a mapping from the current database state.
+
+        :return: Populated ``GroupNodeMapping`` instance
+        """
+
         mapping = cls()
 
         # Query all groups and their nodes
@@ -138,17 +149,15 @@ class GroupNodeMapping:
         return mapping
 
     def diff(self, other: 'GroupNodeMapping') -> GroupChanges:
-        """
-        Calculate differences between this mapping and another.
+        """Calculate differences between this mapping and another.
 
-        Returns:
-            GroupChangeInfo object with detailed group changes.
+        :param other: Other ``GroupNodeMapping`` instance to compare to
+        :return: Populated ``GroupChanges`` object
         """
-        # TODO: Seems like when nodes added to a group, this group is still presented as "new"
-        deleted_groups_info = []
-        new_groups_info = []
-        modified_groups_info = []
-        node_membership_changes = {}
+        deleted_groups_info: List[GroupInfo] = []
+        new_groups_info: List[GroupInfo] = []
+        modified_groups_info: List[GroupModificationInfo] = []
+        node_membership_changes: Dict[str, NodeMembershipChange] = {}
 
         self_group_uuids = set(self.group_to_nodes.keys())
         other_group_uuids = set(other.group_to_nodes.keys())
@@ -159,7 +168,7 @@ class GroupNodeMapping:
                 GroupInfo(
                     uuid=group_uuid,
                     node_count=len(self.group_to_nodes.get(group_uuid, set())),
-                    # as group deleted, cannot be loaded from DB
+                    # as group deleted, cannot be loaded from DB, so no label can be set via
                     # label=orm.load_group(group_uuid).label
                 )
             )
@@ -204,9 +213,11 @@ class GroupNodeMapping:
                     node_membership_changes[node_uuid].removed_from.append(group_uuid)
 
         # Construct and return the GroupChangeInfo object
-        return GroupChanges(
+        group_changes = GroupChanges(
             deleted=deleted_groups_info,
             new=new_groups_info,
             modified=modified_groups_info,
             node_membership=node_membership_changes,
         )
+
+        return group_changes

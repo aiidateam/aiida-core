@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Dumper facades serving as public API for data dumping feature."""
+"""ProcessDumper facade kept as public API for backwards compatibility."""
 
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ from pathlib import Path
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
-from aiida.tools.dumping.config import DumpConfig
-from aiida.tools.dumping.engine import DumpEngine
-from aiida.tools.dumping.utils import DumpPaths
+from aiida.tools._dumping.config import DumpConfig
+from aiida.tools._dumping.engine import DumpEngine
+from aiida.tools._dumping.utils import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.facades')
 
@@ -33,14 +33,14 @@ class ProcessDumper:
     ) -> None:
         """Initialize the ProcessDumper, which handles exporting a single AiiDA ProcessNode.
 
-        :param process: The ``ProcessNode`` to dump, either given as ORM instance, or its PK or UUID.
+        :param process: The ``ProcessNode`` to dump
         :param config: An optional ``DumpConfig`` object that controls what data to include in the dump.
             If ``None``, default dump settings are used.
         :param output_path: Optional base path to write the dump to. Can be a string or ``Path``.
             If ``None``, a default path based on the profile name will be used.
         """
 
-        self.process_node = process_node
+        self.process_node: orm.ProcessNode = process_node
         self.config: DumpConfig = config if config is not None else DumpConfig()
         self.base_output_path: Path
 
@@ -53,8 +53,6 @@ class ProcessDumper:
 
     def dump(self) -> None:
         """Perform the dump operation by invoking the engine."""
-        # Instantiate engine for dump operation rather than on construction such that
-        # Successive incremental dumps can be achieved with one instance
         warn_deprecation(
             'The `ProcessDumper` class is deprecated. Use `orm.ProcessNode.dump()` instead.',
             version=3,

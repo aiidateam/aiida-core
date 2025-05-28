@@ -17,15 +17,15 @@ from typing import TYPE_CHECKING, Optional
 from aiida import orm
 from aiida.common import AIIDA_LOGGER, NotExistent
 from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm
-from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.tracking import DumpRecord, DumpTracker
-from aiida.tools.dumping.utils import DumpChanges, DumpPaths, ProcessingQueue
+from aiida.tools._dumping.detect import DumpChangeDetector
+from aiida.tools._dumping.tracking import DumpRecord, DumpTracker
+from aiida.tools._dumping.utils import DumpChanges, DumpPaths, ProcessingQueue
 
 if TYPE_CHECKING:
-    from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.executors.process import ProcessDumpExecutor
-    from aiida.tools.dumping.mapping import GroupNodeMapping
-    from aiida.tools.dumping.utils import GroupChanges, GroupModificationInfo
+    from aiida.tools._dumping.config import DumpConfig
+    from aiida.tools._dumping.executors.process import ProcessDumpExecutor
+    from aiida.tools._dumping.mapping import GroupNodeMapping
+    from aiida.tools._dumping.utils import GroupChanges, GroupModificationInfo
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.executors.collection')
 
@@ -204,7 +204,7 @@ class CollectionDumpExecutor:
 
         # Update stats for this specific group.
         if record := self.dump_tracker.get_entry(group.uuid):
-            record._update_stats(group_content_path)
+            record.update_stats(group_content_path)
         else:
             logger.warning(f'Log entry not found for group UUID {group}')
 
@@ -363,7 +363,12 @@ class CollectionDumpExecutor:
             try:
                 # Unlink works even if the symlink target doesn't exist
                 found_path.unlink()
-                self.dump_tracker.remove_symlink_from_log_entry(node_uuid, found_path)
+
+                # Remove symlink reference from log entry
+                entry = self.dump_tracker.get_entry(node_uuid)
+                if entry:
+                    entry.remove_symlink(found_path)
+
             except OSError as e:
                 logger.error(f'Failed to remove symlink {found_path}: {e}')
 

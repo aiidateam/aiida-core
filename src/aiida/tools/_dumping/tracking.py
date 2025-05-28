@@ -6,6 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Infrastructure to keep a log/tracking of the progress during and between dumping operations."""
 
 from __future__ import annotations
 
@@ -18,8 +19,8 @@ from typing import Any, Dict, Generator, List, Literal, Optional
 
 from aiida.common import timezone
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.mapping import GroupNodeMapping
-from aiida.tools.dumping.utils import DumpPaths
+from aiida.tools._dumping.mapping import GroupNodeMapping
+from aiida.tools._dumping.utils import DumpPaths, DumpTimes
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.tracking')
 
@@ -80,9 +81,9 @@ class DumpRecord:
         if path not in self.symlinks:
             self.symlinks.append(path)
 
-    def remove_symlink(self, path_to_remove: Path) -> bool:
+    def remove_symlink(self, path: Path) -> bool:
         """Remove a symlink path from this log entry, comparing resolved paths."""
-        resolved_path_to_remove = path_to_remove.resolve()
+        resolved_path_to_remove = path.resolve()
         original_length = len(self.symlinks)
         # Filter out paths that resolve to the same location
         self.symlinks = [
@@ -104,7 +105,7 @@ class DumpRecord:
             return True
         return False
 
-    def _update_stats(self, path: Optional[Path]) -> None:
+    def update_stats(self, path: Optional[Path]) -> None:
         """Update directory stats from the path of the DumpRecord or an optional given path."""
         if not path:
             path = self.path
@@ -161,28 +162,6 @@ class DumpRegistry:
             registry.entries[uuid] = DumpRecord.from_dict(entry_data)
         return registry
 
-    def update_paths(self, old_str: str, new_str: str) -> None:
-        """Update paths by replacing substrings."""
-        # Keep this method as it operates solely on paths within the registry
-        for uuid, entry in self.entries.items():
-            path_str = str(entry.path)
-            if old_str in path_str:
-                entry.path = Path(path_str.replace(old_str, new_str))
-            # Update symlinks
-            for i, symlink_path in enumerate(entry.symlinks):
-                symlink_str = str(symlink_path)
-                if old_str in symlink_str:
-                    entry.symlinks[i] = Path(symlink_str.replace(old_str, new_str))
-            # Update duplicates
-            updated_duplicates = []
-            for duplicate_path in entry.duplicates:
-                duplicate_str = str(duplicate_path)
-                if old_str in duplicate_str:
-                    updated_duplicates.append(Path(duplicate_str.replace(old_str, new_str)))
-                else:
-                    updated_duplicates.append(duplicate_path)
-            entry.duplicates = updated_duplicates
-
 
 class DumpTracker:
     """Handles loading, saving, and accessing dump log data."""
@@ -190,68 +169,55 @@ class DumpTracker:
     def __init__(
         self,
         dump_paths: DumpPaths,
-        last_dump_time_str: str | None = None,
-        group_node_mapping: GroupNodeMapping | None = None,
+        dump_times: DumpTimes,
+        previous_mapping: GroupNodeMapping | None = None,
+        current_mapping: GroupNodeMapping | None = None,
     ) -> None:
         """
         Initialize the DumpTracker. Should typically be instantiated via `load`.
         """
-        self.dump_paths = dump_paths
-        self.registries = {'calculations': DumpRegistry(), 'workflows': DumpRegistry(), 'groups': DumpRegistry()}
-        # Store the raw string time from the log
-        self._last_dump_time_str: Optional[str] = last_dump_time_str
-        self.group_node_mapping: GroupNodeMapping = group_node_mapping or GroupNodeMapping()
+        self.dump_paths: DumpPaths = dump_paths
+        self.registries: Dict[str, DumpRegistry] = {
+            'calculations': DumpRegistry(),
+            'workflows': DumpRegistry(),
+            'groups': DumpRegistry(),
+        }
+        self.dump_times: DumpTimes = dump_times
+        self.previous_mapping: GroupNodeMapping = previous_mapping or GroupNodeMapping()
+        self.current_mapping: GroupNodeMapping = current_mapping or GroupNodeMapping()
 
     @classmethod
-    def load(
-        cls,
-        dump_paths: DumpPaths,
-    ) -> DumpTracker:
+    def load(cls, dump_paths: DumpPaths) -> DumpTracker:
         """Load log data from the log file to instantiate the DumpTracker.
 
-        :param dump_paths: _description_
-        :return: _description_
+        :param dump_paths: DumpPaths instance
+        :return: Loaded DumpTracker instance
         """
-        tracker = cls(dump_paths)
+        data = {}
 
-        if not dump_paths.tracking_log_file_path.exists():
-            return tracker
+        # Load data from file if it exists
+        if dump_paths.tracking_log_file_path.exists():
+            try:
+                data = json.loads(dump_paths.tracking_log_file_path.read_text(encoding='utf-8'))
+            except (json.JSONDecodeError, OSError, ValueError) as e:
+                logger.warning(f'Error loading dump log file {dump_paths.tracking_log_file_path}: {e!s}')
 
-        try:
-            with dump_paths.tracking_log_file_path.open('r', encoding='utf-8') as f:
-                data = json.load(f)
+        # Create DumpTimes and tracker
+        dump_times = DumpTimes.from_last_log_time(data.get('last_dump_time'))
 
-            # Load last dump time string
-            tracker._last_dump_time_str = data.get('last_dump_time')
+        # Load previous group-node-mapping if present
+        previous_mapping = None
+        if 'group_node_mapping' in data:
+            previous_mapping = GroupNodeMapping.from_dict(data['group_node_mapping'])
 
-            # Load group-node mapping if present
-            if 'group_node_mapping' in data:
-                tracker.group_node_mapping = GroupNodeMapping.from_dict(data['group_node_mapping'])
+        tracker = cls(dump_paths, dump_times, previous_mapping=previous_mapping)
 
-            # Load registry data using deserialize_logs helper
-            for registry_name in tracker.registries:
-                if registry_name in data:
-                    registry_data = data[registry_name]
-                    tracker.registries[registry_name] = tracker._deserialize_registry(registry_data)
-
-        except (json.JSONDecodeError, OSError, ValueError) as e:
-            logger.warning(f'Error loading dump log file {dump_paths.tracking_log_file_path}: {e!s}')
+        # Load registry data
+        for registry_name in tracker.registries:
+            if registry_name in data:
+                tracker.registries[registry_name] = tracker.deserialize_registry(data[registry_name])
 
         return tracker
-
-    def get_last_dump_time(self) -> datetime | None:
-        """Parse and return the last dump time, if available."""
-        if self._last_dump_time_str:
-            try:
-                return datetime.fromisoformat(self._last_dump_time_str)
-            except ValueError:
-                logger.warning(f'Could not parse last dump time string: {self._last_dump_time_str}')
-        return None
-
-    # def add_entry(self, registry_key: RegistryNameType, uuid: str, entry: DumpRecord) -> None:
-    #     """Add a log entry for a node to the specified registry."""
-    #     registry = self.registries[registry_key]
-    #     registry.add_entry(uuid, entry)
 
     def del_entry(self, uuid: str) -> bool:
         """Delete a log entry by UUID (automatically finds the correct registry)."""
@@ -260,35 +226,25 @@ class DumpTracker:
                 return registry.del_entry(uuid)
         return False
 
-    # TODO: This currently requires the dump time as argument, not sure if this is what I want
-    def save(
-        self,
-        current_dump_time: datetime,
-        group_node_mapping: GroupNodeMapping | None = None,
-    ) -> None:
+    def save(self) -> None:
         """Save the current log state and mapping to the JSON file."""
         log_dict: dict[str, Any] = {
-            registry_name: self._serialize_registry(registry) for registry_name, registry in self.registries.items()
+            registry_name: self.serialize_registry(registry) for registry_name, registry in self.registries.items()
         }
-        log_dict['last_dump_time'] = current_dump_time.isoformat()
-
-        if group_node_mapping:
-            log_dict['group_node_mapping'] = group_node_mapping.to_dict()
+        log_dict['last_dump_time'] = self.dump_times.current.isoformat()
+        log_dict['group_node_mapping'] = self.current_mapping.to_dict()
 
         try:
-            with self.dump_paths.tracking_log_file_path.open('w', encoding='utf-8') as f:
-                json.dump(log_dict, f, indent=4)
-            logger.debug(f'Dump log saved to {self.dump_paths.tracking_log_file_path}')
+            self.dump_paths.tracking_log_file_path.write_text(json.dumps(log_dict, indent=4), encoding='utf-8')
         except OSError as e:
             logger.error(f'Failed to save dump log to {self.dump_paths.tracking_log_file_path}: {e!s}')
 
-    def _serialize_registry(self, container: DumpRegistry) -> Dict:
+    def serialize_registry(self, container: DumpRegistry) -> Dict:
         """Serialize log entries to a dictionary format relative to dump parent."""
         serialized = {}
         for uuid, entry in container.entries.items():
             try:
-                # Use the DumpLog's to_dict method which now includes new fields
-                entry_dict = entry.to_dict()  # <-- This dict now contains all fields
+                entry_dict = entry.to_dict()
 
                 # Convert paths to relative strings for serialization
                 # Ensure keys exist before attempting conversion
@@ -316,7 +272,7 @@ class DumpTracker:
                 serialized[uuid] = entry.to_dict()  # Store absolute paths using full dict
         return serialized
 
-    def _deserialize_registry(self, data: Dict) -> DumpRegistry:
+    def deserialize_registry(self, data: Dict) -> DumpRegistry:
         """Deserialize log entries using DumpLog.from_dict and make paths absolute."""
         container = DumpRegistry()
         for uuid, entry_data in data.items():
@@ -350,20 +306,15 @@ class DumpTracker:
             return registry.entries[uuid]
         return None
 
-    def update_paths(self, old_base_path: Path, new_base_path: Path) -> int:
-        """Update all paths across all registrys if they start with old_base_path.
+    def update_paths(self, old_base_path: Path, new_base_path: Path) -> None:
+        """Update all paths across all registries if they start with old_base_path.
 
         Replaces the old_base_path prefix with new_base_path.
 
-        Args:
-            old_base_path: The absolute base path prefix to find.
-            new_base_path: The absolute base path prefix to replace with.
-
-        Returns:
-            The total number of path entries (primary path, symlinks, duplicates) updated.
+        :param old_base_path: The absolute base path prefix to find
+        :param new_base_path: The absolute base path prefix to replace with
+        :return: The total number of path entries (primary path, symlinks, duplicates) updated
         """
-        update_count = 0
-        logger.debug(f"Updating paths in logger: Replacing prefix '{old_base_path}' with '{new_base_path}'")
 
         # Ensure paths are absolute and resolved for reliable comparison
         try:
@@ -371,11 +322,10 @@ class DumpTracker:
             new_resolved = new_base_path.resolve()
         except OSError as e:
             logger.error(f'Error resolving paths for update: {e}. Aborting path update.')
-            return 0
+            return
 
         for registry in self.registries.values():
             for uuid, entry in registry.entries.items():
-                updated_entry = False
                 # Update entry.path
                 try:
                     resolved_entry_path = entry.path.resolve()
@@ -383,9 +333,7 @@ class DumpTracker:
                         relative_part = resolved_entry_path.relative_to(old_resolved)
                         new_path = new_resolved / relative_part
                         if entry.path != new_path:
-                            logger.debug(f"Updating primary path for {uuid}: '{entry.path}' -> '{new_path}'")
                             entry.path = new_path
-                            updated_entry = True
                 except (OSError, ValueError):  # Handle resolve() errors or path not relative
                     logger.warning(f'Could not compare/update primary path for {uuid}: {entry.path}')
 
@@ -398,9 +346,6 @@ class DumpTracker:
                             relative_part = resolved_symlink.relative_to(old_resolved)
                             new_symlink = new_resolved / relative_part
                             updated_symlinks.append(new_symlink)
-                            if symlink_path != new_symlink:
-                                logger.debug(f"Updating symlink for {uuid}: '{symlink_path}' -> '{new_symlink}'")
-                                updated_entry = True
                         else:
                             updated_symlinks.append(symlink_path)  # Keep unchanged
                     except (OSError, ValueError):
@@ -418,11 +363,6 @@ class DumpTracker:
                             relative_part = resolved_duplicate.relative_to(old_resolved)
                             new_duplicate = new_resolved / relative_part
                             updated_duplicates.append(new_duplicate)
-                            if duplicate_path != new_duplicate:
-                                logger.debug(
-                                    f"Updating duplicate path for {uuid}: '{duplicate_path}' -> '{new_duplicate}'"
-                                )
-                                updated_entry = True
                         else:
                             updated_duplicates.append(duplicate_path)
                     except (OSError, ValueError):
@@ -431,33 +371,9 @@ class DumpTracker:
 
                 entry.duplicates = updated_duplicates
 
-                if updated_entry:
-                    update_count += 1  # Count updated entries, not individual paths
-
-        logger.info(f'Updated paths in {update_count} log entries.')
-        return update_count
-
-    def remove_symlink_from_log_entry(self, node_uuid: str, symlink_path_to_remove: Path) -> bool:
-        """Finds the log entry for a node and removes a specific symlink path from it."""
-        registry = self.get_registry_from_entry(node_uuid)
-        if not registry:
-            logger.warning(f'Cannot find registry for node UUID {node_uuid} to remove symlink.')
-            return False
-        entry = registry.get_entry(node_uuid)
-        if not entry:
-            logger.warning(f'Cannot find log entry for node UUID {node_uuid} to remove symlink.')
-            return False
-
-        removed = entry.remove_symlink(symlink_path_to_remove)
-        if removed:
-            logger.debug(
-                f"Removed symlink reference '{symlink_path_to_remove.name}' from log entry for node {node_uuid}."
-            )
-        else:
-            logger.debug(
-                f"Symlink reference '{symlink_path_to_remove.name}' not found in log entry for node {node_uuid}."
-            )
-        return removed
+    def set_current_mapping(self, current_mapping: GroupNodeMapping) -> None:
+        """Set the current mapping (to be saved)."""
+        self.current_mapping = current_mapping
 
     def iter_by_type(
         self,

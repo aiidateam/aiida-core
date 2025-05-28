@@ -14,8 +14,8 @@ import yaml
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.tools.dumping.config import DumpConfig
-from aiida.tools.dumping.executors.process import NodeRepoIoDumper, WorkflowWalker
+from aiida.tools._dumping.config import DumpConfig
+from aiida.tools._dumping.executors.process import NodeRepoIoDumper, WorkflowWalker
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

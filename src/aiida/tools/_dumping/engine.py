@@ -17,12 +17,17 @@ from typing import Union
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
 from aiida.manage.configuration.profile import Profile
-from aiida.tools.dumping.config import DumpConfig, DumpMode
-from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.executors import DeletionExecutor, GroupDumpExecutor, ProcessDumpExecutor, ProfileDumpExecutor
-from aiida.tools.dumping.mapping import GroupNodeMapping
-from aiida.tools.dumping.tracking import DumpTracker
-from aiida.tools.dumping.utils import DumpChanges, DumpPaths, DumpTimes
+from aiida.tools._dumping.config import DumpConfig, DumpMode
+from aiida.tools._dumping.detect import DumpChangeDetector
+from aiida.tools._dumping.executors import (
+    DeletionExecutor,
+    GroupDumpExecutor,
+    ProcessDumpExecutor,
+    ProfileDumpExecutor,
+)
+from aiida.tools._dumping.mapping import GroupNodeMapping
+from aiida.tools._dumping.tracking import DumpTracker
+from aiida.tools._dumping.utils import DumpChanges, DumpPaths, DumpTimes
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.engine')
 
@@ -56,9 +61,9 @@ class DumpEngine:
         # by cleaning the previous log file
         self.dump_paths._prepare_directory(path_to_prepare=base_output_path, is_leaf_node_dir=True)
 
-        # Load log data, stored mapping, and last dump time string from file
+        # Load log data, stored mapping, and dump times from file
         self.dump_tracker = DumpTracker.load(self.dump_paths)
-        self.dump_times = DumpTimes.from_last_log_time(self.dump_tracker._last_dump_time_str)
+        self.dump_times = self.dump_tracker.dump_times
 
         # Initialize detector for changes
         self.detector = DumpChangeDetector(
@@ -72,21 +77,6 @@ class DumpEngine:
         This is only computed when needed (for group/profile dumps) and cached for reuse.
         """
         return GroupNodeMapping.build_from_db()
-
-    def _log_dump_start(self) -> None:
-        """Log the start of a dump operation."""
-
-        dump_start_report = ''
-        if isinstance(self.dump_target_entity, orm.ProcessNode):
-            dump_start_report = f'process node (PK: {self.dump_target_entity.pk})'
-        elif isinstance(self.dump_target_entity, orm.Group):
-            dump_start_report = f'group `{self.dump_target_entity.label}` (PK: {self.dump_target_entity.pk})'
-        elif isinstance(self.dump_target_entity, Profile):
-            dump_start_report = f'profile `{self.dump_target_entity.name}`'
-
-        msg = f'Starting dump of {dump_start_report} in {self.config.dump_mode.name.lower()} mode.'
-        if self.config.dump_mode != DumpMode.DRY_RUN:
-            logger.report(msg)
 
     def dump(self) -> None:
         """Selects and executes the appropriate dump strategy based on the self.dump_target_entity."""
@@ -110,14 +100,23 @@ class DumpEngine:
         elif isinstance(self.dump_target_entity, Profile):
             self._dump_profile()
 
-        # Save final dump log for group and profile dumps (process dumps don't return mapping)
-        if isinstance(self.dump_target_entity, (orm.Group, Profile)):
-            current_mapping = self.current_mapping
-        else:
-            current_mapping = None
-
         logger.report(f'Saving final dump log to file `{DumpPaths.TRACKING_LOG_FILE_NAME}`.')
-        self.dump_tracker.save(current_dump_time=self.dump_times.current, group_node_mapping=current_mapping)
+        self.dump_tracker.save()
+
+    def _log_dump_start(self) -> None:
+        """Log the start of a dump operation."""
+
+        dump_start_report = ''
+        if isinstance(self.dump_target_entity, orm.ProcessNode):
+            dump_start_report = f'process node (PK: {self.dump_target_entity.pk})'
+        elif isinstance(self.dump_target_entity, orm.Group):
+            dump_start_report = f'group `{self.dump_target_entity.label}` (PK: {self.dump_target_entity.pk})'
+        elif isinstance(self.dump_target_entity, Profile):
+            dump_start_report = f'profile `{self.dump_target_entity.name}`'
+
+        msg = f'Starting dump of {dump_start_report} in {self.config.dump_mode.name.lower()} mode.'
+        if self.config.dump_mode != DumpMode.DRY_RUN:
+            logger.report(msg)
 
     def _dump_process(self) -> None:
         """Dump a single ``orm.ProcessNode``."""
@@ -134,9 +133,12 @@ class DumpEngine:
     def _dump_group(self) -> None:
         """Dump a group and its associated nodes."""
         assert isinstance(self.dump_target_entity, orm.Group)
+
+        self.dump_tracker.set_current_mapping(self.current_mapping)
         node_changes = self.detector._detect_node_changes(group=self.dump_target_entity)
+
         group_changes = self.detector._detect_group_changes(
-            previous_mapping=self.dump_tracker.group_node_mapping,
+            previous_mapping=self.dump_tracker.previous_mapping,
             current_mapping=self.current_mapping,
             specific_group_uuid=self.dump_target_entity.uuid,
         )
@@ -152,7 +154,7 @@ class DumpEngine:
                 dump_paths=self.dump_paths,
                 dump_tracker=self.dump_tracker,
                 dump_changes=all_changes,
-                previous_mapping=self.dump_tracker.group_node_mapping,
+                previous_mapping=self.dump_tracker.previous_mapping,
             )
             deletion_manager._handle_deleted_entities()
 
@@ -179,9 +181,10 @@ class DumpEngine:
             self.dump_paths._safe_delete_directory(path=self.dump_paths.base_output_path)
             return None
 
+        self.dump_tracker.set_current_mapping(self.current_mapping)
         node_changes = self.detector._detect_node_changes()
         group_changes = self.detector._detect_group_changes(
-            previous_mapping=self.dump_tracker.group_node_mapping, current_mapping=self.current_mapping
+            previous_mapping=self.dump_tracker.previous_mapping, current_mapping=self.current_mapping
         )
         all_changes = DumpChanges(nodes=node_changes, groups=group_changes)
 
@@ -199,7 +202,7 @@ class DumpEngine:
                 dump_paths=self.dump_paths,
                 dump_tracker=self.dump_tracker,
                 dump_changes=all_changes,
-                previous_mapping=self.dump_tracker.group_node_mapping,
+                previous_mapping=self.dump_tracker.previous_mapping,
             )
             deletion_manager._handle_deleted_entities()
 

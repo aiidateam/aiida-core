@@ -26,7 +26,7 @@ from ..node import Node, NodeLinks
 if TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, Process
     from aiida.engine.processes.builder import ProcessBuilder
-    from aiida.tools.dumping.config import DumpConfig
+    from aiida.tools._dumping.config import DumpConfig
 
 __all__ = ('ProcessNode',)
 
@@ -607,9 +607,9 @@ class ProcessNode(Sealable, Node):
         return caller
 
     def dump(self, config: Optional['DumpConfig'] = None, output_path: Optional[Union[str, Path]] = None) -> Path:
-        from aiida.tools.dumping.config import DumpConfig
-        from aiida.tools.dumping.engine import DumpEngine
-        from aiida.tools.dumping.utils import DumpPaths
+        from aiida.tools._dumping.config import DumpConfig
+        from aiida.tools._dumping.engine import DumpEngine
+        from aiida.tools._dumping.utils import DumpPaths
 
         if not config:
             config = DumpConfig()

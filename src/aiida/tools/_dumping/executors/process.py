@@ -24,13 +24,13 @@ from aiida.common import LinkType, timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
-from aiida.tools.dumping.tracking import DumpRecord
-from aiida.tools.dumping.utils import ORM_TYPE_TO_REGISTRY, DumpPaths, RegistryNameType
+from aiida.tools._dumping.tracking import DumpRecord
+from aiida.tools._dumping.utils import ORM_TYPE_TO_REGISTRY, DumpPaths, RegistryNameType
 
 if TYPE_CHECKING:
-    from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.tracking import DumpTracker
-    from aiida.tools.dumping.utils import DumpTimes
+    from aiida.tools._dumping.config import DumpConfig
+    from aiida.tools._dumping.tracking import DumpTracker
+    from aiida.tools._dumping.utils import DumpTimes
 
 __all__ = ('NodeMetadataWriter', 'NodeRepoIoDumper', 'ProcessDumpExecutor', 'ReadmeGenerator', 'WorkflowWalker')
 
@@ -235,7 +235,7 @@ class ProcessDumpExecutor:
         self._dump_node_content(process_node, output_path)
 
         # Calculate and update stats for the new log entry
-        dump_record._update_stats(path=output_path)
+        dump_record.update_stats(path=output_path)
 
     def _execute_skip(self) -> None:
         """Action: Skip dumping this node."""
@@ -297,7 +297,7 @@ class ProcessDumpExecutor:
         self._dump_node_content(process_node, output_path)
 
         # Update stats on the existing log entry using the primary path
-        existing_dump_record._update_stats(path=output_path)
+        existing_dump_record.update_stats(path=output_path)
 
     def _execute_dump_duplicate(
         self, process_node: orm.ProcessNode, output_path: Path, existing_dump_record: DumpRecord

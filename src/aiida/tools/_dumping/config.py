@@ -6,6 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Main configuration infrastructure for data dumping."""
 
 from __future__ import annotations
 
@@ -33,7 +34,7 @@ class DumpMode(Enum):
     DRY_RUN = auto()
 
 
-class GroupDumpScope(Enum):
+class _GroupDumpScope(Enum):
     IN_GROUP = auto()
     ANY = auto()
     NO_GROUP = auto()
@@ -106,8 +107,8 @@ class DumpConfig(BaseModel):
     filter_by_last_dump_time: bool = True
     only_top_level_calcs: bool = True
     only_top_level_workflows: bool = True
-    group_scope: GroupDumpScope = Field(
-        default=GroupDumpScope.IN_GROUP,
+    group_scope: _GroupDumpScope = Field(
+        default=_GroupDumpScope.IN_GROUP,
         exclude=True,  # Exclude from standard serialization, internal class
     )
 

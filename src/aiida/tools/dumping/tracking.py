@@ -104,7 +104,7 @@ class DumpRecord:
             return True
         return False
 
-    def update_stats(self, path: Optional[Path]) -> None:
+    def _update_stats(self, path: Optional[Path]) -> None:
         """Update directory stats from the path of the DumpRecord or an optional given path."""
         if not path:
             path = self.path

@@ -54,7 +54,7 @@ class DumpEngine:
 
         # Need to prepare directory here, as if  `overwrite` selected, the tracker instance should be empty
         # by cleaning the previous log file
-        self.dump_paths.prepare_directory(path_to_prepare=base_output_path, is_leaf_node_dir=True)
+        self.dump_paths._prepare_directory(path_to_prepare=base_output_path, is_leaf_node_dir=True)
 
         # Load log data, stored mapping, and last dump time string from file
         self.dump_tracker = DumpTracker.load(self.dump_paths)
@@ -127,7 +127,7 @@ class DumpEngine:
         # For a single ProcessNode, its dump root is the base_output_path.
         # ProcessManager uses DumpPaths to place content within this root.
         self.process_dump_executor.dump(
-            process_node=self.dump_target_entity, target_path=self.dump_paths.base_output_path
+            process_node=self.dump_target_entity, output_path=self.dump_paths.base_output_path
         )
         self.process_dump_executor.readme_generator._generate(self.dump_target_entity, self.dump_paths.base_output_path)
 
@@ -176,7 +176,7 @@ class DumpEngine:
             # NOTE: Hack for now, delete empty directory again.
             # Ideally don't even create in the first place.
             # Need to check again where it is actually created.
-            self.dump_paths.safe_delete_directory(path=self.dump_paths.base_output_path)
+            self.dump_paths._safe_delete_directory(path=self.dump_paths.base_output_path)
             return None
 
         node_changes = self.detector._detect_node_changes()

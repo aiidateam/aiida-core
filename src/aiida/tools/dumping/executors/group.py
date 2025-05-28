@@ -22,7 +22,7 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.executors.group')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.executors import CollectionDumpExecutor, ProcessDumpExecutor
+    from aiida.tools.dumping.executors import ProcessDumpExecutor
     from aiida.tools.dumping.mapping import GroupNodeMapping
     from aiida.tools.dumping.tracking import DumpTracker
 
@@ -66,7 +66,7 @@ class GroupDumpExecutor(CollectionDumpExecutor):
         current_group_content_root = self.dump_paths.get_path_for_group(group=self.group)
 
         # Prepare the specific directory for this group's content
-        self.dump_paths.prepare_directory(current_group_content_root, is_leaf_node_dir=False)
+        self.dump_paths._prepare_directory(current_group_content_root, is_leaf_node_dir=False)
 
         # Process lifecycle changes for this group based on group-scoped DumpChanges
         if changes.groups.modified or changes.groups.renamed or changes.groups.node_membership:

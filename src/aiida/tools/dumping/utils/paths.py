@@ -151,7 +151,7 @@ class DumpPaths:
             msg = f'Wrong node type: {type(node)} was passed.'
             raise ValueError(msg)
 
-    def prepare_directory(self, path_to_prepare: Path, is_leaf_node_dir: bool = False) -> None:
+    def _prepare_directory(self, path_to_prepare: Path, is_leaf_node_dir: bool = False) -> None:
         """Prepares a directory for dumping, a previously exesting one, or creating it, including the safeguard file.
 
         :param path_to_prepare: The absolute directory path to prepare.
@@ -170,7 +170,7 @@ class DumpPaths:
             and os.listdir(path_to_prepare)
         ):
             if (path_to_prepare / self.SAFEGUARD_FILE_NAME).exists():
-                self.safe_delete_directory(path_to_prepare)
+                self._safe_delete_directory(path_to_prepare)
             else:
                 msg = f'Path {path_to_prepare} exists, is not empty, but safeguard file missing.'
                 raise FileNotFoundError(msg)
@@ -179,7 +179,7 @@ class DumpPaths:
         path_to_prepare.mkdir(parents=True, exist_ok=True)
         (path_to_prepare / self.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
 
-    def safe_delete_directory(self, path: Path) -> None:
+    def _safe_delete_directory(self, path: Path) -> None:
         """
         Safely deletes a directory if it contains a safeguard file.
         """

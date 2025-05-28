@@ -148,7 +148,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
                 logger.warning(f'Group path {group_path} for UUID {group_uuid} is not a directory. Skipping stats.')
                 continue
 
-            group_log_entry.update_stats(group_path)
+            group_log_entry._update_stats(group_path)
 
     def dump(self, changes: DumpChanges) -> None:
         """Dumps the entire profile by orchestrating helper methods."""

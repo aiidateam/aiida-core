@@ -54,13 +54,13 @@ class DumpEngine:
 
         # Need to prepare directory here, as if  `overwrite` selected, the tracker instance should be empty
         # by cleaning the previous log file
-        self.dump_paths.prepare_directory(path_to_prepare=base_output_path)
+        self.dump_paths.prepare_directory(path_to_prepare=base_output_path, is_leaf_node_dir=True)
 
         # Load log data, stored mapping, and last dump time string from file
         self.dump_tracker = DumpTracker.load(self.dump_paths)
         self.dump_times = DumpTimes.from_last_log_time(self.dump_tracker._last_dump_time_str)
 
-        # --- Initialize detector for changes ---
+        # Initialize detector for changes
         self.detector = DumpChangeDetector(
             dump_tracker=self.dump_tracker, dump_paths=self.dump_paths, config=self.config, dump_times=self.dump_times
         )
@@ -159,7 +159,7 @@ class DumpEngine:
         # GroupDumpExecutor needs the specific group and the scoped changes.
         # The DumpPaths instance within GroupDumpExecutor will be the same as DumpEngine's.
         group_dump_executor = GroupDumpExecutor(
-            group_to_dump=self.dump_target_entity,
+            group=self.dump_target_entity,
             config=self.config,
             dump_paths=self.dump_paths,
             dump_tracker=self.dump_tracker,
@@ -186,7 +186,7 @@ class DumpEngine:
         all_changes = DumpChanges(nodes=node_changes, groups=group_changes)
 
         if all_changes.is_empty():
-            logger.report('No changes detected since last dump and not dumping ungrouped. Nothing to do.')
+            logger.report('No changes detected since last dump and not dumping ungrouped nodes. Nothing to do.')
             return None
 
         if self.config.dump_mode == DumpMode.DRY_RUN:

@@ -24,13 +24,13 @@ from aiida.common import LinkType, timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
 from aiida.tools.archive.exceptions import ExportValidationError
-from aiida.tools.dumping.config import DumpConfig
 from aiida.tools.dumping.tracking import DumpRecord
-from aiida.tools.dumping.utils import ORM_TYPE_TO_REGISTRY, DumpPaths, RegistryNameType
+from aiida.tools.dumping.utils import ORM_TYPE_TO_REGISTRY, DumpPaths
 
 if TYPE_CHECKING:
+    from aiida.tools.dumping.config import DumpConfig
     from aiida.tools.dumping.tracking import DumpTracker
-    from aiida.tools.dumping.utils import DumpTimes
+    from aiida.tools.dumping.utils import DumpTimes, RegistryNameType
 
 __all__ = ('NodeMetadataWriter', 'NodeRepoIoDumper', 'ProcessDumpExecutor', 'ReadmeGenerator', 'WorkflowWalker')
 
@@ -40,8 +40,6 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.executors.process')
 DumpProcessorType = Callable[[orm.ProcessNode, Path], None]
 
 
-# TODO: end-user should specify a few actions what to do when duplicate entities are encountered
-# TODO: This should be general `--handle-duplicates` or sthg
 class NodeDumpAction(Enum):
     """Represents the action determined after checking the log."""
 
@@ -70,24 +68,26 @@ class ProcessDumpExecutor:
         # Instantiate helper classes
         self.metadata_writer = NodeMetadataWriter(config)
         self.repo_io_dumper = NodeRepoIoDumper(config)
-        # Pass the bound method self._dump_process_recursive_entry for recursion
         self.workflow_walker = WorkflowWalker(self.dump)
         self.readme_generator = ReadmeGenerator()
 
     def dump(
         self,
         process_node: orm.ProcessNode,
-        target_path: Path | None = None,
-    ):
-        """
-        Main entry point to dump a single ProcessNode.
-        Determines the required action and delegates to execution methods.
-        """
-        if not target_path:
-            raise Exception
+        target_path: Path,
+    ) -> None:
+        """Main entry point to dump a ProcessNode. Determines required action and delegates to execution methods.
 
-        if not self._validate_node_for_dump(process_node):
-            return  # Validation failed, logged inside helper
+        :param process_node: The ``orm.ProcessNode`` to be dumped
+        :param target_path: Target output path for node dump
+        :return: None
+        """
+
+        if not process_node.is_sealed and not self.config.dump_unsealed:
+            msg = (
+                f'Process {process_node.pk} must be sealed before it can be dumped, or `--dump-unsealed` set to True.'
+            )
+            raise ExportValidationError(msg)
 
         action, existing_dump_record = self._check_log_and_determine_action(
             node=process_node,
@@ -135,7 +135,7 @@ class ProcessDumpExecutor:
         resolved_target_path = target_path.resolve()
         resolved_logged_path = existing_dump_record.path.resolve()
 
-        # --- Case 1: Target path is the SAME as the primary logged path ---
+        # Case 1: Target path is the SAME as the primary logged path
         if resolved_target_path == resolved_logged_path:
             # Check if node mtime is newer than logged dump mtime
             node_mtime = node.mtime
@@ -153,7 +153,7 @@ class ProcessDumpExecutor:
             else:
                 return NodeDumpAction.SKIP, existing_dump_record
 
-        # --- Case 2: Target path is DIFFERENT from primary logged path ---
+        # Case 2: Target path is DIFFERENT from primary logged path
         is_calc_node = isinstance(node, orm.CalculationNode)
         is_sub_process = len(node.base.links.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()) > 0
 
@@ -274,13 +274,6 @@ class ProcessDumpExecutor:
             # If duplicate dump fails, potentially clean the partial duplicate directory?
             self._cleanup_failed_dump(node, target_path, False)  # is_primary_dump=False
 
-    def _validate_node_for_dump(self, node: orm.ProcessNode) -> bool:
-        """Checks if the node is valid for dumping."""
-        if not node.is_sealed and not self.config.dump_unsealed:
-            msg = f'Process `{node.pk}` must be sealed before it can be dumped, or `--dump-unsealed` set to True.'
-            raise ExportValidationError(msg)
-        return True
-
     def _dump_node_content(
         self,
         node: orm.ProcessNode,
@@ -298,7 +291,6 @@ class ProcessDumpExecutor:
         if isinstance(node, orm.CalculationNode):
             self.repo_io_dumper._dump_calculation_content(node, target_path)
         elif isinstance(node, orm.WorkflowNode):
-            # WorkflowWalker calls _dump_process_recursive_entry
             # Pass group context as potentially needed by recursive calls for symlink check
             self.workflow_walker._dump_children(node, target_path)  # Must ensure walker passes group context
 

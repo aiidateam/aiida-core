@@ -77,10 +77,9 @@ class ProcessingQueue:
 
     calculations: list = field(default_factory=list)
     workflows: list = field(default_factory=list)
-    groups: list = field(default_factory=list)
 
     def __len__(self) -> int:
-        return len(self.calculations) + len(self.workflows) + len(self.groups)
+        return len(self.calculations) + len(self.workflows)
 
     def is_empty(self) -> bool:
         return len(self) == 0
@@ -179,7 +178,7 @@ class DumpChanges:
         """
         from tabulate import tabulate
 
-        # --- Node Changes Table ---
+        # Node Changes Table
         node_rows = []
 
         # Add new or modified nodes by type
@@ -200,7 +199,7 @@ class DumpChanges:
             tablefmt='simple',
         )
 
-        # --- Group Changes Table ---
+        # Group Changes Table
         group_rows = []
 
         # New, modified and deleted groups

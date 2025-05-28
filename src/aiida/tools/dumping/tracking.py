@@ -376,7 +376,7 @@ class DumpTracker:
         for registry in self.registries.values():
             for uuid, entry in registry.entries.items():
                 updated_entry = False
-                # --- Update entry.path ---
+                # Update entry.path
                 try:
                     resolved_entry_path = entry.path.resolve()
                     if resolved_entry_path.is_relative_to(old_resolved):
@@ -389,7 +389,7 @@ class DumpTracker:
                 except (OSError, ValueError):  # Handle resolve() errors or path not relative
                     logger.warning(f'Could not compare/update primary path for {uuid}: {entry.path}')
 
-                # --- Update entry.symlinks ---
+                # Update entry.symlinks
                 updated_symlinks = []
                 for symlink_path in entry.symlinks:
                     try:
@@ -408,7 +408,7 @@ class DumpTracker:
                         updated_symlinks.append(symlink_path)  # Keep original on error
                 entry.symlinks = updated_symlinks
 
-                # --- Update entry.duplicates ---
+                # Update entry.duplicates
                 # (Similar logic as for symlinks)
                 updated_duplicates = []
                 for duplicate_path in entry.duplicates:

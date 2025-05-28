@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from aiida.orm import Node, User
     from aiida.orm.implementation import StorageBackend
     from aiida.orm.implementation.groups import BackendGroup  # noqa: F401
-    from aiida.tools.dumping.config import DumpConfig
+    from aiida.tools._dumping.config import DumpConfig
 
 __all__ = ('AutoGroup', 'Group', 'ImportGroup', 'UpfFamily')
 
@@ -361,9 +361,9 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         return not self.type_string
 
     def dump(self, config: Optional['DumpConfig'] = None, output_path: Optional[Union[str, Path]] = None) -> Path:
-        from aiida.tools.dumping.config import DumpConfig
-        from aiida.tools.dumping.engine import DumpEngine
-        from aiida.tools.dumping.utils import DumpPaths
+        from aiida.tools._dumping.config import DumpConfig
+        from aiida.tools._dumping.engine import DumpEngine
+        from aiida.tools._dumping.utils import DumpPaths
 
         if not config:
             config = DumpConfig()

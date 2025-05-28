@@ -16,18 +16,18 @@ from typing import TYPE_CHECKING, List, cast
 from aiida import orm
 from aiida.common import NotExistent
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.detect import DumpChangeDetector
-from aiida.tools.dumping.executors.collection import CollectionDumpExecutor
-from aiida.tools.dumping.tracking import DumpTracker
-from aiida.tools.dumping.utils import DumpChanges, DumpPaths, ProcessingQueue
+from aiida.tools._dumping.detect import DumpChangeDetector
+from aiida.tools._dumping.executors.collection import CollectionDumpExecutor
+from aiida.tools._dumping.tracking import DumpTracker
+from aiida.tools._dumping.utils import DumpChanges, DumpPaths, ProcessingQueue
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.executors.profile')
 
 if TYPE_CHECKING:
-    from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.executors.process import ProcessDumpExecutor
-    from aiida.tools.dumping.mapping import GroupNodeMapping
-    from aiida.tools.dumping.tracking import DumpTracker
+    from aiida.tools._dumping.config import DumpConfig
+    from aiida.tools._dumping.executors.process import ProcessDumpExecutor
+    from aiida.tools._dumping.mapping import GroupNodeMapping
+    from aiida.tools._dumping.tracking import DumpTracker
 
 
 class ProfileDumpExecutor(CollectionDumpExecutor):
@@ -148,7 +148,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
                 logger.warning(f'Group path {group_path} for UUID {group_uuid} is not a directory. Skipping stats.')
                 continue
 
-            group_log_entry._update_stats(group_path)
+            group_log_entry.update_stats(group_path)
 
     def dump(self, changes: DumpChanges) -> None:
         """Dumps the entire profile by orchestrating helper methods."""

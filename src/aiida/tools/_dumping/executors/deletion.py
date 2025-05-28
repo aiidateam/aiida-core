@@ -13,15 +13,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.utils import DumpChanges, DumpPaths
+from aiida.tools._dumping.utils import DumpChanges, DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.executors.deletion')
 
 if TYPE_CHECKING:
-    from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.mapping import GroupNodeMapping
-    from aiida.tools.dumping.tracking import DumpTracker
-    from aiida.tools.dumping.utils import GroupInfo
+    from aiida.tools._dumping.config import DumpConfig
+    from aiida.tools._dumping.mapping import GroupNodeMapping
+    from aiida.tools._dumping.tracking import DumpTracker
+    from aiida.tools._dumping.utils import GroupInfo
 
 
 class DeletionExecutor:

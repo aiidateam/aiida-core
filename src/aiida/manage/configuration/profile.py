@@ -23,7 +23,7 @@ from .options import parse_option
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
-    from aiida.tools.dumping.config import DumpConfig
+    from aiida.tools._dumping.config import DumpConfig
 
 __all__ = ('Profile',)
 
@@ -274,9 +274,9 @@ class Profile:
         :return: Resolved output path where the profile data was dumped.
         """
         from aiida.common import AIIDA_LOGGER
-        from aiida.tools.dumping.config import DumpConfig, DumpMode
-        from aiida.tools.dumping.engine import DumpEngine
-        from aiida.tools.dumping.utils import DumpPaths
+        from aiida.tools._dumping.config import DumpConfig, DumpMode
+        from aiida.tools._dumping.engine import DumpEngine
+        from aiida.tools._dumping.utils import DumpPaths
 
         logger = AIIDA_LOGGER.getChild('tools.dumping.profile')
 

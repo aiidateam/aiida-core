@@ -16,7 +16,7 @@ import pytest
 
 from aiida import load_profile, orm
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.dumping.config import DumpConfig, DumpMode
+from aiida.tools._dumping.config import DumpConfig, DumpMode
 
 from .utils import compare_tree
 
@@ -1155,7 +1155,7 @@ class TestProfileDumping:
 
         # Dump 2: No changes, check log message
         caplog.clear()
-        with caplog.at_level(logging.REPORT, logger='aiida.tools.dumping.engine'):
+        with caplog.at_level(logging.REPORT, logger='aiida.tools._dumping.engine'):
             profile.dump(output_path=output_path, config=config)  # Should detect no changes via log
 
         assert (

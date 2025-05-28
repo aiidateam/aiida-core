@@ -14,17 +14,17 @@ from typing import TYPE_CHECKING
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
-from aiida.tools.dumping.executors.collection import CollectionDumpExecutor
-from aiida.tools.dumping.tracking import DumpTracker
-from aiida.tools.dumping.utils import DumpChanges, DumpPaths
+from aiida.tools._dumping.executors.collection import CollectionDumpExecutor
+from aiida.tools._dumping.tracking import DumpTracker
+from aiida.tools._dumping.utils import DumpChanges, DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.executors.group')
 
 if TYPE_CHECKING:
-    from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.executors import ProcessDumpExecutor
-    from aiida.tools.dumping.mapping import GroupNodeMapping
-    from aiida.tools.dumping.tracking import DumpTracker
+    from aiida.tools._dumping.config import DumpConfig
+    from aiida.tools._dumping.executors import ProcessDumpExecutor
+    from aiida.tools._dumping.mapping import GroupNodeMapping
+    from aiida.tools._dumping.tracking import DumpTracker
 
 
 class GroupDumpExecutor(CollectionDumpExecutor):

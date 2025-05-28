@@ -52,7 +52,7 @@ class CollectionDumpExecutor:
         :param group_content_path: The top-level dumping path for the group
         """
 
-        self.dump_paths.prepare_directory(group_content_path, is_leaf_node_dir=False)
+        self.dump_paths._prepare_directory(group_content_path, is_leaf_node_dir=False)
 
         if group.uuid not in self.dump_tracker.registries['groups'].entries:
             self.dump_tracker.registries['groups'].add_entry(
@@ -159,7 +159,7 @@ class CollectionDumpExecutor:
                 # ProcessDumpExecutor.dump takes the final, specific path for the node.
                 self.process_dump_executor.dump(
                     process_node=node,
-                    target_path=node_specific_dump_path,
+                    output_path=node_specific_dump_path,
                 )
                 progress.update()
 
@@ -204,7 +204,7 @@ class CollectionDumpExecutor:
 
         # Update stats for this specific group.
         if record := self.dump_tracker.get_entry(group.uuid):
-            record.update_stats(group_content_path)
+            record._update_stats(group_content_path)
         else:
             logger.warning(f'Log entry not found for group UUID {group}')
 
@@ -289,15 +289,15 @@ class CollectionDumpExecutor:
             if not isinstance(node, orm.ProcessNode):
                 continue
 
-            # Determine the correct target_path for the node within this group
+            # Determine the correct output_path for the node within this group
             # current_group_path_abs is the content root for `group`
-            node_target_path_in_group = self.dump_paths.get_path_for_node(
+            node_output_path_in_group = self.dump_paths.get_path_for_node(
                 node=node,
                 current_content_root=current_group_path_abs,
             )
 
-            # Pass this explicit target_path to the ProcessDumpExecutor
-            self.process_dump_executor.dump(process_node=node, target_path=node_target_path_in_group)
+            # Pass this explicit output_path to the ProcessDumpExecutor
+            self.process_dump_executor.dump(process_node=node, output_path=node_output_path_in_group)
 
         # Node removal handling uses the passed current_group_path_abs
         if self.config.organize_by_groups and mod_info.nodes_removed:
@@ -369,7 +369,7 @@ class CollectionDumpExecutor:
 
         elif found_path.is_dir() and not is_target_dir:
             # It's a directory *within* the group structure (likely a copy), and NOT the original. Safe to remove.
-            self.dump_paths.safe_delete_directory(path=found_path)
+            self.dump_paths._safe_delete_directory(path=found_path)
 
         elif is_target_dir:
             # The path found *is* the primary logged path.

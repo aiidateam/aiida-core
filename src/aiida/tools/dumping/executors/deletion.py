@@ -83,7 +83,7 @@ class DeletionExecutor:
         # Delete directory if it exists
         try:
             if result.path.exists():
-                self.dump_paths.safe_delete_directory(result.path)
+                self.dump_paths._safe_delete_directory(result.path)
 
         except (FileNotFoundError, ValueError) as e:
             logger.warning(f'Could not delete directory for node {node_uuid}: {e}')
@@ -108,9 +108,10 @@ class DeletionExecutor:
         # Only delete directory if it's organized by groups and not the base path
         should_delete_dir = self.config.organize_by_groups and path_to_delete != self.dump_paths.base_output_path
 
+        path_deleted = None
         if should_delete_dir:
             try:
-                self.dump_paths.safe_delete_directory(path=path_to_delete)
+                self.dump_paths._safe_delete_directory(path=path_to_delete)
                 path_deleted = path_to_delete
             except FileNotFoundError as e:
                 logger.warning(f'Directory not found for deleted group {group_uuid} at {path_to_delete}: {e}')

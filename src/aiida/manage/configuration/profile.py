@@ -286,8 +286,8 @@ class Profile:
         # --- Check final determined scope ---
         if not (config.all_entries or config.filters_set) and config.dump_mode != DumpMode.DRY_RUN:
             msg = (
-                'No profile data explicitly selected. No dump will be performed.',
-                'Either select everything via `--all`, or filter via `--groups`, `--user`, etc.',
+                'No profile data explicitly selected. No dump will be performed. '
+                'Either select everything via `--all`, or filter via `--groups`, `--user`, etc.'
             )
             logger.warning(msg)
             return None

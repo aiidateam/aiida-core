@@ -80,7 +80,7 @@ class DumpChangeDetector:
         :param apply_filters: Whether to apply top-level and caller filters
         :param ignore_time_filters: Whether to ignore time-based filters
         :param exclude_tracked: Whether to exclude nodes already in dump tracker
-        :return: DumpNodeStore containing the filtered nodes
+        :return: ProcessingQueue containing the filtered nodes
         """
         if group_scope == GroupDumpScope.IN_GROUP and not group:
             msg = 'Scope is IN_GROUP but no group object was provided.'
@@ -218,7 +218,7 @@ class DumpChangeDetector:
         """Detect new/modified nodes for dumping.
 
         :param group: Specific group to detect changes for, or None for general detection
-        :return: DumpNodeStore containing new/modified nodes
+        :return: ProcessingQueue containing new/modified nodes
         """
         # Determine scope
         if group is not None:
@@ -230,11 +230,14 @@ class DumpChangeDetector:
 
         return self.get_nodes(group_scope=scope, group=group, apply_filters=True, exclude_tracked=True)
 
-    def get_ungrouped_nodes(self) -> ProcessingQueue:
+    def _get_ungrouped_nodes(self) -> ProcessingQueue:
         """Get all ungrouped nodes, ignoring time filters."""
-        # Set `exclude_tracked` to False in the case that a node that was previously in a group, then the group got
-        # deleted (but not the node), and it now ends up being ungrouped, and because of `--also-ungrouped` it should be
-        # dumped in the `ungrouped` directory
+        # Set `exclude_tracked` to False in the edge case that a node that was previously in a group, then the group got
+        # deleted (but not the node), and the node now ends up being ungrouped, and because of `--also-ungrouped` it
+        # should be dumped in the `ungrouped` directory
+        # PRCOMMENT: Not sure if I should ignore time filters here. It's necessary to pick up _all_ nodes, e.g., ones
+        # that end up being ungrouped after group deletion (see above), that have an `mtime` before the last dump.
+        # However, that means that time filters are fully ignored. Maybe it's OK anyway in the ungrouped case.
         return self.get_nodes(
             group_scope=GroupDumpScope.NO_GROUP, apply_filters=True, ignore_time_filters=True, exclude_tracked=False
         )
@@ -245,11 +248,11 @@ class DumpChangeDetector:
         :param group: The specific group to filter by when scope is IN_GROUP
         :return: Populated ``NodeChanges`` instance
         """
-        new_nodes_store = self._detect_new_nodes(group)
+        new_nodes_queue = self._detect_new_nodes(group)
         deleted_node_uuids = self._detect_deleted_nodes()
 
         return NodeChanges(
-            new_or_modified=new_nodes_store,
+            new_or_modified=new_nodes_queue,
             deleted=deleted_node_uuids,
         )
 

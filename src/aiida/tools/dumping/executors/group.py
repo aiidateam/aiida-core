@@ -13,17 +13,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from aiida import orm
-from aiida.common.log import AIIDA_LOGGER
+from aiida.common import AIIDA_LOGGER
 from aiida.tools.dumping.executors.collection import CollectionDumpExecutor
 from aiida.tools.dumping.tracking import DumpTracker
 from aiida.tools.dumping.utils import DumpChanges, DumpPaths
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.executors.profile')
+logger = AIIDA_LOGGER.getChild('tools.dumping.executors.group')
 
 if TYPE_CHECKING:
     from aiida.tools.dumping.config import DumpConfig
-    from aiida.tools.dumping.executors.collection import CollectionDumpExecutor
-    from aiida.tools.dumping.executors.process import ProcessDumpExecutor
+    from aiida.tools.dumping.executors import CollectionDumpExecutor, ProcessDumpExecutor
     from aiida.tools.dumping.mapping import GroupNodeMapping
     from aiida.tools.dumping.tracking import DumpTracker
 
@@ -35,8 +34,8 @@ class GroupDumpExecutor(CollectionDumpExecutor):
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
         process_dump_executor: ProcessDumpExecutor,
-        group_to_dump: orm.Group,
         current_mapping: GroupNodeMapping,
+        group: orm.Group,
     ) -> None:
         super().__init__(
             config=config,
@@ -45,39 +44,38 @@ class GroupDumpExecutor(CollectionDumpExecutor):
             process_dump_executor=process_dump_executor,
             current_mapping=current_mapping,
         )
-        self.group_to_dump = group_to_dump
+        self.group: orm.Group = group
+
+        # Explicit type hints
+        self.dump_paths: DumpPaths
+        self.config: DumpConfig
+        self.dump_tracker: DumpTracker
+        self.process_dump_executor: ProcessDumpExecutor
+        self.current_mapping: GroupNodeMapping
 
     def dump(self, changes: DumpChanges) -> None:
         """
-        Dumps the content of the specific group (self.group_to_dump).
+        Dumps the content of the specific group (self.group).
         The path for this group's content is determined using self.dump_paths.
 
         :param changes: Scoped DumpChanges relevant to this group, as determined by DumpEngine.
         """
-        # The DumpPaths instance was initialized by DumpEngine.
-        # It knows the overall base_output_path and the dump_target_entity (which is self.group_to_dump).
-        # It can therefore correctly determine if self.group_to_dump should be directly in
+        # The DumpPaths instance knows the overall base_output_path and the dump_target_entity (self.group).
+        # It can therefore correctly determine if self.group should be directly in
         # base_output_path or nested under a "groups/" subdirectory.
-        current_group_content_root = self.dump_paths.get_path_for_group(group=self.group_to_dump)
+        current_group_content_root = self.dump_paths.get_path_for_group(group=self.group)
 
-        # Prepare the specific directory for this group's content.
+        # Prepare the specific directory for this group's content
         self.dump_paths.prepare_directory(current_group_content_root, is_leaf_node_dir=False)
 
-        # Process lifecycle changes FOR THIS GROUP.
-        # The `changes.groups` object should have been pre-filtered by DumpEngine
-        # to only contain changes relevant to `self.group_to_dump`.
+        # Process lifecycle changes for this group based on group-scoped DumpChanges
         if changes.groups.modified or changes.groups.renamed or changes.groups.node_membership:
             self._handle_group_changes(changes.groups)
 
         # Process nodes within this group.
         # It needs to use current_group_content_root as the base for placing nodes.
         self._process_group(
-            group=self.group_to_dump,
+            group=self.group,
             changes=changes,
-            group_content_root_path=current_group_content_root,
-        )
-
-        # Update stats for this specific group.
-        self._update_directory_stats(
-            entity_uuid=self.group_to_dump.uuid, path=current_group_content_root, registry_key='groups'
+            group_content_path=current_group_content_root,
         )

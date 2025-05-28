@@ -76,13 +76,15 @@ class DumpConfig(BaseModel):
     Unified Pydantic configuration for dump operations.
     """
 
-    # --- Model Configuration ---
+    # Model Configuration
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         validate_assignment=True,
     )
 
-    groups: Optional[List[Union[str, orm.Group]]] = Field(default=None, description='Groups to dump (UUIDs or labels)')
+    groups: Optional[Union[List[str], List[orm.Group]]] = Field(
+        default=None, description='Groups to dump (either list of UUIDs/labels OR list of Group objects)'
+    )
     start_date: Optional[datetime] = Field(default=None, description='Start date/time for modification time filter')
     end_date: Optional[datetime] = Field(default=None, description='End date/time for modification time filter')
     past_days: Optional[int] = Field(default=None, description='Number of past days to include based on mtime.')
@@ -97,10 +99,10 @@ class DumpConfig(BaseModel):
         default=None, description='List of Code objects or UUIDs/labels to filter by'
     )
 
-    # --- Global options ---
+    # Global options
     dump_mode: DumpMode = DumpMode.INCREMENTAL
 
-    # --- Node collection options ---
+    # Node collection options
     filter_by_last_dump_time: bool = True
     only_top_level_calcs: bool = True
     only_top_level_workflows: bool = True
@@ -109,7 +111,7 @@ class DumpConfig(BaseModel):
         exclude=True,  # Exclude from standard serialization, internal class
     )
 
-    # --- Process dump options ---
+    # Process dump options
     include_inputs: bool = True
     include_outputs: bool = False
     include_attributes: bool = True
@@ -118,7 +120,7 @@ class DumpConfig(BaseModel):
     dump_unsealed: bool = False
     symlink_calcs: bool = False
 
-    # --- Group/Profile options ---
+    # Group/Profile options
     delete_missing: bool = True
     organize_by_groups: bool = True
     also_ungrouped: bool = False
@@ -139,36 +141,35 @@ class DumpConfig(BaseModel):
             or self.user
         )
 
-    # --- Pydantic Field Validators ---
+    # Pydantic Field Validators
     @field_validator('groups', mode='before')
     @classmethod
-    def _validate_groups_input(cls, value: Any) -> Optional[List[str]]:
-        """Validate and transform the input for the 'groups' field.
-
-        :param value: A list containing orm.Group objects or strings (labels/UUIDs),
-        :raises ValueError: If passed value cannot be
-        :raises ValueError: _description_
-        :return: _description_
-        """
+    def _validate_groups_input(cls, value: Any) -> Optional[Union[List[str], List[orm.Group]]]:
+        """Validate groups input - must be either all strings OR all Group objects."""
         if value is None:
             return None
         if not isinstance(value, list):
             msg = f'Invalid input type for groups: {type(value)}. Expected a list.'
             raise ValueError(msg)
 
-        processed_groups: List[str] = []
-        for item_idx, item in enumerate(value):
-            if isinstance(item, orm.Group):
-                processed_groups.append(item.label)
-            elif isinstance(item, str):
-                processed_groups.append(item)
-            else:
-                msg = (
-                    f"Invalid item type in 'groups' list at index {item_idx}: {type(item)}. "
-                    'Expected an AiiDA Group object or a string (label/UUID).'
-                )
-                raise ValueError(msg)
-        return processed_groups if processed_groups else None
+        if not value:  # Empty list
+            return None
+
+        # Check if all items are strings
+        if all(isinstance(item, str) for item in value):
+            return value  # Return list of strings as-is
+
+        # Check if all items are orm.Group objects
+        if all(isinstance(item, orm.Group) for item in value):
+            return value  # Return list of orm.Group objects as-is
+
+        # Mixed types - not allowed
+        types_found = {type(item).__name__ for item in value}
+        msg = (
+            f"Mixed types in 'groups' list not allowed. Found: {types_found}. "
+            'Must be either all strings (UUIDs/labels) OR all Group objects.'
+        )
+        raise ValueError(msg)
 
     @field_validator('user', mode='before')
     def _validate_user_input(cls, value: Any) -> orm.User | None:  # noqa: N805
@@ -201,7 +202,7 @@ class DumpConfig(BaseModel):
         return values
 
 
-# --- IMPORTANT: Finalize Pydantic Model ---
+# IMPORTANT: Finalize Pydantic Model
 # Call model_rebuild() after the class definition to resolve forward references
 # and build the final schema needed for validation/serialization.
 DumpConfig.model_rebuild(force=True)

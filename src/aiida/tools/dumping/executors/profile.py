@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, List, cast
 
 from aiida import orm
@@ -48,7 +49,14 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
             current_mapping=current_mapping,
             dump_tracker=dump_tracker,
         )
-        self.detector = detector
+        self.detector: DumpChangeDetector = detector
+
+        # Explicit type hints
+        self.dump_paths: DumpPaths
+        self.config: DumpConfig
+        self.dump_tracker: DumpTracker
+        self.process_dump_executor: ProcessDumpExecutor
+        self.current_mapping: GroupNodeMapping
 
     def _determine_groups_to_process(self) -> list[orm.Group]:
         """Determine which groups to process based on config."""
@@ -59,42 +67,24 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         if not self.config.groups:
             return []
 
-        # Handle specific groups
+        # Specific groups given as orm entities
         if all(isinstance(g, orm.Group) for g in self.config.groups):
             return cast(List[orm.Group], self.config.groups)
 
-        # Load by identifier
+        # Specific groups given via identifier
         try:
             return [orm.load_group(identifier=str(gid)) for gid in self.config.groups]
         except NotExistent as e:
             logger.error(f'Error loading specified group: {e}')
-            return []
+            raise
 
-    def _add_ungrouped_descendants(
-        self,
-        ungrouped_nodes_store: ProcessingQueue,
-        ungrouped_workflows: list[orm.WorkflowNode],
-    ) -> None:
-        """Add calculation descendants for ungrouped workflows if config requires."""
-        if self.config.only_top_level_calcs or not ungrouped_workflows:
-            return
+    def _has_ungrouped_representation(self, node: orm.ProcessNode, ungrouped_path: Path) -> bool:
+        """Check if a node already has representation under the ungrouped path.
 
-        descendants = DumpChangeDetector.get_calculation_descendants(ungrouped_workflows)
-        if descendants:
-            existing_calc_uuids = {calc.uuid for calc in ungrouped_nodes_store.calculations}
-            logged_calc_uuids = set(self.dump_tracker.registries['calculations'].entries.keys())
-            unique_descendants = [
-                desc
-                for desc in descendants
-                if desc.uuid not in existing_calc_uuids and desc.uuid not in logged_calc_uuids
-            ]
-            if unique_descendants:
-                if not hasattr(ungrouped_nodes_store, 'calculations') or ungrouped_nodes_store.calculations is None:
-                    ungrouped_nodes_store.calculations = []
-                ungrouped_nodes_store.calculations.extend(unique_descendants)
-
-    def _has_ungrouped_representation(self, node: orm.ProcessNode, ungrouped_path) -> bool:
-        """Check if a node already has representation under the ungrouped path."""
+        :param node: The ``orm.ProcessNode`` to be dumped
+        :param ungrouped_path: Path where ungrouped nodes are dumped
+        :return: Boolean if node already has been dumped under the ungrouped path
+        """
         node_uuid = node.uuid
         dump_record = self.dump_tracker.get_entry(node_uuid)
 
@@ -123,12 +113,10 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         return False
 
     def _dump_ungrouped_nodes(self) -> None:
-        """Process ungrouped nodes for dumping."""
-        if not self.config.also_ungrouped:
-            return
+        """Dump ungrouped nodes."""
 
-        # Get filtered ungrouped nodes (includes top-level filtering)
-        ungrouped_nodes = self.detector.get_ungrouped_nodes()
+        # Get filtered ungrouped nodes
+        ungrouped_nodes: ProcessingQueue = self.detector._get_ungrouped_nodes()
 
         # Check against existing representations and dump as needed
         nodes_to_dump = ProcessingQueue()
@@ -144,51 +132,49 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
             if not self._has_ungrouped_representation(node, ungrouped_path):
                 nodes_to_dump.workflows.append(node)
 
-        if not nodes_to_dump.is_empty():
-            ungrouped_path.mkdir(exist_ok=True, parents=True)
-            (ungrouped_path / DumpPaths.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
-            self._dump_nodes(processing_queue=nodes_to_dump, group_context=None)
+        if nodes_to_dump.is_empty():
+            return
+
+        ungrouped_path.mkdir(exist_ok=True, parents=True)
+        (ungrouped_path / DumpPaths.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
+        self._dump_nodes(processing_queue=nodes_to_dump, group_context=None)
 
     def _update_group_stats(self) -> None:
         """Calculate and update final directory stats for all logged groups."""
         for group_uuid, group_log_entry in self.dump_tracker.registries['groups'].entries.items():
             group_path = group_log_entry.path
-            if not group_path.is_absolute():
-                group_path = self.dump_paths.base_output_path / group_path
 
             if not group_path.is_dir():
                 logger.warning(f'Group path {group_path} for UUID {group_uuid} is not a directory. Skipping stats.')
                 continue
 
-            dir_mtime, dir_size = self.dump_paths.get_directory_stats(group_path)
-            group_log_entry.dir_mtime = dir_mtime
-            group_log_entry.dir_size = dir_size
+            group_log_entry.update_stats(group_path)
 
     def dump(self, changes: DumpChanges) -> None:
         """Dumps the entire profile by orchestrating helper methods."""
         if not self.config.all_entries and not self.config.filters_set:
-            logger.report('Default profile dump scope is NONE, skipping profile content dump.')
+            logger.warning('Default profile dump scope is NONE, skipping profile content dump.')
             return
 
-        # 1. Handle Group Lifecycle (using Group Executor)
-        #    This applies changes detected earlier (new/deleted groups, membership)
-        #    Directory creation/deletion for groups happens here or in DeletionExecutor
+        # Handle Group Lifecycle (using Group Executor)
+        # This applies changes detected earlier (renamed, modified, and membership)
+        # Deletion and dumping of new groups handled elsewhere
         self._handle_group_changes(changes.groups)
 
-        # 2. Determine which groups need node processing based on config
-        #    (e.g., all groups, specific groups)
+        # Determine which groups need node processing based on config (e.g., all groups, specific groups)
         groups_to_process = self._determine_groups_to_process()
 
-        # 3. Process nodes within each selected group
+        # Process nodes within each selected group
         for group in groups_to_process:
-            # _process_group handles finding nodes for this group,
-            # adding descendants if needed, and calling node_manager.dump_nodes
+            # _process_group handles finding nodes for this group, adding descendants if needed,
+            # and calling node_manager.dump_nodes
             group_content_root = self.dump_paths.get_path_for_group(group=group)
-            self._process_group(group=group, changes=changes, group_content_root_path=group_content_root)
+            self._process_group(group=group, changes=changes, group_content_path=group_content_root)
 
-        # 4. Process ungrouped nodes if requested by config
-        #    _process_ungrouped_nodes finds relevant nodes and calls node_manager.dump_nodes
-        self._dump_ungrouped_nodes()
+        # Process ungrouped nodes if requested by config
+        # _dump_ungrouped_nodes finds relevant nodes and calls node_manager.dump_nodes
+        if self.config.also_ungrouped:
+            self._dump_ungrouped_nodes()
 
-        # 5. Update final stats for logged groups after all dumping is done
+        # Update final stats for logged groups after all dumping is done
         self._update_group_stats()

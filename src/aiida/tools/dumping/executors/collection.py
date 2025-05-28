@@ -45,29 +45,6 @@ class CollectionDumpExecutor:
         self.dump_tracker: DumpTracker = dump_tracker
         self.current_mapping: GroupNodeMapping = current_mapping
 
-    def _update_directory_stats(self, entity_uuid: str, path: Path, registry_key: str) -> None:
-        """Common update logic for directory stats.
-
-        :param entity_uuid: UUID of entity whose dumping output path should be evaluated
-        :param path: The path for which the stats should be calculated
-        :param registry_key: The corresponding key for the ``DumpTracker`` registry
-        """
-
-        registry = self.dump_tracker.registries[registry_key]
-        dump_record = registry.get_entry(entity_uuid)
-
-        if not dump_record:
-            logger.warning(f'Log entry not found for {registry_key[:-1]} UUID {entity_uuid}')
-            return
-
-        if not path.is_dir():
-            logger.warning(f'Path {path} for UUID {entity_uuid} is not a directory. Skipping stats.')
-            return
-
-        dir_mtime, dir_size = self.dump_paths.get_directory_stats(path)
-        dump_record.dir_mtime = dir_mtime
-        dump_record.dir_size = dir_size
-
     def _register_group_and_prepare_path(self, group: orm.Group, group_content_path: Path) -> None:
         """Ensures the group's specific content directory is prepared and the group is logged.
 
@@ -75,8 +52,6 @@ class CollectionDumpExecutor:
         :param group_content_path: The top-level dumping path for the group
         """
 
-        # Ensure the directory exists (might be redundant if caller prepares, but safe)
-        # In non-dry_run modes, prepare_directory also creates the safeguard.
         self.dump_paths.prepare_directory(group_content_path, is_leaf_node_dir=False)
 
         if group.uuid not in self.dump_tracker.registries['groups'].entries:
@@ -85,12 +60,12 @@ class CollectionDumpExecutor:
                 entry=DumpRecord(path=group_content_path),
             )
 
-    def _identify_nodes_for_group(self, group: orm.Group, changes: DumpChanges) -> ProcessingQueue:
+    def _identify_nodes_in_group(self, group: orm.Group, changes: DumpChanges) -> ProcessingQueue:
         """Identifies nodes explicitly belonging to a given group from the provided changes.
 
         :param group: The specific group
         :param changes: Populated ``DumpChanges`` object with all changes since the last dump
-        :return: DumpNodeStore containing nodes that belong to this group
+        :return: ProcessingQueue containing nodes that belong to this group
         """
 
         nodes_explicitly_in_group = ProcessingQueue()
@@ -106,7 +81,7 @@ class CollectionDumpExecutor:
 
         return nodes_explicitly_in_group
 
-    def _dump_group_descendants(
+    def _dump_group_descendant_calcs(
         self,
         group: orm.Group,
         nodes_in_group: ProcessingQueue,
@@ -115,11 +90,9 @@ class CollectionDumpExecutor:
         """Finds and dumps calculation descendants for the group's workflows
 
         :param group: The specific group
-        :param nodes_in_group: DumpNodeStore containing
+        :param nodes_in_group: ProcessingQueue containing the calcs and workflows in the group
         :param group_root_path: _description_
         """
-        if self.config.only_top_level_calcs:
-            return
 
         workflows_in_group = [wf for wf in nodes_in_group.workflows if isinstance(wf, orm.WorkflowNode)]
 
@@ -137,9 +110,9 @@ class CollectionDumpExecutor:
             return
 
         # Descendants are dumped with the group context, into the group's content root.
-        descendant_store = ProcessingQueue(calculations=unique_unlogged_descendants)
+        descendant_queue = ProcessingQueue(calculations=unique_unlogged_descendants)
         self._dump_nodes(
-            processing_queue=descendant_store,
+            processing_queue=descendant_queue,
             group_context=group,
             current_dump_root_for_nodes=group_root_path,
         )
@@ -190,29 +163,22 @@ class CollectionDumpExecutor:
                 )
                 progress.update()
 
-    def _process_group(self, group: orm.Group, changes: DumpChanges, group_content_root_path: Path) -> None:
+    def _process_group(self, group: orm.Group, changes: DumpChanges, group_content_path: Path) -> None:
         """
-        Process a single group: find its nodes, dump descendants, dump explicit nodes,
+        Process a single group: find its nodes, dump explicit nodes, dump descendants,
         all operating within the provided 'group_content_root_path'.
 
         :param group: The orm.Group to process.
-        :param changes: DumpChanges object, hopefully scoped to this group or the current operation.
+        :param changes: DumpChanges object
         :param group_content_root_path: The absolute filesystem path where this group's
             direct content (safeguard, type subdirs) should reside.
         """
 
         # Ensure the group's own content directory is prepared and logged.
-        # _register_group_and_prepare_path should use group_content_root_path.
-        self._register_group_and_prepare_path(group=group, group_content_path=group_content_root_path)
+        self._register_group_and_prepare_path(group=group, group_content_path=group_content_path)
 
         # Identify nodes explicitly in this group from the scoped changes.
-        nodes_explicitly_in_group = self._identify_nodes_for_group(group, changes)
-
-        # Find and dump calculation descendants if required.
-        # These are dumped into the group_content_root_path.
-        self._dump_group_descendants(
-            group=group, nodes_in_group=nodes_explicitly_in_group, group_root_path=group_content_root_path
-        )
+        nodes_explicitly_in_group = self._identify_nodes_in_group(group, changes)
 
         # Dump the nodes explicitly identified for this group.
         store_for_explicit_dump = ProcessingQueue(
@@ -223,74 +189,76 @@ class CollectionDumpExecutor:
         if len(store_for_explicit_dump) == 0:
             return
 
-        # These nodes are dumped into the group_content_root_path.
+        # These nodes are dumped into the group_content_path.
         self._dump_nodes(
             processing_queue=store_for_explicit_dump,
             group_context=group,
-            current_dump_root_for_nodes=group_content_root_path,
+            current_dump_root_for_nodes=group_content_path,
         )
+
+        # Find and dump calculation descendants if required.
+        if not self.config.only_top_level_calcs:
+            self._dump_group_descendant_calcs(
+                group=group, nodes_in_group=nodes_explicitly_in_group, group_root_path=group_content_path
+            )
+
+        # Update stats for this specific group.
+        if record := self.dump_tracker.get_entry(group.uuid):
+            record.update_stats(group_content_path)
+        else:
+            logger.warning(f'Log entry not found for group UUID {group}')
 
     def _handle_group_changes(self, group_changes: GroupChanges) -> None:
         """Handle changes in the group structure since the last dump.
 
-        Apart from membership changes in the group-node mapping, this doesn't do much else actual work, as the actual
-        dumping and deleting are handled in other places.
-
-        :param group_changes: _description_
+        :param group_changes: Populated ``GroupChanges`` object
         """
-        logger.report('Processing group changes...')
+        logger.report('Processing group changes.')
 
-        # 1. Handle Deleted Groups (Directory deletion handled by DeletionExecutor)
-        # We might still need to log this or perform other cleanup
+        # Handle Deleted Groups. Actual directory deletion handled by DeletionExecutor, only logging done here.
         if group_changes.deleted:
             group_labels = [group_info.label for group_info in group_changes.deleted]
             msg = f'Detected {len(group_changes.deleted)} deleted groups.'
             logger.report(msg)
 
-        # 2. Handle New Groups
-        if group_changes.new:
-            group_labels = [group_info.label for group_info in group_changes.new]
-            logger.report(f'Processing {len(group_changes.new)} new or modified groups: {group_labels}')
-            for group_info in group_changes.new:
-                # Ensure the group directory exists and is logged
-                group = orm.load_group(uuid=group_info.uuid)
-                # Avoid creating empty directories for empty groups
-                if not group.nodes:
-                    continue
-                # Avoid creating empty directories for deselected groups
-                if self.config.groups and (
-                    group.label not in self.config.groups or group_info.uuid not in self.config.groups
-                ):
-                    continue
-
-                group_path = self.dump_paths.get_path_for_group(group=group)
-                self._register_group_and_prepare_path(group=group, group_content_path=group_path)
-                # Dumping nodes within this new group will happen if they
-                # are picked up by the NodeChanges detection based on the config.
-
-        # --- Handle Renamed Groups ---
+        # Handle Renamed Groups
         if self.config.relabel_groups and group_changes.renamed:
-            logger.report(f'Processing {len(group_changes.renamed)} renamed groups...')
+            logger.report(f'Processing {len(group_changes.renamed)} renamed groups.')
             for rename_info in group_changes.renamed:
                 old_path = rename_info.old_path
                 new_path = rename_info.new_path
 
-                # 1. Rename directory on disk
+                # Rename directory on disk
                 if old_path.exists():
                     try:
-                        # Ensure parent of new path exists
+                        if not old_path.is_dir():
+                            raise OSError(f"Source path {old_path} is not a directory")
+
+                        # Check if new_path already exists (os.rename would fail)
+                        if new_path.exists():
+                            raise OSError(f"Destination path {new_path} already exists")
+
+                        # Only create parent directory right before rename
                         new_path.parent.mkdir(parents=True, exist_ok=True)
-                        # os.rename is generally preferred for atomic rename if possible
+
+                        # Atomic rename operation
                         os.rename(old_path, new_path)
+
+                        # Only update tracker if rename succeeded
+                        self.dump_tracker.update_paths(old_base_path=old_path, new_base_path=new_path)
+
                     except OSError as e:
+                        # Clean up the parent directory if we created it and it's empty
+                        if new_path.parent.exists() and not any(new_path.parent.iterdir()):
+                            try:
+                                new_path.parent.rmdir()
+                            except OSError:
+                                pass  # Ignore cleanup errors
+
                         logger.error(f'Failed to rename directory for group {rename_info.uuid}: {e}', exc_info=True)
-                        # Decide whether to continue trying to update logger
                         raise
 
-                # 2. Update logger paths
-                self.dump_tracker.update_paths(old_base_path=old_path, new_base_path=new_path)
-
-        # --- Handle Modified Groups (Membership changes) ---
+        # Handle Modified Groups (Membership changes)
         if group_changes.modified:
             group_labels = [group_info.label for group_info in group_changes.modified]
             logger.report(f'Processing {len(group_changes.modified)} modified groups (membership): {group_labels}')
@@ -305,7 +273,11 @@ class CollectionDumpExecutor:
                 self._update_group_membership(mod_info, current_group_path_abs)
 
     def _update_group_membership(self, mod_info: GroupModificationInfo, current_group_path_abs: Path) -> None:
-        """Update dump structure for a group with added/removed nodes."""
+        """Update dump structure for a group with added/removed nodes.
+
+        :param mod_info: Populated ``GroupModificationInfo`` instance
+        :param current_group_path_abs: Current absolute path of the group.
+        """
 
         # Node addition handling remains the same - process manager places it correctly
         for node_uuid in mod_info.nodes_added:
@@ -321,10 +293,10 @@ class CollectionDumpExecutor:
             # current_group_path_abs is the content root for `group`
             node_target_path_in_group = self.dump_paths.get_path_for_node(
                 node=node,
-                current_content_root=current_group_path_abs,  # This is the new group's content root
+                current_content_root=current_group_path_abs,
             )
 
-            # Pass this explicit target_path to the process manager
+            # Pass this explicit target_path to the ProcessDumpExecutor
             self.process_dump_executor.dump(process_node=node, target_path=node_target_path_in_group)
 
         # Node removal handling uses the passed current_group_path_abs
@@ -334,11 +306,13 @@ class CollectionDumpExecutor:
                 self._remove_node_from_group_dir(current_group_path_abs, node_uuid)
 
     def _remove_node_from_group_dir(self, group_path: Path, node_uuid: str):
-        """
-        Find and remove a node's dump dir/symlink within a specific group path.
-        Handles nodes potentially deleted from the DB by checking filesystem paths.
-        """
+        """Find and remove a node's dump dir/symlink within a specific group path.
 
+        Handles nodes potentially deleted from the DB by checking filesystem paths.
+
+        :param group_path: Current root path of the group
+        :param node_uuid: UUID of node that was deleted
+        """
         dump_record = self.dump_tracker.get_entry(node_uuid)
         if not dump_record:
             logger.warning(f'Cannot find logger path for node {node_uuid} to remove from group.')
@@ -350,15 +324,15 @@ class CollectionDumpExecutor:
 
         # Construct potential paths within the group dir where the node might be represented
         # The order matters if duplicates could somehow exist; checks stop on first find.
-        possible_paths_to_check = [
+        paths_to_check = [
             group_path / 'calculations' / node_filename,
             group_path / 'workflows' / node_filename,
             group_path / node_filename,  # Check group root last
         ]
 
         found_path: Path | None = None
-        for potential_path in possible_paths_to_check:
-            # Use exists() which works for files, dirs, and symlinks (even broken ones)
+        for potential_path in paths_to_check:
+            # exists() works for files, dirs, and symlinks (even broken ones)
             if potential_path.exists():
                 found_path = potential_path
                 break
@@ -366,12 +340,11 @@ class CollectionDumpExecutor:
         if not found_path:
             return
 
-        # --- Removal Logic applied to the found_path ---
+        # Removal Logic applied to the found_path
         # Determine if the found path IS the original logged path.
         # This is crucial to avoid deleting the source if it was stored directly in the group path.
         is_target_dir = False
         try:
-            # Use resolve() for robust comparison, handles symlinks, '.', '..' etc.
             # This comparison is only meaningful if the original logged path *still exists*.
             # If node_path_in_logger points to a non-existent location, found_path cannot be it.
             if node_path.exists():
@@ -391,13 +364,11 @@ class CollectionDumpExecutor:
                 # Unlink works even if the symlink target doesn't exist
                 found_path.unlink()
                 self.dump_tracker.remove_symlink_from_log_entry(node_uuid, found_path)
-                # store.remove_symlink(found_path)
             except OSError as e:
                 logger.error(f'Failed to remove symlink {found_path}: {e}')
 
         elif found_path.is_dir() and not is_target_dir:
             # It's a directory *within* the group structure (likely a copy), and NOT the original. Safe to remove.
-            # Ensure safe_delete_dir handles non-empty dirs and potential errors
             self.dump_paths.safe_delete_directory(path=found_path)
 
         elif is_target_dir:

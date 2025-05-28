@@ -152,8 +152,7 @@ class DumpPaths:
             raise ValueError(msg)
 
     def prepare_directory(self, path_to_prepare: Path, is_leaf_node_dir: bool = False) -> None:
-        """
-        Prepares a directory for dumping, creating it and a safeguard file.
+        """Prepares a directory for dumping, a previously exesting one, or creating it, including the safeguard file.
 
         :param path_to_prepare: The absolute directory path to prepare.
         :param is_leaf_node_dir: True if this path is for a specific node's final dump,
@@ -162,15 +161,21 @@ class DumpPaths:
         if self.config.dump_mode == DumpMode.DRY_RUN:
             return
 
-        elif self.config.dump_mode == DumpMode.OVERWRITE:
-            if path_to_prepare.exists():
-                if os.listdir(path_to_prepare) and not (path_to_prepare / self.SAFEGUARD_FILE_NAME).exists():
-                    if is_leaf_node_dir:
-                        self.safe_delete_directory(path_to_prepare)
-                    else:
-                        msg = f'Path {path_to_prepare} exists, is not empty, but safeguard file missing.'
-                        raise FileNotFoundError(msg)
+        # Handle OVERWRITE mode: delete existing leaf directories if they have safeguards
+        # Directory exists and is not empty
+        if (
+            self.config.dump_mode == DumpMode.OVERWRITE
+            and is_leaf_node_dir
+            and path_to_prepare.exists()
+            and os.listdir(path_to_prepare)
+        ):
+            if (path_to_prepare / self.SAFEGUARD_FILE_NAME).exists():
+                self.safe_delete_directory(path_to_prepare)
+            else:
+                msg = f'Path {path_to_prepare} exists, is not empty, but safeguard file missing.'
+                raise FileNotFoundError(msg)
 
+        # Create directory and safeguard file
         path_to_prepare.mkdir(parents=True, exist_ok=True)
         (path_to_prepare / self.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
 

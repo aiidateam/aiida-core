@@ -84,9 +84,7 @@ class ProcessDumpExecutor:
         """
 
         if not process_node.is_sealed and not self.config.dump_unsealed:
-            msg = (
-                f'Process {process_node.pk} must be sealed before it can be dumped, or `--dump-unsealed` set to True.'
-            )
+            msg = f'Process {process_node.pk} must be sealed before it can be dumped, or `--dump-unsealed` set to True.'
             raise ExportValidationError(msg)
 
         action, existing_dump_record = self._check_log_and_determine_action(

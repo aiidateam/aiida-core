@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from aiida.common.log import AIIDA_LOGGER
@@ -107,19 +106,14 @@ class DeletionExecutor:
         path_to_delete = group_entry.path
 
         # Only delete directory if it's organized by groups and not the base path
-        should_delete_dir = (
-            self.config.organize_by_groups
-            and path_to_delete != self.dump_paths.base_output_path
-        )
+        should_delete_dir = self.config.organize_by_groups and path_to_delete != self.dump_paths.base_output_path
 
         if should_delete_dir:
             try:
                 self.dump_paths.safe_delete_directory(path=path_to_delete)
                 path_deleted = path_to_delete
             except FileNotFoundError as e:
-                logger.warning(
-                    f'Directory not found for deleted group {group_uuid} at {path_to_delete}: {e}'
-                )
+                logger.warning(f'Directory not found for deleted group {group_uuid} at {path_to_delete}: {e}')
 
         #  Delete Group Log Entry
         if self.dump_tracker.del_entry(uuid=group_uuid):

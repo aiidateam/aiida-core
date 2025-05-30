@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, c
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
-from aiida.tools._dumping.config import _GroupDumpScope
+from aiida.tools._dumping.config import GroupDumpScope
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import (
     REGISTRY_TO_ORM_TYPE,
@@ -66,7 +66,7 @@ class DumpChangeDetector:
 
     def get_nodes(
         self,
-        group_scope: _GroupDumpScope = _GroupDumpScope.ANY,
+        group_scope: GroupDumpScope = GroupDumpScope.ANY,
         group: Optional[orm.Group] = None,
         apply_filters: bool = True,
         ignore_time_filters: bool = False,
@@ -81,7 +81,7 @@ class DumpChangeDetector:
         :param exclude_tracked: Whether to exclude nodes already in dump tracker
         :return: ProcessingQueue containing the filtered nodes
         """
-        if group_scope == _GroupDumpScope.IN_GROUP and not group:
+        if group_scope == GroupDumpScope.IN_GROUP and not group:
             msg = 'Scope is IN_GROUP but no group object was provided.'
             raise ValueError(msg)
 
@@ -118,7 +118,7 @@ class DumpChangeDetector:
     def _query_single_type(
         self,
         orm_type: Type[orm.ProcessNode],
-        group_scope: _GroupDumpScope,
+        group_scope: GroupDumpScope,
         group: Optional[orm.Group],
         base_filters: Dict[str, Any],
     ) -> List[orm.ProcessNode]:
@@ -133,7 +133,7 @@ class DumpChangeDetector:
         filters = base_filters.copy()
 
         # Handle NO_GROUP scope
-        if group_scope == _GroupDumpScope.NO_GROUP and self.grouped_node_uuids:
+        if group_scope == GroupDumpScope.NO_GROUP and self.grouped_node_uuids:
             filters.setdefault('uuid', {}).setdefault('!in', []).extend(self.grouped_node_uuids)
 
         # Build query
@@ -141,7 +141,7 @@ class DumpChangeDetector:
         relationships: Dict[str, Any] = {}
 
         # Add group filter for IN_GROUP scope
-        if group_scope == _GroupDumpScope.IN_GROUP and group:
+        if group_scope == GroupDumpScope.IN_GROUP and group:
             qb.append(orm.Group, filters={'uuid': group.uuid}, tag=self.GROUP_TAG)
             relationships['with_group'] = self.GROUP_TAG
 
@@ -221,11 +221,11 @@ class DumpChangeDetector:
         """
         # Determine scope
         if group is not None:
-            scope = _GroupDumpScope.IN_GROUP
-        elif self.config.group_scope == _GroupDumpScope.NO_GROUP:
-            scope = _GroupDumpScope.NO_GROUP
+            scope = GroupDumpScope.IN_GROUP
+        elif self.config.group_scope == GroupDumpScope.NO_GROUP:
+            scope = GroupDumpScope.NO_GROUP
         else:
-            scope = _GroupDumpScope.ANY
+            scope = GroupDumpScope.ANY
 
         return self.get_nodes(group_scope=scope, group=group, apply_filters=True, exclude_tracked=True)
 
@@ -238,7 +238,7 @@ class DumpChangeDetector:
         # that end up being ungrouped after group deletion (see above), that have an `mtime` before the last dump.
         # However, that means that time filters are fully ignored. Maybe it's OK anyway in the ungrouped case.
         return self.get_nodes(
-            group_scope=_GroupDumpScope.NO_GROUP, apply_filters=True, ignore_time_filters=True, exclude_tracked=False
+            group_scope=GroupDumpScope.NO_GROUP, apply_filters=True, ignore_time_filters=True, exclude_tracked=False
         )
 
     def _detect_node_changes(self, group: Optional[orm.Group] = None) -> NodeChanges:
@@ -323,8 +323,6 @@ class DumpChangeDetector:
 
             for group_uuid in common_group_uuids:
                 entry = self.dump_tracker.get_entry(group_uuid)
-                if not entry:
-                    continue
 
                 old_path = entry.path
                 current_group = orm.load_group(uuid=group_uuid)

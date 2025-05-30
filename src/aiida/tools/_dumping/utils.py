@@ -59,17 +59,12 @@ __all__ = (
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.utils')
 
-@dataclass
+@dataclass(frozen=True)
 class DumpTimes:
     """Holds relevant timestamps for a dump operation."""
 
-    current: datetime = field(default=None)
+    current: datetime = field(default_factory=lambda: timezone.now())
     last: Optional[datetime] = None
-
-    def __post_init__(self):
-        """Ensure current time is fixed at construction if not provided."""
-        if self.current is None:
-            self.current = timezone.now()
 
     @classmethod
     def from_last_log_time(cls, last_log_time: str | None) -> 'DumpTimes':
@@ -286,20 +281,6 @@ class DumpPaths:
         """Returns the path to the safeguard file within a given directory."""
         return directory / self.SAFEGUARD_FILE_NAME
 
-    def _get_group_subdirectory_segment(self, group: orm.Group) -> Path:
-        """
-        Determines the path segment for a group. If organize_by_groups is True,
-        it prepends 'groups/'. Assumes group.label is filesystem-safe.
-        """
-        # Assuming group.label is directly usable as a directory name.
-        # If special characters in group.label could be an issue,
-        # you would need some form of sanitization here.
-        group_label_part = Path(group.label)
-
-        if self.config.organize_by_groups:
-            return Path('groups') / group_label_part
-        return group_label_part
-
     def get_path_for_group(self, group: orm.Group) -> Path:
         """Get the absolute path for a group's content."""
         if not self.config.organize_by_groups:
@@ -354,6 +335,20 @@ class DumpPaths:
         else:
             # Should not be called if not dumping ungrouped, but return base as a fallback.
             return self.base_output_path
+
+    def _get_group_subdirectory_segment(self, group: orm.Group) -> Path:
+        """
+        Determines the path segment for a group. If organize_by_groups is True,
+        it prepends 'groups/'. Assumes group.label is filesystem-safe.
+        """
+        # Assuming group.label is directly usable as a directory name.
+        # If special characters in group.label could be an issue,
+        # you would need some form of sanitization here.
+        group_label_part = Path(group.label)
+
+        if self.config.organize_by_groups:
+            return Path('groups') / group_label_part
+        return group_label_part
 
     def _get_node_type_folder_name(self, node: orm.Node) -> str:
         if isinstance(node, orm.CalculationNode):

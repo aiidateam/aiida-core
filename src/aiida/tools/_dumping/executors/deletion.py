@@ -77,8 +77,6 @@ class DeletionExecutor:
 
         # Get entry if it exists in the ``DumpTracker``
         result = self.dump_tracker.get_entry(node_uuid)
-        if not result:
-            return
 
         # Delete directory if it exists
         try:
@@ -99,10 +97,6 @@ class DeletionExecutor:
 
         # Get group entry and determine path to delete
         group_entry = self.dump_tracker.registries['groups'].get_entry(group_uuid)
-        if not group_entry:
-            logger.warning(f'Log entry not found for deleted group UUID {group_uuid}. Cannot remove directory.')
-            return
-
         path_to_delete = group_entry.path
 
         # Only delete directory if it's organized by groups and not the base path
@@ -117,10 +111,7 @@ class DeletionExecutor:
                 logger.warning(f'Directory not found for deleted group {group_uuid} at {path_to_delete}: {e}')
 
         #  Delete Group Log Entry
-        if self.dump_tracker.del_entry(uuid=group_uuid):
-            pass
-        else:
-            logger.warning(f'Failed to remove log entry for deleted group {group_uuid} (may have been missing).')
+        self.dump_tracker.del_entry(uuid=group_uuid)
 
         # Delete Node Log Entries Based on Path
         # Only proceed if we identified a group directory path (even if deletion failed)
@@ -136,8 +127,6 @@ class DeletionExecutor:
                 node_uuids_in_store = list(node_registry.entries.keys())
                 for node_uuid in node_uuids_in_store:
                     node_log_entry = node_registry.get_entry(node_uuid)
-                    if not node_log_entry:
-                        continue
 
                     try:
                         # Check if the node's primary logged path is inside the deleted group path

@@ -23,9 +23,9 @@ from aiida import orm
 from aiida.common import LinkType, timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
-from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools._dumping.tracking import DumpRecord
 from aiida.tools._dumping.utils import ORM_TYPE_TO_REGISTRY, DumpPaths, RegistryNameType
+from aiida.tools.archive.exceptions import ExportValidationError
 
 if TYPE_CHECKING:
     from aiida.tools._dumping.config import DumpConfig
@@ -171,9 +171,9 @@ class ProcessDumpExecutor:
         :return: ``NodeDumpAction`` enum instance, and existing ``DumpRecord``, if applicable
         """
 
-        existing_dump_record = self.dump_tracker.get_entry(process_node.uuid)
-
-        if not existing_dump_record:
+        try:
+            existing_dump_record = self.dump_tracker.get_entry(process_node.uuid)
+        except ValueError:
             return NodeDumpAction.DUMP_PRIMARY, None
 
         resolved_output_path = output_path.resolve()
@@ -360,11 +360,10 @@ class ProcessDumpExecutor:
         if is_primary_dump:
             registry_key = ORM_TYPE_TO_REGISTRY[type(process_node)]
             node_registry = self.dump_tracker.registries[registry_key]
-            if not node_registry.del_entry(process_node.uuid):
-                logger.warning(f'Could not find log entry to remove for failed primary dump of node {process_node.pk}')
+            node_registry.del_entry(process_node.uuid)
 
     @staticmethod
-    def _generate_child_node_label(index: int, link_triple: LinkTriple, append_pk: bool = True) -> str:
+    def generate_child_node_label(index: int, link_triple: LinkTriple, append_pk: bool = True) -> str:
         """Generate directory label for child nodes during recursion.
 
         :param index: Index in the iteration through the child processes of a workflow
@@ -596,7 +595,7 @@ class WorkflowWalker:
             child_node = link_triple.node
             assert isinstance(child_node, orm.ProcessNode)
             # Use static method from ProcessDumpExecutor to generate label consistently
-            child_label = ProcessDumpExecutor._generate_child_node_label(index=index, link_triple=link_triple)
+            child_label = ProcessDumpExecutor.generate_child_node_label(index=index, link_triple=link_triple)
             child_output_path = output_path / child_label
             # Call the provided dump_processor function for the child
             self.dump_processor(

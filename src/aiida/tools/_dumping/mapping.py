@@ -27,67 +27,6 @@ class GroupNodeMapping:
     # Map of node UUID to set of group UUIDs (for faster lookups)
     node_to_groups: Dict[str, Set[str]] = field(default_factory=dict)
 
-    def _add_node_to_group(self, group_uuid: str, node_uuid: str) -> None:
-        """Add a node to a group in the mapping.
-
-        :param group_uuid: The group to add to
-        :param node_uuid: The node to be added
-        """
-
-        # Add to group->nodes mapping
-        if group_uuid not in self.group_to_nodes:
-            self.group_to_nodes[group_uuid] = set()
-        self.group_to_nodes[group_uuid].add(node_uuid)
-
-        # Add to node->groups mapping
-        if node_uuid not in self.node_to_groups:
-            self.node_to_groups[node_uuid] = set()
-        self.node_to_groups[node_uuid].add(group_uuid)
-
-    def _remove_node_from_group(self, group_uuid: str, node_uuid: str) -> None:
-        """Remove a node from a group in the mapping.
-
-        :param group_uuid: The group from which the node should be removed
-        :param node_uuid: The node to be removed
-        """
-
-        # Remove from group->nodes mapping
-        if group_uuid in self.group_to_nodes and node_uuid in self.group_to_nodes[group_uuid]:
-            self.group_to_nodes[group_uuid].remove(node_uuid)
-            # Clean up empty entries
-            if not self.group_to_nodes[group_uuid]:
-                del self.group_to_nodes[group_uuid]
-
-        # Remove from node->groups mapping
-        if node_uuid in self.node_to_groups and group_uuid in self.node_to_groups[node_uuid]:
-            self.node_to_groups[node_uuid].remove(group_uuid)
-            # Clean up empty entries
-            if not self.node_to_groups[node_uuid]:
-                del self.node_to_groups[node_uuid]
-
-    def _remove_group(self, group_uuid: str) -> None:
-        """Remove a group and all its node associations.
-
-        :param group_uuid: The node to be removed
-        """
-        if group_uuid not in self.group_to_nodes:
-            return
-
-        # Get all nodes in this group
-        nodes = self.group_to_nodes[group_uuid].copy()
-
-        # Remove group from each node's groups
-        for node_uuid in nodes:
-            if node_uuid in self.node_to_groups:
-                if group_uuid in self.node_to_groups[node_uuid]:
-                    self.node_to_groups[node_uuid].remove(group_uuid)
-                # Clean up empty entries
-                if not self.node_to_groups[node_uuid]:
-                    del self.node_to_groups[node_uuid]
-
-        # Remove the group entry
-        del self.group_to_nodes[group_uuid]
-
     def to_dict(self) -> Dict:
         """Convert to serializable dictionary."""
         return {
@@ -221,3 +160,64 @@ class GroupNodeMapping:
         )
 
         return group_changes
+
+    def _add_node_to_group(self, group_uuid: str, node_uuid: str) -> None:
+        """Add a node to a group in the mapping.
+
+        :param group_uuid: The group to add to
+        :param node_uuid: The node to be added
+        """
+
+        # Add to group->nodes mapping
+        if group_uuid not in self.group_to_nodes:
+            self.group_to_nodes[group_uuid] = set()
+        self.group_to_nodes[group_uuid].add(node_uuid)
+
+        # Add to node->groups mapping
+        if node_uuid not in self.node_to_groups:
+            self.node_to_groups[node_uuid] = set()
+        self.node_to_groups[node_uuid].add(group_uuid)
+
+    def _remove_node_from_group(self, group_uuid: str, node_uuid: str) -> None:
+        """Remove a node from a group in the mapping.
+
+        :param group_uuid: The group from which the node should be removed
+        :param node_uuid: The node to be removed
+        """
+
+        # Remove from group->nodes mapping
+        if group_uuid in self.group_to_nodes and node_uuid in self.group_to_nodes[group_uuid]:
+            self.group_to_nodes[group_uuid].remove(node_uuid)
+            # Clean up empty entries
+            if not self.group_to_nodes[group_uuid]:
+                del self.group_to_nodes[group_uuid]
+
+        # Remove from node->groups mapping
+        if node_uuid in self.node_to_groups and group_uuid in self.node_to_groups[node_uuid]:
+            self.node_to_groups[node_uuid].remove(group_uuid)
+            # Clean up empty entries
+            if not self.node_to_groups[node_uuid]:
+                del self.node_to_groups[node_uuid]
+
+    def _remove_group(self, group_uuid: str) -> None:
+        """Remove a group and all its node associations.
+
+        :param group_uuid: The node to be removed
+        """
+        if group_uuid not in self.group_to_nodes:
+            return
+
+        # Get all nodes in this group
+        nodes = self.group_to_nodes[group_uuid].copy()
+
+        # Remove group from each node's groups
+        for node_uuid in nodes:
+            if node_uuid in self.node_to_groups:
+                if group_uuid in self.node_to_groups[node_uuid]:
+                    self.node_to_groups[node_uuid].remove(group_uuid)
+                # Clean up empty entries
+                if not self.node_to_groups[node_uuid]:
+                    del self.node_to_groups[node_uuid]
+
+        # Remove the group entry
+        del self.group_to_nodes[group_uuid]

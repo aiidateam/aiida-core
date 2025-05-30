@@ -34,7 +34,7 @@ class DumpMode(Enum):
     DRY_RUN = auto()
 
 
-class _GroupDumpScope(Enum):
+class GroupDumpScope(Enum):
     IN_GROUP = auto()
     ANY = auto()
     NO_GROUP = auto()
@@ -107,8 +107,8 @@ class DumpConfig(BaseModel):
     filter_by_last_dump_time: bool = True
     only_top_level_calcs: bool = True
     only_top_level_workflows: bool = True
-    group_scope: _GroupDumpScope = Field(
-        default=_GroupDumpScope.IN_GROUP,
+    group_scope: GroupDumpScope = Field(
+        default=GroupDumpScope.IN_GROUP,
         exclude=True,  # Exclude from standard serialization, internal class
     )
 

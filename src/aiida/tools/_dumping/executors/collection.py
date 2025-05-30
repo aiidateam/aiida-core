@@ -203,10 +203,8 @@ class CollectionDumpExecutor:
             )
 
         # Update stats for this specific group.
-        if record := self.dump_tracker.get_entry(group.uuid):
-            record.update_stats(group_content_path)
-        else:
-            logger.warning(f'Log entry not found for group UUID {group}')
+        record = self.dump_tracker.get_entry(group.uuid)
+        record.update_stats(group_content_path)
 
     def _handle_group_changes(self, group_changes: GroupChanges) -> None:
         """Handle changes in the group structure since the last dump.
@@ -314,9 +312,6 @@ class CollectionDumpExecutor:
         :param node_uuid: UUID of node that was deleted
         """
         dump_record = self.dump_tracker.get_entry(node_uuid)
-        if not dump_record:
-            logger.warning(f'Cannot find logger path for node {node_uuid} to remove from group.')
-            return
 
         # Even if node is deleted from DB, we expect the dump_tracker to know the original path name
         node_path = dump_record.path
@@ -366,15 +361,23 @@ class CollectionDumpExecutor:
 
                 # Remove symlink reference from log entry
                 entry = self.dump_tracker.get_entry(node_uuid)
-                if entry:
-                    entry.remove_symlink(found_path)
+                entry.remove_symlink(found_path)
+
 
             except OSError as e:
                 logger.error(f'Failed to remove symlink {found_path}: {e}')
+            except ValueError:
+                raise
 
         elif found_path.is_dir() and not is_target_dir:
             # It's a directory *within* the group structure (likely a copy), and NOT the original. Safe to remove.
             self.dump_paths._safe_delete_directory(path=found_path)
+            # Remove duplicate reference from log entry
+            try:
+                entry = self.dump_tracker.get_entry(node_uuid)
+                entry.remove_duplicate(found_path)
+            except ValueError:
+                raise
 
         elif is_target_dir:
             # The path found *is* the primary logged path.

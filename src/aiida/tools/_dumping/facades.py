@@ -11,15 +11,19 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
-from aiida.tools._dumping.config import DumpConfig
+from aiida.tools._dumping.config import ProcessDumpConfig
 from aiida.tools._dumping.engine import DumpEngine
 from aiida.tools._dumping.utils import DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.facades')
+
+if TYPE_CHECKING:
+    pass
 
 
 class ProcessDumper:
@@ -28,20 +32,20 @@ class ProcessDumper:
     def __init__(
         self,
         process_node: orm.ProcessNode,
-        config: DumpConfig | None = None,
+        config: ProcessDumpConfig | None = None,
         output_path: str | Path | None = None,
     ) -> None:
         """Initialize the ProcessDumper, which handles exporting a single AiiDA ProcessNode.
 
         :param process: The ``ProcessNode`` to dump
-        :param config: An optional ``DumpConfig`` object that controls what data to include in the dump.
+        :param config: An optional config object that controls what data to include in the dump.
             If ``None``, default dump settings are used.
         :param output_path: Optional base path to write the dump to. Can be a string or ``Path``.
             If ``None``, a default path based on the profile name will be used.
         """
 
         self.process_node: orm.ProcessNode = process_node
-        self.config: DumpConfig = config if config is not None else DumpConfig()
+        self.config: ProcessDumpConfig = config if config is not None else ProcessDumpConfig()
         self.base_output_path: Path
 
         # Resolve DumpPaths based on output_path and the node

@@ -21,7 +21,7 @@ from aiida.tools._dumping.utils import DumpChanges, DumpPaths
 logger = AIIDA_LOGGER.getChild('tools.dumping.executors.group')
 
 if TYPE_CHECKING:
-    from aiida.tools._dumping.config import DumpConfig
+    from aiida.tools._dumping.config import GroupDumpConfig
     from aiida.tools._dumping.executors import ProcessDumpExecutor
     from aiida.tools._dumping.mapping import GroupNodeMapping
     from aiida.tools._dumping.tracking import DumpTracker
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 class GroupDumpExecutor(CollectionDumpExecutor):
     def __init__(
         self,
-        config: DumpConfig,
+        config: GroupDumpConfig,
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
         process_dump_executor: ProcessDumpExecutor,
@@ -48,7 +48,7 @@ class GroupDumpExecutor(CollectionDumpExecutor):
 
         # Explicit type hints
         self.dump_paths: DumpPaths
-        self.config: DumpConfig
+        self.config: GroupDumpConfig
         self.dump_tracker: DumpTracker
         self.process_dump_executor: ProcessDumpExecutor
         self.current_mapping: GroupNodeMapping

@@ -625,10 +625,7 @@ def process_dump(
     import traceback
     from pathlib import Path
 
-    from pydantic import ValidationError
-
     from aiida.cmdline.utils import echo
-    from aiida.tools._dumping.config import DumpConfig, DumpMode
     from aiida.tools._dumping.utils import DumpPaths
     from aiida.tools.archive.exceptions import ExportValidationError
 
@@ -637,9 +634,6 @@ def process_dump(
         'If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.'
     )
     echo.echo_warning(warning_msg)
-
-    # --- Initial Setup ---
-    final_dump_config = None
 
     try:
         if path is None:
@@ -651,33 +645,26 @@ def process_dump(
             echo.echo_report(f"Using specified output path: '{path}'")
             dump_base_output_path = Path(path).resolve()
 
-        try:
-            # Gather relevant CLI args for group dump
-            config_input_data = {
-                'dry_run': dry_run,
-                'overwrite': overwrite,
-                'include_inputs': include_inputs,
-                'include_outputs': include_outputs,
-                'include_attributes': include_attributes,
-                'include_extras': include_extras,
-                'flat': flat,
-                'dump_unsealed': dump_unsealed,
-            }
-            final_dump_config = DumpConfig.model_validate(config_input_data)
-        except ValidationError as e:
-            echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
+        # Check for dry_run + overwrite
+        if overwrite and dry_run:
+            msg = 'Both `dry_run` and `overwrite` set to true. Operation will NOT be performed.'
+            echo.echo_warning(msg)
             return
 
-        # --- Logical Checks ---
-        # Check for dry_run + overwrite based on final config
-        if overwrite and dry_run:
-            msg = 'Config specifies both `dry_run` and `overwrite` as True. Overwrite will NOT be performed.'
-            echo.echo_warning(msg)
-
         # Execute dumping
-        process.dump(config=final_dump_config, output_path=dump_base_output_path)
+        process.dump(
+            output_path=dump_base_output_path,
+            dry_run=dry_run,
+            overwrite=overwrite,
+            include_inputs=include_inputs,
+            include_outputs=include_outputs,
+            include_attributes=include_attributes,
+            include_extras=include_extras,
+            flat=flat,
+            dump_unsealed=dump_unsealed,
+        )
 
-        if final_dump_config.dump_mode != DumpMode.DRY_RUN:
+        if not dry_run:
             msg = f'Raw files for process `{process.pk}` dumped into folder `{dump_base_output_path.name}`.'
             echo.echo_success(msg)
         else:

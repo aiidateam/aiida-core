@@ -17,7 +17,7 @@ from typing import Union
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
 from aiida.manage.configuration.profile import Profile
-from aiida.tools._dumping.config import DumpConfig, DumpMode
+from aiida.tools._dumping.config import DumpMode, GroupDumpConfig, ProcessDumpConfig, ProfileDumpConfig
 from aiida.tools._dumping.detect import DumpChangeDetector
 from aiida.tools._dumping.executors import (
     DeletionExecutor,
@@ -39,16 +39,16 @@ class DumpEngine:
         self,
         dump_target_entity: Union[orm.ProcessNode, orm.Group, Profile],
         base_output_path: Path,
-        config: DumpConfig | None = None,
+        config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig],
     ):
         """Engine constructor that initializes all entities needed for dumping.
 
         :param dump_target_entity: AiiDA object that will be dumped
         :param base_output_path: Main dumping output path
-        :param config: Populated ``DumpConfig`` instance, defaults to None
+        :param config: Populated config instance, defaults to None
         """
 
-        self.config: DumpConfig = config or DumpConfig()
+        self.config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig] = config
         self.dump_target_entity = dump_target_entity
 
         self.dump_paths = DumpPaths(
@@ -123,6 +123,7 @@ class DumpEngine:
         """Dump a single ``orm.ProcessNode``."""
 
         assert isinstance(self.dump_target_entity, orm.ProcessNode)
+        assert isinstance(self.config, ProcessDumpConfig)
 
         # For a single ProcessNode, its dump root is the base_output_path.
         # ProcessManager uses DumpPaths to place content within this root.
@@ -134,6 +135,7 @@ class DumpEngine:
     def _dump_group(self) -> None:
         """Dump a group and its associated nodes."""
         assert isinstance(self.dump_target_entity, orm.Group)
+        assert isinstance(self.config, GroupDumpConfig)
 
         self.dump_tracker.set_current_mapping(self.current_mapping)
         node_changes = self.detector._detect_node_changes(group=self.dump_target_entity)
@@ -174,6 +176,7 @@ class DumpEngine:
     def _dump_profile(self) -> None:
         """Dump a profile and its associated data."""
         assert isinstance(self.dump_target_entity, Profile)
+        assert isinstance(self.config, ProfileDumpConfig)
 
         if (
             not self.config.all_entries

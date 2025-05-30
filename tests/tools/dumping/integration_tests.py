@@ -16,7 +16,6 @@ import pytest
 
 from aiida import load_profile, orm
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools._dumping.config import DumpConfig, DumpMode
 
 from .utils import compare_tree
 
@@ -387,9 +386,8 @@ class TestProcessDumping:
 
         dump_label = f'{wc_process_label}-{wc_pk}'
         dump_target_path = tmp_path / dump_label
-        config = DumpConfig(dump_mode=DumpMode.OVERWRITE)
 
-        wc_node.dump(config=config, output_path=dump_target_path)
+        wc_node.dump(overwrite=True, output_path=dump_target_path)
 
         # Create the final expected structure including standard files
         expected_tree_content = expected_wc_content_tree[dump_label]
@@ -417,9 +415,8 @@ class TestProcessDumping:
 
         # --- Nested Dump ---
         dump_target_path_nested = tmp_path / dump_label
-        config_nested = DumpConfig(dump_mode=DumpMode.OVERWRITE, include_outputs=True)  # Include outputs
 
-        wc_node.dump(config=config_nested, output_path=dump_target_path_nested)
+        wc_node.dump(output_path=dump_target_path_nested, overwrite=True, include_outputs=True)
 
         # Generate expected nested tree
         expected_wc_content_tree = get_expected_multiply_add_wc_tree(wc_pk=wc_pk, child_pks=child_pks)
@@ -445,8 +442,7 @@ class TestProcessDumping:
         dump_label = f'{process_label}-{calc_pk}'
         dump_target_path = tmp_path / dump_label
 
-        config = DumpConfig(include_outputs=True, dump_mode=DumpMode.OVERWRITE)
-        calculation_node.dump(config=config, output_path=dump_target_path)
+        calculation_node.dump(output_path=dump_target_path, include_outputs=True, overwrite=True)
 
         # Generate expected tree
         expected_node_tree = get_expected_io_calc_tree(pk=calc_pk, process_label=process_label)
@@ -484,9 +480,7 @@ class TestProcessDumping:
         dump_label = f'{process_label}-{calc_pk}-flat'  # Use different name
         dump_target_path = tmp_path / dump_label
 
-        config = DumpConfig(flat=True, include_outputs=True, dump_mode=DumpMode.OVERWRITE)
-
-        calculation_node.dump(config=config, output_path=dump_target_path)
+        calculation_node.dump(output_path=dump_target_path, flat=True, include_outputs=True, overwrite=True)
 
         # Perform basic checks instead of full compare_tree for flat dump
         assert (dump_target_path / 'aiida_node_metadata.yaml').is_file()
@@ -504,9 +498,7 @@ class TestProcessDumping:
         dump_label = f'{process_label}-{calc_pk}'
         dump_target_path = tmp_path / dump_label
 
-        config = DumpConfig(include_outputs=True, dump_mode=DumpMode.OVERWRITE)
-
-        calculation_node.dump(config=config, output_path=dump_target_path)
+        calculation_node.dump(output_path=dump_target_path, include_outputs=True, overwrite=True)
 
         # Generate expected tree using the node helper's content
         expected_node_content = get_expected_add_calc_tree(pk=calc_pk)[dump_label]
@@ -534,8 +526,7 @@ class TestGroupDumping:
         expected_tree = get_expected_group_dump_tree(dump_label=add_group_label, node_trees=[calc_tree])
 
         output_path = tmp_path / add_group_label
-        config = DumpConfig()
-        add_group.dump(config=config, output_path=output_path)
+        add_group.dump(output_path=output_path)
 
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
@@ -600,8 +591,7 @@ class TestGroupDumping:
         dest_group.add_nodes(list(add_group.nodes))
 
         output_path = tmp_path / copy_dump_label
-        config = DumpConfig(filter_by_last_dump_time=False)
-        dest_group.dump(config=config, output_path=output_path)
+        dest_group.dump(output_path=output_path, filter_by_last_dump_time=False)
 
         # Generate expected tree for the copied group dump
         calc_tree = get_expected_add_calc_tree(pk=node1.pk)
@@ -623,8 +613,7 @@ class TestGroupDumping:
         group.add_nodes(sub_calcs)
 
         output_path = tmp_path / dump_label
-        config = DumpConfig(filter_by_last_dump_time=False)
-        group.dump(config=config, output_path=output_path)
+        group.dump(output_path=output_path, filter_by_last_dump_time=False)
 
         # Generate expected tree for the group containing sub-calcs
         multiply_tree = get_expected_multiply_func_tree(pk=multiply_child.pk)
@@ -645,10 +634,8 @@ class TestProfileDumping:
         # Assemble profile tree
         expected_tree = get_expected_profile_dump_tree(groups_data={add_group.label: [calc_tree]})
 
-        config = DumpConfig(all_entries=True)
-
         profile = load_profile()
-        profile.dump(config=config, output_path=tmp_path / profile_dump_label)
+        profile.dump(output_path=tmp_path / profile_dump_label, all_entries=True)
 
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
@@ -667,8 +654,7 @@ class TestProfileDumping:
         expected_tree = get_expected_profile_dump_tree(groups_data={multiply_add_group.label: [wc_tree]})
 
         profile = load_profile()
-        config = DumpConfig(all_entries=True)
-        profile.dump(config=config, output_path=tmp_path / profile_dump_label)
+        profile.dump(output_path=tmp_path / profile_dump_label, all_entries=True)
 
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
@@ -699,8 +685,7 @@ class TestProfileDumping:
         )
 
         profile = load_profile()
-        config = DumpConfig(all_entries=True)
-        profile.dump(config=config, output_path=tmp_path / profile_dump_label)
+        profile.dump(output_path=tmp_path / profile_dump_label, all_entries=True)
 
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
@@ -729,8 +714,7 @@ class TestProfileDumping:
         )
 
         profile = load_profile()
-        config = DumpConfig(all_entries=True)
-        profile.dump(config=config, output_path=tmp_path / profile_dump_label)
+        profile.dump(output_path=tmp_path / profile_dump_label, all_entries=True)
 
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
@@ -760,8 +744,7 @@ class TestProfileDumping:
         )
 
         profile = load_profile()
-        config = DumpConfig(all_entries=True, organize_by_groups=False)
-        profile.dump(output_path=tmp_path / profile_dump_label, config=config)
+        profile.dump(output_path=tmp_path / profile_dump_label, all_entries=True, organize_by_groups=False)
 
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
@@ -790,9 +773,8 @@ class TestProfileDumping:
         output_path = tmp_path / profile_dump_label
 
         # --- Dump 1: Only grouped nodes ---
-        config_grouped = DumpConfig(all_entries=True, also_ungrouped=False)
         profile = load_profile()
-        profile.dump(output_path=output_path, config=config_grouped)
+        profile.dump(output_path=output_path, all_entries=True, also_ungrouped=False)
 
         # Generate expected tree for grouped nodes only
         grouped_calc_tree = get_expected_add_calc_tree(pk=grouped_add_node.pk)
@@ -810,14 +792,8 @@ class TestProfileDumping:
         # Note: We re-instantiate dumper to ensure fresh state reading if needed,
         # or rely on the dumper correctly handling incremental logic with config change.
         # Re-instantiating is often safer in tests.
-        config_all = DumpConfig(
-            all_entries=True,
-            also_ungrouped=True,
-            filter_by_last_dump_time=False,
-            dump_mode=DumpMode.INCREMENTAL,
-        )
         profile = load_profile()
-        profile.dump(output_path=output_path, config=config_all)
+        profile.dump(output_path=output_path, all_entries=True, also_ungrouped=True, filter_by_last_dump_time=False)
 
         # Generate expected tree for all nodes
         ungrouped_calc_tree = get_expected_add_calc_tree(pk=ungrouped_add_node.pk)
@@ -841,11 +817,10 @@ class TestProfileDumping:
         node2 = generate_calculation_node_add()  # Created but not in group yet
 
         output_path = tmp_path / profile_dump_label
-        config = DumpConfig(all_entries=True, filter_by_last_dump_time=False)
         profile = load_profile()
 
         # Dump 1: Only node1 should be in the group dump
-        profile.dump(output_path=output_path, config=config)
+        profile.dump(output_path=output_path, all_entries=True, filter_by_last_dump_time=False)
         tree1 = get_expected_profile_dump_tree(groups_data={add_group.label: [get_expected_add_calc_tree(node1.pk)]})
         compare_tree(expected=tree1, base_path=tmp_path)
 
@@ -854,7 +829,7 @@ class TestProfileDumping:
 
         # Dump 2: Both nodes should be in the group dump
         # Re-run dump, should pick up group change
-        profile.dump(output_path=output_path, config=config)
+        profile.dump(output_path=output_path, all_entries=True, filter_by_last_dump_time=False)
         tree2 = get_expected_profile_dump_tree(
             groups_data={
                 add_group.label: [
@@ -876,8 +851,7 @@ class TestProfileDumping:
         output_path = tmp_path / profile_dump_label
 
         profile = load_profile()
-        config = DumpConfig(all_entries=True, filter_by_last_dump_time=False)
-        profile.dump(output_path=output_path, config=config)
+        profile.dump(output_path=output_path, all_entries=True, filter_by_last_dump_time=False)
 
         # Generate expected tree with node1 in both groups
         calc_tree = get_expected_add_calc_tree(pk=node1.pk)
@@ -898,9 +872,8 @@ class TestProfileDumping:
         dest_group.add_nodes(list(add_group.nodes))
 
         output_path = tmp_path / profile_dump_label
-        config = DumpConfig(all_entries=True, symlink_calcs=True, filter_by_last_dump_time=False)
         profile = load_profile()
-        profile.dump(output_path=output_path, config=config)
+        profile.dump(output_path=output_path, all_entries=True, symlink_calcs=True, filter_by_last_dump_time=False)
 
         # --- Symlink specific checks ---
         node_dir_name = f'{node1.process_label}-{node1.pk}'
@@ -935,8 +908,7 @@ class TestProfileDumping:
         output_path = tmp_path / profile_dump_label
 
         profile = load_profile()
-        config = DumpConfig(all_entries=True, filter_by_last_dump_time=False)
-        profile.dump(output_path=output_path, config=config)
+        profile.dump(output_path=output_path, all_entries=True, filter_by_last_dump_time=False)
 
         # Generate expected tree (only sub-calcs in the group)
         multiply_tree = get_expected_multiply_func_tree(pk=multiply_child.pk)
@@ -962,10 +934,9 @@ class TestProfileDumping:
         output_path = tmp_path / profile_dump_label
 
         profile = load_profile()
-        config = DumpConfig(all_entries=True, filter_by_last_dump_time=False)
 
         # Dump 1: Full initial state
-        profile.dump(output_path=output_path, config=config)
+        profile.dump(output_path=output_path, all_entries=True, filter_by_last_dump_time=False)
         calc_tree = get_expected_add_calc_tree(pk=node_add.pk)  # Getting pk here is fine
         wc_tree = get_expected_multiply_add_wc_tree(wc_pk=node_wc.pk, child_pks=wc_child_pks)
         initial_tree = get_expected_profile_dump_tree(
@@ -979,9 +950,8 @@ class TestProfileDumping:
         # Delete the add node
         delete_nodes(pks=[node_add.pk], dry_run=False)  # Using pk is fine
 
-        # Dump 2: Incremental dump with delete_missing=True
-        config_del = DumpConfig(delete_missing=True, all_entries=True, dump_mode=DumpMode.INCREMENTAL)
-        profile.dump(output_path=output_path, config=config_del)
+        # Dump 2: Incremental dump with delete_missing=True (default)
+        profile.dump(output_path=output_path, all_entries=True)
 
         # Generate expected tree after deletion
         final_tree = get_expected_profile_dump_tree(
@@ -1015,10 +985,9 @@ class TestProfileDumping:
         output_path = tmp_path / profile_dump_label
 
         profile = load_profile()
-        config = DumpConfig(all_entries=True, filter_by_last_dump_time=False, also_ungrouped=True)
 
         # Dump 1: Full initial state
-        profile.dump(output_path=output_path, config=config)
+        profile.dump(output_path=output_path, all_entries=True, filter_by_last_dump_time=False, also_ungrouped=True)
         calc_tree_initial = get_expected_add_calc_tree(pk=node_add.pk)
         wc_tree_initial = get_expected_multiply_add_wc_tree(wc_pk=node_wc.pk, child_pks=wc_child_pks)
         initial_tree = get_expected_profile_dump_tree(
@@ -1033,8 +1002,7 @@ class TestProfileDumping:
         orm.Group.collection.delete(multiply_add_group.pk)
 
         # Dump 2: Incremental dump, should remove multiply_add_group dir
-        config_del = DumpConfig(delete_missing=True, all_entries=True, dump_mode=DumpMode.INCREMENTAL)
-        profile.dump(output_path=output_path, config=config_del)
+        profile.dump(output_path=output_path, all_entries=True)
 
         # Generate expected tree after group deletion
         tree_after_del = get_expected_profile_dump_tree(
@@ -1045,14 +1013,7 @@ class TestProfileDumping:
         assert not (output_path / 'groups' / multiply_add_group_label).exists()
 
         # Dump 3: Include ungrouped, should find the WC node now
-        config_ungrouped = DumpConfig(
-            also_ungrouped=True,
-            delete_missing=True,
-            all_entries=True,
-            dump_mode=DumpMode.INCREMENTAL,
-            filter_by_last_dump_time=False,
-        )
-        profile.dump(output_path=output_path, config=config_ungrouped)
+        profile.dump(output_path=output_path, also_ungrouped=True, all_entries=True, filter_by_last_dump_time=False)
 
         # Generate expected tree with WC node in ungrouped
         tree_final = get_expected_profile_dump_tree(
@@ -1071,10 +1032,9 @@ class TestProfileDumping:
 
         output_path = tmp_path / profile_dump_label
         profile = load_profile()
-        config = DumpConfig(all_entries=True, filter_by_last_dump_time=False)
 
         # Dump 1: Initial state
-        profile.dump(config=config, output_path=output_path)
+        profile.dump(output_path=output_path, all_entries=True, filter_by_last_dump_time=False)
         calc_tree = get_expected_add_calc_tree(pk=node_add.pk)
         wc_tree = get_expected_multiply_add_wc_tree(wc_pk=node_wc.pk, child_pks=wc_child_pks)
         initial_tree = get_expected_profile_dump_tree(
@@ -1090,7 +1050,7 @@ class TestProfileDumping:
         multiply_add_group.add_nodes([node_add])
 
         # Dump 2: Should reflect the change
-        profile.dump(config=config, output_path=output_path)
+        profile.dump(output_path=output_path, all_entries=True, filter_by_last_dump_time=False)
         final_tree = get_expected_profile_dump_tree(
             groups_data={
                 add_group.label: [],  # Now empty
@@ -1107,11 +1067,10 @@ class TestProfileDumping:
         new_label = 'add-group-relabelled'
 
         output_path = tmp_path / profile_dump_label
-        config = DumpConfig(all_entries=True, filter_by_last_dump_time=False)
         profile = load_profile()
 
         # Dump 1: Initial state
-        profile.dump(config=config, output_path=output_path)
+        profile.dump(output_path=output_path, all_entries=True, filter_by_last_dump_time=False)
         calc_tree = get_expected_add_calc_tree(pk=node_add.pk)
         initial_tree = get_expected_profile_dump_tree(groups_data={old_label: [calc_tree]})
         compare_tree(expected=initial_tree, base_path=tmp_path)
@@ -1121,13 +1080,7 @@ class TestProfileDumping:
 
         # Dump 2: Update groups, should reflect relabeling
         # Re-instantiate dumper or ensure config update is picked up
-        config_update = DumpConfig(
-            all_entries=True,
-            relabel_groups=True,
-            dump_mode=DumpMode.INCREMENTAL,
-            filter_by_last_dump_time=False,
-        )
-        profile.dump(config=config_update, output_path=output_path)
+        profile.dump(output_path=output_path, all_entries=True, relabel_groups=True, filter_by_last_dump_time=False)
 
         # Generate expected tree with new label
         final_tree = get_expected_profile_dump_tree(groups_data={new_label: [calc_tree]})
@@ -1144,10 +1097,9 @@ class TestProfileDumping:
 
         output_path = tmp_path / profile_dump_label
         profile = load_profile()
-        config = DumpConfig(all_entries=True)
 
         # Dump 1: Initial dump
-        profile.dump(output_path=output_path, config=config)
+        profile.dump(output_path=output_path, all_entries=True)
         initial_tree = get_expected_profile_dump_tree(
             groups_data={add_group.label: [get_expected_add_calc_tree(node_add.pk)]}
         )
@@ -1156,7 +1108,8 @@ class TestProfileDumping:
         # Dump 2: No changes, check log message
         caplog.clear()
         with caplog.at_level(logging.REPORT, logger='aiida.tools._dumping.engine'):
-            profile.dump(output_path=output_path, config=config)  # Should detect no changes via log
+            # Should detect no changes via log
+            profile.dump(output_path=output_path, all_entries=True)
 
         assert (
             'No changes detected since last dump' in caplog.text
@@ -1169,15 +1122,10 @@ class TestProfileDumping:
         add_group = setup_add_group
         original_node = add_group.nodes[0]
         output_path = tmp_path / profile_dump_label
-        config = DumpConfig(
-            all_entries=True,
-            filter_by_last_dump_time=True,  # Explicitly enable (though default)
-            dump_mode=DumpMode.INCREMENTAL,  # Essential for this test
-        )
         profile = load_profile()
 
         # Dump 1: Initial dump
-        profile.dump(output_path=output_path, config=config)
+        profile.dump(output_path=output_path, all_entries=True)
         original_calc_tree = get_expected_add_calc_tree(pk=original_node.pk)
         initial_tree = get_expected_profile_dump_tree(groups_data={add_group.label: [original_calc_tree]})
         compare_tree(expected=initial_tree, base_path=tmp_path)
@@ -1194,7 +1142,7 @@ class TestProfileDumping:
         add_group.add_nodes([new_node])
 
         # Dump 2: Incremental dump, filtering by time
-        profile.dump(output_path=output_path, config=config)
+        profile.dump(output_path=output_path, all_entries=True)
 
         # Check mtime of original node dir DID NOT change
         mtime_orig_node_after = original_node_dump_path.stat().st_mtime

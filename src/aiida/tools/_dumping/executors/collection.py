@@ -363,7 +363,6 @@ class CollectionDumpExecutor:
                 entry = self.dump_tracker.get_entry(node_uuid)
                 entry.remove_symlink(found_path)
 
-
             except OSError as e:
                 logger.error(f'Failed to remove symlink {found_path}: {e}')
             except ValueError:

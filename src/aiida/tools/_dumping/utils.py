@@ -59,6 +59,7 @@ __all__ = (
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.utils')
 
+
 @dataclass(frozen=True)
 class DumpTimes:
     """Holds relevant timestamps for a dump operation."""

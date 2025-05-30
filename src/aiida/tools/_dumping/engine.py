@@ -27,7 +27,7 @@ from aiida.tools._dumping.executors import (
 )
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.tracking import DumpTracker
-from aiida.tools._dumping.utils import DumpChanges, DumpPaths, DumpTimes
+from aiida.tools._dumping.utils import DumpChanges, DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.engine')
 

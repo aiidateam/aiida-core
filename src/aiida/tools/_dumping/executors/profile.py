@@ -58,6 +58,35 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         self.process_dump_executor: ProcessDumpExecutor
         self.current_mapping: GroupNodeMapping
 
+    def dump(self, changes: DumpChanges) -> None:
+        """Dumps the entire profile by orchestrating helper methods."""
+        if not self.config.all_entries and not self.config.filters_set:
+            logger.warning('Default profile dump scope is NONE, skipping profile content dump.')
+            return
+
+        # Handle Group Lifecycle (using Group Executor)
+        # This applies changes detected earlier (renamed, modified, and membership)
+        # Deletion and dumping of new groups handled elsewhere
+        self._handle_group_changes(changes.groups)
+
+        # Determine which groups need node processing based on config (e.g., all groups, specific groups)
+        groups_to_process = self._determine_groups_to_process()
+
+        # Process nodes within each selected group
+        for group in groups_to_process:
+            # _process_group handles finding nodes for this group, adding descendants if needed,
+            # and calling node_manager.dump_nodes
+            group_content_root = self.dump_paths.get_path_for_group(group=group)
+            self._process_group(group=group, changes=changes, group_content_path=group_content_root)
+
+        # Process ungrouped nodes if requested by config
+        # _dump_ungrouped_nodes finds relevant nodes and calls node_manager.dump_nodes
+        if self.config.also_ungrouped:
+            self._dump_ungrouped_nodes()
+
+        # Update final stats for logged groups after all dumping is done
+        self._update_group_stats()
+
     def _determine_groups_to_process(self) -> list[orm.Group]:
         """Determine which groups to process based on config."""
         if self.config.all_entries:
@@ -86,9 +115,11 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         :return: Boolean if node already has been dumped under the ungrouped path
         """
         node_uuid = node.uuid
-        dump_record = self.dump_tracker.get_entry(node_uuid)
 
-        if not dump_record:
+        try:
+            dump_record = self.dump_tracker.get_entry(node_uuid)
+        except ValueError as e:
+            logger.warning(f'Node {node_uuid} not found in dump tracker: {e}')
             return False
 
         try:
@@ -149,32 +180,3 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
                 continue
 
             group_log_entry.update_stats(group_path)
-
-    def dump(self, changes: DumpChanges) -> None:
-        """Dumps the entire profile by orchestrating helper methods."""
-        if not self.config.all_entries and not self.config.filters_set:
-            logger.warning('Default profile dump scope is NONE, skipping profile content dump.')
-            return
-
-        # Handle Group Lifecycle (using Group Executor)
-        # This applies changes detected earlier (renamed, modified, and membership)
-        # Deletion and dumping of new groups handled elsewhere
-        self._handle_group_changes(changes.groups)
-
-        # Determine which groups need node processing based on config (e.g., all groups, specific groups)
-        groups_to_process = self._determine_groups_to_process()
-
-        # Process nodes within each selected group
-        for group in groups_to_process:
-            # _process_group handles finding nodes for this group, adding descendants if needed,
-            # and calling node_manager.dump_nodes
-            group_content_root = self.dump_paths.get_path_for_group(group=group)
-            self._process_group(group=group, changes=changes, group_content_path=group_content_root)
-
-        # Process ungrouped nodes if requested by config
-        # _dump_ungrouped_nodes finds relevant nodes and calls node_manager.dump_nodes
-        if self.config.also_ungrouped:
-            self._dump_ungrouped_nodes()
-
-        # Update final stats for logged groups after all dumping is done
-        self._update_group_stats()

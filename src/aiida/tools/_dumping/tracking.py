@@ -17,8 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Literal, Optional
 
-from aiida.common import timezone
-from aiida.common.log import AIIDA_LOGGER
+from aiida.common import AIIDA_LOGGER, timezone
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import DumpPaths, DumpTimes
 
@@ -36,17 +35,22 @@ class DumpRecord:
     dir_size: Optional[int] = None
 
     def to_dict(self) -> dict:
-        # Add mtime serialization if included
+        """Returns a serialized dictionary representation of the entry."""
         return {
             'path': str(self.path),
             'symlinks': [str(path) for path in self.symlinks] if self.symlinks else [],
-            'duplicates': [str(path) for path in self.duplicates],
+            'duplicates': [str(path) for path in self.duplicates] if self.duplicates else [],
             'dir_mtime': self.dir_mtime.isoformat() if self.dir_mtime else None,
-            'dir_size': self.dir_size,
+            'dir_size': self.dir_size if self.dir_size else None,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> 'DumpRecord':
+        """Returns a populated ``DumpRecord`` entry from a serialized dictionary representation.
+
+        :param data: Dictionary with ``DumpRecord`` content (usually obtained from the log JSON file)
+        :return: ``DumpRecord`` instance
+        """
         symlinks = []
         if data.get('symlinks'):
             symlinks = [Path(path) for path in data['symlinks']]
@@ -77,36 +81,47 @@ class DumpRecord:
         )
 
     def add_symlink(self, path: Path) -> None:
-        """Add a symlink path to this log entry."""
+        """Add a symlink path to this ``DumpRecord`` entry.
+
+        :param path: The path of the symlink
+        """
         if path not in self.symlinks:
             self.symlinks.append(path)
 
-    def remove_symlink(self, path: Path) -> bool:
-        """Remove a symlink path from this log entry, comparing resolved paths."""
+    def remove_symlink(self, path: Path) -> None:
+        """Remove a symlink path from this ``DumpRecord`` entry, comparing resolved paths.
+
+        :param path: The symlink to be removed
+        """
         resolved_path_to_remove = path.resolve()
-        original_length = len(self.symlinks)
         # Filter out paths that resolve to the same location
         self.symlinks = [
             p
             for p in self.symlinks
             if not p.exists() or p.resolve() != resolved_path_to_remove  # Check exists() first for broken links
         ]
-        return len(self.symlinks) < original_length
 
     def add_duplicate(self, path: Path) -> None:
-        """Add a duplicate dump path to this log entry."""
+        """Add a duplicate dump path to this ``DumpRecord`` entry.
+
+        :param path: The duplicated dump path for an AiiDa object to be added
+        """
         if path not in self.duplicates:
             self.duplicates.append(path)
 
-    def remove_duplicate(self, path: Path) -> bool:
-        """Remove a duplicate dump path from this log entry."""
+    def remove_duplicate(self, path: Path) -> None:
+        """Remove a duplicate dump path from this ``DumpRecord`` entry.
+
+        :param path: The duplicated dump path to be removed from the ``DumpRecord`` entry
+        """
         if path in self.duplicates:
             self.duplicates.remove(path)
-            return True
-        return False
 
     def update_stats(self, path: Optional[Path]) -> None:
-        """Update directory stats from the path of the DumpRecord or an optional given path."""
+        """Update directory stats from the path of the ``DumpRecord`` or an optional given path.
+
+        :param path: An optional path. If not given, the path of the ``DumpRecord`` instance is used
+        """
         if not path:
             path = self.path
 
@@ -115,34 +130,76 @@ class DumpRecord:
 
 @dataclass
 class DumpRegistry:
-    """A registry for DumpRecord entries, indexed by UUID."""
+    """A registry for ``DumpRecord`` entries, indexed by UUID."""
 
     entries: Dict[str, DumpRecord] = field(default_factory=dict)
 
     def add_entry(self, uuid: str, entry: DumpRecord) -> None:
-        """Add a single entry to the container."""
+        """Add a single ``DumpRecord`` entry to the registry.
+
+        :param uuid: The UUID of the AiiDA node
+        :param entry: The ``DumpRecord`` entry to be added
+        :raises ValueError: If the UUID already exists in the registry
+        """
+        if uuid in self.entries:
+            raise ValueError(f"UUID '{uuid}' already exists in the registry")
         self.entries[uuid] = entry
 
     def add_entries(self, entries: Dict[str, DumpRecord]) -> None:
-        """Add a collection of entries to the container."""
-        self.entries.update(entries)
+        """Add a collection of ``DumpRecord`` entries to the container.
 
-    def del_entry(self, uuid: str) -> bool:
-        """Remove a single entry by UUID."""
-        if uuid in self.entries:
-            del self.entries[uuid]
-            return True
-        return False
+        :param entries: Dictionary of ``DumpRecord`` entries indexed by the AiiDA node UUIDs
+        """
+        for uuid, entry in entries.items():
+            self.add_entry(uuid, entry)
+
+    def del_entry(self, uuid: str) -> None:
+        """Remove a single ``DumpRecord`` entry by its AiiDA node UUID.
+
+        :param uuid: The UUID of the AiiDA node for which the entry should be removed
+        :raises ValueError: If the UUID doesn't exist in the registry
+        """
+        if uuid not in self.entries:
+            raise ValueError(f"UUID '{uuid}' not in the registry")
+        del self.entries[uuid]
 
     def del_entries(self, uuids: Collection[str]) -> None:
-        """Remove a collection of entries by UUID."""
-        for uuid in uuids:
-            if uuid in self.entries:
-                del self.entries[uuid]
+        """Remove a collection of entries via their UUIDs.
 
-    def get_entry(self, uuid: str) -> Optional[DumpRecord]:
-        """Retrieve a single entry by UUID."""
-        return self.entries.get(uuid)
+        :param uuids: List of UUIDs whose entries should be removed from the registry
+        """
+        for uuid in uuids:
+            self.del_entry(uuid)
+
+    def get_entry(self, uuid: str) -> DumpRecord:
+        """Retrieve a single entry via its UUID.
+
+        :param uuid: The corresponding UUID of the entry to be retrieved
+        :return: The retrieved ``DumpRecord`` entry from the registry
+        :raises ValueError: If the UUID doesn't exist in the registry
+        """
+        if uuid not in self.entries:
+            raise ValueError(f"UUID '{uuid}' not found in the registry")
+        return self.entries[uuid]
+
+    def to_dict(self) -> Dict:
+        """Get a serialized dictionary representation of the ``DumpRegistry``
+
+        :return: Serialized dictionary representation of the ``DumpRegistry``
+        """
+        return {uuid: entry.to_dict() for uuid, entry in self.entries.items()}
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> DumpRegistry:
+        """Obtain a ``DumpRegistry`` instance from a serialized dictionary representation
+
+        :param data: Serialized dictionary representation of ``DumpRegistry`` contents
+        :return: Populated ``DumpRegistry`` instance
+        """
+        registry = cls()
+        for uuid, entry_data in data.items():
+            registry.entries[uuid] = DumpRecord.from_dict(entry_data)
+        return registry
 
     def __len__(self) -> int:
         """Return the number of entries in the container."""
@@ -152,29 +209,23 @@ class DumpRegistry:
         """Iterate over all entries."""
         return iter(self.entries.items())
 
-    def to_dict(self) -> Dict:
-        return {uuid: entry.to_dict() for uuid, entry in self.entries.items()}
-
-    @classmethod
-    def from_dict(cls, data: Dict) -> DumpRegistry:
-        registry = cls()
-        for uuid, entry_data in data.items():
-            registry.entries[uuid] = DumpRecord.from_dict(entry_data)
-        return registry
-
 
 class DumpTracker:
-    """Handles loading, saving, and accessing dump log data."""
+    """Handles loading, saving, modifying, and accessing dump log/tracking data."""
 
     def __init__(
         self,
         dump_paths: DumpPaths,
-        dump_times: DumpTimes,
-        previous_mapping: GroupNodeMapping | None = None,
-        current_mapping: GroupNodeMapping | None = None,
+        dump_times: Optional[DumpTimes] = None,
+        previous_mapping: Optional[GroupNodeMapping] = None,
+        current_mapping: Optional[GroupNodeMapping] = None,
     ) -> None:
-        """
-        Initialize the DumpTracker. Should typically be instantiated via `load`.
+        """Initialize the DumpTracker. Typically be instantiated via `load`.
+
+        :param dump_paths: Instance of ``DumpPaths``
+        :param dump_times: Instance of ``DumpTimes``
+        :param previous_mapping: A ``GroupNodeMapping`` of a previous dump, if existing, defaults to None
+        :param current_mapping: The current ``GroupNodeMapping`` obtained from AiiDA's DB state, defaults to None
         """
         self.dump_paths: DumpPaths = dump_paths
         self.registries: Dict[str, DumpRegistry] = {
@@ -182,7 +233,7 @@ class DumpTracker:
             'workflows': DumpRegistry(),
             'groups': DumpRegistry(),
         }
-        self.dump_times: DumpTimes = dump_times
+        self.dump_times: DumpTimes = dump_times or DumpTimes()
         self.previous_mapping: GroupNodeMapping = previous_mapping or GroupNodeMapping()
         self.current_mapping: GroupNodeMapping = current_mapping or GroupNodeMapping()
 
@@ -190,8 +241,8 @@ class DumpTracker:
     def load(cls, dump_paths: DumpPaths) -> DumpTracker:
         """Load log data from the log file to instantiate the DumpTracker.
 
-        :param dump_paths: DumpPaths instance
-        :return: Loaded DumpTracker instance
+        :param dump_paths: Path to the JSON log file to be read in
+        :return: Loaded ``DumpTracker`` instance
         """
         data = {}
 
@@ -201,8 +252,9 @@ class DumpTracker:
                 data = json.loads(dump_paths.tracking_log_file_path.read_text(encoding='utf-8'))
             except (json.JSONDecodeError, OSError, ValueError) as e:
                 logger.warning(f'Error loading dump log file {dump_paths.tracking_log_file_path}: {e!s}')
+                raise
 
-        # Create DumpTimes and tracker
+        # Create DumpTimes and tracker instances
         dump_times = DumpTimes.from_last_log_time(data.get('last_dump_time'))
 
         # Load previous group-node-mapping if present
@@ -210,26 +262,20 @@ class DumpTracker:
         if 'group_node_mapping' in data:
             previous_mapping = GroupNodeMapping.from_dict(data['group_node_mapping'])
 
+        # `current_mapping` is set elsewhere
         tracker = cls(dump_paths, dump_times, previous_mapping=previous_mapping)
 
         # Load registry data
         for registry_name in tracker.registries:
             if registry_name in data:
-                tracker.registries[registry_name] = tracker.deserialize_registry(data[registry_name])
+                tracker.registries[registry_name] = tracker._deserialize_registry(data[registry_name])
 
         return tracker
-
-    def del_entry(self, uuid: str) -> bool:
-        """Delete a log entry by UUID (automatically finds the correct registry)."""
-        for registry in self.registries.values():
-            if uuid in registry.entries:
-                return registry.del_entry(uuid)
-        return False
 
     def save(self) -> None:
         """Save the current log state and mapping to the JSON file."""
         log_dict: dict[str, Any] = {
-            registry_name: self.serialize_registry(registry) for registry_name, registry in self.registries.items()
+            registry_name: self._serialize_registry(registry) for registry_name, registry in self.registries.items()
         }
         log_dict['last_dump_time'] = self.dump_times.current.isoformat()
         log_dict['group_node_mapping'] = self.current_mapping.to_dict()
@@ -239,10 +285,123 @@ class DumpTracker:
         except OSError as e:
             logger.error(f'Failed to save dump log to {self.dump_paths.tracking_log_file_path}: {e!s}')
 
-    def serialize_registry(self, container: DumpRegistry) -> Dict:
-        """Serialize log entries to a dictionary format relative to dump parent."""
+    def get_entry(self, uuid: str) -> DumpRecord:
+        """Find the dump record for an AiiDA node with the given UUID.
+
+        :param uuid: UUID of the AiiDA node
+        :return: The dump record for the given UUID
+        :raises ValueError: If the UUID is not found in any registry
+        """
+        registry = self._get_registry_from_entry(uuid=uuid)
+        return registry.get_entry(uuid)
+
+    def del_entry(self, uuid: str) -> None:
+        """Delete a log entry by UUID (automatically finds the correct registry).
+
+        :param uuid: The corresponding UUID of the AiiDA node for which the entry should be deleted
+        :raises ValueError: If the UUID is not found in any registry
+        """
+        registry = self._get_registry_from_entry(uuid=uuid)
+        registry.del_entry(uuid)
+
+    def update_paths(self, old_base_path: Path, new_base_path: Path) -> None:
+        """Update all paths across all registries if they start with old_base_path.
+
+        Replaces the old_base_path prefix with new_base_path.
+
+        :param old_base_path: The absolute base path prefix to find
+        :param new_base_path: The absolute base path prefix to replace with
+        :raises OSError: If path resolution fails
+        :raises ValueError: If path operations fail
+        """
+
+        # Ensure paths are absolute and resolved for reliable comparison
+        try:
+            old_resolved = old_base_path.resolve()
+            new_resolved = new_base_path.resolve()
+        except OSError as e:
+            logger.error(f'Error resolving paths for update: {e}. Aborting path update.')
+            raise
+
+        for registry in self.registries.values():
+            for uuid, entry in registry.entries.items():
+                # Update entry.path
+                try:
+                    resolved_entry_path = entry.path.resolve()
+                    if resolved_entry_path.is_relative_to(old_resolved):
+                        relative_part = resolved_entry_path.relative_to(old_resolved)
+                        new_path = new_resolved / relative_part
+                        if entry.path != new_path:
+                            entry.path = new_path
+                except (OSError, ValueError) as e:
+                    logger.warning(f'Could not compare/update primary path for {uuid}: {entry.path}. Error: {e}')
+                    raise
+
+                # Update entry.symlinks
+                updated_symlinks = []
+                for symlink_path in entry.symlinks:
+                    try:
+                        resolved_symlink = symlink_path.resolve()
+                        if resolved_symlink.is_relative_to(old_resolved):
+                            relative_part = resolved_symlink.relative_to(old_resolved)
+                            new_symlink = new_resolved / relative_part
+                            updated_symlinks.append(new_symlink)
+                        else:
+                            updated_symlinks.append(symlink_path)
+                    except (OSError, ValueError) as e:
+                        logger.warning(f'Could not compare/update symlink for {uuid}: {symlink_path}. Error: {e}')
+                        raise
+
+                entry.symlinks = updated_symlinks
+
+                # Update entry.duplicates
+                updated_duplicates = []
+                for duplicate_path in entry.duplicates:
+                    try:
+                        resolved_duplicate = duplicate_path.resolve()
+                        if resolved_duplicate.is_relative_to(old_resolved):
+                            relative_part = resolved_duplicate.relative_to(old_resolved)
+                            new_duplicate = new_resolved / relative_part
+                            updated_duplicates.append(new_duplicate)
+                        else:
+                            updated_duplicates.append(duplicate_path)
+                    except (OSError, ValueError) as e:
+                        logger.warning(f'Could not compare/update duplicate for {uuid}: {duplicate_path}. Error: {e}')
+                        raise  # Add this line to be consistent with primary path handling
+
+                entry.duplicates = updated_duplicates
+
+    def set_current_mapping(self, current_mapping: GroupNodeMapping) -> None:
+        """Set the current mapping to be saved to the JSON log file.
+
+        :param current_mapping: Instance of ``GroupNodeMapping`` obtained from the current state of AiiDA's DB
+        """
+        self.current_mapping = current_mapping
+
+    def iter_by_type(
+        self,
+    ) -> Generator[
+        tuple[Literal['calculations'], DumpRegistry]
+        | tuple[Literal['workflows'], DumpRegistry]
+        | tuple[Literal['groups'], DumpRegistry]
+    ]:
+        """Iterate over node registries
+
+        :yield: Tuple with the registry key string Literal and the corresponding ``DumpRegistry``
+        """
+        yield ('calculations', self.registries['calculations'])
+        yield ('workflows', self.registries['workflows'])
+        yield ('groups', self.registries['groups'])
+
+    def _serialize_registry(self, registry: DumpRegistry) -> Dict[str, Dict[str, Any]]:
+        """Serialize log entries to a dictionary format with paths relative to the dump base_output_path.
+
+        :param registry: Instance of the ``DumpRegistry`` to be serialized
+        :return: Serialized ``DumpRegistry`` dictionary representation
+        :raises ValueError: If any path cannot be made relative to base_output_path
+        """
         serialized = {}
-        for uuid, entry in container.entries.items():
+        for uuid, entry in registry.entries.items():
             try:
                 entry_dict = entry.to_dict()
 
@@ -260,129 +419,52 @@ class DumpTracker:
                     ]
 
                 # Add the complete entry dict (including mtime/size) to serialized output
-                serialized[uuid] = entry_dict  # <-- Use the full dict from to_dict()
+                serialized[uuid] = entry_dict
 
-            except ValueError:
-                # Fallback if path is not relative - use absolute paths from to_dict()
+            except ValueError as e:
                 msg = (
-                    f'Path {entry.path} or its links/duplicates not relative to {self.dump_paths.base_output_path}.'
-                    'Storing absolute.'
+                    f'Path {entry.path} or its links/duplicates not relative to {self.dump_paths.base_output_path}. '
+                    f'Error: {e}'
                 )
-                logger.warning(msg)
-                serialized[uuid] = entry.to_dict()  # Store absolute paths using full dict
+                logger.error(msg)
+                raise
+
         return serialized
 
-    def deserialize_registry(self, data: Dict) -> DumpRegistry:
-        """Deserialize log entries using DumpLog.from_dict and make paths absolute."""
-        container = DumpRegistry()
+    def _deserialize_registry(self, data: Dict[str, Dict[str, Any]]) -> DumpRegistry:
+        """Deserialize log entries using ``DumpRecord.from_dict`` and make paths absolute for internal handling.
+
+        :param data: Serialized dictionary with UUIDs as keys and entry data as values
+        :return: DumpRegistry instance with deserialized entries
+        :raises ValueError: If deserialization fails or path operations fail
+        """
+        registry = DumpRegistry()
         for uuid, entry_data in data.items():
-            dump_record: Optional[DumpRecord] = None
-            # Handle new format (dict)
-            if isinstance(entry_data, dict) and 'path' in entry_data:
-                # Use from_dict to get all fields correctly
-                dump_record = DumpRecord.from_dict(entry_data)
-                # Now make paths absolute based on dump_paths.base_output_path
-                # Note: Assumes paths in JSON are relative to dump_paths.base_output_path
-                dump_record.path = self.dump_paths.base_output_path / dump_record.path
-                dump_record.symlinks = [self.dump_paths.base_output_path / p for p in dump_record.symlinks]
-                dump_record.duplicates = [self.dump_paths.base_output_path / p for p in dump_record.duplicates]
+            if 'path' in entry_data:
+                try:
+                    # Use from_dict to get all fields correctly
+                    dump_record = DumpRecord.from_dict(entry_data)
+                    # Make paths absolute based on dump_paths.base_output_path
+                    dump_record.path = self.dump_paths.base_output_path / dump_record.path
+                    dump_record.symlinks = [self.dump_paths.base_output_path / p for p in dump_record.symlinks]
+                    dump_record.duplicates = [self.dump_paths.base_output_path / p for p in dump_record.duplicates]
 
-            if dump_record:
-                container.add_entry(uuid, dump_record)
+                    registry.add_entry(uuid, dump_record)
+                except Exception as e:
+                    logger.error(f'Failed to deserialize entry for UUID {uuid}: {e}')
+                    raise
 
-        return container
+        return registry
 
-    def get_registry_from_entry(self, uuid: str) -> Optional[DumpRegistry]:
-        """Find registry containing the UUID."""
+    def _get_registry_from_entry(self, uuid: str) -> DumpRegistry:
+        """Find registry that contains the given UUID.
+
+        :param uuid: The UUID for which the registry should be found
+        :raises ValueError: If UUID not contained in any registry
+        :return: The retrieved ``DumpRegistry`` instance
+        """
         for registry in self.registries.values():
             if uuid in registry.entries:
                 return registry
-        return None
-
-    def get_entry(self, uuid: str) -> Optional[DumpRecord]:
-        """Find the dump record for an entity with the given UUID."""
-        registry = self.get_registry_from_entry(uuid=uuid)
-        if registry and uuid in registry.entries:
-            return registry.entries[uuid]
-        return None
-
-    def update_paths(self, old_base_path: Path, new_base_path: Path) -> None:
-        """Update all paths across all registries if they start with old_base_path.
-
-        Replaces the old_base_path prefix with new_base_path.
-
-        :param old_base_path: The absolute base path prefix to find
-        :param new_base_path: The absolute base path prefix to replace with
-        :return: The total number of path entries (primary path, symlinks, duplicates) updated
-        """
-
-        # Ensure paths are absolute and resolved for reliable comparison
-        try:
-            old_resolved = old_base_path.resolve()
-            new_resolved = new_base_path.resolve()
-        except OSError as e:
-            logger.error(f'Error resolving paths for update: {e}. Aborting path update.')
-            return
-
-        for registry in self.registries.values():
-            for uuid, entry in registry.entries.items():
-                # Update entry.path
-                try:
-                    resolved_entry_path = entry.path.resolve()
-                    if resolved_entry_path.is_relative_to(old_resolved):
-                        relative_part = resolved_entry_path.relative_to(old_resolved)
-                        new_path = new_resolved / relative_part
-                        if entry.path != new_path:
-                            entry.path = new_path
-                except (OSError, ValueError):  # Handle resolve() errors or path not relative
-                    logger.warning(f'Could not compare/update primary path for {uuid}: {entry.path}')
-
-                # Update entry.symlinks
-                updated_symlinks = []
-                for symlink_path in entry.symlinks:
-                    try:
-                        resolved_symlink = symlink_path.resolve()
-                        if resolved_symlink.is_relative_to(old_resolved):
-                            relative_part = resolved_symlink.relative_to(old_resolved)
-                            new_symlink = new_resolved / relative_part
-                            updated_symlinks.append(new_symlink)
-                        else:
-                            updated_symlinks.append(symlink_path)  # Keep unchanged
-                    except (OSError, ValueError):
-                        logger.warning(f'Could not compare/update symlink for {uuid}: {symlink_path}')
-                        updated_symlinks.append(symlink_path)  # Keep original on error
-                entry.symlinks = updated_symlinks
-
-                # Update entry.duplicates
-                # (Similar logic as for symlinks)
-                updated_duplicates = []
-                for duplicate_path in entry.duplicates:
-                    try:
-                        resolved_duplicate = duplicate_path.resolve()
-                        if resolved_duplicate.is_relative_to(old_resolved):
-                            relative_part = resolved_duplicate.relative_to(old_resolved)
-                            new_duplicate = new_resolved / relative_part
-                            updated_duplicates.append(new_duplicate)
-                        else:
-                            updated_duplicates.append(duplicate_path)
-                    except (OSError, ValueError):
-                        logger.warning(f'Could not compare/update duplicate for {uuid}: {duplicate_path}')
-                        updated_duplicates.append(duplicate_path)
-
-                entry.duplicates = updated_duplicates
-
-    def set_current_mapping(self, current_mapping: GroupNodeMapping) -> None:
-        """Set the current mapping (to be saved)."""
-        self.current_mapping = current_mapping
-
-    def iter_by_type(
-        self,
-    ) -> Generator[
-        tuple[Literal['calculations'], DumpRegistry]
-        | tuple[Literal['workflows'], DumpRegistry]
-        | tuple[Literal['groups'], DumpRegistry]
-    ]:
-        """Iterate over node registries (excludes groups)"""
-        yield ('calculations', self.registries['calculations'])
-        yield ('workflows', self.registries['workflows'])
-        yield ('groups', self.registries['groups'])
+        msg = f'UUID `{uuid}` not contained in any registry.'
+        raise ValueError(msg)

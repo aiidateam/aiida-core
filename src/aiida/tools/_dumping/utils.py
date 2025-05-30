@@ -243,10 +243,7 @@ class DumpPaths:
     TRACKING_LOG_FILE_NAME = 'aiida_dump_log.json'
 
     def __init__(
-        self,
-        base_output_path: Path,
-        config: DumpConfig,
-        dump_target_entity: orm.Node | orm.Group | Profile,
+        self, base_output_path: Path, config: DumpConfig, dump_target_entity: Union[orm.Node, orm.Group, Profile]
     ):
         """
         Initializes the DumpPaths object for centralized path handling during the dumping.

@@ -22,9 +22,9 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 
 # fmt: off
 
+from ._dumping import *
 from .calculations import *
 from .data import *
-from ._dumping import *
 from .graph import *
 from .groups import *
 from .visualization import *

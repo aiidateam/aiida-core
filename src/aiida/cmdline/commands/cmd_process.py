@@ -628,9 +628,9 @@ def process_dump(
     from pydantic import ValidationError
 
     from aiida.cmdline.utils import echo
-    from aiida.tools.archive.exceptions import ExportValidationError
     from aiida.tools._dumping.config import DumpConfig, DumpMode
     from aiida.tools._dumping.utils import DumpPaths
+    from aiida.tools.archive.exceptions import ExportValidationError
 
     warning_msg = (
         'This is a new feature which is still in its testing phase. '

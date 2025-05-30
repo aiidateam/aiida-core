@@ -100,8 +100,9 @@ class DumpEngine:
         elif isinstance(self.dump_target_entity, Profile):
             self._dump_profile()
 
-        logger.report(f'Saving final dump log to file `{DumpPaths.TRACKING_LOG_FILE_NAME}`.')
-        self.dump_tracker.save()
+        if not self.config.dump_mode == DumpMode.DRY_RUN:
+            logger.report(f'Saving final dump log to file `{DumpPaths.TRACKING_LOG_FILE_NAME}`.')
+            self.dump_tracker.save()
 
     def _log_dump_start(self) -> None:
         """Log the start of a dump operation."""
@@ -174,7 +175,11 @@ class DumpEngine:
         """Dump a profile and its associated data."""
         assert isinstance(self.dump_target_entity, Profile)
 
-        if not self.config.all_entries and not self.config.filters_set:
+        if (
+            not self.config.all_entries
+            and not self.config.filters_set
+            and not self.config.dump_mode == DumpMode.DRY_RUN
+        ):
             # NOTE: Hack for now, delete empty directory again.
             # Ideally don't even create in the first place.
             # Need to check again where it is actually created.

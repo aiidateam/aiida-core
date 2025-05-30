@@ -443,7 +443,7 @@ class DumpPaths:
         elif isinstance(entity, Profile):
             return DumpPaths._get_profile_path(entity, prefix, appendix)
         else:
-            assert_never(entity)  # type: ignore[unreachable]
+            assert_never(entity)
 
     @staticmethod
     def _get_process_node_path(process_node: orm.ProcessNode, prefix: Optional[str], appendix: Optional[str]) -> Path:

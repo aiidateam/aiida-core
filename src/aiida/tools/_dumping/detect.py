@@ -15,7 +15,12 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, c
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
-from aiida.tools._dumping.config import GroupDumpScope
+from aiida.tools._dumping.config import (
+    DumpConfigType,
+    GroupDumpConfig,
+    GroupDumpScope,
+    ProfileDumpConfig,
+)
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import (
     REGISTRY_TO_ORM_TYPE,
@@ -31,7 +36,7 @@ from aiida.tools._dumping.utils import (
 )
 
 if TYPE_CHECKING:
-    from aiida.tools._dumping.config import DumpConfig
+    from aiida.tools._dumping.config import DumpConfigType
     from aiida.tools._dumping.tracking import DumpTracker
 
 __all__ = ('DumpChangeDetector',)
@@ -49,10 +54,10 @@ class DumpChangeDetector:
     CODE_TAG = 'code_filter'
 
     def __init__(
-        self, config: DumpConfig, dump_tracker: DumpTracker, dump_paths: DumpPaths, dump_times: DumpTimes
+        self, config: DumpConfigType, dump_tracker: DumpTracker, dump_paths: DumpPaths, dump_times: DumpTimes
     ) -> None:
         """Initializes the DumpChangeDetector."""
-        self.config: DumpConfig = config
+        self.config: DumpConfigType = config
         self.dump_tracker: DumpTracker = dump_tracker
         self.dump_paths: DumpPaths = dump_paths
         self.dump_times: DumpTimes = dump_times
@@ -87,7 +92,7 @@ class DumpChangeDetector:
 
         # Build base filters
         base_filters = {}
-        if not ignore_time_filters:
+        if not ignore_time_filters and isinstance(self.config, (GroupDumpConfig, ProfileDumpConfig)):
             base_filters['mtime'] = self._resolve_time_filters()
 
         # Get nodes by type
@@ -146,12 +151,13 @@ class DumpChangeDetector:
             relationships['with_group'] = self.GROUP_TAG
 
         # Add entity filters (User, Computer, Code)
-        qb, entity_relationships = self._resolve_qb_appends(qb)
-        relationships.update(entity_relationships)
+        if isinstance(self.config, (GroupDumpConfig, ProfileDumpConfig)):
+            qb, entity_relationships = self._resolve_qb_appends(qb)
+            relationships.update(entity_relationships)
 
-        # Add edge filter for Code links
-        if 'with_incoming' in relationships and relationships['with_incoming'] == self.CODE_TAG:
-            relationships['edge_filters'] = {'label': 'code'}
+            # Add edge filter for Code links
+            if 'with_incoming' in relationships and relationships['with_incoming'] == self.CODE_TAG:
+                relationships['edge_filters'] = {'label': 'code'}
 
         # Add main node type
         qb.append(orm_type, filters=filters, tag=self.NODE_TAG, **relationships)
@@ -194,6 +200,7 @@ class DumpChangeDetector:
         if not nodes:
             return nodes
 
+        assert isinstance(self.config, (GroupDumpConfig, ProfileDumpConfig))
         # Determine if we should apply top-level filtering
         should_filter = (store_type == 'workflows' and self.config.only_top_level_workflows) or (
             store_type == 'calculations' and self.config.only_top_level_calcs
@@ -220,6 +227,7 @@ class DumpChangeDetector:
         :return: ProcessingQueue containing new/modified nodes
         """
         # Determine scope
+        assert isinstance(self.config, (GroupDumpConfig, ProfileDumpConfig))
         if group is not None:
             scope = GroupDumpScope.IN_GROUP
         elif self.config.group_scope == GroupDumpScope.NO_GROUP:
@@ -386,6 +394,7 @@ class DumpChangeDetector:
     def _resolve_time_filters(self) -> Dict[str, Any]:
         """Create time-based query filters based on dump configuration."""
         time_filters: Dict[str, Any] = {}
+        assert isinstance(self.config, (GroupDumpConfig, ProfileDumpConfig))
 
         # Skip if no time filters requested
         if not (
@@ -433,6 +442,7 @@ class DumpChangeDetector:
         :return: Tuple of QueryBuilder instance with additional filters and dictionary holding the ``relationships``
         """
         relationships_to_add = {}
+        assert isinstance(self.config, (GroupDumpConfig, ProfileDumpConfig))
 
         # User filter
         if self.config.user:

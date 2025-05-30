@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER, NotExistent
@@ -22,7 +22,7 @@ from aiida.tools._dumping.tracking import DumpRecord, DumpTracker
 from aiida.tools._dumping.utils import DumpChanges, DumpPaths, ProcessingQueue
 
 if TYPE_CHECKING:
-    from aiida.tools._dumping.config import DumpConfig
+    from aiida.tools._dumping.config import GroupDumpConfig, ProfileDumpConfig
     from aiida.tools._dumping.executors.process import ProcessDumpExecutor
     from aiida.tools._dumping.mapping import GroupNodeMapping
     from aiida.tools._dumping.utils import GroupChanges, GroupModificationInfo
@@ -33,13 +33,13 @@ logger = AIIDA_LOGGER.getChild('tools.dumping.executors.collection')
 class CollectionDumpExecutor:
     def __init__(
         self,
-        config: DumpConfig,
+        config: Union[GroupDumpConfig, ProfileDumpConfig],
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
         process_dump_executor: ProcessDumpExecutor,
         current_mapping: GroupNodeMapping,
     ) -> None:
-        self.config: DumpConfig = config
+        self.config: Union[GroupDumpConfig, ProfileDumpConfig] = config
         self.dump_paths: DumpPaths = dump_paths
         self.process_dump_executor: ProcessDumpExecutor = process_dump_executor
         self.dump_tracker: DumpTracker = dump_tracker

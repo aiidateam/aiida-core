@@ -137,7 +137,7 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
 
     if not force:
         click.confirm(
-            f'Are you sure you want to move {len(nodes)} nodes from {source_group} ' f'to {target_group}?', abort=True
+            f'Are you sure you want to move {len(nodes)} nodes from {source_group} to {target_group}?', abort=True
         )
 
     source_group.remove_nodes(nodes)
@@ -690,10 +690,7 @@ def group_dump(
     import traceback
     from pathlib import Path
 
-    from pydantic import ValidationError
-
     from aiida.cmdline.utils import echo
-    from aiida.tools._dumping.config import DumpConfig, DumpMode
     from aiida.tools._dumping.utils import DumpPaths
 
     warning_msg = (
@@ -701,9 +698,6 @@ def group_dump(
         'If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.'
     )
     echo.echo_warning(warning_msg)
-
-    # --- Initial Setup ---
-    final_dump_config = None
 
     try:
         if path is None:
@@ -714,43 +708,34 @@ def group_dump(
             dump_base_output_path = Path(path).resolve()
             echo.echo_report(f"Using specified output path: '{dump_base_output_path}'")
 
-        try:
-            # Gather relevant CLI args for group dump
-            config_input_data = {
-                'dry_run': dry_run,
-                'overwrite': overwrite,
-                'groups': [group.uuid],  # Set group explicitly here
-                'past_days': past_days,
-                'start_date': start_date,
-                'end_date': end_date,
-                'filter_by_last_dump_time': filter_by_last_dump_time,
-                'only_top_level_calcs': only_top_level_calcs,
-                'only_top_level_workflows': only_top_level_workflows,
-                'delete_missing': delete_missing,
-                'symlink_calcs': symlink_calcs,
-                'include_inputs': include_inputs,
-                'include_outputs': include_outputs,
-                'include_attributes': include_attributes,
-                'include_extras': include_extras,
-                'flat': flat,
-                'dump_unsealed': dump_unsealed,
-            }
-            final_dump_config = DumpConfig.model_validate(config_input_data)
-        except ValidationError as e:
-            echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
-            return
-
         # --- Logical Checks ---
-        if final_dump_config.dump_mode == DumpMode.DRY_RUN and overwrite:
+        if dry_run and overwrite:
             msg = (
                 '`--dry-run` and `--overwrite` selected (or set in config). Overwrite operation will NOT be performed.'
             )
             echo.echo_warning(msg)
 
         # Run the dumping
-        group.dump(config=final_dump_config, output_path=dump_base_output_path)
+        group.dump(
+            output_path=dump_base_output_path,
+            dry_run=dry_run,
+            overwrite=overwrite,
+            past_days=past_days,
+            start_date=start_date,
+            end_date=end_date,
+            filter_by_last_dump_time=filter_by_last_dump_time,
+            only_top_level_calcs=only_top_level_calcs,
+            only_top_level_workflows=only_top_level_workflows,
+            symlink_calcs=symlink_calcs,
+            include_inputs=include_inputs,
+            include_outputs=include_outputs,
+            include_attributes=include_attributes,
+            include_extras=include_extras,
+            flat=flat,
+            dump_unsealed=dump_unsealed,
+        )
 
-        if final_dump_config.dump_mode != DumpMode.DRY_RUN:
+        if not dry_run:
             msg = f'Raw files for group `{group.label}` dumped into folder `{dump_base_output_path.name}`.'
             echo.echo_success(msg)
         else:

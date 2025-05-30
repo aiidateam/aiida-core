@@ -13,12 +13,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from aiida.common.log import AIIDA_LOGGER
+from aiida.tools._dumping.config import DumpConfigType, GroupDumpConfig, ProfileDumpConfig
 from aiida.tools._dumping.utils import DumpChanges, DumpPaths
 
 logger = AIIDA_LOGGER.getChild('tools.dumping.executors.deletion')
 
 if TYPE_CHECKING:
-    from aiida.tools._dumping.config import DumpConfig
     from aiida.tools._dumping.mapping import GroupNodeMapping
     from aiida.tools._dumping.tracking import DumpTracker
     from aiida.tools._dumping.utils import GroupInfo
@@ -29,7 +29,7 @@ class DeletionExecutor:
 
     def __init__(
         self,
-        config: DumpConfig,
+        config: DumpConfigType,
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
         dump_changes: DumpChanges,
@@ -37,14 +37,14 @@ class DeletionExecutor:
     ):
         """Initializes the DeletionExecutor.
 
-        :param config: ``DumpConfig`` instance
+        :param config: Populated config instance
         :param dump_paths: ``DumpPaths`` instance
         :param dump_tracker: ``DumpTracker`` instance
         :param dump_changes: ``DumpChanges`` instance
         :param previous_mapping: Instance of ``GroupNodeMapping`` if exists from a previous dump
         """
 
-        self.config: DumpConfig = config
+        self.config: DumpConfigType = config
         self.dump_paths: DumpPaths = dump_paths
         self.dump_tracker: DumpTracker = dump_tracker
         self.dump_changes: DumpChanges = dump_changes
@@ -95,6 +95,7 @@ class DeletionExecutor:
         :param group_uuid: UUID of the given, deleted group
         """
 
+        assert isinstance(self.config, (GroupDumpConfig, ProfileDumpConfig))
         # Get group entry and determine path to delete
         group_entry = self.dump_tracker.registries['groups'].get_entry(group_uuid)
         path_to_delete = group_entry.path

@@ -19,7 +19,7 @@ from typing import Dict, List, Literal, Optional, Set, Type, Union
 from aiida import orm
 from aiida.common import AIIDA_LOGGER, assert_never, timezone
 from aiida.manage.configuration import Profile
-from aiida.tools._dumping.config import DumpConfig, DumpMode
+from aiida.tools._dumping.config import DumpMode, GroupDumpConfig, ProcessDumpConfig, ProfileDumpConfig
 
 RegistryNameType = Literal['calculations', 'workflows', 'groups']
 
@@ -243,18 +243,21 @@ class DumpPaths:
     TRACKING_LOG_FILE_NAME = 'aiida_dump_log.json'
 
     def __init__(
-        self, base_output_path: Path, config: DumpConfig, dump_target_entity: Union[orm.Node, orm.Group, Profile]
+        self,
+        base_output_path: Path,
+        config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig],
+        dump_target_entity: Union[orm.Node, orm.Group, Profile],
     ):
         """
         Initializes the DumpPaths object for centralized path handling during the dumping.
 
         :param base_output_path: The absolute root path for the entire dump operation.
-        :param config: The DumpConfig object.
+        :param config: The config object.
         :param dump_target_entity: The primary entity this dump operation is targeting
             This helps in contextual path decisions.
         """
         self.base_output_path: Path = base_output_path.resolve()
-        self.config: DumpConfig = config
+        self.config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig] = config
         self.dump_target_entity: Union[orm.Node, orm.Group, Profile] = dump_target_entity
 
     @property
@@ -268,6 +271,8 @@ class DumpPaths:
         :param group: ``orm.Group`` instance
         :return: Resolved output path for the group dump
         """
+
+        assert isinstance(self.config, (GroupDumpConfig, ProfileDumpConfig))
         if not self.config.organize_by_groups:
             return self.base_output_path
 
@@ -309,6 +314,7 @@ class DumpPaths:
 
         Node type subdirectories will be created under this path.
         """
+        assert isinstance(self.config, ProfileDumpConfig)
         if self.config.also_ungrouped:
             if self.config.organize_by_groups:
                 # Ungrouped nodes go into "ungrouped/" at the top level
@@ -328,6 +334,7 @@ class DumpPaths:
         # Assuming group.label is directly usable as a directory name.
         group_label_part = Path(group.label)
 
+        assert isinstance(self.config, (GroupDumpConfig, ProfileDumpConfig))
         if self.config.organize_by_groups:
             return Path(self.GROUPS_DIR_NAME) / group_label_part
         return group_label_part

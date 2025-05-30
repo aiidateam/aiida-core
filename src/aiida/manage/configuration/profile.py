@@ -14,16 +14,17 @@ import collections
 import os
 import pathlib
 from copy import deepcopy
+from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Type, Union
 
 from aiida.common import exceptions
 
 from .options import parse_option
 
 if TYPE_CHECKING:
+    from aiida.orm import Code, Computer, Group, User
     from aiida.orm.implementation import StorageBackend
-    from aiida.tools._dumping.config import DumpConfig
 
 __all__ = ('Profile',)
 
@@ -265,29 +266,110 @@ class Profile:
         }
 
     def dump(
-        self, config: Optional[DumpConfig] = None, output_path: Optional[Union[str, Path]] = None
+        self,
+        output_path: Optional[Union[str, Path]] = None,
+        # Dump mode options
+        dry_run: bool = False,
+        overwrite: bool = False,
+        # Scope options
+        all_entries: bool = False,
+        groups: Optional[Union[List[str], List[Group]]] = None,
+        user: Optional[Union[List[str], List[User]]] = None,
+        computers: Optional[Union[List[str], List[Computer]]] = None,
+        codes: Optional[Union[List[str], List[Code]]] = None,
+        # Time filtering options
+        past_days: Optional[int] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        filter_by_last_dump_time: bool = True,
+        # Node collection options
+        only_top_level_calcs: bool = True,
+        only_top_level_workflows: bool = True,
+        # Process dump options
+        include_inputs: bool = True,
+        include_outputs: bool = False,
+        include_attributes: bool = True,
+        include_extras: bool = False,
+        flat: bool = False,
+        dump_unsealed: bool = False,
+        symlink_calcs: bool = False,
+        # Group/Profile options
+        delete_missing: bool = True,
+        organize_by_groups: bool = True,
+        also_ungrouped: bool = False,
+        relabel_groups: bool = True,
     ) -> Optional[Path]:
         """Dump data stored in an AiiDA profile to disk in a human-readable directory tree.
 
-        :param config: DumpConfig configuration object, defaults to None
-        :param output_path: Dumping output path, defaults to None
-        :return: Resolved output path where the profile data was dumped.
+        :param output_path: Target directory for the dump
+        :param dry_run: Show what would be dumped without actually dumping
+        :param overwrite: Overwrite existing dump directories
+        :param all_entries: Dump all entries in the profile
+        :param groups: List of groups to dump (UUIDs, labels, or Group objects)
+        :param user: User to filter by (User object or email)
+        :param computers: List of computers to filter by
+        :param codes: List of codes to filter by
+        :param past_days: Only include nodes modified in the past N days
+        :param start_date: Only include nodes modified after this date
+        :param end_date: Only include nodes modified before this date
+        :param filter_by_last_dump_time: Filter nodes by last dump time
+        :param only_top_level_calcs: Only dump top-level calculations
+        :param only_top_level_workflows: Only dump top-level workflows
+        :param include_inputs: Include input files in the dump
+        :param include_outputs: Include output files in the dump
+        :param include_attributes: Include node attributes in metadata
+        :param include_extras: Include node extras in metadata
+        :param flat: Use flat directory structure
+        :param dump_unsealed: Allow dumping of unsealed nodes
+        :param symlink_calcs: Create symlinks for calculation nodes
+        :param delete_missing: Delete dump files for nodes no longer in scope
+        :param organize_by_groups: Organize output by groups
+        :param also_ungrouped: Also dump ungrouped nodes
+        :param relabel_groups: Update group directory names when labels change
+        :return: Path where the profile was dumped, or None if nothing was dumped
         """
         from aiida.common import AIIDA_LOGGER
-        from aiida.tools._dumping.config import DumpConfig, DumpMode
+        from aiida.tools._dumping.config import DumpMode, ProfileDumpConfig
         from aiida.tools._dumping.engine import DumpEngine
         from aiida.tools._dumping.utils import DumpPaths
 
         logger = AIIDA_LOGGER.getChild('tools.dumping.profile')
 
-        if not config:
-            config = DumpConfig()
+        # Construct ProfileDumpConfig from kwargs
+        config_data = {
+            'all_entries': all_entries,
+            'dry_run': dry_run,
+            'overwrite': overwrite,
+            'groups': groups or [],
+            'user': user,
+            'computers': computers or [],
+            'codes': codes or [],
+            'past_days': past_days,
+            'start_date': start_date,
+            'end_date': end_date,
+            'filter_by_last_dump_time': filter_by_last_dump_time,
+            'only_top_level_calcs': only_top_level_calcs,
+            'only_top_level_workflows': only_top_level_workflows,
+            'include_inputs': include_inputs,
+            'include_outputs': include_outputs,
+            'include_attributes': include_attributes,
+            'include_extras': include_extras,
+            'flat': flat,
+            'dump_unsealed': dump_unsealed,
+            'symlink_calcs': symlink_calcs,
+            'delete_missing': delete_missing,
+            'organize_by_groups': organize_by_groups,
+            'also_ungrouped': also_ungrouped,
+            'relabel_groups': relabel_groups,
+        }
 
-        # --- Check final determined scope ---
+        config = ProfileDumpConfig.model_validate(config_data)
+
+        # Check final determined scope
         if not (config.all_entries or config.filters_set) and config.dump_mode != DumpMode.DRY_RUN:
             msg = (
                 'No profile data explicitly selected. No dump will be performed. '
-                'Either select everything via `--all`, or filter via `--groups`, `--user`, etc.'
+                'Either select everything via `all_entries=True`, or filter via `groups`, `user`, etc.'
             )
             logger.warning(msg)
             return None

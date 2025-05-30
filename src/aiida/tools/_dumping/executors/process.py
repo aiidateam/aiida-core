@@ -28,7 +28,7 @@ from aiida.tools._dumping.utils import ORM_TYPE_TO_REGISTRY, DumpPaths, Registry
 from aiida.tools.archive.exceptions import ExportValidationError
 
 if TYPE_CHECKING:
-    from aiida.tools._dumping.config import DumpConfig
+    from aiida.tools._dumping.config import DumpConfigType
     from aiida.tools._dumping.tracking import DumpTracker
     from aiida.tools._dumping.utils import DumpTimes
 
@@ -55,12 +55,12 @@ class ProcessDumpExecutor:
 
     def __init__(
         self,
-        config: DumpConfig,
+        config: DumpConfigType,
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
         dump_times: DumpTimes,
     ):
-        self.config: DumpConfig = config
+        self.config: DumpConfigType = config
         self.dump_paths: DumpPaths = dump_paths
         self.dump_tracker: DumpTracker = dump_tracker
         self.dump_times: DumpTimes = dump_times
@@ -400,8 +400,8 @@ class ProcessDumpExecutor:
 class NodeMetadataWriter:
     """Handles writing the aiida_node_metadata.yaml file."""
 
-    def __init__(self, config: DumpConfig):
-        self.config: DumpConfig = config
+    def __init__(self, config: DumpConfigType):
+        self.config: DumpConfigType = config
 
     def _write(
         self,
@@ -472,8 +472,8 @@ class NodeMetadataWriter:
 class NodeRepoIoDumper:
     """Handles dumping repository contents and linked I/O Data nodes."""
 
-    def __init__(self, config: DumpConfig):
-        self.config: DumpConfig = config
+    def __init__(self, config: DumpConfigType):
+        self.config: DumpConfigType = config
 
     def _dump_calculation_content(self, calculation_node: orm.CalculationNode, output_path: Path) -> None:
         """Dump repository and I/O file contents for a CalculationNode.

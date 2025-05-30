@@ -353,10 +353,7 @@ def profile_dump(
     import traceback
     from pathlib import Path
 
-    from pydantic import ValidationError
-
     from aiida.cmdline.utils import echo
-    from aiida.tools._dumping.config import DumpConfig, DumpMode
     from aiida.tools._dumping.utils import DumpPaths
 
     warning_msg = (
@@ -367,7 +364,6 @@ def profile_dump(
 
     # --- Initial Setup ---
     profile = ctx.obj['profile']
-    final_dump_config = None
     try:
         if path is None:
             profile_path = DumpPaths.get_default_dump_path(entity=profile)
@@ -377,58 +373,52 @@ def profile_dump(
             dump_base_output_path = Path(path).resolve()
             echo.echo_report(f"Using specified output path: '{dump_base_output_path}'")
 
-        try:
-            # Gather all relevant CLI args here
-            config_input_data = {
-                'dry_run': dry_run,
-                'overwrite': overwrite,
-                'all_entries': all_entries,
-                'groups': list(groups) if groups else [],
-                'past_days': past_days,
-                'start_date': start_date,
-                'end_date': end_date,
-                'user': user,
-                'codes': codes,
-                'computers': computers,
-                'filter_by_last_dump_time': filter_by_last_dump_time,
-                'only_top_level_calcs': only_top_level_calcs,
-                'only_top_level_workflows': only_top_level_workflows,
-                'delete_missing': delete_missing,
-                'symlink_calcs': symlink_calcs,
-                'organize_by_groups': organize_by_groups,
-                'also_ungrouped': also_ungrouped,
-                'relabel_groups': relabel_groups,
-                'include_inputs': include_inputs,
-                'include_outputs': include_outputs,
-                'include_attributes': include_attributes,
-                'include_extras': include_extras,
-                'flat': flat,
-                'dump_unsealed': dump_unsealed,
-            }
-            final_dump_config = DumpConfig.model_validate(config_input_data)
-        except ValidationError as e:
-            echo.echo_critical(f'Invalid command-line arguments provided:\n{e}')
-            return
-
-        # --- Other logical checks ---
-        if not final_dump_config.organize_by_groups and final_dump_config.relabel_groups:
+        # Logical checks
+        if not organize_by_groups and relabel_groups:
             echo.echo_warning('`relabel_groups` is True, but `organize_by_groups` is False.')
-        if final_dump_config.dump_mode == DumpMode.DRY_RUN and overwrite:
+            return
+        if dry_run and overwrite:
             msg = (
                 '`--dry-run` and `--overwrite` selected (or set in config). Overwrite operation will NOT be performed.'
             )
             echo.echo_warning(msg)
+            return
 
         # Run the dumping
-        _ = profile.dump(config=final_dump_config, output_path=dump_base_output_path)
+        _ = profile.dump(
+            output_path=dump_base_output_path,
+            dry_run=dry_run,
+            overwrite=overwrite,
+            all_entries=all_entries,
+            groups=list(groups) if groups else None,
+            user=user,
+            computers=computers,
+            codes=codes,
+            past_days=past_days,
+            start_date=start_date,
+            end_date=end_date,
+            filter_by_last_dump_time=filter_by_last_dump_time,
+            only_top_level_calcs=only_top_level_calcs,
+            only_top_level_workflows=only_top_level_workflows,
+            delete_missing=delete_missing,
+            symlink_calcs=symlink_calcs,
+            organize_by_groups=organize_by_groups,
+            also_ungrouped=also_ungrouped,
+            relabel_groups=relabel_groups,
+            include_inputs=include_inputs,
+            include_outputs=include_outputs,
+            include_attributes=include_attributes,
+            include_extras=include_extras,
+            flat=flat,
+            dump_unsealed=dump_unsealed,
+        )
 
-        if final_dump_config.dump_mode != DumpMode.DRY_RUN and (
-            final_dump_config.all_entries or final_dump_config.filters_set
+        if not dry_run and (
+            all_entries or bool(codes or computers or groups or past_days or start_date or end_date or user)
         ):
             msg = f'Raw files for profile `{profile.name}` dumped into folder `{dump_base_output_path.name}`.'
             echo.echo_success(msg)
-
-        if final_dump_config.dump_mode == DumpMode.DRY_RUN:
+        elif dry_run:
             echo.echo_success('Dry run completed.')
 
     except Exception as e:

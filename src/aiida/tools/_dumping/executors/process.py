@@ -224,7 +224,7 @@ class ProcessDumpExecutor:
         dump_record = None
 
         # Prepare directory
-        self.dump_paths._prepare_directory(path_to_prepare=output_path)
+        self.dump_paths._prepare_directory(path_to_prepare=output_path, is_leaf_node_dir=False)
 
         # Create new log entry
         dump_record = DumpRecord(path=output_path.resolve())

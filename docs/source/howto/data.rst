@@ -100,11 +100,9 @@ For one of our beloved ``MultiplyAddWorkChain``s, (PK=29) we run the ``verdi pro
 
     Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
     Report: No output path specified. Using default: `<my-pwd>/MultiplyAddWorkChain-29`
-    Report: No config file found. Using command-line arguments.
     Report: Starting dump of process node (PK: 29) in `incremental` mode.
-    Report: Saving final dump log and configuration.
+    Report: Saving final dump log to file `aiida_dump_log.json`.
     Success: Raw files for process `29` dumped into folder `MultiplyAddWorkChain-29`.
-    Success: Raw files for WorkChainNode <pk> dumped into folder `dump-multiply_add`.
 
 And the output directory tree:
 
@@ -132,16 +130,14 @@ And the output directory tree:
     │     ├── _scheduler-stderr.txt
     │     ├── _scheduler-stdout.txt
     │     └── aiida.out
-    ├── aiida_dump_config.yaml
     ├── aiida_dump_log.json
     └── README.md
 
 The ``README.md`` file provides a description of the directory structure, as well as useful information about the
 top-level process.
 The ``.aiida_dump_safeguard`` file is used to mark directories created by the dumping command to avoid accidental
-cleaning of wrong directories, the ``aiida_dump_config.yaml`` file contains the
-configuration for the command execution (provided via the CLI arguments), and the ``aiida_dump_log.json`` file logging
-information about the dump (both files explained further below).
+cleaning of wrong directories and the ``aiida_dump_log.json`` file contains tracking/logging information about the dump
+(explained further below).
 
 In the output directory, numbered subdirectories are created for each step of the workflow, resulting in the
 ``01-multiply-30`` and ``02-ArithmeticAddCalculation-32`` folders, where the prefixes denote the step in the workflow,
@@ -192,10 +188,9 @@ This command will create a directory structure with all processes contained in t
     $ verdi group dump my-calculations
     Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
     Report: No output path specified. Using default: `<my-pwd>/my-calculations`
-    Report: No config file found. Using command-line arguments.
     Report: Starting dump of group `my-calculations` (PK: 1) in `incremental` mode.
     Report: Dumping 1 nodes for group 'my-calculations'
-    Report: Saving final dump log and configuration.
+    Report: Saving final dump log to file `aiida_dump_log.json`.
     Success: Raw files for group `my-calculations` dumped into folder `my-calculations`.
 
 Will result in the following output directory:
@@ -205,7 +200,6 @@ Will result in the following output directory:
     $ tree -a my-calculations/
     my-calculations
     ├── .aiida_dump_safeguard
-    ├── aiida_dump_config.yaml
     ├── aiida_dump_log.json
     └── calculations
         └── ArithmeticAddCalculation-4
@@ -229,10 +223,9 @@ And similarly for a group ``my-workflows`` with a ``MultiplyAddWorkChain``:
     $ verdi group dump my-workflows
     Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
     Report: No output path specified. Using default: `/home/geiger_j/aiida_projects/verdi-profile-dump/dev-dumps/docs/my-workflows`
-    Report: No config file found. Using command-line arguments.
     Report: Starting dump of group `my-workflows` (PK: 2) in `incremental` mode.
     Report: Dumping 1 nodes for group 'my-workflows'
-    Report: Saving final dump log and configuration.
+    Report: Saving final dump log to file `aiida_dump_log.json`.
     Success: Raw files for group `my-workflows` dumped into folder `my-workflows`.
 
 And the following output directory:
@@ -242,7 +235,6 @@ And the following output directory:
     $ tree -a my-workflows/
     my-workflows
     ├── .aiida_dump_safeguard
-    ├── aiida_dump_config.yaml
     ├── aiida_dump_log.json
     └── workflows
         └── MultiplyAddWorkChain-11
@@ -267,17 +259,13 @@ And the following output directory:
                     ├── _scheduler-stdout.txt
                     └── aiida.out
 
-The ``.aiida_dump_safeguard`` and ``aiida_dump_config.yaml`` files serve the same purposes as mentioned above.
-Here, the latter file can be particularly helpful if a ``dump`` command is run multiply times to ensure the same
-configuration options for the dumping operation are re-used, as the command automatically looks for the existence of
-this file.
-In effect, this successive usage of (any) ``verdi dump`` command allows one to incrementally populate the given ``dump``
-output directory, while data is created by AiiDA.
 
 To keep track of the dumping progress, the ``aiida_dump_log.json`` contains the dumped ``calculations``, ``workflows``,
 ``groups`` and ``data`` (to be implemented), including the dump path, possible symlinks, duplicate output directories,
 and the directory ``mtime`` and size, the dumping time, as well as the groups-to-nodes and nodes-to-groups mapping after
 every ``dump`` operation.
+In effect, the successive usage of (any) ``verdi dump`` command allows one to incrementally populate the given ``dump``
+output directory, while data is created by AiiDA.
 E.g., after dumping the ``my-calculations`` group, it contains the following content:
 
 .. code-block:: json
@@ -332,18 +320,14 @@ dump my-calculations`` command, one obtains:
     $ verdi group dump my-calculations
     Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
     Report: No output path specified. Using default: `<my-pwd>/my-calculations`
-    Report: Config file found at 'my-calculations/aiida_dump_config.yaml'.
-    Report: Using config file settings ONLY (ignoring other CLI flags).
     Report: Starting dump of group `my-calculations` (PK: 1) in `incremental` mode.
-    Report: Processing group changes...
+    Report: Processing group changes.
     Report: Processing 1 modified groups (membership): ['my-calculations']
     Report: Dumping 1 nodes for group 'my-calculations'
-    Report: Saving final dump log and configuration.
+    Report: Saving final dump log to file `aiida_dump_log.json`.
     Success: Raw files for group `my-calculations` dumped into folder `my-calculations`.
 
-As evident from the report, the command automatically found and used the configuration file created at the end of the
-previous dump operation, thus keeping the state of successive runs consistent.
-It further picked up that only a single new node was added to the ``my-calculations`` group since the last execution and dumped it.
+As evident from the report, the command picked up that only a single new node was added to the ``my-calculations`` group since the last execution and dumped it.
 
 In addition to the options for dumping individual processes, the ``verdi group dump`` command provides further
 configuration options, e.g., to apply various time filters via ``-p/--past-days``, ``--start-date``, ``--end-date``, and
@@ -375,13 +359,7 @@ To avoid initiating the ``dump`` operation for possibly very large databases, if
     $ verdi profile dump
     Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
     Report: No output path specified. Using default: '<my-pwd>/my-profile'
-    Report: No config file found. Using command-line arguments.
-    Warning: No specific data selection determined from config file or CLI arguments.
-    Warning: Please specify `--all` to dump all profile data or filters such as `groups`, `user`, etc.
-    Warning: Use `--help` for all options and `--dry-run` to preview.
-    Report: Starting dump of profile `docs` in `incremental` mode.
-    Report: No changes detected since last dump and not dumping ungrouped. Nothing to do.
-    Report: Saving final dump log and configuration.
+    Warning: No profile data explicitly selected. No dump will be performed. Either select everything via `all_entries=True`, or filter via `groups`, `user`, etc.
 
 Instead, if all data of the profile should be dumped, use the ``--all`` flag, or select a subset of your AiiDA data
 using ``--groups``, ``--user``, filters, one of the various time-based filter options the command provides (see above).
@@ -393,13 +371,12 @@ If we run with ``--all`` on our current profile, we get the following result:
     $ verdi profile dump --all
     Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
     Report: No output path specified. Using default: '<my-pwd>/my-profile'
-    Report: No config file found. Using command-line arguments.
     Report: Starting dump of profile `my-profile` in `incremental` mode.
-    Report: Processing group changes...
+    Report: Processing group changes.
     Report: Processing 2 new or modified groups: ['my-calculations', 'my-workflows']
     Report: Dumping 1 nodes for group 'my-calculations'
     Report: Dumping 1 nodes for group 'my-workflows'
-    Report: Saving final dump log and configuration.
+    Report: Saving final dump log to file `aiida_dump_log.json`.
     Success: Raw files for profile `my-profile` dumped into folder `my-profile`.
 
 The resulting directory preserves the group organization:
@@ -409,7 +386,6 @@ The resulting directory preserves the group organization:
     $ tree -a my-profile/
     my-profile
     ├── .aiida_dump_safeguard
-    ├── aiida_dump_config.yaml
     ├── aiida_dump_log.json
     └── groups
         ├── my-calculations
@@ -440,18 +416,18 @@ The resulting directory preserves the group organization:
                     │  └── inputs
                     │     └── source_file
                     └── 02-ArithmeticAddCalculation-14
-                    ├── .aiida_dump_safeguard
-                    ├── .aiida_node_metadata.yaml
-                    ├── inputs
-                    │  ├── .aiida
-                    │  │  ├── calcinfo.json
-                    │  │  └── job_tmpl.json
-                    │  ├── _aiidasubmit.sh
-                    │  └── aiida.in
-                    └── outputs
-                        ├── _scheduler-stderr.txt
-                        ├── _scheduler-stdout.txt
-                        └── aiida.out
+                       ├── .aiida_dump_safeguard
+                       ├── .aiida_node_metadata.yaml
+                       ├── inputs
+                       │  ├── .aiida
+                       │  │  ├── calcinfo.json
+                       │  │  └── job_tmpl.json
+                       │  ├── _aiidasubmit.sh
+                       │  └── aiida.in
+                       └── outputs
+                           ├── _scheduler-stderr.txt
+                           ├── _scheduler-stdout.txt
+                           └── aiida.out
 
 Finally, in addition to the configuration of process and group dumping, the ``verdi profile dump`` provides again a few
 additional options, most importantly,
@@ -483,9 +459,11 @@ The dump functionality is also available via the Python API:
     group.dump()
 
     # Dump the default profile -> Need to  explicitly select all entries
-    from aiida.tools.dumping.config import DumpConfig
     profile = load_profile()
-    profile.dump(config=DumpConfig(all_entries=True))
+    profile.dump(all_entries=True)
+
+The `dump` methods of the currently supported ``orm.ProcessNode``, ``orm.Group``, and ``Profile`` classes expose the
+same sets of options that are also exposed via the ``verdi`` CLI.
 
 Usage Scenarios
 ---------------

@@ -379,7 +379,7 @@ class Process(PlumpyProcess):
                     continue
                 try:
                     result = self.runner.controller.kill_process(child.pk, msg_text=f'Killed by parent<{self.node.pk}>')
-                    result = asyncio.wrap_future(result)  # type: ignore[arg-type]
+                    result = asyncio.wrap_future(result)
                     if asyncio.isfuture(result):
                         killing.append(result)
                 except ConnectionClosed:

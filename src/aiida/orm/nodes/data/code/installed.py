@@ -83,7 +83,7 @@ class InstalledCode(Code):
         """
         super().__init__(**kwargs)
         self.computer = computer
-        self.filepath_executable = filepath_executable  # type: ignore[assignment]
+        self.filepath_executable = filepath_executable
 
     def _validate(self):
         """Validate the instance by checking that a computer has been defined.

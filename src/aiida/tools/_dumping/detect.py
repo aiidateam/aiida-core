@@ -11,16 +11,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, Union, cast
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
-from aiida.tools._dumping.config import (
-    DumpConfigType,
-    GroupDumpConfig,
-    GroupDumpScope,
-    ProfileDumpConfig,
-)
+from aiida.tools._dumping.config import GroupDumpConfig, GroupDumpScope, ProfileDumpConfig
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import (
     REGISTRY_TO_ORM_TYPE,
@@ -36,8 +31,8 @@ from aiida.tools._dumping.utils import (
 )
 
 if TYPE_CHECKING:
-    from aiida.tools._dumping.config import DumpConfigType
     from aiida.tools._dumping.tracking import DumpTracker
+
 
 __all__ = ('DumpChangeDetector',)
 
@@ -55,14 +50,14 @@ class DumpChangeDetector:
 
     def __init__(
         self,
-        config: 'DumpConfigType',
+        config: Union[GroupDumpConfig, ProfileDumpConfig],
         dump_tracker: DumpTracker,
         dump_paths: DumpPaths,
         dump_times: DumpTimes,
         current_mapping: GroupNodeMapping,
     ) -> None:
         """Initializes the DumpChangeDetector."""
-        self.config: 'DumpConfigType' = config
+        self.config: Union[GroupDumpConfig, ProfileDumpConfig] = config
         self.dump_tracker: DumpTracker = dump_tracker
         self.dump_paths: DumpPaths = dump_paths
         self.dump_times: DumpTimes = dump_times

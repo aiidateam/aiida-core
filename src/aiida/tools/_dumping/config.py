@@ -12,21 +12,19 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum, auto
-from typing import Annotated, Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, computed_field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from aiida import orm
 
 __all__ = (
-    'DumpConfigType',
     'DumpMode',
     'GroupDumpConfig',
+    'GroupDumpScope',
     'ProcessDumpConfig',
     'ProfileDumpConfig',
 )
-
-DumpConfigType = Union['ProcessDumpConfig', 'GroupDumpConfig', 'ProfileDumpConfig']
 
 
 class DumpMode(Enum):
@@ -120,12 +118,6 @@ def _validate_groups_input(value: Optional[Union[List[orm.Group], List[str]]]) -
         'Must be either all strings (UUIDs/labels) OR all Group objects.'
     )
     raise ValueError(msg)
-
-
-UserValidator = Annotated[Optional[orm.User], BeforeValidator(_validate_user_input)]
-ComputersValidator = Annotated[Optional[List[orm.Computer]], BeforeValidator(_validate_computers_input)]
-CodesValidator = Annotated[Optional[List[orm.Code]], BeforeValidator(_validate_codes_input)]
-GroupsValidator = Annotated[Optional[List[orm.Group]], BeforeValidator(_validate_groups_input)]
 
 
 class BaseDumpConfig(BaseModel):
@@ -239,7 +231,7 @@ class ProcessDumpConfig(BaseDumpConfig, ProcessHandlingMixin):
 class GroupDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, EntityFilterMixin, GroupManagementMixin):
     """Configuration for dumping groups."""
 
-    groups: 'GroupsValidator' = Field(
+    groups: Optional[Union[List[orm.Group], List[str]]] = Field(
         default=None, description='Groups to dump (either list of UUIDs/labels OR list of Group objects)'
     )
 
@@ -248,6 +240,11 @@ class GroupDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, Ent
         default=GroupDumpScope.IN_GROUP,
         exclude=True,  # Exclude from standard serialization, internal class
     )
+
+    @field_validator('groups', mode='before')
+    @classmethod
+    def validate_groups(cls, v):
+        return _validate_groups_input(v)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -267,7 +264,7 @@ class GroupDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, Ent
 class ProfileDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, EntityFilterMixin, GroupManagementMixin):
     """Configuration for dumping entire profiles."""
 
-    groups: 'GroupsValidator' = Field(
+    groups: Optional[Union[List[orm.Group], List[str]]] = Field(
         default=None, description='Groups to dump (either list of UUIDs/labels OR list of Group objects)'
     )
 
@@ -278,6 +275,11 @@ class ProfileDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, E
         default=GroupDumpScope.ANY,
         exclude=True,  # Exclude from standard serialization, internal class
     )
+
+    @field_validator('groups', mode='before')
+    @classmethod
+    def validate_groups(cls, v):
+        return _validate_groups_input(v)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

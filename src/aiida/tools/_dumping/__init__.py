@@ -7,5 +7,3 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Public API for data dumping functionality."""
-
-# gotcha

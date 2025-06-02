@@ -189,11 +189,11 @@ class EntityFilterMixin(BaseModel):
         arbitrary_types_allowed=True,
         validate_assignment=True,
     )
-    user: UserValidator = Field(default=None, description='User object or email to filter by')
-    computers: ComputersValidator = Field(
+    user: 'UserValidator' = Field(default=None, description='User object or email to filter by')
+    computers: 'ComputersValidator' = Field(
         default=None, description='List of Computer objects or UUIDs/labels to filter by'
     )
-    codes: CodesValidator = Field(default=None, description='List of Code objects or UUIDs/labels to filter by')
+    codes: 'CodesValidator' = Field(default=None, description='List of Code objects or UUIDs/labels to filter by')
 
 
 class ProcessHandlingMixin(BaseModel):
@@ -222,7 +222,7 @@ class ProcessDumpConfig(BaseDumpConfig, ProcessHandlingMixin):
 class GroupDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, EntityFilterMixin, GroupManagementMixin):
     """Configuration for dumping groups."""
 
-    groups: GroupsValidator = Field(
+    groups: 'GroupsValidator' = Field(
         default=None, description='Groups to dump (either list of UUIDs/labels OR list of Group objects)'
     )
 
@@ -250,7 +250,7 @@ class GroupDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, Ent
 class ProfileDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, EntityFilterMixin, GroupManagementMixin):
     """Configuration for dumping entire profiles."""
 
-    groups: GroupsValidator = Field(
+    groups: 'GroupsValidator' = Field(
         default=None, description='Groups to dump (either list of UUIDs/labels OR list of Group objects)'
     )
 

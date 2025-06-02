@@ -54,10 +54,10 @@ class DumpChangeDetector:
     CODE_TAG = 'code_filter'
 
     def __init__(
-        self, config: DumpConfigType, dump_tracker: DumpTracker, dump_paths: DumpPaths, dump_times: DumpTimes
+        self, config: 'DumpConfigType', dump_tracker: DumpTracker, dump_paths: DumpPaths, dump_times: DumpTimes
     ) -> None:
         """Initializes the DumpChangeDetector."""
-        self.config: DumpConfigType = config
+        self.config: 'DumpConfigType' = config
         self.dump_tracker: DumpTracker = dump_tracker
         self.dump_paths: DumpPaths = dump_paths
         self.dump_times: DumpTimes = dump_times

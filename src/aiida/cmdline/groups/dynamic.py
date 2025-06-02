@@ -137,7 +137,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             shared_options.reverse()
 
             for option in shared_options:
-                func = option(func)
+                func = option(func)  # type: ignore[operator]
 
             return func
 

@@ -190,10 +190,12 @@ class EntityFilterMixin(BaseModel):
         validate_assignment=True,
     )
     user: Optional[orm.User] = Field(default=None, description='User object or email to filter by')
-    computers: Optional[orm.Computer] = Field(
+    computers: Optional[List[orm.Computer]] = Field(
         default=None, description='List of Computer objects or UUIDs/labels to filter by'
     )
-    codes: Optional[orm.Code] = Field(default=None, description='List of Code objects or UUIDs/labels to filter by')
+    codes: Optional[List[orm.Code]] = Field(
+        default=None, description='List of Code objects or UUIDs/labels to filter by'
+    )
 
     @field_validator('user', mode='before')
     @classmethod
@@ -209,6 +211,7 @@ class EntityFilterMixin(BaseModel):
     @classmethod
     def validate_codes(cls, v):
         return _validate_codes_input(v)
+
 
 class ProcessHandlingMixin(BaseModel):
     """Mixin for node collection options."""

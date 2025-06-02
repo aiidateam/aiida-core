@@ -462,13 +462,14 @@ The dump functionality is also available via the Python API:
     profile = load_profile()
     profile.dump(all_entries=True)
 
-The `dump` methods of the currently supported ``orm.ProcessNode``, ``orm.Group``, and ``Profile`` classes expose the
+The ``dump`` methods of the currently supported ``orm.ProcessNode``, ``orm.Group``, and ``Profile`` classes expose the
 same sets of options that are also exposed via the ``verdi`` CLI.
 
 .. warning::
-The previous ``ProcessDumper`` class is still available as part of the Python API, but it is being deprecated and is not
-recommended anymore.
-Please use the new ``.dump()`` methods of the respective ``orm.ProcessNode`` (and subclass) instances instead.
+
+    The previous ``ProcessDumper`` class is still available as part of the Python API, but it is being deprecated and is not
+    recommended anymore.
+    Please use the new ``.dump()`` methods of the respective ``orm.ProcessNode`` (and subclass) instances instead.
 
 Usage Scenarios
 ---------------

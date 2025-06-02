@@ -227,12 +227,13 @@ def test_process_kill_failing_transport_failed_kill(
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('started_daemon_client')
-def test_process_kill_failing_ebm_upload(
+def test_process_kill_failing_ebm_transport(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
-    """Kill a process that is waiting after failed EBM during upload. It should be possible to kill it normally.
+    """Kill a process that is waiting after failed EBM during a transport task.
 
-    A process that failed upload (e.g. in scenarios that transport is working again) and is then killed with
+    It should be possible to kill it normally. A process that failed upload (e.g. in scenarios that transport is working
+    again) and is then killed
     """
     from aiida.orm import Int
 
@@ -303,6 +304,7 @@ def test_process_kill_failing_ebm_kill(
         await_condition(lambda: not node.is_killed, timeout=kill_timeout)
 
         # kill should restart EBM and be not successful in EBM
+        # this tests if the old task is cancelled and restarted successfully
         run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
         await_condition(lambda: not node.is_killed, timeout=kill_timeout)
 

@@ -7,3 +7,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Public API for data dumping functionality."""
+
+from aiida.tools._dumping.facades import ProcessDumper
+
+__all__ = ('ProcessDumper',)

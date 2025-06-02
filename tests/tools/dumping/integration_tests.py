@@ -15,14 +15,10 @@ from typing import Any, Dict, List, Optional, Tuple
 import pytest
 
 from aiida import load_profile, orm
-from aiida.common.log import AIIDA_LOGGER
+from aiida.common import AIIDA_LOGGER, LinkType
+from aiida.tools._dumping.utils import DumpPaths
 
 from .utils import compare_tree
-
-# TODO: Also verify the log updates
-# TODO: Verify Computer/code selection
-
-# NOTE: There exists `create_file_hierarchy` and `serialize_file_hierarchy` fixtures
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.tests')
 
@@ -30,9 +26,12 @@ profile_dump_label = 'profile-dump'
 add_group_label = 'add-group'
 multiply_add_group_label = 'multiply-add-group'
 sub_calc_group_label = 'sub-calc-group'
+filename = 'file.txt'
+log_filename = DumpPaths.TRACKING_LOG_FILE_NAME
+safeguard_filename = DumpPaths.SAFEGUARD_FILE_NAME
+readme_filename = 'README.md'
 
-# --- Content Definitions for Dumped Nodes ---
-
+# Content Definitions for Dumped Nodes
 _ADD_CALC_INPUT_CONTENT = [
     '_aiidasubmit.sh',
     'aiida.in',
@@ -47,7 +46,7 @@ _ADD_CALC_OUTPUT_CONTENT = [
 
 # Content for a simple calculation node like ArithmeticAddCalculation
 _ADD_CALC_NODE_CONTENT = [
-    '.aiida_dump_safeguard',
+    safeguard_filename,
     'aiida_node_metadata.yaml',
     {'inputs': _ADD_CALC_INPUT_CONTENT},
     {'outputs': _ADD_CALC_OUTPUT_CONTENT},
@@ -56,25 +55,25 @@ _ADD_CALC_NODE_CONTENT = [
 # Content for a simple function node like 'multiply'
 _MULTIPLY_FUNC_NODE_CONTENT = [
     'aiida_node_metadata.yaml',
-    '.aiida_dump_safeguard',
-    {'inputs': ['source_file']},  # Assuming multiply function only has this repo file
+    safeguard_filename,
+    {'inputs': ['source_file']},  # `multiply`` function only has this repo file
 ]
 
-# --- Content Definitions for IO Calc Nodes ---
-_IO_CALC_INPUT_REPO_CONTENT = ['file.txt']
+# Content Definitions for IO Calc Nodes
+_IO_CALC_INPUT_REPO_CONTENT = [filename]
 _IO_CALC_INPUT_NODE_CONTENT = [
     {'arraydata': ['default.npy']},
-    {'folderdata': [{'relative_path': ['file.txt']}]},  # Represents FolderData repository
-    {'singlefile': ['file.txt']},
+    {'folderdata': [{'relative_path': [filename]}]},  # Represents FolderData repository
+    {'singlefile': [filename]},
 ]
 _IO_CALC_OUTPUT_NODE_CONTENT = [
-    {'folderdata': [{'relative_path': ['file.txt']}]},
-    {'singlefile': ['file.txt']},
+    {'folderdata': [{'relative_path': [filename]}]},
+    {'singlefile': [filename]},
 ]
 
 # Content list for a standard nested dump of the IO Calc
 _IO_CALC_NODE_CONTENT_NESTED = [
-    '.aiida_dump_safeguard',
+    safeguard_filename,
     'aiida_node_metadata.yaml',
     {'inputs': _IO_CALC_INPUT_REPO_CONTENT},
     {'node_inputs': _IO_CALC_INPUT_NODE_CONTENT},
@@ -82,7 +81,7 @@ _IO_CALC_NODE_CONTENT_NESTED = [
 ]
 
 _IO_CALC_NODE_CONTENT_NESTED_NO_OUTPUTS = [
-    '.aiida_dump_safeguard',
+    safeguard_filename,
     'aiida_node_metadata.yaml',
     {'inputs': _IO_CALC_INPUT_REPO_CONTENT},
     {'node_inputs': _IO_CALC_INPUT_NODE_CONTENT},
@@ -90,23 +89,23 @@ _IO_CALC_NODE_CONTENT_NESTED_NO_OUTPUTS = [
 ]
 
 _IO_CALC_NODE_CONTENT_FLAT = [
-    'README.md',
-    'aiida_dump_log.json',
-    '.aiida_dump_safeguard',
+    readme_filename,
+    log_filename,
+    safeguard_filename,
     'aiida_node_metadata.yaml',
-    'file.txt',
+    filename,
     'default.npy',
 ]
 
 
-# --- Dynamic Node Tree Generation Helpers ---
-def get_expected_io_calc_tree(pk: int, process_label: str = 'CalculationNodeWithIO') -> Dict[str, List[Any]]:
+# Dynamic Node Tree Generation Helpers
+def get_expected_io_calc_tree(pk: int, process_label: str) -> Dict[str, List[Any]]:
     """Generates the expected nested dump tree dict for the IO CalculationNode."""
     node_dir_name = f'{process_label}-{pk}'
     return {node_dir_name: _IO_CALC_NODE_CONTENT_NESTED}
 
 
-def get_expected_io_calc_tree_flat(pk: int, process_label: str = 'CalculationNodeWithIO') -> Dict[str, List[Any]]:
+def get_expected_io_calc_tree_flat(pk: int, process_label: str) -> Dict[str, List[Any]]:
     """Generates the expected flat dump tree dict for the IO CalculationNode."""
     node_dir_name = f'{process_label}-{pk}'
     return {node_dir_name: _IO_CALC_NODE_CONTENT_FLAT}
@@ -120,7 +119,7 @@ def get_expected_add_calc_tree(pk: int) -> Dict[str, List[Any]]:
 
 def get_expected_multiply_func_tree(pk: int) -> Dict[str, List[Any]]:
     """Generates the expected dump tree dict for a 'multiply' function node."""
-    node_dir_name = f'multiply-{pk}'  # Assuming 'multiply' is the consistent label part
+    node_dir_name = f'multiply-{pk}'
     return {node_dir_name: _MULTIPLY_FUNC_NODE_CONTENT}
 
 
@@ -140,7 +139,7 @@ def get_expected_multiply_add_wc_tree(wc_pk: int, child_pks: Tuple[int, int]) ->
 
     return {
         node_dir_name: [
-            '.aiida_dump_safeguard',
+            safeguard_filename,
             'aiida_node_metadata.yaml',
             {f'01-{multiply_dir_key}': multiply_child_tree[multiply_dir_key]},
             {f'02-{add_dir_key}': add_child_tree[add_dir_key]},
@@ -148,12 +147,12 @@ def get_expected_multiply_add_wc_tree(wc_pk: int, child_pks: Tuple[int, int]) ->
     }
 
 
-# --- Helper for the WorkChain with IO children ---
+# Helper for the WorkChain with IO children
 def get_expected_io_wc_tree(
     wc_pk: int,
     child_pks: Tuple[int, int],  # Expecting PKs of the two IO Calcs
-    wc_process_label: str = 'WorkChainNodeWithIO',  # Assumed label for the test WC
-    child_process_label: str = 'CalculationNodeWithIO',  # Assumed label for the IO calcs
+    wc_process_label: str,
+    child_process_label: str,
 ) -> Dict[str, List[Any]]:
     """
     Generates the expected dump tree for the test WorkChain with IO children.
@@ -162,15 +161,12 @@ def get_expected_io_wc_tree(
     wc_node_dir_name = f'{wc_process_label}-{wc_pk}'
 
     # Get the tree structures for the children using their specific helper
-    # Note: We use the *content* list (_IO_CALC_NODE_CONTENT_NESTED) directly
-    #       to avoid creating intermediate single-node dicts here.
     child1_dir_name = f'{child_process_label}-{child_pks[0]}'
     child2_dir_name = f'{child_process_label}-{child_pks[1]}'
 
     wc_content = [
-        '.aiida_dump_safeguard',
+        safeguard_filename,
         'aiida_node_metadata.yaml',
-        # Nest child 1 (assuming 01- prefix)
         {
             f'01-{child1_dir_name}': _IO_CALC_NODE_CONTENT_NESTED  # Use the predefined content list
         },
@@ -183,25 +179,20 @@ def get_expected_io_wc_tree(
     return {wc_node_dir_name: wc_content}
 
 
-# --- Helper for the specific nested WorkChain with IO children ---
+# Helper for the specific nested WorkChain with IO children
 def get_expected_nested_io_wc_tree(
     wc_pk: int,
     wc_sub_pk: int,
     child_calc_pks: Tuple[int, int],  # Expecting PKs of the two IO Calcs called by sub-WC
-    wc_process_label: str = 'WorkflowNode',  # Default from fixture
-    # Labels below are NOT used for nested directory names, only PKs are.
-    wc_sub_process_label: str = 'WorkflowNode',  # Default from fixture
-    child_process_label: str = 'CalculationNodeWithIO',  # Assumed label for the IO calcs
-    # Assume standard link labels used by the fixture
-    wc_to_sub_link_label: str = 'sub_workflow',
-    sub_to_calc_link_label: str = 'calculation',
+    wc_process_label: str,
+    wc_to_sub_link_label: str,
+    sub_to_calc_link_label: str,
 ) -> Dict[str, List[Any]]:
-    """
-    Generates the expected dump tree for the test nested WorkChain with IO children.
-    Assumes wc_node calls wc_node_sub, which calls the two calculation nodes.
-    Uses numerical prefixes based on observed dumper behavior.
-    Uses content definition appropriate for whether outputs were attached.
-    Uses correct nested directory naming convention: {prefix}-{link_label}-{child_pk}.
+    """Generates the expected dump tree for the test nested WorkChain with IO children.
+
+    Assumes wc_node calls wc_node_sub, which calls the two calculation nodes.  Uses numerical prefixes, content
+    definition appropriate for whether outputs were attached, and nested directory naming convention:
+    {prefix}-{link_label}-{child_pk}.
     """
     # Top-level directory name uses label and PK
     wc_node_dir_name = f'{wc_process_label}-{wc_pk}'
@@ -212,7 +203,7 @@ def get_expected_nested_io_wc_tree(
 
     # Build the sub-workflow's content, nesting the calculations
     wc_sub_content = [
-        '.aiida_dump_safeguard',
+        safeguard_filename,
         'aiida_node_metadata.yaml',
         # Assuming calculations are called in sequence (01-, 02-)
         {f'01-{sub_to_calc_link_label}-{child_calc_pks[0]}': child1_content},  # Nested child 1 dir key uses PK
@@ -220,9 +211,8 @@ def get_expected_nested_io_wc_tree(
     ]
 
     # Build the main workflow's content, nesting the sub-workflow
-    # Key now uses: {prefix}-{link_label}-{CHILD_PK}
     wc_content = [
-        '.aiida_dump_safeguard',
+        safeguard_filename,
         'aiida_node_metadata.yaml',
         # Assuming sub-workflow is the first thing called (01-)
         {f'01-{wc_to_sub_link_label}-{wc_sub_pk}': wc_sub_content},  # Nested sub-workflow dir key uses PK
@@ -231,7 +221,7 @@ def get_expected_nested_io_wc_tree(
     return {wc_node_dir_name: wc_content}
 
 
-# --- Dynamic Archive Assembly Helpers ---
+# Dynamic assembly helpers
 def _assemble_nodes_by_type(node_trees: List[Dict]) -> Dict[str, List[Dict]]:
     """Helper to group node tree dicts by type."""
     grouped_by_type: Dict[str, List[Dict]] = {
@@ -242,6 +232,7 @@ def _assemble_nodes_by_type(node_trees: List[Dict]) -> Dict[str, List[Dict]]:
     for node_tree in node_trees:
         node_key = next(iter((node_tree.keys())))
 
+        # This is very fragile...
         if 'Calculation' in node_key or 'multiply' in node_key:
             grouped_by_type['calculations'].append(node_tree)
         elif 'WorkChain' in node_key:  # Keywords for workflows/functions
@@ -271,8 +262,8 @@ def get_expected_profile_dump_tree(
         A dictionary representing the expected file/directory tree structure.
     """
     top_level_content = [
-        'aiida_dump_log.json',
-        '.aiida_dump_safeguard',
+        log_filename,
+        safeguard_filename,
     ]
 
     if organize_by_groups:
@@ -280,7 +271,7 @@ def get_expected_profile_dump_tree(
         if groups_data:
             for label, node_trees in groups_data.items():
                 grouped_nodes_by_type = _assemble_nodes_by_type(node_trees)
-                group_content = ['.aiida_dump_safeguard']  # Safeguard inside each group dir
+                group_content = [safeguard_filename]  # Safeguard inside each group dir
 
                 # Iterate through the assembled types and add a dictionary for each
                 for type_label, trees in grouped_nodes_by_type.items():
@@ -296,7 +287,7 @@ def get_expected_profile_dump_tree(
             ungrouped_nodes_by_type = _assemble_nodes_by_type(ungrouped_data)
             # Check if there's actually anything to add for the 'ungrouped' directory
             if ungrouped_nodes_by_type:
-                ungrouped_entry = ['.aiida_dump_safeguard']  # Safeguard for ungrouped dir
+                ungrouped_entry = [safeguard_filename]  # Safeguard for ungrouped dir
                 for type_label, trees in ungrouped_nodes_by_type.items():
                     # No need to check for emptiness again
                     ungrouped_entry.append({type_label: trees})
@@ -325,8 +316,8 @@ def get_expected_profile_dump_tree(
 def get_expected_group_dump_tree(dump_label: str, node_trees: List[Dict]) -> Dict[str, List[Any]]:
     """Generates the expected tree for the output of a group dump."""
     content = [
-        'aiida_dump_log.json',
-        '.aiida_dump_safeguard',
+        log_filename,
+        safeguard_filename,
     ]
     nodes_by_type = _assemble_nodes_by_type(node_trees)
 
@@ -341,12 +332,6 @@ def get_expected_group_dump_tree(dump_label: str, node_trees: List[Dict]) -> Dic
 class TestProcessDumping:
     """Tests the dumping of process nodes."""
 
-    # test_init_and_verify: Remains largely the same, uses node.pk/uuid/process_label
-    # test_from_config: Remains the same, tests config loading
-    # test_dump_unsealed_raises: Remains the same
-    # test_dump_unsealed_allowed: Remains the same
-
-    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_dump_facade_wc_io(self, generate_calculation_node_io, generate_workchain_node_io, tmp_path):
         """Test dumping WorkChain with nested IO files."""
         # Setup
@@ -358,52 +343,57 @@ class TestProcessDumping:
         wc_pk = wc_node.pk
         wc_process_label = wc_node.process_label or 'WorkflowNode'  # Get actual label or default
 
-        # --- Get PKs of the nested structure ---
+        # Get PKs of the nested structure
         called_workflows = wc_node.called  # Should contain wc_node_sub
         assert len(called_workflows) == 1, 'Expected one called sub-workflow'
         wc_node_sub = called_workflows[0]
         wc_sub_pk = wc_node_sub.pk
-        wc_sub_process_label = wc_node_sub.process_label or 'WorkflowNode'
 
         called_calcs = wc_node_sub.called  # Calcs called by the sub-workflow
         assert len(called_calcs) == 2, 'Expected two called calculations from sub-workflow'
         # Sort PKs for consistent order
         child_calc_pks = tuple(sorted([n.pk for n in called_calcs]))
         # Get label from one of the children (assuming they are the same type)
-        child_process_label = called_calcs[0].process_label or 'CalculationNodeWithIO'
-        # --- End PK gathering ---
 
-        # --- Generate the expected tree using the CORRECT helper ---
+        # Get link label from main WC to sub-WC
+        wc_to_sub_links = wc_node.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
+        wc_to_sub_link_label = wc_to_sub_links[0].link_label if wc_to_sub_links else 'call_workflow'
+
+        # Get link label from sub-WC to calculations
+        sub_to_calc_links = wc_node_sub.base.links.get_outgoing(
+            link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)
+        ).all()
+        sub_to_calc_link_label = sub_to_calc_links[0].link_label if sub_to_calc_links else 'call_calc'
+
+        # Generate the expected tree using the helper
         expected_wc_content_tree = get_expected_nested_io_wc_tree(
             wc_pk=wc_pk,
             wc_sub_pk=wc_sub_pk,
             child_calc_pks=child_calc_pks,
             wc_process_label=wc_process_label,
-            wc_sub_process_label=wc_sub_process_label,
-            child_process_label=child_process_label,
+            wc_to_sub_link_label=wc_to_sub_link_label,
+            sub_to_calc_link_label=sub_to_calc_link_label,
         )
-        # --- End dynamic generation ---
 
         dump_label = f'{wc_process_label}-{wc_pk}'
         dump_target_path = tmp_path / dump_label
 
-        wc_node.dump(overwrite=True, output_path=dump_target_path)
+        wc_node.dump(output_path=dump_target_path, overwrite=True)
 
         # Create the final expected structure including standard files
         expected_tree_content = expected_wc_content_tree[dump_label]
         expected_tree_final = {
             dump_label: [
-                'README.md',
-                'aiida_dump_log.json',
+                readme_filename,
+                log_filename,
             ]
             + expected_tree_content  # Add standard files to node content list
         }
 
         compare_tree(expected=expected_tree_final, base_path=tmp_path)
-        assert (dump_target_path / 'README.md').is_file()
-        assert (dump_target_path / 'aiida_dump_log.json').is_file()
+        assert (dump_target_path / readme_filename).is_file()
+        assert (dump_target_path / log_filename).is_file()
 
-    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_dump_facade_multiply_add(self, tmp_path, generate_workchain_multiply_add):
         """Test dumping MultiplyAddWorkChain using (nested and flat)."""
 
@@ -413,7 +403,7 @@ class TestProcessDumping:
         assert len(child_pks) == 2
         dump_label = f'{wc_node.process_label}-{wc_pk}'
 
-        # --- Nested Dump ---
+        # Nested Dump
         dump_target_path_nested = tmp_path / dump_label
 
         wc_node.dump(output_path=dump_target_path_nested, overwrite=True, include_outputs=True)
@@ -423,15 +413,14 @@ class TestProcessDumping:
         expected_tree_content_nested = expected_wc_content_tree[dump_label]
         expected_tree_nested = {
             dump_label: [
-                'README.md',
-                'aiida_dump_log.json',
-                '.aiida_dump_safeguard',
+                readme_filename,
+                log_filename,
+                safeguard_filename,
             ]
             + expected_tree_content_nested
         }
         compare_tree(expected=expected_tree_nested, base_path=tmp_path)
 
-    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_dump_facade_calculation_io(self, tmp_path, generate_calculation_node_io):
         """Test dumping a CalculationNode with complex IO."""
         calculation_node = generate_calculation_node_io(attach_outputs=True)
@@ -449,23 +438,22 @@ class TestProcessDumping:
         expected_tree_content = expected_node_tree[dump_label]
         expected_tree = {
             dump_label: [
-                'README.md',
-                'aiida_dump_log.json',
-                '.aiida_dump_safeguard',
+                readme_filename,
+                log_filename,
+                safeguard_filename,
             ]
             + expected_tree_content
         }
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
         # Content checks remain valuable
-        file_path = dump_target_path / 'inputs' / 'file.txt'
+        file_path = dump_target_path / 'inputs' / filename
         assert file_path.read_text() == 'a'
-        node_input_path = dump_target_path / 'node_inputs' / 'singlefile' / 'file.txt'
+        node_input_path = dump_target_path / 'node_inputs' / 'singlefile' / filename
         assert node_input_path.read_text() == 'a'
-        node_output_path = dump_target_path / 'node_outputs' / 'singlefile' / 'file.txt'
+        node_output_path = dump_target_path / 'node_outputs' / 'singlefile' / filename
         assert node_output_path.read_text() == 'a'  # Assuming output is same as input for this test node
 
-    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_dump_facade_calculation_flat(self, tmp_path, generate_calculation_node_io):
         """Test flat dumping of a CalculationNode."""
         # As noted before, the exact flat structure representation and verification
@@ -484,12 +472,11 @@ class TestProcessDumping:
 
         # Perform basic checks instead of full compare_tree for flat dump
         assert (dump_target_path / 'aiida_node_metadata.yaml').is_file()
-        assert (dump_target_path / 'aiida_dump_log.json').is_file()
-        assert (dump_target_path / 'file.txt').is_file()  # Check a key file is flattened
+        assert (dump_target_path / log_filename).is_file()
+        assert (dump_target_path / filename).is_file()  # Check a key file is flattened
         assert (dump_target_path / 'default.npy').is_file()
         # Add more specific checks if needed based on expected flat output
 
-    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_dump_facade_calculation_add(self, tmp_path, generate_calculation_node_add):
         """Test dumping ArithmeticAddCalculation."""
         calculation_node = generate_calculation_node_add()  # Fixture runs and seals
@@ -504,9 +491,9 @@ class TestProcessDumping:
         expected_node_content = get_expected_add_calc_tree(pk=calc_pk)[dump_label]
         expected_tree = {
             dump_label: [
-                'README.md',
-                'aiida_dump_log.json',
-                '.aiida_dump_safeguard',
+                readme_filename,
+                log_filename,
+                safeguard_filename,
             ]
             + expected_node_content
         }
@@ -621,7 +608,7 @@ class TestGroupDumping:
         expected_tree = get_expected_group_dump_tree(dump_label=dump_label, node_trees=[multiply_tree, add_tree])
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
-
+# TODO: Can remove the `aiida_profile_clean` if I explicitly select the groups, rather than using `--all`
 class TestProfileDumping:
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_dump_add_group(self, tmp_path, setup_add_group):
@@ -772,7 +759,7 @@ class TestProfileDumping:
 
         output_path = tmp_path / profile_dump_label
 
-        # --- Dump 1: Only grouped nodes ---
+        # Dump 1: Only grouped nodes
         profile = load_profile()
         profile.dump(output_path=output_path, all_entries=True, also_ungrouped=False)
 
@@ -788,7 +775,7 @@ class TestProfileDumping:
         )
         compare_tree(expected=expected_tree_grouped, base_path=tmp_path)
 
-        # --- Dump 2: Include ungrouped nodes (incremental) ---
+        # Dump 2: Include ungrouped nodes (incremental)
         # Note: We re-instantiate dumper to ensure fresh state reading if needed,
         # or rely on the dumper correctly handling incremental logic with config change.
         # Re-instantiating is often safer in tests.
@@ -875,7 +862,7 @@ class TestProfileDumping:
         profile = load_profile()
         profile.dump(output_path=output_path, all_entries=True, symlink_calcs=True, filter_by_last_dump_time=False)
 
-        # --- Symlink specific checks ---
+        # Symlink specific checks
         node_dir_name = f'{node1.process_label}-{node1.pk}'
         path_in_group1 = output_path / 'groups' / add_group.label / 'calculations' / node_dir_name
         path_in_group2 = output_path / 'groups' / copy_group_label / 'calculations' / node_dir_name
@@ -883,7 +870,7 @@ class TestProfileDumping:
         assert path_in_group1.is_dir() and not path_in_group1.is_symlink(), 'Source path should be a directory'
         assert path_in_group2.is_symlink(), 'Second path should be a symlink'
         assert path_in_group2.resolve() == path_in_group1.resolve(), 'Symlink target mismatch'
-        # --- End symlink checks ---
+        # End symlink checks
 
         # Check overall structure (compare_tree implicitly follows links)
         calc_tree = get_expected_add_calc_tree(pk=node1.pk)

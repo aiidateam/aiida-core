@@ -14,7 +14,7 @@ from datetime import datetime
 from enum import Enum, auto
 from typing import Annotated, Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, computed_field, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from aiida import orm
 
@@ -189,12 +189,26 @@ class EntityFilterMixin(BaseModel):
         arbitrary_types_allowed=True,
         validate_assignment=True,
     )
-    user: 'UserValidator' = Field(default=None, description='User object or email to filter by')
-    computers: 'ComputersValidator' = Field(
+    user: Optional[orm.User] = Field(default=None, description='User object or email to filter by')
+    computers: Optional[orm.Computer] = Field(
         default=None, description='List of Computer objects or UUIDs/labels to filter by'
     )
-    codes: 'CodesValidator' = Field(default=None, description='List of Code objects or UUIDs/labels to filter by')
+    codes: Optional[orm.Code] = Field(default=None, description='List of Code objects or UUIDs/labels to filter by')
 
+    @field_validator('user', mode='before')
+    @classmethod
+    def validate_user(cls, v):
+        return _validate_user_input(v)
+
+    @field_validator('computers', mode='before')
+    @classmethod
+    def validate_computers(cls, v):
+        return _validate_computers_input(v)
+
+    @field_validator('codes', mode='before')
+    @classmethod
+    def validate_codes(cls, v):
+        return _validate_codes_input(v)
 
 class ProcessHandlingMixin(BaseModel):
     """Mixin for node collection options."""

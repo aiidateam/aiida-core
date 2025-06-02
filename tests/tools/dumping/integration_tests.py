@@ -608,6 +608,7 @@ class TestGroupDumping:
         expected_tree = get_expected_group_dump_tree(dump_label=dump_label, node_trees=[multiply_tree, add_tree])
         compare_tree(expected=expected_tree, base_path=tmp_path)
 
+
 # TODO: Can remove the `aiida_profile_clean` if I explicitly select the groups, rather than using `--all`
 class TestProfileDumping:
     @pytest.mark.usefixtures('aiida_profile_clean')

@@ -17,4 +17,4 @@ coverage:
         threshold: 0.1%
 
 ignore:
-  - "src/aiida/tools/_dumping/**/*"
+- src/aiida/tools/_dumping/**/*

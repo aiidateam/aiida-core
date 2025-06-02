@@ -632,12 +632,14 @@ class ProcessNode(Sealable, Node):
         :param dump_unsealed: Allow dumping of unsealed nodes, defaults to False
         :return: Path where the process was dumped
         """
-        from aiida.tools._dumping.config import DumpMode, ProcessDumpConfig
+        from aiida.tools._dumping.config import ProcessDumpConfig
         from aiida.tools._dumping.engine import DumpEngine
         from aiida.tools._dumping.utils import DumpPaths
 
         # Construct ProcessDumpConfig from kwargs
         config_data = {
+            'dry_run': dry_run,
+            'overwrite': overwrite,
             'include_inputs': include_inputs,
             'include_outputs': include_outputs,
             'include_attributes': include_attributes,
@@ -645,14 +647,6 @@ class ProcessNode(Sealable, Node):
             'flat': flat,
             'dump_unsealed': dump_unsealed,
         }
-
-        # Set dump mode based on flags
-        if dry_run:
-            config_data['dump_mode'] = DumpMode.DRY_RUN
-        elif overwrite:
-            config_data['dump_mode'] = DumpMode.OVERWRITE
-        else:
-            config_data['dump_mode'] = DumpMode.INCREMENTAL
 
         config = ProcessDumpConfig.model_validate(config_data)
 

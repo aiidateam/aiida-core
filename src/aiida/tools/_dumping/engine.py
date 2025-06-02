@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-from functools import cached_property
 from pathlib import Path
 from typing import Union
 
@@ -65,21 +64,8 @@ class DumpEngine:
         self.dump_tracker = DumpTracker.load(self.dump_paths)
         self.dump_times = self.dump_tracker.dump_times
 
-        # Initialize detector for changes
-        self.detector = DumpChangeDetector(
-            dump_tracker=self.dump_tracker, dump_paths=self.dump_paths, config=self.config, dump_times=self.dump_times
-        )
-
-    @cached_property
-    def current_mapping(self) -> GroupNodeMapping:
-        """Build and cache the current group-node mapping from the database.
-
-        This is only computed when needed (for group/profile dumps) and cached for reuse.
-        """
-        return GroupNodeMapping.build_from_db()
-
-    def dump(self) -> None:
-        """Selects and executes the appropriate dump strategy based on the self.dump_target_entity."""
+        # Create the group-node mapping required for the dump from AiiDA's DB depending on the dump target entity
+        self.current_mapping = self._build_mapping_for_target()
 
         # Initialize ProcessDumpExecutor as it is needed for all dumping operations
         self.process_dump_executor = ProcessDumpExecutor(
@@ -89,20 +75,28 @@ class DumpEngine:
             dump_times=self.dump_times,
         )
 
-        # Log start message
-        self._log_dump_start()
+    def _build_mapping_for_target(self) -> GroupNodeMapping:
+        """Build the appropriate group-node mapping based on the target entity and config."""
+        if isinstance(self.dump_target_entity, orm.Group):
+            # Single group dump - pass it as a single-element list
+            return GroupNodeMapping.build_from_db(groups=[self.dump_target_entity])
 
-        # Call appropriate helper method
-        if isinstance(self.dump_target_entity, orm.ProcessNode):
-            self._dump_process()
-        elif isinstance(self.dump_target_entity, orm.Group):
-            self._dump_group()
         elif isinstance(self.dump_target_entity, Profile):
-            self._dump_profile()
+            # Profile dump - depends on config
+            assert isinstance(self.config, ProfileDumpConfig)
 
-        if not self.config.dump_mode == DumpMode.DRY_RUN:
-            logger.report(f'Saving final dump log to file `{DumpPaths.TRACKING_LOG_FILE_NAME}`.')
-            self.dump_tracker.save()
+            if self.config.all_entries:
+                # Build mapping for all groups
+                return GroupNodeMapping.build_from_db(groups=None)
+            elif self.config.groups:
+                # Build mapping only for specified groups
+                return GroupNodeMapping.build_from_db(groups=self.config.groups)
+            else:
+                # No groups specified - return empty mapping
+                return GroupNodeMapping()
+
+        else:  # orm.ProcessNode
+            return GroupNodeMapping()  # or None?
 
     def _log_dump_start(self) -> None:
         """Log the start of a dump operation."""
@@ -119,6 +113,24 @@ class DumpEngine:
         if self.config.dump_mode != DumpMode.DRY_RUN:
             logger.report(msg)
 
+    def dump(self) -> None:
+        """Selects and executes the appropriate dump strategy based on the self.dump_target_entity."""
+
+        # Log start message
+        self._log_dump_start()
+
+        # Call appropriate helper method
+        if isinstance(self.dump_target_entity, orm.ProcessNode):
+            self._dump_process()
+        elif isinstance(self.dump_target_entity, orm.Group):
+            self._dump_group()
+        elif isinstance(self.dump_target_entity, Profile):
+            self._dump_profile()
+
+        if not self.config.dump_mode == DumpMode.DRY_RUN:
+            logger.report(f'Saving final dump log to file `{DumpPaths.TRACKING_LOG_FILE_NAME}`.')
+            self.dump_tracker.save()
+
     def _dump_process(self) -> None:
         """Dump a single ``orm.ProcessNode``."""
 
@@ -134,8 +146,17 @@ class DumpEngine:
 
     def _dump_group(self) -> None:
         """Dump a group and its associated nodes."""
+
         assert isinstance(self.dump_target_entity, orm.Group)
         assert isinstance(self.config, GroupDumpConfig)
+
+        self.detector = DumpChangeDetector(
+            dump_tracker=self.dump_tracker,
+            dump_paths=self.dump_paths,
+            config=self.config,
+            dump_times=self.dump_times,
+            current_mapping=self.current_mapping,
+        )
 
         self.dump_tracker.set_current_mapping(self.current_mapping)
         node_changes = self.detector._detect_node_changes(group=self.dump_target_entity)
@@ -175,8 +196,17 @@ class DumpEngine:
 
     def _dump_profile(self) -> None:
         """Dump a profile and its associated data."""
+
         assert isinstance(self.dump_target_entity, Profile)
         assert isinstance(self.config, ProfileDumpConfig)
+
+        self.detector = DumpChangeDetector(
+            dump_tracker=self.dump_tracker,
+            dump_paths=self.dump_paths,
+            config=self.config,
+            dump_times=self.dump_times,
+            current_mapping=self.current_mapping,
+        )
 
         if (
             not self.config.all_entries

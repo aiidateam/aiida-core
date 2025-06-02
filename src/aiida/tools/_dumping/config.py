@@ -138,7 +138,7 @@ class BaseDumpConfig(BaseModel):
     )
 
     # Global options
-    dump_mode: DumpMode = Field(default=DumpMode.INCREMENTAL, description='Dump mode to use', exclude=True)
+    dump_mode: DumpMode = Field(default=DumpMode.INCREMENTAL, description='Dump mode to use')
 
     # Process dump options - common to all dump types
     include_inputs: bool = True
@@ -150,7 +150,7 @@ class BaseDumpConfig(BaseModel):
 
     @model_validator(mode='before')
     @classmethod
-    def _map_click_options_to_dump_mode(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def _resolve_dump_mode_from_flags(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         """Map incoming CLI click options to internal representation."""
         # Convert Dump Mode
 

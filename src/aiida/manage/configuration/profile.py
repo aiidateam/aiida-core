@@ -301,35 +301,35 @@ class Profile:
     ) -> Optional[Path]:
         """Dump data stored in an AiiDA profile to disk in a human-readable directory tree.
 
-        :param output_path: Target directory for the dump
-        :param dry_run: Show what would be dumped without actually dumping
-        :param overwrite: Overwrite existing dump directories
-        :param all_entries: Dump all entries in the profile
-        :param groups: List of groups to dump (UUIDs, labels, or Group objects)
-        :param user: User to filter by (User object or email)
-        :param computers: List of computers to filter by
-        :param codes: List of codes to filter by
-        :param past_days: Only include nodes modified in the past N days
-        :param start_date: Only include nodes modified after this date
-        :param end_date: Only include nodes modified before this date
-        :param filter_by_last_dump_time: Filter nodes by last dump time
-        :param only_top_level_calcs: Only dump top-level calculations
-        :param only_top_level_workflows: Only dump top-level workflows
-        :param include_inputs: Include input files in the dump
-        :param include_outputs: Include output files in the dump
-        :param include_attributes: Include node attributes in metadata
-        :param include_extras: Include node extras in metadata
-        :param flat: Use flat directory structure
-        :param dump_unsealed: Allow dumping of unsealed nodes
-        :param symlink_calcs: Create symlinks for calculation nodes
-        :param delete_missing: Delete dump files for nodes no longer in scope
-        :param organize_by_groups: Organize output by groups
-        :param also_ungrouped: Also dump ungrouped nodes
-        :param relabel_groups: Update group directory names when labels change
+        :param output_path: Target directory for the dump, defaults to None
+        :param dry_run: Show what would be dumped without actually dumping, defaults to False
+        :param overwrite: Overwrite existing dump directories, defaults to False
+        :param all_entries: Dump all entries in the profile, defaults to False
+        :param groups: List of groups to dump (UUIDs, labels, or Group objects), defaults to None
+        :param user: User to filter by (User object or email), defaults to None
+        :param computers: List of computers to filter by, defaults to None
+        :param codes: List of codes to filter by, defaults to None
+        :param past_days: Only include nodes modified in the past N days, defaults to None
+        :param start_date: Only include nodes modified after this date, defaults to None
+        :param end_date: Only include nodes modified before this date, defaults to None
+        :param filter_by_last_dump_time: Filter nodes by last dump time, defaults to True
+        :param only_top_level_calcs: Only dump top-level calculations, defaults to True
+        :param only_top_level_workflows: Only dump top-level workflows, defaults to True
+        :param include_inputs: Include input files in the dump, defaults to True
+        :param include_outputs: Include output files in the dump, defaults to False
+        :param include_attributes: Include node attributes in metadata, defaults to True
+        :param include_extras: Include node extras in metadata, defaults to False
+        :param flat: Use flat directory structure, defaults to False
+        :param dump_unsealed: Allow dumping of unsealed nodes, defaults to False
+        :param symlink_calcs: Create symlinks for calculation nodes, defaults to False
+        :param delete_missing: Delete dump files for nodes no longer in scope, defaults to True
+        :param organize_by_groups: Organize output by groups, defaults to True
+        :param also_ungrouped: Also dump ungrouped nodes, defaults to False
+        :param relabel_groups: Update group directory names when labels change, defaults to True
         :return: Path where the profile was dumped, or None if nothing was dumped
         """
         from aiida.common import AIIDA_LOGGER
-        from aiida.tools._dumping.config import DumpMode, ProfileDumpConfig
+        from aiida.tools._dumping.config import ProfileDumpConfig
         from aiida.tools._dumping.engine import DumpEngine
         from aiida.tools._dumping.utils import DumpPaths
 
@@ -366,7 +366,7 @@ class Profile:
         config = ProfileDumpConfig.model_validate(config_data)
 
         # Check final determined scope
-        if not (config.all_entries or config.filters_set) and config.dump_mode != DumpMode.DRY_RUN:
+        if not (config.all_entries or config.filters_set) and not dry_run:
             msg = (
                 'No profile data explicitly selected. No dump will be performed. '
                 'Either select everything via `all_entries=True`, or filter via `groups`, `user`, etc.'

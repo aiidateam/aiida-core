@@ -54,19 +54,30 @@ class DumpChangeDetector:
     CODE_TAG = 'code_filter'
 
     def __init__(
-        self, config: 'DumpConfigType', dump_tracker: DumpTracker, dump_paths: DumpPaths, dump_times: DumpTimes
+        self,
+        config: 'DumpConfigType',
+        dump_tracker: DumpTracker,
+        dump_paths: DumpPaths,
+        dump_times: DumpTimes,
+        current_mapping: GroupNodeMapping,
     ) -> None:
         """Initializes the DumpChangeDetector."""
         self.config: 'DumpConfigType' = config
         self.dump_tracker: DumpTracker = dump_tracker
         self.dump_paths: DumpPaths = dump_paths
         self.dump_times: DumpTimes = dump_times
+        self._current_mapping: GroupNodeMapping = current_mapping
+        self._grouped_node_uuids_cache: Optional[set[str]] = None
 
     @property
     def grouped_node_uuids(self) -> set[str]:
         """Cached property holding the set of UUIDs for all nodes in any group."""
-        mapping = GroupNodeMapping.build_from_db()
-        uuids = set().union(*mapping.group_to_nodes.values())
+        if self._grouped_node_uuids_cache is not None:
+            return self._grouped_node_uuids_cache
+
+        # Always use the provided mapping - no fallback!
+        uuids = set().union(*self._current_mapping.group_to_nodes.values())
+        self._grouped_node_uuids_cache = uuids
         return uuids
 
     def get_nodes(
@@ -328,8 +339,11 @@ class DumpChangeDetector:
             self_group_uuids = set(previous_mapping.group_to_nodes.keys())
             other_group_uuids = set(current_mapping.group_to_nodes.keys())
             common_group_uuids = self_group_uuids & other_group_uuids
+            # Only check for renames on groups that are actually tracked
+            tracked_group_uuids = set(self.dump_tracker.registries['groups'].entries.keys())
+            groups_to_check_for_rename = common_group_uuids & tracked_group_uuids
 
-            for group_uuid in common_group_uuids:
+            for group_uuid in groups_to_check_for_rename:
                 entry = self.dump_tracker.get_entry(group_uuid)
 
                 old_path = entry.path

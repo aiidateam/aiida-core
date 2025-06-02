@@ -269,7 +269,7 @@ def test_process_kill_failing_ebm_upload(
 def test_process_kill_failing_ebm_kill(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
 ):
-    """Kill a process that with a failng EBM during the kill.
+    """Kill a process that had previously failed with an EBM.
 
     Killing a process tries to gracefully cancel the job on the remote node. If there are connection problems it retries
     it in using the EBM. If this fails another kill command can be send to restart the cancelation of the job scheduler.

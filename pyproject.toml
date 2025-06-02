@@ -535,4 +535,4 @@ commands = molecule {posargs:test}
 # .pre-commit-config.yaml
 # .github/actions/install-aiida-core/action.yml
 # .readthedocs.yml
-required-version = ">=0.5.21"
+required-version = ">=0.7.0"

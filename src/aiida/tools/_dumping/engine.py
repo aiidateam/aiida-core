@@ -29,7 +29,7 @@ from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.tracking import DumpTracker
 from aiida.tools._dumping.utils import DumpChanges, DumpPaths
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.engine')
+logger = AIIDA_LOGGER.getChild('tools._dumping.engine')
 
 
 class DumpEngine:

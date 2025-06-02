@@ -14,25 +14,19 @@ from datetime import datetime
 from enum import Enum, auto
 from typing import Annotated, Any, Dict, List, Optional, Union
 
-from pydantic import (
-    BaseModel,
-    BeforeValidator,
-    ConfigDict,
-    Field,
-    computed_field,
-    field_validator,
-    model_validator,
-)
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, computed_field, model_validator
 
 from aiida import orm
-from aiida.common.log import AIIDA_LOGGER
 
-__all__ = ('DumpConfigType', 'DumpMode', 'GroupDumpConfig', 'ProcessDumpConfig', 'ProfileDumpConfig')
+__all__ = (
+    'DumpConfigType',
+    'DumpMode',
+    'GroupDumpConfig',
+    'ProcessDumpConfig',
+    'ProfileDumpConfig',
+)
 
 DumpConfigType = Union['ProcessDumpConfig', 'GroupDumpConfig', 'ProfileDumpConfig']
-
-
-logger = AIIDA_LOGGER.getChild('tools.dumping.config')
 
 
 class DumpMode(Enum):
@@ -47,25 +41,91 @@ class GroupDumpScope(Enum):
     NO_GROUP = auto()
 
 
-def _load_computer_validator(value: Optional[Union[int, str, orm.Computer]]) -> orm.Computer | None:
+def _load_computer_validator(value: Union[int, str, orm.Computer]) -> orm.Computer:
     """Pydantic validator to load an ``orm.Computer`` from identifier."""
-    if value is None or isinstance(value, orm.Computer):
+    if isinstance(value, orm.Computer):
         return value
     elif isinstance(value, (str, int)):
         return orm.load_computer(identifier=value)
 
 
-def _load_code_validator(value: Optional[Union[int, str, orm.Code]]) -> orm.Code | None:
+def _load_code_validator(value: Union[int, str, orm.Code]) -> orm.Code:
     """Pydantic validator to load an ``orm.Code`` from identifier."""
-    if value is None or isinstance(value, orm.Code):
+    if isinstance(value, orm.Code):
         return value
     elif isinstance(value, (str, int)):
         return orm.load_code(identifier=value)
 
 
-# Define Annotated types to apply the validators to list items
-ComputerOrNone = Annotated[Optional[orm.Computer], BeforeValidator(_load_computer_validator)]
-CodeOrNone = Annotated[Optional[orm.Code], BeforeValidator(_load_code_validator)]
+def _validate_user_input(value: Optional[Union[orm.User, str]]) -> orm.User | None:
+    """Load User object from email string."""
+    if value is None or isinstance(value, orm.User):
+        return value
+    elif isinstance(value, str):
+        return orm.User.collection.get(email=value)
+
+
+def _validate_computers_input(value: Optional[Union[List[orm.Computer], List[str]]]) -> Optional[List[orm.Computer]]:
+    """Load Computer objects from identifiers."""
+    if not value:
+        return None
+
+    # Apply the validator to each item in the list
+    return [_load_computer_validator(item) for item in value]
+
+
+def _validate_codes_input(value: Optional[Union[List[orm.Code], List[str]]]) -> Optional[List[orm.Code]]:
+    """Load Code objects from identifiers."""
+    if not value:
+        return None
+
+    # Check if all items are strings
+    if all(isinstance(item, str) for item in value):
+        return [_load_code_validator(item) for item in value]
+
+    # Check if all items are orm.Code objects
+    if all(isinstance(item, orm.Code) for item in value):
+        # Return list of orm.Code objects as-is
+        # mypy doesn't correctly resolve with all and isinstance
+        return value  # type: ignore[return-value]
+
+    # Mixed types - not allowed
+    types_found = {type(item).__name__ for item in value}
+    msg = (
+        f"Mixed types in 'groups' list not allowed. Found: {types_found}. "
+        'Must be either all strings (UUIDs/labels) OR all Group objects.'
+    )
+    raise ValueError(msg)
+
+
+def _validate_groups_input(value: Optional[Union[List[orm.Group], List[str]]]) -> Optional[List[orm.Group]]:
+    """Utility function to validate groups input - must be either all strings OR all Group objects."""
+    if not value:
+        return None
+
+    # Check if all items are strings
+    if all(isinstance(item, str) for item in value):
+        return [orm.load_group(v) for v in value]
+
+    # Check if all items are orm.Group objects
+    if all(isinstance(item, orm.Group) for item in value):
+        # Return list of orm.Group objects as-is
+        # mypy doesn't correctly resolve with all and isinstance
+        return value  # type: ignore[return-value]
+
+    # Mixed types - not allowed
+    types_found = {type(item).__name__ for item in value}
+    msg = (
+        f"Mixed types in 'groups' list not allowed. Found: {types_found}. "
+        'Must be either all strings (UUIDs/labels) OR all Group objects.'
+    )
+    raise ValueError(msg)
+
+
+UserValidator = Annotated[Optional[orm.User], BeforeValidator(_validate_user_input)]
+ComputersValidator = Annotated[Optional[List[orm.Computer]], BeforeValidator(_validate_computers_input)]
+CodesValidator = Annotated[Optional[List[orm.Code]], BeforeValidator(_validate_codes_input)]
+GroupsValidator = Annotated[Optional[List[orm.Group]], BeforeValidator(_validate_groups_input)]
 
 
 class BaseDumpConfig(BaseModel):
@@ -77,8 +137,8 @@ class BaseDumpConfig(BaseModel):
         validate_assignment=True,
     )
 
-    # Global options - use default_factory to ensure proper precedence
-    dump_mode: DumpMode = Field(default=DumpMode.INCREMENTAL, description='Dump mode to use')
+    # Global options
+    dump_mode: DumpMode = Field(default=DumpMode.INCREMENTAL, description='Dump mode to use', exclude=True)
 
     # Process dump options - common to all dump types
     include_inputs: bool = True
@@ -90,20 +150,16 @@ class BaseDumpConfig(BaseModel):
 
     @model_validator(mode='before')
     @classmethod
-    def _map_click_options_to_internal(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        """Map incoming Click-option-like keys to internal representation."""
-        # Handle Dump Mode - set default if not already set
-        if 'dump_mode' not in values:
-            if values.pop('dry_run', False):
-                values['dump_mode'] = DumpMode.DRY_RUN
-            elif values.pop('overwrite', False):
-                values['dump_mode'] = DumpMode.OVERWRITE
-            else:
-                values['dump_mode'] = DumpMode.INCREMENTAL
+    def _map_click_options_to_dump_mode(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """Map incoming CLI click options to internal representation."""
+        # Convert Dump Mode
+
+        if values.pop('dry_run', False):
+            values['dump_mode'] = DumpMode.DRY_RUN
+        elif values.pop('overwrite', False):
+            values['dump_mode'] = DumpMode.OVERWRITE
         else:
-            # Clean up dry_run/overwrite if dump_mode is explicitly set
-            values.pop('dry_run', None)
-            values.pop('overwrite', None)
+            values['dump_mode'] = DumpMode.INCREMENTAL
 
         return values
 
@@ -113,8 +169,8 @@ class TimeFilterMixin(BaseModel):
 
     start_date: Optional[datetime] = Field(default=None, description='Start date/time for modification time filter')
     end_date: Optional[datetime] = Field(default=None, description='End date/time for modification time filter')
-    past_days: Optional[int] = Field(default=None, description='Number of past days to include based on mtime.')
-    filter_by_last_dump_time: bool = True
+    past_days: Optional[int] = Field(default=None, description='Number of past days to include based on mtime')
+    filter_by_last_dump_time: bool = Field(default=True, description='Filter nodes by mtime since last dump')
 
     @model_validator(mode='after')
     def _check_date_filters(self) -> 'TimeFilterMixin':
@@ -133,27 +189,14 @@ class EntityFilterMixin(BaseModel):
         arbitrary_types_allowed=True,
         validate_assignment=True,
     )
-
-    user: Optional[Union[orm.User, str]] = Field(default=None, description='User object or email to filter by')
-    computers: Optional[List[Union[orm.Computer, str]]] = Field(
+    user: UserValidator = Field(default=None, description='User object or email to filter by')
+    computers: ComputersValidator = Field(
         default=None, description='List of Computer objects or UUIDs/labels to filter by'
     )
-    codes: Optional[List[Union[orm.Code, str]]] = Field(
-        default=None, description='List of Code objects or UUIDs/labels to filter by'
-    )
-
-    @field_validator('user', mode='before')
-    def _validate_user_input(cls, value: Any) -> orm.User | None:  # noqa: N805
-        """Load User object from email string."""
-        if value is None or isinstance(value, orm.User):
-            return value
-        if isinstance(value, str):
-            return orm.User.collection.get(email=value)
-        msg = f'Invalid input type for user: {type(value)}. Expected email string or User object.'
-        raise ValueError(msg)
+    codes: CodesValidator = Field(default=None, description='List of Code objects or UUIDs/labels to filter by')
 
 
-class NodeCollectionMixin(BaseModel):
+class ProcessHandlingMixin(BaseModel):
     """Mixin for node collection options."""
 
     only_top_level_calcs: bool = True
@@ -169,17 +212,17 @@ class GroupManagementMixin(BaseModel):
     relabel_groups: bool = True
 
 
-class ProcessDumpConfig(BaseDumpConfig, NodeCollectionMixin):
+class ProcessDumpConfig(BaseDumpConfig, ProcessHandlingMixin):
     """Configuration for dumping individual process nodes."""
 
-    # Process dumps don't need additional configuration beyond the base and node collection
+    # Process dumps don't need additional configuration beyond the base config and process handling
     pass
 
 
-class GroupDumpConfig(BaseDumpConfig, TimeFilterMixin, EntityFilterMixin, NodeCollectionMixin, GroupManagementMixin):
+class GroupDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, EntityFilterMixin, GroupManagementMixin):
     """Configuration for dumping groups."""
 
-    groups: Optional[Union[List[str], List[orm.Group]]] = Field(
+    groups: GroupsValidator = Field(
         default=None, description='Groups to dump (either list of UUIDs/labels OR list of Group objects)'
     )
 
@@ -203,40 +246,11 @@ class GroupDumpConfig(BaseDumpConfig, TimeFilterMixin, EntityFilterMixin, NodeCo
             or self.user
         )
 
-    @field_validator('groups', mode='before')
-    @classmethod
-    def _validate_groups_input(cls, value: Any) -> Optional[Union[List[str], List[orm.Group]]]:
-        """Validate groups input - must be either all strings OR all Group objects."""
-        if value is None:
-            return None
-        if not isinstance(value, list):
-            msg = f'Invalid input type for groups: {type(value)}. Expected a list.'
-            raise ValueError(msg)
 
-        if not value:  # Empty list
-            return None
-
-        # Check if all items are strings
-        if all(isinstance(item, str) for item in value):
-            return value  # Return list of strings as-is
-
-        # Check if all items are orm.Group objects
-        if all(isinstance(item, orm.Group) for item in value):
-            return value  # Return list of orm.Group objects as-is
-
-        # Mixed types - not allowed
-        types_found = {type(item).__name__ for item in value}
-        msg = (
-            f"Mixed types in 'groups' list not allowed. Found: {types_found}. "
-            'Must be either all strings (UUIDs/labels) OR all Group objects.'
-        )
-        raise ValueError(msg)
-
-
-class ProfileDumpConfig(BaseDumpConfig, TimeFilterMixin, EntityFilterMixin, NodeCollectionMixin, GroupManagementMixin):
+class ProfileDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, EntityFilterMixin, GroupManagementMixin):
     """Configuration for dumping entire profiles."""
 
-    groups: Optional[Union[List[str], List[orm.Group]]] = Field(
+    groups: GroupsValidator = Field(
         default=None, description='Groups to dump (either list of UUIDs/labels OR list of Group objects)'
     )
 
@@ -261,35 +275,6 @@ class ProfileDumpConfig(BaseDumpConfig, TimeFilterMixin, EntityFilterMixin, Node
             or self.end_date
             or self.user
         )
-
-    @field_validator('groups', mode='before')
-    @classmethod
-    def _validate_groups_input(cls, value: Any) -> Optional[Union[List[str], List[orm.Group]]]:
-        """Validate groups input - must be either all strings OR all Group objects."""
-        if value is None:
-            return None
-        if not isinstance(value, list):
-            msg = f'Invalid input type for groups: {type(value)}. Expected a list.'
-            raise ValueError(msg)
-
-        if not value:  # Empty list
-            return None
-
-        # Check if all items are strings
-        if all(isinstance(item, str) for item in value):
-            return value  # Return list of strings as-is
-
-        # Check if all items are orm.Group objects
-        if all(isinstance(item, orm.Group) for item in value):
-            return value  # Return list of orm.Group objects as-is
-
-        # Mixed types - not allowed
-        types_found = {type(item).__name__ for item in value}
-        msg = (
-            f"Mixed types in 'groups' list not allowed. Found: {types_found}. "
-            'Must be either all strings (UUIDs/labels) OR all Group objects.'
-        )
-        raise ValueError(msg)
 
 
 # Rebuild all models to resolve forward references

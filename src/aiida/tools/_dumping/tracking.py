@@ -21,7 +21,7 @@ from aiida.common import AIIDA_LOGGER, timezone
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import DumpPaths, DumpTimes
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.tracking')
+logger = AIIDA_LOGGER.getChild('tools._dumping.tracking')
 
 
 @dataclass

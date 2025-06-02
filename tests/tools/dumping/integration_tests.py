@@ -24,7 +24,7 @@ from .utils import compare_tree
 
 # NOTE: There exists `create_file_hierarchy` and `serialize_file_hierarchy` fixtures
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.tests')
+logger = AIIDA_LOGGER.getChild('tools._dumping.tests')
 
 profile_dump_label = 'profile-dump'
 add_group_label = 'add-group'

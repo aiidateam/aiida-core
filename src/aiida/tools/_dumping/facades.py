@@ -20,7 +20,7 @@ from aiida.tools._dumping.config import ProcessDumpConfig
 from aiida.tools._dumping.engine import DumpEngine
 from aiida.tools._dumping.utils import DumpPaths
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.facades')
+logger = AIIDA_LOGGER.getChild('tools._dumping.facades')
 
 if TYPE_CHECKING:
     pass

@@ -16,7 +16,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.tools._dumping.config import DumpConfigType, GroupDumpConfig, ProfileDumpConfig
 from aiida.tools._dumping.utils import DumpChanges, DumpPaths
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.executors.deletion')
+logger = AIIDA_LOGGER.getChild('tools._dumping.executors.deletion')
 
 if TYPE_CHECKING:
     from aiida.tools._dumping.mapping import GroupNodeMapping

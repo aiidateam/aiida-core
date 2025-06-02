@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 __all__ = ('NodeMetadataWriter', 'NodeRepoIoDumper', 'ProcessDumpExecutor', 'ReadmeGenerator', 'WorkflowWalker')
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.executors.process')
+logger = AIIDA_LOGGER.getChild('tools._dumping.executors.process')
 
 # Type hint for the recursive dump function expected by WorkflowWalker
 DumpProcessorType = Callable[[orm.ProcessNode, Path], None]

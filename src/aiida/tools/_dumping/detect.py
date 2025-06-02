@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 
 __all__ = ('DumpChangeDetector',)
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.detect')
+logger = AIIDA_LOGGER.getChild('tools._dumping.detect')
 
 
 class DumpChangeDetector:
@@ -446,7 +446,7 @@ class DumpChangeDetector:
 
         # User filter
         if self.config.user:
-            if isinstance(self.config.user, orm.User) and self.config.user.pk is not None:
+            if self.config.user.pk is not None:
                 qb.append(orm.User, filters={'id': self.config.user.pk}, tag=self.USER_TAG)
                 relationships_to_add['with_user'] = self.USER_TAG
             else:
@@ -454,16 +454,14 @@ class DumpChangeDetector:
 
         # Computer filter
         if self.config.computers:
-            computer_pks = [
-                comp.pk for comp in self.config.computers if isinstance(comp, orm.Computer) and comp.pk is not None
-            ]
+            computer_pks = [comp.pk for comp in self.config.computers if comp.pk is not None]
             if computer_pks:
                 qb.append(orm.Computer, filters={'id': {'in': computer_pks}}, tag=self.COMPUTER_TAG)
                 relationships_to_add['with_computer'] = self.COMPUTER_TAG
 
         # Code filter
         if self.config.codes:
-            code_pks = [code.pk for code in self.config.codes if isinstance(code, orm.Code) and code.pk is not None]
+            code_pks = [code.pk for code in self.config.codes if code.pk is not None]
             if code_pks:
                 qb.append(orm.Code, filters={'id': {'in': code_pks}}, tag=self.CODE_TAG)
                 relationships_to_add['with_incoming'] = self.CODE_TAG

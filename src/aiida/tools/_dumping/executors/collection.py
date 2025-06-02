@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from aiida.tools._dumping.mapping import GroupNodeMapping
     from aiida.tools._dumping.utils import GroupChanges, GroupModificationInfo
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.executors.collection')
+logger = AIIDA_LOGGER.getChild('tools._dumping.executors.collection')
 
 
 class CollectionDumpExecutor:

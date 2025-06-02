@@ -54,7 +54,7 @@ __all__ = (
     'RegistryNameType',
 )
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.utils')
+logger = AIIDA_LOGGER.getChild('tools._dumping.utils')
 
 
 @dataclass(frozen=True)

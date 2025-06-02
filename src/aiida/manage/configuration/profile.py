@@ -333,7 +333,7 @@ class Profile:
         from aiida.tools._dumping.engine import DumpEngine
         from aiida.tools._dumping.utils import DumpPaths
 
-        logger = AIIDA_LOGGER.getChild('tools.dumping.profile')
+        logger = AIIDA_LOGGER.getChild('tools._dumping.profile')
 
         # Construct ProfileDumpConfig from kwargs
         config_data = {

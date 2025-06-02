@@ -21,7 +21,7 @@ from aiida.tools._dumping.executors.collection import CollectionDumpExecutor
 from aiida.tools._dumping.tracking import DumpTracker
 from aiida.tools._dumping.utils import DumpChanges, DumpPaths, ProcessingQueue
 
-logger = AIIDA_LOGGER.getChild('tools.dumping.executors.profile')
+logger = AIIDA_LOGGER.getChild('tools._dumping.executors.profile')
 
 if TYPE_CHECKING:
     from aiida.tools._dumping.config import ProfileDumpConfig
@@ -98,7 +98,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
 
         # Specific groups given as orm entities
         if all(isinstance(g, orm.Group) for g in self.config.groups):
-            return cast(List[orm.Group], self.config.groups)
+            return self.config.groups
 
         # Specific groups given via identifier
         try:

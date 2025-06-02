@@ -47,7 +47,7 @@ class InstalledCode(Code):
             ...,
             title='Computer',
             description='The remote computer on which the executable resides.',
-            orm_to_model=lambda node, _: node.computer.label,
+            orm_to_model=lambda node, _: node.computer.label,  # type: ignore[attr-defined]
             short_name='-Y',
             priority=2,
         )

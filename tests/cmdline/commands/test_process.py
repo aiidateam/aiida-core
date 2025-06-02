@@ -291,8 +291,6 @@ def test_process_kill_failing_ebm_kill(
         'aiida.engine.utils.exponential_backoff_retry',
         MockFunctions.exponential_backoff_retry_fail_kill,
     )
-    # from aiida.engine.utils import exponential_backoff_retry
-    # monkeypatch_args = ('aiida.engine.utils.exponential_backoff_retry', exponential_backoff_retry)
     with fork_worker_context(monkeypatch.setattr, monkeypatch_args):
         node = submit_and_await(make_a_builder(kill_timeout + 10), ProcessState.WAITING, timeout=kill_timeout)
         await_condition(

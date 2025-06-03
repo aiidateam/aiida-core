@@ -78,7 +78,7 @@ repos:
   - id: mypy
     name: mypy
     entry: mypy
-    args: [--config-file=pyproject.toml]
+    args: [--config-file=pyproject.toml, --pretty]
     language: python
     types: [python]
     require_serial: true

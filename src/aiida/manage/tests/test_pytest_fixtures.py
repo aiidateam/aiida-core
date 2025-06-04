@@ -79,7 +79,7 @@ def test_aiida_computer_fixtures(fixture_name, transport_cls, transport_type, re
     assert not computer_unconfigured.is_configured
 
 
-def test_deamon_client(daemon_client):
+def test_daemon_client(daemon_client):
     from aiida.manage.configuration import get_config
 
     print(f'\nConfiguration at: {get_config().dirpath}')

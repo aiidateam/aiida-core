@@ -12,6 +12,11 @@ from aiida.transports import AsyncTransport, BlockingTransport
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
 
 
+def test_aiida_localhost(aiida_localhost):
+    """Test the ``aiida_localhost`` fixture."""
+    assert aiida_localhost.label == 'localhost'
+
+
 @pytest.mark.parametrize(
     'fixture_name, transport_cls, transport_type',
     [

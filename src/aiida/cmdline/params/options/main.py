@@ -902,20 +902,12 @@ FILTER_BY_LAST_DUMP_TIME = OverridableOption(
     help='Only select nodes whose `mtime` is after the last dump time.',
 )
 
-FILTER_BY_LAST_DUMP_TIME = OverridableOption(
-    '--filter-by-last-dump-time/--no-filter-by-last-dump-time',
-    is_flag=True,
-    default=True,
-    show_default=True,
-    help='Only select nodes whose `mtime` is after the last dump time.',
-)
-
 START_DATE = OverridableOption(
     '--start-date',
     is_flag=False,
     default=None,
     show_default=True,
-    help='Start date for node mtime range selection for profile dumping.',
+    help='Start date for node mtime range selection for node collection dumping.',
 )
 
 END_DATE = OverridableOption(
@@ -923,5 +915,5 @@ END_DATE = OverridableOption(
     is_flag=False,
     default=None,
     show_default=True,
-    help='End date for node mtime range selection for profile dumping.',
+    help='End date for node mtime range selection for node collection dumping.',
 )

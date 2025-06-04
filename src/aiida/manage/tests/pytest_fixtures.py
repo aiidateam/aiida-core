@@ -168,10 +168,8 @@ def aiida_instance(
         yield configuration.get_config()
 
     else:
-        reset = False
-
+        current_config = None
         if configuration.CONFIG is not None:
-            reset = True
             current_config = configuration.CONFIG
             current_config_path = pathlib.Path(current_config.dirpath)
             current_profile = configuration.get_profile()
@@ -184,12 +182,13 @@ def aiida_instance(
         try:
             yield configuration.get_config(create=True)
         finally:
-            if reset:
+            if current_config:
                 if current_path_variable is None:
                     os.environ.pop(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
                 else:
                     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = current_path_variable
 
+                configuration.reset_config()
                 AiiDAConfigDir.set(current_config_path)
                 configuration.get_config()
                 if current_profile:

@@ -9,7 +9,7 @@ from aiida.transports import AsyncTransport, BlockingTransport
 
 # This is needed when we run this file in isolation using
 # the `--noconftest` pytest option in the 'test-pytest-fixtures' CI job.
-pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
+pytest_plugins = ['aiida.tools.pytest_fixtures']
 
 
 def test_aiida_localhost(aiida_localhost):

@@ -830,7 +830,7 @@ INCLUDE_ATTRIBUTES = OverridableOption(
 
 INCLUDE_EXTRAS = OverridableOption(
     '--include-extras/--exclude-extras',
-    default=True,
+    default=False,
     show_default=True,
     help='Include extras in the `aiida_node_metadata.yaml` written for every `ProcessNode`.',
 )

@@ -142,7 +142,13 @@ class DumpEngine:
         self.process_dump_executor.dump(
             process_node=self.dump_target_entity, output_path=self.dump_paths.base_output_path
         )
-        self.process_dump_executor.readme_generator._generate(self.dump_target_entity, self.dump_paths.base_output_path)
+
+        # Readme generation done by the engine rather than executor, as the file should only created for the primary
+        # process for `verdi process dump`, not sup-processes, or processes as part of a group/profile dump
+        if not self.config.dump_mode == DumpMode.DRY_RUN:
+            self.process_dump_executor.readme_generator._generate(
+                self.dump_target_entity, self.dump_paths.base_output_path
+            )
 
     def _dump_group(self) -> None:
         """Dump a group and its associated nodes."""

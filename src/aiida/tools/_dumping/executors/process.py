@@ -24,7 +24,7 @@ from aiida.common import LinkType, timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
 from aiida.tools._dumping.tracking import DumpRecord
-from aiida.tools._dumping.utils import ORM_TYPE_TO_REGISTRY, DumpPaths, RegistryNameType
+from aiida.tools._dumping.utils import ORM_TYPE_TO_REGISTRY, DumpMode, DumpPaths, RegistryNameType
 from aiida.tools.archive.exceptions import ExportValidationError
 
 if TYPE_CHECKING:
@@ -88,6 +88,9 @@ class ProcessDumpExecutor:
             raise ExportValidationError(msg)
 
         if not process_node.pk:
+            return
+
+        if self.config.dump_mode == DumpMode.DRY_RUN:
             return
 
         action, existing_dump_record = self._check_log_and_determine_action(

@@ -635,27 +635,27 @@ def process_dump(
     )
     echo.echo_warning(warning_msg)
 
+    # Check for dry_run + overwrite
+    if overwrite and dry_run:
+        msg = 'Both `dry_run` and `overwrite` set to true. Operation will NOT be performed.'
+        echo.echo_warning(msg)
+        return
+
+    if path is None:
+        process_path = DumpPaths.get_default_dump_path(process)
+        dump_base_output_path = Path.cwd() / process_path
+        msg = f'No output path specified. Using default: `{dump_base_output_path}`'
+        echo.echo_report(msg)
+    else:
+        echo.echo_report(f'Using specified output path: `{path}`')
+        dump_base_output_path = Path(path).resolve()
+
+    if dry_run:
+        echo.echo_success('Dry run completed.')
+        return
+
+    # Execute dumping
     try:
-        if path is None:
-            process_path = DumpPaths.get_default_dump_path(process)
-            dump_base_output_path = Path.cwd() / process_path
-            msg = f'No output path specified. Using default: `{dump_base_output_path}`'
-            echo.echo_report(msg)
-        else:
-            echo.echo_report(f"Using specified output path: '{path}'")
-            dump_base_output_path = Path(path).resolve()
-
-        # Check for dry_run + overwrite
-        if overwrite and dry_run:
-            msg = 'Both `dry_run` and `overwrite` set to true. Operation will NOT be performed.'
-            echo.echo_warning(msg)
-            return
-
-        if dry_run:
-            echo.echo_success('Dry run completed.')
-            return
-
-        # Execute dumping
         process.dump(
             output_path=dump_base_output_path,
             dry_run=dry_run,
@@ -668,10 +668,8 @@ def process_dump(
             dump_unsealed=dump_unsealed,
         )
 
-
         msg = f'Raw files for process `{process.pk}` dumped into folder `{dump_base_output_path.name}`.'
         echo.echo_success(msg)
-
     except ExportValidationError as e:
         echo.echo_critical(f'Data validation error during dump: {e!s}')
     except Exception as e:

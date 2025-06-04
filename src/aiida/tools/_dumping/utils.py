@@ -43,6 +43,7 @@ ORM_TYPE_TO_REGISTRY = {
 __all__ = (
     'ORM_TYPE_TO_REGISTRY',
     'REGISTRY_TO_ORM_TYPE',
+    'DumpMode',
     'DumpPaths',
     'DumpTimes',
     'GroupChanges',

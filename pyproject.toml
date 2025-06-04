@@ -536,3 +536,8 @@ commands = molecule {posargs:test}
 # .github/actions/install-aiida-core/action.yml
 # .readthedocs.yml
 required-version = ">=0.7.0"
+
+[tool.coverage.run]
+omit = [
+    "src/aiida/tools/_dumping/**/*"
+]

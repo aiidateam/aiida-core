@@ -335,6 +335,7 @@ def test_configure_rabbitmq(run_cli_command, isolated_config):
     assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
     assert profile.process_control_config['broker_port'] == 5672
 
+
 def test_profile_dump(run_cli_command, tmp_path, generate_calculation_node_add):
     """Test verdi profile dump"""
     from aiida import orm

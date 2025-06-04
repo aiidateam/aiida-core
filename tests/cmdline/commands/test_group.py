@@ -624,9 +624,7 @@ class TestVerdiGroup:
         assert f'Using specified output path: `{test_path}`' in result.output
 
     @patch('aiida.orm.groups.Group.dump')
-    def test_dump_calls_group_dump_with_correct_args(
-        self, mock_dump, run_cli_command, tmp_path
-    ):
+    def test_dump_calls_group_dump_with_correct_args(self, mock_dump, run_cli_command, tmp_path):
         """Test that group.dump is called with correct arguments"""
         group = orm.Group(label='test_args_group').store()
         node = orm.CalculationNode().store().seal()
@@ -635,8 +633,10 @@ class TestVerdiGroup:
 
         options = [
             group.label,
-            '--path', str(test_path),
-            '--past-days', '7',
+            '--path',
+            str(test_path),
+            '--past-days',
+            '7',
             '--only-top-level-calcs',
             '--only-top-level-workflows',
             '--include-inputs',
@@ -684,10 +684,13 @@ class TestVerdiGroup:
         # Test start-date and end-date options
         options = [
             group.label,
-            '--path', str(test_path / 'dates'),
-            '--start-date', '2024-01-01',
-            '--end-date', '2024-12-31',
-            '--overwrite'
+            '--path',
+            str(test_path / 'dates'),
+            '--start-date',
+            '2024-01-01',
+            '--end-date',
+            '2024-12-31',
+            '--overwrite',
         ]
         result = run_cli_command(cmd_group.group_dump, options)
         assert result.exception is None, result.output
@@ -701,12 +704,7 @@ class TestVerdiGroup:
         test_path = tmp_path / 'collection-test'
 
         # Test with only calculations
-        options = [
-            group.label,
-            '--path', str(test_path),
-            '--only-top-level-calcs',
-            '--no-only-top-level-workflows'
-        ]
+        options = [group.label, '--path', str(test_path), '--only-top-level-calcs', '--no-only-top-level-workflows']
         result = run_cli_command(cmd_group.group_dump, options)
         assert result.exception is None, result.output
 
@@ -723,7 +721,8 @@ class TestVerdiGroup:
 
         options = [
             group.label,
-            '--path', str(test_path),
+            '--path',
+            str(test_path),
             '--exclude-inputs',
             '--include-outputs',
             '--include-attributes',
@@ -772,11 +771,7 @@ class TestVerdiGroup:
         group.add_nodes([node])
         test_path = tmp_path / 'filter-time-test'
 
-        options = [
-            group.label,
-            '--path', str(test_path),
-            '--no-filter-by-last-dump-time'
-        ]
+        options = [group.label, '--path', str(test_path), '--no-filter-by-last-dump-time']
         result = run_cli_command(cmd_group.group_dump, options)
         assert result.exception is None, result.output
 

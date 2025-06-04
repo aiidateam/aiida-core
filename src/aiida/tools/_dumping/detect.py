@@ -464,7 +464,7 @@ class DumpChangeDetector:
         if self.config.codes and self.config.computers:
             msg = (
                 "Cannot specify both 'codes' and 'computers' filters simultaneously. "
-                "Codes are already tied to specific computers."
+                'Codes are already tied to specific computers.'
             )
             raise ValueError(msg)
 

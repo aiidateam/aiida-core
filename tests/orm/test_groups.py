@@ -389,10 +389,7 @@ class TestGroups:
         output_path = tmp_path / 'group_dump_time'
 
         # Test with past_days filter
-        result_path = group.dump(
-            output_path=output_path,
-            past_days=7
-        )
+        result_path = group.dump(output_path=output_path, past_days=7)
         assert result_path.exists()
 
         # Test with date range
@@ -400,10 +397,7 @@ class TestGroups:
         start_date = end_date - timedelta(days=1)
 
         result_path2 = group.dump(
-            output_path=output_path / 'date_range',
-            start_date=start_date,
-            end_date=end_date,
-            overwrite=True
+            output_path=output_path / 'date_range', start_date=start_date, end_date=end_date, overwrite=True
         )
         assert result_path2.exists()
 
@@ -417,11 +411,7 @@ class TestGroups:
         output_path = tmp_path / 'group_dump_filters'
 
         # Test with only top-level calculations
-        result_path = group.dump(
-            output_path=output_path,
-            only_top_level_calcs=False,
-            only_top_level_workflows=False
-        )
+        result_path = group.dump(output_path=output_path, only_top_level_calcs=False, only_top_level_workflows=False)
         assert result_path.exists()
 
     def test_dump_unsealed_node_allowed(self, tmp_path):
@@ -443,10 +433,7 @@ class TestGroups:
         group.add_nodes([node])
 
         output_path = tmp_path / 'group_dump_symlink'
-        result_path = group.dump(
-            output_path=output_path,
-            symlink_calcs=True
-        )
+        result_path = group.dump(output_path=output_path, symlink_calcs=True)
 
         assert result_path.exists()
 
@@ -462,18 +449,12 @@ class TestGroups:
         output_path = tmp_path / 'group_dump_metadata'
 
         # Test with attributes included but not extras
-        result_path = group.dump(
-            output_path=output_path,
-            include_attributes=True,
-            include_extras=False
-        )
+        result_path = group.dump(output_path=output_path, include_attributes=True, include_extras=False)
         assert result_path.exists()
 
         # Test with extras included but not attributes
         result_path2 = group.dump(
-            output_path=output_path / 'extras_only',
-            include_attributes=False,
-            include_extras=True
+            output_path=output_path / 'extras_only', include_attributes=False, include_extras=True
         )
         assert result_path2.exists()
 
@@ -490,11 +471,7 @@ class TestGroups:
         assert result_path1.exists()
 
         # Second dump with filter_by_last_dump_time
-        result_path2 = group.dump(
-            output_path=output_path / 'filtered',
-            filter_by_last_dump_time=False,
-            overwrite=True
-        )
+        result_path2 = group.dump(output_path=output_path / 'filtered', filter_by_last_dump_time=False, overwrite=True)
         assert result_path2.exists()
 
     def test_dump_multiple_nodes_types(self, tmp_path):
@@ -512,6 +489,7 @@ class TestGroups:
         result_path = group.dump(output_path=output_path)
 
         assert result_path.exists()
+
 
 class TestGroupsSubclasses:
     """Test rules around creating `Group` subclasses."""

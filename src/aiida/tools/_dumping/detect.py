@@ -161,9 +161,9 @@ class DumpChangeDetector:
             qb, entity_relationships = self._resolve_qb_appends(qb)
             relationships.update(entity_relationships)
 
-            # Add edge filter for Code links
-            if 'with_incoming' in relationships and relationships['with_incoming'] == self.CODE_TAG:
-                relationships['edge_filters'] = {'label': 'code'}
+            # # Add edge filter for Code links
+            # if 'with_incoming' in relationships and relationships['with_incoming'] == self.CODE_TAG:
+            #     relationships['edge_filters'] = {'label': 'code'}
 
         # Add main node type
         qb.append(orm_type, filters=filters, tag=self.NODE_TAG, **relationships)
@@ -461,6 +461,13 @@ class DumpChangeDetector:
             else:
                 logger.warning(f'Invalid user provided: {self.config.user}. Skipping filter.')
 
+        if self.config.codes and self.config.computers:
+            msg = (
+                "Cannot specify both 'codes' and 'computers' filters simultaneously. "
+                "Codes are already tied to specific computers."
+            )
+            raise ValueError(msg)
+
         # Computer filter
         if self.config.computers:
             computer_pks = [comp.pk for comp in self.config.computers if comp.pk is not None]
@@ -469,7 +476,7 @@ class DumpChangeDetector:
                 relationships_to_add['with_computer'] = self.COMPUTER_TAG
 
         # Code filter
-        if self.config.codes:
+        elif self.config.codes:
             code_pks = [code.pk for code in self.config.codes if code.pk is not None]
             if code_pks:
                 qb.append(orm.Code, filters={'id': {'in': code_pks}}, tag=self.CODE_TAG)

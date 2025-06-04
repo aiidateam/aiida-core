@@ -298,7 +298,7 @@ class Profile:
         organize_by_groups: bool = True,
         also_ungrouped: bool = False,
         relabel_groups: bool = True,
-    ) -> Optional[Path]:
+    ) -> Path:
         """Dump data stored in an AiiDA profile to disk in a human-readable directory tree.
 
         :param output_path: Target directory for the dump, defaults to None
@@ -365,6 +365,11 @@ class Profile:
 
         config = ProfileDumpConfig.model_validate(config_data)
 
+        if output_path:
+            target_path: Path = Path(output_path).resolve()
+        else:
+            target_path = DumpPaths.get_default_dump_path(entity=self)
+
         # Check final determined scope
         if not (config.all_entries or config.filters_set) and not dry_run:
             msg = (
@@ -372,12 +377,7 @@ class Profile:
                 'Either select everything via `all_entries=True`, or filter via `groups`, `user`, etc.'
             )
             logger.warning(msg)
-            return None
-
-        if output_path:
-            target_path: Path = Path(output_path).resolve()
-        else:
-            target_path = DumpPaths.get_default_dump_path(entity=self)
+            return target_path
 
         engine = DumpEngine(
             base_output_path=target_path,

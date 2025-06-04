@@ -42,7 +42,7 @@ from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
-from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException, DaemonTimeoutException
+from aiida.engine.daemon.client import DaemonNotRunningException, DaemonTimeoutException, get_daemon_client
 from aiida.manage import Profile, get_manager, get_profile
 from aiida.manage.manager import Manager
 from aiida.orm import Computer, ProcessNode, User
@@ -673,7 +673,7 @@ def daemon_client(aiida_profile):
 
     The daemon will be automatically stopped at the end of the test session.
     """
-    daemon_client = DaemonClient(aiida_profile)
+    daemon_client = get_daemon_client(aiida_profile.name)
 
     try:
         yield daemon_client

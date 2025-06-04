@@ -334,3 +334,39 @@ def test_configure_rabbitmq(run_cli_command, isolated_config):
     cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
     assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
     assert profile.process_control_config['broker_port'] == 5672
+
+def test_profile_dump(run_cli_command, tmp_path, generate_calculation_node_add):
+    """Test verdi profile dump"""
+    from aiida import orm
+
+    # Create some data to dump
+    group = orm.Group(label='test_profile_dump_group').store()
+    node = generate_calculation_node_add()
+    group.add_nodes([node])
+
+    test_path = tmp_path / 'profile-dump'
+
+    # Test dry run
+    options = ['--path', str(test_path / 'dry'), '--all', '--dry-run']
+    result = run_cli_command(cmd_profile.profile_dump, options)
+    assert result.exception is None, result.output
+    assert 'Dry run completed' in result.output
+
+    # Basic dump test with all entries
+    options = ['--path', str(test_path), '--all']
+    result = run_cli_command(cmd_profile.profile_dump, options)
+    assert result.exception is None, result.output
+    assert 'Success:' in result.output
+    assert test_path.exists()
+
+    # Test group-specific dump
+    options = ['--path', str(test_path / 'group'), '--groups', group.label]
+    result = run_cli_command(cmd_profile.profile_dump, options)
+    assert result.exception is None, result.output
+    assert 'Success:' in result.output
+
+    # Test overwrite
+    options = ['--path', str(test_path), '--all', '--overwrite']
+    result = run_cli_command(cmd_profile.profile_dump, options)
+    assert result.exception is None, result.output
+    assert 'Success:' in result.output

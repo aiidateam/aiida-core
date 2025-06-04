@@ -595,3 +595,34 @@ class TestVerdiGroup:
         assert dest_group.count() == 2
         nodes_dest_group = {str(node.uuid) for node in dest_group.nodes}
         assert nodes_source_group == nodes_dest_group
+
+    def test_dump(self, run_cli_command, tmp_path, generate_calculation_node_add):
+        """Test verdi group dump"""
+        from aiida import orm
+
+        # Create a group with some nodes
+        group = orm.Group(label='test_dump_group').store()
+        node = generate_calculation_node_add()
+        group.add_nodes([node])
+
+        test_path = tmp_path / 'group-dump'
+
+        # Test dry run
+        options = [group.label, '--path', str(test_path / 'dry'), '--dry-run']
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+        assert 'Dry run completed' in result.output
+        assert not test_path.exists()
+
+        # Basic dump test
+        options = [group.label, '--path', str(test_path)]
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+        assert 'Success:' in result.output
+        assert test_path.exists()
+
+        # Test overwrite
+        options = [group.label, '--path', str(test_path), '--overwrite']
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+        assert 'Success:' in result.output

@@ -177,6 +177,7 @@ def aiida_instance(
 
         dirpath_config = tmp_path_factory.mktemp('config')
         os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_config)
+        configuration.reset_config()
         AiiDAConfigDir.set(dirpath_config)
 
         try:

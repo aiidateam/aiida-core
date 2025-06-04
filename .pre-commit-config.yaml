@@ -126,6 +126,8 @@ repos:
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|
+        src/aiida/manage/tests/main.py|
+        src/aiida/manage/tests/pytest_fixtures.py|
         src/aiida/orm/comments.py|
         src/aiida/orm/computers.py|
         src/aiida/orm/implementation/storage_backend.py|

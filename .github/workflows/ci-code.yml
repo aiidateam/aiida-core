@@ -178,10 +178,10 @@ jobs:
       run: .github/workflows/setup_ssh.sh
 
     - name: Test new pytest fixtures
-      run: pytest --cov aiida --noconftest tests/tools/pytest_fixtures/
+      run: pytest -v --cov aiida --noconftest tests/tools/pytest_fixtures/
 
     - name: Test legacy pytest fixtures
-      run: pytest --cov aiida --noconftest src/aiida/manage/tests/test_pytest_fixtures.py
+      run: pytest -v --cov aiida --noconftest src/aiida/manage/tests/test_pytest_fixtures.py
 
     - name: Upload coverage report
       if: github.repository == 'aiidateam/aiida-core'

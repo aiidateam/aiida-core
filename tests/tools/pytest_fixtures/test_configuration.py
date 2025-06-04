@@ -1,6 +1,7 @@
 """Test the pytest fixtures."""
 
-# This is needed for when we run this file in isolation using the `--noconftest` option
+# This is needed when we run this file in isolation using
+# the `--noconftest` pytest option in the 'test-pytest-fixtures' CI job.
 pytest_plugins = ['aiida.tools.pytest_fixtures']
 
 

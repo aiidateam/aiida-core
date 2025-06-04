@@ -7,7 +7,7 @@ import pytest
 from aiida.manage.configuration import get_config
 from aiida.manage.configuration.config import Config
 from aiida.orm import Computer
-from aiida.transports import BlockingTransport
+from aiida.transports import AsyncTransport, BlockingTransport
 
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
 
@@ -25,7 +25,9 @@ def test_aiida_localhost(aiida_localhost):
 @pytest.mark.parametrize(
     'fixture_name, transport_cls, transport_type',
     [
+        ('aiida_computer_ssh', BlockingTransport, 'core.ssh'),
         ('aiida_computer_local', BlockingTransport, 'core.local'),
+        ('aiida_computer_ssh_async', AsyncTransport, 'core.ssh_async'),
     ],
 )
 @pytest.mark.usefixtures('aiida_profile_clean')

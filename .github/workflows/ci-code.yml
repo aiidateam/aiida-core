@@ -88,7 +88,6 @@ jobs:
         files: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
-
   tests-presto:
 
     runs-on: ubuntu-24.04
@@ -174,6 +173,9 @@ jobs:
         python-version: '3.9'
         from-lock: 'true'
         extras: tests
+
+    - name: Setup SSH
+      run: .github/workflows/setup_ssh.sh
 
     - name: Test new pytest fixtures
       run: pytest --cov aiida --noconftest tests/tools/pytest_fixtures/test_configuration.py

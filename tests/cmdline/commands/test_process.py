@@ -26,7 +26,7 @@ from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.engine.utils import exponential_backoff_retry
-from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
+from aiida.orm import CalcJobNode, Group, Int, WorkChainNode, WorkflowNode, WorkFunctionNode
 from tests.utils.processes import WaitProcess
 
 FuncArgs = tuple[t.Any, ...]
@@ -152,7 +152,6 @@ def test_process_kill_failing_transport(
     A failure in opening a transport connection results in the EBM to be fired blocking a regular kill command.
     The force kill command will ignore the EBM and kill the process in any case."""
     from aiida.cmdline.utils.common import get_process_function_report
-    from aiida.orm import Int
 
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
 
@@ -193,7 +192,6 @@ def test_process_kill_failing_transport_failed_kill(
     """
 
     from aiida.cmdline.utils.common import get_process_function_report
-    from aiida.orm import Int
 
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
 
@@ -235,8 +233,6 @@ def test_process_kill_failing_ebm_transport(
     It should be possible to kill it normally. A process that failed upload (e.g. in scenarios that transport is working
     again) and is then killed
     """
-    from aiida.orm import Int
-
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
 
     def make_a_builder(sleep_seconds=0):
@@ -275,7 +271,7 @@ def test_process_kill_failing_ebm_kill(
     Killing a process tries to gracefully cancel the job on the remote node. If there are connection problems it retries
     it in using the EBM. If this fails another kill command can be send to restart the cancelation of the job scheduler.
     """
-    from aiida.orm import Int
+    from aiida.cmdline.utils.common import get_process_function_report
 
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
 
@@ -306,7 +302,11 @@ def test_process_kill_failing_ebm_kill(
         # kill should restart EBM and be not successful in EBM
         # this tests if the old task is cancelled and restarted successfully
         run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
-        await_condition(lambda: not node.is_killed, timeout=kill_timeout)
+        await_condition(
+            lambda: 'Found active scheduler job cancelation that will be rescheduled.'
+            in get_process_function_report(node),
+            timeout=kill_timeout,
+        )
 
         # force kill should skip EBM and successfully kill the process
         run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
@@ -825,8 +825,6 @@ def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
     result = run_cli_command(cmd_process.process_kill, raises=True)
     assert result.exit_code == ExitCode.USAGE_ERROR
     assert len(result.output_lines) > 0
-
-    from aiida.orm import Int
 
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     builder = code.get_builder()

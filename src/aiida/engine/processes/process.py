@@ -339,10 +339,6 @@ class Process(PlumpyProcess):
         """
         self.node.logger.info(f'Request to kill Process<{self.node.pk}>')
 
-        # PR_COMMENT Because we need to overwrite the logic of the cancelation of the self._killing task of the
-        #            scheduler job, we need to copy this logic of the parent class in plumpy, we need to adapt the
-        #            cancelation of the last sent killing action to also resend the kill/cancelation of the scheduler
-        #            job as we stop this canelation by canceling the last killing action
         if self.killed():
             # Already killed
             return True
@@ -356,11 +352,9 @@ class Process(PlumpyProcess):
             if self._killing:
                 self._killing.cancel()
 
-            # PR_COMMENT: We cannot reuse _killing because of type issues, it is a CancellableAction.
-            #             We can wrap a task around a CancellableAction but the CancellableAction catches silently any
-            #             error whilel here we need to know if the cancelation of the scheduler job failed.
             if self._cancelling_scheduler_job:
                 self._cancelling_scheduler_job.cancel()
+                self.node.logger.report('Found active scheduler job cancelation that will be rescheduled.')
 
             from .calcjobs.tasks import task_kill_job
 
@@ -369,7 +363,7 @@ class Process(PlumpyProcess):
             try:
                 self.loop.run_until_complete(self._cancelling_scheduler_job)
             except Exception as exc:
-                self.node.logger.error(f'While cancelling job error was raised: {exc!s}')
+                self.node.logger.error(f'While cancelling the scheduler job an error was raised: {exc}')
                 return False
 
         result = super().kill(msg_text, force_kill)
@@ -410,8 +404,6 @@ class Process(PlumpyProcess):
 
         return result
 
-    # PR_COMMENT This is a copy of the function in engine/processes/calcjobs/tasks.py
-    #            and will merged to one place in PR #6868
     async def _launch_task(self, coro, *args, **kwargs):
         """Launch a coroutine as a task, making sure to make it interruptable."""
         import functools

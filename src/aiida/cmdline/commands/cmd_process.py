@@ -651,6 +651,10 @@ def process_dump(
             echo.echo_warning(msg)
             return
 
+        if dry_run:
+            echo.echo_success('Dry run completed.')
+            return
+
         # Execute dumping
         process.dump(
             output_path=dump_base_output_path,
@@ -664,11 +668,9 @@ def process_dump(
             dump_unsealed=dump_unsealed,
         )
 
-        if not dry_run:
-            msg = f'Raw files for process `{process.pk}` dumped into folder `{dump_base_output_path.name}`.'
-            echo.echo_success(msg)
-        else:
-            echo.echo_success('Dry run completed.')
+
+        msg = f'Raw files for process `{process.pk}` dumped into folder `{dump_base_output_path.name}`.'
+        echo.echo_success(msg)
 
     except ExportValidationError as e:
         echo.echo_critical(f'Data validation error during dump: {e!s}')

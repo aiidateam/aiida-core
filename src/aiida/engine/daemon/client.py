@@ -207,8 +207,7 @@ class DaemonClient:
 
             return port
 
-    @staticmethod
-    def get_env() -> dict[str, str]:
+    def get_env(self) -> dict[str, str]:
         """Return the environment for this current process.
 
         This method is used to pass variables from the environment of the current process to a subprocess that is
@@ -222,7 +221,7 @@ class DaemonClient:
         env = os.environ.copy()
         env['PATH'] = ':'.join([os.path.dirname(sys.executable), env['PATH']])
         env['PYTHONPATH'] = ':'.join(sys.path)
-        env['AIIDA_PATH'] = get_config().dirpath
+        env['AIIDA_PATH'] = self._config.dirpath
         env['PYTHONUNBUFFERED'] = 'True'
         return env
 

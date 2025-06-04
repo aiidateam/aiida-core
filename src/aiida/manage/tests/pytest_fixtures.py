@@ -42,7 +42,7 @@ from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
-from aiida.engine.daemon.client import DaemonNotRunningException, DaemonTimeoutException, get_daemon_client
+from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException, DaemonTimeoutException
 from aiida.manage import Profile, get_manager, get_profile
 from aiida.manage.manager import Manager
 from aiida.orm import Computer, ProcessNode, User
@@ -168,8 +168,10 @@ def aiida_instance(
         yield configuration.get_config()
 
     else:
-        current_config = None
+        reset = False
+
         if configuration.CONFIG is not None:
+            reset = True
             current_config = configuration.CONFIG
             current_config_path = pathlib.Path(current_config.dirpath)
             current_profile = configuration.get_profile()
@@ -177,21 +179,20 @@ def aiida_instance(
 
         dirpath_config = tmp_path_factory.mktemp('config') / settings.DEFAULT_CONFIG_DIR_NAME
         os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_config)
-        configuration.reset_config()
         AiiDAConfigDir.set(dirpath_config)
+        configuration.CONFIG = configuration.load_config(create=True)
 
         try:
-            yield configuration.get_config(create=True)
+            yield configuration.CONFIG
         finally:
-            if current_config:
+            if reset:
                 if current_path_variable is None:
                     os.environ.pop(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
                 else:
                     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = current_path_variable
 
-                configuration.reset_config()
                 AiiDAConfigDir.set(current_config_path)
-                configuration.get_config()
+                configuration.CONFIG = current_config
                 if current_profile:
                     aiida_manager.load_profile(current_profile.name, allow_switch=True)
 
@@ -673,7 +674,7 @@ def daemon_client(aiida_profile):
 
     The daemon will be automatically stopped at the end of the test session.
     """
-    daemon_client = get_daemon_client(aiida_profile.name)
+    daemon_client = DaemonClient(aiida_profile)
 
     try:
         yield daemon_client

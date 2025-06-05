@@ -64,14 +64,18 @@ def test_set_option(profile_factory):
     assert profile.get_option(option_key) == option_value_two
 
 
+TEST_GROUP_LABEL = 'test_profile_dump_group'
+
+
 @pytest.fixture
-def profile_with_data():
+@pytest.mark.usefixtures('aiida_profile_clean')
+def profile_with_minimal_data():
     """Create a profile with some test data."""
     # Get current profile
     profile = get_config().get_profile()
 
     # Create some test data
-    group = orm.Group(label='test_profile_dump_group').store()
+    group = orm.Group(label=TEST_GROUP_LABEL).store()
     calc_node = orm.CalculationNode().store().seal()
     data_node = orm.Int(42).store()
     _ = orm.WorkflowNode().store().seal()
@@ -81,13 +85,33 @@ def profile_with_data():
     return profile
 
 
+@pytest.fixture
+@pytest.mark.usefixtures('aiida_profile_clean')
+def profile_with_actual_data(generate_calculation_node_io, generate_workchain_node_io):
+    """Create a profile with some test data."""
+    # Get current profile
+    profile = get_config().get_profile()
+
+    # Create some test data
+    group = orm.Group(label=TEST_GROUP_LABEL).store()
+    cj_nodes = [
+        generate_calculation_node_io(attach_outputs=False),
+        generate_calculation_node_io(attach_outputs=False),
+    ]
+    wc_node = generate_workchain_node_io(cj_nodes=cj_nodes)
+
+    group.add_nodes(cj_nodes + [wc_node])
+
+    return profile
+
+
 @pytest.mark.usefixtures('aiida_profile_clean')
 class TestProfileDump:
     """Test the dump method of Profile."""
 
-    def test_dump_dry_run(self, capsys, tmp_path, profile_with_data):
+    def test_dump_dry_run(self, capsys, tmp_path, profile_with_minimal_data):
         """Test dry run mode doesn't create files."""
-        profile = profile_with_data
+        profile = profile_with_minimal_data
         output_path = tmp_path / 'profile_dump'
 
         result_path = profile.dump(
@@ -113,9 +137,9 @@ class TestProfileDump:
         assert 'Groups:' in captured.out
         assert 'Node memberships' in captured.out
 
-    def test_dump_overwrite(self, tmp_path, profile_with_data):
+    def test_dump_overwrite(self, tmp_path, profile_with_minimal_data):
         """Test overwrite functionality."""
-        profile = profile_with_data
+        profile = profile_with_minimal_data
         output_path = tmp_path / 'profile_dump_overwrite'
 
         # First dump
@@ -127,9 +151,9 @@ class TestProfileDump:
         assert result_path2.exists()
         assert result_path1 == result_path2
 
-    def test_dump_basic_all_entries(self, tmp_path, profile_with_data):
+    def test_dump_basic_all_entries(self, tmp_path, profile_with_minimal_data):
         """Test basic dumping of entire profile."""
-        profile = profile_with_data
+        profile = profile_with_minimal_data
         output_path = tmp_path / 'profile_dump_all'
 
         result_path = profile.dump(output_path=output_path, all_entries=True)
@@ -141,13 +165,13 @@ class TestProfileDump:
         # Check for expected files
         assert (result_path / '.aiida_dump_safeguard').exists()
 
-    def test_dump_specific_groups(self, tmp_path, profile_with_data):
+    def test_dump_specific_groups(self, tmp_path, profile_with_minimal_data):
         """Test dumping specific groups only."""
-        profile = profile_with_data
+        profile = profile_with_minimal_data
         output_path = tmp_path / 'profile_dump_groups'
 
         # Get the test group we created
-        group = orm.Group.collection.get(label='test_profile_dump_group')
+        group = orm.Group.collection.get(label=TEST_GROUP_LABEL)
         extra_group = orm.Group(label='extra_group').store()
 
         result_path = profile.dump(output_path=output_path, groups=[group])
@@ -158,16 +182,16 @@ class TestProfileDump:
         assert not (result_path / 'groups' / extra_group.label).exists()
 
         # Test dumping by label
-        result_path = profile.dump(output_path=output_path, groups=['test_profile_dump_group'], overwrite=True)
+        result_path = profile.dump(output_path=output_path, groups=[TEST_GROUP_LABEL], overwrite=True)
 
         assert result_path.exists()
         assert result_path.is_dir()
         assert (result_path / 'groups' / group.label).exists()
         assert not (result_path / 'groups' / extra_group.label).exists()
 
-    def test_dump_by_user(self, tmp_path, profile_with_data):
+    def test_dump_by_user(self, tmp_path, profile_with_minimal_data):
         """Test dumping data for specific user."""
-        profile = profile_with_data
+        profile = profile_with_minimal_data
         output_path = tmp_path / 'profile_dump_user'
 
         default_user = orm.User.collection.get_default()
@@ -181,24 +205,24 @@ class TestProfileDump:
         other_calc.user = other_user
         other_calc.store().seal()
 
-        group = orm.load_group('test_profile_dump_group')
+        group = orm.load_group(TEST_GROUP_LABEL)
         group.add_nodes(other_calc)
 
         result_path = profile.dump(
             output_path=output_path,
             user=default_user,
-            groups=['test_profile_dump_group'],
+            groups=[TEST_GROUP_LABEL],
         )
 
         assert result_path.exists()
         assert result_path.is_dir()
-        assert (result_path / 'groups' / 'test_profile_dump_group' / 'calculations').exists()
+        assert (result_path / 'groups' / TEST_GROUP_LABEL / 'calculations').exists()
         # Calculation created by other user is not dumped
-        assert not (result_path / 'groups' / 'test_profile_dump_group' / 'calculations' / f'{other_calc.pk}').exists()
+        assert not (result_path / 'groups' / TEST_GROUP_LABEL / 'calculations' / f'{other_calc.pk}').exists()
 
-    def test_dump_empty_scope_returns_none(self, tmp_path, profile_with_data, caplog):
+    def test_dump_empty_scope_returns_none(self, tmp_path, profile_with_minimal_data, caplog):
         """Test that dumping with no scope returns None."""
-        profile = profile_with_data
+        profile = profile_with_minimal_data
         output_path = tmp_path / 'profile_dump_empty'
 
         _ = profile.dump(output_path=output_path)
@@ -206,9 +230,9 @@ class TestProfileDump:
         assert 'No profile data explicitly selected. No dump will be performed.' in caplog.text
         assert caplog.records[-1].levelname == 'WARNING'
 
-    def test_dump_with_time_filters(self, tmp_path, profile_with_data):
+    def test_dump_with_time_filters(self, tmp_path, profile_with_minimal_data):
         """Test dumping with time-based filters."""
-        profile = profile_with_data
+        profile = profile_with_minimal_data
         output_path = tmp_path / 'profile_dump_time'
 
         # Test with past_days filter
@@ -224,9 +248,9 @@ class TestProfileDump:
         )
         assert result_path2.exists()
 
-    def test_dump_organize_by_groups(self, tmp_path, profile_with_data):
+    def test_dump_organize_by_groups(self, tmp_path, profile_with_minimal_data):
         """Test dumping organized by groups."""
-        profile = profile_with_data
+        profile = profile_with_minimal_data
         output_path = tmp_path / 'profile_dump_organized'
 
         result_path = profile.dump(
@@ -244,19 +268,19 @@ class TestProfileDump:
         assert (result_path / 'calculations').exists()
         assert (result_path / 'workflows').exists()
 
-    def test_dump_with_relabel_groups(self, tmp_path, profile_with_data):
+    def test_dump_with_relabel_groups(self, tmp_path, profile_with_minimal_data):
         """Test dumping with group relabeling."""
-        profile = profile_with_data
+        profile = profile_with_minimal_data
         output_path = tmp_path / 'profile_dump_relabel'
 
         result_path = profile.dump(
             output_path=output_path, all_entries=True, organize_by_groups=True, relabel_groups=True
         )
         assert result_path.exists()
-        assert (result_path / 'groups' / 'test_profile_dump_group').exists()
+        assert (result_path / 'groups' / TEST_GROUP_LABEL).exists()
 
         # Now relabel the group
-        group = orm.load_group('test_profile_dump_group')
+        group = orm.load_group(TEST_GROUP_LABEL)
         group.label = 'relabeled'
 
         result_path = profile.dump(
@@ -264,9 +288,9 @@ class TestProfileDump:
         )
         assert (result_path / 'groups' / 'relabeled').exists()
 
-    def test_dump_only_top_level_calcs(self, tmp_path, profile_with_data, generate_workchain_multiply_add):
+    def test_dump_only_top_level_calcs(self, tmp_path, profile_with_minimal_data, generate_workchain_multiply_add):
         """Test dumping with node collection filters."""
-        profile = profile_with_data
+        profile = profile_with_minimal_data
         output_path = tmp_path / 'profile_dump_filters'
         _ = generate_workchain_multiply_add()
 
@@ -285,9 +309,9 @@ class TestProfileDump:
         assert (result_path / 'ungrouped' / 'calculations').exists()
 
     # FIXME: Cannot specify both code and computer. Make it either or
-    def test_dump_with_computers_and_codes(self, tmp_path, profile_with_data):
+    def test_dump_with_computers_and_codes(self, tmp_path, profile_with_minimal_data):
         """Test dumping with computer and code filters."""
-        profile = profile_with_data
+        profile = profile_with_minimal_data
         output_path = tmp_path / 'profile_dump_comp_codes'
 
         # Create a computer and code for testing
@@ -303,183 +327,263 @@ class TestProfileDump:
         assert result_path.exists()
         # TODO: Continue here. Check that _only_ aiida_dump_log.json file in output directory, but no subdirectories
 
-    # def test_dump_include_file_options(self, tmp_path, profile_with_data):
-    #     """Test dumping with different file inclusion options."""
-    #     profile = profile_with_data
-    #     output_path = tmp_path / 'profile_dump_files'
+    def test_dump_flat_structure(self, tmp_path, profile_with_minimal_data, generate_calculation_node_add):
+        """Test dumping with flat directory structure."""
+        profile = profile_with_minimal_data
+        node = generate_calculation_node_add()
+        output_path = tmp_path / 'profile_dump_flat'
 
-    #     result_path = profile.dump(
-    #         output_path=output_path,
-    #         all_entries=True,
-    #         include_inputs=True,
-    #         include_outputs=True,
-    #         include_attributes=True,
-    #         include_extras=True,
-    #     )
-    #     assert result_path.exists()
+        result_path = profile.dump(output_path=output_path, all_entries=True, also_ungrouped=True, flat=True)
+        assert result_path.exists()
+        target_path = result_path / 'ungrouped' / 'calculations' / f'ArithmeticAddCalculation-{node.pk}'
+        assert target_path.exists()
+        assert not (target_path / 'inputs').exists()
+        assert not (target_path / 'outputs').exists()
+        assert (target_path / 'aiida.in').exists()
 
-    # def test_dump_flat_structure(self, tmp_path, profile_with_data):
-    #     """Test dumping with flat directory structure."""
-    #     profile = profile_with_data
-    #     output_path = tmp_path / 'profile_dump_flat'
+    def test_dump_unsealed_nodes(self, tmp_path, profile_with_minimal_data):
+        """Test dumping with unsealed nodes allowed."""
+        from aiida.tools.archive import ExportValidationError
 
-    #     result_path = profile.dump(output_path=output_path, all_entries=True, flat=True)
-    #     assert result_path.exists()
+        profile = profile_with_minimal_data
 
-    # def test_dump_unsealed_nodes(self, tmp_path, profile_with_data):
-    #     """Test dumping with unsealed nodes allowed."""
-    #     profile = profile_with_data
+        # Create an unsealed node
+        unsealed_node = orm.CalculationNode()
+        unsealed_node.store()  # Store but don't seal
 
-    #     # Create an unsealed node
-    #     unsealed_node = orm.CalculationNode()
-    #     unsealed_node.store()  # Store but don't seal
+        output_path = tmp_path / 'profile_dump_unsealed'
 
-    #     output_path = tmp_path / 'profile_dump_unsealed'
+        with pytest.raises(ExportValidationError, match='must be sealed'):
+            result_path = profile.dump(
+                output_path=output_path, all_entries=True, also_ungrouped=True, dump_unsealed=False
+            )
 
-    #     result_path = profile.dump(output_path=output_path, all_entries=True, dump_unsealed=True)
-    #     assert result_path.exists()
+        result_path = profile.dump(output_path=output_path, all_entries=True, dump_unsealed=True)
+        # Nothing dumped, so just check if completes without exception and main output directory exists
+        assert result_path.exists()
 
-    # def test_dump_symlink_calcs(self, tmp_path, profile_with_data):
-    #     """Test dumping with symlinks for calculations."""
-    #     profile = profile_with_data
-    #     output_path = tmp_path / 'profile_dump_symlink'
+    def test_dump_symlink_calcs(self, tmp_path, profile_with_minimal_data, generate_calculation_node_io):
+        """Test dumping with symlinks for calculations."""
+        profile = profile_with_minimal_data
+        output_path = tmp_path / 'profile_dump_symlink'
+        group1 = orm.Group(label='group1').store()
+        group2 = orm.Group(label='group2').store()
+        node = generate_calculation_node_io()
+        node.seal()
+        group1.add_nodes([node])
+        group2.add_nodes([node])
 
-    #     result_path = profile.dump(output_path=output_path, all_entries=True, symlink_calcs=True)
-    #     assert result_path.exists()
+        result_path = profile.dump(output_path=output_path, groups=[group1, group2], symlink_calcs=True)
+        assert result_path.exists()
 
-    # def test_dump_delete_missing(self, tmp_path, profile_with_data):
-    #     """Test dumping with delete_missing option."""
-    #     profile = profile_with_data
-    #     output_path = tmp_path / 'profile_dump_delete'
+        # Check that the actual directory exists in group1
+        target_path = result_path / 'groups' / 'group1' / 'calculations' / str(node.pk)
+        assert target_path.exists()
+        assert target_path.is_dir()
+        assert not target_path.is_symlink()  # Should be the actual directory
 
-    #     result_path = profile.dump(output_path=output_path, all_entries=True, delete_missing=False)
-    #     assert result_path.exists()
+        # Check that the symlink exists in group2
+        symlink_path = result_path / 'groups' / 'group2' / 'calculations' / str(node.pk)
+        assert symlink_path.exists()
+        assert symlink_path.is_symlink()
 
-    # def test_dump_filter_by_last_dump_time(self, tmp_path, profile_with_data):
-    #     """Test filtering by last dump time."""
-    #     profile = profile_with_data
-    #     output_path = tmp_path / 'profile_dump_last_time'
+        # Verify the symlink points to the correct target
+        assert symlink_path.resolve() == target_path.resolve()
 
-    #     # First dump
-    #     result_path1 = profile.dump(output_path=output_path, all_entries=True)
-    #     assert result_path1.exists()
+        # Check that the symlink is relative, not absolute
+        symlink_target = symlink_path.readlink()
+        assert not symlink_target.is_absolute()
 
-    #     # Second dump with filter_by_last_dump_time disabled
-    #     result_path2 = profile.dump(
-    #         output_path=output_path / 'no_filter', all_entries=True, filter_by_last_dump_time=False
-    #     )
-    #     assert result_path2.exists()
+        # Alternative way to check the symlink target (relative path)
+        expected_relative_target = '../../group1/calculations/' + str(node.pk)
+        assert str(symlink_path.readlink()) == expected_relative_target
 
-    # def test_dump_default_path(self, profile_with_data):
-    #     """Test dumping with default path generation."""
-    #     profile = profile_with_data
+        # Verify the symlinked content is accessible and identical
+        assert (symlink_path / 'aiida_node_metadata.yaml').exists()
+        assert (target_path / 'aiida_node_metadata.yaml').exists()
 
-    #     # Call dump without specifying output_path
-    #     result_path = profile.dump(all_entries=True)
+        # Check that both paths lead to the same content
+        symlink_metadata = (symlink_path / 'aiida_node_metadata.yaml').read_text()
+        target_metadata = (target_path / 'aiida_node_metadata.yaml').read_text()
+        assert symlink_metadata == target_metadata
 
-    #     assert result_path.exists()
-    #     assert result_path.is_dir()
-    #     # Should contain the profile name in the path
-    #     assert profile.name in str(result_path)
+    def test_dump_delete_missing_node(self, tmp_path, profile_with_actual_data):
+        """Test dumping with delete_missing option."""
+        from aiida.tools.graph.deletions import delete_nodes
 
-    #     # Clean up
-    #     import shutil
+        profile = profile_with_actual_data
+        output_path = tmp_path / 'profile_dump_delete'
 
-    #     shutil.rmtree(result_path)
+        result_path = profile.dump(output_path=output_path, groups=[TEST_GROUP_LABEL], delete_missing=False)
 
-    # def test_dump_with_mixed_group_specifications(self, tmp_path, profile_with_data):
-    #     """Test dumping with groups specified in different ways."""
-    #     profile = profile_with_data
-    #     output_path = tmp_path / 'profile_dump_mixed_groups'
+        nodes = orm.load_group(TEST_GROUP_LABEL).nodes
+        node = next(node for node in nodes if isinstance(node, orm.WorkflowNode))
+        node_pk = node.pk
 
-    #     # Get the group object and create another one
-    #     group1 = orm.Group.collection.get(label='test_profile_dump_group')
-    #     group2 = orm.Group(label='test_profile_dump_group2').store()
+        assert result_path.exists()
+        target_path = result_path / 'groups' / TEST_GROUP_LABEL / 'workflows'
+        assert (target_path / f'{node_pk}').exists()
 
-    #     # Mix group objects and labels
-    #     result_path = profile.dump(output_path=output_path, groups=[group1, 'test_profile_dump_group2'])
-    #     assert result_path.exists()
+        delete_nodes(pks=[node_pk], dry_run=False)
+        _ = profile.dump(output_path=output_path, groups=[TEST_GROUP_LABEL], delete_missing=True)
 
-    # def test_dump_dry_run_with_overwrite_returns_none(self, tmp_path, profile_with_data):
-    #     """Test that dry_run + overwrite returns None."""
-    #     profile = profile_with_data
-    #     output_path = tmp_path / 'profile_dump_dry_overwrite'
+        assert not (target_path / f'{node_pk}').exists()
 
-    #     result_path = profile.dump(output_path=output_path, all_entries=True, dry_run=True, overwrite=True)
-    #     assert result_path is None
+    def test_dump_delete_missing_group(self, tmp_path, profile_with_actual_data):
+        """Test dumping with delete_missing option."""
+        profile = profile_with_actual_data
+        output_path = tmp_path / 'profile_dump_delete'
 
-    # def test_dump_all_boolean_combinations(self, tmp_path, profile_with_data):
-    #     """Test various boolean flag combinations."""
-    #     profile = profile_with_data
-    #     output_path = tmp_path / 'profile_dump_booleans'
+        result_path = profile.dump(output_path=output_path, all_entries=True, delete_missing=False)
+        group = orm.load_group(TEST_GROUP_LABEL)
+        node = next(node for node in group.nodes if isinstance(node, orm.WorkflowNode))
 
-    #     # Test all flags enabled
-    #     result_path = profile.dump(
-    #         output_path=output_path,
-    #         all_entries=True,
-    #         overwrite=True,
-    #         filter_by_last_dump_time=True,
-    #         only_top_level_calcs=True,
-    #         only_top_level_workflows=True,
-    #         delete_missing=True,
-    #         symlink_calcs=True,
-    #         organize_by_groups=True,
-    #         also_ungrouped=True,
-    #         relabel_groups=True,
-    #         include_inputs=True,
-    #         include_outputs=True,
-    #         include_attributes=True,
-    #         include_extras=True,
-    #         flat=True,
-    #         dump_unsealed=True,
-    #     )
-    #     assert result_path.exists()
+        assert result_path.exists()
+        target_path = result_path / 'groups' / TEST_GROUP_LABEL
+        assert target_path.exists()
 
-    #     # Test all flags disabled
-    #     result_path2 = profile.dump(
-    #         output_path=output_path / 'disabled',
-    #         all_entries=True,
-    #         overwrite=True,
-    #         filter_by_last_dump_time=False,
-    #         only_top_level_calcs=False,
-    #         only_top_level_workflows=False,
-    #         delete_missing=False,
-    #         symlink_calcs=False,
-    #         organize_by_groups=False,
-    #         also_ungrouped=False,
-    #         relabel_groups=False,
-    #         include_inputs=False,
-    #         include_outputs=False,
-    #         include_attributes=False,
-    #         include_extras=False,
-    #         flat=False,
-    #         dump_unsealed=False,
-    #     )
-    #     assert result_path2.exists()
+        orm.Group.collection.delete(group.pk)
 
-    # def test_dump_with_user_list(self, tmp_path, profile_with_data):
-    #     """Test dumping with multiple users specified."""
-    #     profile = profile_with_data
-    #     output_path = tmp_path / 'profile_dump_users'
+        _ = profile.dump(output_path=output_path, all_entries=True, delete_missing=True, also_ungrouped=True)
+        ungrouped_wf_path = result_path / 'ungrouped' / 'workflows' / f'{node.pk}'
 
-    #     # Get default user (in a real test environment there might be multiple users)
-    #     default_user = orm.User.collection.get_default()
+        # Group path doesn't exist anymore
+        assert not target_path.exists()
+        assert ungrouped_wf_path.exists()
 
-    #     result_path = profile.dump(
-    #         output_path=output_path,
-    #         user=[default_user],  # Pass as list
-    #     )
-    #     assert result_path.exists()
+        # FIXME: If `also_ungrouped=False` in the `dump` command above, the WF node that was previously in the group is
+        # not being dumped. If one then runs the command again, one must set `filter_by_last_dump_time` to False,
+        # otherwise it is not picked up. I thought for the ungrouped nodes, time filters are ignared anyway? Changes in
+        # the DB structure are only evaluated between the previous dump and the next, so the node is by default
+        # overlooked here, thus one needs to disable the time filter.
+        # _ = profile.dump(
+        #     output_path=output_path,
+        #     all_entries=True,
+        #     delete_missing=True,
+        #     also_ungrouped=True,
+        #     filter_by_last_dump_time=False,
+        # )
 
-    # def test_dump_computers_and_codes_by_label(self, tmp_path, profile_with_data):
-    #     """Test dumping with computers and codes specified by labels."""
-    #     profile = profile_with_data
-    #     output_path = tmp_path / 'profile_dump_labels'
+        # # Workflow that was in the group now dumped in the ungrouped directory
+        # assert ungrouped_wf_path.exists()
 
-    #     # Create test computer and code
-    #     computer = orm.Computer(
-    #         label='test_computer_label', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
-    #     ).store()
+    def test_dump_filter_by_last_dump_time(self, tmp_path, profile_with_minimal_data, generate_calculation_node_io):
+        """Test filtering by last dump time."""
+        profile = profile_with_minimal_data
+        output_path = tmp_path / 'profile_dump_last_time'
+
+        # First dump
+        node1 = generate_calculation_node_io()
+        node1.seal().store()
+        result_path = profile.dump(output_path=output_path, groups=[TEST_GROUP_LABEL])
+
+        assert result_path.exists()
+
+        result_path = profile.dump(output_path=output_path, groups=[TEST_GROUP_LABEL], also_ungrouped=True)
+        # Node is filtered out because its mtime is before the previous dump, so no `ungrouped` directory is created
+        assert not (result_path / 'ungrouped').exists()
+
+        result_path = profile.dump(
+            output_path=output_path, groups=[TEST_GROUP_LABEL], also_ungrouped=True, filter_by_last_dump_time=False
+        )
+        assert (result_path / 'ungrouped' / 'calculations' / f'{node1.pk}').exists()
+
+        # def test_dump_with_mixed_group_specifications(self, tmp_path, profile_with_minimal_data):
+        #     """Test dumping with groups specified in different ways."""
+        #     profile = profile_with_minimal_data
+        #     output_path = tmp_path / 'profile_dump_mixed_groups'
+
+        #     # Get the group object and create another one
+        #     group1 = orm.Group.collection.get(label=TEST_GROUP_LABEL)
+        #     group2 = orm.Group(label='test_profile_dump_group2').store()
+
+        #     # Mix group objects and labels
+        #     result_path = profile.dump(output_path=output_path, groups=[group1, 'test_profile_dump_group2'])
+        #     assert result_path.exists()
+
+        # def test_dump_dry_run_with_overwrite_returns_none(self, tmp_path, profile_with_minimal_data):
+        #     """Test that dry_run + overwrite returns None."""
+        #     profile = profile_with_minimal_data
+        #     output_path = tmp_path / 'profile_dump_dry_overwrite'
+
+        #     result_path = profile.dump(output_path=output_path, all_entries=True, dry_run=True, overwrite=True)
+        #     assert result_path is None
+
+        # def test_dump_all_boolean_combinations(self, tmp_path, profile_with_minimal_data):
+        #     """Test various boolean flag combinations."""
+        #     profile = profile_with_minimal_data
+        #     output_path = tmp_path / 'profile_dump_booleans'
+
+        #     # Test all flags enabled
+        #     result_path = profile.dump(
+        #         output_path=output_path,
+        #         all_entries=True,
+        #         overwrite=True,
+        #         filter_by_last_dump_time=True,
+        #         only_top_level_calcs=True,
+        #         only_top_level_workflows=True,
+        #         delete_missing=True,
+        #         symlink_calcs=True,
+        #         organize_by_groups=True,
+        #         also_ungrouped=True,
+        #         relabel_groups=True,
+        #         include_inputs=True,
+        #         include_outputs=True,
+        #         include_attributes=True,
+        #         include_extras=True,
+        #         flat=True,
+        #         dump_unsealed=True,
+        #     )
+        #     assert result_path.exists()
+
+        #     # Test all flags disabled
+        #     result_path2 = profile.dump(
+        #         output_path=output_path / 'disabled',
+        #         all_entries=True,
+        #         overwrite=True,
+        #         filter_by_last_dump_time=False,
+        #         only_top_level_calcs=False,
+        #         only_top_level_workflows=False,
+        #         delete_missing=False,
+        #         symlink_calcs=False,
+        #         organize_by_groups=False,
+        #         also_ungrouped=False,
+        #         relabel_groups=False,
+        #         include_inputs=False,
+        #         include_outputs=False,
+        #         include_attributes=False,
+        #         include_extras=False,
+        #         flat=False,
+        #         dump_unsealed=False,
+        #     )
+        #     assert result_path2.exists()
+
+        # def test_dump_with_user_list(self, tmp_path, profile_with_minimal_data):
+        #     """Test dumping with multiple users specified."""
+        #     profile = profile_with_minimal_data
+        #     output_path = tmp_path / 'profile_dump_users'
+
+        #     # Get default user (in a real test environment there might be multiple users)
+        #     default_user = orm.User.collection.get_default()
+
+        #     result_path = profile.dump(
+        #         output_path=output_path,
+        #         user=[default_user],  # Pass as list
+        #     )
+        #     assert result_path.exists()
+
+        # def test_dump_computers_and_codes_by_label(self, tmp_path, profile_with_minimal_data):
+        #     """Test dumping with computers and codes specified by labels."""
+        #     profile = profile_with_minimal_data
+        #     output_path = tmp_path / 'profile_dump_labels'
+
+        #     # Create test computer and code
+        # computer = orm.Computer(
+        #     label='test_computer_label',
+        #     hostname='localhost',
+        #     transport_type='core.local',
+        #     scheduler_type='core.direct',
+        # ).store()
 
     #     code = orm.InstalledCode(label='test_code_label', computer=computer, filepath_executable='/bin/bash').store()
 

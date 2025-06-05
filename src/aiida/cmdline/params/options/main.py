@@ -397,10 +397,10 @@ USER_INSTITUTION = OverridableOption(
 
 DB_ENGINE = OverridableOption(
     '--db-engine',
-    required=True,
-    help='Engine to use to connect to the database.',
+    required=False,
+    help='Engine to use to connect to the database. (deprecated)',
     default='postgresql_psycopg',
-    type=click.Choice(['postgresql_psycopg']),
+    type=click.Choice(['postgresql_psycopg', 'postgresql_psycopg2']),
 )
 
 DB_BACKEND = OverridableOption(

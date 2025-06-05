@@ -11,11 +11,10 @@
 import uuid
 from datetime import datetime, timedelta
 
-from aiida.tools._dumping.utils import DumpPaths
-from aiida.tools._dumping.config import ProfileDumpConfig
 import pytest
 
 from aiida import orm
+from aiida.tools._dumping.utils import DumpPaths
 
 
 def test_base_properties(profile_factory):

@@ -141,6 +141,7 @@ def aiida_profile_factory():
             is_test_profile=True,
         )
         config.set_default_profile(profile.name)
+        config.store()
 
         def reset_storage():
             """Reset the storage of the profile.

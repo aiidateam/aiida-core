@@ -216,7 +216,7 @@ def quicksetup(
         'port': db_port,
         'user': su_db_username,
         'password': su_db_password,
-        'database': su_db_name,
+        'dbname': su_db_name,
     }
     postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo_su)
 

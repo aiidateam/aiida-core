@@ -95,8 +95,8 @@ class DumpEngine:
                 # No groups specified - return empty mapping
                 return GroupNodeMapping()
 
-        else:  # orm.ProcessNode
-            return GroupNodeMapping()  # or None?
+        else:
+            return GroupNodeMapping()
 
     def _log_dump_start(self) -> None:
         """Log the start of a dump operation."""

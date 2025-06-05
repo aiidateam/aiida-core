@@ -231,8 +231,8 @@ class ProcessDumpConfig(BaseDumpConfig, ProcessHandlingMixin):
 class GroupDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, EntityFilterMixin, GroupManagementMixin):
     """Configuration for dumping groups."""
 
-    groups: Optional[Union[List[orm.Group], List[str]]] = Field(
-        default=None, description='Groups to dump (either list of UUIDs/labels OR list of Group objects)'
+    groups: Optional[Union[List[orm.Group], List[str], List[int]]] = Field(
+        default=None, description='Groups to dump (either list of PKs/UUIDs/labels OR list of Group objects)'
     )
 
     # Group-specific options
@@ -264,7 +264,7 @@ class GroupDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, Ent
 class ProfileDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, EntityFilterMixin, GroupManagementMixin):
     """Configuration for dumping entire profiles."""
 
-    groups: Optional[Union[List[orm.Group], List[str]]] = Field(
+    groups: Optional[Union[List[orm.Group], List[str], List[int]]] = Field(
         default=None, description='Groups to dump (either list of UUIDs/labels OR list of Group objects)'
     )
 

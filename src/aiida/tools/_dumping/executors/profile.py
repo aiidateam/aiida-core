@@ -98,7 +98,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
 
         # Specific groups given as orm entities
         if all(isinstance(g, orm.Group) for g in self.config.groups):
-            return self.config.groups
+            return cast(list[orm.Group], self.config.groups)
 
         # Specific groups given via identifier
         try:

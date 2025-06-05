@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Union, cast
 
 from aiida import orm
 from aiida.tools._dumping.utils import GroupChanges, GroupInfo, GroupModificationInfo, NodeMembershipChange
@@ -69,7 +69,7 @@ class GroupNodeMapping:
         return mapping
 
     @classmethod
-    def build_from_db(cls, groups: Optional[List[orm.Group]] = None) -> 'GroupNodeMapping':
+    def build_from_db(cls, groups: Optional[Union[List[orm.Group], List[str], List[int]]] = None) -> 'GroupNodeMapping':
         """Build a mapping from the current database state.
 
         :param groups: If provided, only build mapping for these specific groups.
@@ -83,7 +83,11 @@ class GroupNodeMapping:
 
         if groups is not None:
             # Only query the specified groups
-            group_uuids = [g.uuid for g in groups]
+            if all(isinstance(g, orm.Group) for g in groups):
+                orm_groups = cast(List[orm.Group], groups)
+                group_uuids = [g.uuid for g in orm_groups]
+            else:
+                group_uuids = [orm.load_group(g).uuid for g in groups]
             qb.append(orm.Group, tag='group', project=['uuid'], filters={'uuid': {'in': group_uuids}})
         else:
             # Query all groups

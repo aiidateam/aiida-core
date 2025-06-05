@@ -26,11 +26,11 @@ class StashCalculation(CalcJob):
 
         inputs = {
             'metadata': {
-                'computer': Computer.collection.get(label="localhost"),
+                'computer': load_computer(label="localhost"),
                 'options': {
                     'resources': {'num_machines': 1},
                     'stash': {
-                        'stash_mode': StashMode.COPY,
+                        'stash_mode': StashMode.COPY.value,
                         'target_base': '/scratch/my_stashing/',
                         'source_list': ['aiida.in', '_aiidasubmit.sh'],
                     },

@@ -681,12 +681,8 @@ def group_dump(
     flat,
     dump_unsealed,
 ):
-    """Dump data of an AiiDA group to disk.
+    """Dump data of an AiiDA group to disk."""
 
-    If 'aiida_dump_config.yaml' exists in the target directory, it will be used
-    as the sole source of configuration settings, ignoring other CLI flags.
-    Otherwise, CLI flags will be used.
-    """
     import traceback
     from pathlib import Path
 

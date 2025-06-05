@@ -371,7 +371,7 @@ def profile_dump(
             echo.echo_report(f"No output path specified. Using default: '{dump_base_output_path}'")
         else:
             dump_base_output_path = Path(path).resolve()
-            echo.echo_report(f"Using specified output path: '{dump_base_output_path}'")
+            echo.echo_report(f"Using specified output path: `{dump_base_output_path}`")
 
         # Logical checks
         if not organize_by_groups and relabel_groups:

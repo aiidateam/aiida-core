@@ -114,7 +114,7 @@ class TestVerdiGroup:
         orm.Group(label='group_test_delete_03').store()
         do_not_delete_user = orm.User(email='user0@example.com')
         do_not_delete_group = orm.Group(label='do_not_delete_group', user=do_not_delete_user).store()
-        do_not_delete_node = orm.CalculationNode().store().seal()
+        do_not_delete_node = orm.CalculationNode().store()
         do_not_delete_group.add_nodes(do_not_delete_node)
         do_not_delete_user.store()
 
@@ -142,8 +142,8 @@ class TestVerdiGroup:
         assert 'group_test_delete_01' not in result.output
 
         # 3) Add some nodes and then use `verdi group delete` to delete a group that contains nodes
-        node_01 = orm.CalculationNode().seal()
-        node_02 = orm.CalculationNode().seal()
+        node_01 = orm.CalculationNode().store()
+        node_02 = orm.CalculationNode().store()
         node_pks = {node_01.pk, node_02.pk}
 
         group = orm.load_group(label='group_test_delete_02')
@@ -312,7 +312,7 @@ class TestVerdiGroup:
         assert 'do_not_delete_group' not in result.output
 
         # 11) --node should delete only groups that contain a specific node
-        node = orm.CalculationNode().store().seal()
+        node = orm.CalculationNode().store()
         group = orm.Group(label='group_test_delete_15').store()
         group.add_nodes(node)
 
@@ -337,6 +337,7 @@ class TestVerdiGroup:
         ]:
             assert grpline in result.output
 
+    @pytest.mark.usefixtures("aiida_profile_clean")
     def test_show_limit(self, run_cli_command):
         """Test `--limit` option of the `verdi group show` command."""
         label = 'test_group_limit'
@@ -392,9 +393,9 @@ class TestVerdiGroup:
 
     def test_add_remove_nodes(self, run_cli_command):
         """Test `verdi group remove-nodes` command."""
-        node_01 = orm.CalculationNode().seal()
-        node_02 = orm.CalculationNode().seal()
-        node_03 = orm.CalculationNode().seal()
+        node_01 = orm.CalculationNode().store()
+        node_02 = orm.CalculationNode().store()
+        node_03 = orm.CalculationNode().store()
 
         result = run_cli_command(
             cmd_group.group_add_nodes, ['--force', '--group=dummygroup1', node_01.uuid], use_subprocess=True
@@ -477,7 +478,7 @@ class TestVerdiGroup:
 
     def test_move_nodes(self, run_cli_command):
         """Test `verdi group move-nodes` command."""
-        node_01 = orm.CalculationNode().seal()
+        node_01 = orm.CalculationNode().store()
         node_02 = orm.Int(1).store()
         node_03 = orm.Bool(True).store()
 
@@ -568,8 +569,8 @@ class TestVerdiGroup:
         dest_label = 'dest_copy_existing_group'
 
         # Create source group with nodes
-        calc_s1 = orm.CalculationNode().seal()
-        calc_s2 = orm.CalculationNode().seal()
+        calc_s1 = orm.CalculationNode().store()
+        calc_s2 = orm.CalculationNode().store()
         nodes_source_group = {str(node.uuid) for node in [calc_s1, calc_s2]}
         source_group = orm.Group(label=source_label).store()
         source_group.add_nodes([calc_s1, calc_s2])
@@ -621,7 +622,7 @@ class TestVerdiGroup:
         options = [group.label, '--path', str(test_path)]
         result = run_cli_command(cmd_group.group_dump, options)
         assert result.exception is None, result.output
-        assert f'Using specified output path: `{test_path}`' in result.output
+        assert f'Report: Using specified output path: `{test_path}`' in result.output
 
     @patch('aiida.orm.groups.Group.dump')
     def test_dump_calls_group_dump_with_correct_args(self, mock_dump, run_cli_command, tmp_path):

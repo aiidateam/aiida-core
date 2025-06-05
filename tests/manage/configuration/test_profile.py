@@ -73,6 +73,7 @@ def profile_with_minimal_data():
     """Create a profile with some test data."""
     # Get current profile
     from aiida import load_profile
+
     profile = load_profile()
 
     # Create some test data
@@ -92,6 +93,7 @@ def profile_with_actual_data(generate_calculation_node_io, generate_workchain_no
     """Create a profile with some test data."""
     # Get current profile
     from aiida import load_profile
+
     profile = load_profile()
 
     # Create some test data
@@ -184,7 +186,7 @@ class TestProfileDump:
         assert not (result_path / 'groups' / extra_group.label).exists()
 
         # Test dumping by label
-        _ =DumpPaths._safe_delete_directory(path=result_path)
+        _ = DumpPaths._safe_delete_directory(path=result_path)
         result_path = profile.dump(output_path=output_path, groups=[TEST_GROUP_LABEL])
 
         assert result_path.exists()
@@ -307,7 +309,10 @@ class TestProfileDump:
 
         _ = DumpPaths._safe_delete_directory(path=result_path)
         result_path = profile.dump(
-            output_path=output_path, all_entries=True, only_top_level_calcs=False, also_ungrouped=True,
+            output_path=output_path,
+            all_entries=True,
+            only_top_level_calcs=False,
+            also_ungrouped=True,
         )
 
         assert result_path.exists()

@@ -1,6 +1,13 @@
 # Changelog
 
-## v2.6.3 - 2024-11-6
+
+## v2.6.4 - 2025-05-22
+
+### Fixes
+- Dependencies: Pin click to `~=8.1.0` (#6888) [[e1d55fa]](https://github.com/aiidateam/aiida-core/commit/e1d55fa0d6c268db7a25e9740679a5a0fbe412b8)
+
+
+## v2.6.3 - 2024-11-06
 
 ### Fixes
 - CLI: Fix exception for `verdi plugin list` (#6560) [[c3b10b7]](https://github.com/aiidateam/aiida-core/commit/c3b10b759a9cd062800ef120591d5c7fd0ae4ee7)

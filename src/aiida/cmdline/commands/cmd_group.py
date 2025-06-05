@@ -706,7 +706,7 @@ def group_dump(
             echo.echo_report(f'No output path specified. Using default: `{dump_base_output_path}`')
         else:
             dump_base_output_path = Path(path).resolve()
-            echo.echo_report(f"Using specified output path: `{dump_base_output_path}`")
+            echo.echo_report(f'Using specified output path: `{dump_base_output_path}`')
 
         # --- Logical Checks ---
         if dry_run and overwrite:

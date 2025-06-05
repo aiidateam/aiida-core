@@ -337,7 +337,7 @@ class TestVerdiGroup:
         ]:
             assert grpline in result.output
 
-    @pytest.mark.usefixtures("aiida_profile_clean")
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_show_limit(self, run_cli_command):
         """Test `--limit` option of the `verdi group show` command."""
         label = 'test_group_limit'

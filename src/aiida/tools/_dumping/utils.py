@@ -383,15 +383,14 @@ class DumpPaths:
         path_to_prepare.mkdir(parents=True, exist_ok=True)
         (path_to_prepare / self.SAFEGUARD_FILE_NAME).touch(exist_ok=True)
 
-    def _safe_delete_directory(self, path: Path) -> None:
+    @staticmethod
+    def _safe_delete_directory(path: Path) -> None:
         """Safely deletes a directory if it contains a safeguard file.
 
         :param path: The path to be deleted
         """
-        if self.config.dump_mode == DumpMode.DRY_RUN:
-            return
 
-        safeguard_path = path / self.SAFEGUARD_FILE_NAME
+        safeguard_path = path / DumpPaths.SAFEGUARD_FILE_NAME
         if path.is_dir() and safeguard_path.is_file():
             import shutil
 

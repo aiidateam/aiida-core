@@ -291,7 +291,7 @@ class ProcessDumpExecutor:
         """
 
         # Clean existing directory
-        self.dump_paths._safe_delete_directory(path=output_path)
+        DumpPaths._safe_delete_directory(path=output_path)
 
         # Prepare directory again
         self.dump_paths._prepare_directory(path_to_prepare=output_path)
@@ -358,7 +358,7 @@ class ProcessDumpExecutor:
         """
 
         logger.warning(f'Attempting cleanup for failed dump of node {process_node.pk} at {output_path.name}')
-        self.dump_paths._safe_delete_directory(path=output_path)
+        DumpPaths._safe_delete_directory(path=output_path)
 
         if is_primary_dump:
             registry_key = ORM_TYPE_TO_REGISTRY[type(process_node)]

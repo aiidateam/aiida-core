@@ -370,7 +370,7 @@ class CollectionDumpExecutor:
 
         elif found_path.is_dir() and not is_target_dir:
             # It's a directory *within* the group structure (likely a copy), and NOT the original. Safe to remove.
-            self.dump_paths._safe_delete_directory(path=found_path)
+            DumpPaths._safe_delete_directory(path=found_path)
             # Remove duplicate reference from log entry
             try:
                 entry = self.dump_tracker.get_entry(node_uuid)

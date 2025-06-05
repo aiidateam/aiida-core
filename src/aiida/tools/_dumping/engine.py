@@ -222,7 +222,7 @@ class DumpEngine:
             # NOTE: Hack for now, delete empty directory again.
             # Ideally don't even create in the first place.
             # Need to check again where it is actually created.
-            self.dump_paths._safe_delete_directory(path=self.dump_paths.base_output_path)
+            DumpPaths._safe_delete_directory(path=self.dump_paths.base_output_path)
             return None
 
         self.dump_tracker.set_current_mapping(self.current_mapping)

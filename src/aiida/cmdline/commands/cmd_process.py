@@ -14,6 +14,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.overridable import OverridableOption
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.log import LOG_LEVELS, capture_logging
 
 REPAIR_INSTRUCTIONS = """\
@@ -583,50 +584,21 @@ def process_repair(manager, broker, dry_run):
 @verdi_process.command('dump')
 @arguments.PROCESS()
 @options.PATH()
+@options.DRY_RUN()
 @options.OVERWRITE()
-@click.option(
-    '--include-inputs/--exclude-inputs',
-    default=True,
-    show_default=True,
-    help='Include the linked input nodes of the `CalculationNode`(s).',
-)
-@click.option(
-    '--include-outputs/--exclude-outputs',
-    default=False,
-    show_default=True,
-    help='Include the linked output nodes of the `CalculationNode`(s).',
-)
-@click.option(
-    '--include-attributes/--exclude-attributes',
-    default=True,
-    show_default=True,
-    help='Include attributes in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-@click.option(
-    '--include-extras/--exclude-extras',
-    default=True,
-    show_default=True,
-    help='Include extras in the `.aiida_node_metadata.yaml` written for every `ProcessNode`.',
-)
-@click.option(
-    '-f',
-    '--flat',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Dump files in a flat directory for every step of the workflow.',
-)
-@click.option(
-    '--dump-unsealed',
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help='Also allow the dumping of unsealed process nodes.',
-)
-@options.INCREMENTAL()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+@options.DUMP_UNSEALED()
+@click.pass_context
+@with_dbenv()
 def process_dump(
+    ctx,
     process,
     path,
+    dry_run,
     overwrite,
     include_inputs,
     include_outputs,
@@ -634,13 +606,12 @@ def process_dump(
     include_extras,
     flat,
     dump_unsealed,
-    incremental,
 ) -> None:
     """Dump process input and output files to disk.
 
     Child calculations/workflows (also called `CalcJob`s/`CalcFunction`s and `WorkChain`s/`WorkFunction`s in AiiDA
     jargon) run by the parent workflow are contained in the directory tree as sub-folders and are sorted by their
-    creation time.  The directory tree thus mirrors the logical execution of the workflow, which can also be queried by
+    creation time. The directory tree thus mirrors the logical execution of the workflow, which can also be queried by
     running `verdi process status <pk>` on the command line.
 
     By default, input and output files of each calculation can be found in the corresponding "inputs" and
@@ -648,33 +619,59 @@ def process_dump(
     settings). Additional input and output files (depending on the type of calculation) are placed in the "node_inputs"
     and "node_outputs", respectively.
 
-    Lastly, every folder also contains a hidden, human-readable `.aiida_node_metadata.yaml` file with the relevant AiiDA
+    Lastly, every folder also contains a hidden, human-readable `aiida_node_metadata.yaml` file with the relevant AiiDA
     node data for further inspection.
     """
+    import traceback
+    from pathlib import Path
 
+    from aiida.cmdline.utils import echo
+    from aiida.tools._dumping.utils import DumpPaths
     from aiida.tools.archive.exceptions import ExportValidationError
-    from aiida.tools.dumping.processes import ProcessDumper
 
-    process_dumper = ProcessDumper(
-        include_inputs=include_inputs,
-        include_outputs=include_outputs,
-        include_attributes=include_attributes,
-        include_extras=include_extras,
-        overwrite=overwrite,
-        flat=flat,
-        dump_unsealed=dump_unsealed,
-        incremental=incremental,
+    warning_msg = (
+        'This is a new feature which is still in its testing phase. '
+        'If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.'
     )
+    echo.echo_warning(warning_msg)
 
+    # Check for dry_run + overwrite
+    if overwrite and dry_run:
+        msg = 'Both `dry_run` and `overwrite` set to true. Operation will NOT be performed.'
+        echo.echo_warning(msg)
+        return
+
+    if path is None:
+        process_path = DumpPaths.get_default_dump_path(process)
+        dump_base_output_path = Path.cwd() / process_path
+        msg = f'No output path specified. Using default: `{dump_base_output_path}`'
+        echo.echo_report(msg)
+    else:
+        echo.echo_report(f'Using specified output path: `{path}`')
+        dump_base_output_path = Path(path).resolve()
+
+    if dry_run:
+        echo.echo_success('Dry run completed.')
+        return
+
+    # Execute dumping
     try:
-        dump_path = process_dumper.dump(process_node=process, output_path=path)
-    except FileExistsError:
-        echo.echo_critical(
-            'Dumping directory exists and overwrite is False. Set overwrite to True, or delete directory manually.'
+        process.dump(
+            output_path=dump_base_output_path,
+            dry_run=dry_run,
+            overwrite=overwrite,
+            include_inputs=include_inputs,
+            include_outputs=include_outputs,
+            include_attributes=include_attributes,
+            include_extras=include_extras,
+            flat=flat,
+            dump_unsealed=dump_unsealed,
         )
-    except ExportValidationError as e:
-        echo.echo_critical(f'{e!s}')
-    except Exception as e:
-        echo.echo_critical(f'Unexpected error while dumping {process.__class__.__name__} <{process.pk}>:\n ({e!s}).')
 
-    echo.echo_success(f'Raw files for {process.__class__.__name__} <{process.pk}> dumped into folder `{dump_path}`.')
+        msg = f'Raw files for process `{process.pk}` dumped into folder `{dump_base_output_path.name}`.'
+        echo.echo_success(msg)
+    except ExportValidationError as e:
+        echo.echo_critical(f'Data validation error during dump: {e!s}')
+    except Exception as e:
+        msg = f'Unexpected error during dump of process {process.pk}:\n ({e!s}).\n'
+        echo.echo_critical(msg + traceback.format_exc())

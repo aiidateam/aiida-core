@@ -331,14 +331,14 @@ def process_status(call_link_label, most_recent_node, max_depth, processes):
 @options.WAIT()
 @OverridableOption(
     '-F',
-    '--force-kill',
+    '--force',
     is_flag=True,
     default=False,
     help='Kills the process without waiting for a confirmation if the job has been killed.\n'
     'Note: This may lead to orphaned jobs on your HPC and should be used with caution.',
 )()
 @decorators.with_dbenv()
-def process_kill(processes, all_entries, timeout, wait, force_kill):
+def process_kill(processes, all_entries, timeout, wait, force):
     """Kill running processes.
 
     Kill one or multiple running processes."""
@@ -355,7 +355,7 @@ def process_kill(processes, all_entries, timeout, wait, force_kill):
     if all_entries:
         click.confirm('Are you sure you want to kill all processes?', abort=True)
 
-    if force_kill:
+    if force:
         echo.echo_warning('Force kill is enabled. This may lead to orphaned jobs on your HPC.')
         msg_text = 'Force killed through `verdi process kill`'
     else:
@@ -365,7 +365,7 @@ def process_kill(processes, all_entries, timeout, wait, force_kill):
             control.kill_processes(
                 processes,
                 msg_text=msg_text,
-                force_kill=force_kill,
+                force=force,
                 all_entries=all_entries,
                 timeout=timeout,
                 wait=wait,

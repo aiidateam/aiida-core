@@ -26,7 +26,7 @@ class StashCalculation(CalcJob):
 
         inputs = {
             'metadata': {
-                'computer': Computer.collection.get(label="localhost"),
+                'computer': load_computer(label="localhost"),
                 'options': {
                     'resources': {'num_machines': 1},
                     'stash': {

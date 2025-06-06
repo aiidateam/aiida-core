@@ -179,7 +179,7 @@ def aiida_instance(
             current_profile = configuration.get_profile()
             current_path_variable = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
 
-        dirpath_config = tmp_path_factory.mktemp('config')
+        dirpath_config = tmp_path_factory.mktemp('config') / settings.DEFAULT_CONFIG_DIR_NAME
         os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_config)
         AiiDAConfigDir.set(dirpath_config)
         configuration.CONFIG = configuration.load_config(create=True)

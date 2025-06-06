@@ -133,3 +133,55 @@ jobs:
         verdi devel check-load-time
         verdi devel check-undesired-imports
         .github/workflows/verdi.sh
+
+
+  test-pytest-fixtures:
+    # Who watches the watchmen?
+    # Here we test the pytest fixtures in isolation from the rest of aiida-core test suite,
+    # since they can be used outside of aiida core context, e.g. in plugins.
+    # Unlike in other workflows in this file, we purposefully don't setup a test profile.
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:10
+        env:
+          POSTGRES_DB: test_aiida
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+        - 5432:5432
+      rabbitmq:
+        image: rabbitmq:3.8.14-management
+        ports:
+        - 5672:5672
+        - 15672:15672
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.9'
+        from-lock: 'true'
+        extras: tests
+
+    - name: Test legacy pytest fixtures
+      run: pytest --cov aiida --noconftest src/aiida/manage/tests/test_pytest_fixtures.py
+
+    - name: Upload coverage report
+      if: github.repository == 'aiidateam/aiida-core'
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: test-pytest-fixtures
+        files: ./coverage.xml
+        fail_ci_if_error: false  # don't fail job, if coverage upload fails

@@ -216,7 +216,7 @@ def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], 'Computer']:
         computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh_async')
 
         if configure:
-            computer.configure()
+            computer.configure(backend='asyncssh')
 
         return computer
 

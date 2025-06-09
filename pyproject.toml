@@ -398,6 +398,8 @@ filterwarnings = [
   'ignore:Identity map already had an identity for .* inside of an event handler within the flush?:sqlalchemy.exc.SAWarning',
   'ignore:The `aiida.orm.nodes.data.upf` module is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
+  # https://github.com/aiidateam/plumpy/issues/283
+  'ignore:There is no current event loop:DeprecationWarning:plumpy',
   'default::ResourceWarning'
 ]
 markers = [

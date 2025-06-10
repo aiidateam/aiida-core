@@ -728,7 +728,6 @@ If the runner has successfully received the request and scheduled the callback, 
 The 'scheduled' indicates that the actual killing might not necessarily have happened just yet.
 This means that even after having called ``verdi process kill`` and getting the success message, the corresponding process may still be listed as active in the output of ``verdi process list``.
 
-By default, the ``pause``, ``play`` and ``kill`` commands wait until the action has been successfully executed.
 To change this behavior, you can use the ``-t / --timeout <FLOAT>`` option to specify a timeout after which the command will stop the action.
 If you set the timeout to ``0```, the command returns immediately without waiting for a response.
 A process is only gracefully killed if AiiDA is able to cancel the associated scheduler job.

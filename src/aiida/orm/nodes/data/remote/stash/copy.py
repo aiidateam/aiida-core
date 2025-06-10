@@ -42,6 +42,9 @@ class RemoteStashCopyData(RemoteStashData):
         self.target_basepath = target_basepath
         self.source_list = source_list
 
+        # Although this subclass supports only the `StashMode.COPY` mode,
+        # the design aligns with the `RemoteStashData` LSP for consistency.
+        # For stashing with compressed options, consider using `RemoteStashCompressedData`.
         if stash_mode != StashMode.COPY:
             raise ValueError('`RemoteStashCopyData` can only be used with `stash_mode == StashMode.COPY`.')
 

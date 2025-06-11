@@ -45,6 +45,10 @@ class RemoteStashCopyData(RemoteStashData):
         # Although this subclass supports only the `StashMode.COPY` mode,
         # the design aligns with the `RemoteStashData` LSP for consistency.
         # For stashing with compressed options, consider using `RemoteStashCompressedData`.
+        # We are consistent with the signature in `RemoteStashData` following LSP,
+        # even though in this subclass we only support one stash mode which make this seem weirdly designed at first
+        # glance, note there is also a subsclass for compressed options
+
         if stash_mode != StashMode.COPY:
             raise ValueError('`RemoteStashCopyData` can only be used with `stash_mode == StashMode.COPY`.')
 

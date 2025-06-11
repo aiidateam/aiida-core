@@ -247,13 +247,14 @@ def _resolve_futures(
     """Process a mapping of futures representing an action on an active process.
 
     This function will echo the correct information strings based on the outcomes of the futures and the given verb
-    conjugations. You can optionally wait for any pending actions to be completed before the functions returns and use a
-    timeout to put a maximum wait time on the actions. TODO fix docstring
+    conjugations. The function waits for any pending actions to be completed. By specifying a timeout the function
+    aborts after the specified time and cancels pending actions.
 
     :param futures: The map of action futures and the corresponding processes.
     :param infinitive: The infinitive form of the action verb.
     :param present: The present tense form of the action verb.
-    :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
+    :param timeout: If None or float('inf') it waits until the actions are completed otherwise it waits for response the
+        amount in seconds.
     """
     if not timeout or not futures:
         if futures:

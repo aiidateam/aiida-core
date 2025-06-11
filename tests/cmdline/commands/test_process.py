@@ -217,7 +217,7 @@ def test_process_kill_failing_transport_failed_kill(
 
         # practice a normal kill, which should fail
         result = run_cli_command(cmd_process.process_kill, [str(node.pk), '--timeout', '1.0'])
-        assert f'Error: call to kill Process<{node.pk}> timed out' in result.stdout
+        assert f'Error: Call to kill Process<{node.pk}> timed out' in result.stdout
 
         # force kill the process
         result = run_cli_command(cmd_process.process_kill, [str(node.pk), '-F'])

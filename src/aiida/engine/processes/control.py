@@ -229,6 +229,7 @@ def _perform_actions(
 
         try:
             future = action(process.pk, **kwargs)
+            LOGGER.report(f'Request to {infinitive} Process<{process.pk}> sent.')
         except communications.UnroutableError:
             LOGGER.error(f'Process<{process.pk}> is unreachable.')
         else:
@@ -254,10 +255,15 @@ def _resolve_futures(
     :param present: The present tense form of the action verb.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
     """
-    if not timeout:
+    if not timeout or not futures:
+        if futures:
+            LOGGER.report(
+                f"Request to {infinitive} process(es) {','.join([str(proc.pk) for proc in futures.values()])}"
+                ' sent. Skipping waiting for response.'
+            )
         return
 
-    LOGGER.report(f"Waiting for process(es) {','.join([str(proc.pk) for proc in futures.values()])}")
+    LOGGER.report(f"Waiting for process(es) {','.join([str(proc.pk) for proc in futures.values()])}.")
 
     # Ensure that when futures are only are completed if they return an actual value (not a future)
     unwrapped_futures = {unwrap_kiwi_future(future): process for future, process in futures.items()}
@@ -273,7 +279,7 @@ def _resolve_futures(
                 LOGGER.error(f'Failed to {infinitive} Process<{process.pk}>: {exception}')
             else:
                 if result is True:
-                    LOGGER.report(f'Request to {infinitive} Process<{process.pk}> sent')
+                    LOGGER.report(f'Request to {infinitive} Process<{process.pk}> processed.')
                 elif result is False:
                     LOGGER.error(f'Problem {present} Process<{process.pk}>')
                 else:

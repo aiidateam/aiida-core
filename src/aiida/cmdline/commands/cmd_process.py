@@ -28,11 +28,11 @@ If one ore more processes are unreachable, you can run the following commands to
 ACTION_TIMEOUT = OverridableOption(
     '-t',
     '--timeout',
-    type=click.FLOAT,
+    type=click.FloatRange(0, float('inf')),
     default=float('inf'),
     show_default=True,
     help='Time in seconds to wait for a response before timing out. '
-    'If timeout <= 0 the command does not wait for response.',
+    'If timeout is 0 the command does not wait for response.',
 )
 
 

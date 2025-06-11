@@ -129,13 +129,13 @@ class AsyncSshTransport(AsyncTransport):
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
         if kwargs.pop('backend') == 'openssh':
-            from .async_backend import OpenSSH
+            from .async_backend import _OpenSSH
 
-            self.async_backend = OpenSSH(self.machine, self.logger, self._bash_command_str)
+            self.async_backend = _OpenSSH(self.machine, self.logger, self._bash_command_str)
         else:
-            from .async_backend import AsyncSSH
+            from .async_backend import _AsyncSSH
 
-            self.async_backend = AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
+            self.async_backend = _AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
 
         self._concurrent_io = 0
 

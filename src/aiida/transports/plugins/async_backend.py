@@ -7,12 +7,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-This module instruct a `BasicAdapter` class that backends `AsyncSshTransport`.
-It also provides two implementation classes: `AsyncSSH` and `OpenSSH`, which are used to
+This module instruct a `_AsynchronousSSHBackend` class that backends `AsyncSshTransport`.
+It also provides two implementation classes: `_AsyncSSH` and `_OpenSSH`, which are used to
 interact with remote machines over SSH.
 
-The `AsyncSSH` class uses the `asyncssh` library to execute commands and transfer files,
-while the `OpenSSH` class uses the `ssh` command line client.
+The `_AsyncSSH` class uses the `asyncssh` library to execute commands and transfer files,
+while the `_OpenSSH` class uses the `ssh` command line client.
 """
 
 import abc
@@ -29,10 +29,10 @@ from aiida.transports.transport import (
     has_magic,
 )
 
-__all__ = ('AsyncSSH', 'OpenSSH')
+__all__ = ('_AsyncSSH', '_OpenSSH')
 
 
-class BasicAdapter:
+class _AsynchronousSSHBackend(abc.ABC):
     """
     This is a base class for the backend adaptors of `AsyncSshTransport` class.
     It defines the interface for the methods that need to be implemented by the subclasses.
@@ -209,7 +209,7 @@ class BasicAdapter:
         """
 
 
-class AsyncSSH(BasicAdapter):
+class _AsyncSSH(_AsynchronousSSHBackend):
     """A backend class that uses asyncssh to execute commands and transfer files.
     This class is not part of the public api and should not be used directly.
     Note: This class is not part of the public API and should not be used directly.
@@ -345,7 +345,7 @@ class AsyncSSH(BasicAdapter):
         recursive: bool,
         preserve: bool,
     ):
-        # SFTP.copy() supports remote copy only in very recent version OpenSSH 9.0 and later.
+        # SFTP.copy() supports remote copy only in very recent version _OpenSSH 9.0 and later.
         # For the older versions, it downloads the file and uploads it again!
         # For performance reasons, we should check if the remote copy is supported, if so use
         # self._sftp.mcopy() & self._sftp.copy() otherwise send a `cp` command to the remote machine.
@@ -437,8 +437,8 @@ class AsyncSSH(BasicAdapter):
                 await _exec_cp(cp_exe, cp_flags, remotesource, remotedestination)
 
 
-class OpenSSH(BasicAdapter):
-    """A backend class that executes OpenSSH commands directly in a shell.
+class _OpenSSH(_AsynchronousSSHBackend):
+    """A backend class that executes _OpenSSH commands directly in a shell.
     This class is not part of the public api and should not be used directly.
     Note: This class is not part of the public API and should not be used directly.
     """
@@ -448,7 +448,7 @@ class OpenSSH(BasicAdapter):
 
     async def openssh_execute(self, commands, stdin: Optional[str] = None, timeout: Optional[float] = None):
         """
-        Execute a command using the OpenSSH command line client.
+        Execute a command using the _OpenSSH command line client.
         :param commands: The list of commands to execute
         :param timeout: The timeout in seconds
         :return: The return code, stdout, and stderr

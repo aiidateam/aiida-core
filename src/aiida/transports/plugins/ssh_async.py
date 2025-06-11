@@ -45,7 +45,7 @@ def validate_script(ctx, param, value: str):
     return value
 
 
-def validate_machine(ctx, param, value: str):
+def validate_host(ctx, param, value: str):
     async def attempt_connection():
         try:
             await asyncssh.connect(value)
@@ -54,9 +54,9 @@ def validate_machine(ctx, param, value: str):
         return True
 
     if not asyncio.run(attempt_connection()):
-        raise click.BadParameter("Couldn't connect! " 'Please make sure `ssh {value}` would work without password')
+        raise click.BadParameter(f"Could not connect. Please make sure 'ssh {value}' does work password-less")
     else:
-        click.echo(f'`ssh {value}` successful!')
+        click.echo(f"Connection with 'ssh {value}' was successful.")
 
     return value
 
@@ -71,15 +71,17 @@ class AsyncSshTransport(AsyncTransport):
         (
             # the underscore is added to avoid conflict with the machine property
             # which is passed to __init__ as parameter `machine=computer.hostname`
-            'machine_or_host',
+            'host',
             {
                 'type': str,
-                'prompt': 'Machine(or host) name as in `ssh <your-host-name>` command.'
-                ' (It should be a password-less setup)',
-                'help': 'Password-less host-setup to connect, as in command `ssh <your-host-name>`. '
-                "You'll need to have a `Host <your-host-name>` entry defined in your `~/.ssh/config` file.",
+                'prompt': "Host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config)",
+                'help': (
+                    'Password-less host-setup to connect, as in command `ssh <HOST>`.'
+                    ' You need to have a `Host <HOST>` entry defined in your `~/.ssh/config` file.'
+                    ' We ignore the hostname provided in the aiida computer setup and only use the host.'
+                ),
                 'non_interactive_default': True,
-                'callback': validate_machine,
+                'callback': validate_host,
             },
         ),
         (
@@ -87,7 +89,7 @@ class AsyncSshTransport(AsyncTransport):
             {
                 'type': int,
                 'default': _DEFAULT_max_io_allowed,
-                'prompt': 'Maximum number of concurrent I/O operations.',
+                'prompt': 'Maximum number of concurrent I/O operations',
                 'help': 'Depends on various factors, such as your network bandwidth, the server load, etc.'
                 ' (An experimental number)',
                 'non_interactive_default': True,
@@ -121,12 +123,12 @@ class AsyncSshTransport(AsyncTransport):
         super().__init__(*args, **kwargs)
         # the machine is passed as `machine=computer.hostname` in the codebase
         # 'machine' is immutable.
-        # 'machine_or_host' is mutable, so it can be changed via command:
+        # 'host' is mutable, so it can be changed via command:
         # 'verdi computer configure core.ssh_async <LABEL>'.
-        # by default, 'machine_or_host' is set to 'machine' in the __init__ method, if not provided.
+        # by default, 'host' is set to 'machine' in the __init__ method, if not provided.
         # NOTE: to guarantee a connection,
         # a computer with core.ssh_async transport plugin should be configured before any instantiation.
-        self.machine = kwargs.pop('machine_or_host', kwargs.pop('machine'))
+        self.machine = kwargs.pop('host', kwargs.pop('machine'))
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
 

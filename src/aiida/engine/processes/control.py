@@ -257,34 +257,36 @@ def _resolve_futures(
     if not timeout:
         return
 
-    LOGGER.report(f"waiting for process(es) {','.join([str(proc.pk) for proc in futures.values()])}")
+    LOGGER.report(f"Waiting for process(es) {','.join([str(proc.pk) for proc in futures.values()])}")
 
+    # Ensure that when futures are only are completed if they return an actual value (not a future)
+    unwrapped_futures = {unwrap_kiwi_future(future): process for future, process in futures.items()}
     try:
-        for future, process in futures.items():
-            # we unwrap to the end
-            unwrapped = unwrap_kiwi_future(future)
+        # future does not interpret float('inf') correctly by changing it to None we get the intended behavior
+        for future in concurrent.futures.as_completed(
+            unwrapped_futures.keys(), timeout=None if timeout == float('inf') else timeout
+        ):
+            process = unwrapped_futures[future]
             try:
-                # future does not interpret float('inf') correctly by changing it to None we get the intended behavior
-                result = unwrapped.result(timeout=None if timeout == float('inf') else timeout)
-            except communications.TimeoutError:
-                cancelled = future.cancel()
-                if cancelled:
-                    LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out and was cancelled.')
-                else:
-                    LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out but could not be cancelled.')
+                result = future.result()
             except Exception as exception:
-                LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
+                LOGGER.error(f'Failed to {infinitive} Process<{process.pk}>: {exception}')
             else:
                 if result is True:
-                    LOGGER.report(f'request to {infinitive} Process<{process.pk}> sent')
+                    LOGGER.report(f'Request to {infinitive} Process<{process.pk}> sent')
                 elif result is False:
-                    LOGGER.error(f'problem {present} Process<{process.pk}>')
+                    LOGGER.error(f'Problem {present} Process<{process.pk}>')
                 else:
-                    LOGGER.error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
+                    LOGGER.error(f'Got unexpected response when {present} Process<{process.pk}>: {result}')
     except concurrent.futures.TimeoutError:
-        raise ProcessTimeoutException(
-            f'timed out trying to {infinitive} processes {futures.values()}\n'
-            'This could be because the daemon workers are too busy to respond, please try again later.\n'
-            'If the problem persists, make sure the daemon and RabbitMQ are running properly by restarting them.\n'
-            'If the processes remain unresponsive, as a last resort, try reviving them with ``revive_processes``.'
-        )
+        # We cancel the tasks that are not done
+        undone_futures = {future: process for future, process in unwrapped_futures.items() if not future.done()}
+        if not undone_futures:
+            LOGGER.error(f'Call to {infinitive} timed out but already done.')
+        for future, process in undone_futures.items():
+            if not future.done():
+                cancelled = future.cancel()
+                if cancelled:
+                    LOGGER.error(f'Call to {infinitive} Process<{process.pk}> timed out and was cancelled.')
+                else:
+                    LOGGER.error(f'Call to {infinitive} Process<{process.pk}> timed out but could not be cancelled.')

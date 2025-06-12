@@ -149,9 +149,7 @@ def test_rmtree(custom_transport, tmp_path_remote, tmp_path_local):
 def test_listdir(custom_transport, tmp_path_remote):
     """Create directories, verify listdir, delete a folder with subfolders"""
     with custom_transport as transport:
-        # list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
-        # TODO:  AsyncSshTransport::_OpenSSH is not able to create a directory with special characters
-        # What's the use case?
+        list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
         list_of_dir = ['1', '-f', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
         for this_dir in list_of_dir:
@@ -184,9 +182,7 @@ def test_listdir_withattributes(custom_transport, tmp_path_remote):
         return {_['name']: _['isdir'] for _ in data}
 
     with custom_transport as transport:
-        # list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
-        # TODO:  AsyncSshTransport::_OpenSSH is not able to create a directory with special characters
-        # What's the use case?
+        list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
         list_of_dir = ['1', '-f', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
         for this_dir in list_of_dir:

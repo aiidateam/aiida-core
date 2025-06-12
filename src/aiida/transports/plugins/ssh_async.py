@@ -427,7 +427,6 @@ class AsyncSshTransport(AsyncTransport):
             raise ValueError('The localpath must be an absolute path')
 
         if not os.path.isabs(remotepath):
-            # TODO: open an issue for this, it has to raise a ValueError
             # Historically remotepath could be a relative path, but it is not supported anymore.
             raise OSError('The remotepath must be an absolute path')
 
@@ -511,7 +510,6 @@ class AsyncSshTransport(AsyncTransport):
             raise ValueError('The localpath must be an absolute path')
 
         if not os.path.isabs(remotepath):
-            # TODO: open an issue for this, it has to raise a ValueError
             # Historically remotepath could be a relative path, but it is not supported anymore.
             raise OSError('The remotepath must be an absolute path')
 

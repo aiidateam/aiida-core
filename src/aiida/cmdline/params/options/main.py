@@ -113,6 +113,8 @@ __all__ = (
     'SORT',
     'START_DATE',
     'SYMLINK_CALCS',
+    'TEMPLATE_FILE',
+    'TEMPLATE_VARS',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
@@ -916,4 +918,20 @@ END_DATE = OverridableOption(
     default=None,
     show_default=True,
     help='End date for node mtime range selection for node collection dumping.',
+)
+
+# Add a new option for template variables in non-interactive mode
+TEMPLATE_VARS = OverridableOption(
+    '--template-vars',
+    type=click.STRING,
+    help='JSON string containing template variable values for non-interactive mode. '
+         'Example: \'{"label": "my-computer", "slurm_account": "my_account"}\'',
+)
+
+# Create an enhanced config file option
+TEMPLATE_FILE = click.option(
+    '--template',
+    type=click.STRING,
+    help='Load computer setup from configuration file in YAML format (local path or URL). '
+         'Supports Jinja2 templates with interactive prompting.',
 )

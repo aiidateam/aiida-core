@@ -8,6 +8,7 @@
 ###########################################################################
 """`verdi computer` command."""
 
+import json
 import pathlib
 import traceback
 from copy import deepcopy
@@ -22,6 +23,7 @@ from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
 from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.template_config import load_and_process_template
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
 
@@ -270,6 +272,19 @@ def set_computer_builder(ctx, param, value):
     return value
 
 
+# Helper function to set template vars in context
+def set_template_vars_in_context(ctx, param, value):
+    """Set template variables in the context for the config provider to use."""
+    if value:
+        try:
+            template_var_dict = json.loads(value)
+            # Store template vars in context for the config provider
+            ctx._template_vars = template_var_dict
+        except json.JSONDecodeError as e:
+            raise click.BadParameter(f'Invalid JSON in template-vars: {e}')
+    return value
+
+# Modified computer setup command
 @verdi_computer.command('setup')
 @options_computer.LABEL()
 @options_computer.HOSTNAME()
@@ -284,23 +299,57 @@ def set_computer_builder(ctx, param, value):
 @options_computer.USE_DOUBLE_QUOTES()
 @options_computer.PREPEND_TEXT()
 @options_computer.APPEND_TEXT()
-@options.NON_INTERACTIVE()
-@options.CONFIG_FILE()
+# @options.NON_INTERACTIVE()
+# @options.CONFIG_FILE()  # Keep the original config option for backward compatibility
+@options.TEMPLATE_FILE()  # Add our new template option
+@options.TEMPLATE_VARS()
 @click.pass_context
 @with_dbenv()
-def computer_setup(ctx, non_interactive, **kwargs):
+def computer_setup(ctx, non_interactive, template, template_vars, **kwargs):
     """Create a new computer."""
     from aiida.orm.utils.builders.computer import ComputerBuilder
+    print("HELLO")
 
-    if kwargs['label'] in get_computer_names():
+    # Handle template variables
+    template_var_dict = None
+    if template_vars:
+        try:
+            template_var_dict = json.loads(template_vars)
+        except json.JSONDecodeError as e:
+            echo.echo_critical(f'Invalid JSON in template-vars: {e}')
+
+    # Process template if provided
+    if template:
+        try:
+            # Load and process the template
+            config_data = load_and_process_template(
+                template,
+                interactive=not non_interactive,
+                template_vars=template_var_dict
+            )
+
+            # Update kwargs with config file data
+            # Only update if the value wasn't explicitly provided on command line
+            for key, value in config_data.items():
+                if key not in kwargs or kwargs[key] is None:
+                    kwargs[key] = value
+
+        except Exception as e:
+            echo.echo_critical(f'Error processing template: {e}')
+
+    # Check for existing computer
+    if kwargs.get('label') and kwargs['label'] in get_computer_names():
         echo.echo_critical(
             'A computer called {c} already exists. '
             'Use "verdi computer duplicate {c}" to set up a new '
             'computer starting from the settings of {c}.'.format(c=kwargs['label'])
         )
 
-    kwargs['transport'] = kwargs['transport'].name
-    kwargs['scheduler'] = kwargs['scheduler'].name
+    # Convert entry points to their names
+    if kwargs.get('transport'):
+        kwargs['transport'] = kwargs['transport'].name
+    if kwargs.get('scheduler'):
+        kwargs['scheduler'] = kwargs['scheduler'].name
 
     computer_builder = ComputerBuilder(**kwargs)
     try:
@@ -319,6 +368,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
 
     profile = ctx.obj['profile']
     echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
+
 
 
 @verdi_computer.command('duplicate')

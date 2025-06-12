@@ -79,11 +79,7 @@ def test_aiida_computer_fixtures(fixture_name, transport_cls, transport_type, re
     assert not computer_unconfigured.is_configured
 
 
-def test_daemon_client(daemon_client):
-    from aiida.manage.configuration import get_config
-
-    print(f'\nConfiguration at: {get_config().dirpath}')
-    print(f'Daemon configuration at: {daemon_client._config.dirpath}\n')
+def test_deamon_client(daemon_client):
     if daemon_client.is_daemon_running:
         daemon_client.stop_daemon(wait=True)
     daemon_client.start_daemon()

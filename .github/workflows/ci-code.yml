@@ -138,7 +138,7 @@ jobs:
   test-pytest-fixtures:
     # Who watches the watchmen?
     # Here we test the pytest fixtures in isolation from the rest of aiida-core test suite,
-    # since since they can be used outside of aiida core context, e.g. in plugins.
+    # since they can be used outside of aiida core context, e.g. in plugins.
     # Unlike in other workflows in this file, we purposefully don't setup a test profile.
 
     runs-on: ubuntu-24.04
@@ -181,7 +181,7 @@ jobs:
       run: pytest -v --cov aiida --noconftest tests/tools/pytest_fixtures/
 
     - name: Test legacy pytest fixtures
-      run: pytest -sv --cov aiida --noconftest src/aiida/manage/tests/test_pytest_fixtures.py
+      run: pytest --cov aiida --noconftest src/aiida/manage/tests/test_pytest_fixtures.py
 
     - name: Upload coverage report
       if: github.repository == 'aiidateam/aiida-core'

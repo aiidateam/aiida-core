@@ -181,7 +181,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
-    class Model(BaseModel):
+    class Model(BaseModel, defer_build=True):
         pk: Optional[int] = MetadataField(
             None,
             description='The primary key of the entity. Can be `None` if the entity is not yet stored.',

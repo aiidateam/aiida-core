@@ -35,7 +35,7 @@ def test_pause_processes(submit_and_await):
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
-    control.pause_processes([node], wait=True)
+    control.pause_processes([node], timeout=float('inf'))
     assert node.paused
     assert node.process_status == 'Paused through `aiida.engine.processes.control.pause_processes`'
 
@@ -46,7 +46,7 @@ def test_pause_processes_all_entries(submit_and_await):
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
-    control.pause_processes(all_entries=True, wait=True)
+    control.pause_processes(all_entries=True, timeout=float('inf'))
     assert node.paused
 
 
@@ -56,10 +56,10 @@ def test_play_processes(submit_and_await):
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
-    control.pause_processes([node], wait=True)
+    control.pause_processes([node], timeout=float('inf'))
     assert node.paused
 
-    control.play_processes([node], wait=True)
+    control.play_processes([node], timeout=float('inf'))
     assert not node.paused
 
 
@@ -69,10 +69,10 @@ def test_play_processes_all_entries(submit_and_await):
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
-    control.pause_processes([node], wait=True)
+    control.pause_processes([node], timeout=float('inf'))
     assert node.paused
 
-    control.play_processes(all_entries=True, wait=True)
+    control.play_processes(all_entries=True, timeout=float('inf'))
     assert not node.paused
 
 
@@ -81,7 +81,7 @@ def test_kill_processes(submit_and_await):
     """Test :func:`aiida.engine.processes.control.kill_processes`."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
-    control.kill_processes([node], wait=True)
+    control.kill_processes([node], timeout=float('inf'))
     assert node.is_terminated
     assert node.is_killed
     assert node.process_status == 'Killed through `aiida.engine.processes.control.kill_processes`'
@@ -92,7 +92,7 @@ def test_kill_processes_all_entries(submit_and_await):
     """Test :func:`aiida.engine.processes.control.kill_processes` with ``all_entries=True``."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
-    control.kill_processes(all_entries=True, wait=True)
+    control.kill_processes(all_entries=True, timeout=float('inf'))
     assert node.is_terminated
     assert node.is_killed
 

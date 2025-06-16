@@ -19,6 +19,7 @@ from typing import Optional, Union
 import click
 
 from aiida.common.exceptions import InvalidOperation
+from aiida.common.pydantic import MetadataField
 from aiida.transports.transport import (
     AsyncTransport,
     Transport,
@@ -48,10 +49,11 @@ def validate_backend(ctx, param, value: str):
     return value
 
 
+_DEFAULT_max_io_allowed = 8
+
+
 class AsyncSshTransport(AsyncTransport):
     """Transport plugin via SSH, asynchronously."""
-
-    _DEFAULT_max_io_allowed = 8
 
     # note, I intentionally wanted to keep connection parameters as simple as possible.
     _valid_auth_options = [
@@ -107,6 +109,28 @@ class AsyncSshTransport(AsyncTransport):
         ),
     ]
 
+    class Model(AsyncTransport.Model):
+        """Model for the transport."""
+
+        machine_or_host: str = MetadataField(
+            '',
+            description='Machine name as in `ssh <your-host-name>` command. It should be a password-less setup',
+            title='Password-less host-setup to connect, as in command `ssh <your-host-name>`. '
+            "You'll need to have a `Host <your-host-name>` entry defined in your `~/.ssh/config` file.",
+        )
+        max_io_allowed: int = MetadataField(
+            _DEFAULT_max_io_allowed,
+            description='Maximum number of concurrent I/O operations.',
+            title='Depends on various factors, such as your network bandwidth, the server load, etc. '
+            '(An experimental number)',
+        )
+        script_before: str = MetadataField(
+            'None',
+            description='Local script to run *before* opening connection (path)',
+            title=' (optional) Specify a script to run *before* opening SSH connection. '
+            'The script should be executable',
+        )
+
     @classmethod
     def _get_machine_suggestion_string(cls, computer):
         """Return a suggestion for the parameter machine."""
@@ -126,7 +150,7 @@ class AsyncSshTransport(AsyncTransport):
         # NOTE: to guarantee a connection,
         # a computer with core.ssh_async transport plugin should be configured before any instantiation.
         self.machine = kwargs.pop('machine_or_host', kwargs.pop('machine'))
-        self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
+        self._max_io_allowed = kwargs.pop('max_io_allowed', _DEFAULT_max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
 
         if kwargs.get('backend') == 'openssh':

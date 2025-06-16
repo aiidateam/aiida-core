@@ -17,7 +17,6 @@ from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, S
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
-from aiida.plugins import entry_point
 from aiida.transports.plugins.local import LocalTransport
 
 
@@ -41,19 +40,25 @@ def file_hierarchy_simple():
     }
 
 
+# Skip for any transport plugins that are locally installed but are not part of `aiida-core`
 @pytest.fixture(
     scope='function',
-    params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
+    params=[
+        ('core.local', None),
+        ('core.ssh', None),
+        ('core.ssh_async', 'asyncssh'),
+        ('core.ssh_async', 'openssh'),
+    ],
 )
 def node_and_calc_info(aiida_localhost, aiida_computer_ssh, aiida_computer_ssh_async, aiida_code_installed, request):
     """Return a ``CalcJobNode`` and associated ``CalcInfo`` instance."""
 
-    if request.param == 'core.local':
+    if request.param[0] == 'core.local':
         node = CalcJobNode(computer=aiida_localhost)
-    elif request.param == 'core.ssh':
+    elif request.param[0] == 'core.ssh':
         node = CalcJobNode(computer=aiida_computer_ssh())
-    elif request.param == 'core.ssh_async':
-        node = CalcJobNode(computer=aiida_computer_ssh_async())
+    elif request.param[0] == 'core.ssh_async':
+        node = CalcJobNode(computer=aiida_computer_ssh_async(backend=request.param[1]))
     else:
         raise ValueError(f'unsupported transport: {request.param}')
 

@@ -34,6 +34,7 @@ from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteD
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
+from aiida.transports import has_magic
 
 if TYPE_CHECKING:
     from aiida.transports import Transport
@@ -465,7 +466,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
         target_basepath = target_base / uuid[:2] / uuid[2:4] / uuid[4:]
 
         for source_filename in source_list:
-            if transport.has_magic(source_filename):
+            if has_magic(source_filename):
                 copy_instructions = []
                 for globbed_filename in await transport.glob_async(source_basepath / source_filename):
                     target_filepath = target_basepath / Path(globbed_filename).relative_to(source_basepath)
@@ -679,7 +680,7 @@ async def retrieve_files_from_list(
         if isinstance(item, (list, tuple)):
             tmp_rname, tmp_lname, depth = item
             # if there are more than one file I do something differently
-            if transport.has_magic(tmp_rname):
+            if has_magic(tmp_rname):
                 remote_names = await transport.glob_async(workdir.joinpath(tmp_rname))
                 local_names = []
                 for rem in remote_names:
@@ -702,7 +703,7 @@ async def retrieve_files_from_list(
         else:
             abs_item = item if item.startswith('/') else str(workdir.joinpath(item))
 
-            if transport.has_magic(abs_item):
+            if has_magic(abs_item):
                 remote_names = await transport.glob_async(abs_item)
                 local_names = [os.path.split(rem)[1] for rem in remote_names]
             else:

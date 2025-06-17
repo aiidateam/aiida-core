@@ -1479,3 +1479,41 @@ def test_extract(
     with pytest.raises(OSError, match='Error while extracting the tar archive.'):
         with custom_transport as transport:
             transport.extract(tmp_path_remote / archive_name, tmp_path_remote / 'extracted_1')
+
+
+def test_glob(custom_transport, tmp_path_local):
+    """Test the glob method of the transport plugin.
+    This tests mainly the implementation, doesn't need to run on remote
+    """
+
+    for subpath in [
+        'i.txt',
+        'j.txt',
+        'folder1/a/b.txt',
+        'folder1/a/c.txt',
+        'folder1/a/c.in',
+        'folder1/c.txt',
+        'folder2/x',
+        'folder2/y/z',
+    ]:
+        tmp_path_local.joinpath(subpath).parent.mkdir(parents=True, exist_ok=True)
+        tmp_path_local.joinpath(subpath).write_text('touch')
+
+    with custom_transport as transport:
+        g_list = transport.glob(str(tmp_path_local) + '/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['i.txt', 'j.txt']]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder1/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['folder1/c.txt']]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder1/*/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['folder1/a/b.txt', 'folder1/a/c.txt']]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder*/*')
+        paths = [
+            str(tmp_path_local.joinpath(item)) for item in ['folder1/a', 'folder1/c.txt', 'folder2/x', 'folder2/y']
+        ]
+        assert sorted(paths) == sorted(g_list)

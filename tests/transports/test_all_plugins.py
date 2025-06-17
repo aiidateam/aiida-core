@@ -1493,6 +1493,7 @@ def test_glob(custom_transport, tmp_path_local):
         'folder1/a/c.txt',
         'folder1/a/c.in',
         'folder1/c.txt',
+        'folder1/e/f/g.txt',
         'folder2/x',
         'folder2/y/z',
     ]:
@@ -1514,6 +1515,11 @@ def test_glob(custom_transport, tmp_path_local):
 
         g_list = transport.glob(str(tmp_path_local) + '/folder*/*')
         paths = [
-            str(tmp_path_local.joinpath(item)) for item in ['folder1/a', 'folder1/c.txt', 'folder2/x', 'folder2/y']
+            str(tmp_path_local.joinpath(item))
+            for item in ['folder1/a', 'folder1/c.txt', 'folder2/x', 'folder2/y', 'folder1/e']
         ]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder1/*/*/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['folder1/e/f/g.txt']]
         assert sorted(paths) == sorted(g_list)

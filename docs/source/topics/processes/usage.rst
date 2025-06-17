@@ -733,7 +733,7 @@ If you set the timeout to ``0```, the command returns immediately without waitin
 A process is only gracefully killed if AiiDA is able to cancel the associated scheduler job.
 By default, the ``pause``, ``play`` and ``kill`` commands wait until the action has been executed, either failed or succeeded.
 If you want to kill the process regardless of whether the scheduler job is successfully cancelled, you can use the ``-F / --force`` option.
-In this case, a cancellation request is still sent to the scheduler, but the command does not wait for a successful response and proceeds to kill the AiiDA process.
+In this case, a cancellation request is still sent to the scheduler, but the command does not wait for a response and proceeds to kill the AiiDA process.
 
 
 .. rubric:: Footnotes

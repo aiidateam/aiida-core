@@ -55,8 +55,9 @@ For example, ``verdi process kill --help`` shows::
         -a, --all                       Kill all processes if no specific processes
                                         are specified.
         -t, --timeout FLOAT RANGE       Time in seconds to wait for a response
-                                        before timing out. If timeout is 0 the
-                                        command does not wait for response.
+                                        before timing out. If the timeout is 0 the
+                                        command returns immediately and attempts to
+                                        kill the process in the background.
                                         [default: inf; 0<=x<=inf]
         -F, --force                     Kills the process without waiting for a
                                         confirmation if the job has been killed.

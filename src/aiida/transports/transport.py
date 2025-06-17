@@ -915,10 +915,12 @@ class Transport(abc.ABC):
             for name in self.glob1(self.getcwd(), basename):
                 yield name
             return
+
         if has_magic(dirname):
-            dirs = self.iglob(dirname)
+            dirs = [d for d in self.iglob(dirname) if self.isdir(d)]
         else:
-            dirs = [dirname]
+            dirs = [dirname] if self.isdir(dirname) else []
+
         if has_magic(basename):
             glob_in_dir = self.glob1
         else:

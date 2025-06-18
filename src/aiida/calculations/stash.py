@@ -86,8 +86,8 @@ class StashCalculation(CalcJob):
         spec.inputs['metadata']['computer'].required = True
         spec.inputs['metadata']['options']['stash'].required = True
         spec.inputs['metadata']['options']['stash']['stash_mode'].required = True
-        spec.inputs['metadata']['options']['stash']['target_base'].required = True
-        spec.inputs['metadata']['options']['stash']['source_list'].required = True
+        spec.inputs['metadata']['options']['stash']['target_base']
+        spec.inputs['metadata']['options']['stash']['source_list']
         spec.inputs['metadata']['options']['resources'].default = {
             'num_machines': 1,
             'num_mpiprocs_per_machine': 1,
@@ -117,7 +117,7 @@ class StashCalculation(CalcJob):
             if custom_command is None:
                 raise ValueError("Input 'custom_command' is required for `StashMode.CUSTOM_SCRIPT` mode.")
 
-            working_directory = self.inputs.source_node.get_remote_path()  # type: ignore[union-attr]
+            working_directory = self.inputs.source_node.get_remote_path()
             change_dir = f'cd {working_directory}\n'
 
             with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:

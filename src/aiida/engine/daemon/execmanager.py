@@ -465,7 +465,6 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
 
     if stash_mode == StashMode.CUSTOM_SCRIPT.value:
         command = stash_options.get('custom_command')
-
         remote_stash = RemoteStashCustomData(
             computer=calculation.computer,
             stash_mode=StashMode(stash_mode),

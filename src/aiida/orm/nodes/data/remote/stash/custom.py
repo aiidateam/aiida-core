@@ -10,7 +10,7 @@
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
-from aiida.orm.fields import add_field
+from aiida.common.pydantic import MetadataField
 
 from .base import RemoteStashData
 
@@ -22,13 +22,10 @@ class RemoteStashCustomData(RemoteStashData):
 
     _storable = True
 
-    __qb_fields__ = [
-        add_field(
-            'custom_command',
-            dtype=str,
-            doc='The custom_command with which the data was stashed',
-        ),
-    ]
+    class Model(RemoteStashData.Model):
+        custom_command: str = MetadataField(
+            description='The custom_command with which the data is being stashed',
+        )
 
     def __init__(
         self,

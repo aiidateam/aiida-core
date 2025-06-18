@@ -118,14 +118,28 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     source_list = stash_options.get('source_list', None)
     stash_mode = stash_options.get('stash_mode', None)
 
-    if not isinstance(target_base, str) or not os.path.isabs(target_base):
-        return f'`metadata.options.stash.target_base` should be an absolute filepath, got: {target_base}'
+    if stash_mode is not StashMode.CUSTOM_SCRIPT.value:
+        if not isinstance(target_base, str) or not os.path.isabs(target_base):
+            return f'`metadata.options.stash.target_base` should be an absolute filepath, got: {target_base}'
 
-    if not isinstance(source_list, (list, tuple)) or any(
-        not isinstance(src, str) or os.path.isabs(src) for src in source_list
-    ):
-        port = 'metadata.options.stash.source_list'
-        return f'`{port}` should be a list or tuple of relative filepaths, got: {source_list}'
+        if not isinstance(source_list, (list, tuple)) or any(
+            not isinstance(src, str) or os.path.isabs(src) for src in source_list
+        ):
+            port = 'metadata.options.stash.source_list'
+            return f'`{port}` should be a list or tuple of relative filepaths, got: {source_list}'
+
+        if stash_options.get('custom_command', None) is not None:
+            return f'`metadata.options.stash.target_base` is not an input for {stash_mode} stashing mode'
+    else:
+        custom_command = stash_options.get('custom_command', None)
+        if not isinstance(custom_command, str):
+            return f'`metadata.options.stash.custom_command` should be a string, got: {custom_command}'
+
+        if stash_options.get('target_base', None) is not None:
+            return '`metadata.options.stash.target_base` is not an input for `StashMode.CUSTOM_SCRIPT` stashing mode'
+
+        if stash_options.get('source_list', None) is not None:
+            return '`metadata.options.stash.source_list` is not an input for `StashMode.CUSTOM_SCRIPT` stashing mode'
 
     try:
         StashMode(stash_mode)
@@ -434,6 +448,12 @@ class CalcJob(Process):
             valid_type=bool,
             required=False,
             help='Whether to follow symlinks while stashing or not, specific to StashMode.COMPRESS_* enums',
+        )
+        spec.input(
+            'metadata.options.stash.custom_command',
+            valid_type=str,
+            required=False,
+            help='',
         )
         spec.output(
             'remote_folder',

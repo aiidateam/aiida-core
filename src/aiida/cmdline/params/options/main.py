@@ -913,18 +913,98 @@ END_DATE = OverridableOption(
     help='End date for node mtime range selection for node collection dumping.',
 )
 
-# Add a new option for template variables in non-interactive mode
-TEMPLATE_VARS = OverridableOption(
-    '--template-vars',
-    type=click.STRING,
-    help='JSON string containing template variable values for non-interactive mode. '
-    'Example: \'{"label": "my-computer", "slurm_account": "my_account"}\'',
-)
+import click
 
-# Create an enhanced config file option
-TEMPLATE_FILE = OverridableOption(
+from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.template_config import load_and_process_template
+
+from .overridable import OverridableOption
+
+
+class TemplateOption(OverridableOption):
+    """Option that processes Jinja2 templates and updates Click context defaults."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the template option."""
+        kwargs.setdefault('is_eager', True)  # Process template before other options
+        kwargs.setdefault('expose_value', False)  # Don't pass template to the command function
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, **kwargs):
+        """Create the option with updated kwargs."""
+        kw_copy = self.kwargs.copy()
+        kw_copy.update(kwargs)
+
+        # Set the callback to process the template
+        saved_callback = kw_copy.get('callback')
+        kw_copy['callback'] = lambda ctx, param, value: self._process_template(ctx, param, value, saved_callback)
+
+        return click.option(*self.args, **kw_copy)
+
+    def _process_template(self, ctx, param, value, saved_callback):
+        """Process the template file and update context defaults."""
+        if not value:
+            return saved_callback(ctx, param, value) if saved_callback else value
+
+        ctx.default_map = ctx.default_map or {}
+
+        # Get template vars from context if they were set by TEMPLATE_VARS option
+        template_vars = getattr(ctx, '_template_vars', None)
+
+        # Determine if we're in non-interactive mode
+        non_interactive = False
+        for ctx_param in ctx.params.values():
+            if isinstance(ctx_param, bool) and 'non_interactive' in str(ctx_param):
+                non_interactive = ctx_param
+                break
+
+        try:
+            # Load and process the template
+            config_data = load_and_process_template(value, interactive=not non_interactive, template_vars=template_vars)
+
+            # Update the default map with template values
+            # This will set defaults for options that haven't been explicitly provided
+            for key, template_value in config_data.items():
+                if key not in ctx.default_map:
+                    ctx.default_map[key] = template_value
+
+        except Exception as e:
+            echo.echo_critical(f'Error processing template: {e}')
+
+        return saved_callback(ctx, param, value) if saved_callback else value
+
+
+# Updated TEMPLATE_FILE option
+TEMPLATE_FILE = TemplateOption(
     '--template',
     type=click.STRING,
     help='Load computer setup from configuration file in YAML format (local path or URL). '
     'Supports Jinja2 templates with interactive prompting.',
+)
+
+import json
+
+
+# Helper function to set template vars in context (updated)
+def set_template_vars_in_context(ctx, param, value):
+    """Set template variables in the context for the template option to use."""
+    if value:
+        try:
+            template_var_dict = json.loads(value)
+            # Store template vars in context for the template option to use
+            ctx._template_vars = template_var_dict
+        except json.JSONDecodeError as e:
+            raise click.BadParameter(f'Invalid JSON in template-vars: {e}')
+    return value
+
+
+# Updated TEMPLATE_VARS option with callback
+TEMPLATE_VARS = OverridableOption(
+    '--template-vars',
+    type=click.STRING,
+    is_eager=True,  # Process before template option
+    callback=set_template_vars_in_context,
+    expose_value=False,  # Don't pass to command function
+    help='JSON string containing template variable values for non-interactive mode. '
+    'Example: \'{"label": "my-computer", "slurm_account": "my_account"}\'',
 )

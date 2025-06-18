@@ -23,7 +23,6 @@ from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
 from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.cmdline.utils.template_config import load_and_process_template
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
 
@@ -309,9 +308,9 @@ def computer_setup(ctx, non_interactive, **kwargs):
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     # Debug output
-    print(f"Debug: non_interactive = {non_interactive}")
-    print(f"Debug: kwargs keys = {list(kwargs.keys())}")
-    print(f"Debug: ctx.default_map = {ctx.default_map}")
+    print(f'Debug: non_interactive = {non_interactive}')
+    print(f'Debug: kwargs keys = {list(kwargs.keys())}')
+    print(f'Debug: ctx.default_map = {ctx.default_map}')
 
     # Check for existing computer
     if kwargs.get('label') and kwargs['label'] in get_computer_names():
@@ -344,6 +343,7 @@ def computer_setup(ctx, non_interactive, **kwargs):
 
     profile = ctx.obj['profile']
     echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
+
 
 @verdi_computer.command('duplicate')
 @arguments.COMPUTER(callback=set_computer_builder)

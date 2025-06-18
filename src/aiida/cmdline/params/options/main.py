@@ -916,11 +916,12 @@ END_DATE = OverridableOption(
     help='End date for node mtime range selection for node collection dumping.',
 )
 
-import json
 import click
+
 from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.template_config import load_and_process_template
+
 from .overridable import OverridableOption
+
 
 # Template processing callback
 def process_template_callback(ctx, param, value):
@@ -938,11 +939,7 @@ def process_template_callback(ctx, param, value):
 
     try:
         # Load and process the template
-        config_data = load_and_process_template(
-            value,
-            interactive=not non_interactive,
-            template_vars=template_vars
-        )
+        config_data = load_and_process_template(value, interactive=not non_interactive, template_vars=template_vars)
 
         # Update the default map with template values
         for key, template_value in config_data.items():
@@ -953,6 +950,7 @@ def process_template_callback(ctx, param, value):
         echo.echo_critical(f'Error processing template: {e}')
 
     return value
+
 
 # Template vars callback
 def set_template_vars_callback(ctx, param, value):
@@ -966,6 +964,7 @@ def set_template_vars_callback(ctx, param, value):
             raise click.BadParameter(f'Invalid JSON in template-vars: {e}')
     return value
 
+
 # Template options using simple OverridableOption with callbacks
 TEMPLATE_VARS = OverridableOption(
     '--template-vars',
@@ -974,7 +973,7 @@ TEMPLATE_VARS = OverridableOption(
     callback=set_template_vars_callback,
     expose_value=False,  # Don't pass to command function
     help='JSON string containing template variable values for non-interactive mode. '
-         'Example: \'{"label": "my-computer", "slurm_account": "my_account"}\'',
+    'Example: \'{"label": "my-computer", "slurm_account": "my_account"}\'',
 )
 
 TEMPLATE_FILE = OverridableOption(
@@ -984,5 +983,5 @@ TEMPLATE_FILE = OverridableOption(
     callback=process_template_callback,
     expose_value=False,  # Don't pass template to the command function
     help='Load computer setup from configuration file in YAML format (local path or URL). '
-         'Supports Jinja2 templates with interactive prompting.',
+    'Supports Jinja2 templates with interactive prompting.',
 )

@@ -922,7 +922,7 @@ TEMPLATE_VARS = OverridableOption(
 )
 
 # Create an enhanced config file option
-TEMPLATE_FILE = click.option(
+TEMPLATE_FILE = OverridableOption(
     '--template',
     type=click.STRING,
     help='Load computer setup from configuration file in YAML format (local path or URL). '

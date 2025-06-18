@@ -918,7 +918,7 @@ TEMPLATE_VARS = OverridableOption(
     '--template-vars',
     type=click.STRING,
     help='JSON string containing template variable values for non-interactive mode. '
-         'Example: \'{"label": "my-computer", "slurm_account": "my_account"}\'',
+    'Example: \'{"label": "my-computer", "slurm_account": "my_account"}\'',
 )
 
 # Create an enhanced config file option
@@ -926,5 +926,5 @@ TEMPLATE_FILE = OverridableOption(
     '--template',
     type=click.STRING,
     help='Load computer setup from configuration file in YAML format (local path or URL). '
-         'Supports Jinja2 templates with interactive prompting.',
+    'Supports Jinja2 templates with interactive prompting.',
 )

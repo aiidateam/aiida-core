@@ -284,6 +284,7 @@ def set_template_vars_in_context(ctx, param, value):
             raise click.BadParameter(f'Invalid JSON in template-vars: {e}')
     return value
 
+
 # Modified computer setup command
 @verdi_computer.command('setup')
 @options_computer.LABEL()
@@ -308,7 +309,8 @@ def set_template_vars_in_context(ctx, param, value):
 def computer_setup(ctx, non_interactive, template, template_vars, **kwargs):
     """Create a new computer."""
     from aiida.orm.utils.builders.computer import ComputerBuilder
-    print("HELLO")
+
+    print('HELLO')
 
     # Handle template variables
     template_var_dict = None
@@ -323,9 +325,7 @@ def computer_setup(ctx, non_interactive, template, template_vars, **kwargs):
         try:
             # Load and process the template
             config_data = load_and_process_template(
-                template,
-                interactive=not non_interactive,
-                template_vars=template_var_dict
+                template, interactive=not non_interactive, template_vars=template_var_dict
             )
 
             # Update kwargs with config file data
@@ -368,7 +368,6 @@ def computer_setup(ctx, non_interactive, template, template_vars, **kwargs):
 
     profile = ctx.obj['profile']
     echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
-
 
 
 @verdi_computer.command('duplicate')

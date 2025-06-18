@@ -75,7 +75,9 @@ def configuration_callback(
         except Exception as exception:
             raise click.BadOptionUsage(option_name, f'Error reading configuration file: {exception}', ctx)
 
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
         valid_params = [param.name for param in ctx.command.params if param.name != option_name]
         specified_params = list(config.keys())
         unknown_params = set(specified_params).difference(set(valid_params))

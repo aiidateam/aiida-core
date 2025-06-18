@@ -632,17 +632,46 @@ Using the ``COPY`` mode, the target path defines another location (on the same f
    }
 
 .. note::
-
-   In the future, other methods for stashing may be implemented, such as placing all files in a (compressed) tarball or even stash files on tape.
-
-.. important::
-
-   If the ``stash`` option namespace is defined for a calculation job, the daemon will perform the stashing operations before the files are retrieved.
-   This means that the stashing happens before the parsing of the output files (which occurs after the retrieving step), such that that the files will be stashed independent of the final exit status that the parser will assign to the calculation job.
-   This may cause files to be stashed for calculations that will later be considered to have failed.
+    In addition to the ``COPY`` mode, the following modes, these storage efficient modes are also are available:
+    ``COMPRESS_TAR``, ``COMPRESS_TARBZ2``, ``COMPRESS_TARGZ``, ``COMPRESS_TARXZ``.
 
 The stashed files and folders are represented by an output node that is attached to the calculation node through the label ``remote_stash``, as a ``RemoteStashFolderData`` node.
 Just like the ``remote_folder`` node, this represents a location or files on a remote machine and so is equivalent to a "symbolic link".
+
+.. important::
+
+   If the ``stash`` option namespace is defined for a generic calculation job, the daemon will perform the stashing operations before the files are retrieved.
+   This means that the stashing happens before the parsing of the output files (which occurs after the retrieving step), such that that the files will be stashed independent of the final exit status that the parser will assign to the calculation job.
+   This may cause files to be stashed for calculations that will later be considered to have failed.
+
+To avoid this scenario, you can instead, stash via a separate calculation job, for example:
+
+.. code-block:: python
+
+    from aiida.common.datastructures import StashMode
+    from aiida.orm import load_node, load_computer
+
+    StashCalculation = CalculationFactory('core.stash')
+
+    calcjob_node = load_node(<CALCJOB_PK>)
+    remote_folder = calcjob_node.outputs.remote_folder
+
+    inputs = {
+        'metadata': {
+            'computer': load_computer(label="localhost"),
+            'options': {
+                'stash': {
+                'source_list': ['aiida.out', 'output.txt'],
+                'target_base': '/scratch/',
+                'stash_mode': StashMode.COPY.value,
+                },
+            },
+        },
+        'source_node': remote_folder,
+    }
+
+    result = run(StashCalculation, **inputs)
+
 
 .. important::
 

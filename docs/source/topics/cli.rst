@@ -52,11 +52,20 @@ For example, ``verdi process kill --help`` shows::
         Kill running processes.
 
     Options:
-        -t, --timeout FLOAT  Time in seconds to wait for a response before timing
-                             out.  [default: 5.0]
-        --wait / --no-wait   Wait for the action to be completed otherwise return as
-                             soon as it's scheduled.
-        -h, --help           Show this message and exit.
+        -a, --all                       Kill all processes if no specific processes
+                                        are specified.
+        -t, --timeout FLOAT RANGE       Time in seconds to wait for a response
+                                        before timing out. If the timeout is 0 the
+                                        command returns immediately and attempts to
+                                        kill the process in the background.
+                                        [default: inf; 0<=x<=inf]
+        -F, --force                     Kills the process without waiting for a
+                                        confirmation if the job has been killed.
+                                        Note: This may lead to orphaned jobs on your
+                                        HPC and should be used with caution.
+        -v, --verbosity [notset|debug|info|report|warning|error|critical]
+                                        Set the verbosity of the output.
+        -h, --help                      Show this message and exit.
 
 All help strings consist of three parts:
 

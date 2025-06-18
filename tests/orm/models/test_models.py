@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 from pydantic import BaseModel
 
+from aiida.common.datastructures import StashMode
 from aiida.orm import AuthInfo, Comment, Computer, Group, Log, User
 from aiida.orm.nodes.data import (
     ArrayData,
@@ -21,6 +22,9 @@ from aiida.orm.nodes.data import (
     Int,
     JsonableData,
     List,
+    RemoteData,
+    RemoteStashCompressedData,
+    RemoteStashData,
     SinglefileData,
     Str,
     StructureData,
@@ -48,6 +52,9 @@ orms_to_test = (
     SinglefileData,
     Str,
     StructureData,
+    RemoteData,
+    RemoteStashData,
+    RemoteStashCompressedData,
 )
 
 
@@ -134,6 +141,17 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         return Str, {'value': 'string'}
     if request.param is StructureData:
         return StructureData, {'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]]}
+    if request.param is RemoteData:
+        return RemoteData, {'remote_path': '/some/path'}
+    if request.param is RemoteStashData:
+        return RemoteStashData, {'stash_mode': StashMode.COMPRESS_TAR}
+    if request.param is RemoteStashCompressedData:
+        return RemoteStashCompressedData, {
+            'stash_mode': StashMode.COMPRESS_TAR,
+            'target_basepath': '/some/path',
+            'source_list': ['/some/file'],
+            'dereference': True,
+        }
 
     raise NotImplementedError()
 

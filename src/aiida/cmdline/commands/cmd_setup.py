@@ -81,6 +81,9 @@ def setup(
     if profile_uuid is not None:
         profile.uuid = profile_uuid
 
+    if non_interactive and db_engine != 'postgresql_psycopg':
+        echo.echo_deprecated('The `--db-engine` option is deprecated and has no effect.')
+
     profile.set_storage(
         db_backend,
         {
@@ -205,12 +208,15 @@ def quicksetup(
     # store default user settings so user does not have to re-enter them
     _store_default_user_settings(ctx.obj.config, email, first_name, last_name, institution)
 
+    if non_interactive and db_engine != 'postgresql_psycopg':
+        echo.echo_deprecated('The `--db-engine` option is deprecated and has no effect.')
+
     dbinfo_su = {
         'host': db_host,
         'port': db_port,
         'user': su_db_username,
         'password': su_db_password,
-        'database': su_db_name,
+        'dbname': su_db_name,
     }
     postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo_su)
 

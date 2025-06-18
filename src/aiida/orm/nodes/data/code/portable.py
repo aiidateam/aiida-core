@@ -63,7 +63,7 @@ class PortableCode(Code):
             description='Relative filepath of executable with directory of code files.',
             short_name='-X',
             priority=1,
-            orm_to_model=lambda node, _: str(node.filepath_executable),
+            orm_to_model=lambda node, _: str(node.filepath_executable),  # type: ignore[attr-defined]
         )
         filepath_files: str = MetadataField(
             ...,
@@ -72,7 +72,7 @@ class PortableCode(Code):
             short_name='-F',
             is_attribute=False,
             priority=2,
-            orm_to_model=_export_filpath_files_from_repo,
+            orm_to_model=_export_filpath_files_from_repo,  # type: ignore[arg-type]
         )
 
     def __init__(
@@ -104,7 +104,7 @@ class PortableCode(Code):
         if not filepath_files_path.is_dir():
             raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
 
-        self.filepath_executable = filepath_executable
+        self.filepath_executable = filepath_executable  # type: ignore[assignment] # should be fixed in mypy 1.15 see mypy/commit/1eb9d4c
         self.base.repository.put_object_from_tree(str(filepath_files))
 
     def _validate(self):

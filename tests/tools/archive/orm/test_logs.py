@@ -378,3 +378,28 @@ def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile_clean):
         log_message = str(log[1])
         assert log_uuid in total_log_uuids
         assert log_message in log_msgs
+
+
+def test_filter_size(tmp_path, aiida_profile_clean):
+    """Tests if the query still works when the number of logs is beyond the `filter_size limit."""
+    node = orm.CalculationNode().store()
+    node.seal()
+
+    nb_nodes = 5
+    for _ in range(nb_nodes):
+        node.logger.critical('some')
+
+    # Export DB
+    export_file_existing = tmp_path.joinpath('export.aiida')
+    create_archive([node], filename=export_file_existing)
+
+    # Clean database and reimport DB
+    aiida_profile_clean.reset_storage()
+    import_archive(export_file_existing, filter_size=2)
+
+    # Check correct import
+    builder = orm.QueryBuilder().append(orm.Node, tag='node', project=['uuid'])
+    builder.append(orm.Log, with_node='node', project=['uuid'])
+    builder = builder.all()
+
+    assert len(builder) == nb_nodes

@@ -9,8 +9,11 @@
 """Implementation of StashCalculation."""
 
 from aiida import orm
+from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import CalcInfo, CodeInfo, StashMode
 from aiida.engine import CalcJob
+
+EXEC_LOGGER = AIIDA_LOGGER.getChild('StashCalculation')
 
 
 class StashCalculation(CalcJob):
@@ -23,7 +26,7 @@ class StashCalculation(CalcJob):
 
         inputs = {
             'metadata': {
-                'computer': Computer.collection.get(label="localhost"),
+                'computer': load_computer(label="localhost"),
                 'options': {
                     'resources': {'num_machines': 1},
                     'stash': {
@@ -93,7 +96,17 @@ class StashCalculation(CalcJob):
         spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
 
     def prepare_for_submission(self, folder):
-        source_node = self.inputs.get('source_node')
+        if self.inputs.source_node.computer.uuid != self.inputs.metadata.computer.uuid:
+            EXEC_LOGGER.warning(
+                'YOUR SETTING MIGHT RESULT IN A SILENT FAILURE!'
+                ' The computer of the source node and the computer of the calculation are strongly advised be the same.'
+                ' However, it is not mandatory,'
+                ' in order to support the case that original computer somehow is not usable, anymore.'
+                ' E.g. the original computer was configured for ``core.torque``, but the HPC has move to SLURM,'
+                ' so you had to create a new computer configured with ``core.slurm``,'
+                " and you'll need a job submission to do this."
+            )
+
         stash_mode = self.inputs.metadata.options.stash.get('stash_mode')
 
         calc_info = CalcInfo()
@@ -104,7 +117,7 @@ class StashCalculation(CalcJob):
             if custom_command is None:
                 raise ValueError("Input 'custom_command' is required for `StashMode.CUSTOM_SCRIPT` mode.")
 
-            working_directory = source_node.get_remote_path()  # type: ignore[union-attr]
+            working_directory = self.inputs.source_node.get_remote_path()  # type: ignore[union-attr]
             change_dir = f'cd {working_directory}\n'
 
             with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:

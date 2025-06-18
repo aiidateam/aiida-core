@@ -24,7 +24,6 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 
 from .calculations import *
 from .data import *
-from .dumping import *
 from .graph import *
 from .groups import *
 from .visualization import *

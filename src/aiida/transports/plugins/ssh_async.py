@@ -110,7 +110,7 @@ class AsyncSshTransport(AsyncTransport):
     ]
 
     @classmethod
-    def _get_machine_suggestion_string(cls, computer):
+    def _get_host_suggestion_string(cls, computer):
         """Return a suggestion for the parameter machine."""
         # Originally set as 'Hostname' during `verdi computer setup`
         # and is passed as `machine=computer.hostname` in the codebase

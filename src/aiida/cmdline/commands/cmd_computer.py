@@ -285,8 +285,6 @@ def set_template_vars_in_context(ctx, param, value):
     return value
 
 
-
-# Modified computer setup command
 @verdi_computer.command('setup')
 @options_computer.LABEL()
 @options_computer.HOSTNAME()
@@ -301,12 +299,12 @@ def set_template_vars_in_context(ctx, param, value):
 @options_computer.USE_DOUBLE_QUOTES()
 @options_computer.PREPEND_TEXT()
 @options_computer.APPEND_TEXT()
-@options.NON_INTERACTIVE()  # Uncomment this line
-@options.TEMPLATE_FILE()
-@options.TEMPLATE_VARS()
+@options.NON_INTERACTIVE()
+@options.TEMPLATE_VARS()  # This should come before TEMPLATE_FILE
+@options.TEMPLATE_FILE()  # This will process the template and set defaults
 @click.pass_context
 @with_dbenv()
-def computer_setup(ctx, non_interactive, template, template_vars, **kwargs):
+def computer_setup(ctx, non_interactive, **kwargs):
     """Create a new computer."""
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
@@ -314,31 +312,6 @@ def computer_setup(ctx, non_interactive, template, template_vars, **kwargs):
     print(f"Debug: non_interactive = {non_interactive}")
     print(f"Debug: kwargs keys = {list(kwargs.keys())}")
     print(f"Debug: ctx.default_map = {ctx.default_map}")
-
-    # Handle template variables
-    template_var_dict = None
-    if template_vars:
-        try:
-            template_var_dict = json.loads(template_vars)
-        except json.JSONDecodeError as e:
-            echo.echo_critical(f'Invalid JSON in template-vars: {e}')
-
-    # Process template if provided
-    if template:
-        try:
-            # Load and process the template
-            config_data = load_and_process_template(
-                template, interactive=not non_interactive, template_vars=template_var_dict
-            )
-
-            # Update kwargs with config file data
-            # Only update if the value wasn't explicitly provided on command line
-            for key, value in config_data.items():
-                if key not in kwargs or kwargs[key] is None:
-                    kwargs[key] = value
-
-        except Exception as e:
-            echo.echo_critical(f'Error processing template: {e}')
 
     # Check for existing computer
     if kwargs.get('label') and kwargs['label'] in get_computer_names():
@@ -371,91 +344,6 @@ def computer_setup(ctx, non_interactive, template, template_vars, **kwargs):
 
     profile = ctx.obj['profile']
     echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
-
-# Modified computer setup command
-# @verdi_computer.command('setup')
-# @options_computer.LABEL()
-# @options_computer.HOSTNAME()
-# @options_computer.DESCRIPTION()
-# @options_computer.TRANSPORT()
-# @options_computer.SCHEDULER()
-# @options_computer.SHEBANG()
-# @options_computer.WORKDIR()
-# @options_computer.MPI_RUN_COMMAND()
-# @options_computer.MPI_PROCS_PER_MACHINE()
-# @options_computer.DEFAULT_MEMORY_PER_MACHINE()
-# @options_computer.USE_DOUBLE_QUOTES()
-# @options_computer.PREPEND_TEXT()
-# @options_computer.APPEND_TEXT()
-# # @options.NON_INTERACTIVE()
-# # @options.CONFIG_FILE()  # Keep the original config option for backward compatibility
-# @options.TEMPLATE_FILE()  # Add our new template option
-# @options.TEMPLATE_VARS()
-# @click.pass_context
-# @with_dbenv()
-# def computer_setup(ctx, non_interactive, template, template_vars, **kwargs):
-#     """Create a new computer."""
-#     from aiida.orm.utils.builders.computer import ComputerBuilder
-
-#     print('HELLO')
-
-#     # Handle template variables
-#     template_var_dict = None
-#     if template_vars:
-#         try:
-#             template_var_dict = json.loads(template_vars)
-#         except json.JSONDecodeError as e:
-#             echo.echo_critical(f'Invalid JSON in template-vars: {e}')
-
-#     # Process template if provided
-#     if template:
-#         try:
-#             # Load and process the template
-#             config_data = load_and_process_template(
-#                 template, interactive=not non_interactive, template_vars=template_var_dict
-#             )
-
-#             # Update kwargs with config file data
-#             # Only update if the value wasn't explicitly provided on command line
-#             for key, value in config_data.items():
-#                 if key not in kwargs or kwargs[key] is None:
-#                     kwargs[key] = value
-
-#         except Exception as e:
-#             echo.echo_critical(f'Error processing template: {e}')
-
-#     # Check for existing computer
-#     if kwargs.get('label') and kwargs['label'] in get_computer_names():
-#         echo.echo_critical(
-#             'A computer called {c} already exists. '
-#             'Use "verdi computer duplicate {c}" to set up a new '
-#             'computer starting from the settings of {c}.'.format(c=kwargs['label'])
-#         )
-
-#     # Convert entry points to their names
-#     if kwargs.get('transport'):
-#         kwargs['transport'] = kwargs['transport'].name
-#     if kwargs.get('scheduler'):
-#         kwargs['scheduler'] = kwargs['scheduler'].name
-
-#     computer_builder = ComputerBuilder(**kwargs)
-#     try:
-#         computer = computer_builder.new()
-#     except (ComputerBuilder.ComputerValidationError, ValidationError) as e:
-#         echo.echo_critical(f'{type(e).__name__}: {e}')
-
-#     try:
-#         computer.store()
-#     except ValidationError as err:
-#         echo.echo_critical(f'unable to store the computer: {err}. Exiting...')
-#     else:
-#         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
-
-#     echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
-
-#     profile = ctx.obj['profile']
-#     echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
-
 
 @verdi_computer.command('duplicate')
 @arguments.COMPUTER(callback=set_computer_builder)

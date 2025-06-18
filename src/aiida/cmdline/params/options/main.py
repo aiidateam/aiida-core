@@ -8,11 +8,14 @@
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 
+import json
 import pathlib
 
 import click
 
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
+from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.template_config import load_and_process_template
 from aiida.common.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.postgres import DEFAULT_DBINFO
 
@@ -913,80 +916,46 @@ END_DATE = OverridableOption(
     help='End date for node mtime range selection for node collection dumping.',
 )
 
+import json
 import click
-
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.template_config import load_and_process_template
-
 from .overridable import OverridableOption
 
+# Template processing callback
+def process_template_callback(ctx, param, value):
+    """Process template file and update context defaults."""
+    if not value:
+        return value
 
-class TemplateOption(OverridableOption):
-    """Option that processes Jinja2 templates and updates Click context defaults."""
+    ctx.default_map = ctx.default_map or {}
 
-    def __init__(self, *args, **kwargs):
-        """Initialize the template option."""
-        kwargs.setdefault('is_eager', True)  # Process template before other options
-        kwargs.setdefault('expose_value', False)  # Don't pass template to the command function
-        super().__init__(*args, **kwargs)
+    # Get template vars from context if they were set by TEMPLATE_VARS option
+    template_vars = getattr(ctx, '_template_vars', None)
 
-    def __call__(self, **kwargs):
-        """Create the option with updated kwargs."""
-        kw_copy = self.kwargs.copy()
-        kw_copy.update(kwargs)
+    # Check if we're in non-interactive mode
+    non_interactive = ctx.params.get('non_interactive', False)
 
-        # Set the callback to process the template
-        saved_callback = kw_copy.get('callback')
-        kw_copy['callback'] = lambda ctx, param, value: self._process_template(ctx, param, value, saved_callback)
+    try:
+        # Load and process the template
+        config_data = load_and_process_template(
+            value,
+            interactive=not non_interactive,
+            template_vars=template_vars
+        )
 
-        return click.option(*self.args, **kw_copy)
+        # Update the default map with template values
+        for key, template_value in config_data.items():
+            if key not in ctx.default_map:
+                ctx.default_map[key] = template_value
 
-    def _process_template(self, ctx, param, value, saved_callback):
-        """Process the template file and update context defaults."""
-        if not value:
-            return saved_callback(ctx, param, value) if saved_callback else value
+    except Exception as e:
+        echo.echo_critical(f'Error processing template: {e}')
 
-        ctx.default_map = ctx.default_map or {}
+    return value
 
-        # Get template vars from context if they were set by TEMPLATE_VARS option
-        template_vars = getattr(ctx, '_template_vars', None)
-
-        # Determine if we're in non-interactive mode
-        non_interactive = False
-        for ctx_param in ctx.params.values():
-            if isinstance(ctx_param, bool) and 'non_interactive' in str(ctx_param):
-                non_interactive = ctx_param
-                break
-
-        try:
-            # Load and process the template
-            config_data = load_and_process_template(value, interactive=not non_interactive, template_vars=template_vars)
-
-            # Update the default map with template values
-            # This will set defaults for options that haven't been explicitly provided
-            for key, template_value in config_data.items():
-                if key not in ctx.default_map:
-                    ctx.default_map[key] = template_value
-
-        except Exception as e:
-            echo.echo_critical(f'Error processing template: {e}')
-
-        return saved_callback(ctx, param, value) if saved_callback else value
-
-
-# Updated TEMPLATE_FILE option
-TEMPLATE_FILE = TemplateOption(
-    '--template',
-    type=click.STRING,
-    help='Load computer setup from configuration file in YAML format (local path or URL). '
-    'Supports Jinja2 templates with interactive prompting.',
-)
-
-import json
-
-
-# Helper function to set template vars in context (updated)
-def set_template_vars_in_context(ctx, param, value):
+# Template vars callback
+def set_template_vars_callback(ctx, param, value):
     """Set template variables in the context for the template option to use."""
     if value:
         try:
@@ -997,14 +966,23 @@ def set_template_vars_in_context(ctx, param, value):
             raise click.BadParameter(f'Invalid JSON in template-vars: {e}')
     return value
 
-
-# Updated TEMPLATE_VARS option with callback
+# Template options using simple OverridableOption with callbacks
 TEMPLATE_VARS = OverridableOption(
     '--template-vars',
     type=click.STRING,
     is_eager=True,  # Process before template option
-    callback=set_template_vars_in_context,
+    callback=set_template_vars_callback,
     expose_value=False,  # Don't pass to command function
     help='JSON string containing template variable values for non-interactive mode. '
-    'Example: \'{"label": "my-computer", "slurm_account": "my_account"}\'',
+         'Example: \'{"label": "my-computer", "slurm_account": "my_account"}\'',
+)
+
+TEMPLATE_FILE = OverridableOption(
+    '--template',
+    type=click.STRING,
+    is_eager=True,  # Process template before other options
+    callback=process_template_callback,
+    expose_value=False,  # Don't pass template to the command function
+    help='Load computer setup from configuration file in YAML format (local path or URL). '
+         'Supports Jinja2 templates with interactive prompting.',
 )

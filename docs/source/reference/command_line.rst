@@ -27,7 +27,7 @@ Below is a list with all available subcommands.
     Commands:
       create   Create an archive from all or part of a profiles's data.
       import   Import archived data to a profile.
-      info     Summarise the contents of an archive.
+      info     Summaries the contents of an archive.
       migrate  Migrate an archive to a more recent schema version.
       version  Print the current version of an archive's schema.
 
@@ -453,7 +453,7 @@ Below is a list with all available subcommands.
       --broker-host HOSTNAME          Hostname for the message broker.  [default: 127.0.0.1]
       --broker-port INTEGER           Port for the message broker.  [default: 5672]
       --broker-virtual-host TEXT      Name of the virtual host for the message broker without
-                                      leading forward slash.  [default: ""]
+                                      leading forward slash.
       --repository DIRECTORY          Absolute path to the file repository.
       --test-profile                  Designate the profile to be used for running the test
                                       suite only.

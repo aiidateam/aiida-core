@@ -437,7 +437,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     :param transport: an already opened transport.
     """
     from aiida.common.datastructures import StashMode
-    from aiida.orm import RemoteStashCompressedData, RemoteStashFolderData
+    from aiida.orm import RemoteStashCompressedData, RemoteStashCopyData
 
     logger_extra = get_dblogger_extra(calculation)
 
@@ -488,10 +488,10 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                 else:
                     EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
 
-        remote_stash = RemoteStashFolderData(
+        remote_stash = RemoteStashCopyData(
             computer=calculation.computer,
-            target_basepath=str(target_basepath),
             stash_mode=StashMode(stash_mode),
+            target_basepath=str(target_basepath),
             source_list=source_list,
         ).store()
 
@@ -512,8 +512,8 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
 
         remote_stash = RemoteStashCompressedData(
             computer=calculation.computer,
-            target_basepath=target_destination,
             stash_mode=StashMode(stash_mode),
+            target_basepath=target_destination,
             source_list=source_list,
             dereference=dereference,
         )

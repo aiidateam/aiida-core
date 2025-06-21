@@ -47,7 +47,7 @@ class InstalledCode(Code):
             ...,
             title='Computer',
             description='The remote computer on which the executable resides.',
-            orm_to_model=lambda node, _: node.computer.label,
+            orm_to_model=lambda node, _: node.computer.label,  # type: ignore[attr-defined]
             short_name='-Y',
             priority=2,
         )
@@ -83,7 +83,7 @@ class InstalledCode(Code):
         """
         super().__init__(**kwargs)
         self.computer = computer
-        self.filepath_executable = filepath_executable  # type: ignore[assignment]
+        self.filepath_executable = filepath_executable
 
     def _validate(self):
         """Validate the instance by checking that a computer has been defined.
@@ -159,7 +159,7 @@ class InstalledCode(Code):
         """
         return self.filepath_executable
 
-    @property  # type: ignore[override]
+    @property
     def computer(self) -> Computer:
         """Return the computer of this code."""
         assert self.backend_entity.computer is not None

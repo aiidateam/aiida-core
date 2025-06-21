@@ -328,3 +328,36 @@ def test_import_of_django_sqla_export_file(aiida_localhost, backend):
     res = builder.dict()[0]
 
     assert res['comp']['metadata'] == comp1_metadata
+
+
+def test_filter_size(tmp_path, aiida_profile_clean):
+    """Tests if the query still works when the number of computer is beyond the `filter_size limit."""
+    nb_nodes = 5
+    nodes = []
+    for i in range(nb_nodes):
+        node = orm.CalcJobNode()
+        node.computer = orm.Computer(
+            label=f'{i}', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+        ).store()
+        node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        node.label = f'{i}'
+        node.store()
+        node.seal()
+        nodes.append(node)
+
+    builder = orm.QueryBuilder().append(orm.Computer, project=['uuid', 'label'])
+    builder = builder.all()
+
+    # Export DB
+    export_file_existing = tmp_path.joinpath('export.aiida')
+    create_archive(nodes, filename=export_file_existing)
+
+    # Clean database and reimport DB
+    aiida_profile_clean.reset_storage()
+    import_archive(export_file_existing, filter_size=2)
+
+    # Check correct import
+    builder = orm.QueryBuilder().append(orm.Computer, project=['uuid', 'label'])
+    builder = builder.all()
+
+    assert len(builder) == nb_nodes

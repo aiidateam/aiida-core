@@ -125,7 +125,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     @property
     def logger(self) -> logging.Logger:
-        return self._logger  # type: ignore[has-type]
+        return self._logger
 
     @classmethod
     def _label_validator(cls, label: str) -> None:

@@ -449,6 +449,10 @@ select = [
   'RUF'  # ruff
 ]
 
+# https://github.com/astral-sh/ruff/issues/9298
+[tool.ruff.lint.pyflakes]
+extend-generics = ["aiida.orm.entities.Entity", "aiida.orm.entities.Collection"]
+
 [tool.tox]
 legacy_tox_ini = """
 [tox]

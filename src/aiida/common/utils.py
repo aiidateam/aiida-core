@@ -14,8 +14,9 @@ import io
 import os
 import re
 import sys
-from datetime import datetime
-from typing import Any, Dict
+from collections.abc import Iterable
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 from .lang import classproperty
@@ -41,7 +42,7 @@ def validate_uuid(given_uuid: str) -> bool:
     return str(parsed_uuid) == given_uuid
 
 
-def validate_list_of_string_tuples(val, tuple_length):
+def validate_list_of_string_tuples(val: Any, tuple_length: int) -> bool:
     """Check that:
 
     1. ``val`` is a list or tuple
@@ -75,7 +76,7 @@ def validate_list_of_string_tuples(val, tuple_length):
     return True
 
 
-def get_unique_filename(filename, list_of_filenames):
+def get_unique_filename(filename: str, list_of_filenames: 'list | tuple') -> str:
     """Return a unique filename that can be added to the list_of_filenames.
 
     If filename is not in list_of_filenames, it simply returns the filename
@@ -104,7 +105,7 @@ def get_unique_filename(filename, list_of_filenames):
     return new_filename
 
 
-def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):
+def str_timedelta(dt: timedelta, max_num_fields: int = 3, short: bool = False, negative_to_zero: bool = False) -> str:
     """Given a dt in seconds, return it in a HH:MM:SS format.
 
     :param dt: a TimeDelta object
@@ -170,7 +171,7 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):
     return f'{raw_string}{negative_string}'
 
 
-def get_class_string(obj):
+def get_class_string(obj: Any) -> str:
     """Return the string identifying the class of the object (module + object name,
     joined by dots).
 
@@ -182,7 +183,7 @@ def get_class_string(obj):
     return f'{obj.__module__}.{obj.__class__.__name__}'
 
 
-def get_object_from_string(class_string):
+def get_object_from_string(class_string: str) -> Any:
     """Given a string identifying an object (as returned by the get_class_string
     method) load and return the actual object.
     """
@@ -193,7 +194,7 @@ def get_object_from_string(class_string):
     return getattr(importlib.import_module(the_module), the_name)
 
 
-def grouper(n, iterable):
+def grouper(n: int, iterable: Iterable) -> Iterable:
     """Given an iterable, returns an iterable that returns tuples of groups of
     elements from iterable of length n, except the last one that has the
     required length to exaust iterable (i.e., there is no filling applied).
@@ -223,11 +224,11 @@ class ArrayCounter:
         self.seq = -1
 
     def array_counter(self):
-        self.seq += 1
+        self.seq += 1  # type: ignore[operator]
         return self.seq
 
 
-def are_dir_trees_equal(dir1, dir2):
+def are_dir_trees_equal(dir1: str, dir2: str) -> tuple[bool, str]:
     """Compare two directories recursively. Files in each directory are
     assumed to be equal if their names and contents are equal.
 
@@ -376,14 +377,14 @@ class Prettifier:
         }
 
     @classmethod
-    def get_prettifiers(cls):
+    def get_prettifiers(cls) -> list[str]:
         """Return a list of valid prettifier strings
 
         :return: a list of strings
         """
         return sorted(cls.prettifiers.keys())
 
-    def __init__(self, format):
+    def __init__(self, format: Optional[str]):
         """Create a class to pretttify strings of a given format
 
         :param format: a string with the format to use to prettify.
@@ -397,7 +398,7 @@ class Prettifier:
         except KeyError:
             raise ValueError(f"Unknown prettifier format {format}; valid formats: {', '.join(self.get_prettifiers())}")
 
-    def prettify(self, label):
+    def prettify(self, label: str) -> str:
         """Prettify a label using the format passed in the initializer
 
         :param label: the string to prettify
@@ -406,7 +407,7 @@ class Prettifier:
         return self._prettifier_f(label)
 
 
-def prettify_labels(labels, format=None):
+def prettify_labels(labels: list, format: Optional[str] = None) -> list:
     """Prettify label for typesetting in various formats
 
     :param labels: a list of length-2 tuples, in the format(position, label)
@@ -420,7 +421,7 @@ def prettify_labels(labels, format=None):
     return [(pos, prettifier.prettify(label)) for pos, label in labels]
 
 
-def join_labels(labels, join_symbol='|', threshold=1.0e-6):
+def join_labels(labels: list, join_symbol: str = '|', threshold: float = 1.0e-6):
     """Join labels with a joining symbol when they are very close
 
     :param labels: a list of length-2 tuples, in the format(position, label)
@@ -466,14 +467,14 @@ class Capturing:
         lines, use obj.stderr_lines. If False, obj.stderr_lines is None.
     """
 
-    def __init__(self, capture_stderr=False):
+    def __init__(self, capture_stderr: bool = False):
         """Construct a new instance."""
-        self.stdout_lines = []
+        self.stdout_lines: list[str] = []
         super().__init__()
 
         self._capture_stderr = capture_stderr
         if self._capture_stderr:
-            self.stderr_lines = []
+            self.stderr_lines: Optional[list] = []
         else:
             self.stderr_lines = None
 
@@ -494,7 +495,8 @@ class Capturing:
         sys.stdout = self._stdout
         del self._stringioout  # free up some memory
         if self._capture_stderr:
-            self.stderr_lines.extend(self._stringioerr.getvalue().splitlines())
+            # NOTE: mypy is not clever enough to now that when we're here, self.stderr_lines is not None
+            self.stderr_lines.extend(self._stringioerr.getvalue().splitlines())  # type: ignore[union-attr]
             sys.stderr = self._stderr
             del self._stringioerr  # free up some memory
 
@@ -517,7 +519,7 @@ class ErrorAccumulator:
 
     def __init__(self, *error_cls):
         self.error_cls = error_cls
-        self.errors = {k: [] for k in self.error_cls}
+        self.errors: dict[type, list] = {k: [] for k in self.error_cls}
 
     def run(self, function, *args, **kwargs):
         try:
@@ -525,7 +527,7 @@ class ErrorAccumulator:
         except self.error_cls as err:
             self.errors[err.__class__].append(err)
 
-    def success(self):
+    def success(self) -> bool:
         return bool(not any(self.errors.values()))
 
     def result(self, raise_error=Exception):
@@ -533,7 +535,7 @@ class ErrorAccumulator:
             self.raise_errors(raise_error)
         return self.success(), self.errors
 
-    def raise_errors(self, raise_cls):
+    def raise_errors(self, raise_cls: type[Exception]) -> None:
         if not self.success():
             raise raise_cls(f'The following errors were encountered: {self.errors}')
 
@@ -548,7 +550,7 @@ class DatetimePrecision:
                 4 (dare + hour + minute +second)
     """
 
-    def __init__(self, dtobj, precision):
+    def __init__(self, dtobj: datetime, precision: int):
         """Constructor to check valid datetime object and precision"""
         if not isinstance(dtobj, datetime):
             raise TypeError('dtobj argument has to be a datetime object')
@@ -583,9 +585,10 @@ def format_directory_size(size_in_bytes: int) -> str:
     factor = 1024  # 1 KB = 1024 B
     index = 0
 
-    while size_in_bytes >= factor and index < len(prefixes) - 1:
-        size_in_bytes /= factor
+    converted_size: float = size_in_bytes
+    while converted_size >= factor and index < len(prefixes) - 1:
+        converted_size /= factor
         index += 1
 
     # Format the size to two decimal places
-    return f'{size_in_bytes:.2f} {prefixes[index]}'
+    return f'{converted_size:.2f} {prefixes[index]}'

@@ -9,6 +9,7 @@
 """Various dictionary types with extended functionality."""
 
 from collections.abc import Mapping
+from typing import Optional
 
 from . import exceptions
 
@@ -25,7 +26,7 @@ class AttributeDict(dict):
     used.
     """
 
-    def __init__(self, dictionary=None):
+    def __init__(self, dictionary: Optional[Mapping] = None):
         """Recursively turn the `dict` and all its nested dictionaries into `AttributeDict` instance."""
         super().__init__()
         if dictionary is None:
@@ -37,7 +38,7 @@ class AttributeDict(dict):
             else:
                 self[key] = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Representation of the object."""
         return f'{self.__class__.__name__}({dict.__repr__(self)})'
 
@@ -104,7 +105,7 @@ class FixedFieldsAttributeDict(AttributeDict):
             _valid_fields = ('a','b','c')
     """
 
-    _valid_fields = tuple()
+    _valid_fields: tuple = tuple()
 
     def __init__(self, init=None):
         if init is None:
@@ -131,11 +132,11 @@ class FixedFieldsAttributeDict(AttributeDict):
             super().__setattr__(attr, value)
 
     @classmethod
-    def get_valid_fields(cls):
+    def get_valid_fields(cls) -> tuple:
         """Return the list of valid fields."""
         return cls._valid_fields
 
-    def __dir__(self):
+    def __dir__(self) -> list:
         return list(self._valid_fields)
 
 
@@ -192,7 +193,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
         See if we want that setting a default field to None means deleting it.
     """
 
-    _default_fields = tuple()
+    _default_fields: tuple = tuple()
 
     def validate(self):
         """Validate the keys, if any ``validate_*`` method is available."""
@@ -225,14 +226,14 @@ class DefaultFieldsAttributeDict(AttributeDict):
             raise
 
     @classmethod
-    def get_default_fields(cls):
+    def get_default_fields(cls) -> list:
         """Return the list of default fields, either defined in the instance or not."""
         return list(cls._default_fields)
 
-    def defaultkeys(self):
+    def defaultkeys(self) -> list:
         """Return the default keys defined in the instance."""
         return [_ for _ in self.keys() if _ in self._default_fields]
 
-    def extrakeys(self):
+    def extrakeys(self) -> list:
         """Return the extra keys defined in the instance."""
         return [_ for _ in self.keys() if _ not in self._default_fields]

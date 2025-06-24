@@ -26,6 +26,7 @@ class StashMode(Enum):
     COMPRESS_TARBZ2 = 'tar.bz2'
     COMPRESS_TARGZ = 'tar.gz'
     COMPRESS_TARXZ = 'tar.xz'
+    CUSTOM_SCRIPT = 'custom_script'
 
 
 class CalcJobState(Enum):

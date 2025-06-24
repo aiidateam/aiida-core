@@ -1,8 +1,10 @@
 name: release
 
-# Automate deployment to PyPI when creating a release tag vX.Y.Z
-# will only be published to PyPI if the git tag matches the release version
-# and the pre-commit and tests pass
+# Automate plubishing to PyPI and TestPyPI. When pushing a release tag vX.Y.Z,
+# the workflow will publish to PyPI. When the 'test-release' label is active on
+# a PR, the workflow will publish to TestPyPI on each update. In both cases it
+# is checked if pre-commit and the tests pass. When a release tag is pushed it
+# will in addition check if the tag and aiida-core version and tag match.
 
 on:
   # pull request event we use for test releases
@@ -21,10 +23,6 @@ jobs:
 
   check-release-tag:
 
-    # Only run this job on the main repository and not on forks.
-    # and only run it if a tag is pushed or if the test-release label is active.
-    # When the tag is released we will publish to pypi.
-    # When the a label is active we will publish to testpypi
     if: github.repository == 'aiidateam/aiida-core' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
 

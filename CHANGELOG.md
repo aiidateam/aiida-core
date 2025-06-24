@@ -209,7 +209,7 @@ inputs = {
         'options': {
             'resources': {'num_machines': 1},
             'stash': {
-                'stash_mode':  StashMode.COMPRESS_TARGZ,
+                'stash_mode':  StashMode.COMPRESS_TARGZ.value,
                 'target_base': '/scratch/',
                 'source_list': ['heavy_data.xyz'],  # ['*'] to stash everything
             },

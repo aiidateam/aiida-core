@@ -9,9 +9,7 @@
 """Module with `Node` sub class for workchain processes."""
 
 from typing import TYPE_CHECKING, Optional, Tuple
-from typing import TYPE_CHECKING, Optional, Tuple
 
-from aiida.common import exceptions
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
 

@@ -281,6 +281,11 @@ Documentation = 'https://aiida.readthedocs.io'
 Home = 'http://www.aiida.net/'
 Source = 'https://github.com/aiidateam/aiida-core'
 
+[tool.coverage.run]
+omit = [
+  "src/aiida/tools/_dumping/**/*"
+]
+
 [tool.flit.module]
 name = 'aiida'
 

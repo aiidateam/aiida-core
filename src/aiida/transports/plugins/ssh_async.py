@@ -114,22 +114,22 @@ class AsyncSshTransport(AsyncTransport):
     class Model(AsyncTransport.Model):
         """Model for the transport."""
 
-        machine_or_host: str = MetadataField(
+        host: str = MetadataField(
             '',
-            description='Machine name as in `ssh <your-host-name>` command. It should be a password-less setup',
-            title='Password-less host-setup to connect, as in command `ssh <your-host-name>`. '
+            title="Host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config)",
+            description='Password-less host-setup to connect, as in command `ssh <your-host-name>`. '
             "You'll need to have a `Host <your-host-name>` entry defined in your `~/.ssh/config` file.",
         )
         max_io_allowed: int = MetadataField(
             _DEFAULT_max_io_allowed,
-            description='Maximum number of concurrent I/O operations.',
-            title='Depends on various factors, such as your network bandwidth, the server load, etc. '
+            title='Maximum number of concurrent I/O operations.',
+            description='Depends on various factors, such as your network bandwidth, the server load, etc. '
             '(An experimental number)',
         )
         script_before: str = MetadataField(
             'None',
-            description='Local script to run *before* opening connection (path)',
-            title=' (optional) Specify a script to run *before* opening SSH connection. '
+            title='Local script to run *before* opening connection (path)',
+            description=' (optional) Specify a script to run *before* opening SSH connection. '
             'The script should be executable',
         )
 

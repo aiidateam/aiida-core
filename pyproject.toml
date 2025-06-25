@@ -24,7 +24,7 @@ dependencies = [
   "asyncssh~=2.19.0",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
-  'click~=8.1',
+  'click~=8.1.0',
   'disk-objectstore~=1.3.0',
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
@@ -189,6 +189,8 @@ requires-python = '>=3.9'
 'core.pcod' = 'aiida.tools.dbimporters.plugins.pcod:PcodDbImporter'
 'core.tcod' = 'aiida.tools.dbimporters.plugins.tcod:TcodDbImporter'
 
+[project.entry-points.'aiida.tools.workflows']
+
 [project.entry-points.'aiida.transports']
 'core.local' = 'aiida.transports.plugins.local:LocalTransport'
 'core.ssh' = 'aiida.transports.plugins.ssh:SshTransport'
@@ -278,6 +280,11 @@ Changelog = 'https://github.com/aiidateam/aiida-core/blob/main/CHANGELOG.md'
 Documentation = 'https://aiida.readthedocs.io'
 Home = 'http://www.aiida.net/'
 Source = 'https://github.com/aiidateam/aiida-core'
+
+[tool.coverage.run]
+omit = [
+  "src/aiida/tools/_dumping/**/*"
+]
 
 [tool.flit.module]
 name = 'aiida'
@@ -535,4 +542,4 @@ commands = molecule {posargs:test}
 # .pre-commit-config.yaml
 # .github/actions/install-aiida-core/action.yml
 # .readthedocs.yml
-required-version = ">=0.5.21"
+required-version = ">=0.7.0"

@@ -57,7 +57,7 @@ repos:
       )$
 
 - repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.5.22
+  rev: 0.7.6
   hooks:
     # Check and update the uv lockfile
   - id: uv-lock
@@ -126,8 +126,6 @@ repos:
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|
-        src/aiida/manage/tests/main.py|
-        src/aiida/manage/tests/pytest_fixtures.py|
         src/aiida/orm/comments.py|
         src/aiida/orm/computers.py|
         src/aiida/orm/implementation/storage_backend.py|

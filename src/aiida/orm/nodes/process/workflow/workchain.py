@@ -9,7 +9,9 @@
 """Module with `Node` sub class for workchain processes."""
 
 from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple
 
+from aiida.common import exceptions
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
 
@@ -26,19 +28,19 @@ class WorkChainNode(WorkflowNode):
 
     STEPPER_STATE_INFO_KEY = 'stepper_state_info'
 
-    # An optional entry point for a CalculationTools instance
+    # An optional entry point for a WorkflowTools instance
     _tools = None
 
     @property
-    def tools(self) -> 'WorkflowTools':
-        """Return the calculation tools that are registered for the process type associated with this calculation.
+    def tools(self) -> Optional['WorkflowTools']:
+        """Return the workflow tools that are registered for the process type associated with this workflow.
 
-        If the entry point name stored in the `process_type` of the CalcJobNode has an accompanying entry point in the
-        `aiida.tools.calculations` entry point category, it will attempt to load the entry point and instantiate it
+        If the entry point name stored in the `process_type` of the WorkChainNode has an accompanying entry point in the
+        `aiida.tools.workflows` entry point category, it will attempt to load the entry point and instantiate it
         passing the node to the constructor. If the entry point does not exist, cannot be resolved or loaded, a warning
-        will be logged and the base CalculationTools class will be instantiated and returned.
+        will be logged and the base WorkflowTools class will be instantiated and returned.
 
-        :return: CalculationTools instance
+        :return: WorkflowsTools instance
         """
         from aiida.plugins.entry_point import get_entry_point_from_string, is_valid_entry_point_string, load_entry_point
         from aiida.tools.workflows import WorkflowTools

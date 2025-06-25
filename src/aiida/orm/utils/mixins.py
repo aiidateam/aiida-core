@@ -183,7 +183,7 @@ class Sealable:
 
     SEALED_KEY = 'sealed'
 
-    class Model(pydantic.BaseModel):
+    class Model(pydantic.BaseModel, defer_build=True):
         sealed: bool = MetadataField(description='Whether the node is sealed')
 
     @classproperty

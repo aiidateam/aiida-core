@@ -8,7 +8,7 @@
 ###########################################################################
 """Base class for WorkflowTools
 
-Sub-classes can be registered in the `aiida.tools.calculations` category to enable the `CalcJobNode` class from being
+Sub-classes can be registered in the `aiida.tools.workflows` category to enable the `CalcJobNode` class from being
 able to find the tools plugin, load it and expose it through the `tools` property of the `CalcJobNode`.
 """
 

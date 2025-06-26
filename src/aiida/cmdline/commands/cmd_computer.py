@@ -659,7 +659,7 @@ def computer_delete(computer, dry_run):
     echo.echo_success(f'Computer `{label}` {"and all its associated nodes " if associated_nodes_pk else ""}deleted.')
 
 
-def configure_computer(ctx: click.Context, cls, non_interactive: bool, **kwargs):  # pylint: disable=unused-argument
+def configure_computer(ctx: click.Context, cls, **kwargs):  # pylint: disable=unused-argument
     """Configure a `Computer` instance."""
     from aiida import orm
 

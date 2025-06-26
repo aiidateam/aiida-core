@@ -410,7 +410,7 @@ class TestVerdiComputerConfigure:
         # I just pass the first four arguments:
         # the username, the port, look_for_keys, and the key_filename
         # This testing also checks that an empty key_filename is ok
-        command_input = f"\n\n{remote_username}\n{port}\n{'yes' if look_for_keys else 'no'}\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        command_input = f"{remote_username}\n{port}\n{'yes' if look_for_keys else 'no'}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
 
         result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input=command_input)
         assert comp.is_configured, result.output
@@ -499,7 +499,7 @@ class TestVerdiComputerConfigure:
         result = self.cli_runner(computer_configure, ['show', comp.label])
 
         result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults'])
-        assert 'username' in result.output
+        assert '* username' in result.output
 
         result = self.cli_runner(
             computer_configure, ['show', comp.label, '--defaults', '--as-option-string'], suppress_warnings=True
@@ -507,7 +507,7 @@ class TestVerdiComputerConfigure:
         assert '--username=' in result.output
 
         config_cmd = ['core.ssh', comp.label, '--non-interactive']
-        config_cmd.extend(result.output.strip().replace("'", '').split(' '))
+        config_cmd.extend(result.output.replace("'", '').split(' '))
         result_config = self.cli_runner(computer_configure, config_cmd, suppress_warnings=True)
         assert comp.is_configured, result_config.output
 

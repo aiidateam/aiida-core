@@ -16,14 +16,14 @@ from math import isclose
 
 import click
 
-from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
+from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
 from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common.exceptions import EntryPointError, ValidationError
-from aiida.plugins.entry_point import get_entry_point_names
+from aiida.common.exceptions import ValidationError
 
 
 @verdi.group('computer')
@@ -709,48 +709,33 @@ def computer_configure():
 def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current configuration for a computer."""
     from aiida.common.escaping import escape_for_bash
-    from aiida.transports import cli as transport_cli
 
     transport_cls = computer.get_transport_class()
-    option_list = [
-        param
-        for param in transport_cli.create_configure_cmd(computer.transport_type).params
-        if isinstance(param, click.core.Option)
-    ]
-    option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
+    configuration = computer.get_configuration(user)
+    model = transport_cls.Model(**configuration)
 
-    if defaults:
-        config = {option.name: transport_cli.transport_option_default(option.name, computer) for option in option_list}
-    else:
-        config = computer.get_configuration(user)
+    if not as_option_string:
+        echo_tabulate(list(model.model_dump().items()), tablefmt='plain')
+        return
 
-    option_items = []
-    if as_option_string:
-        for option in option_list:
-            t_opt = transport_cls.auth_options[option.name]
-            if config.get(option.name) or config.get(option.name) is False:
-                if t_opt.get('switch'):
-                    option_value = (
-                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"
-                    )
-                elif t_opt.get('is_flag'):
-                    is_default = config.get(option.name) == transport_cli.transport_option_default(
-                        option.name, computer
-                    )
-                    option_value = option.opts[-1] if is_default else ''
-                else:
-                    option_value = f'{option.opts[-1]}={option.type(config[option.name])}'
-                option_items.append(option_value)
-        opt_string = ' '.join(option_items)
-        echo.echo(escape_for_bash(opt_string))
-    else:
-        table = []
-        for name in transport_cls.get_valid_auth_params():
-            if name in config:
-                table.append((f'* {name}', config[name]))
+    option_list = []
+
+    for key, value in model.model_dump().items():
+        if value is None or value == '':
+            continue
+
+        if model.model_fields[key].annotation is bool:
+            if value:
+                option_list.append(f'--{key.replace("_", "-")}')
             else:
-                table.append((f'* {name}', '-'))
-        echo_tabulate(table, tablefmt='plain')
+                option_list.append(f'--no-{key.replace("_", "-")}')
+        else:
+            try:
+                option_list.append(f'--{key.replace("_", "-")}={value.value}')
+            except AttributeError:
+                option_list.append(f'--{key.replace("_", "-")}={value}')
+
+    echo.echo(escape_for_bash(' '.join(option_list)))
 
 
 @verdi_computer.group('export')

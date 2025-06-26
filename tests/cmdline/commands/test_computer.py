@@ -499,7 +499,7 @@ class TestVerdiComputerConfigure:
         result = self.cli_runner(computer_configure, ['show', comp.label])
 
         result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults'])
-        assert '* username' in result.output
+        assert 'username' in result.output
 
         result = self.cli_runner(
             computer_configure, ['show', comp.label, '--defaults', '--as-option-string'], suppress_warnings=True
@@ -507,7 +507,7 @@ class TestVerdiComputerConfigure:
         assert '--username=' in result.output
 
         config_cmd = ['core.ssh', comp.label, '--non-interactive']
-        config_cmd.extend(result.output.replace("'", '').split(' '))
+        config_cmd.extend(result.output.strip().replace("'", '').split(' '))
         result_config = self.cli_runner(computer_configure, config_cmd, suppress_warnings=True)
         assert comp.is_configured, result_config.output
 

@@ -104,7 +104,8 @@ jobs:
       env:
         FLIT_USERNAME: __token__
         FLIT_PASSWORD: ${{ secrets.PYPI_KEY }}
-        FLIT_INDEX_URL: https://pypi.org/
+        FLIT_INDEX_URL: https://upload.pypi.org/legacy/
+
 
   publish-testpypi:
     if: github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release')

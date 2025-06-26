@@ -659,25 +659,40 @@ def computer_delete(computer, dry_run):
     echo.echo_success(f'Computer `{label}` {"and all its associated nodes " if associated_nodes_pk else ""}deleted.')
 
 
-class LazyConfigureGroup(VerdiCommandGroup):
-    """A click group that will lazily load the subcommands for each transport plugin."""
+def configure_computer(ctx: click.Context, cls, **kwargs):  # pylint: disable=unused-argument
+    """Configure a `Computer` instance."""
+    from aiida import orm
 
-    def list_commands(self, ctx):
-        subcommands = super().list_commands(ctx)
-        subcommands.extend(get_entry_point_names('aiida.transports'))
-        return subcommands
+    user = kwargs.pop('user', None) or orm.User.collection.get_default()
+    computer = kwargs.pop('computer')
 
-    def get_command(self, ctx, name):
-        from aiida.transports import cli as transport_cli
+    echo.echo_report(f'Configuring computer {computer.label} for user {user.email}.')
+    if not user.is_default:
+        echo.echo_report('Configuring different user, defaults may not be appropriate.')
 
-        try:
-            command = transport_cli.create_configure_cmd(name)
-        except EntryPointError:
-            command = super().get_command(ctx, name)
-        return command
+    computer.configure(user=user, **kwargs)
+    echo.echo_success(f'{computer.label} successfully configured for {user.email}')
 
 
-@verdi_computer.group('configure', cls=LazyConfigureGroup)
+def validate_transport(ctx, _, computer):
+    """Validate that the transport of the computer matches that of the command."""
+    if computer.transport_type != ctx.command.name:
+        echo.echo_critical(
+            f'Transport of computer {computer.label} is `{computer.transport_type}` and not `{ctx.command.name}`.'
+        )
+    return computer
+
+
+@verdi_computer.group(
+    'configure',
+    cls=DynamicEntryPointCommandGroup,
+    command=configure_computer,
+    entry_point_group='aiida.transports',
+    shared_options=[
+        options.USER(),
+        arguments.COMPUTER(callback=validate_transport),
+    ],
+)
 def computer_configure():
     """Configure the transport for a computer and user."""
 

@@ -104,4 +104,32 @@ jobs:
       env:
         FLIT_USERNAME: __token__
         FLIT_PASSWORD: ${{ secrets.PYPI_KEY }}
-        FLIT_INDEX_URL: https://pypi.org/
+        FLIT_INDEX_URL: https://upload.pypi.org/legacy/
+
+
+  publish-testpypi:
+    if: github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release')
+
+    name: Publish to test PyPI
+
+    needs: [pre-commit, tests]
+
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+    - name: install flit
+      run: |
+        pip install flit~=3.4
+    - name: Build and publish
+      run: |
+        flit publish
+      env:
+        FLIT_USERNAME: __token__
+        FLIT_PASSWORD: ${{ secrets.TEST_PYPI_KEY }}
+        FLIT_INDEX_URL: https://test.pypi.org/legacy/

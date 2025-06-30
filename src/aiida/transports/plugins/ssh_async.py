@@ -110,8 +110,12 @@ class AsyncSshTransport(AsyncTransport):
     ]
 
     @classmethod
-    def _get_machine_suggestion_string(cls, computer):
-        """Return a suggestion for the parameter machine."""
+    def _get_host_suggestion_string(cls, computer):
+        """Return a suggestion for the parameter 'host'.
+        Note: the name of this methood is not arbitrary! In order to be picked up during
+        `verdi computer configure` command, it has to be in the following format:
+        `_get_<PARAMETER_NAME>_suggestion_string`
+        """
         # Originally set as 'Hostname' during `verdi computer setup`
         # and is passed as `machine=computer.hostname` in the codebase
         # unfortunately, name of hostname and machine are used interchangeably in the aiida-core codebase

@@ -175,7 +175,7 @@ jobs:
         extras: tests
 
     - name: Test legacy pytest fixtures
-      run: pytest --cov aiida --noconftest src/aiida/manage/tests/test_pytest_fixtures.py
+      run: pytest --cov aiida --noconftest .github/test_legacy_pytest_fixtures.py
 
     - name: Upload coverage report
       if: github.repository == 'aiidateam/aiida-core'

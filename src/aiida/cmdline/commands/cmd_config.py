@@ -213,7 +213,7 @@ def verdi_config_caching(disabled):
 
 
 @verdi_config.command('downgrade')
-@click.argument('version', type=click.Choice(list({str(m.down_revision) for m in MIGRATIONS})))
+@click.argument('version', type=click.Choice(sorted(list({str(m.down_revision) for m in MIGRATIONS}))))
 def verdi_config_downgrade(version):
     """Print a configuration, downgraded to a specific version."""
     path = Path(get_config_path())

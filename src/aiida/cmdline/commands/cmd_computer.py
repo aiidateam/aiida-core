@@ -25,6 +25,22 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
 
+from .registry_helpers import (
+    apply_computer_config,
+    fetch_resource_registry_data,
+    fetch_code_registry_data,
+    get_computer_configure_config,
+    get_computer_setup_config,
+    interactive_computer_selector,
+    interactive_system_selector,
+    save_config_to_file,
+    search_computers_in_aiida,
+    _get_computers_table,
+    _handle_computer_configuration,
+    _process_template_variables,
+    _replace_template_var,
+)
+
 
 @verdi.group('computer')
 def verdi_computer():
@@ -227,7 +243,7 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo, comput
 
     if not isclose(timing_true, timing_false, rel_tol=rel_tol, abs_tol=abs_tol):
         return True, (
-            f"\n\n{click.style('Warning:', fg='yellow', bold=True)} "
+            f'\n\n{click.style("Warning:", fg="yellow", bold=True)} '
             'The computer is configured to use a login shell, which is slower compared to a normal shell.\n'
             f'Command execution time of {timing_true:.3f} versus {timing_false:.3f} seconds, respectively).\n'
             'Unless this setting is really necessary, consider disabling it with:\n'
@@ -345,7 +361,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
-        echo.echo_critical(f"A computer called {kwargs['label']} already exists")
+        echo.echo_critical(f'A computer called {kwargs["label"]} already exists')
 
     kwargs['transport'] = kwargs['transport'].name
     kwargs['scheduler'] = kwargs['scheduler'].name
@@ -716,7 +732,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
                     option_value = (
-                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"
+                        option.opts[-1] if config.get(option.name) else f'--no-{option.name.replace("_", "-")}'
                     )
                 elif t_opt.get('is_flag'):
                     is_default = config.get(option.name) == transport_cli.transport_option_default(
@@ -832,3 +848,89 @@ def computer_export_config(computer, output_file, user, overwrite, sort):
             )
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} configuration exported to file `{output_file}`.')
+
+
+# NOTE: variant_data
+
+
+@verdi_computer.command('search')
+@click.argument('pattern', required=False)
+@click.option('--save-only', is_flag=True, help='Only save configuration to files, do not apply to AiiDA')
+@with_dbenv()
+def computer_search(pattern, save_only):
+    """Search for computers in the AiiDA code registry and setup/configure them.
+
+    If PATTERN is provided, search for computers matching that pattern.
+    If no pattern is provided, show all available computers in the registry.
+
+    This command allows you to discover and setup computers from the community
+    AiiDA code registry at https://aiidateam.github.io/aiida-code-registry/
+    """
+    from aiida.cmdline.utils.common import tabulate
+
+    try:
+        echo.echo_info('Fetching AiiDA code registry...')
+        # NOTE: There is quite some overlap between code registry and resource registry
+        # code registry: 'daint.cscs.ch', 'imxgesrv1.epfl.ch', 'lsmosrv6', 'fidis.epfl.ch', 'tigu.empa.ch', 'paratera',
+        # 'merlin.psi.ch', 'eiger.cscs.ch'
+        # resource registry: 'eiger.cscs.ch', 'daint.cscs.ch', 'merlin.psi.ch', 'merlin7.psi.ch'
+        registry_data = fetch_code_registry_data() | fetch_resource_registry_data()
+        echo.echo_success(f'Successfully fetched AiiDA registry data. Found {len(registry_data)} computers.')
+
+        if pattern:
+            matching_systems = [system for system in registry_data.keys() if pattern in system]
+            table = _get_computers_table({match: registry_data[match] for match in matching_systems})
+            if not matching_systems:
+                echo.echo_warning(f"No computers found matching pattern '{pattern}'")
+                if click.confirm('\nWould you like to show all available systems in the registry?'):
+                    table = _get_computers_table(registry_data)
+            else:
+                registry_data = {match: registry_data[match] for match in matching_systems}
+                echo.echo_report(f"Systems in the registry matching the pattern '{pattern}'")
+                table = _get_computers_table(registry_data)
+
+        else:
+            echo.echo_report('All available systems in the registries:')
+            table = _get_computers_table(registry_data)
+
+        echo.echo(
+            tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid')
+        )
+
+        # Offer to setup a computer
+        if click.confirm('\nWould you like to setup a computer from the registry?'):
+
+            if len(table) == 1:
+                import ipdb; ipdb.set_trace()
+                # Only one match, use it directly
+                computer_name = matching_systems[0]
+                # NOTE: Add here interactive variant selection
+                # computer_data = registry_data[computer_name]
+                # variant = computer_name['variant']
+                # echo.echo_info(f'Setting up {computer_name} / {variant}')
+                # _handle_computer_configuration(registry_data, computer_name, variant, save_only)
+            else:
+                # Multiple matches, let user choose
+                selection = interactive_system_selector(registry_data)
+                if not selection:
+                    return
+                system_name, variant = selection
+                _handle_computer_configuration(registry_data, system_name, variant, save_only)
+
+        #         if click.confirm("Would you like to browse all available registry computers?"):
+        #             # Show all systems in table format
+        #             all_systems = find_matching_registry_systems(registry_data, "")
+        #             if all_systems:
+        #                 echo.echo_info(f"\n🌐 All available computers in AiiDA registry ({len(all_systems)} total):")
+        #                 _print_computers_table(all_systems)
+
+        #                 if click.confirm("\nWould you like to setup a computer?"):
+        #                     selection = interactive_system_selector(registry_data)
+        #                     if selection:
+        #                         system_name, variant = selection
+        #                         _handle_computer_configuration(registry_data, system_name, variant, save_only)
+        #     else:
+        #         echo.echo_warning("No computers found in registry")
+
+    except Exception as e:
+        echo.echo_error(f'Failed to search registry: {e}')

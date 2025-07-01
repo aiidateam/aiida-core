@@ -25,14 +25,6 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
 
-from .registry_helpers import (
-    fetch_code_registry_data,
-    fetch_resource_registry_data,
-    get_computers_table,
-    handle_computer_configuration,
-    interactive_computer_selector,
-)
-
 
 @verdi.group('computer')
 def verdi_computer():
@@ -842,9 +834,6 @@ def computer_export_config(computer, output_file, user, overwrite, sort):
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} configuration exported to file `{output_file}`.')
 
 
-# NOTE: variant_data
-
-
 @verdi_computer.command('search')
 @click.argument('pattern', type=str, required=False)
 @click.option(
@@ -865,6 +854,17 @@ def computer_search(pattern, source):
     and the AiiDA resource registry athttps://github.com/aiidateam/aiida-resource-registry/
     """
     from aiida.cmdline.utils.common import tabulate
+    from aiida.cmdline.utils.registry_helpers import (
+        fetch_code_registry_data,
+        fetch_resource_registry_data,
+        get_computers_table,
+        get_computer_setup_config,
+        get_computer_configure_config,
+        interactive_computer_selector,
+        interactive_variant_selector,
+        process_template_variables,
+        save_config_to_file,
+    )
 
     echo.echo_report('Fetching AiiDA registries...')
     # NOTE: There is quite some overlap between code registry and resource registry
@@ -880,40 +880,93 @@ def computer_search(pattern, source):
 
     echo.echo_success(f'Successfully fetched AiiDA registry data. Found {len(registry_data)} computers.')
 
+    matching_systems = None
     if pattern:
         matching_systems = [system for system in registry_data.keys() if pattern in system]
         if not matching_systems:
             echo.echo_warning(f"No computers found matching pattern '{pattern}'")
-            if click.confirm('\nWould you like to show all available systems in the registry?'):
-                table = get_computers_table(registry_data)
+            if not click.confirm('\nWould you like to show all available systems in the registry?'):
+                return
+            table = get_computers_table(registry_data)
+            echo.echo(
+                tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid')
+            )
         else:
             registry_data = {match: registry_data[match] for match in matching_systems}
             echo.echo_report(f"Systems in the registry matching the pattern '{pattern}'")
             table = get_computers_table(registry_data)
+            echo.echo(
+                tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid')
+            )
 
     else:
         echo.echo_report('All available systems in the registries:')
         table = get_computers_table(registry_data)
+        echo.echo(
+            tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid')
+        )
 
-    echo.echo(tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid'))
-
-    # Offer to setup a computer
-    if not click.confirm('\nWould you like to setup a computer from the registry?'):
+    # Offer to save configuration to files
+    if not click.confirm('\nWould you like to save computer configuration to files?'):
         return
 
-    if len(table) == 1:
-        import ipdb
-
-        ipdb.set_trace()
-        # Only one match, use it directly
-        # NOTE: Use here only interactive variant selection
-        selection = interactive_computer_selector(registry_data)
-        if not selection:
+    # Handle computer selection based on pattern matching
+    if matching_systems and len(matching_systems) == 1:
+        # Only one match, use it directly and just select variant
+        selected_computer = matching_systems[0]
+        echo.echo_report(f'Using the only matching computer: {selected_computer}')
+        selected_variant = interactive_variant_selector(registry_data, selected_computer)
+        if not selected_variant:
             return
+        selection = (selected_computer, selected_variant)
     else:
-        # Multiple matches, let user choose
-        selection = interactive_computer_selector(registry_data)
-        if not selection:
+        # Multiple matches or no pattern, let user choose computer and variant
+        selected_computer = interactive_computer_selector(registry_data)
+        if not selected_computer:
             return
-        system_name, variant = selection
-        handle_computer_configuration(registry_data, system_name, variant)
+
+        selected_variant = interactive_variant_selector(registry_data, selected_computer)
+        if not selected_variant:
+            return
+
+        selection = (selected_computer, selected_variant)
+
+    system_name, variant = selection
+
+    try:
+        # Get the raw configurations
+        setup_config = get_computer_setup_config(registry_data, system_name, variant)
+        configure_config = get_computer_configure_config(registry_data, system_name, variant)
+
+        echo.echo_info(f'\n📋 Processing configuration for {system_name} ({variant})')
+
+        # Process template variables for setup config
+        echo.echo_info('\n🔧 Processing computer setup configuration...')
+        processed_setup_config = process_template_variables(setup_config)
+        if processed_setup_config is None:
+            echo.echo_info('Configuration processing was cancelled.')
+            return
+
+        # Process template variables for configure config
+        echo.echo_info('\n🔐 Processing computer configure configuration...')
+        processed_configure_config = process_template_variables(configure_config)
+        if processed_configure_config is None:
+            echo.echo_info('Configuration processing was cancelled.')
+            return
+
+        # Save both configurations to files
+        echo.echo_info('Saving configurations to files...')
+
+        setup_file = save_config_to_file(processed_setup_config, 'setup', system_name, variant)
+        configure_file = save_config_to_file(processed_configure_config, 'configure', system_name, variant)
+
+        echo.echo_success('Configuration files created successfully!')
+        echo.echo('To set up the computer, run:')
+        echo.echo(f'  verdi computer setup --config {setup_file}')
+        echo.echo('\nTo configure the computer, run:')
+        # TODO: Dynamically print transport endpoint, don't hardcode to core.ssh
+        echo.echo(f'  verdi computer configure core.ssh <computer-label> --config {configure_file}')
+
+    except Exception as e:
+        echo.echo_critical(f'Error processing configuration: {e}')
+        return

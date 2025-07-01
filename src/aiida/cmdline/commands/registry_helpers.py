@@ -16,18 +16,18 @@ from aiida.common.exceptions import ValidationError
 # Direct URL to the database.json file
 
 __all__ = (
-    'get_computers_table',
-    'handle_computer_configuration',
-    'process_template_variables',
-    'replace_template_var',
     'apply_computer_config',
     'fetch_resource_registry_data',
     'get_available_codes',
     'get_computer_configure_config',
     'get_computer_setup_config',
-    'interactive_config_handling',
+    'get_computers_table',
+    'handle_computer_configuration',
     'interactive_computer_selector',
+    'interactive_config_handling',
     'list_computer_variants',
+    'process_template_variables',
+    'replace_template_var',
     'save_config_to_file',
 )
 
@@ -261,8 +261,6 @@ def interactive_computer_selector(registry_data: t.Dict[str, t.Any]) -> t.Option
             return None
 
 
-
-#
 def interactive_config_handling(computer_name: str, variant: str) -> t.Optional[bool]:
     """Ask user whether to apply computer configuration directly or save to file."""
     echo.echo_info(f'\nConfiguration found for {computer_name} / {variant}')
@@ -456,7 +454,7 @@ def process_template_variables(config):
         # Show where this variable is used
         usage_examples = _get_template_usage_examples(processed_config, var_name)
         if usage_examples:
-            echo.echo(f"Template variable: {{{{ {var_name} }}}}")
+            echo.echo(f'Template variable: {{{{ {var_name} }}}}')
             echo.echo('Used in:')
             for example in usage_examples:
                 echo.echo(f'  {example}')
@@ -464,7 +462,7 @@ def process_template_variables(config):
         try:
             value = click.prompt(f"Enter value for '{var_name}'", type=str)
             var_values[var_name] = value
-            echo.echo('='*40)
+            echo.echo('=' * 40)
 
         except click.Abort:
             return None

@@ -26,11 +26,10 @@ from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
 
 from .registry_helpers import (
+    fetch_code_registry_data,
+    fetch_resource_registry_data,
     get_computers_table,
     handle_computer_configuration,
-    fetch_resource_registry_data,
-    fetch_code_registry_data,
-    interactive_config_handling,
     interactive_computer_selector,
 )
 

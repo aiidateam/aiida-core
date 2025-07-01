@@ -1,7 +1,8 @@
 """Helper functions for AiiDA code registry integration."""
 
+import copy
 import json
-import tempfile
+import re
 import typing as t
 from pathlib import Path
 
@@ -10,26 +11,23 @@ import requests
 import yaml
 
 from aiida.cmdline.utils import echo
-from aiida.common.exceptions import EntryPointError, ValidationError
+from aiida.common.exceptions import ValidationError
 
 # Direct URL to the database.json file
 
 __all__ = (
-    '_handle_computer_configuration',
-    '_get_computers_table',
-    '_process_template_variables',
-    '_replace_template_var',
+    'get_computers_table',
+    'handle_computer_configuration',
+    'process_template_variables',
+    'replace_template_var',
     'apply_computer_config',
     'fetch_resource_registry_data',
-    'find_codes_by_name',
     'get_available_codes',
     'get_computer_configure_config',
     'get_computer_setup_config',
-    'interactive_code_selector',
+    'interactive_config_handling',
     'interactive_computer_selector',
-    'interactive_system_selector',
-    'list_available_systems',
-    'list_system_variants',
+    'list_computer_variants',
     'save_config_to_file',
 )
 
@@ -57,11 +55,11 @@ def fetch_code_registry_data() -> t.Dict[str, t.Any]:
 
             for variant_name, variant_data in host_data.items():
                 if variant_name == 'default':
-                    # Preserve default partition as-is
+                    # Preserve default variant as-is
                     categorized_data[hostname]['default'] = variant_data
                     continue
 
-                # Initialize new structure for this partition
+                # Initialize new structure for this variant
                 categorized_data[hostname][variant_name] = {'computer': {}, 'codes': {}}
 
                 # Separate computer and code configurations
@@ -107,145 +105,120 @@ def fetch_resource_registry_data() -> t.Dict[str, t.Any]:
         raise click.ClickException(f'Failed to parse JSON data: {e}')
 
 
-def remove_metadata_sections(data: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:
+def remove_metadata_sections(registry_data: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:
     """
-    Recursively remove 'metadata' keys from nested dictionaries.
+    Remove 'metadata' keys from the registry data structure.
+
+    The metadata appears at a consistent depth:
+    hostname → variant → type → item → metadata
 
     Args:
-        data: Dictionary that may contain metadata sections
+        data: Registry dictionary
 
     Returns:
         Dictionary with metadata sections removed
     """
-    if not isinstance(data, dict):
-        return data
-
     cleaned = {}
-    for key, value in data.items():
-        if key == 'metadata':
-            # Skip metadata sections entirely
-            continue
-        elif isinstance(value, dict):
-            # Recursively clean nested dictionaries
-            cleaned[key] = remove_metadata_sections(value)
-        else:
-            # Keep non-dict values as-is
-            cleaned[key] = value
+
+    for hostname, host_data in registry_data.items():
+        cleaned[hostname] = {}
+
+        for variant, variant_data in host_data.items():
+            if variant == 'default':
+                # Keep default value as-is
+                cleaned[hostname][variant] = variant_data
+                continue
+
+            cleaned[hostname][variant] = {}
+
+            for section_type, section_data in variant_data.items():
+                cleaned[hostname][variant][section_type] = {}
+
+                for item_name, item_data in section_data.items():
+                    # Copy all item data except metadata
+                    cleaned[hostname][variant][section_type][item_name] = {
+                        k: v for k, v in item_data.items() if k != 'metadata'
+                    }
 
     return cleaned
 
 
-def list_available_systems(registry_data: t.Dict[str, t.Any]) -> t.List[str]:
-    """List all available computer systems in the registry."""
-    return list(registry_data.keys())
-
-
-def list_system_variants(registry_data: t.Dict[str, t.Any], system_name: str) -> t.List[str]:
+def list_computer_variants(registry_data: t.Dict[str, t.Any], computer_name: str) -> t.List[str]:
     """List all available variants for a given system."""
-    if system_name not in registry_data:
-        raise ValueError(f"System '{system_name}' not found in registry")
+    if computer_name not in registry_data:
+        msg = f"Computer '{computer_name}' not found in registry"
+        raise ValueError(msg)
 
-    system_data = registry_data[system_name]
-    variants = [key for key in system_data.keys() if key != 'default']
+    computer_data = registry_data[computer_name]
+    variants = [key for key in computer_data.keys() if key != 'default']
     return variants
 
 
-def get_computer_setup_config(registry_data: t.Dict[str, t.Any], system_name: str, variant: str) -> t.Dict[str, t.Any]:
+def get_computer_setup_config(
+    registry_data: t.Dict[str, t.Any], computer_name: str, variant: str
+) -> t.Dict[str, t.Any]:
     """Get the computer setup configuration for a specific system and variant."""
-    if system_name not in registry_data:
-        raise ValueError(f"System '{system_name}' not found in registry")
+    if computer_name not in registry_data:
+        raise ValueError(f"System '{computer_name}' not found in registry")
 
-    system_data = registry_data[system_name]
+    computer_data = registry_data[computer_name]
 
-    if variant not in system_data:
-        available_variants = list_system_variants(registry_data, system_name)
-        raise ValueError(f"Variant '{variant}' not found for system '{system_name}'. Available: {available_variants}")
+    if variant not in computer_data:
+        available_variants = list_computer_variants(registry_data, computer_name)
+        raise ValueError(f"Variant '{variant}' not found for system '{computer_name}'. Available: {available_variants}")
 
-    return system_data[variant]['computer']['computer-setup']
+    return computer_data[variant]['computer']['computer-setup']
 
 
 def get_computer_configure_config(
-    registry_data: t.Dict[str, t.Any], system_name: str, variant: str
+    registry_data: t.Dict[str, t.Any], computer_name: str, variant: str
 ) -> t.Dict[str, t.Any]:
     """Get the computer configure configuration for a specific system and variant."""
-    if system_name not in registry_data:
-        raise ValueError(f"System '{system_name}' not found in registry")
+    if computer_name not in registry_data:
+        raise ValueError(f"Computer '{computer_name}' not found in registry")
 
-    system_data = registry_data[system_name]
+    computer_data = registry_data[computer_name]
 
-    if variant not in system_data:
-        available_variants = list_system_variants(registry_data, system_name)
-        raise ValueError(f"Variant '{variant}' not found for system '{system_name}'. Available: {available_variants}")
+    if variant not in computer_data:
+        available_variants = list_computer_variants(registry_data, computer_name)
+        raise ValueError(f"Variant '{variant}' not found for system '{computer_name}'. Available: {available_variants}")
 
-    return system_data[variant]['computer']['computer-configure']
-
-
-def get_available_codes(registry_data: t.Dict[str, t.Any], system_name: str, variant: str) -> t.Dict[str, t.Any]:
-    """Get all available codes for a specific system and variant."""
-    if system_name not in registry_data:
-        raise ValueError(f"System '{system_name}' not found in registry")
-
-    system_data = registry_data[system_name]
-
-    if variant not in system_data:
-        available_variants = list_system_variants(registry_data, system_name)
-        raise ValueError(f"Variant '{variant}' not found for system '{system_name}'. Available: {available_variants}")
-
-    return system_data[variant].get('codes', {})
+    return computer_data[variant]['computer']['computer-configure']
 
 
-def find_codes_by_name(registry_data: t.Dict[str, t.Any], code_pattern: str) -> t.List[t.Dict[str, t.Any]]:
-    """Find codes across all systems that match a given pattern."""
-    matching_codes = []
-
-    for system_name, system_data in registry_data.items():
-        for variant_name, variant_data in system_data.items():
-            if variant_name == 'default':
-                continue
-
-            codes = variant_data.get('codes', {})
-            for code_name, code_config in codes.items():
-                if code_pattern.lower() in code_name.lower():
-                    matching_codes.append(
-                        {'system': system_name, 'variant': variant_name, 'code_name': code_name, 'config': code_config}
-                    )
-
-    return matching_codes
-
-
-def interactive_system_selector(registry_data: t.Dict[str, t.Any]) -> t.Optional[t.Tuple[str, str]]:
+def interactive_computer_selector(registry_data: t.Dict[str, t.Any]) -> t.Optional[t.Tuple[str, str]]:
     """Interactively prompt user to select a system and variant."""
-    systems = list_available_systems(registry_data)
+    computers = list(registry_data.keys())
 
-    if not systems:
+    if not computers:
         echo.echo_error('No systems found in registry.')
         return None
 
-    echo.echo_info('\n🖥️  Available Systems:')
+    echo.echo_info('\n🖥️  Available Computers:')
     echo.echo('=' * 80)
 
-    for i, system in enumerate(systems, 1):
-        default_variant = registry_data[system].get('default', 'N/A')
-        variants = list_system_variants(registry_data, system)
+    for i, computer in enumerate(computers, 1):
+        default_variant = registry_data[computer].get('default', 'N/A')
+        variants = list_computer_variants(registry_data, computer)
         variant_str = ', '.join(variants)
-        echo.echo(f'{i:2d}. {system}')
+        echo.echo(f'{i:2d}. {computer}')
         echo.echo(f'     Default: {default_variant} | Variants: {variant_str}')
 
-    echo.echo(f'{len(systems) + 1:2d}. Cancel')
+    echo.echo(f'{len(computers) + 1:2d}. Cancel')
     echo.echo('=' * 80)
 
     while True:
         try:
-            choice = click.prompt(f'\nSelect a system (1-{len(systems) + 1})', type=int)
+            choice = click.prompt(f'\nSelect a system (1-{len(computers) + 1})', type=int)
 
-            if choice == len(systems) + 1:
+            if choice == len(computers) + 1:
                 echo.echo_info('Selection cancelled.')
                 return None
-            elif 1 <= choice <= len(systems):
-                selected_system = systems[choice - 1]
+            elif 1 <= choice <= len(computers):
+                selected_system = computers[choice - 1]
 
                 # Now select variant
-                variants = list_system_variants(registry_data, selected_system)
+                variants = list_computer_variants(registry_data, selected_system)
 
                 echo.echo_info(f'\n⚙️  Available variants for {selected_system}:')
                 echo.echo('=' * 50)
@@ -281,16 +254,18 @@ def interactive_system_selector(registry_data: t.Dict[str, t.Any]) -> t.Optional
                         return None
 
             else:
-                echo.echo_error(f'Invalid choice. Please enter a number between 1 and {len(systems) + 1}.')
+                echo.echo_error(f'Invalid choice. Please enter a number between 1 and {len(computers) + 1}.')
 
         except click.Abort:
             echo.echo_info('Selection cancelled.')
             return None
 
 
-def interactive_computer_selector(system_name: str, variant: str) -> t.Optional[bool]:
+
+#
+def interactive_config_handling(computer_name: str, variant: str) -> t.Optional[bool]:
     """Ask user whether to apply computer configuration directly or save to file."""
-    echo.echo_info(f'\nConfiguration found for {system_name} / {variant}')
+    echo.echo_info(f'\nConfiguration found for {computer_name} / {variant}')
     echo.echo('What would you like to do?')
     echo.echo('1. Setup computer in AiiDA directly')
     echo.echo('2. Save configuration to YAML files')
@@ -313,47 +288,11 @@ def interactive_computer_selector(system_name: str, variant: str) -> t.Optional[
             return None
 
 
-def interactive_code_selector(
-    registry_data: t.Dict[str, t.Any], system_name: str, variant: str
-) -> t.Optional[t.Dict[str, t.Any]]:
-    """Interactively select a code from the available codes for a system/variant."""
-    codes = get_available_codes(registry_data, system_name, variant)
-
-    if not codes:
-        echo.echo_warning(f'No codes found for {system_name} / {variant}')
-        return None
-
-    echo.echo_info(f'\n📦 Available codes for {system_name} / {variant}:')
-    echo.echo('=' * 50)
-
-    code_list = list(codes.items())
-    for i, (code_name, code_config) in enumerate(code_list, 1):
-        description = code_config.get('description', 'No description available')
-        echo.echo(f'{i:2d}. {code_name}')
-        echo.echo(f'     {description}')
-
-    echo.echo(f'{len(code_list) + 1:2d}. Cancel')
-    echo.echo('=' * 50)
-
-    while True:
-        try:
-            choice = click.prompt(f'\nSelect a code (1-{len(code_list) + 1})', type=int)
-
-            if choice == len(code_list) + 1:
-                return None
-            elif 1 <= choice <= len(code_list):
-                selected_code = code_list[choice - 1]
-                return {'name': selected_code[0], 'config': selected_code[1], 'system': system_name, 'variant': variant}
-            else:
-                echo.echo_error(f'Invalid choice. Please enter a number between 1 and {len(code_list) + 1}.')
-
-        except click.Abort:
-            return None
-
-
-def save_config_to_file(config: t.Dict[str, t.Any], config_type: str, system_name: str, variant: str) -> Path:
+# NOTE: Check if this function necessary or functionality already exists, e.g.,
+# via pydantic serialization
+def save_config_to_file(config: t.Dict[str, t.Any], config_type: str, computer_name: str, variant: str) -> Path:
     """Save configuration to a YAML file."""
-    filename = f'{system_name.replace(".", "_")}_{variant}_{config_type}.yaml'
+    filename = f'{computer_name.replace(".", "_")}_{variant}_{config_type}.yaml'
     filepath = Path.cwd() / filename
 
     # Handle file existence
@@ -361,7 +300,7 @@ def save_config_to_file(config: t.Dict[str, t.Any], config_type: str, system_nam
         if not click.confirm(f'File {filename} already exists. Overwrite?'):
             counter = 1
             while True:
-                new_filename = f'{system_name.replace(".", "_")}_{variant}_{config_type}_{counter}.yaml'
+                new_filename = f'{computer_name.replace(".", "_")}_{variant}_{config_type}_{counter}.yaml'
                 new_filepath = Path.cwd() / new_filename
                 if not new_filepath.exists():
                     filepath = new_filepath
@@ -417,7 +356,6 @@ def complete_computer_spec_with_defaults(setup_config: t.Dict[str, t.Any]) -> t.
 
 def apply_computer_config(setup_config: t.Dict[str, t.Any], configure_config: t.Dict[str, t.Any]) -> bool:
     """Apply computer configuration directly to AiiDA."""
-    from aiida.orm import Computer
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     try:
@@ -441,10 +379,7 @@ def apply_computer_config(setup_config: t.Dict[str, t.Any], configure_config: t.
 
                 user = User.collection.get_default()
 
-                # Process configure_config to remove any metadata
-                clean_configure_config = {k: v for k, v in configure_config.items() if k != 'metadata'}
-
-                authinfo = computer.configure(user=user, **clean_configure_config)
+                authinfo = computer.configure(user=user, **configure_config)
                 echo.echo_success(f"Computer '{computer.label}' configured successfully for user '{user.email}'")
 
             except Exception as e:
@@ -467,62 +402,7 @@ def apply_computer_config(setup_config: t.Dict[str, t.Any], configure_config: t.
         return False
 
 
-def _handle_computer_configuration(registry_data, system_name, variant, save_only=False):
-    """Handle the configuration of a computer from the registry."""
-    try:
-        setup_config = get_computer_setup_config(registry_data, system_name, variant)
-        configure_config = get_computer_configure_config(registry_data, system_name, variant)
-
-        # Process template variables
-        setup_config = _process_template_variables(setup_config)
-        configure_config = _process_template_variables(configure_config)
-
-        # Decide what to do with the configuration
-        if save_only:
-            apply_config = False
-        else:
-            apply_config = interactive_computer_selector(system_name, variant)
-            if apply_config is None:
-                return
-
-        if apply_config:
-            success = apply_computer_config(setup_config, configure_config)
-            if success:
-                echo.echo_success('Computer configuration applied successfully!')
-        else:
-            # Complete the configuration with defaults for saving
-            complete_config = complete_computer_spec_with_defaults(setup_config)
-            setup_file = save_config_to_file(complete_config, 'setup', system_name, variant)
-            configure_file = save_config_to_file(configure_config, 'configure', system_name, variant)
-
-            echo.echo_info('\nTo apply these configurations, run:')
-            echo.echo_info(f'  verdi computer setup --config {setup_file}')
-            echo.echo_info(
-                f'  verdi computer configure {complete_config.get("transport", "core.ssh")} {complete_config["label"]} --config {configure_file}'
-            )
-
-    except Exception as e:
-        echo.echo_error(f'Failed to handle computer configuration: {e}')
-        import traceback
-
-        traceback.print_exc()
-
-
-def search_computers_in_aiida(pattern: str) -> t.List[t.Any]:
-    """Search for computers in AiiDA database that match the pattern."""
-    try:
-        from aiida.orm import Computer, QueryBuilder
-
-        qb = QueryBuilder()
-        qb.append(Computer, filters={'label': {'ilike': f'%{pattern}%'}})
-
-        return [computer for [computer] in qb.all()]
-
-    except Exception:
-        return []
-
-
-def _get_computers_table(registry_data) -> t.List[t.List]:
+def get_computers_table(registry_data) -> t.List[t.List]:
     """Print a formatted table of computer systems."""
 
     table = []
@@ -531,14 +411,14 @@ def _get_computers_table(registry_data) -> t.List[t.List]:
     hostnames = []
     codes = []
 
-    for system_key, system_data in registry_data.items():
-        default_variant = system_data['default']
-        variant_list = [key for key in system_data.keys() if key not in ('default', default_variant)]
+    for computer_key, computer_data in registry_data.items():
+        default_variant = computer_data['default']
+        variant_list = [key for key in computer_data.keys() if key not in ('default', default_variant)]
         variant_str = f'{default_variant} (default)'
         if len(variant_list) > 0:
             variant_str += ', ' + ', '.join(variant_list)
         variants.append(variant_str)
-        default_config = system_data[default_variant]
+        default_config = computer_data[default_variant]
         default_hostname = default_config['computer']['computer-setup']['hostname']
         default_codes = [
             code.removesuffix(f'-{default_variant}')
@@ -556,82 +436,100 @@ def _get_computers_table(registry_data) -> t.List[t.List]:
     return table
 
 
-def _handle_computer_configuration(registry_data, system_name, variant, save_only=False):
-    """Handle the configuration of a computer from the registry."""
-    try:
-        setup_config = get_computer_setup_config(registry_data, system_name, variant)
-        configure_config = get_computer_configure_config(registry_data, system_name, variant)
-
-        # Process template variables
-        # FIXME: These two currently don't work. Placeholders are still in the created Computer
-        setup_config = _process_template_variables(setup_config)
-        configure_config = _process_template_variables(configure_config)
-
-        # Decide what to do with the configuration
-        apply_config = interactive_computer_selector(system_name, variant)
-        if apply_config is None:
-            return
-
-        if apply_config:
-            # TODO: Check here if a computer with the same label already exists.
-            success = apply_computer_config(setup_config, configure_config)
-        else:
-            setup_file = save_config_to_file(setup_config, 'setup', system_name, variant)
-            configure_file = save_config_to_file(configure_config, 'configure', system_name, variant)
-
-            echo.echo_info('\nTo apply these configurations, run:')
-            echo.echo_info(f'  verdi computer setup --config {setup_file}')
-            echo.echo_info(
-                f'  verdi computer configure {setup_config.get("transport", "core.ssh")} {setup_config["label"]} --config {configure_file}'
-            )
-
-    except Exception as e:
-        echo.echo_error(f'Failed to handle computer configuration: {e}')
-
-
-def _process_template_variables(config):
-    """Process template variables in configuration."""
-    import copy
-
+def process_template_variables(config):
+    """Process template variables in configuration by scanning for Jinja2 templates."""
     processed_config = copy.deepcopy(config)
 
-    # Get template variables from metadata if available
-    metadata = processed_config.get('metadata', {})
-    template_variables = metadata.get('template_variables', {})
+    # Find all template variables in the config
+    template_vars = find_template_variables(processed_config)
 
-    # Remove metadata from the final config
-    if 'metadata' in processed_config:
-        del processed_config['metadata']
+    if not template_vars:
+        return processed_config
 
-    # Prompt for template variables
-    for var_name, var_info in template_variables.items():
-        description = var_info.get('description', f'Value for {var_name}')
-        var_type = var_info.get('type', 'text')
-        default = var_info.get('default')
-        options_list = var_info.get('options', [])
+    echo.echo_report(f'Found {len(template_vars)} template variable(s) to configure:')
 
-        if var_type == 'list' and options_list:
-            echo.echo_info(f'\nAvailable options for {var_name}:')
-            for i, option in enumerate(options_list, 1):
-                echo.echo(f'  {i}. {option}')
+    # Prompt user for each template variable
+    var_values = {}
+    for var_name in template_vars:
+        echo.echo_info(f'\nTemplate variable: {var_name}')
 
-            while True:
-                try:
-                    choice = click.prompt(f'Select {description} (1-{len(options_list)})', type=int)
-                    if 1 <= choice <= len(options_list):
-                        value = options_list[choice - 1]
-                        break
-                    else:
-                        echo.echo_error(f'Please enter a number between 1 and {len(options_list)}')
-                except click.Abort:
-                    return None
-        else:
-            value = click.prompt(description, default=default, show_default=bool(default))
+        # Show where this variable is used
+        usage_examples = _get_template_usage_examples(processed_config, var_name)
+        if usage_examples:
+            echo.echo(f"Template variable: {{{{ {var_name} }}}}")
+            echo.echo('Used in:')
+            for example in usage_examples:
+                echo.echo(f'  {example}')
 
-        # Replace template variables in the config
+        try:
+            value = click.prompt(f"Enter value for '{var_name}'", type=str)
+            var_values[var_name] = value
+            echo.echo('='*40)
+
+        except click.Abort:
+            return None
+
+    # Replace all template variables with user values
+    for var_name, value in var_values.items():
         _replace_template_var(processed_config, var_name, value)
 
     return processed_config
+
+
+def find_template_variables(obj, template_vars=None):
+    """Recursively find all Jinja2 template variables in a nested structure."""
+    if template_vars is None:
+        template_vars = set()
+
+    # Regex pattern to match {{ variable_name }}
+    pattern = r'\{\{\s*([^}]+)\s*\}\}'
+
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if isinstance(value, str):
+                matches = re.findall(pattern, value)
+                for match in matches:
+                    # Clean up the variable name (remove extra spaces)
+                    var_name = match.strip()
+                    template_vars.add(var_name)
+            elif isinstance(value, (dict, list)):
+                find_template_variables(value, template_vars)
+    elif isinstance(obj, list):
+        for item in obj:
+            if isinstance(item, str):
+                matches = re.findall(pattern, item)
+                for match in matches:
+                    var_name = match.strip()
+                    template_vars.add(var_name)
+            elif isinstance(item, (dict, list)):
+                _find_template_variables(item, template_vars)
+
+    return template_vars
+
+
+def _get_template_usage_examples(obj, var_name, examples=None, path=''):
+    """Get examples of where a template variable is used."""
+    if examples is None:
+        examples = []
+
+    template_pattern = f'{{{{ {var_name} }}}}'
+
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            current_path = f'{path}.{key}' if path else key
+            if isinstance(value, str) and template_pattern in value:
+                examples.append(f'{current_path}: {value}')
+            elif isinstance(value, (dict, list)):
+                _get_template_usage_examples(value, var_name, examples, current_path)
+    elif isinstance(obj, list):
+        for i, item in enumerate(obj):
+            current_path = f'{path}[{i}]'
+            if isinstance(item, str) and template_pattern in item:
+                examples.append(f'{current_path}: {item}')
+            elif isinstance(item, (dict, list)):
+                _get_template_usage_examples(item, var_name, examples, current_path)
+
+    return examples
 
 
 def _replace_template_var(obj, var_name, value):
@@ -650,3 +548,31 @@ def _replace_template_var(obj, var_name, value):
                 obj[i] = item.replace(template_pattern, str(value))
             elif isinstance(item, (dict, list)):
                 _replace_template_var(item, var_name, value)
+
+
+def handle_computer_configuration(registry_data, computer_name, variant):
+    """Handle the configuration of a computer from the registry."""
+    setup_config = get_computer_setup_config(registry_data, computer_name, variant)
+    configure_config = get_computer_configure_config(registry_data, computer_name, variant)
+
+    # Process template variables
+    setup_config = process_template_variables(setup_config)
+    configure_config = process_template_variables(configure_config)
+
+    # Decide what to do with the configuration
+    apply_config = interactive_config_handling(computer_name, variant)
+    if apply_config is None:
+        return
+
+    if apply_config:
+        # TODO: Check here if a computer with the same label already exists.
+        success = apply_computer_config(setup_config, configure_config)
+    else:
+        setup_file = save_config_to_file(setup_config, 'setup', computer_name, variant)
+        configure_file = save_config_to_file(configure_config, 'configure', computer_name, variant)
+
+        echo.echo_info('\nTo apply these configurations, run:')
+        echo.echo_info(f'  verdi computer setup --config {setup_file}')
+        echo.echo_info(
+            f'  verdi computer configure {setup_config.get("transport", "core.ssh")} {setup_config["label"]} --config {configure_file}'
+        )

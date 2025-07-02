@@ -383,13 +383,13 @@ def empty_config(tmp_path) -> Config:
 
 
 @pytest.fixture
-def profile_factory() -> Profile:
+def profile_factory():
     """Create a new profile instance.
 
     :return: the profile instance.
     """
 
-    def _create_profile(name='test-profile', **kwargs):
+    def _create_profile(name='test-profile', **kwargs) -> Profile:
         repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
 
         profile_dictionary = {
@@ -424,41 +424,6 @@ def profile_factory() -> Profile:
         return Profile(name, profile_dictionary)
 
     return _create_profile
-
-
-@pytest.fixture
-def profile_factory_sqlite_zip() -> Profile:
-    """Create a new profile instance with sqlite_zip storage backend.
-
-    :return: function to create sqlite_zip profile instances.
-    """
-
-    def _create_sqlite_zip_profile(name='test-profile', filepath=None, **kwargs):
-        """Create a profile with sqlite_zip backend.
-
-        :param name: profile name
-        :param filepath: path to the .aiida zip file
-        :param kwargs: additional profile options
-        """
-        if filepath is None:
-            filepath = f'/tmp/{name}.aiida'
-
-        profile_dictionary = {
-            'default_user_email': kwargs.pop('default_user_email', 'dummy@localhost'),
-            'storage': {
-                'backend': 'core.sqlite_zip',
-                'config': {'filepath': str(filepath)},
-            },
-            'process_control': {
-                'backend': kwargs.pop('process_control_backend', None),
-                'config': kwargs.pop('process_control_config', {}),
-            },
-            'test_profile': kwargs.pop('test_profile', True),
-        }
-
-        return Profile(name, profile_dictionary)
-
-    return _create_sqlite_zip_profile
 
 
 @pytest.fixture

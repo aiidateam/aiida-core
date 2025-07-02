@@ -960,7 +960,6 @@ def computer_search(pattern, source):
         setup_file = save_config_to_file(processed_setup_config, 'setup', system_name, variant)
         configure_file = save_config_to_file(processed_configure_config, 'configure', system_name, variant)
 
-        echo.echo_success('Configuration files created successfully!')
         echo.echo('To set up the computer, run:')
         echo.echo(f'  verdi computer setup --config {setup_file}')
         echo.echo('\nTo configure the computer, run:')

@@ -285,7 +285,6 @@ def profile_delete(force, delete_data, profiles):
             continue
 
         get_config().delete_profile(profile.name, delete_storage=delete_data)
-
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
 
 

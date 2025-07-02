@@ -286,16 +286,20 @@ def profile_delete(force, delete_data, profiles):
             echo.echo_report(f'Deleting of `{profile.name}` cancelled.')
             continue
 
-        storage_filepath_str = profile.storage_config['filepath']
-        if profile.storage_backend == 'core.sqlite_zip' and not Path(storage_filepath_str).exists():
-            echo.echo_warning(
-                (
-                    f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the `.aiida` file at '
-                    f"`{storage_filepath_str}` doesn't exist anymore."
+
+        if profile.storage_backend == 'core.sqlite_zip':
+            storage_filepath_str = profile.storage_config['filepath']
+            if not Path(storage_filepath_str).exists():
+                echo.echo_warning(
+                    (
+                        f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the `.aiida` file at '
+                        f"`{storage_filepath_str}` doesn't exist anymore."
+                    )
                 )
-            )
-            echo.echo_report('Possibly the file was manually removed before? Profile deletion will proceed anyway.')
-            get_config().delete_profile(profile.name, delete_storage=False)
+                echo.echo_report('Possibly the file was manually removed before? Profile deletion will proceed anyway.')
+                get_config().delete_profile(profile.name, delete_storage=False)
+            else:
+                get_config().delete_profile(profile.name, delete_storage=delete_data)
 
         else:
             get_config().delete_profile(profile.name, delete_storage=delete_data)

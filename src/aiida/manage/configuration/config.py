@@ -579,6 +579,7 @@ class Config:
 
         if delete_storage:
             storage_cls = StorageFactory(profile.storage_backend)
+            # TODO: Add logic here
             storage = storage_cls(profile)
             storage.delete()
             LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')

@@ -448,6 +448,7 @@ def test_delete_profile_sqlite_zip(config_with_profile, tmp_path, caplog, monkey
     # This allows us to test the delete_profile logic without creating real, complex archive files
     from aiida.storage.sqlite_zip import migrator
     from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+
     monkeypatch.setattr(migrator, 'validate_storage', lambda path: None)
 
     config = config_with_profile

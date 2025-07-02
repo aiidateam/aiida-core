@@ -579,8 +579,6 @@ class Config:
 
         if delete_storage:
             storage_cls = StorageFactory(profile.storage_backend)
-            # TODO: Add logic here
-            # import ipdb; ipdb.set_trace()
             if profile.storage_backend == 'core.sqlite_zip' and not Path(profile.storage_config['filepath']).exists():
                 LOGGER.warning(
                     (

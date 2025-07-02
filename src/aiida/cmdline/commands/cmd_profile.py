@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 
@@ -22,6 +23,9 @@ from aiida.cmdline.utils import defaults, echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
+
+if TYPE_CHECKING:
+    from aiida.manage.configuration import Config
 
 
 @verdi.group('profile')
@@ -286,7 +290,7 @@ def profile_delete(force, delete_data, profiles):
             echo.echo_report(f'Deleting of `{profile.name}` cancelled.')
             continue
 
-
+        config: Config = get_config()
         if profile.storage_backend == 'core.sqlite_zip':
             storage_filepath_str = profile.storage_config['filepath']
             if not Path(storage_filepath_str).exists():
@@ -297,12 +301,12 @@ def profile_delete(force, delete_data, profiles):
                     )
                 )
                 echo.echo_report('Possibly the file was manually removed before? Profile deletion will proceed anyway.')
-                get_config().delete_profile(profile.name, delete_storage=False)
+                config.delete_profile(profile.name, delete_storage=False)
             else:
-                get_config().delete_profile(profile.name, delete_storage=delete_data)
+                config.delete_profile(profile.name, delete_storage=delete_data)
 
         else:
-            get_config().delete_profile(profile.name, delete_storage=delete_data)
+            config.delete_profile(profile.name, delete_storage=delete_data)
 
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
 

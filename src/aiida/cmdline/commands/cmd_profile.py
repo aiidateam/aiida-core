@@ -295,7 +295,7 @@ def profile_delete(force, delete_data, profiles):
                 )
             )
             echo.echo_report(
-                'Possibly it was manually removed before? Will still proceed with the deletion of the profile.'
+                'Possibly the file was manually removed before? Profile deletion will proceed anyway.'
             )
             get_config().delete_profile(profile.name, delete_storage=False)
 

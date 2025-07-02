@@ -857,9 +857,9 @@ def computer_search(pattern, source):
     from aiida.cmdline.utils.registry_helpers import (
         fetch_code_registry_data,
         fetch_resource_registry_data,
-        get_computers_table,
-        get_computer_setup_config,
         get_computer_configure_config,
+        get_computer_setup_config,
+        get_computers_table,
         interactive_computer_selector,
         interactive_variant_selector,
         process_template_variables,

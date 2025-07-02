@@ -584,9 +584,9 @@ class Config:
                     (
                         f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the `.aiida` file at '
                         f"`{profile.storage_config['filepath']}` doesn't exist anymore."
+                        'Possibly the file was manually removed before? Profile deletion will proceed anyway.'
                     )
                 )
-                LOGGER.warning('Possibly the file was manually removed before? Profile deletion will proceed anyway.')
             else:
                 storage = storage_cls(profile)
                 storage.delete()

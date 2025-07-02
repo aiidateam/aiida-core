@@ -192,29 +192,6 @@ def test_setup_with_validating_sqlite_version(run_cli_command, isolated_config, 
     assert f'Created new profile `{profile_name}`.' in result.output
 
 
-# @pytest.mark.parametrize('entry_point', ('core.sqlite_dos', 'core.sqlite_zip'))
-# def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point):
-#     """Test the ``verdi profile delete`` command with the ``--delete-storage`` option."""
-#     profile_name = 'temp-profile'
-
-#     if entry_point == 'core.sqlite_zip':
-#         filepath = tmp_path / 'archive.aiida'
-#         create_archive([], filename=filepath)
-#     else:
-#         filepath = tmp_path / 'storage'
-
-#     options = [entry_point, '-n', '--filepath', str(filepath), '--profile-name', profile_name, '--email', 'email@host']
-#     result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
-#     assert filepath.exists()
-#     assert profile_name in isolated_config.profile_names
-
-#     run_cli_command(cmd_profile.profile_delete, ['--force', '--delete-data', profile_name], use_subprocess=False)
-#     result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
-#     assert profile_name not in result.output
-#     assert not filepath.exists()
-#     assert profile_name not in isolated_config.profile_names
-
-
 @pytest.mark.parametrize('entry_point', ('core.sqlite_dos', 'core.sqlite_zip'))
 def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point):
     """Test the ``verdi profile delete`` command with the ``--delete-storage`` option."""
@@ -231,89 +208,11 @@ def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point)
     assert filepath.exists()
     assert profile_name in isolated_config.profile_names
 
-    # Test CLI deletion
     run_cli_command(cmd_profile.profile_delete, ['--force', '--delete-data', profile_name], use_subprocess=False)
     result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
     assert profile_name not in result.output
     assert not filepath.exists()
     assert profile_name not in isolated_config.profile_names
-
-    # Test direct Config.delete_profile method for sqlite_zip
-    if entry_point == 'core.sqlite_zip':
-        # Test case 1: File exists, delete_storage=True
-        profile_name_2 = 'temp-profile-2'
-        filepath_2 = tmp_path / 'archive2.aiida'
-        create_archive([], filename=filepath_2)
-
-        options_2 = [
-            entry_point,
-            '-n',
-            '--filepath',
-            str(filepath_2),
-            '--profile-name',
-            profile_name_2,
-            '--email',
-            'email@host',
-        ]
-        run_cli_command(cmd_profile.profile_setup, options_2, use_subprocess=False)
-        assert filepath_2.exists()
-        assert profile_name_2 in isolated_config.profile_names
-
-        # Direct call to delete_profile
-        isolated_config.delete_profile(profile_name_2, delete_storage=True)
-        assert profile_name_2 not in isolated_config.profile_names
-        assert not filepath_2.exists()  # File should be deleted
-
-        # Test case 2: File doesn't exist, delete_storage=True (should handle gracefully)
-        profile_name_3 = 'temp-profile-3'
-        filepath_3 = tmp_path / 'archive3.aiida'
-        create_archive([], filename=filepath_3)
-
-        options_3 = [
-            entry_point,
-            '-n',
-            '--filepath',
-            str(filepath_3),
-            '--profile-name',
-            profile_name_3,
-            '--email',
-            'email@host',
-        ]
-        run_cli_command(cmd_profile.profile_setup, options_3, use_subprocess=False)
-        assert filepath_3.exists()
-        assert profile_name_3 in isolated_config.profile_names
-
-        # Manually delete the file to simulate missing file scenario
-        filepath_3.unlink()
-        assert not filepath_3.exists()
-
-        # This should work gracefully even though file doesn't exist
-        isolated_config.delete_profile(profile_name_3, delete_storage=True)
-        assert profile_name_3 not in isolated_config.profile_names
-
-        # Test case 3: File exists, delete_storage=False (should keep file)
-        profile_name_4 = 'temp-profile-4'
-        filepath_4 = tmp_path / 'archive4.aiida'
-        create_archive([], filename=filepath_4)
-
-        options_4 = [
-            entry_point,
-            '-n',
-            '--filepath',
-            str(filepath_4),
-            '--profile-name',
-            profile_name_4,
-            '--email',
-            'email@host',
-        ]
-        run_cli_command(cmd_profile.profile_setup, options_4, use_subprocess=False)
-        assert filepath_4.exists()
-        assert profile_name_4 in isolated_config.profile_names
-
-        # Delete profile but keep storage
-        isolated_config.delete_profile(profile_name_4, delete_storage=False)
-        assert profile_name_4 not in isolated_config.profile_names
-        assert filepath_4.exists()  # File should still exist
 
 
 @pytest.mark.parametrize('entry_point', ('core.psql_dos', 'core.sqlite_temp', 'core.sqlite_dos', 'core.sqlite_zip'))

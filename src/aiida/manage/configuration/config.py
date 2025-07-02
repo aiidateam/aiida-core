@@ -267,7 +267,7 @@ class Config:
 
         # Keep generating a new backup filename based on the current time until it does not exist
         while not filepath_backup or os.path.isfile(filepath_backup):
-            filepath_backup = f"{filepath}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
+            filepath_backup = f'{filepath}.{timezone.now().strftime("%Y%m%d-%H%M%S.%f")}'
 
         shutil.copy(filepath, filepath_backup)
 
@@ -580,9 +580,19 @@ class Config:
         if delete_storage:
             storage_cls = StorageFactory(profile.storage_backend)
             # TODO: Add logic here
-            storage = storage_cls(profile)
-            storage.delete()
-            LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
+            # import ipdb; ipdb.set_trace()
+            if profile.storage_backend == 'core.sqlite_zip' and not Path(profile.storage_config['filepath']).exists():
+                LOGGER.warning(
+                    (
+                        f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the `.aiida` file at '
+                        f"`{profile.storage_config['filepath']}` doesn't exist anymore."
+                    )
+                )
+                LOGGER.warning('Possibly the file was manually removed before? Profile deletion will proceed anyway.')
+            else:
+                storage = storage_cls(profile)
+                storage.delete()
+                LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
         else:
             LOGGER.report(f'Data storage not deleted, configuration is: {profile.storage_config}')
 

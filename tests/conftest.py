@@ -427,6 +427,41 @@ def profile_factory() -> Profile:
 
 
 @pytest.fixture
+def profile_factory_sqlite_zip() -> Profile:
+    """Create a new profile instance with sqlite_zip storage backend.
+
+    :return: function to create sqlite_zip profile instances.
+    """
+
+    def _create_sqlite_zip_profile(name='test-profile', filepath=None, **kwargs):
+        """Create a profile with sqlite_zip backend.
+
+        :param name: profile name
+        :param filepath: path to the .aiida zip file
+        :param kwargs: additional profile options
+        """
+        if filepath is None:
+            filepath = f'/tmp/{name}.aiida'
+
+        profile_dictionary = {
+            'default_user_email': kwargs.pop('default_user_email', 'dummy@localhost'),
+            'storage': {
+                'backend': 'core.sqlite_zip',
+                'config': {'filepath': str(filepath)},
+            },
+            'process_control': {
+                'backend': kwargs.pop('process_control_backend', None),
+                'config': kwargs.pop('process_control_config', {}),
+            },
+            'test_profile': kwargs.pop('test_profile', True),
+        }
+
+        return Profile(name, profile_dictionary)
+
+    return _create_sqlite_zip_profile
+
+
+@pytest.fixture
 def config_with_profile_factory(empty_config, profile_factory) -> Config:
     """Create a temporary configuration instance with one profile.
 

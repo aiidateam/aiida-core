@@ -440,24 +440,25 @@ def test_delete_profile(config_with_profile, profile_factory):
     assert profile_name not in config_on_disk.profile_names
 
 
-def test_delete_profile_sqlite_zip(config_with_profile, profile_factory_sqlite_zip, tmp_path, caplog, monkeypatch):
+def test_delete_profile_sqlite_zip(config_with_profile, tmp_path, caplog, monkeypatch):
     """Test the ``delete_profile`` method with sqlite_zip backend when file doesn't exist."""
     import logging
 
     # Mock the validate_storage function to avoid needing a valid archive file
-    # This allows us to test the delete_profile logic without creating complex archive files
+    # This allows us to test the delete_profile logic without creating real, complex archive files
     from aiida.storage.sqlite_zip import migrator
-
+    from aiida.storage.sqlite_zip.backend import SqliteZipBackend
     monkeypatch.setattr(migrator, 'validate_storage', lambda path: None)
 
     config = config_with_profile
     profile_name = 'sqlite-zip-profile'
 
     # Create a path for the sqlite zip file
-    zip_filepath = tmp_path / 'test_profile.aiida'
+    zip_filepath = tmp_path / f'{profile_name}.aiida'
 
     # Create a profile with sqlite_zip backend
-    profile = profile_factory_sqlite_zip(name=profile_name, filepath=zip_filepath)
+    profile = SqliteZipBackend.create_profile(zip_filepath)
+    profile._name = profile_name
 
     config.add_profile(profile)
     assert config.get_profile(profile_name) == profile
@@ -473,10 +474,8 @@ def test_delete_profile_sqlite_zip(config_with_profile, profile_factory_sqlite_z
     with caplog.at_level(logging.INFO):
         config.delete_profile(profile_name, delete_storage=True)
 
-    # Verify the file was deleted
+    # Verify the file was deleted and profile removed
     assert not zip_filepath.exists()
-
-    # Verify profile was removed
     assert profile_name not in config.profile_names
 
     # Verify config was persisted to disk
@@ -486,9 +485,10 @@ def test_delete_profile_sqlite_zip(config_with_profile, profile_factory_sqlite_z
     # Test case 2: File doesn't exist - should log warning but proceed
     # Re-add the profile for the second test
     profile2_name = 'sqlite-zip-profile-2'
-    zip_filepath2 = tmp_path / 'test_profile2.aiida'
+    zip_filepath2 = tmp_path / f'{profile2_name}.aiida'
 
-    profile2 = profile_factory_sqlite_zip(name=profile2_name, filepath=zip_filepath2)
+    profile2 = SqliteZipBackend.create_profile(zip_filepath2)
+    profile2._name = profile2_name
 
     config.add_profile(profile2)
     config.store()
@@ -504,10 +504,10 @@ def test_delete_profile_sqlite_zip(config_with_profile, profile_factory_sqlite_z
 
     # Verify the warning messages were logged
     warning_messages = [record.message for record in caplog.records if record.levelname == 'WARNING']
-    assert len(warning_messages) >= 2
+    assert len(warning_messages) == 1
     assert f'Profile `{profile2_name}` has the `core.sqlite_zip` backend' in warning_messages[0]
     assert "doesn't exist anymore" in warning_messages[0]
-    assert 'Possibly the file was manually removed before' in warning_messages[1]
+    assert 'Possibly the file was manually removed before' in warning_messages[0]
 
     # Verify profile was still removed from config
     assert profile2_name not in config.profile_names
@@ -518,9 +518,10 @@ def test_delete_profile_sqlite_zip(config_with_profile, profile_factory_sqlite_z
 
     # Test case 3: delete_storage=False should not attempt to delete storage
     profile3_name = 'sqlite-zip-profile-3'
-    zip_filepath3 = tmp_path / 'test_profile3.aiida'
+    zip_filepath3 = tmp_path / f'{profile3_name}.aiida'
 
-    profile3 = profile_factory_sqlite_zip(name=profile3_name, filepath=zip_filepath3)
+    profile3 = SqliteZipBackend.create_profile(zip_filepath3)
+    profile3._name = profile3_name
 
     config.add_profile(profile3)
     config.store()
@@ -547,9 +548,10 @@ def test_delete_profile_sqlite_zip(config_with_profile, profile_factory_sqlite_z
 
     # Test case 4: Test with default profile to verify default profile handling
     profile4_name = 'sqlite-zip-default-profile'
-    zip_filepath4 = tmp_path / 'test_profile4.aiida'
+    zip_filepath4 = tmp_path / f'{profile4_name}.aiida'
 
-    profile4 = profile_factory_sqlite_zip(name=profile4_name, filepath=zip_filepath4)
+    profile4 = SqliteZipBackend.create_profile(zip_filepath4)
+    profile4._name = profile4_name
 
     config.add_profile(profile4)
     config.set_default_profile(profile4_name, overwrite=True)
@@ -565,20 +567,26 @@ def test_delete_profile_sqlite_zip(config_with_profile, profile_factory_sqlite_z
     with caplog.at_level(logging.WARNING):
         config.delete_profile(profile4_name, delete_storage=True)
 
-    # Verify the file was deleted
+    # Verify the file was deleted and profile removed
     assert not zip_filepath4.exists()
-
-    # Verify profile was removed
     assert profile4_name not in config.profile_names
 
     # Verify appropriate warning about default profile
     warning_messages = [record.message for record in caplog.records if record.levelname == 'WARNING']
-    if not config.profile_names:
-        # If no profiles remain
-        assert any('no profiles remain to set as default' in msg for msg in warning_messages)
-    else:
-        # If other profiles exist, one should be set as new default
-        assert any('setting' in msg and 'as the new default' in msg for msg in warning_messages)
+
+    # If other profiles exist, one should be set as new default
+    assert any('setting' in msg and 'as the new default' in msg for msg in warning_messages)
+
+    config.store()
+
+    # No other profiles exist anymore
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        config.delete_profile('default', delete_storage=False)
+    warning_messages = [record.message for record in caplog.records if record.levelname == 'WARNING']
+
+    assert not config.profile_names
+    assert any('no profiles remain to set as default' in msg for msg in warning_messages)
 
 
 def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):

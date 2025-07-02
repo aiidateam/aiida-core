@@ -47,7 +47,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         command: t.Callable,
         entry_point_group: str,
         entry_point_name_filter: str = r'.*',
-        shared_options: list[click.Option] | None = None,
+        shared_options: list[t.Callable[[t.Any], t.Any]] | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -137,13 +137,13 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             shared_options.reverse()
 
             for option in shared_options:
-                func = option(func)  # type: ignore[operator]
+                func = option(func)
 
             return func
 
         return apply_options
 
-    def list_options(self, entry_point: str) -> list:
+    def list_options(self, entry_point: str) -> list[t.Callable[[t.Any], t.Any]]:
         """Return the list of options that should be applied to the command for the given entry point.
 
         :param entry_point: The entry point.

@@ -15,7 +15,6 @@ from pgtest.pgtest import PGTest
 
 from aiida import orm
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
-from aiida.manage.configuration import Profile
 from aiida.manage import configuration
 from aiida.plugins import StorageFactory
 from aiida.tools.archive.create import create_archive
@@ -246,7 +245,16 @@ def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point)
         filepath_2 = tmp_path / 'archive2.aiida'
         create_archive([], filename=filepath_2)
 
-        options_2 = [entry_point, '-n', '--filepath', str(filepath_2), '--profile-name', profile_name_2, '--email', 'email@host']
+        options_2 = [
+            entry_point,
+            '-n',
+            '--filepath',
+            str(filepath_2),
+            '--profile-name',
+            profile_name_2,
+            '--email',
+            'email@host',
+        ]
         run_cli_command(cmd_profile.profile_setup, options_2, use_subprocess=False)
         assert filepath_2.exists()
         assert profile_name_2 in isolated_config.profile_names
@@ -261,7 +269,16 @@ def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point)
         filepath_3 = tmp_path / 'archive3.aiida'
         create_archive([], filename=filepath_3)
 
-        options_3 = [entry_point, '-n', '--filepath', str(filepath_3), '--profile-name', profile_name_3, '--email', 'email@host']
+        options_3 = [
+            entry_point,
+            '-n',
+            '--filepath',
+            str(filepath_3),
+            '--profile-name',
+            profile_name_3,
+            '--email',
+            'email@host',
+        ]
         run_cli_command(cmd_profile.profile_setup, options_3, use_subprocess=False)
         assert filepath_3.exists()
         assert profile_name_3 in isolated_config.profile_names
@@ -279,7 +296,16 @@ def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point)
         filepath_4 = tmp_path / 'archive4.aiida'
         create_archive([], filename=filepath_4)
 
-        options_4 = [entry_point, '-n', '--filepath', str(filepath_4), '--profile-name', profile_name_4, '--email', 'email@host']
+        options_4 = [
+            entry_point,
+            '-n',
+            '--filepath',
+            str(filepath_4),
+            '--profile-name',
+            profile_name_4,
+            '--email',
+            'email@host',
+        ]
         run_cli_command(cmd_profile.profile_setup, options_4, use_subprocess=False)
         assert filepath_4.exists()
         assert profile_name_4 in isolated_config.profile_names
@@ -288,6 +314,7 @@ def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point)
         isolated_config.delete_profile(profile_name_4, delete_storage=False)
         assert profile_name_4 not in isolated_config.profile_names
         assert filepath_4.exists()  # File should still exist
+
 
 @pytest.mark.parametrize('entry_point', ('core.psql_dos', 'core.sqlite_temp', 'core.sqlite_dos', 'core.sqlite_zip'))
 def test_setup(config_psql_dos, run_cli_command, isolated_config, tmp_path, entry_point):

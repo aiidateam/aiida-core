@@ -420,3 +420,65 @@ def profile_dump(
     except Exception as e:
         msg = f'Unexpected error during dump of {profile.name}:\n ({e!s}).\n'
         echo.echo_critical(msg + traceback.format_exc())
+
+
+@verdi_profile.command('from-backup')
+@click.argument('path', type=click.Path(), nargs=1)
+# @click.option(
+#     '--delete-data/--keep-data',
+#     default=None,
+#     help='Whether to delete the storage with all its data or not. This flag has to be explicitly specified',
+# )
+# @arguments.PROFILES(required=True)
+def profile_from_backup(path):
+    from aiida.manage.configuration.config import Config
+    from aiida.manage.configuration import create_profile
+    from disk_objectstore import Container, backup_utils
+    from aiida.manage.manager import Manager
+    from rich.pretty import pprint
+
+    import sqlite3
+    from pathlib import Path
+
+    # NOTE:
+    # Steps that need to be done:
+    # 1. New profile created based on the backed-up previous config.json (this currently has to be done manually)
+    # 2. Import the data of the database (currently limit to same db-backend)
+    # 3. rsync the disk-objectstore container (this should be simple)
+
+    # NOTE: This assumes a fresh AiiDA instance without an existing profile for now. Later also support already existing
+    # profiles
+    # NOTE: Could also make this part of `verdi presto`
+    backup_config = Config.from_file(Path(path) / 'config.json')
+    current_config = get_config()
+    backup_profile: Profile = backup_config.get_profile(name=next(iter(backup_config.dictionary['profiles'].keys())))
+
+    pprint(backup_config.dictionary)
+    # NOTE: `storage_config` from previous backed-up profile for sqlite_dos contains the the filepath from the previous storage
+    new_profile_name = f"{backup_profile.name}-restored"
+
+    restored_profile = create_profile(
+        current_config,
+        name=new_profile_name,
+        email=backup_profile.default_user_email,
+        storage_backend=backup_profile.storage_backend,
+        # NOTE: In verdi presto, for `core.sqlite_dos` an empty config is passed
+        # For psql_dos, we can probably pass the same arguments as backed up, apart from db-name, for which a new one
+        # should be generated
+        storage_config={}
+    )
+    current_config.add_profile(restored_profile)
+
+    import ipdb; ipdb.set_trace()
+    # NOTE: Run `rsync -arvz /path/to/backup/container <storage.config.repository_uri>` to transfer the repository
+    # current_config.store()
+
+    backup_db = Path(path) / 'database.sqlite'
+    target_db = Path(restored_profile.storage_config['filepath']) / 'database.sqlite'
+    import shutil
+    shutil.copy2(backup_db, target_db)
+
+    # Usage example
+    # restore_sqlite_backup('backup_database.db', 'restored_database.db')
+
+    pass

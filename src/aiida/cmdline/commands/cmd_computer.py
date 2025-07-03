@@ -842,8 +842,14 @@ def computer_export_config(computer, output_file, user, overwrite, sort):
     default='both',
     help='Specify the registry source (default: both)',
 )
+@click.option(
+    '--auto-setup',
+    is_flag=True,
+    help='Automatically run setup and configure commands after saving config files'
+)
+@click.pass_context
 @with_dbenv()
-def computer_search(pattern, source):
+def computer_search(ctx, pattern, source, auto_setup):
     """Search for computers in the AiiDA registries and setup them up in your profile.
 
     If PATTERN is provided, search for computers matching that pattern.
@@ -907,7 +913,8 @@ def computer_search(pattern, source):
         )
 
     # Offer to save configuration to files
-    if not click.confirm('\nWould you like to save computer configuration to files?'):
+    save_files = auto_setup or click.confirm('\nWould you like to save computer configuration to files?')
+    if not save_files:
         return
 
     # Handle computer selection based on pattern matching
@@ -933,39 +940,83 @@ def computer_search(pattern, source):
 
     system_name, variant = selection
 
-    try:
-        # Get the raw configurations
-        setup_config = get_computer_setup_config(registry_data, system_name, variant)
-        configure_config = get_computer_configure_config(registry_data, system_name, variant)
+    # Get the raw configurations
+    setup_config = get_computer_setup_config(registry_data, system_name, variant)
+    configure_config = get_computer_configure_config(registry_data, system_name, variant)
 
-        echo.echo_info(f'\n📋 Processing configuration for {system_name} ({variant})')
+    echo.echo_info(f'\n📋 Processing configuration for {system_name} ({variant})')
 
-        # Process template variables for setup config
-        echo.echo_info('\n🔧 Processing computer setup configuration...')
-        processed_setup_config = process_template_variables(setup_config)
-        if processed_setup_config is None:
-            echo.echo_info('Configuration processing was cancelled.')
-            return
+    # Process template variables for setup config
+    echo.echo_info('\n🔧 Processing computer setup configuration...')
+    processed_setup_config = process_template_variables(setup_config)
+    if processed_setup_config is None:
+        echo.echo_info('Configuration processing was cancelled.')
+        return
 
-        # Process template variables for configure config
-        echo.echo_info('\n🔐 Processing computer configure configuration...')
-        processed_configure_config = process_template_variables(configure_config)
-        if processed_configure_config is None:
-            echo.echo_info('Configuration processing was cancelled.')
-            return
+    # Process template variables for configure config
+    echo.echo_info('\n🔐 Processing computer configure configuration...')
+    processed_configure_config = process_template_variables(configure_config)
+    if processed_configure_config is None:
+        echo.echo_info('Configuration processing was cancelled.')
+        return
 
-        # Save both configurations to files
-        echo.echo_info('Saving configurations to files...')
+    # Save both configurations to files
+    echo.echo_info('Saving configurations to files...')
 
-        setup_file = save_config_to_file(processed_setup_config, 'setup', system_name, variant)
-        configure_file = save_config_to_file(processed_configure_config, 'configure', system_name, variant)
+    setup_file = save_config_to_file(processed_setup_config, 'setup', system_name, variant)
+    configure_file = save_config_to_file(processed_configure_config, 'configure', system_name, variant)
 
+    # Get the computer label from the setup config for the configure command
+    computer_label = processed_setup_config.get('label', f'{system_name}_{variant}')
+
+    # Get the transport type from the setup config for the configure command
+    transport_type = processed_setup_config.get('transport', 'core.ssh')
+
+    if auto_setup:
+        echo.echo_info('\n🚀 Automatically setting up computer...')
+
+        # Invoke computer setup command
+        from aiida.plugins import SchedulerFactory, TransportFactory
+
+        # Convert strings to entry point objects (not loaded classes)
+        processed_setup_config_copy = processed_setup_config.copy()
+
+        # Get the entry point objects (load=False to get the entry point, not the loaded class)
+        if 'scheduler' in processed_setup_config_copy:
+            scheduler_ep = SchedulerFactory(processed_setup_config_copy['scheduler'], load=False)
+            processed_setup_config_copy['scheduler'] = scheduler_ep
+
+        if 'transport' in processed_setup_config_copy:
+            transport_ep = TransportFactory(processed_setup_config_copy['transport'], load=False)
+            processed_setup_config_copy['transport'] = transport_ep
+
+        # Now invoke with the entry point objects
+        ctx.invoke(computer_setup, non_interactive=False, **processed_setup_config_copy)
+        echo.echo_success(f'✅ Computer setup completed successfully!')
+
+        # Invoke computer configure command
+        echo.echo_info('\n🔧 Automatically configuring computer...')
+
+        # Import the transport CLI to get the configure command
+        from aiida.transports import cli as transport_cli
+        configure_cmd = transport_cli.create_configure_cmd(transport_type)
+
+        # Get the computer object to pass to configure command
+        from aiida.orm import Computer
+        computer = Computer.collection.get(label=computer_label)
+
+        # Invoke the configure command with the config file
+        import ipdb; ipdb.set_trace()
+        ctx.invoke(
+            configure_cmd,
+            computer=computer,
+            config_file=configure_file,
+        )
+        echo.echo_success(f'✅ Computer configuration completed successfully!')
+        echo.echo_success(f'🎉 Computer "{computer_label}" is now ready to use!')
+
+    else:
         echo.echo('To set up the computer, run:')
         echo.echo(f'  verdi computer setup --config {setup_file}')
         echo.echo('\nTo configure the computer, run:')
-        # TODO: Dynamically print transport endpoint, don't hardcode to core.ssh
-        echo.echo(f'  verdi computer configure core.ssh <computer-label> --config {configure_file}')
-
-    except Exception as e:
-        echo.echo_critical(f'Error processing configuration: {e}')
-        return
+        echo.echo(f'  verdi computer configure {transport_type} {computer_label} --config {configure_file}')

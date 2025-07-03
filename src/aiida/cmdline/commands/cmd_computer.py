@@ -843,9 +843,7 @@ def computer_export_config(computer, output_file, user, overwrite, sort):
     help='Specify the registry source (default: both)',
 )
 @click.option(
-    '--auto-setup',
-    is_flag=True,
-    help='Automatically run setup and configure commands after saving config files'
+    '--auto-setup', is_flag=True, help='Automatically run setup and configure commands after saving config files'
 )
 @click.pass_context
 @with_dbenv()
@@ -992,27 +990,31 @@ def computer_search(ctx, pattern, source, auto_setup):
 
         # Now invoke with the entry point objects
         ctx.invoke(computer_setup, non_interactive=False, **processed_setup_config_copy)
-        echo.echo_success(f'✅ Computer setup completed successfully!')
+        echo.echo_success('✅ Computer setup completed successfully!')
 
         # Invoke computer configure command
         echo.echo_info('\n🔧 Automatically configuring computer...')
 
         # Import the transport CLI to get the configure command
         from aiida.transports import cli as transport_cli
+
         configure_cmd = transport_cli.create_configure_cmd(transport_type)
 
         # Get the computer object to pass to configure command
         from aiida.orm import Computer
+
         computer = Computer.collection.get(label=computer_label)
 
         # Invoke the configure command with the config file
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
         ctx.invoke(
             configure_cmd,
             computer=computer,
             config_file=configure_file,
         )
-        echo.echo_success(f'✅ Computer configuration completed successfully!')
+        echo.echo_success('✅ Computer configuration completed successfully!')
         echo.echo_success(f'🎉 Computer "{computer_label}" is now ready to use!')
 
     else:

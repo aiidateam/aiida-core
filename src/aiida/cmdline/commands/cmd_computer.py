@@ -227,7 +227,7 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo, comput
 
     if not isclose(timing_true, timing_false, rel_tol=rel_tol, abs_tol=abs_tol):
         return True, (
-            f"\n\n{click.style('Warning:', fg='yellow', bold=True)} "
+            f'\n\n{click.style("Warning:", fg="yellow", bold=True)} '
             'The computer is configured to use a login shell, which is slower compared to a normal shell.\n'
             f'Command execution time of {timing_true:.3f} versus {timing_false:.3f} seconds, respectively).\n'
             'Unless this setting is really necessary, consider disabling it with:\n'
@@ -345,7 +345,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
-        echo.echo_critical(f"A computer called {kwargs['label']} already exists")
+        echo.echo_critical(f'A computer called {kwargs["label"]} already exists')
 
     kwargs['transport'] = kwargs['transport'].name
     kwargs['scheduler'] = kwargs['scheduler'].name
@@ -716,7 +716,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
                     option_value = (
-                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"
+                        option.opts[-1] if config.get(option.name) else f'--no-{option.name.replace("_", "-")}'
                     )
                 elif t_opt.get('is_flag'):
                     is_default = config.get(option.name) == transport_cli.transport_option_default(
@@ -832,3 +832,193 @@ def computer_export_config(computer, output_file, user, overwrite, sort):
             )
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} configuration exported to file `{output_file}`.')
+
+
+@verdi_computer.command('search')
+@click.argument('pattern', type=str, required=False)
+@click.option(
+    '--source',
+    type=click.Choice(['code-registry', 'resource-registry', 'both']),
+    default='both',
+    help='Specify the registry source (default: both)',
+)
+@click.option(
+    '--auto-setup', is_flag=True, help='Automatically run setup and configure commands after saving config files'
+)
+@click.pass_context
+@with_dbenv()
+def computer_search(ctx, pattern, source, auto_setup):
+    """Search for computers in the AiiDA registries and setup them up in your profile.
+
+    If PATTERN is provided, search for computers matching that pattern.
+    If no pattern is provided, show all available computers.
+
+    This command allows you to discover and setup computers from the community
+    AiiDA code registry at https://github.com/aiidateam/aiida-code-registry/
+    and the AiiDA resource registry athttps://github.com/aiidateam/aiida-resource-registry/
+    """
+    from aiida.cmdline.utils.common import tabulate
+    from aiida.cmdline.utils.registry_helpers import (
+        fetch_code_registry_data,
+        fetch_resource_registry_data,
+        get_computer_configure_config,
+        get_computer_setup_config,
+        get_computers_table,
+        interactive_computer_selector,
+        interactive_variant_selector,
+        process_template_variables,
+        save_config_to_file,
+    )
+
+    echo.echo_report('Fetching AiiDA registries...')
+    # NOTE: There is quite some overlap between code registry and resource registry
+    # code registry: 'daint.cscs.ch', 'imxgesrv1.epfl.ch', 'lsmosrv6', 'fidis.epfl.ch', 'tigu.empa.ch', 'paratera',
+    # 'merlin.psi.ch', 'eiger.cscs.ch'
+    # resource registry: 'eiger.cscs.ch', 'daint.cscs.ch', 'merlin.psi.ch', 'merlin7.psi.ch'
+    if source == 'both':
+        registry_data = fetch_code_registry_data() | fetch_resource_registry_data()
+    elif source == 'resource-registry':
+        registry_data = fetch_resource_registry_data()
+    elif source == 'code-registry':
+        registry_data = fetch_code_registry_data()
+
+    echo.echo_success(f'Successfully fetched AiiDA registry data. Found {len(registry_data)} computers.')
+
+    matching_systems = None
+    if pattern:
+        matching_systems = [system for system in registry_data.keys() if pattern in system]
+        if not matching_systems:
+            echo.echo_warning(f"No computers found matching pattern '{pattern}'")
+            if not click.confirm('\nWould you like to show all available systems in the registry?'):
+                return
+            table = get_computers_table(registry_data)
+            echo.echo(
+                tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid')
+            )
+        else:
+            registry_data = {match: registry_data[match] for match in matching_systems}
+            echo.echo_report(f"Systems in the registry matching the pattern '{pattern}'")
+            table = get_computers_table(registry_data)
+            echo.echo(
+                tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid')
+            )
+
+    else:
+        echo.echo_report('All available systems in the registries:')
+        table = get_computers_table(registry_data)
+        echo.echo(
+            tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid')
+        )
+
+    # Offer to save configuration to files
+    save_files = auto_setup or click.confirm('\nWould you like to save computer configuration to files?')
+    if not save_files:
+        return
+
+    # Handle computer selection based on pattern matching
+    if matching_systems and len(matching_systems) == 1:
+        # Only one match, use it directly and just select variant
+        selected_computer = matching_systems[0]
+        echo.echo_report(f'Using the only matching computer: {selected_computer}')
+        selected_variant = interactive_variant_selector(registry_data, selected_computer)
+        if not selected_variant:
+            return
+        selection = (selected_computer, selected_variant)
+    else:
+        # Multiple matches or no pattern, let user choose computer and variant
+        selected_computer = interactive_computer_selector(registry_data)
+        if not selected_computer:
+            return
+
+        selected_variant = interactive_variant_selector(registry_data, selected_computer)
+        if not selected_variant:
+            return
+
+        selection = (selected_computer, selected_variant)
+
+    system_name, variant = selection
+
+    # Get the raw configurations
+    setup_config = get_computer_setup_config(registry_data, system_name, variant)
+    configure_config = get_computer_configure_config(registry_data, system_name, variant)
+
+    echo.echo_info(f'\n📋 Processing configuration for {system_name} ({variant})')
+
+    # Process template variables for setup config
+    echo.echo_info('\n🔧 Processing computer setup configuration...')
+    processed_setup_config = process_template_variables(setup_config)
+    if processed_setup_config is None:
+        echo.echo_info('Configuration processing was cancelled.')
+        return
+
+    # Process template variables for configure config
+    echo.echo_info('\n🔐 Processing computer configure configuration...')
+    processed_configure_config = process_template_variables(configure_config)
+    if processed_configure_config is None:
+        echo.echo_info('Configuration processing was cancelled.')
+        return
+
+    # Save both configurations to files
+    echo.echo_info('Saving configurations to files...')
+
+    setup_file = save_config_to_file(processed_setup_config, 'setup', system_name, variant)
+    configure_file = save_config_to_file(processed_configure_config, 'configure', system_name, variant)
+
+    # Get the computer label from the setup config for the configure command
+    computer_label = processed_setup_config.get('label', f'{system_name}_{variant}')
+
+    # Get the transport type from the setup config for the configure command
+    transport_type = processed_setup_config.get('transport', 'core.ssh')
+
+    if auto_setup:
+        echo.echo_info('\n🚀 Automatically setting up computer...')
+
+        # Invoke computer setup command
+        from aiida.plugins import SchedulerFactory, TransportFactory
+
+        # Convert strings to entry point objects (not loaded classes)
+        processed_setup_config_copy = processed_setup_config.copy()
+
+        # Get the entry point objects (load=False to get the entry point, not the loaded class)
+        if 'scheduler' in processed_setup_config_copy:
+            scheduler_ep = SchedulerFactory(processed_setup_config_copy['scheduler'], load=False)
+            processed_setup_config_copy['scheduler'] = scheduler_ep
+
+        if 'transport' in processed_setup_config_copy:
+            transport_ep = TransportFactory(processed_setup_config_copy['transport'], load=False)
+            processed_setup_config_copy['transport'] = transport_ep
+
+        # Now invoke with the entry point objects
+        ctx.invoke(computer_setup, non_interactive=False, **processed_setup_config_copy)
+        echo.echo_success('✅ Computer setup completed successfully!')
+
+        # Invoke computer configure command
+        echo.echo_info('\n🔧 Automatically configuring computer...')
+
+        # Import the transport CLI to get the configure command
+        from aiida.transports import cli as transport_cli
+
+        configure_cmd = transport_cli.create_configure_cmd(transport_type)
+
+        # Get the computer object to pass to configure command
+        from aiida.orm import Computer
+
+        computer = Computer.collection.get(label=computer_label)
+
+        # Invoke the configure command with the config file
+        import ipdb
+
+        ipdb.set_trace()
+        ctx.invoke(
+            configure_cmd,
+            computer=computer,
+            config_file=configure_file,
+        )
+        echo.echo_success('✅ Computer configuration completed successfully!')
+        echo.echo_success(f'🎉 Computer "{computer_label}" is now ready to use!')
+
+    else:
+        echo.echo('To set up the computer, run:')
+        echo.echo(f'  verdi computer setup --config {setup_file}')
+        echo.echo('\nTo configure the computer, run:')
+        echo.echo(f'  verdi computer configure {transport_type} {computer_label} --config {configure_file}')

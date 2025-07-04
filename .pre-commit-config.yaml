@@ -188,7 +188,6 @@ repos:
         src/aiida/transports/cli.py|
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|
-        src/aiida/workflows/arithmetic/multiply_add.py|
       )$
 
   - id: generate-conda-environment

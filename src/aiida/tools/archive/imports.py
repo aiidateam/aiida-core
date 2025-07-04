@@ -949,7 +949,7 @@ def _import_links(
                     raise ImportUniquenessError(
                         f'Node {in_id} already has an outgoing {link_type.value!r} link with label {link_label!r}'
                     )
-                if 'out_id' in link_uniqueness and out_id in existing_out_id_label:
+                if 'out_id' in link_uniqueness and out_id in existing_out_id:
                     raise ImportUniquenessError(f'Node {out_id} already has an incoming {link_type.value!r} link')
                 if 'out_id_label' in link_uniqueness and (out_id, link_label) in existing_out_id_label:
                     raise ImportUniquenessError(

@@ -75,10 +75,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        if (
-            not isinstance(handle, io.BufferedIOBase)  # type: ignore[redundant-expr,unreachable]
-            and not self.is_readable_byte_stream(handle)
-        ):
+        if not isinstance(handle, io.BufferedIOBase) and not self.is_readable_byte_stream(handle):
             raise TypeError(f'handle does not seem to be a byte stream: {type(handle)}.')
         return self._put_object_from_filelike(handle)
 

@@ -83,7 +83,7 @@ class Process(PlumpyProcess):
     class SaveKeys(enum.Enum):
         """Keys used to identify things in the saved instance state bundle."""
 
-        CALC_ID: str = 'calc_id'
+        CALC_ID = 'calc_id'
 
     @classmethod
     def spec(cls) -> ProcessSpec:
@@ -379,7 +379,7 @@ class Process(PlumpyProcess):
                     continue
                 try:
                     result = self.runner.controller.kill_process(child.pk, msg_text=f'Killed by parent<{self.node.pk}>')
-                    result = asyncio.wrap_future(result)  # type: ignore[arg-type]
+                    result = asyncio.wrap_future(result)
                     if asyncio.isfuture(result):
                         killing.append(result)
                 except ConnectionClosed:

@@ -104,7 +104,7 @@ class PortableCode(Code):
         if not filepath_files_path.is_dir():
             raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
 
-        self.filepath_executable = filepath_executable  # type: ignore[assignment] # should be fixed in mypy 1.15 see mypy/commit/1eb9d4c
+        self.filepath_executable = filepath_executable
         self.base.repository.put_object_from_tree(str(filepath_files))
 
     def _validate(self):

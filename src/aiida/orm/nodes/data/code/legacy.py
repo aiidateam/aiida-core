@@ -231,7 +231,7 @@ class Code(AbstractCode):
             return result[0]
 
     @classmethod
-    def get(cls, pk=None, label=None, machinename=None):
+    def get(cls, pk=None, label=None, machinename=None):  # type: ignore[override]
         """Get a Computer object with given identifier string, that can either be
         the numeric ID (pk), or the label (and computername) (if unique).
 

@@ -23,7 +23,7 @@ class WorkChainNode(WorkflowNode):
     STEPPER_STATE_INFO_KEY = 'stepper_state_info'
 
     @classproperty
-    def _updatable_attributes(cls) -> Tuple[str, ...]:  # type: ignore[override]  # noqa: N805
+    def _updatable_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
         return super()._updatable_attributes + (cls.STEPPER_STATE_INFO_KEY,)
 
     @property

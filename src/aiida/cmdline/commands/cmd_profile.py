@@ -422,39 +422,407 @@ def profile_dump(
         echo.echo_critical(msg + traceback.format_exc())
 
 
+# @verdi_profile.command('from-backup')
+# @click.argument('path', type=click.Path(), nargs=1)
+# # @click.option(
+# #     '--delete-data/--keep-data',
+# #     default=None,
+# #     help='Whether to delete the storage with all its data or not. This flag has to be explicitly specified',
+# # )
+# # @arguments.PROFILES(required=True)
+# def profile_from_backup(path):
+#     from aiida.manage.configuration.config import Config
+#     from aiida.manage.configuration import create_profile
+#     from disk_objectstore import Container, backup_utils
+#     from aiida.manage.manager import Manager
+#     from rich.pretty import pprint
+
+#     import sqlite3
+#     from pathlib import Path
+
+#     # NOTE:
+#     # Steps that need to be done:
+#     # 1. New profile created based on the backed-up previous config.json (this currently has to be done manually)
+#     # 2. Import the data of the database (currently limit to same db-backend)
+#     # 3. rsync the disk-objectstore container (this should be simple)
+
+#     # NOTE: This assumes a fresh AiiDA instance without an existing profile for now. Later also support already existing
+#     # profiles
+#     # NOTE: Could also make this part of `verdi presto`
+#     backup_config = Config.from_file(Path(path) / 'config.json')
+#     current_config = get_config()
+#     backup_profile: Profile = backup_config.get_profile(name=next(iter(backup_config.dictionary['profiles'].keys())))
+
+#     pprint(backup_config.dictionary)
+#     # NOTE: `storage_config` from previous backed-up profile for sqlite_dos contains the the filepath from the previous storage
+#     new_profile_name = f"{backup_profile.name}-restored"
+
+#     restored_profile = create_profile(
+#         current_config,
+#         name=new_profile_name,
+#         email=backup_profile.default_user_email,
+#         storage_backend=backup_profile.storage_backend,
+#         # NOTE: In verdi presto, for `core.sqlite_dos` an empty config is passed
+#         # For psql_dos, we can probably pass the same arguments as backed up, apart from db-name, for which a new one
+#         # should be generated
+#         storage_config={}
+#     )
+#     current_config.add_profile(restored_profile)
+
+#     import ipdb; ipdb.set_trace()
+#     # NOTE: Run `rsync -arvz /path/to/backup/container <storage.config.repository_uri>` to transfer the repository
+#     # current_config.store()
+
+#     backup_db = Path(path) / 'database.sqlite'
+#     target_db = Path(restored_profile.storage_config['filepath']) / 'database.sqlite'
+#     import shutil
+#     shutil.copy2(backup_db, target_db)
+
+#     # Usage example
+#     # restore_sqlite_backup('backup_database.db', 'restored_database.db')
+
+#     pass
+
+# @verdi_profile.command('from-backup')
+# @click.argument('path', type=click.Path(), nargs=1)
+# def profile_from_backup(path):
+#     from aiida.manage.configuration.config import Config
+#     from aiida.manage.configuration import create_profile
+#     from rich.pretty import pprint
+#     import sqlite3
+#     from pathlib import Path
+#     import shutil
+#     import subprocess
+
+#     def import_sqlite_database(backup_db_path, target_db_path):
+#         """Import data from backup SQLite database to target database using SQLite's backup API."""
+#         print("Importing database content...")
+
+#         # Use SQLite's native backup API (same as disk-objectstore uses)
+#         backup_conn = sqlite3.connect(str(backup_db_path))
+#         target_conn = sqlite3.connect(str(target_db_path))
+
+#         try:
+#             # Use SQLite's backup method - this is atomic and safe
+#             with target_conn:
+#                 backup_conn.backup(target_conn)
+#             print("Database content imported successfully")
+#         finally:
+#             backup_conn.close()
+#             target_conn.close()
+
+#     def restore_repository(backup_container_path, target_container_path):
+#         """Restore the disk-objectstore container from backup."""
+#         print("Restoring repository...")
+
+#         if not backup_container_path.exists():
+#             print("Warning: No container directory found in backup")
+#             return
+
+#         if target_container_path.exists():
+#             shutil.rmtree(target_container_path)
+
+#         # Use rsync for efficient copying
+#         try:
+#             subprocess.run([
+#                 'rsync', '-arvz',
+#                 str(backup_container_path) + '/',
+#                 str(target_container_path) + '/'
+#             ], check=True)
+#             print("Repository restored successfully")
+#         except (subprocess.CalledProcessError, FileNotFoundError):
+#             # Fallback to shutil if rsync is not available
+#             shutil.copytree(backup_container_path, target_container_path)
+#             print("Repository restored using fallback method")
+
+#     # Load backup configuration
+#     backup_config = Config.from_file(Path(path) / 'config.json')
+#     current_config = get_config()
+#     backup_profile = backup_config.get_profile(name=next(iter(backup_config.dictionary['profiles'].keys())))
+
+#     print(f"Restoring backup from profile: {backup_profile.name}")
+
+#     # Create new profile with fresh storage
+#     new_profile_name = f"{backup_profile.name}-restored"
+
+#     restored_profile = create_profile(
+#         current_config,
+#         name=new_profile_name,
+#         email=backup_profile.default_user_email,
+#         storage_backend=backup_profile.storage_backend,
+#         storage_config={}  # Fresh, empty storage config
+#     )
+#     current_config.add_profile(restored_profile)
+#     current_config.store()
+
+#     print(f"Created new profile: {new_profile_name}")
+
+#     # Import database content
+#     backup_db = Path(path) / 'database.sqlite'
+#     target_db = Path(restored_profile.storage_config['filepath']) / 'database.sqlite'
+#     import_sqlite_database(backup_db, target_db)
+
+#     # Restore the repository
+#     backup_container_path = Path(path) / 'container'
+#     target_container_path = Path(restored_profile.storage_config['filepath']) / 'container'
+#     restore_repository(backup_container_path, target_container_path)
+
+#     print(f"Profile '{new_profile_name}' restored successfully!")
+
+
+# @verdi_profile.command('from-backup')
+# @click.argument('path', type=click.Path(), nargs=1)
+# def profile_from_backup(path):
+#     from aiida.manage.configuration.config import Config
+#     from aiida.manage.configuration import create_profile
+#     from rich.pretty import pprint
+#     import sqlite3
+#     from pathlib import Path
+#     import shutil
+#     import subprocess
+
+#     def import_sqlite_database(backup_db_path, target_db_path):
+#         """Import data from backup SQLite database to target database using SQLite's backup API."""
+#         print("Importing database content...")
+
+#         # First, let's check if the target database is properly initialized
+#         target_conn = sqlite3.connect(str(target_db_path))
+
+#         # Check if the database has the alembic_version table (indicates proper initialization)
+#         cursor = target_conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'")
+#         has_alembic = cursor.fetchone() is not None
+#         target_conn.close()
+
+#         if not has_alembic:
+#             print("Warning: Target database appears uninitialized. Using direct backup method.")
+#             # If target is not initialized, just do a direct backup
+#             backup_conn = sqlite3.connect(str(backup_db_path))
+#             target_conn = sqlite3.connect(str(target_db_path))
+
+#             try:
+#                 with target_conn:
+#                     backup_conn.backup(target_conn)
+#                 print("Database content imported successfully")
+#             finally:
+#                 backup_conn.close()
+#                 target_conn.close()
+#         else:
+#             print("Target database is initialized. Importing data while preserving schema...")
+#             # Target is initialized, so we need to import data more carefully
+#             backup_conn = sqlite3.connect(str(backup_db_path))
+#             target_conn = sqlite3.connect(str(target_db_path))
+
+#             try:
+#                 # Attach the backup database
+#                 target_conn.execute(f"ATTACH '{backup_db_path}' AS backup_db")
+
+#                 # Get list of tables from backup (excluding schema management tables)
+#                 tables = backup_conn.execute("""
+#                     SELECT name FROM sqlite_master
+#                     WHERE type='table'
+#                     AND name NOT IN ('alembic_version', 'sqlite_sequence')
+#                 """).fetchall()
+
+#                 for (table_name,) in tables:
+#                     # Clear existing data
+#                     target_conn.execute(f"DELETE FROM {table_name}")
+
+#                     # Copy data from backup
+#                     target_conn.execute(f"INSERT INTO {table_name} SELECT * FROM backup_db.{table_name}")
+
+#                 target_conn.commit()
+#                 print("Database content imported successfully")
+
+#             finally:
+#                 backup_conn.close()
+#                 target_conn.close()
+
+#     def restore_repository(backup_container_path, target_container_path):
+#         """Restore the disk-objectstore container from backup."""
+#         print("Restoring repository...")
+
+#         if not backup_container_path.exists():
+#             print("Warning: No container directory found in backup")
+#             return
+
+#         if target_container_path.exists():
+#             shutil.rmtree(target_container_path)
+
+#         # Use rsync for efficient copying
+#         try:
+#             subprocess.run([
+#                 'rsync', '-arvz',
+#                 str(backup_container_path) + '/',
+#                 str(target_container_path) + '/'
+#             ], check=True)
+#             print("Repository restored successfully")
+#         except (subprocess.CalledProcessError, FileNotFoundError):
+#             # Fallback to shutil if rsync is not available
+#             shutil.copytree(backup_container_path, target_container_path)
+#             print("Repository restored using fallback method")
+
+#     # Load backup configuration
+#     backup_config = Config.from_file(Path(path) / 'config.json')
+#     current_config = get_config()
+#     backup_profile = backup_config.get_profile(name=next(iter(backup_config.dictionary['profiles'].keys())))
+
+#     print(f"Restoring backup from profile: {backup_profile.name}")
+
+#     # Create new profile with fresh storage
+#     new_profile_name = f"{backup_profile.name}-restored"
+
+#     restored_profile = create_profile(
+#         current_config,
+#         name=new_profile_name,
+#         email=backup_profile.default_user_email,
+#         storage_backend=backup_profile.storage_backend,
+#         storage_config={}  # Fresh, empty storage config
+#     )
+#     current_config.add_profile(restored_profile)
+#     current_config.store()
+
+#     print(f"Created new profile: {new_profile_name}")
+
+#     # Import database content
+#     backup_db = Path(path) / 'database.sqlite'
+#     target_db = Path(restored_profile.storage_config['filepath']) / 'database.sqlite'
+#     import_sqlite_database(backup_db, target_db)
+
+#     # Restore the repository
+#     backup_container_path = Path(path) / 'last-backup' / 'container'
+#     target_container_path = Path(restored_profile.storage_config['filepath']) / 'container'
+#     pprint(current_config.dictionary)
+#     import ipdb; ipdb.set_trace()
+#     restore_repository(backup_container_path, target_container_path)
+
+#     print(f"Profile '{new_profile_name}' restored successfully!")
+
 @verdi_profile.command('from-backup')
 @click.argument('path', type=click.Path(), nargs=1)
-# @click.option(
-#     '--delete-data/--keep-data',
-#     default=None,
-#     help='Whether to delete the storage with all its data or not. This flag has to be explicitly specified',
-# )
-# @arguments.PROFILES(required=True)
 def profile_from_backup(path):
     from aiida.manage.configuration.config import Config
     from aiida.manage.configuration import create_profile
-    from disk_objectstore import Container, backup_utils
-    from aiida.manage.manager import Manager
     from rich.pretty import pprint
-
     import sqlite3
     from pathlib import Path
+    import shutil
+    import subprocess
 
-    # NOTE:
-    # Steps that need to be done:
-    # 1. New profile created based on the backed-up previous config.json (this currently has to be done manually)
-    # 2. Import the data of the database (currently limit to same db-backend)
-    # 3. rsync the disk-objectstore container (this should be simple)
+    def import_sqlite_database(backup_db_path, target_db_path):
+        """Import data from backup SQLite database to target database using SQLite's backup API."""
+        print("Importing database content...")
 
-    # NOTE: This assumes a fresh AiiDA instance without an existing profile for now. Later also support already existing
-    # profiles
-    # NOTE: Could also make this part of `verdi presto`
+        # First, let's check if the target database is properly initialized
+        target_conn = sqlite3.connect(str(target_db_path))
+
+        # Check if the database has the alembic_version table (indicates proper initialization)
+        cursor = target_conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'")
+        has_alembic = cursor.fetchone() is not None
+        target_conn.close()
+
+        if not has_alembic:
+            print("Warning: Target database appears uninitialized. Using direct backup method.")
+            # If target is not initialized, just do a direct backup
+            backup_conn = sqlite3.connect(str(backup_db_path))
+            target_conn = sqlite3.connect(str(target_db_path))
+
+            try:
+                with target_conn:
+                    backup_conn.backup(target_conn)
+                print("Database content imported successfully")
+            finally:
+                backup_conn.close()
+                target_conn.close()
+        else:
+            print("Target database is initialized. Importing data while preserving schema...")
+            # Target is initialized, so we need to import data more carefully
+            backup_conn = sqlite3.connect(str(backup_db_path))
+            target_conn = sqlite3.connect(str(target_db_path))
+
+            try:
+                # Attach the backup database
+                target_conn.execute(f"ATTACH '{backup_db_path}' AS backup_db")
+
+                # Get list of tables from backup (excluding schema management tables)
+                tables = backup_conn.execute("""
+                    SELECT name FROM sqlite_master
+                    WHERE type='table'
+                    AND name NOT IN ('alembic_version', 'sqlite_sequence')
+                """).fetchall()
+
+                for (table_name,) in tables:
+                    # Clear existing data
+                    target_conn.execute(f"DELETE FROM {table_name}")
+
+                    # Copy data from backup
+                    target_conn.execute(f"INSERT INTO {table_name} SELECT * FROM backup_db.{table_name}")
+
+                target_conn.commit()
+                print("Database content imported successfully")
+
+            finally:
+                backup_conn.close()
+                target_conn.close()
+
+    def restore_repository(backup_container_path, target_container_path):
+        """Restore the disk-objectstore container from backup."""
+        print("Restoring repository...")
+
+        if not backup_container_path.exists():
+            print("Warning: No container directory found in backup")
+            return
+
+        if target_container_path.exists():
+            shutil.rmtree(target_container_path)
+
+        # Use rsync for efficient copying
+        try:
+            subprocess.run([
+                'rsync', '-arvz',
+                str(backup_container_path) + '/',
+                str(target_container_path) + '/'
+            ], check=True)
+            print("Repository restored successfully")
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fallback to shutil if rsync is not available
+            shutil.copytree(backup_container_path, target_container_path)
+            print("Repository restored using fallback method")
+
+        # Fix UUID mismatch between database and container
+        print("Synchronizing container UUID with database...")
+        try:
+            from disk_objectstore import Container
+
+            # Get the actual UUID from the restored container
+            container = Container(target_container_path)
+            actual_container_uuid = container.container_id
+
+            # Update the database to match the container UUID
+            target_db = target_container_path.parent / 'database.sqlite'
+            conn = sqlite3.connect(str(target_db))
+            try:
+                # Update the repository UUID in the database
+                conn.execute(
+                    "UPDATE db_dbsetting SET val = ? WHERE key = 'repository|uuid'",
+                    (f'"{actual_container_uuid}"',)
+                )
+                conn.commit()
+                print(f"Updated database repository UUID to: {actual_container_uuid}")
+            finally:
+                conn.close()
+
+        except Exception as e:
+            print(f"Warning: Could not sync container UUID: {e}")
+            print("You may need to run 'verdi storage maintain' to fix UUID mismatch")
+
+    # Load backup configuration
     backup_config = Config.from_file(Path(path) / 'config.json')
     current_config = get_config()
-    backup_profile: Profile = backup_config.get_profile(name=next(iter(backup_config.dictionary['profiles'].keys())))
+    backup_profile = backup_config.get_profile(name=next(iter(backup_config.dictionary['profiles'].keys())))
 
-    pprint(backup_config.dictionary)
-    # NOTE: `storage_config` from previous backed-up profile for sqlite_dos contains the the filepath from the previous storage
+    print(f"Restoring backup from profile: {backup_profile.name}")
+
+    # Create new profile with fresh storage
     new_profile_name = f"{backup_profile.name}-restored"
 
     restored_profile = create_profile(
@@ -462,23 +830,21 @@ def profile_from_backup(path):
         name=new_profile_name,
         email=backup_profile.default_user_email,
         storage_backend=backup_profile.storage_backend,
-        # NOTE: In verdi presto, for `core.sqlite_dos` an empty config is passed
-        # For psql_dos, we can probably pass the same arguments as backed up, apart from db-name, for which a new one
-        # should be generated
-        storage_config={}
+        storage_config={}  # Fresh, empty storage config
     )
     current_config.add_profile(restored_profile)
+    current_config.store()
 
-    import ipdb; ipdb.set_trace()
-    # NOTE: Run `rsync -arvz /path/to/backup/container <storage.config.repository_uri>` to transfer the repository
-    # current_config.store()
+    print(f"Created new profile: {new_profile_name}")
 
+    # Import database content
     backup_db = Path(path) / 'database.sqlite'
     target_db = Path(restored_profile.storage_config['filepath']) / 'database.sqlite'
-    import shutil
-    shutil.copy2(backup_db, target_db)
+    import_sqlite_database(backup_db, target_db)
 
-    # Usage example
-    # restore_sqlite_backup('backup_database.db', 'restored_database.db')
+    # Restore the repository
+    backup_container_path = Path(path) / 'last-backup' / 'container'
+    target_container_path = Path(restored_profile.storage_config['filepath']) / 'container'
+    restore_repository(backup_container_path, target_container_path)
 
-    pass
+    print(f"Profile '{new_profile_name}' restored successfully!")

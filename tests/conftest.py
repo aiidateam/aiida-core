@@ -413,13 +413,13 @@ def empty_config(tmp_path) -> Config:
 
 
 @pytest.fixture
-def profile_factory() -> Profile:
+def profile_factory():
     """Create a new profile instance.
 
     :return: the profile instance.
     """
 
-    def _create_profile(name='test-profile', **kwargs):
+    def _create_profile(name='test-profile', **kwargs) -> Profile:
         repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
 
         profile_dictionary = {

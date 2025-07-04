@@ -32,7 +32,7 @@ ACTION_TIMEOUT = OverridableOption(
     default=float('inf'),
     show_default=True,
     help='Time in seconds to wait for a response before timing out. '
-    'If timeout is 0 the command does not wait for response.',
+    'If the timeout is 0 the command returns immediately and attempts to kill the process in the background.',
 )
 
 

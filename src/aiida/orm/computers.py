@@ -64,7 +64,7 @@ class ComputerCollection(entities.Collection['Computer']):
 class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     """Computer entity."""
 
-    _logger = logging.getLogger(__name__)  # type: ignore[assignment]
+    _logger = logging.getLogger(__name__)
 
     PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL = 'minimum_scheduler_poll_interval'
     PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT = 10.0

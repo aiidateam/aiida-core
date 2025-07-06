@@ -10,7 +10,7 @@
 
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -80,7 +80,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         hostname: str = MetadataField(description='Hostname of the computer', is_attribute=False)
         transport_type: str = MetadataField(description='Transport type of the computer', is_attribute=False)
         scheduler_type: str = MetadataField(description='Scheduler type of the computer', is_attribute=False)
-        metadata: dict[str, Any] = MetadataField(description='Metadata of the computer', is_attribute=False)
+        metadata: Dict[str, Any] = MetadataField(description='Metadata of the computer', is_attribute=False)
 
     def __init__(
         self,

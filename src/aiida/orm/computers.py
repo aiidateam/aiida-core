@@ -52,7 +52,7 @@ class ComputerCollection(entities.Collection['Computer']):
         except exceptions.NotExistent:
             return True, Computer(backend=self.backend, label=label, **kwargs)
 
-    def list_labels(self) -> list[str]:
+    def list_labels(self):
         """Return a list with all the labels of the computers in the DB."""
         return self._backend.computers.list_names()  # type: ignore[attr-defined]
 

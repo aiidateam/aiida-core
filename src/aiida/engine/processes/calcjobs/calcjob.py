@@ -1125,7 +1125,7 @@ class CalcJob(Process):
                 ) from exception
             if os.path.isabs(dest_rel_path):
                 raise PluginInternalError(
-                    '[presubmission of calc {}] ' 'The destination path of the remote copy ' 'is absolute! ({})'.format(
+                    '[presubmission of calc {}] The destination path of the remote copy is absolute! ({})'.format(
                         this_pk, dest_rel_path
                     )
                 )

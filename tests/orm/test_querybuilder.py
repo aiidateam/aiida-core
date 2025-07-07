@@ -903,12 +903,12 @@ class TestQueryBuilderCornerCases:
 
         # AbstractCode query should find all code types
         abstract_results = qb().append(orm.AbstractCode).all(flat=True)
-        assert (
-            installed_code in abstract_results
-        ), f'InstalledCode not found with AbstractCode query. Result: {abstract_results}'
-        assert (
-            portable_code in abstract_results
-        ), f'PortableCode not found with AbstractCode query. Result: {abstract_results}'
+        assert installed_code in abstract_results, (
+            f'InstalledCode not found with AbstractCode query. Result: {abstract_results}'
+        )
+        assert portable_code in abstract_results, (
+            f'PortableCode not found with AbstractCode query. Result: {abstract_results}'
+        )
         assert legacy_code in abstract_results, f'Code not found with AbstractCode query. Result: {abstract_results}'
         assert len(abstract_results) == 3
 

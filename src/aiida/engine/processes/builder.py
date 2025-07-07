@@ -179,7 +179,7 @@ class ProcessBuilderNamespace(MutableMapping):
         :param kwds: keyword value pairs that should be mapped onto the ports.
         """
         if len(args) > 1:
-            raise TypeError(f'update expected at most 1 arguments, got {int(len(args))}')
+            raise TypeError(f'update expected at most 1 arguments, got {len(args)}')
 
         if args:
             for key, value in args[0].items():

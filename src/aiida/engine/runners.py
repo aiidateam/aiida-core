@@ -77,9 +77,9 @@ class Runner:
         :param persister: the persister to use to persist processes
 
         """
-        assert not (
-            broker_submit and persister is None
-        ), 'Must supply a persister if you want to submit using communicator'
+        assert not (broker_submit and persister is None), (
+            'Must supply a persister if you want to submit using communicator'
+        )
 
         set_event_loop_policy()
         self._loop = loop if loop is not None else asyncio.get_event_loop()

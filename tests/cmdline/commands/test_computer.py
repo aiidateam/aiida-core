@@ -410,7 +410,7 @@ class TestVerdiComputerConfigure:
         # I just pass the first four arguments:
         # the username, the port, look_for_keys, and the key_filename
         # This testing also checks that an empty key_filename is ok
-        command_input = f"{remote_username}\n{port}\n{'yes' if look_for_keys else 'no'}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        command_input = f'{remote_username}\n{port}\n{"yes" if look_for_keys else "no"}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n'
 
         result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input=command_input)
         assert comp.is_configured, result.output
@@ -539,9 +539,9 @@ class TestVerdiComputerConfigure:
 
         # verifying correctness by comparing internal and loaded yaml object
         configure_setup_data = yaml.safe_load(exported_setup_filename.read_text())
-        assert configure_setup_data == self.comp_builder.get_computer_spec(
-            comp
-        ), 'Internal computer configuration does not agree with exported one.'
+        assert configure_setup_data == self.comp_builder.get_computer_spec(comp), (
+            'Internal computer configuration does not agree with exported one.'
+        )
 
     def test_computer_export_setup_overwrite(self, tmp_path):
         """Test if overwriting behavior of `verdi computer export setup` command works as expected"""
@@ -606,9 +606,9 @@ class TestVerdiComputerConfigure:
         # Write sorted output file
         result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename])
         assert 'Success' in result.output, 'Command should have run successfull.'
-        assert (
-            str(exported_config_filename) in result.output
-        ), 'Filename should be in terminal output but was not found.'
+        assert str(exported_config_filename) in result.output, (
+            'Filename should be in terminal output but was not found.'
+        )
         assert exported_config_filename.exists(), f"'{exported_config_filename}' was not created during export."
 
         content = exported_config_filename.read_text()
@@ -616,17 +616,17 @@ class TestVerdiComputerConfigure:
 
         # verifying correctness by comparing internal and loaded yaml object
         configure_config_data = yaml.safe_load(exported_config_filename.read_text())
-        assert (
-            configure_config_data == comp.get_configuration()
-        ), 'Internal computer configuration does not agree with exported one.'
+        assert configure_config_data == comp.get_configuration(), (
+            'Internal computer configuration does not agree with exported one.'
+        )
 
         # Check that unsorted output file creation works as expected
         exported_config_filename.unlink()
         result = self.cli_runner(computer_export_config, [comp.label, exported_config_filename, '--no-sort'])
         assert 'Success' in result.output, 'Command should have run successfull.'
-        assert (
-            str(exported_config_filename) in result.output
-        ), 'Filename should be in terminal output but was not found.'
+        assert str(exported_config_filename) in result.output, (
+            'Filename should be in terminal output but was not found.'
+        )
         assert exported_config_filename.exists(), f"'{exported_config_filename}' was not created during export."
 
         # Check contents

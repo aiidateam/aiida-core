@@ -239,7 +239,7 @@ def create_archive(
                 entity_ids[EntityTypes.USER].add(entry.pk)
             else:
                 raise ArchiveExportError(
-                    f'I was given {entry} ({type(entry)}),' ' which is not a User, Node, Computer, or Group instance'
+                    f'I was given {entry} ({type(entry)}), which is not a User, Node, Computer, or Group instance'
                 )
         group_nodes, link_data = _collect_required_entities(
             querybuilder,
@@ -672,7 +672,7 @@ def _check_unsealed_nodes(querybuilder: QbType, node_ids: Set[int], batch_size: 
     if unsealed_node_pks:
         raise ExportValidationError(
             'All ProcessNodes must be sealed before they can be exported. '
-            f"Node(s) with PK(s): {', '.join(str(pk) for pk in unsealed_node_pks)} is/are not sealed."
+            f'Node(s) with PK(s): {", ".join(str(pk) for pk in unsealed_node_pks)} is/are not sealed.'
         )
 
 
@@ -763,7 +763,7 @@ def get_init_summary(
     """Get summary for archive initialisation"""
     parameters = [['Path', str(outfile)], ['Version', archive_version], ['Compression', compression]]
 
-    result = f"\n{tabulate(parameters, headers=['Archive Parameters', ''])}"
+    result = f'\n{tabulate(parameters, headers=["Archive Parameters", ""])}'
 
     inclusions = [
         ['Computers/Nodes/Groups/Users', 'All' if collect_all else 'Selected'],
@@ -771,10 +771,10 @@ def get_init_summary(
         ['Node Comments', include_comments],
         ['Node Logs', include_logs],
     ]
-    result += f"\n\n{tabulate(inclusions, headers=['Inclusion rules', ''])}"
+    result += f'\n\n{tabulate(inclusions, headers=["Inclusion rules", ""])}'
 
     if not collect_all:
-        rules_table = [[f"Follow links {' '.join(name.split('_'))}s", value] for name, value in traversal_rules.items()]
-        result += f"\n\n{tabulate(rules_table, headers=['Traversal rules', ''])}"
+        rules_table = [[f'Follow links {" ".join(name.split("_"))}s', value] for name, value in traversal_rules.items()]
+        result += f'\n\n{tabulate(rules_table, headers=["Traversal rules", ""])}'
 
     return result + '\n'

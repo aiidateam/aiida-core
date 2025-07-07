@@ -254,7 +254,7 @@ def test_different_computer_same_name_import(aiida_profile, tmp_path, aiida_loca
     # Check that there are no calculations
     builder = orm.QueryBuilder()
     builder.append(orm.CalcJobNode, project=['*'])
-    assert builder.count() == 0, 'There should not be any ' 'calculations in the database at ' 'this point.'
+    assert builder.count() == 0, 'There should not be any calculations in the database at this point.'
 
     # Import all the calculations
     import_archive(filename1)

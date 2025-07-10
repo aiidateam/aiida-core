@@ -435,7 +435,7 @@ def profile_from_backup(path):
 
     def import_sqlite_database(backup_db_path, target_db_path):
         """Import data from backup SQLite database to target database using SQLite's backup API."""
-        print("Importing database content...")
+        print('Importing database content...')
 
         # First, let's check if the target database is properly initialized
         target_conn = sqlite3.connect(str(target_db_path))
@@ -446,7 +446,7 @@ def profile_from_backup(path):
         target_conn.close()
 
         if not has_alembic:
-            print("Warning: Target database appears uninitialized. Using direct backup method.")
+            print('Warning: Target database appears uninitialized. Using direct backup method.')
             # If target is not initialized, just do a direct backup
             backup_conn = sqlite3.connect(str(backup_db_path))
             target_conn = sqlite3.connect(str(target_db_path))
@@ -454,12 +454,12 @@ def profile_from_backup(path):
             try:
                 with target_conn:
                     backup_conn.backup(target_conn)
-                print("Database content imported successfully")
+                print('Database content imported successfully')
             finally:
                 backup_conn.close()
                 target_conn.close()
         else:
-            print("Target database is initialized. Importing data while preserving schema...")
+            print('Target database is initialized. Importing data while preserving schema...')
             # Target is initialized, so we need to import data more carefully
             backup_conn = sqlite3.connect(str(backup_db_path))
             target_conn = sqlite3.connect(str(target_db_path))
@@ -477,13 +477,13 @@ def profile_from_backup(path):
 
                 for (table_name,) in tables:
                     # Clear existing data
-                    target_conn.execute(f"DELETE FROM {table_name}")
+                    target_conn.execute(f'DELETE FROM {table_name}')
 
                     # Copy data from backup
-                    target_conn.execute(f"INSERT INTO {table_name} SELECT * FROM backup_db.{table_name}")
+                    target_conn.execute(f'INSERT INTO {table_name} SELECT * FROM backup_db.{table_name}')
 
                 target_conn.commit()
-                print("Database content imported successfully")
+                print('Database content imported successfully')
 
             finally:
                 backup_conn.close()
@@ -491,10 +491,10 @@ def profile_from_backup(path):
 
     def restore_repository(backup_container_path, target_container_path):
         """Restore the disk-objectstore container from backup."""
-        print("Restoring repository...")
+        print('Restoring repository...')
 
         if not backup_container_path.exists():
-            print("Warning: No container directory found in backup")
+            print('Warning: No container directory found in backup')
             return
 
         if target_container_path.exists():
@@ -502,19 +502,17 @@ def profile_from_backup(path):
 
         # Use rsync for efficient copying
         try:
-            subprocess.run([
-                'rsync', '-arvz',
-                str(backup_container_path) + '/',
-                str(target_container_path) + '/'
-            ], check=True)
-            print("Repository restored successfully")
+            subprocess.run(
+                ['rsync', '-arvz', str(backup_container_path) + '/', str(target_container_path) + '/'], check=True
+            )
+            print('Repository restored successfully')
         except (subprocess.CalledProcessError, FileNotFoundError):
             # Fallback to shutil if rsync is not available
             shutil.copytree(backup_container_path, target_container_path)
-            print("Repository restored using fallback method")
+            print('Repository restored using fallback method')
 
         # Fix UUID mismatch between database and container
-        print("Synchronizing container UUID with database...")
+        print('Synchronizing container UUID with database...')
         try:
             from disk_objectstore import Container
 
@@ -528,16 +526,15 @@ def profile_from_backup(path):
             try:
                 # Update the repository UUID in the database
                 conn.execute(
-                    "UPDATE db_dbsetting SET val = ? WHERE key = 'repository|uuid'",
-                    (f'"{actual_container_uuid}"',)
+                    "UPDATE db_dbsetting SET val = ? WHERE key = 'repository|uuid'", (f'"{actual_container_uuid}"',)
                 )
                 conn.commit()
-                print(f"Updated database repository UUID to: {actual_container_uuid}")
+                print(f'Updated database repository UUID to: {actual_container_uuid}')
             finally:
                 conn.close()
 
         except Exception as e:
-            print(f"Warning: Could not sync container UUID: {e}")
+            print(f'Warning: Could not sync container UUID: {e}')
             print("You may need to run 'verdi storage maintain' to fix UUID mismatch")
 
     # Load backup configuration
@@ -545,22 +542,22 @@ def profile_from_backup(path):
     current_config = get_config()
     backup_profile = backup_config.get_profile(name=next(iter(backup_config.dictionary['profiles'].keys())))
 
-    print(f"Restoring backup from profile: {backup_profile.name}")
+    print(f'Restoring backup from profile: {backup_profile.name}')
 
     # Create new profile with fresh storage
-    new_profile_name = f"{backup_profile.name}-restored"
+    new_profile_name = f'{backup_profile.name}-restored'
 
     restored_profile = create_profile(
         current_config,
         name=new_profile_name,
         email=backup_profile.default_user_email,
         storage_backend=backup_profile.storage_backend,
-        storage_config={}  # Fresh, empty storage config
+        storage_config={},  # Fresh, empty storage config
     )
     current_config.add_profile(restored_profile)
     current_config.store()
 
-    print(f"Created new profile: {new_profile_name}")
+    print(f'Created new profile: {new_profile_name}')
 
     # Import database content
     backup_db = Path(path) / 'database.sqlite'

@@ -17,6 +17,7 @@ using an ``InstalledCode``, it will run its executable on the associated compute
 from __future__ import annotations
 
 import pathlib
+from typing import cast
 
 from pydantic import field_serializer, field_validator
 
@@ -47,7 +48,7 @@ class InstalledCode(Code):
             ...,
             title='Computer',
             description='The remote computer on which the executable resides.',
-            orm_to_model=lambda node, _: node.computer.label,
+            orm_to_model=lambda node, _: cast('InstalledCode', node).computer.label,
             short_name='-Y',
             priority=2,
         )
@@ -55,7 +56,7 @@ class InstalledCode(Code):
             ...,
             title='Filepath executable',
             description='Filepath of the executable on the remote computer.',
-            orm_to_model=lambda node, _: str(node.filepath_executable),  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: str(cast('InstalledCode', node).filepath_executable),
             short_name='-X',
             priority=1,
         )
@@ -83,7 +84,7 @@ class InstalledCode(Code):
         """
         super().__init__(**kwargs)
         self.computer = computer
-        self.filepath_executable = filepath_executable  # type: ignore[assignment]
+        self.filepath_executable = filepath_executable
 
     def _validate(self):
         """Validate the instance by checking that a computer has been defined.
@@ -159,7 +160,7 @@ class InstalledCode(Code):
         """
         return self.filepath_executable
 
-    @property  # type: ignore[override]
+    @property
     def computer(self) -> Computer:
         """Return the computer of this code."""
         assert self.backend_entity.computer is not None

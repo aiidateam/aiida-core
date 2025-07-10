@@ -12,7 +12,7 @@ import pytest
 
 from aiida.common.datastructures import StashMode
 from aiida.common.exceptions import StoringNotAllowed
-from aiida.orm import RemoteStashCompressedData, RemoteStashData, RemoteStashFolderData
+from aiida.orm import QueryBuilder, RemoteStashCompressedData, RemoteStashCopyData, RemoteStashData
 
 
 def test_base_class():
@@ -32,7 +32,7 @@ def test_constructor_folder(store):
     target_basepath = '/absolute/path'
     source_list = ['relative/folder', 'relative/file']
 
-    data = RemoteStashFolderData(stash_mode, target_basepath, source_list)
+    data = RemoteStashCopyData(stash_mode, target_basepath, source_list)
 
     assert data.stash_mode == stash_mode
     assert data.target_basepath == target_basepath
@@ -66,7 +66,7 @@ def test_constructor_invalid_folder(argument, value):
 
     with pytest.raises(TypeError):
         kwargs[argument] = value
-        RemoteStashFolderData(**kwargs)
+        RemoteStashCopyData(**kwargs)
 
 
 @pytest.mark.parametrize('store', (False, True))
@@ -124,7 +124,7 @@ def test_constructor_invalid_compressed(argument, value):
 @pytest.mark.parametrize(
     'dataclass, valid_stash_modes',
     (
-        (RemoteStashFolderData, [StashMode.COPY]),
+        (RemoteStashCopyData, [StashMode.COPY]),
         (
             RemoteStashCompressedData,
             [StashMode.COMPRESS_TAR, StashMode.COMPRESS_TARBZ2, StashMode.COMPRESS_TARGZ, StashMode.COMPRESS_TARXZ],
@@ -151,3 +151,25 @@ def test_constructor_invalid_stash_mode(dataclass, valid_stash_modes):
                 dataclass(**kwargs)
         else:
             dataclass(**kwargs)
+
+
+def test_remote_stash_folder_data_queryable(monkeypatch):
+    """Checks if `RemoteStashFolderData` can still be queried after deprecation"""
+    from aiida.orm.nodes.data.remote.stash.folder import RemoteStashFolderData
+
+    # Remove ValueError in init constructor to store a node in database
+    def init(self, stash_mode=StashMode.COPY, target_basepath='/tmp', source_list=('/some',)):
+        RemoteStashData.__init__(self, stash_mode=stash_mode)
+
+    monkeypatch.setattr(RemoteStashFolderData, '__init__', init)
+    RemoteStashFolderData().store()
+
+    # Check that at least one instance can be found
+    assert len(QueryBuilder().append(RemoteStashFolderData).all()) > 0
+    monkeypatch.undo()
+    # Check that init error is in place
+    with pytest.raises(
+        RuntimeError, match='`RemoteStashFolderData` instantiation is not allowed. Use `RemoteStashCopyData` instead.'
+    ):
+        RemoteStashFolderData(stash_mode=StashMode.COPY, target_basepath='/tmp', source_list=('/some',))
+    assert len(QueryBuilder().append(RemoteStashFolderData).all()) > 0

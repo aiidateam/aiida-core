@@ -838,12 +838,15 @@ def computer_export_config(computer, output_file, user, overwrite, sort):
 @click.argument('pattern', type=str, required=False)
 @click.option(
     '--source',
-    type=click.Choice(['code-registry', 'resource-registry', 'both']),
-    default='both',
-    help='Specify the registry source (default: both)',
+    type=click.Choice(['code-registry', 'resource-registry', 'ssh-config']),
+    default='ssh-config',
+    help='Specify the computer source (default: ssh-config)',
 )
 @click.option(
-    '--auto-setup', is_flag=True, help='Automatically run setup and configure commands after saving config files'
+    '--auto-setup',
+    is_flag=True,
+    default=True,
+    help='Automatically run setup and configure commands after saving config files',
 )
 @click.pass_context
 @with_dbenv()
@@ -853,14 +856,17 @@ def computer_search(ctx, pattern, source, auto_setup):
     If PATTERN is provided, search for computers matching that pattern.
     If no pattern is provided, show all available computers.
 
-    This command allows you to discover and setup computers from the community
-    AiiDA code registry at https://github.com/aiidateam/aiida-code-registry/
-    and the AiiDA resource registry athttps://github.com/aiidateam/aiida-resource-registry/
+    This command allows you to discover and setup computers from:\n
+    - The community AiiDA code registry at https://github.com/aiidateam/aiida-code-registry/\n
+    - The AiiDA resource registry at https://github.com/aiidateam/aiida-resource-registry/\n
+    - Your local SSH configuration at ``~/.ssh/config``
     """
+
     from aiida.cmdline.utils.common import tabulate
     from aiida.cmdline.utils.registry_helpers import (
         fetch_code_registry_data,
         fetch_resource_registry_data,
+        fetch_ssh_config_data,
         get_computer_configure_config,
         get_computer_setup_config,
         get_computers_table,
@@ -875,14 +881,17 @@ def computer_search(ctx, pattern, source, auto_setup):
     # code registry: 'daint.cscs.ch', 'imxgesrv1.epfl.ch', 'lsmosrv6', 'fidis.epfl.ch', 'tigu.empa.ch', 'paratera',
     # 'merlin.psi.ch', 'eiger.cscs.ch'
     # resource registry: 'eiger.cscs.ch', 'daint.cscs.ch', 'merlin.psi.ch', 'merlin7.psi.ch'
-    if source == 'both':
-        registry_data = fetch_code_registry_data() | fetch_resource_registry_data()
-    elif source == 'resource-registry':
-        registry_data = fetch_resource_registry_data()
-    elif source == 'code-registry':
-        registry_data = fetch_code_registry_data()
-
-    echo.echo_success(f'Successfully fetched AiiDA registry data. Found {len(registry_data)} computers.')
+    # if source == 'both':
+    #     registry_data = fetch_code_registry_data() | fetch_resource_registry_data()
+    if source == 'ssh-config':
+        registry_data = fetch_ssh_config_data()
+    else:
+        echo.echo_report('Fetching AiiDA registries...')
+        if source == 'resource-registry':
+            registry_data = fetch_resource_registry_data()
+        elif source == 'code-registry':
+            registry_data = fetch_code_registry_data()
+        echo.echo_success(f'Successfully fetched AiiDA registry data. Found {len(registry_data)} computers.')
 
     matching_systems = None
     if pattern:
@@ -910,10 +919,19 @@ def computer_search(ctx, pattern, source, auto_setup):
             tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid')
         )
 
-    # Offer to save configuration to files
-    save_files = auto_setup or click.confirm('\nWould you like to save computer configuration to files?')
-    if not save_files:
+    # import ipdb
+
+    # ipdb.set_trace()
+    # if source == 'ssh-config':
+    #     import ipdb
+
+    #     ipdb.set_trace()
+
+    # Offer to select a computer from the retrieved table
+    if not click.confirm('\nWould you like to select a computer?', default=True):
         return
+
+    # TODO: Don't call variant selector for Computer from `ssh-config`
 
     # Handle computer selection based on pattern matching
     if matching_systems and len(matching_systems) == 1:
@@ -958,6 +976,18 @@ def computer_search(ctx, pattern, source, auto_setup):
         echo.echo_info('Configuration processing was cancelled.')
         return
 
+
+    if source == 'ssh-config':
+        echo.echo_report(
+            "We recommend running `verdi computer setup` with the `core.ssh_async` transport plugin."
+            "This will automatically use your operating system (OpenSSH) configuration."
+        )
+        if auto_setup:
+            echo.echo_warning(
+                "Automatic setup is not possible as necessary AiiDA options not contained in ssh-config file."
+            )
+        return
+
     # Save both configurations to files
     echo.echo_info('Saving configurations to files...')
 
@@ -971,7 +1001,8 @@ def computer_search(ctx, pattern, source, auto_setup):
     transport_type = processed_setup_config.get('transport', 'core.ssh')
 
     if auto_setup:
-        echo.echo_info('\n🚀 Automatically setting up computer...')
+
+        echo.echo_report('\n🚀 Automatically setting up computer...')
 
         # Invoke computer setup command
         from aiida.plugins import SchedulerFactory, TransportFactory

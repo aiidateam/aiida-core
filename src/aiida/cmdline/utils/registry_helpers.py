@@ -13,7 +13,9 @@ import yaml
 from aiida.cmdline.utils import echo
 
 __all__ = (
+    'fetch_code_registry_data',
     'fetch_resource_registry_data',
+    'fetch_ssh_config_data',
     'get_computer_configure_config',
     'get_computer_setup_config',
     'get_computers_table',
@@ -33,7 +35,7 @@ def fetch_code_registry_data() -> t.Dict[str, t.Any]:
     Returns:
         Dictionary containing the complete registry database in normalized format
     """
-    database_url = 'https://aiidateam.github.io/aiida-code-registry/database_v2_1.json'
+    database_url = 'https://aiidateam.github.io/aiida-code-registry/database.json'
 
     try:
         response = requests.get(database_url, timeout=10)
@@ -96,6 +98,116 @@ def fetch_resource_registry_data() -> t.Dict[str, t.Any]:
         raise click.ClickException(f'Failed to fetch registry data from {database_url}: {e}')
     except json.JSONDecodeError as e:
         raise click.ClickException(f'Failed to parse JSON data: {e}')
+
+
+def fetch_ssh_config_data(ssh_config_path: t.Optional[str | Path] = None) -> t.Dict[str, t.Any]:
+    """
+    Parse SSH config file and convert to registry format.
+
+    Args:
+        ssh_config_path: Path to SSH config file. If None, uses ~/.ssh/config
+
+    Returns:
+        Dictionary containing SSH hosts in registry format
+    """
+    if ssh_config_path is None:
+        ssh_config_path = Path.home() / '.ssh' / 'config'
+    else:
+        ssh_config_path = Path(ssh_config_path)
+
+    if not ssh_config_path.exists():
+        raise click.ClickException(f'SSH config file not found at {ssh_config_path}')
+
+    try:
+        ssh_hosts = parse_ssh_config(ssh_config_path)
+        return convert_ssh_config_to_registry_format(ssh_hosts)
+    except Exception as e:
+        raise click.ClickException(f'Failed to parse SSH config file: {e}')
+
+
+def parse_ssh_config(config_path: Path) -> t.Dict[str, t.Dict[str, str]]:
+    """
+    Parse SSH config file and extract host configurations.
+
+    Args:
+        config_path: Path to the SSH config file
+
+    Returns:
+        Dictionary mapping host aliases to their configuration options
+    """
+    hosts = {}
+    current_host = None
+
+    with open(config_path, 'r', encoding='utf-8') as f:
+        for line_num, line in enumerate(f, 1):
+            line = line.strip()
+
+            # Skip empty lines and comments
+            if not line or line.startswith('#'):
+                continue
+
+            # Parse Host directive
+            if line.lower().startswith('host '):
+                host_pattern = line.split(None, 1)[1]
+                # Handle multiple hosts in one directive (space or comma separated)
+                host_names = re.split(r'[,\s]+', host_pattern)
+
+                for host_name in host_names:
+                    host_name = host_name.strip()
+                    if host_name and not ('*' in host_name or '?' in host_name):  # Skip wildcards
+                        current_host = host_name
+                        hosts[current_host] = {}
+                continue
+
+            # Parse configuration options
+            if current_host and ' ' in line:
+                try:
+                    key, value = line.split(None, 1)
+                    # Convert key to lowercase for consistency
+                    hosts[current_host][key.lower()] = value
+                except ValueError:
+                    # Skip malformed lines
+                    continue
+
+    return hosts
+
+
+def convert_ssh_config_to_registry_format(ssh_hosts: t.Dict[str, t.Dict[str, str]]) -> t.Dict[str, t.Any]:
+    """
+    Convert parsed SSH config to registry format.
+
+    Args:
+        ssh_hosts: Dictionary of SSH host configurations
+
+    Returns:
+        Dictionary in registry format
+    """
+    registry_data = {}
+
+    for host_alias, host_config in ssh_hosts.items():
+        # Skip certain hosts that are clearly not compute hosts
+        if any(pattern in host_alias.lower() for pattern in ['github.com', 'gitlab.com', 'bitbucket']):
+            continue
+
+        # Extract hostname (use hostname directive if available, otherwise use host alias)
+        hostname = host_config.get('hostname', host_alias)
+
+        # Create minimal setup configuration with only required fields
+        setup_config = {'label': hostname.split('.')[0], 'hostname': hostname, 'transport': 'core.ssh_async'}
+
+        # Create empty configure configuration
+        configure_config = {}
+
+        # Structure in registry format
+        registry_data[host_alias] = {
+            'default': 'ssh_config',
+            'ssh_config': {
+                'computer': {'computer-setup': setup_config, 'computer-configure': configure_config},
+                'codes': {},  # No codes defined from SSH config
+            },
+        }
+
+    return registry_data
 
 
 def remove_metadata_sections(registry_data: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:

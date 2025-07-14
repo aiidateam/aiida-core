@@ -11,11 +11,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from aiida.cmdline.utils.common import tabulate
 
 import click
 import requests
 import yaml
+
+from aiida.cmdline.utils.common import tabulate
 
 LOGGER = logging.getLogger(__name__)
 
@@ -756,10 +757,14 @@ class ComputerSetupHandler:
             LOGGER.info(f'Setup YAML file written to: {setup_file}')
 
         # Always write configuration YAML and log that auto-configuration is not supported
-        LOGGER.warning('Automatic configuration of computers is not yet supported. Writing configuration YAML file to disk.')
+        LOGGER.warning(
+            'Automatic configuration of computers is not yet supported. Writing configuration YAML file to disk.'
+        )
         configure_file = file_manager.save_config(processed_configure_config, 'configure', system_name, variant)
         LOGGER.info(f'Configuration YAML file written to: {configure_file}')
-        ComputerSetupHandler._auto_configure(ctx, processed_configure_config, computer_label, transport_type, configure_file)
+        ComputerSetupHandler._auto_configure(
+            ctx, processed_configure_config, computer_label, transport_type, configure_file
+        )
 
         return True
 

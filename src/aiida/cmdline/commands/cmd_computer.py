@@ -20,7 +20,7 @@ from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
-from aiida.cmdline.utils.common import validate_output_filename, tabulate
+from aiida.cmdline.utils.common import tabulate, validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
@@ -860,7 +860,7 @@ def computer_search(ctx, pattern, source):
         ComputerSelector,
         ComputerSetupHandler,
         ComputerSource,
-    )  # noqa: PLC0415
+    )
 
     # Convert string to enum
     source_enum = ComputerSource(source)
@@ -895,10 +895,13 @@ def computer_search(ctx, pattern, source):
     # Handle SSH-only source differently
     if source_enum == ComputerSource.SSH_CONFIG:
         # Show table of SSH config computers
-        print(tabulate(
-            [[i+1, k] for i, k in enumerate(registry_data.keys())],
-            headers=['#', 'SSH Config Computer'],
-            tablefmt='grid'))
+        print(
+            tabulate(
+                [[i + 1, k] for i, k in enumerate(registry_data.keys())],
+                headers=['#', 'SSH Config Computer'],
+                tablefmt='grid',
+            )
+        )
         echo.echo_report('Computers registered in the ~/.ssh/config can be set up using the `core.ssh_async` transport')
         echo.echo_report('This transport plugin automatically uses your OS SSH configuration')
         echo.echo_report('for connection settings including ProxyJump, IdentityFile, and other SSH options.')
@@ -919,7 +922,9 @@ def computer_search(ctx, pattern, source):
         return
 
     # Prompt user before setup
-    if not click.confirm(f'Would you like to set up the computer "{system_name}" with variant "{variant}" now?', default=True):
+    if not click.confirm(
+        f'Would you like to set up the computer "{system_name}" with variant "{variant}" now?', default=True
+    ):
         print('Setup cancelled.')
         return
 

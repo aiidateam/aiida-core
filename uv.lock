@@ -169,7 +169,7 @@ tui = [
 requires-dist = [
     { name = "aiida-core", extras = ["atomic-tools", "rest", "tests", "tui"], marker = "extra == 'pre-commit'" },
     { name = "aiida-export-migration-tests", marker = "extra == 'tests'", specifier = "==0.9.0" },
-    { name = "alembic", specifier = "~=1.2" },
+    { name = "alembic", specifier = "~=1.8" },
     { name = "archive-path", specifier = "~=0.4.2" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.18" },
     { name = "asyncssh", specifier = "~=2.19.0" },

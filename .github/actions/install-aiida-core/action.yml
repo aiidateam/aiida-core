@@ -46,5 +46,6 @@ runs:
 
   - name: Install aiida-core
     if: ${{ inputs.from-lock != 'true' }}
-    run: uv pip install --resolution ${{ inputs.resolution-strategy }} -e .${{ inputs.extras }}
+    run: |
+      uv pip install --resolution ${{ inputs.resolution-strategy }} -e .${{ inputs.extras && format('[{0}]', inputs.extras) || '' }}
     shell: bash

@@ -199,7 +199,7 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'pre-commit'", specifier = "~=1.16.0" },
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=1.0.0" },
     { name = "notebook", marker = "extra == 'notebook'", specifier = "~=6.1,>=6.1.5" },
-    { name = "numpy", specifier = "~=1.21" },
+    { name = "numpy", specifier = ">=1.21,<3" },
     { name = "packaging", marker = "extra == 'pre-commit'", specifier = "~=23.0" },
     { name = "paramiko", specifier = "~=3.0" },
     { name = "pg8000", marker = "extra == 'tests'", specifier = "~=1.13" },

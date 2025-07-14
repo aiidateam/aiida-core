@@ -633,7 +633,7 @@ Quick comparison between these methods:
 
 ::
 
-   (A) Immediate stashing:
+   (Method 1) Immediate stashing:
    +---------------------+      +--------------------------------+
    |  Calculation job    | ---> | Stash files with no submission |
    +---------------------+      |         (before retrieve)      |
@@ -644,7 +644,7 @@ Quick comparison between these methods:
                                 | Retrieve & parse files |
                                 +------------------------+
 
-   (B) Post-completion stashing:
+   (Method 2) Post-completion stashing:
    +---------------------+      +------------------------+
    |  Calculation job    | ---> | Retrieve & parse files |  ->
    +---------------------+      +------------------------+

@@ -607,8 +607,6 @@ The order can be controlled through the ``file_copy_operation_order`` attribute 
 Stashing Files on the Remote
 ----------------------------
 
-.. _remote_stashing:
-
 
 In many scientific workflows, calculations produce files that are either too large to retrieve to your local AiiDA repository or simply not needed locally. However, you may still want to keep these files available on the remote machine—for example, to facilitate restarts, enable debugging, or for archiving purposes—but outside the compute or scratch directory that might be cleaned up regularly.
 
@@ -640,11 +638,11 @@ Quick comparison between these methods:
    |  Calculation job    | ---> | Stash files with no submission |
    +---------------------+      |         (before retrieve)      |
                                 +--------------------------------+
-                                          |
-                                          v
-                              +------------------------+
-                              | Retrieve & parse files |
-                              +------------------------+
+                                             |
+                                             v
+                                +------------------------+
+                                | Retrieve & parse files |
+                                +------------------------+
 
    (B) Post-completion stashing:
    +---------------------+      +------------------------+
@@ -712,7 +710,7 @@ This method requires specifying the ``remote_folder`` of the original calculatio
 
     inputs = {
         'metadata': {
-            'computer': load_computer(label="localhost"),
+            'computer': load_computer(label=<COMPUTER_LABEL>),
             'options': {
                 'stash': {
                     'stash_mode': StashMode.COPY.value,
@@ -734,10 +732,10 @@ First, place your script on the remote machine and define it as an AiiDA code:
 
 .. code-block:: python
 
-   code = orm.InstalledCode(
+   code = InstalledCode(
        label='<MY_CODE>',
        default_calc_job_plugin='core.stash',
-       computer=orm.load_computer(<COMPUTER_LABEL>),
+       computer=load_computer(<COMPUTER_LABEL>),
        filepath_executable=str(<Path_to_script.sh>),
    )
    code.store()
@@ -746,10 +744,10 @@ Run the custom stashing job with:
 
 .. code-block:: python
 
-   CalculationFactory('core.stash')
+   StashCalculation = CalculationFactory('core.stash')
    inputs = {
        'metadata': {
-           'computer': aiida_localhost,
+           'computer': load_computer(<COMPUTER_LABEL>),
            'options': {
                'resources': {'num_machines': 1},
                'stash': {
@@ -760,9 +758,9 @@ Run the custom stashing job with:
            },
        },
        'source_node': <orm.RemoteData>,
-       'code': orm.load_code(label='<MY_CODE>'),
+       'code': load_code(label='<MY_CODE>'),
    }
-   submit(CalculationFactory('core.stash'), **inputs)
+   submit(StashCalculation, **inputs)
 
 
 
@@ -771,7 +769,7 @@ This calculation produces an ``aiida.in`` file in JSON format with the stashing 
 .. code-block:: none
 
    {"working_directory": <orm.RemoteData>.get_remote_path(),
-    "source_list": ["dummy.txt", "very_dummy.txt"],
+    "source_list": ["aiida.out", "output.txt"],
     "target_base": "/path/to/stash"}
 
 Which is used as an input to your script:
@@ -804,7 +802,8 @@ Caveats and best practices
 
    - **AiiDA does not manage the files in the remote stash after creation.** Files may be deleted or lost at any time, depending on the cluster's configuration or cleanup policies.
    - **Check quotas and permissions**: Make sure you have write access and sufficient quota in the target stash directory.
-   - **Handle errors**: If the stashing operation fails (e.g., due to missing files or lack of permissions), AiiDA will log the issue, but will not raise (room for improvement in AiiDA). It is your responsibility to check and recover as needed.
+   - **Handle errors**: If the stashing operation fails (e.g., due to missing files or lack of permissions), AiiDA will log the issue, but will not raise. It is your responsibility to check and recover as needed.
+   - **Source files are not deleted after stashing**: This is to prevent unwanted data-loss.
 
 
 

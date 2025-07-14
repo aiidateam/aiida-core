@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import os
-import sys
 import pathlib
+import sys
 import warnings
 from typing import final
 

@@ -6,10 +6,12 @@
 
 from .base import *
 from .compress import *
+from .custom import *
 from .folder import *
 
 __all__ = (
     'RemoteStashCompressedData',
+    'RemoteStashCustomData',
     'RemoteStashData',
     'RemoteStashFolderData'
 )

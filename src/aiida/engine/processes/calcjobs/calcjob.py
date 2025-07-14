@@ -51,10 +51,9 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
     :return: string with error message in case the inputs are invalid
     """
     try:
-        ctx.get_port('code')
         ctx.get_port('metadata.computer')
     except ValueError:
-        # If the namespace no longer contains the `code` or `metadata.computer` ports we skip validation
+        # If the namespace no longer contains `metadata.computer` port we skip validation
         return None
 
     remote_folder = inputs.get('remote_folder', None)
@@ -66,6 +65,10 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
         return None
 
     code = inputs.get('code', None)
+    if not code:
+        # If the namespace no longer contains `code` port we skip validation
+        return None
+
     computer_from_code = code.computer
     computer_from_metadata = inputs.get('metadata', {}).get('computer', None)
 

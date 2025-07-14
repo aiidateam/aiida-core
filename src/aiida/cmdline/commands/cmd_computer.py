@@ -20,7 +20,7 @@ from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
-from aiida.cmdline.utils.common import validate_output_filename
+from aiida.cmdline.utils.common import validate_output_filename, tabulate
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
@@ -842,214 +842,120 @@ def computer_export_config(computer, output_file, user, overwrite, sort):
     default='ssh-config',
     help='Specify the computer source (default: ssh-config)',
 )
-@click.option(
-    '--auto-setup',
-    is_flag=True,
-    default=True,
-    help='Automatically run setup and configure commands after saving config files',
-)
 @click.pass_context
 @with_dbenv()
-def computer_search(ctx, pattern, source, auto_setup):
-    """Search for computers in the AiiDA registries and setup them up in your profile.
+def computer_search(ctx, pattern, source):
+    """Search for computers and setup them in your profile.
 
     If PATTERN is provided, search for computers matching that pattern.
     If no pattern is provided, show all available computers.
 
-    This command allows you to discover and setup computers from:\n
-    - The community AiiDA code registry at https://github.com/aiidateam/aiida-code-registry/\n
-    - The AiiDA resource registry at https://github.com/aiidateam/aiida-resource-registry/\n
-    - Your local SSH configuration at ``~/.ssh/config``
+    This command allows you to discover and setup computers from:
+    - The community AiiDA code registry
+    - The AiiDA resource registry
+    - Your local SSH configuration at ~/.ssh/config
     """
-
-    from aiida.cmdline.utils.common import tabulate
     from aiida.cmdline.utils.registry_helpers import (
-        fetch_code_registry_data,
-        fetch_resource_registry_data,
-        fetch_ssh_config_data,
-        get_computer_configure_config,
-        get_computer_setup_config,
-        get_computers_table,
-        interactive_computer_selector,
-        interactive_variant_selector,
-        process_template_variables,
-        save_config_to_file,
-    )
+        ComputerSearchService,
+        ComputerSelector,
+        ComputerSetupHandler,
+        ComputerSource,
+    )  # noqa: PLC0415
 
-    echo.echo_report('Fetching AiiDA registries...')
-    # NOTE: There is quite some overlap between code registry and resource registry
-    # code registry: 'daint.cscs.ch', 'imxgesrv1.epfl.ch', 'lsmosrv6', 'fidis.epfl.ch', 'tigu.empa.ch', 'paratera',
-    # 'merlin.psi.ch', 'eiger.cscs.ch'
-    # resource registry: 'eiger.cscs.ch', 'daint.cscs.ch', 'merlin.psi.ch', 'merlin7.psi.ch'
-    # if source == 'both':
-    #     registry_data = fetch_code_registry_data() | fetch_resource_registry_data()
-    if source == 'ssh-config':
-        registry_data = fetch_ssh_config_data()
-    else:
-        echo.echo_report('Fetching AiiDA registries...')
-        if source == 'resource-registry':
-            registry_data = fetch_resource_registry_data()
-        elif source == 'code-registry':
-            registry_data = fetch_code_registry_data()
-        echo.echo_success(f'Successfully fetched AiiDA registry data. Found {len(registry_data)} computers.')
+    # Convert string to enum
+    source_enum = ComputerSource(source)
 
-    matching_systems = None
-    if pattern:
-        matching_systems = [system for system in registry_data.keys() if pattern in system]
-        if not matching_systems:
-            echo.echo_warning(f"No computers found matching pattern '{pattern}'")
-            if not click.confirm('\nWould you like to show all available systems in the registry?'):
-                return
-            table = get_computers_table(registry_data)
-            echo.echo(
-                tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid')
-            )
-        else:
-            registry_data = {match: registry_data[match] for match in matching_systems}
-            echo.echo_report(f"Systems in the registry matching the pattern '{pattern}'")
-            table = get_computers_table(registry_data)
-            echo.echo(
-                tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid')
-            )
+    # Initialize service
+    service = ComputerSearchService()
 
-    else:
-        echo.echo_report('All available systems in the registries:')
-        table = get_computers_table(registry_data)
-        echo.echo(
-            tabulate(table, headers=['System', 'Variants', 'Hostname', 'Codes (default variant)'], tablefmt='grid')
-        )
+    # Fetch data
+    echo.echo_report('Fetching computer data from sources...')
+    registry_data = service.fetch_data(source_enum)
 
-    # import ipdb
-
-    # ipdb.set_trace()
-    # if source == 'ssh-config':
-    #     import ipdb
-
-    #     ipdb.set_trace()
-
-    # Offer to select a computer from the retrieved table
-    if not click.confirm('\nWould you like to select a computer?', default=True):
+    if not registry_data:
+        echo.echo_error('No computer data could be fetched from any source.')
         return
 
-    # TODO: Don't call variant selector for Computer from `ssh-config`
+    echo.echo_success(f'Total: {len(registry_data)} computers available from all sources.')
 
-    # Handle computer selection based on pattern matching
-    if matching_systems and len(matching_systems) == 1:
-        # Only one match, use it directly and just select variant
-        selected_computer = matching_systems[0]
-        echo.echo_report(f'Using the only matching computer: {selected_computer}')
-        selected_variant = interactive_variant_selector(registry_data, selected_computer)
-        if not selected_variant:
-            return
-        selection = (selected_computer, selected_variant)
+    # Filter by pattern if provided
+    if pattern:
+        matching_data = service.filter_by_pattern(pattern)
+        if not matching_data:
+            echo.echo_warning(f"No computers found matching pattern '{pattern}'")
+            if not click.confirm('\nWould you like to show all available systems?'):
+                return
+            echo.echo_report('All available systems:')
+        else:
+            echo.echo_report(f"Systems matching the pattern '{pattern}':")
+            registry_data = matching_data
     else:
-        # Multiple matches or no pattern, let user choose computer and variant
-        selected_computer = interactive_computer_selector(registry_data)
-        if not selected_computer:
-            return
+        echo.echo_report('All available systems:')
 
-        selected_variant = interactive_variant_selector(registry_data, selected_computer)
-        if not selected_variant:
-            return
+    # Handle SSH-only source differently
+    if source_enum == ComputerSource.SSH_CONFIG:
+        # Show table of SSH config computers
+        print(tabulate(
+            [[i+1, k] for i, k in enumerate(registry_data.keys())],
+            headers=['#', 'SSH Config Computer'],
+            tablefmt='grid'))
+        echo.echo_report('Computers registered in the ~/.ssh/config can be set up using the `core.ssh_async` transport')
+        echo.echo_report('This transport plugin automatically uses your OS SSH configuration')
+        echo.echo_report('for connection settings including ProxyJump, IdentityFile, and other SSH options.')
+        echo.echo_report('For more information, see the AiiDA documentation on SSH transport plugins.')
+        return
 
-        selection = (selected_computer, selected_variant)
+    selector = ComputerSelector(registry_data)
+    selection = _get_computer_selection(selector, pattern)
+    if not selection:
+        return
 
     system_name, variant = selection
 
-    # Get the raw configurations
-    setup_config = get_computer_setup_config(registry_data, system_name, variant)
-    configure_config = get_computer_configure_config(registry_data, system_name, variant)
-
-    echo.echo_info(f'\n📋 Processing configuration for {system_name} ({variant})')
-
-    # Process template variables for setup config
-    echo.echo_info('\n🔧 Processing computer setup configuration...')
-    processed_setup_config = process_template_variables(setup_config)
-    if processed_setup_config is None:
-        echo.echo_info('Configuration processing was cancelled.')
+    # Handle SSH config computers differently
+    if system_name.startswith('ssh:'):
+        hostname = system_name.replace('ssh:', '')
+        ComputerSetupHandler.handle_ssh_config_setup(system_name, hostname)
         return
 
-    # Process template variables for configure config
-    echo.echo_info('\n🔐 Processing computer configure configuration...')
-    processed_configure_config = process_template_variables(configure_config)
-    if processed_configure_config is None:
-        echo.echo_info('Configuration processing was cancelled.')
+    # Prompt user before setup
+    if not click.confirm(f'Would you like to set up the computer "{system_name}" with variant "{variant}" now?', default=True):
+        print('Setup cancelled.')
         return
 
+    # Handle registry computers
+    ComputerSetupHandler.handle_registry_setup(ctx, selector, system_name, variant, auto_setup=True)
 
-    if source == 'ssh-config':
-        echo.echo_report(
-            "We recommend running `verdi computer setup` with the `core.ssh_async` transport plugin."
-            "This will automatically use your operating system (OpenSSH) configuration."
-        )
-        if auto_setup:
-            echo.echo_warning(
-                "Automatic setup is not possible as necessary AiiDA options not contained in ssh-config file."
-            )
-        return
 
-    # Save both configurations to files
-    echo.echo_info('Saving configurations to files...')
+def _get_computer_selection(selector, pattern):
+    """Get computer and variant selection from user."""
+    # Check if pattern matches exactly one system
+    if pattern:
+        matching_systems = [system for system in selector.registry_data.keys() if pattern in system]
+        if len(matching_systems) == 1:
+            selected_computer = matching_systems[0]
+            echo.echo_report(f'Using the only matching computer: {selected_computer}')
 
-    setup_file = save_config_to_file(processed_setup_config, 'setup', system_name, variant)
-    configure_file = save_config_to_file(processed_configure_config, 'configure', system_name, variant)
+            # Skip variant selection for SSH config
+            if selected_computer.startswith('ssh:'):
+                return (selected_computer, 'ssh_config')
 
-    # Get the computer label from the setup config for the configure command
-    computer_label = processed_setup_config.get('label', f'{system_name}_{variant}')
+            selected_variant = selector.select_variant(selected_computer)
+            if not selected_variant:
+                return None
+            return (selected_computer, selected_variant)
 
-    # Get the transport type from the setup config for the configure command
-    transport_type = processed_setup_config.get('transport', 'core.ssh')
+    # Interactive selection
+    selected_computer = selector.select_computer()
+    if not selected_computer:
+        return None
 
-    if auto_setup:
+    # Skip variant selection for SSH config
+    if selected_computer.startswith('ssh:'):
+        return (selected_computer, 'ssh_config')
 
-        echo.echo_report('\n🚀 Automatically setting up computer...')
+    selected_variant = selector.select_variant(selected_computer)
+    if not selected_variant:
+        return None
 
-        # Invoke computer setup command
-        from aiida.plugins import SchedulerFactory, TransportFactory
-
-        # Convert strings to entry point objects (not loaded classes)
-        processed_setup_config_copy = processed_setup_config.copy()
-
-        # Get the entry point objects (load=False to get the entry point, not the loaded class)
-        if 'scheduler' in processed_setup_config_copy:
-            scheduler_ep = SchedulerFactory(processed_setup_config_copy['scheduler'], load=False)
-            processed_setup_config_copy['scheduler'] = scheduler_ep
-
-        if 'transport' in processed_setup_config_copy:
-            transport_ep = TransportFactory(processed_setup_config_copy['transport'], load=False)
-            processed_setup_config_copy['transport'] = transport_ep
-
-        # Now invoke with the entry point objects
-        ctx.invoke(computer_setup, non_interactive=False, **processed_setup_config_copy)
-        echo.echo_success('✅ Computer setup completed successfully!')
-
-        # Invoke computer configure command
-        echo.echo_info('\n🔧 Automatically configuring computer...')
-
-        # Import the transport CLI to get the configure command
-        from aiida.transports import cli as transport_cli
-
-        configure_cmd = transport_cli.create_configure_cmd(transport_type)
-
-        # Get the computer object to pass to configure command
-        from aiida.orm import Computer
-
-        computer = Computer.collection.get(label=computer_label)
-
-        # Invoke the configure command with the config file
-        import ipdb
-
-        ipdb.set_trace()
-        ctx.invoke(
-            configure_cmd,
-            computer=computer,
-            config_file=configure_file,
-        )
-        echo.echo_success('✅ Computer configuration completed successfully!')
-        echo.echo_success(f'🎉 Computer "{computer_label}" is now ready to use!')
-
-    else:
-        echo.echo('To set up the computer, run:')
-        echo.echo(f'  verdi computer setup --config {setup_file}')
-        echo.echo('\nTo configure the computer, run:')
-        echo.echo(f'  verdi computer configure {transport_type} {computer_label} --config {configure_file}')
+    return (selected_computer, selected_variant)

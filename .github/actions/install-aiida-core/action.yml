@@ -18,6 +18,10 @@ inputs:
     description: Install aiida-core dependencies from uv lock file
     default: 'true'
     required: false
+  resolution-strategy:
+    description: uv dependency resolution strategy
+    default: highest
+    required: false
 
 runs:
   using: composite
@@ -42,5 +46,5 @@ runs:
 
   - name: Install aiida-core
     if: ${{ inputs.from-lock != 'true' }}
-    run: uv pip install -e .${{ inputs.extras }}
+    run: uv pip install --resolution ${{ inputs.resolution-strategy }} -e .${{ inputs.extras }}
     shell: bash

@@ -134,9 +134,10 @@ def _get_configuration_directory_from_envvar() -> pathlib.Path | None:
         return None
 
     # Determine seperator to split paths in environment variables like PATH
-    seperator = ':'
     if sys.platform == 'win32':
         seperator = ';'
+    else:
+        seperator = ':'
 
     # Loop over all the paths in the ``AIIDA_PATH`` variable to see if any of them contain a configuration folder
     dirpath_config = None

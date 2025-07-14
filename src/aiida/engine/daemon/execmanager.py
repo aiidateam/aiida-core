@@ -491,6 +491,30 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
 
     ###
 
+    if stash_mode == StashMode.SUBMIT_CUSTOM_CODE.value:
+        if calculation.process_type != 'aiida.calculations:core.stash':
+            EXEC_LOGGER.warning(
+                f'Stashing as {StashMode.SUBMIT_CUSTOM_CODE.value}'
+                ' is only possible through job submission. Stashing skipped.'
+            )
+            # Note we could easily support it via `transport.exec_command_wait_async`
+            # However, that may confuse users, as it's done in a different manner than job-submission
+            # So just to stay safe, we decided not to provide this feature.
+            return
+
+        remote_stash = RemoteStashCustomData(
+            computer=calculation.computer,
+            stash_mode=StashMode(stash_mode),
+            target_basepath=str(target_base),
+            source_list=source_list,
+        )
+
+        remote_stash.store()
+        remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
+        return
+
+    ###
+
     if stash_mode == StashMode.COPY.value:
         target_basepath = target_base / uuid[:2] / uuid[2:4] / uuid[4:]
 

@@ -78,6 +78,7 @@ __all__ = (
     'StoringNotAllowed',
     'TestsNotAllowedError',
     'TransportTaskException',
+    'UnStashMode',
     'UniquenessError',
     'UnsupportedSpeciesError',
     'ValidationError',

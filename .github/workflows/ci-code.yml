@@ -86,6 +86,7 @@ jobs:
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
   tests-minimum-requirements:
+    name: test minimum reqs (${{ matrix.python-version }}, ${{ matrix.database-backend }})
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:

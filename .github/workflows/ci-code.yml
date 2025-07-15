@@ -114,8 +114,8 @@ jobs:
         from-lock: 'false'
         resolution-strategy: lowest-direct
 
-    - name: Setup SSH on localhost
-      run: .github/workflows/setup_ssh.sh
+    - name: Setup environment
+      run: .github/workflows/setup.sh
 
     - name: Run test suite
       env:

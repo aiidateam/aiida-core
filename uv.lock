@@ -216,7 +216,7 @@ requires-dist = [
     { name = "pymatgen", marker = "extra == 'atomic-tools'", specifier = ">=2023.7.11" },
     { name = "pympler", marker = "extra == 'tests'", specifier = "~=1.0" },
     { name = "pymysql", marker = "extra == 'atomic-tools'", specifier = "~=0.9.3" },
-    { name = "pyparsing", marker = "extra == 'rest'", specifier = "~=3.0" },
+    { name = "pyparsing", marker = "extra == 'rest'", specifier = "~=3.1" },
     { name = "pytest", marker = "extra == 'tests'", specifier = "~=7.0" },
     { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = "~=0.12,<0.17" },
     { name = "pytest-benchmark", marker = "extra == 'tests'", specifier = "~=4.0" },

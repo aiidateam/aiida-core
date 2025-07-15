@@ -241,7 +241,7 @@ rest = [
   'flask-cors~=3.0',
   'flask-restful~=0.3.10',
   'flask~=2.3.3',
-  'pyparsing~=3.0',
+  'pyparsing~=3.1',
   'python-memcached~=1.59',
   'seekpath~=1.9,>=1.9.3'
 ]

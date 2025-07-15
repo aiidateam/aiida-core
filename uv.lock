@@ -171,7 +171,7 @@ requires-dist = [
     { name = "aiida-export-migration-tests", marker = "extra == 'tests'", specifier = "==0.9.0" },
     { name = "alembic", specifier = "~=1.8" },
     { name = "archive-path", specifier = "~=0.4.2" },
-    { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.18" },
+    { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.21" },
     { name = "asyncssh", specifier = "~=2.19.0" },
     { name = "bpython", marker = "extra == 'bpython'", specifier = "~=0.18.0" },
     { name = "chardet", marker = "sys_platform == 'win32'", specifier = "~=5.2.0" },

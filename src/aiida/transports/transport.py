@@ -69,7 +69,7 @@ class Transport(abc.ABC):
 
     # This is used as a global default in case subclasses don't redefine this,
     # but this should  be redefined in plugins where appropriate
-    _DEFAULT_SAFE_OPEN_INTERVAL = 30.0
+    _DEFAULT_SAFE_OPEN_INTERVAL = 15.0
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
@@ -100,6 +100,7 @@ class Transport(abc.ABC):
                 'prompt': 'Connection cooldown time (s)',
                 'help': 'Minimum time interval in seconds between opening new connections.',
                 'callback': validate_positive_number,
+                'non_interactive_default': True,
             },
         ),
     ]

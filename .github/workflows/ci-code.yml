@@ -121,7 +121,7 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0
-      run: pytest -n auto --db-backend ${{ matrix.database-backend }} -m 'not nightly' tests/
+      run: pytest --disable-warnings -n auto --db-backend ${{ matrix.database-backend }} -m 'not nightly' tests/
 
 
   tests-presto:

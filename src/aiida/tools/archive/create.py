@@ -283,7 +283,10 @@ def create_archive(
     # Create and open the archive for writing.
     # We create in a temp dir then move to final place at end,
     # so that the user cannot end up with a half written archive on errors
-    with tempfile.TemporaryDirectory() as tmpdir:
+    import ipdb; ipdb.set_trace()
+    base_temp_dir = '/mount'  # or whatever directory you want to use
+    with tempfile.TemporaryDirectory(dir=base_temp_dir) as tmpdir:
+    # with tempfile.TemporaryDirectory() as tmpdir:
         tmp_filename = Path(tmpdir) / 'export.zip'
         with archive_format.open(tmp_filename, mode='x', compression=compression) as writer:
             # add metadata

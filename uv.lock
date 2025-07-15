@@ -240,7 +240,7 @@ requires-dist = [
     { name = "sphinx-notfound-page", marker = "extra == 'docs'", specifier = "~=1.0" },
     { name = "sphinx-sqlalchemy", marker = "extra == 'docs'", specifier = "~=0.2.0" },
     { name = "sphinxext-rediraffe", marker = "extra == 'docs'", specifier = "~=0.2.4" },
-    { name = "sqlalchemy", specifier = "~=2.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.20,<3" },
     { name = "sqlalchemy", extras = ["mypy"], marker = "extra == 'pre-commit'", specifier = "~=2.0" },
     { name = "tabulate", specifier = ">=0.8.0,<0.10.0" },
     { name = "tomli", marker = "extra == 'pre-commit'" },

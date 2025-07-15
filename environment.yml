@@ -31,7 +31,7 @@ dependencies:
 - pytz~=2021.1
 - pyyaml~=6.0
 - requests~=2.0
-- sqlalchemy~=2.0
+- sqlalchemy<3,>=2.0.20
 - tabulate<0.10.0,>=0.8.0
 - tqdm~=4.45
 - typing-extensions~=4.0

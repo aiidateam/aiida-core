@@ -20,11 +20,10 @@ from collections.abc import Mapping
 from logging import LoggerAdapter
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, assert_never
 from typing import Mapping as MappingType
 
 from aiida.common import AIIDA_LOGGER, exceptions
-from aiida.common.asserts import assert_never
 from aiida.common.datastructures import CalcInfo, FileCopyOperation
 from aiida.common.folders import Folder, SandboxFolder
 from aiida.common.links import LinkType

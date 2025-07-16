@@ -108,7 +108,7 @@ class DirectScheduler(BashCliScheduler):
                 command += f' {escape_for_bash(jobs)}'
             else:
                 try:
-                    command += f" {' '.join(escape_for_bash(job) for job in jobs if job)}"
+                    command += f' {" ".join(escape_for_bash(job) for job in jobs if job)}'
                 except TypeError:
                     raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
 

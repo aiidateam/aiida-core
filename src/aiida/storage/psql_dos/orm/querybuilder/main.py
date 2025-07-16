@@ -359,7 +359,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         if attrpath and 'cast' not in entityspec.keys():
             # JSONB fields ar delimited by '.' must be cast
             raise ValueError(
-                f'To order_by {field_key!r}, the value has to be cast, ' "but no 'cast' key has been specified."
+                f"To order_by {field_key!r}, the value has to be cast, but no 'cast' key has been specified."
             )
         entity = self._get_projectable_entity(alias, column_name, attrpath, cast=entityspec.get('cast'))
         order = entityspec.get('order', 'asc')
@@ -903,7 +903,7 @@ def get_column(colname: str, alias: AliasedClass) -> InstrumentedAttribute:
         return getattr(alias, colname)
     except AttributeError as exc:
         raise ValueError(
-            '{} is not a column of {}\n' 'Valid columns are:\n' '{}'.format(
+            '{} is not a column of {}\nValid columns are:\n{}'.format(
                 colname, alias, '\n'.join(alias._sa_class_manager.mapper.c.keys())
             )
         ) from exc

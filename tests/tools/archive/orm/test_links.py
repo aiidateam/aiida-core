@@ -362,9 +362,9 @@ def test_high_level_workflow_links(aiida_profile_clean, tmp_path, aiida_localhos
             export_set = [tuple(_) for _ in export_links]
             import_set = [tuple(_) for _ in import_links]
 
-            assert set(export_set) == set(
-                import_set
-            ), f'Failed with c1={calcs[0]}, c2={calcs[1]}, w1={works[0]}, w2={works[1]}'
+            assert set(export_set) == set(import_set), (
+                f'Failed with c1={calcs[0]}, c2={calcs[1]}, w1={works[0]}, w2={works[1]}'
+            )
 
 
 def prepare_link_flags_export(nodes_to_export, test_data):
@@ -396,10 +396,10 @@ def link_flags_import_helper(test_data, reset_db):
         for node_type, node_cls in nodes_util.items():
             if node_type in expected_nodes:
                 builder = orm.QueryBuilder().append(node_cls, project='uuid')
-                assert builder.count() == len(
-                    expected_nodes[node_type]
-                ), 'Expected {} {} node(s), but got {}. Test: "{}"'.format(
-                    len(expected_nodes[node_type]), node_type, builder.count(), test
+                assert builder.count() == len(expected_nodes[node_type]), (
+                    'Expected {} {} node(s), but got {}. Test: "{}"'.format(
+                        len(expected_nodes[node_type]), node_type, builder.count(), test
+                    )
                 )
                 for node_uuid in builder.iterall():
                     assert node_uuid[0] in expected_nodes[node_type], f'Failed for test: "{test}"'
@@ -674,8 +674,9 @@ def test_multiple_post_return_links(tmp_path, aiida_profile_clean):
 
     links = get_all_node_links()
     assert len(links) == 1, (
-        'Only a single Link (from Calc. to Data) is expected, '
-        'instead {} were found (in, out, label, type): {}'.format(len(links), links)
+        'Only a single Link (from Calc. to Data) is expected, instead {} were found (in, out, label, type): {}'.format(
+            len(links), links
+        )
     )
     for from_uuid, to_uuid, found_label, found_type in links:
         assert from_uuid == calc_uuid
@@ -695,7 +696,7 @@ def test_multiple_post_return_links(tmp_path, aiida_profile_clean):
         assert node[0] in [data_uuid, calc_uuid, work_uuid]
 
     links = get_all_node_links()
-    assert (
-        len(links) == 2
-    ), f'Exactly two Links are expected, instead {len(links)} were found (in, out, label, type): {links}'
+    assert len(links) == 2, (
+        f'Exactly two Links are expected, instead {len(links)} were found (in, out, label, type): {links}'
+    )
     assert sorted(links) == sorted(before_links)

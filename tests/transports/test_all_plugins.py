@@ -1218,9 +1218,9 @@ def test_asynchronous_execution(custom_transport, tmp_path):
             # SSH connection etc.) and I don't want to have false failures.
             # Actually, if the time is short, it could mean also that the execution failed!
             # So I double check later that the execution was successful.
-            assert (
-                elapsed_time < 5
-            ), 'Getting back control after remote execution took more than 5 seconds! Probably submission blocks'
+            assert elapsed_time < 5, (
+                'Getting back control after remote execution took more than 5 seconds! Probably submission blocks'
+            )
 
             # Check that the job is still running
             # Wait 0.2 more seconds, so that I don't do a super-quick check that might return True
@@ -1280,7 +1280,7 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
             transport.compress('unsupported_format', tmp_path_remote, tmp_path_remote / 'archive.tar', '/')
 
         # if the remotesource does not exist
-        with pytest.raises(OSError, match=f"{tmp_path_remote / 'non_existing'} does not exist"):
+        with pytest.raises(OSError, match=f'{tmp_path_remote / "non_existing"} does not exist'):
             transport.compress('tar', tmp_path_remote / 'non_existing', tmp_path_remote / 'archive.tar', '/')
 
         # if a matching pattern of the remote source is not found
@@ -1290,7 +1290,7 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
         # if the remotedestination already exists
         Path(tmp_path_remote / 'already_exist.tar').touch()
         with pytest.raises(
-            OSError, match=f"The remote destination {tmp_path_remote / 'already_exist.tar'} already exists."
+            OSError, match=f'The remote destination {tmp_path_remote / "already_exist.tar"} already exists.'
         ):
             transport.compress('tar', tmp_path_remote, tmp_path_remote / 'already_exist.tar', '/', overwrite=False)
 
@@ -1301,7 +1301,7 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
         # if the root_dir is not a directory
         with pytest.raises(
             OSError,
-            match=f"The relative root {tmp_path_remote / 'non_existing_folder'} does not exist, or is not a directory.",
+            match=f'The relative root {tmp_path_remote / "non_existing_folder"} does not exist, or is not a directory.',
         ):
             transport.compress(
                 'tar', tmp_path_remote, tmp_path_remote / 'archive.tar', tmp_path_remote / 'non_existing_folder'

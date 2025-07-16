@@ -59,7 +59,7 @@ def get_env_with_venv_bin():
     config = get_config()
 
     currenv = os.environ.copy()
-    currenv['PATH'] = f"{os.path.dirname(sys.executable)}:{currenv['PATH']}"
+    currenv['PATH'] = f'{os.path.dirname(sys.executable)}:{currenv["PATH"]}'
     currenv['AIIDA_PATH'] = config.dirpath
     currenv['PYTHONUNBUFFERED'] = 'True'
 
@@ -175,18 +175,18 @@ def get_node_info(node, include_summary=True):
     nodes_output = node.base.links.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
 
     if nodes_input:
-        result += f"\n{format_nested_links(nodes_input.nested(), headers=['Inputs', 'PK', 'Type'])}"
+        result += f'\n{format_nested_links(nodes_input.nested(), headers=["Inputs", "PK", "Type"])}'
 
     if nodes_output:
-        result += f"\n{format_nested_links(nodes_output.nested(), headers=['Outputs', 'PK', 'Type'])}"
+        result += f'\n{format_nested_links(nodes_output.nested(), headers=["Outputs", "PK", "Type"])}'
 
     if nodes_caller:
         links = sorted(nodes_caller.all(), key=lambda x: x.node.ctime)
-        result += f"\n{format_flat_links(links, headers=['Caller', 'PK', 'Type'])}"
+        result += f'\n{format_flat_links(links, headers=["Caller", "PK", "Type"])}'
 
     if nodes_called:
         links = sorted(nodes_called.all(), key=lambda x: x.node.ctime)
-        result += f"\n{format_flat_links(links, headers=['Called', 'PK', 'Type'])}"
+        result += f'\n{format_flat_links(links, headers=["Called", "PK", "Type"])}'
 
     log_messages = orm.Log.collection.get_logs_for(node)
 
@@ -248,7 +248,7 @@ def format_nested_links(links, headers):
     table = []
 
     for depth, label, pk, class_name in format_recursive(links):
-        table.append([f"{' ' * (depth * indent_size)}{label}", pk, class_name])
+        table.append([f'{" " * (depth * indent_size)}{label}', pk, class_name])
 
     result = f'\n{tabulate(table, headers=headers)}'
     tb.PRESERVE_WHITESPACE = False
@@ -274,7 +274,7 @@ def get_calcjob_report(calcjob):
     report = []
 
     if calcjob_state == CalcJobState.WITHSCHEDULER:
-        state_string = f"{calcjob_state}, scheduler state: {scheduler_state if scheduler_state else '(unknown)'}"
+        state_string = f'{calcjob_state}, scheduler state: {scheduler_state if scheduler_state else "(unknown)"}'
     else:
         state_string = f'{calcjob_state}'
 

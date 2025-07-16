@@ -189,7 +189,7 @@ class AsyncSshTransport(AsyncTransport):
         self._is_open = False
 
     def __str__(self):
-        return f"{'OPEN' if self._is_open else 'CLOSED'} [AsyncSshTransport]"
+        return f'{"OPEN" if self._is_open else "CLOSED"} [AsyncSshTransport]'
 
     async def get_async(
         self,
@@ -765,7 +765,7 @@ class AsyncSshTransport(AsyncTransport):
         copy_items = ' '.join([str(Path(item).relative_to(root_dir)) for item in copy_list])
         # note: order of the flags is important
         tar_command = (
-            f"tar -c{compression_flag!s}{'h' if dereference else ''}f {remotedestination!s} -C {root_dir!s} "
+            f'tar -c{compression_flag!s}{"h" if dereference else ""}f {remotedestination!s} -C {root_dir!s} '
             + copy_items
         )
 
@@ -814,7 +814,7 @@ class AsyncSshTransport(AsyncTransport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                "Problem executing tar. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
                     retval, stdout, stderr, tar_command
                 )
             )

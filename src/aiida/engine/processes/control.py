@@ -259,12 +259,12 @@ def _resolve_futures(
     if not timeout or not futures:
         if futures:
             LOGGER.report(
-                f"Request to {infinitive} process(es) {','.join([str(proc.pk) for proc in futures.values()])}"
+                f'Request to {infinitive} process(es) {",".join([str(proc.pk) for proc in futures.values()])}'
                 ' sent. Skipping waiting for response.'
             )
         return
 
-    LOGGER.report(f"Waiting for process(es) {','.join([str(proc.pk) for proc in futures.values()])}.")
+    LOGGER.report(f'Waiting for process(es) {",".join([str(proc.pk) for proc in futures.values()])}.')
 
     # Ensure that when futures are only are completed if they return an actual value (not a future)
     unwrapped_futures = {unwrap_kiwi_future(future): process for future, process in futures.items()}

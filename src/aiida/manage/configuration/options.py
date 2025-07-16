@@ -77,7 +77,7 @@ class Option:
                 try:
                     messages.append(str(error['ctx']['error']))
                 except KeyError:
-                    messages.append(f"Invalid value for `{error['loc'][0]}`: {error['msg']}")
+                    messages.append(f'Invalid value for `{error["loc"][0]}`: {error["msg"]}')
 
             raise ConfigurationError('\n'.join(messages)) from exception
 

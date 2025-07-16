@@ -162,7 +162,7 @@ def create(
     batch_size,
     test_run,
     dry_run,
-    temp_dir
+    temp_dir,
 ):
     """Create an archive from all or part of a profiles's data.
 
@@ -214,7 +214,7 @@ def create(
         'compression': compress,
         'batch_size': batch_size,
         'test_run': dry_run,
-        'temp_dir': temp_dir
+        'temp_dir': temp_dir,
     }
 
     if AIIDA_LOGGER.level <= logging.REPORT:

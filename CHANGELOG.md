@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.7.1 - 2025-07-16
+
+### Fixes
+
+- Extend check of stash options when they are specified as empty dict (#6942) [[cbbdedb138c76c5d1114688da6d044641ad86d58]](https://github.com/aiidateam/aiida-core/commit/cbbdedb138c76c5d1114688da6d044641ad86d58)
+
+### Docs
+
+- Docs: Remove note on unsupported `contains` and `get_creation_statistics` (#6930) [[a392f5c5cc2babddb2c5152989db7009bb53b87d]](https://github.com/aiidateam/aiida-core/commit/a392f5c5cc2babddb2c5152989db7009bb53b87d)
+
+
 ## v2.7.0 - 2025-06-24
 
 - [Asynchronous SSH connection](#asynchronous-ssh-connection-6626)

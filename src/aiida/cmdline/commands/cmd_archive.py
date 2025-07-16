@@ -138,6 +138,10 @@ def inspect(ctx, archive, version, meta_data, database):
     help='Determine entities to export, but do not create the archive. Deprecated, please use `--dry-run` instead.',
 )
 @options.DRY_RUN(help='Determine entities to export, but do not create the archive.')
+@click.option(
+    '--base-tmp-dir',
+    help='Determine entities to export, but do not create the archive. Deprecated, please use `--dry-run` instead.',
+)
 @decorators.with_dbenv()
 def create(
     output_file,
@@ -160,6 +164,7 @@ def create(
     batch_size,
     test_run,
     dry_run,
+    temp_dir
 ):
     """Create an archive from all or part of a profiles's data.
 
@@ -211,6 +216,7 @@ def create(
         'compression': compress,
         'batch_size': batch_size,
         'test_run': dry_run,
+        'temp_dir': temp_dir
     }
 
     if AIIDA_LOGGER.level <= logging.REPORT:  # type: ignore[attr-defined]

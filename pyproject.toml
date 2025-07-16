@@ -35,7 +35,7 @@ dependencies = [
   'jinja2~=3.0',
   'kiwipy[rmq]~=0.8.4',
   'importlib-metadata~=6.0',
-  'numpy~=1.21',
+  'numpy>=1.21,<3',
   'paramiko~=3.0',
   'pgsu~=0.3.0',
   'psutil~=5.6',
@@ -119,6 +119,7 @@ requires-python = '>=3.9'
 'core.remote' = 'aiida.orm.nodes.data.remote.base:RemoteData'
 'core.remote.stash' = 'aiida.orm.nodes.data.remote.stash.base:RemoteStashData'
 'core.remote.stash.compress' = 'aiida.orm.nodes.data.remote.stash.compress:RemoteStashCompressedData'
+'core.remote.stash.custom' = 'aiida.orm.nodes.data.remote.stash.custom:RemoteStashCustomData'
 'core.remote.stash.folder' = 'aiida.orm.nodes.data.remote.stash.folder:RemoteStashFolderData'
 'core.singlefile' = 'aiida.orm.nodes.data.singlefile:SinglefileData'
 'core.str' = 'aiida.orm.nodes.data.str:Str'
@@ -446,7 +447,8 @@ select = [
   'PLE',  # pylint-error
   'PLR',  # pylint-refactor
   'PLW',  # pylint-warning
-  'RUF'  # ruff
+  'RUF',  # ruff
+  'NPY201'  # numpy compatibility
 ]
 
 [tool.tox]

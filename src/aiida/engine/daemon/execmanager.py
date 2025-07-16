@@ -437,7 +437,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     :param transport: an already opened transport.
     """
     from aiida.common.datastructures import StashMode
-    from aiida.orm import RemoteStashCompressedData, RemoteStashFolderData
+    from aiida.orm import RemoteStashCompressedData, RemoteStashCustomData, RemoteStashFolderData
 
     logger_extra = get_dblogger_extra(calculation)
 
@@ -456,11 +456,40 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     dereference = stash_options.get('dereference', False)
 
     if not source_list:
+        EXEC_LOGGER.warning(f'stashing source_list is empty for calculation<{calculation.pk}>. Stashing skipped.')
+        return
+
+    if stash_mode not in [mode.value for mode in StashMode.__members__.values()]:
+        EXEC_LOGGER.warning(f'stashing mode {stash_mode} is not supported. Stashing skipped.')
         return
 
     EXEC_LOGGER.debug(
         f'stashing files with mode {stash_mode} for calculation<{calculation.pk}>: {source_list}', extra=logger_extra
     )
+
+    if stash_mode == StashMode.SUBMIT_CUSTOM_CODE.value:
+        if calculation.process_type != 'aiida.calculations:core.stash':
+            EXEC_LOGGER.warning(
+                f'Stashing as {StashMode.SUBMIT_CUSTOM_CODE.value}'
+                ' is only possible through job submission. Stashing skipped.'
+            )
+            # Note we could easily support it via `transport.exec_command_wait_async`
+            # However, that may confuse users, as it's done in a different manner than job-submission
+            # So just to stay safe, we decided not to provide this feature.
+            return
+
+        remote_stash = RemoteStashCustomData(
+            computer=calculation.computer,
+            stash_mode=StashMode(stash_mode),
+            target_basepath=str(target_base),
+            source_list=source_list,
+        )
+
+        remote_stash.store()
+        remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
+        return
+
+    ###
 
     if stash_mode == StashMode.COPY.value:
         target_basepath = target_base / uuid[:2] / uuid[2:4] / uuid[4:]
@@ -482,7 +511,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                 try:
                     await transport.copy_async(source_filepath, target_filepath)
                 except (OSError, ValueError) as exception:
-                    EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+                    EXEC_LOGGER.warning(f'Failed to stash {source_filepath} to {target_filepath}: {exception}')
                     # try to clean up in case of a failure
                     await transport.rmtree_async(target_base / uuid[:2])
                 else:
@@ -530,9 +559,9 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                 dereference=dereference,
             )
         except (OSError, ValueError) as exception:
-            EXEC_LOGGER.warning(f'failed to stash {source_list} to {target_destination}: {exception}')
+            EXEC_LOGGER.warning(f'Failed to stash {source_list} to {target_destination}: {exception}')
             return
-            # note: if you raise here, you triger the exponential backoff
+            # note: if you raise here, you trigger the exponential backoff
             # and if you don't raise, it appears as successful in verdi process list: Finished [0]
             # An issue opened to investigate and fix this https://github.com/aiidateam/aiida-core/issues/6789
             # raise exceptions.RemoteOperationError(f'failed '

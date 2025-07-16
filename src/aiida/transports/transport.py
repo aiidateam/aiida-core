@@ -100,6 +100,7 @@ class Transport(abc.ABC):
                 'prompt': 'Connection cooldown time (s)',
                 'help': 'Minimum time interval in seconds between opening new connections.',
                 'callback': validate_positive_number,
+                'default': _DEFAULT_SAFE_OPEN_INTERVAL,
                 'non_interactive_default': True,
             },
         ),

@@ -59,6 +59,7 @@ def create_archive(
     compression: int = 6,
     test_run: bool = False,
     backend: Optional[StorageBackend] = None,
+    temp_dir: Optional[Union[str, Path]] = None,
     **traversal_rules: bool,
 ) -> Path:
     """Export AiiDA data to an archive file.
@@ -139,6 +140,12 @@ def create_archive(
 
     :param backend: the backend to export from. If not specified, the default backend is used.
 
+    :param temp_dir: Directory to use for temporary files during archive creation.
+        If not specified, a temporary directory will be created in the same directory as the output file
+        with a '.aiida-export-' prefix. This parameter is useful when the output directory has limited
+        space or when you want to use a specific filesystem (e.g., faster storage) for temporary operations.
+        The directory must exist and be writable.
+
     :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
         what rule names are toggleable and what the defaults are.
 
@@ -178,6 +185,25 @@ def create_archive(
     full_traversal_rules = {
         name: traversal_rules.get(name, rule.default) for name, rule in GraphTraversalRules.EXPORT.value.items()
     }
+
+    # Handle temporary directory configuration
+    if temp_dir is not None:
+        temp_dir = Path(temp_dir)
+        if not temp_dir.exists():
+            msg = f"Specified temporary directory '{temp_dir}' does not exist"
+            raise ArchiveExportError(msg)
+        if not temp_dir.is_dir():
+            msg = f"Specified temporary directory '{temp_dir}' is not a directory"
+            raise ArchiveExportError(msg)
+        # Check if directory is writable
+        if not temp_dir.is_writable():
+            msg = f"Specified temporary directory '{temp_dir}' is not writable"
+            raise ArchiveExportError()
+        tmp_prefix = None  # Use default tempfile prefix
+    else:
+        # Create temporary directory in the same folder as the output file
+        temp_dir = filename.parent
+        tmp_prefix = '.aiida-export-'
 
     initial_summary = get_init_summary(
         archive_version=archive_format.latest_version,
@@ -283,10 +309,10 @@ def create_archive(
     # Create and open the archive for writing.
     # We create in a temp dir then move to final place at end,
     # so that the user cannot end up with a half written archive on errors
-    import ipdb; ipdb.set_trace()
-    base_temp_dir = '/mount'  # or whatever directory you want to use
-    with tempfile.TemporaryDirectory(dir=base_temp_dir) as tmpdir:
-    # with tempfile.TemporaryDirectory() as tmpdir:
+    # import ipdb; ipdb.set_trace()
+    temp_dir = Path('/mount')  # or whatever directory you want to use
+    with tempfile.TemporaryDirectory(dir=temp_dir, prefix=tmp_prefix) as tmpdir:
+        # NOTE: Add the `tmp_prefix` to the directory or file?
         tmp_filename = Path(tmpdir) / 'export.zip'
         with archive_format.open(tmp_filename, mode='x', compression=compression) as writer:
             # add metadata

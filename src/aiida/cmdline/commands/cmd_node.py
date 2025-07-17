@@ -372,7 +372,7 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
         from aiida.orm.utils.remote import clean_mapping_remote_paths, get_calcjob_remote_paths
         from aiida.tools.graph.graph_traversers import get_nodes_delete
 
-        backend = get_manager().get_backend()
+        backend = get_manager().get_profile_storage()
         # For here we ignore missing nodes will be raised via func:``delete_nodes`` in the next block
         pks_set_to_delete = get_nodes_delete(
             pks, get_links=False, missing_callback=lambda missing_pks: None, backend=backend, **traversal_rules

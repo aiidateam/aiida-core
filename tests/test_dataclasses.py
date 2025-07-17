@@ -2095,7 +2095,7 @@ class TestStructureDataFromPymatgen:
             )
             tmpf.flush()
             pymatgen_parser = CifParser(tmpf.name)
-            pymatgen_struct = pymatgen_parser.get_structures()[0]
+            pymatgen_struct = pymatgen_parser.parse_structures(primitive=True)[0]
 
         structs_to_test = [StructureData(pymatgen=pymatgen_struct), StructureData(pymatgen_structure=pymatgen_struct)]
 

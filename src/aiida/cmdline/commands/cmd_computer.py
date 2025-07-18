@@ -20,7 +20,7 @@ from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
-from aiida.cmdline.utils.common import validate_output_filename
+from aiida.cmdline.utils.common import tabulate, validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
@@ -227,7 +227,7 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo, comput
 
     if not isclose(timing_true, timing_false, rel_tol=rel_tol, abs_tol=abs_tol):
         return True, (
-            f"\n\n{click.style('Warning:', fg='yellow', bold=True)} "
+            f'\n\n{click.style("Warning:", fg="yellow", bold=True)} '
             'The computer is configured to use a login shell, which is slower compared to a normal shell.\n'
             f'Command execution time of {timing_true:.3f} versus {timing_false:.3f} seconds, respectively).\n'
             'Unless this setting is really necessary, consider disabling it with:\n'
@@ -345,7 +345,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
-        echo.echo_critical(f"A computer called {kwargs['label']} already exists")
+        echo.echo_critical(f'A computer called {kwargs["label"]} already exists')
 
     kwargs['transport'] = kwargs['transport'].name
     kwargs['scheduler'] = kwargs['scheduler'].name
@@ -716,7 +716,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
                     option_value = (
-                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"
+                        option.opts[-1] if config.get(option.name) else f'--no-{option.name.replace("_", "-")}'
                     )
                 elif t_opt.get('is_flag'):
                     is_default = config.get(option.name) == transport_cli.transport_option_default(
@@ -832,3 +832,135 @@ def computer_export_config(computer, output_file, user, overwrite, sort):
             )
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} configuration exported to file `{output_file}`.')
+
+
+@verdi_computer.command('search')
+@click.argument('pattern', type=str, required=False)
+@click.option(
+    '--source',
+    type=click.Choice(['code-registry', 'resource-registry', 'ssh-config']),
+    default='ssh-config',
+    help='Specify the computer source (default: ssh-config)',
+)
+@click.pass_context
+@with_dbenv()
+def computer_search(ctx, pattern, source):
+    """Search for computers and setup them in your profile.
+
+    If PATTERN is provided, search for computers matching that pattern.
+    If no pattern is provided, show all available computers.
+
+    This command allows you to discover and setup computers from:
+    - The community AiiDA code registry
+    - The AiiDA resource registry
+    - Your local SSH configuration at ~/.ssh/config
+    """
+    from aiida.cmdline.utils.registry_helpers import (
+        ComputerSearchService,
+        ComputerSelector,
+        ComputerSetupHandler,
+        ComputerSource,
+    )
+
+    # Convert string to enum
+    source_enum = ComputerSource(source)
+
+    # Initialize service
+    service = ComputerSearchService()
+
+    # Fetch data
+    echo.echo_report('Fetching computer data from sources...')
+    registry_data = service.fetch_data(source_enum)
+
+    if not registry_data:
+        echo.echo_error('No computer data could be fetched from any source.')
+        return
+
+    echo.echo_success(f'Total: {len(registry_data)} computers available from all sources.')
+
+    # Filter by pattern if provided
+    if pattern:
+        matching_data = service.filter_by_pattern(pattern)
+        if not matching_data:
+            echo.echo_warning(f"No computers found matching pattern '{pattern}'")
+            if not click.confirm('\nWould you like to show all available systems?'):
+                return
+            echo.echo_report('All available systems:')
+        else:
+            echo.echo_report(f"Systems matching the pattern '{pattern}':")
+            registry_data = matching_data
+    else:
+        echo.echo_report('All available systems:')
+
+    # Handle SSH-only source differently
+    if source_enum == ComputerSource.SSH_CONFIG:
+        # Show table of SSH config computers
+        print(
+            tabulate(
+                [[i + 1, k] for i, k in enumerate(registry_data.keys())],
+                headers=['#', 'SSH Config Computer'],
+                tablefmt='grid',
+            )
+        )
+        echo.echo_report('Computers registered in the ~/.ssh/config can be set up using the `core.ssh_async` transport')
+        echo.echo_report('This transport plugin automatically uses your OS SSH configuration')
+        echo.echo_report('for connection settings including ProxyJump, IdentityFile, and other SSH options.')
+        echo.echo_report('For more information, see the AiiDA documentation on SSH transport plugins.')
+        return
+
+    selector = ComputerSelector(registry_data)
+    selection = _get_computer_selection(selector, pattern)
+    if not selection:
+        return
+
+    system_name, variant = selection
+
+    # Handle SSH config computers differently
+    if system_name.startswith('ssh:'):
+        hostname = system_name.replace('ssh:', '')
+        ComputerSetupHandler.handle_ssh_config_setup(system_name, hostname)
+        return
+
+    # Prompt user before setup
+    if not click.confirm(
+        f'Would you like to set up the computer "{system_name}" with variant "{variant}" now?', default=True
+    ):
+        print('Setup cancelled.')
+        return
+
+    # Handle registry computers
+    ComputerSetupHandler.handle_registry_setup(ctx, selector, system_name, variant, auto_setup=True)
+
+
+def _get_computer_selection(selector, pattern):
+    """Get computer and variant selection from user."""
+    # Check if pattern matches exactly one system
+    if pattern:
+        matching_systems = [system for system in selector.registry_data.keys() if pattern in system]
+        if len(matching_systems) == 1:
+            selected_computer = matching_systems[0]
+            echo.echo_report(f'Using the only matching computer: {selected_computer}')
+
+            # Skip variant selection for SSH config
+            if selected_computer.startswith('ssh:'):
+                return (selected_computer, 'ssh_config')
+
+            selected_variant = selector.select_variant(selected_computer)
+            if not selected_variant:
+                return None
+            return (selected_computer, selected_variant)
+
+    # Interactive selection
+    selected_computer = selector.select_computer()
+    if not selected_computer:
+        return None
+
+    # Skip variant selection for SSH config
+    if selected_computer.startswith('ssh:'):
+        return (selected_computer, 'ssh_config')
+
+    selected_variant = selector.select_variant(selected_computer)
+    if not selected_variant:
+        return None
+
+    return (selected_computer, selected_variant)

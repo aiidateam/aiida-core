@@ -10,7 +10,7 @@
 
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -21,7 +21,7 @@ from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
-    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation import BackendComputer, StorageBackend
     from aiida.schedulers import Scheduler
     from aiida.transports import Transport
 
@@ -35,7 +35,7 @@ class ComputerCollection(entities.Collection['Computer']):
     def _entity_base_cls() -> Type['Computer']:
         return Computer
 
-    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple[bool, 'Computer']:
+    def get_or_create(self, label: Optional[str] = None, **kwargs) -> tuple[bool, 'Computer']:
         """Try to retrieve a Computer from the DB with the given arguments;
         create (and store) a new Computer if such a Computer was not present yet.
 
@@ -52,9 +52,9 @@ class ComputerCollection(entities.Collection['Computer']):
         except exceptions.NotExistent:
             return True, Computer(backend=self.backend, label=label, **kwargs)
 
-    def list_labels(self) -> List[str]:
+    def list_labels(self):
         """Return a list with all the labels of the computers in the DB."""
-        return self._backend.computers.list_names()
+        return self._backend.computers.list_names()  # type: ignore[attr-defined]
 
     def delete(self, pk: int) -> None:
         """Delete the computer with the given id"""
@@ -90,7 +90,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         transport_type: str = '',
         scheduler_type: str = '',
         workdir: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
         backend: Optional['StorageBackend'] = None,
     ) -> None:
         """Construct a new computer."""
@@ -186,11 +186,11 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         if not os.path.isabs(convertedwd):
             raise exceptions.ValidationError('The workdir must be an absolute path')
 
-    def _mpirun_command_validator(self, mpirun_cmd: Union[List[str], Tuple[str, ...]]) -> None:
+    def _mpirun_command_validator(self, mpirun_cmd: Union[list[str], tuple[str, ...]]) -> None:
         """Validates the mpirun_command variable. MUST be called after properly
         checking for a valid scheduler.
         """
-        if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, str) for i in mpirun_cmd):
+        if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, str) for i in mpirun_cmd):  # type: ignore[redundant-expr]
             raise exceptions.ValidationError('the mpirun_command must be a list of strings')
 
         try:
@@ -244,7 +244,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         if def_cpus_per_machine is None:
             return
 
-        if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:
+        if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:  # type: ignore[redundant-expr]
             raise exceptions.ValidationError(
                 'Invalid value for default_mpiprocs_per_machine, must be a positive integer, or an empty string if you '
                 'do not want to provide a default value.'
@@ -256,7 +256,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         if def_memory_per_machine is None:
             return
 
-        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:
+        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:  # type: ignore[redundant-expr]
             raise exceptions.ValidationError(
                 f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
             )
@@ -355,7 +355,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         self._backend_entity.set_transport_type(value)
 
     @property
-    def metadata(self) -> Dict[str, Any]:
+    def metadata(self) -> dict[str, Any]:
         """Return the computer metadata.
 
         :return: the metadata.
@@ -363,7 +363,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         return self._backend_entity.get_metadata()
 
     @metadata.setter
-    def metadata(self, value: Dict[str, Any]) -> None:
+    def metadata(self, value: dict[str, Any]) -> None:
         """Set the computer metadata.
 
         :param value: the metadata to set.
@@ -441,7 +441,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         type_check(val, bool)
         self.set_property('use_double_quotes', val)
 
-    def get_mpirun_command(self) -> List[str]:
+    def get_mpirun_command(self) -> list[str]:
         """Return the mpirun command. Must be a list of strings, that will be
         then joined with spaces when submitting.
 
@@ -449,11 +449,11 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """
         return self.get_property('mpirun_command', ['mpirun', '-np', '{tot_num_mpiprocs}'])
 
-    def set_mpirun_command(self, val: Union[List[str], Tuple[str, ...]]) -> None:
+    def set_mpirun_command(self, val: Union[list[str], tuple[str, ...]]) -> None:
         """Set the mpirun command. It must be a list of strings (you can use
         string.split() if you have a single, space-separated string).
         """
-        if not isinstance(val, (tuple, list)) or not all(isinstance(i, str) for i in val):
+        if not isinstance(val, (tuple, list)) or not all(isinstance(i, str) for i in val):  # type: ignore[redundant-expr]
             raise TypeError('the mpirun_command must be a list of strings')
         self.set_property('mpirun_command', val)
 
@@ -663,7 +663,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         return authinfo
 
-    def get_configuration(self, user: Optional['User'] = None) -> Dict[str, Any]:
+    def get_configuration(self, user: Optional['User'] = None) -> dict[str, Any]:
         """Get the configuration of computer for the given user as a dictionary
 
         :param user: the user to to get the configuration for, otherwise default user

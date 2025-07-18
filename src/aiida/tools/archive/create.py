@@ -334,7 +334,9 @@ def create_archive(
                     }
                 )
                 # stream entity data to the archive
-                with get_progress_reporter()(desc='Archiving database: ', total=sum(entity_counts.values())) as progress:
+                with get_progress_reporter()(
+                    desc='Archiving database: ', total=sum(entity_counts.values())
+                ) as progress:
                     for etype, ids in entity_ids.items():
                         if etype == EntityTypes.NODE and strip_checkpoints:
 
@@ -391,7 +393,9 @@ def create_archive(
 
                 # stream node repository files to the archive
                 if entity_ids[EntityTypes.NODE]:
-                    _stream_repo_files(archive_format.key_format, writer, entity_ids[EntityTypes.NODE], backend, batch_size)
+                    _stream_repo_files(
+                        archive_format.key_format, writer, entity_ids[EntityTypes.NODE], backend, batch_size
+                    )
 
                 EXPORT_LOGGER.report('Finalizing archive creation...')
 
@@ -404,9 +408,9 @@ def create_archive(
         if e.errno == 28:  # No space left on device
             raise ArchiveExportError(
                 f"Insufficient disk space in temporary directory '{tmp_dir}'. "
-                f"Consider using --tmp-dir to specify a location with more available space."
+                f'Consider using --tmp-dir to specify a location with more available space.'
             ) from e
-        raise ArchiveExportError(f"Failed to create temporary directory: {e}") from e
+        raise ArchiveExportError(f'Failed to create temporary directory: {e}') from e
 
     EXPORT_LOGGER.report('Archive created successfully')
 

@@ -18,6 +18,7 @@ from aiida import orm
 from aiida.common.exceptions import IncompatibleStorageSchema, LicensingException
 from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
+from aiida.tools.archive.exceptions import ArchiveExportError
 
 
 @pytest.mark.parametrize('entities', ['all', 'specific'])
@@ -154,3 +155,63 @@ def test_control_of_licenses(tmp_path):
 
     with pytest.raises(LicensingException):
         create_archive([struct], test_run=True, forbidden_licenses=crashing_filter)
+
+
+@pytest.mark.usefixtures("aiida_profile_clean")
+def test_tmp_dir_custom_valid(tmp_path):
+    """Test using a custom valid temporary directory."""
+    from unittest.mock import patch
+
+    node = orm.Int(42).store()
+    custom_tmp = tmp_path / 'custom_tmp'
+    custom_tmp.mkdir()
+    filename = tmp_path / 'export.aiida'  # Put output file outside custom_tmp
+
+    with patch('tempfile.TemporaryDirectory') as mock_temp_dir:
+        # Create the actual temp directory that the mock returns
+        actual_temp_dir = custom_tmp / 'temp_dir'
+        actual_temp_dir.mkdir()
+
+        mock_temp_dir.return_value.__enter__.return_value = str(actual_temp_dir)
+        mock_temp_dir.return_value.__exit__.return_value = None
+
+        create_archive([node], filename=filename, tmp_dir=custom_tmp)
+
+        # Check that TemporaryDirectory was called with custom directory
+        mock_temp_dir.assert_called_once_with(dir=custom_tmp, prefix=None)
+
+@pytest.mark.usefixtures("aiida_profile_clean")
+def test_tmp_dir_validation_errors(tmp_path):
+    """Test tmp_dir validation errors."""
+
+    node = orm.Int(42).store()
+    filename = tmp_path / 'export.aiida'
+
+    # Non-existent directory
+    with pytest.raises(ArchiveExportError, match="does not exist"):
+        create_archive([node], filename=filename, tmp_dir=tmp_path / 'nonexistent')
+
+    # File instead of directory
+    not_a_dir = tmp_path / 'file.txt'
+    not_a_dir.write_text('content')
+    with pytest.raises(ArchiveExportError, match="is not a directory"):
+        create_archive([node], filename=filename, tmp_dir=not_a_dir)
+
+@pytest.mark.usefixtures("aiida_profile_clean")
+def test_tmp_dir_disk_space_error(tmp_path):
+    """Test disk space error handling."""
+    from unittest.mock import patch
+
+    node = orm.Int(42).store()
+    custom_tmp = tmp_path / 'custom_tmp'
+    custom_tmp.mkdir()
+    filename = tmp_path / 'export.aiida'
+
+    def mock_temp_dir_error(*args, **kwargs):
+        error = OSError("No space left on device")
+        error.errno = 28
+        raise error
+
+    with patch('tempfile.TemporaryDirectory', side_effect=mock_temp_dir_error):
+        with pytest.raises(ArchiveExportError, match="Insufficient disk space.*--tmp-dir"):
+            create_archive([node], filename=filename, tmp_dir=custom_tmp)

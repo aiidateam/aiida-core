@@ -141,7 +141,7 @@ def create_archive(
 
     :param backend: the backend to export from. If not specified, the default backend is used.
 
-    :param temp_dir: Directory to use for temporary files during archive creation.
+    :param tmp_dir: Directory to use for temporary files during archive creation.
         If not specified, a temporary directory will be created in the same directory as the output file
         with a '.aiida-export-' prefix. This parameter is useful when the output directory has limited
         space or when you want to use a specific filesystem (e.g., faster storage) for temporary operations.
@@ -200,7 +200,7 @@ def create_archive(
         # Taken from: https://stackoverflow.com/a/2113511
         if not os.access(tmp_dir, os.W_OK | os.X_OK):
             msg = f"Specified temporary directory '{tmp_dir}' is not writable"
-            raise ArchiveExportError()
+            raise ArchiveExportError(msg)
         tmp_prefix = None  # Use default tempfile prefix
     else:
         # Create temporary directory in the same folder as the output file
@@ -311,9 +311,6 @@ def create_archive(
     # Create and open the archive for writing.
     # We create in a temp dir then move to final place at end,
     # so that the user cannot end up with a half written archive on errors
-    # import ipdb; ipdb.set_trace()
-    tmp_dir = Path('/mount')  # or whatever directory you want to use
-
     try:
         with tempfile.TemporaryDirectory(dir=tmp_dir, prefix=tmp_prefix) as tmpdir:
             tmp_filename = Path(tmpdir) / 'export.zip'
@@ -406,10 +403,11 @@ def create_archive(
             shutil.move(tmp_filename, filename)
     except OSError as e:
         if e.errno == 28:  # No space left on device
-            raise ArchiveExportError(
+            msg = (
                 f"Insufficient disk space in temporary directory '{tmp_dir}'. "
                 f'Consider using --tmp-dir to specify a location with more available space.'
-            ) from e
+            )
+            raise ArchiveExportError(msg) from e
         raise ArchiveExportError(f'Failed to create temporary directory: {e}') from e
 
     EXPORT_LOGGER.report('Archive created successfully')

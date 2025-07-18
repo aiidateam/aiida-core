@@ -54,7 +54,7 @@ class StashCalculation(CalcJob):
 
         inputs = {
             'metadata': {
-                'computer': Computer.collection.get(label="localhost"),
+                'computer': load_computer(label="localhost"),
                 'options': {
                     'resources': {'num_machines': 1},
                     'stash': {
@@ -64,7 +64,8 @@ class StashCalculation(CalcJob):
                     },
                 },
             },
-            'source_node': node_1,
+            'source_node': <RemoteData_NODE>,
+            'code': <MY_CODE>
         }
     """
 
@@ -91,6 +92,7 @@ class StashCalculation(CalcJob):
             'num_machines': 1,
             'num_mpiprocs_per_machine': 1,
         }
+
         spec.inputs['metadata']['options']['input_filename'].default = 'aiida.in'
         spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
 

@@ -28,9 +28,6 @@ jobs:
       matrix:
         python-version: ['3.9', '3.13']
         database-backend: [psql]
-        include:
-        - python-version: '3.9'
-          database-backend: sqlite
 
     services:
       postgres:
@@ -87,6 +84,45 @@ jobs:
         name: aiida-pytests-py3.9
         files: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
+
+  tests-minimum-requirements:
+    name: test minimum reqs (${{ matrix.python-version }}, ${{ matrix.database-backend }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9']
+        database-backend: [sqlite]
+
+    services:
+      rabbitmq:
+        image: rabbitmq:3.8.14-management
+        ports:
+        - 5672:5672
+        - 15672:15672
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install graphviz
+      run: sudo apt update && sudo apt install graphviz
+
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: ${{ matrix.python-version }}
+        from-lock: 'false'
+        resolution-strategy: lowest-direct
+
+    - name: Setup SSH on localhost
+      run: .github/workflows/setup_ssh.sh
+
+    - name: Run test suite
+      env:
+        AIIDA_WARN_v3: 0
+      run: pytest --disable-warnings -n auto --db-backend ${{ matrix.database-backend }} -m 'not nightly' tests/
+
 
   tests-presto:
 

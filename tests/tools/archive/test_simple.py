@@ -157,7 +157,7 @@ def test_control_of_licenses(tmp_path):
         create_archive([struct], test_run=True, forbidden_licenses=crashing_filter)
 
 
-@pytest.mark.usefixtures("aiida_profile_clean")
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_tmp_dir_custom_valid(tmp_path):
     """Test using a custom valid temporary directory."""
     from unittest.mock import patch
@@ -180,7 +180,8 @@ def test_tmp_dir_custom_valid(tmp_path):
         # Check that TemporaryDirectory was called with custom directory
         mock_temp_dir.assert_called_once_with(dir=custom_tmp, prefix=None)
 
-@pytest.mark.usefixtures("aiida_profile_clean")
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_tmp_dir_validation_errors(tmp_path):
     """Test tmp_dir validation errors."""
 
@@ -188,16 +189,17 @@ def test_tmp_dir_validation_errors(tmp_path):
     filename = tmp_path / 'export.aiida'
 
     # Non-existent directory
-    with pytest.raises(ArchiveExportError, match="does not exist"):
+    with pytest.raises(ArchiveExportError, match='does not exist'):
         create_archive([node], filename=filename, tmp_dir=tmp_path / 'nonexistent')
 
     # File instead of directory
     not_a_dir = tmp_path / 'file.txt'
     not_a_dir.write_text('content')
-    with pytest.raises(ArchiveExportError, match="is not a directory"):
+    with pytest.raises(ArchiveExportError, match='is not a directory'):
         create_archive([node], filename=filename, tmp_dir=not_a_dir)
 
-@pytest.mark.usefixtures("aiida_profile_clean")
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_tmp_dir_disk_space_error(tmp_path):
     """Test disk space error handling."""
     from unittest.mock import patch
@@ -208,10 +210,10 @@ def test_tmp_dir_disk_space_error(tmp_path):
     filename = tmp_path / 'export.aiida'
 
     def mock_temp_dir_error(*args, **kwargs):
-        error = OSError("No space left on device")
+        error = OSError('No space left on device')
         error.errno = 28
         raise error
 
     with patch('tempfile.TemporaryDirectory', side_effect=mock_temp_dir_error):
-        with pytest.raises(ArchiveExportError, match="Insufficient disk space.*--tmp-dir"):
+        with pytest.raises(ArchiveExportError, match='Insufficient disk space.*--tmp-dir'):
             create_archive([node], filename=filename, tmp_dir=custom_tmp)

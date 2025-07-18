@@ -1501,6 +1501,10 @@ def test_glob(custom_transport, tmp_path_local):
         tmp_path_local.joinpath(subpath).write_text('touch')
 
     with custom_transport as transport:
+        # do not raise an error if the path does not exist
+        g_list = transport.glob(str(tmp_path_local) + '/non_existing/*.txt')
+        assert g_list == []
+
         g_list = transport.glob(str(tmp_path_local) + '/*.txt')
         paths = [str(tmp_path_local.joinpath(item)) for item in ['i.txt', 'j.txt']]
         assert sorted(paths) == sorted(g_list)

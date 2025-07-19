@@ -27,7 +27,7 @@ class GroupParamType(IdentifierParamType):
 
     name = 'Group'
 
-    def __init__(self, create_if_not_exist: bool = False, sub_classes: tuple[str] | None = ('aiida.groups:core',)):
+    def __init__(self, create_if_not_exist: bool = False, sub_classes: tuple[str] = ('aiida.groups:core',)):
         """Construct the parameter type.
 
         The `sub_classes` argument can be used to narrow the set of subclasses of `Group` that should be matched. By
@@ -45,11 +45,8 @@ class GroupParamType(IdentifierParamType):
         """
         type_check(sub_classes, tuple, allow_none=True)
 
-        if create_if_not_exist:
-            if sub_classes is None:
-                raise ValueError('`sub_classes` cannot be None if `create_if_not_exist=True`')
-            if len(sub_classes) > 1:
-                raise ValueError('`sub_classes` can at most contain one entry point if `create_if_not_exist=True`')
+        if create_if_not_exist and len(sub_classes) > 1:
+            raise ValueError('`sub_classes` can at most contain one entry point if `create_if_not_exist=True`')
 
         self._create_if_not_exist = create_if_not_exist
         super().__init__(sub_classes=sub_classes)

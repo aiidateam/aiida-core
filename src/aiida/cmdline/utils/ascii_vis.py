@@ -8,7 +8,9 @@
 ###########################################################################
 """Utility functions to draw ASCII diagrams to the command line."""
 
-from typing import Optional
+from __future__ import annotations
+
+import typing as t
 
 __all__ = ('format_call_graph',)
 
@@ -57,7 +59,9 @@ def calc_info(node, call_link_label: bool = False) -> str:
     return string
 
 
-def format_call_graph(calc_node, max_depth: Optional[int] = None, call_link_label: bool = False, info_fn=calc_info):
+def format_call_graph(
+    calc_node, max_depth: int | None = None, call_link_label: bool = False, info_fn: t.Callable = calc_info
+) -> t.Any:
     """Print a tree like the POSIX tree command for the calculation call graph.
 
     :param calc_node: The calculation node
@@ -71,8 +75,8 @@ def format_call_graph(calc_node, max_depth: Optional[int] = None, call_link_labe
 
 
 def build_call_graph(
-    calc_node, max_depth: Optional[int] = None, call_link_label: bool = False, info_fn=calc_info
-) -> str:
+    calc_node, max_depth: int | None = None, call_link_label: bool = False, info_fn: t.Callable = calc_info
+) -> str | tuple[str, list]:
     """Build the call graph of a given node.
 
     :param calc_node: The calculation node
@@ -100,7 +104,7 @@ def build_call_graph(
     return info_string
 
 
-def format_tree_descending(tree, prefix='', pos=-1):
+def format_tree_descending(tree: t.Any, prefix: str = '', pos: int = -1):
     """Format a descending tree."""
     text = []
 

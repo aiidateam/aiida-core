@@ -22,6 +22,11 @@ from click import style
 from . import echo
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
+    import plumpy
+
+    from aiida.engine import Process, ProcessSpec
     from aiida.orm import WorkChainNode
 
 __all__ = ('is_verbose',)
@@ -66,21 +71,21 @@ def get_env_with_venv_bin():
     return currenv
 
 
-def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
+def format_local_time(timestamp: datetime | float, format_str: str = '%Y-%m-%d %H:%M:%S') -> str:
     """Format a datetime object or UNIX timestamp in a human readable format
 
     :param timestamp: a datetime object or a float representing a UNIX timestamp
     :param format_str: optional string format to pass to strftime
     """
-    from aiida.common import timezone
+    from datetime import datetime
 
     if isinstance(timestamp, float):
-        return timezone.datetime.fromtimestamp(timestamp).strftime(format_str)
+        return datetime.fromtimestamp(timestamp).strftime(format_str)
 
     return timestamp.strftime(format_str)
 
 
-def print_last_process_state_change(process_type=None):
+def print_last_process_state_change(process_type: str | None = None) -> None:
     """Print the last time that a process of the specified type has changed its state.
 
     :param process_type: optional process type for which to get the latest state change timestamp.
@@ -403,7 +408,7 @@ def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_de
     return '\n'.join(report)
 
 
-def print_process_info(process):
+def print_process_info(process: Process) -> None:
     """Print detailed information about a process class and its process specification.
 
     :param process: a :py:class:`~aiida.engine.processes.process.Process` class
@@ -418,13 +423,13 @@ def print_process_info(process):
     print_process_spec(process.spec())
 
 
-def print_process_spec(process_spec):
+def print_process_spec(process_spec: ProcessSpec) -> None:
     """Print the process spec in a human-readable formatted way.
 
     :param process_spec: a `ProcessSpec` instance
     """
 
-    def build_entries(ports):
+    def build_entries(ports: plumpy.PortNamespace) -> list[tuple]:
         """Build a list of entries to be printed for a `PortNamespace.
 
         :param ports: the port namespace
@@ -437,9 +442,9 @@ def print_process_spec(process_spec):
                 continue
 
             valid_types = port.valid_type if isinstance(port.valid_type, (list, tuple)) else (port.valid_type,)
-            valid_types = ', '.join([valid_type.__name__ for valid_type in valid_types if valid_type is not None])
+            valid_types_str = ', '.join([valid_type.__name__ for valid_type in valid_types if valid_type is not None])
             info = textwrap.wrap(port.help if port.help is not None else '', width=75)
-            result.append([name, port.required, valid_types, info])
+            result.append((name, port.required, valid_types_str, info))
 
         return result
 
@@ -473,23 +478,23 @@ def print_process_spec(process_spec):
     if process_spec.exit_codes:
         echo.echo('Exit codes:\n', fg=echo.COLORS['report'], bold=True)
 
-        table = [('0', 'The process finished successfully.')]
+        exit_codes_table = [('0', 'The process finished successfully.')]
 
         for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
             if exit_code.invalidates_cache:
                 status = style(exit_code.status, bold=True, fg='red')
             else:
                 status = exit_code.status
-            table.append((status, '\n'.join(textwrap.wrap(exit_code.message, width=75))))
+            exit_codes_table.append((status, '\n'.join(textwrap.wrap(exit_code.message, width=75))))
 
-        echo.echo(tabulate(table, tablefmt='plain'))
+        echo.echo(tabulate(exit_codes_table, tablefmt='plain'))
         echo.echo(style('\nExit codes that invalidate the cache are marked in bold red.\n', italic=True))
 
 
 def validate_output_filename(
     output_file: Path | str,
     overwrite: bool = False,
-):
+) -> None:
     """Validate output filename."""
 
     if output_file is None:

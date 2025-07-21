@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import sys
 import warnings
 from typing import final
 
@@ -132,9 +133,15 @@ def _get_configuration_directory_from_envvar() -> pathlib.Path | None:
     if environment_variable is None:
         return None
 
+    # Determine seperator to split paths in environment variables like PATH
+    if sys.platform == 'win32':
+        seperator = ';'
+    else:
+        seperator = ':'
+
     # Loop over all the paths in the ``AIIDA_PATH`` variable to see if any of them contain a configuration folder
     dirpath_config = None
-    for base_dir_path in [path for path in environment_variable.split(':') if path]:
+    for base_dir_path in [path for path in environment_variable.split(seperator) if path]:
         dirpath_config = pathlib.Path(base_dir_path).expanduser()
 
         # Only add the base config directory name to the base path if it does not already do so

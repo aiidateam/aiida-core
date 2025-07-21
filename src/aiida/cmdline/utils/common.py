@@ -15,19 +15,20 @@ import os
 import sys
 import textwrap
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from click import style
 
 from . import echo
 
 if TYPE_CHECKING:
+    from collections.abc import MutableMapping
     from datetime import datetime
 
     import plumpy
 
     from aiida.engine import Process, ProcessSpec
-    from aiida.orm import WorkChainNode
+    from aiida.orm import CalcJobNode, Node, WorkChainNode
 
 __all__ = ('is_verbose',)
 
@@ -39,7 +40,7 @@ def tabulate(table, **kwargs):
     return tb.tabulate(table, **kwargs)
 
 
-def is_verbose():
+def is_verbose() -> bool:
     """Return whether the configured logging verbosity is considered verbose, i.e., equal or lower to ``INFO`` level.
 
     .. note:: This checks the effective logging level that is set on the ``CMDLINE_LOGGER``. This means that it will
@@ -51,7 +52,7 @@ def is_verbose():
     return echo.CMDLINE_LOGGER.getEffectiveLevel() <= logging.INFO
 
 
-def get_env_with_venv_bin():
+def get_env_with_venv_bin() -> MutableMapping:
     """Create a clone of the current running environment with the AIIDA_PATH variable set directory of the config."""
     from aiida.common.warnings import warn_deprecation
     from aiida.manage.configuration import get_config
@@ -64,7 +65,7 @@ def get_env_with_venv_bin():
     config = get_config()
 
     currenv = os.environ.copy()
-    currenv['PATH'] = f"{os.path.dirname(sys.executable)}:{currenv['PATH']}"
+    currenv['PATH'] = f'{os.path.dirname(sys.executable)}:{currenv["PATH"]}'
     currenv['AIIDA_PATH'] = config.dirpath
     currenv['PYTHONUNBUFFERED'] = 'True'
 
@@ -107,7 +108,7 @@ def print_last_process_state_change(process_type: str | None = None) -> None:
         echo_report(f'Last time an entry changed state: {relative} ({formatted})')
 
 
-def get_node_summary(node):
+def get_node_summary(node: Node) -> str:
     """Return a multi line string with a pretty formatted summary of a Node.
 
     :param node: a Node instance
@@ -118,7 +119,7 @@ def get_node_summary(node):
     from aiida.orm import ProcessNode
 
     table_headers = ['Property', 'Value']
-    table = []
+    table: list[list[str | Any]] = []
 
     if isinstance(node, ProcessNode):
         table.append(['type', node.process_label])
@@ -155,12 +156,12 @@ def get_node_summary(node):
         pass
     else:
         if computer is not None:
-            table.append(['computer', f'[{node.computer.pk}] {node.computer.label}'])
+            table.append(['computer', f'[{computer.pk}] {computer.label}'])
 
     return tabulate(table, headers=table_headers)
 
 
-def get_node_info(node, include_summary=True):
+def get_node_info(node: Node, include_summary: bool = True) -> str:
     """Return a multi line string of information about the given node, such as the incoming and outcoming links.
 
     :param include_summary: boolean, if True, also include a summary of node properties
@@ -180,18 +181,18 @@ def get_node_info(node, include_summary=True):
     nodes_output = node.base.links.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
 
     if nodes_input:
-        result += f"\n{format_nested_links(nodes_input.nested(), headers=['Inputs', 'PK', 'Type'])}"
+        result += f'\n{format_nested_links(nodes_input.nested(), headers=["Inputs", "PK", "Type"])}'
 
     if nodes_output:
-        result += f"\n{format_nested_links(nodes_output.nested(), headers=['Outputs', 'PK', 'Type'])}"
+        result += f'\n{format_nested_links(nodes_output.nested(), headers=["Outputs", "PK", "Type"])}'
 
     if nodes_caller:
         links = sorted(nodes_caller.all(), key=lambda x: x.node.ctime)
-        result += f"\n{format_flat_links(links, headers=['Caller', 'PK', 'Type'])}"
+        result += f'\n{format_flat_links(links, headers=["Caller", "PK", "Type"])}'
 
     if nodes_called:
         links = sorted(nodes_called.all(), key=lambda x: x.node.ctime)
-        result += f"\n{format_flat_links(links, headers=['Called', 'PK', 'Type'])}"
+        result += f'\n{format_flat_links(links, headers=["Called", "PK", "Type"])}'
 
     log_messages = orm.Log.collection.get_logs_for(node)
 
@@ -205,7 +206,7 @@ def get_node_info(node, include_summary=True):
     return result
 
 
-def format_flat_links(links, headers):
+def format_flat_links(links: list, headers) -> str:
     """Given a flat list of LinkTriples, return a flat string representation.
 
     :param links: a list of LinkTriples
@@ -224,7 +225,7 @@ def format_flat_links(links, headers):
     return result
 
 
-def format_nested_links(links, headers):
+def format_nested_links(links: dict, headers) -> str:
     """Given a nested dictionary of nodes, return a nested string representation.
 
     :param links: a nested dictionary of nodes
@@ -253,7 +254,7 @@ def format_nested_links(links, headers):
     table = []
 
     for depth, label, pk, class_name in format_recursive(links):
-        table.append([f"{' ' * (depth * indent_size)}{label}", pk, class_name])
+        table.append([f'{" " * (depth * indent_size)}{label}', pk, class_name])
 
     result = f'\n{tabulate(table, headers=headers)}'
     tb.PRESERVE_WHITESPACE = False
@@ -261,7 +262,7 @@ def format_nested_links(links, headers):
     return result
 
 
-def get_calcjob_report(calcjob):
+def get_calcjob_report(calcjob: CalcJobNode) -> str:
     """Return a multi line string representation of the log messages and output of a given calcjob
 
     :param calcjob: the calcjob node
@@ -279,7 +280,7 @@ def get_calcjob_report(calcjob):
     report = []
 
     if calcjob_state == CalcJobState.WITHSCHEDULER:
-        state_string = f"{calcjob_state}, scheduler state: {scheduler_state if scheduler_state else '(unknown)'}"
+        state_string = f'{calcjob_state}, scheduler state: {scheduler_state if scheduler_state else "(unknown)"}'
     else:
         state_string = f'{calcjob_state}'
 
@@ -314,7 +315,7 @@ def get_calcjob_report(calcjob):
     return '\n'.join(report)
 
 
-def get_process_function_report(node):
+def get_process_function_report(node: Node) -> str:
     """Return a multi line string representation of the log messages and output of a given process function node
 
     :param node: the node
@@ -330,7 +331,7 @@ def get_process_function_report(node):
     return '\n'.join(report)
 
 
-def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_depth=None):
+def get_workchain_report(node: WorkChainNode, levelname: str, indent_size: int = 4, max_depth: int | None = None):
     """Return a multi line string representation of the log messages and output of a given workchain
 
     :param node: the workchain node

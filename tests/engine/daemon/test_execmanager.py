@@ -17,7 +17,6 @@ from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, S
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
-from aiida.plugins import entry_point
 from aiida.transports.plugins.local import LocalTransport
 
 
@@ -41,19 +40,25 @@ def file_hierarchy_simple():
     }
 
 
+# Skip for any transport plugins that are locally installed but are not part of `aiida-core`
 @pytest.fixture(
     scope='function',
-    params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
+    params=[
+        ('core.local', None),
+        ('core.ssh', None),
+        ('core.ssh_async', 'asyncssh'),
+        ('core.ssh_async', 'openssh'),
+    ],
 )
 def node_and_calc_info(aiida_localhost, aiida_computer_ssh, aiida_computer_ssh_async, aiida_code_installed, request):
     """Return a ``CalcJobNode`` and associated ``CalcInfo`` instance."""
 
-    if request.param == 'core.local':
+    if request.param[0] == 'core.local':
         node = CalcJobNode(computer=aiida_localhost)
-    elif request.param == 'core.ssh':
+    elif request.param[0] == 'core.ssh':
         node = CalcJobNode(computer=aiida_computer_ssh())
-    elif request.param == 'core.ssh_async':
-        node = CalcJobNode(computer=aiida_computer_ssh_async())
+    elif request.param[0] == 'core.ssh_async':
+        node = CalcJobNode(computer=aiida_computer_ssh_async(backend=request.param[1]))
     else:
         raise ValueError(f'unsupported transport: {request.param}')
 
@@ -653,6 +658,8 @@ async def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_i
         )
 
 
+# TODO:
+# THIS entire test suit has to move and merge with test_stash.py
 @pytest.mark.parametrize(
     'file_hierarchy',
     [{'aiida.out': 'out', 'aiida.in': 'in', '_aiidasubmit.sh': 'script', 'folder': {'1': '1', '2': '2', '3': '3'}}],
@@ -678,7 +685,10 @@ async def test_stashing(
     monkeypatch,
     caplog,
 ):
-    """Test the stashing of files."""
+    """Test the stashing of files, when stashing is performed as part of a generic calculation job.
+    Testing the stashing of files, when stashing is performed via `StashCalculation` is done in `test_stash.py`.
+    """
+
     import logging
 
     computer_wdir = tmp_path / 'aiida'
@@ -693,15 +703,25 @@ async def test_stashing(
     node.set_remote_workdir(str(node_workdir))
     create_file_hierarchy(file_hierarchy, node_workdir)
 
-    node.set_option(
-        'stash',
-        {
-            'source_list': ['*'],
-            'target_base': str(dest_path),
-            'stash_mode': stash_mode,
-            'dereference': True,  # ignored in case of COPY
-        },
-    )
+    if stash_mode == StashMode.COPY.value:
+        node.set_option(
+            'stash',
+            {
+                'source_list': ['*'],
+                'target_base': str(dest_path),
+                'stash_mode': stash_mode,
+            },
+        )
+    else:
+        node.set_option(
+            'stash',
+            {
+                'source_list': ['*'],
+                'target_base': str(dest_path),
+                'stash_mode': stash_mode,
+                'dereference': True,  # ignored in case of COPY
+            },
+        )
 
     def mock_get_authinfo(*args, **kwargs):
         class MockAuthInfo:
@@ -737,15 +757,26 @@ async def test_stashing(
     ## 2) test Error handling
     dest_path_error = tmp_path / 'stash_path_error'
     dest_path_error.mkdir()
-    node.set_option(
-        'stash',
-        {
-            'source_list': ['*'],
-            'target_base': str(dest_path_error),
-            'stash_mode': stash_mode,
-            'dereference': True,  # ignored in case of COPY
-        },
-    )
+
+    if stash_mode == StashMode.COPY.value:
+        node.set_option(
+            'stash',
+            {
+                'source_list': ['*'],
+                'target_base': str(dest_path_error),
+                'stash_mode': stash_mode,
+            },
+        )
+    else:
+        node.set_option(
+            'stash',
+            {
+                'source_list': ['*'],
+                'target_base': str(dest_path_error),
+                'stash_mode': stash_mode,
+                'dereference': True,  # ignored in case of COPY
+            },
+        )
 
     with LocalTransport() as transport:
         if stash_mode == StashMode.COPY.value:
@@ -765,7 +796,7 @@ async def test_stashing(
         # the error should only be logged to EXEC_LOGGER.warning and exit with 0
         with caplog.at_level(logging.WARNING):
             await execmanager.stash_calculation(node, transport)
-            assert any('failed to stash' in message for message in caplog.messages)
+            assert any('Failed to stash' in message for message in caplog.messages)
 
     # Ensure no files were created in the destination path after the error
     assert not any(dest_path_error.iterdir())

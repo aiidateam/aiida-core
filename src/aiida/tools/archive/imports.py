@@ -262,11 +262,18 @@ def _import_users(
     # get matching emails from the backend
     output_email_id: Dict[str, int] = {}
     if input_id_email:
-        output_email_id = dict(
-            orm.QueryBuilder(backend=backend_to)
-            .append(orm.User, filters={'email': {'in': list(input_id_email.values())}}, project=['email', 'id'])
-            .all(batch_size=query_params.batch_size)
-        )
+        output_email_id = {
+            key: value
+            for query_results in [
+                dict(
+                    orm.QueryBuilder(backend=backend_to)
+                    .append(orm.User, filters={'email': {'in': chunk}}, project=['email', 'id'])
+                    .all(batch_size=query_params.batch_size)
+                )
+                for _, chunk in batch_iter(set(input_id_email.values()), query_params.filter_size)
+            ]
+            for key, value in query_results.items()
+        }
 
     new_users = len(input_id_email) - len(output_email_id)
     existing_users = len(output_email_id)
@@ -300,11 +307,18 @@ def _import_computers(
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(
-            orm.QueryBuilder(backend=backend_to)
-            .append(orm.Computer, filters={'uuid': {'in': list(input_id_uuid.values())}}, project=['uuid', 'id'])
-            .all(batch_size=query_params.batch_size)
-        )
+        backend_uuid_id = {
+            key: value
+            for query_results in [
+                dict(
+                    orm.QueryBuilder(backend=backend_to)
+                    .append(orm.Computer, filters={'uuid': {'in': chunk}}, project=['uuid', 'id'])
+                    .all(batch_size=query_params.batch_size)
+                )
+                for _, chunk in batch_iter(set(input_id_uuid.values()), query_params.filter_size)
+            ]
+            for key, value in query_results.items()
+        }
 
     new_computers = len(input_id_uuid) - len(backend_uuid_id)
     existing_computers = len(backend_uuid_id)
@@ -460,17 +474,20 @@ def _import_nodes(
 
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
-    input_id_uuid_uuids = list(input_id_uuid.values())
 
     if input_id_uuid:
-        for _, batch in batch_iter(input_id_uuid_uuids, query_params.filter_size):
-            backend_uuid_id.update(
+        backend_uuid_id = {
+            key: value
+            for query_results in [
                 dict(
                     orm.QueryBuilder(backend=backend_to)
-                    .append(orm.Node, filters={'uuid': {'in': batch}}, project=['uuid', 'id'])
+                    .append(orm.Node, filters={'uuid': {'in': chunk}}, project=['uuid', 'id'])
                     .all(batch_size=query_params.batch_size)
                 )
-            )
+                for _, chunk in batch_iter(set(input_id_uuid.values()), query_params.filter_size)
+            ]
+            for key, value in query_results.items()
+        }
 
     new_nodes = len(input_id_uuid) - len(backend_uuid_id)
 
@@ -544,12 +561,20 @@ def _import_logs(
 
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
+
     if input_id_uuid:
-        backend_uuid_id = dict(
-            orm.QueryBuilder(backend=backend_to)
-            .append(orm.Log, filters={'uuid': {'in': list(input_id_uuid.values())}}, project=['uuid', 'id'])
-            .all(batch_size=query_params.batch_size)
-        )
+        backend_uuid_id = {
+            key: value
+            for query_results in [
+                dict(
+                    orm.QueryBuilder(backend=backend_to)
+                    .append(orm.Log, filters={'uuid': {'in': chunk}}, project=['uuid', 'id'])
+                    .all(batch_size=query_params.batch_size)
+                )
+                for _, chunk in batch_iter(set(input_id_uuid.values()), query_params.filter_size)
+            ]
+            for key, value in query_results.items()
+        }
 
     new_logs = len(input_id_uuid) - len(backend_uuid_id)
     existing_logs = len(backend_uuid_id)
@@ -924,7 +949,7 @@ def _import_links(
                     raise ImportUniquenessError(
                         f'Node {in_id} already has an outgoing {link_type.value!r} link with label {link_label!r}'
                     )
-                if 'out_id' in link_uniqueness and out_id in existing_out_id_label:
+                if 'out_id' in link_uniqueness and out_id in existing_out_id:
                     raise ImportUniquenessError(f'Node {out_id} already has an incoming {link_type.value!r} link')
                 if 'out_id_label' in link_uniqueness and (out_id, link_label) in existing_out_id_label:
                     raise ImportUniquenessError(

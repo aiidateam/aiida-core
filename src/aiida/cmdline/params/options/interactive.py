@@ -67,7 +67,7 @@ class InteractiveOption(ConditionalOption):
         return click.style(self._prompt, fg=self.PROMPT_COLOR)
 
     @prompt.setter
-    def prompt(self, value: str) -> None:
+    def prompt(self, value: str | None) -> None:
         """Set the prompt text."""
         self._prompt = value
 

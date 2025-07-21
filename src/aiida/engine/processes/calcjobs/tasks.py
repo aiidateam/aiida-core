@@ -553,7 +553,7 @@ class Waiting(plumpy.process_states.Waiting):
                 result = self.stash(monitor_result=monitor_result)
 
             elif self._command == STASH_COMMAND:
-                if node.get_option('stash') is not None:
+                if node.get_option('stash'):
                     await self._launch_task(task_stash_job, node, transport_queue)
                 result = self.retrieve(monitor_result=self._monitor_result)
 
@@ -582,7 +582,6 @@ class Waiting(plumpy.process_states.Waiting):
         except TransportTaskException as exception:
             raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
         except plumpy.process_states.KillInterruption as exception:
-            await self._kill_job(node, transport_queue)
             node.set_process_status(str(exception))
             return self.retrieve(monitor_result=self._monitor_result)
         except (plumpy.futures.CancelledError, asyncio.CancelledError):

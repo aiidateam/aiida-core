@@ -27,7 +27,7 @@ class GroupParamType(IdentifierParamType):
 
     name = 'Group'
 
-    def __init__(self, create_if_not_exist: bool = False, sub_classes: tuple[str] | None = ('aiida.groups:core',)):
+    def __init__(self, create_if_not_exist: bool = False, sub_classes: tuple[str] = ('aiida.groups:core',)):
         """Construct the parameter type.
 
         The `sub_classes` argument can be used to narrow the set of subclasses of `Group` that should be matched. By

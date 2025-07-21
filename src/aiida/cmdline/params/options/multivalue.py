@@ -60,8 +60,7 @@ class MultipleValueOption(click.Option):
         self._eat_all_parser = None
 
     # TODO: add_to_parser has been deprecated in 8.2.0
-    # TODO: click.parser._OptionParser is OptionParser in 8.1
-    def add_to_parser(self, parser: click.parser._OptionParser, ctx: click.Context):
+    def add_to_parser(self, parser: click.parser._OptionParser, ctx: click.Context) -> None:
         """Override built in click method that allows us to specify a custom parser
         to eat up parameters until the following flag or 'endopt' (i.e. --)
         """

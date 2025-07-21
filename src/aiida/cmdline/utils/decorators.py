@@ -17,6 +17,7 @@ Provides:
     code branch gets visited and possibly avoiding the overhead if not
 
 """
+
 from __future__ import annotations
 
 import typing as t

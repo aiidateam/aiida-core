@@ -90,16 +90,10 @@ repos:
         src/aiida/calculations/diff_tutorial/calculations.py|
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
-        src/aiida/cmdline/commands/cmd_archive.py|
-        src/aiida/cmdline/commands/cmd_calcjob.py|
         src/aiida/cmdline/commands/cmd_code.py|
         src/aiida/cmdline/commands/cmd_computer.py|
-        src/aiida/cmdline/commands/cmd_data/cmd_list.py|
-        src/aiida/cmdline/commands/cmd_data/cmd_upf.py|
         src/aiida/cmdline/commands/cmd_devel.py|
         src/aiida/cmdline/commands/cmd_group.py|
-        src/aiida/cmdline/commands/cmd_node.py|
-        src/aiida/cmdline/commands/cmd_shell.py|
         src/aiida/cmdline/commands/cmd_storage.py|
         src/aiida/common/extendeddicts.py|
         src/aiida/common/utils.py|

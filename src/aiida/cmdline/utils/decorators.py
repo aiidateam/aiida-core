@@ -18,6 +18,7 @@ Provides:
 
 """
 
+import typing as t
 from contextlib import contextmanager
 
 from click_spinner import spinner
@@ -78,7 +79,7 @@ def load_backend_if_not_loaded():
             manager.get_profile_storage()  # This will load the backend of the loaded profile, if not already loaded
 
 
-def with_dbenv():
+def with_dbenv() -> t.Callable:
     """Function decorator that will load the database environment for the currently loaded profile.
 
     .. note:: if no profile has been loaded yet, the default profile will be loaded first.

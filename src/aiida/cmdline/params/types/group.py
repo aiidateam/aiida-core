@@ -8,6 +8,10 @@
 ###########################################################################
 """Module for custom click param type group."""
 
+from __future__ import annotations
+
+import typing as t
+
 import click
 
 from aiida.cmdline.utils import decorators
@@ -23,7 +27,7 @@ class GroupParamType(IdentifierParamType):
 
     name = 'Group'
 
-    def __init__(self, create_if_not_exist=False, sub_classes=('aiida.groups:core',)):
+    def __init__(self, create_if_not_exist: bool = False, sub_classes: tuple[str] = ('aiida.groups:core',)):
         """Construct the parameter type.
 
         The `sub_classes` argument can be used to narrow the set of subclasses of `Group` that should be matched. By
@@ -60,7 +64,9 @@ class GroupParamType(IdentifierParamType):
         return GroupEntityLoader
 
     @decorators.with_dbenv()
-    def shell_complete(self, ctx, param, incomplete):
+    def shell_complete(
+        self, ctx: click.Context, param: click.Parameter, incomplete: str
+    ) -> list[click.shell_completion.CompletionItem]:
         """Return possible completions based on an incomplete value.
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
@@ -71,13 +77,13 @@ class GroupParamType(IdentifierParamType):
         ]
 
     @decorators.with_dbenv()
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter, ctx: click.Context) -> t.Any:
         try:
             group = super().convert(value, param, ctx)
         except click.BadParameter:
             if self._create_if_not_exist:
                 # The particular subclass to load will be stored in `_sub_classes` as loaded by `convert` of the super.
-                cls = self._sub_classes[0]
+                cls = self._sub_classes[0]  # type: ignore[index]
                 group = cls(label=value).store()
             else:
                 raise

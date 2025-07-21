@@ -37,7 +37,7 @@ class AiiDAConfigDir:
     _glb_aiida_config_folder: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
 
     @classmethod
-    def get(cls):
+    def get(cls) -> pathlib.Path:
         """Return the path of the configuration directory."""
         return cls._glb_aiida_config_folder
 

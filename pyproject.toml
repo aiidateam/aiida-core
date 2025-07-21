@@ -378,7 +378,7 @@ ignore_errors = true
 module = 'plumpy'
 
 [tool.pytest.ini_options]
-addopts = '--benchmark-skip --durations=50 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
+addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
 filterwarnings = [
   'ignore:.*and will be removed in NumPy 2.0.*:DeprecationWarning:ase:',
   'ignore:datetime.datetime.utcfromtimestamp:DeprecationWarning:pytz|dateutil|tqdm|aio_pika:',
@@ -398,6 +398,10 @@ filterwarnings = [
   'ignore:Identity map already had an identity for .* inside of an event handler within the flush?:sqlalchemy.exc.SAWarning',
   'ignore:The `aiida.orm.nodes.data.upf` module is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
+  # https://github.com/aiidateam/plumpy/issues/283
+  'ignore:There is no current event loop:DeprecationWarning:plumpy',
+  # spglib deprecation
+  'ignore:dict interface is deprecated:DeprecationWarning',
   'default::ResourceWarning'
 ]
 markers = [

@@ -248,7 +248,7 @@ class Manager:
         """
         from aiida.common.warnings import warn_deprecation
 
-        warn_deprecation('get_backend() is deprecated, use get_profile_storage() instead', version=3)
+        warn_deprecation('get_backend() is deprecated, use get_profile_storage() instead', version=3, stacklevel=3)
         return self.get_profile_storage()
 
     def get_profile_storage(self) -> 'StorageBackend':

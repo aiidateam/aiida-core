@@ -48,9 +48,9 @@ class SqliteEntityOverride:
     @classmethod
     def _class_check(cls):
         """Assert that the class is correctly configured"""
-        assert issubclass(
-            cls.MODEL_CLASS, models.SqliteBase
-        ), 'Must set the MODEL_CLASS in the derived class to a SQLA model'
+        assert issubclass(cls.MODEL_CLASS, models.SqliteBase), (
+            'Must set the MODEL_CLASS in the derived class to a SQLA model'
+        )
 
     @classmethod
     def from_dbmodel(cls, dbmodel, backend):

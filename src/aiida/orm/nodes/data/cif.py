@@ -372,7 +372,7 @@ class CifData(SinglefileData):
                 return (cifs[0], False)
 
             raise ValueError(
-                'More than one copy of a CIF file ' 'with the same MD5 has been found in ' 'the DB. pks={}'.format(
+                'More than one copy of a CIF file with the same MD5 has been found in the DB. pks={}'.format(
                     ','.join([str(i.pk) for i in cifs])
                 )
             )

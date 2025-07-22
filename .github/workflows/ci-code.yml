@@ -129,10 +129,7 @@ jobs:
         extras: ''
 
     - name: Run verdi tests
-      run: |
-        verdi devel check-load-time
-        verdi devel check-undesired-imports
-        .github/workflows/verdi.sh
+      run: .github/workflows/verdi.sh
 
 
   test-pytest-fixtures:

@@ -57,7 +57,7 @@ repos:
       )$
 
 - repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.5.22
+  rev: 0.7.6
   hooks:
     # Check and update the uv lockfile
   - id: uv-lock
@@ -78,7 +78,7 @@ repos:
   - id: mypy
     name: mypy
     entry: mypy
-    args: [--config-file=pyproject.toml]
+    args: [--config-file=pyproject.toml, --pretty]
     language: python
     types: [python]
     require_serial: true
@@ -107,11 +107,6 @@ repos:
         src/aiida/cmdline/commands/cmd_node.py|
         src/aiida/cmdline/commands/cmd_shell.py|
         src/aiida/cmdline/commands/cmd_storage.py|
-        src/aiida/cmdline/params/options/commands/setup.py|
-        src/aiida/cmdline/params/options/interactive.py|
-        src/aiida/cmdline/params/options/main.py|
-        src/aiida/cmdline/params/options/multivalue.py|
-        src/aiida/cmdline/params/types/group.py|
         src/aiida/cmdline/utils/ascii_vis.py|
         src/aiida/cmdline/utils/common.py|
         src/aiida/cmdline/utils/echo.py|
@@ -126,8 +121,6 @@ repos:
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|
-        src/aiida/manage/tests/main.py|
-        src/aiida/manage/tests/pytest_fixtures.py|
         src/aiida/orm/comments.py|
         src/aiida/orm/computers.py|
         src/aiida/orm/implementation/storage_backend.py|
@@ -190,7 +183,6 @@ repos:
         src/aiida/transports/cli.py|
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|
-        src/aiida/workflows/arithmetic/multiply_add.py|
       )$
 
   - id: generate-conda-environment
@@ -201,7 +193,8 @@ repos:
     files: >-
       (?x)^(
         pyproject.toml|
-        utils/dependency_management.py
+        utils/dependency_management.py|
+        environment.yml|
       )$
 
   - id: validate-conda-environment

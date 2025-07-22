@@ -13,8 +13,8 @@ from typing import Dict, Optional
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
+from aiida.common.pydantic import MetadataField
 from aiida.orm.entities import from_backend_entity
-from aiida.orm.fields import add_field
 
 from ..node import Node
 
@@ -46,14 +46,10 @@ class Data(Node):
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
 
-    __qb_fields__ = [
-        add_field(
-            'source',
-            dtype=Optional[dict],
-            is_subscriptable=True,
-            doc='Source of the data',
-        ),
-    ]
+    class Model(Node.Model):
+        source: Optional[dict] = MetadataField(
+            None, description='Source of the data.', is_subscriptable=True, exclude_from_cli=True
+        )
 
     def __init__(self, *args, source=None, **kwargs):
         """Construct a new instance, setting the ``source`` attribute if provided as a keyword argument."""

@@ -477,6 +477,10 @@ class DaemonClient:
         command = {'command': 'stats', 'properties': {'name': self.daemon_name}}
         return self.call_client(command, timeout=timeout)
 
+    def get_number_of_workers(self, timeout: int | None = None) -> int:
+        """Get number of workers."""
+        return len(self.get_worker_info(timeout).get('info', []))
+
     def get_daemon_info(self, timeout: int | None = None) -> dict[str, t.Any]:
         """Get statistics about this daemon itself.
 
@@ -531,7 +535,8 @@ class DaemonClient:
         try:
             subprocess.check_output(command, env=env, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exception:
-            raise DaemonException('The daemon failed to start.') from exception
+            # CalledProcessError is not passing the subprocess stderr in its message so we add it in DaemonException
+            raise DaemonException(f'The daemon failed to start with error:\n{exception.stdout.decode()}') from exception
 
         if not wait:
             return

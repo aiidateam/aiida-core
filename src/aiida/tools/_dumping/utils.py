@@ -16,8 +16,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Set, Type, Union
 
+try:
+    # typing.assert_never available since 3.11
+    from typing import assert_never
+except ImportError:
+    from typing_extensions import assert_never
+
 from aiida import orm
-from aiida.common import AIIDA_LOGGER, assert_never, timezone
+from aiida.common import AIIDA_LOGGER, timezone
 from aiida.manage.configuration import Profile
 from aiida.tools._dumping.config import DumpMode, GroupDumpConfig, ProcessDumpConfig, ProfileDumpConfig
 

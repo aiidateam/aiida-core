@@ -137,6 +137,7 @@ py:class click.types.Path
 py:class click.types.File
 py:class click.types.StringParamType
 py:class click.parser.OptionParser
+py:class click.parser._OptionParser
 py:func click.shell_completion._start_of_option
 py:meth click.Option.get_default
 py:meth fail

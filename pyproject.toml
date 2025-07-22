@@ -390,6 +390,7 @@ filterwarnings = [
   'ignore::DeprecationWarning:pymatgen:',
   'ignore::DeprecationWarning:jsonbackend:',
   'ignore::DeprecationWarning:pkg_resources:',
+  "ignore:'BaseCommand' is deprecated and will be removed in Click 9.0.:DeprecationWarning:trogon:",
   'ignore:ast.* is deprecated.*:DeprecationWarning:docstring_parser:',
   'ignore::SyntaxWarning:CifFile:',
   'ignore::pytest.PytestCollectionWarning',

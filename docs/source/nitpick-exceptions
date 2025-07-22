@@ -60,6 +60,7 @@ py:obj ModelType
 py:class aiida.common.ReturnType
 py:class aiida.common.SelfType
 py:class aiida.common.lang.MethodType
+py:class aiida.cmdline.params._shims.C
 py:class aiida.orm.entitites.CollectionType
 py:class aiida.orm.entitites.EntityType
 py:class aiida.orm.entitites.BackendEntityType

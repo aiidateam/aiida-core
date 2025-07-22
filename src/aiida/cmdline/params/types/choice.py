@@ -8,7 +8,13 @@
 ###########################################################################
 """A custom click type that defines a lazy choice"""
 
+from __future__ import annotations
+
+import typing as t
+
 import click
+
+from .._shims import shim_add_ctx
 
 __all__ = ('LazyChoice',)
 
@@ -48,13 +54,18 @@ class LazyChoice(click.ParamType):
     def choices(self):
         return self._click_choice.choices
 
-    def get_metavar(self, param):
-        return self._click_choice.get_metavar(param)
+    @shim_add_ctx
+    def get_metavar(self, param: click.Parameter, ctx: click.Context | None) -> str | None:
+        if ctx is not None:
+            return self._click_choice.get_metavar(param, ctx)
+        else:
+            return self._click_choice.get_metavar(param)
 
-    def get_missing_message(self, param):
-        return self._click_choice.get_missing_message(param)
+    @shim_add_ctx
+    def get_missing_message(self, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        return self._click_choice.get_missing_message(param, ctx)
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         return self._click_choice.convert(value, param, ctx)
 
     def __repr__(self):

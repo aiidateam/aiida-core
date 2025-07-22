@@ -28,6 +28,7 @@ from aiida.plugins.entry_point import (
     get_entry_points,
 )
 
+from .._shims import shim_add_ctx
 from .strings import EntryPointType
 
 if t.TYPE_CHECKING:
@@ -165,7 +166,8 @@ class PluginParamType(EntryPointType):
         """
         return [click.shell_completion.CompletionItem(p) for p in self.get_possibilities(incomplete=incomplete)]
 
-    def get_missing_message(self, param: click.Parameter) -> str:
+    @shim_add_ctx
+    def get_missing_message(self, param: click.Parameter, ctx: click.Context | None) -> str:
         return 'Possible arguments are:\n\n' + '\n'.join(self.get_valid_arguments())
 
     def get_entry_point_from_string(self, entry_point_string: str) -> EntryPoint:

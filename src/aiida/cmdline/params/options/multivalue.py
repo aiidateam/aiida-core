@@ -8,6 +8,8 @@
 ###########################################################################
 """Module to define multi value options for click."""
 
+from __future__ import annotations
+
 import click
 
 from .. import types

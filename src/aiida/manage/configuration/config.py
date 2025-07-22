@@ -269,7 +269,7 @@ class Config:
 
         # Keep generating a new backup filename based on the current time until it does not exist
         while not filepath_backup or os.path.isfile(filepath_backup):
-            filepath_backup = f"{filepath}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
+            filepath_backup = f'{filepath}.{timezone.now().strftime("%Y%m%d-%H%M%S.%f")}'
 
         shutil.copy(filepath, filepath_backup)
 

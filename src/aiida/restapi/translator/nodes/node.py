@@ -174,9 +174,7 @@ class NodeTranslator(BaseTranslator):
         """
         ## Check the compatibility of query_type and id
         if query_type != 'default' and id is None:
-            raise ValidationError(
-                'non default result/content can only be ' 'applied to a specific node (specify an id)'
-            )
+            raise ValidationError('non default result/content can only be applied to a specific node (specify an id)')
 
         ## Set the type of query
         self.set_query_type(

@@ -49,9 +49,9 @@ class PcodDbImporter(CodDbImporter):
                     values = [values]
                 sql_parts.append(f'({value[1](self, value[0], key, values)})')
         if kwargs:
-            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
+            raise NotImplementedError(f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}')
 
-        return f"SELECT file FROM data WHERE {' AND '.join(sql_parts)}"
+        return f'SELECT file FROM data WHERE {" AND ".join(sql_parts)}'
 
     def query(self, **kwargs):
         """Performs a query on the PCOD database using ``keyword = value`` pairs,
@@ -88,7 +88,7 @@ class PcodSearchResults(CodSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return f"{self._base_url + result_dict['id'][0]}/{result_dict['id'][0:3]}/{result_dict['id']}.cif"
+        return f'{self._base_url + result_dict["id"][0]}/{result_dict["id"][0:3]}/{result_dict["id"]}.cif'
 
 
 class PcodEntry(CodEntry):

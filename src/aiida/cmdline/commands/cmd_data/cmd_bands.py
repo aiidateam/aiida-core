@@ -106,13 +106,13 @@ def bands_show(data, fmt):
     '--y-min-lim',
     type=click.FLOAT,
     default=None,
-    help='The minimum value for the y axis.' ' Default: minimum of all bands',
+    help='The minimum value for the y axis. Default: minimum of all bands',
 )
 @click.option(
     '--y-max-lim',
     type=click.FLOAT,
     default=None,
-    help='The maximum value for the y axis.' ' Default: maximum of all bands',
+    help='The maximum value for the y axis. Default: maximum of all bands',
 )
 @click.option(
     '-o',

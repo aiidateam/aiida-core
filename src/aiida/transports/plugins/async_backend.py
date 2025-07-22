@@ -404,7 +404,7 @@ class _AsyncSSH(_AsynchronousSSHBackend):
                         self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
                 else:
                     self.logger.error(
-                        "Problem executing cp. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                        "Problem executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
                             retval, stdout, stderr, command
                         )
                     )
@@ -412,9 +412,9 @@ class _AsyncSSH(_AsynchronousSSHBackend):
                         raise FileNotFoundError(f'Error while executing cp: {stderr}')
 
                     raise OSError(
-                        'Error while executing cp. Exit code: {}, '
-                        "stdout: '{}', stderr: '{}', "
-                        "command: '{}'".format(retval, stdout, stderr, command)
+                        "Error while executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
+                            retval, stdout, stderr, command
+                        )
                     )
 
             cp_exe = 'cp'
@@ -497,7 +497,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
             if await self.path_exists(path):
                 raise FileExistsError(f'Directory already exists: {path}')
 
-        commands = self.ssh_command_generator(f"mkdir {'-p' if parents else ''} {path}")
+        commands = self.ssh_command_generator(f'mkdir {"-p" if parents else ""} {path}')
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
@@ -518,7 +518,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
         # chmod works with octal numbers, so we have to convert the mode to octal
         mode = oct(mode)[2:]  # type: ignore[assignment]
-        commands = self.ssh_command_generator(f"chmod {'-h' if not follow_symlinks else ''} {mode} {path}")
+        commands = self.ssh_command_generator(f'chmod {"-h" if not follow_symlinks else ""} {mode} {path}')
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:

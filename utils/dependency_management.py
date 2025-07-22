@@ -218,7 +218,7 @@ def validate_environment_yml():
     # the install_requirements for setuptools.
     if conda_dependencies:
         raise DependencySpecificationError(
-            "The 'environment.yml' file contains dependencies that are missing " "in 'pyproject.toml':\n- {}".format(
+            "The 'environment.yml' file contains dependencies that are missing in 'pyproject.toml':\n- {}".format(
                 '\n- '.join(map(str, conda_dependencies))
             )
         )

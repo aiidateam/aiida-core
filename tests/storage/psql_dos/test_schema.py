@@ -49,9 +49,9 @@ class TestRelationshipsSQLA:
         # Check that the result of outputs_q is a query
         from sqlalchemy.orm.dynamic import AppenderQuery
 
-        assert isinstance(
-            n_1.backend_entity.bare_model.outputs_q, AppenderQuery
-        ), 'This is expected to be an AppenderQuery'
+        assert isinstance(n_1.backend_entity.bare_model.outputs_q, AppenderQuery), (
+            'This is expected to be an AppenderQuery'
+        )
 
         # Check that the result of outputs is correct
         out = {_.pk for _ in n_1.backend_entity.bare_model.outputs}
@@ -76,9 +76,9 @@ class TestRelationshipsSQLA:
         # Check that the result of outputs_q is a query
         from sqlalchemy.orm.dynamic import AppenderQuery
 
-        assert isinstance(
-            n_1.backend_entity.bare_model.inputs_q, AppenderQuery
-        ), 'This is expected to be an AppenderQuery'
+        assert isinstance(n_1.backend_entity.bare_model.inputs_q, AppenderQuery), (
+            'This is expected to be an AppenderQuery'
+        )
 
         # Check that the result of inputs is correct
         out = {_.pk for _ in n_3.backend_entity.bare_model.inputs}

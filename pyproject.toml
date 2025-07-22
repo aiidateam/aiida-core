@@ -433,11 +433,13 @@ quote-style = 'single'
 ignore = [
   'F403',  # Star imports unable to detect undefined names
   'F405',  # Import may be undefined or defined from star imports
+  'PLC0415',  # Import statements should be at top-level
   'PLR0911',  # Too many return statements
   'PLR0912',  # Too many branches
   'PLR0913',  # Too many arguments in function definition
   'PLR0915',  # Too many statements
   'PLR2004',  # Magic value used in comparison
+  'PLW1641',  # Object does not implement `__hash__` method
   'RUF005',  # Consider iterable unpacking instead of concatenation
   'RUF012'  # Mutable class attributes should be annotated with `typing.ClassVar`
 ]

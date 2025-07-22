@@ -181,8 +181,8 @@ def print_status(status, service, msg='', exception=None, print_traceback=False)
     :param msg:  message string
     """
     symbol = STATUS_SYMBOLS[status]
-    echo.echo(f" {symbol['string']} ", fg=symbol['color'], nl=False)
-    echo.echo(f"{service + ':':12s} {msg}")
+    echo.echo(f' {symbol["string"]} ', fg=symbol['color'], nl=False)
+    echo.echo(f'{service + ":":12s} {msg}')
 
     if exception is not None:
         echo.echo_error(f'{type(exception).__name__}: {exception}')

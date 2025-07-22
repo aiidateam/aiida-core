@@ -104,7 +104,7 @@ class IcsdDbImporter(DbImporter):
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
                 raise ValueError("incorrect value for keyword '" + alias + ' only integers and strings are accepted')
-        return f"{key} IN ({', '.join(str(int(i)) for i in values)})"
+        return f'{key} IN ({", ".join(str(int(i)) for i in values)})'
 
     def _str_exact_clause(self, key, alias, values):
         """Return SQL query predicate for querying string fields."""

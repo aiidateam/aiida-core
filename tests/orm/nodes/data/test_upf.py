@@ -151,7 +151,7 @@ class TestUpfParser:
         # regular upf file version 1 header
         upf_contents = '\n'.join(
             [
-                '<PP_INFO>' 'Human readable section is completely irrelevant for parsing!',
+                '<PP_INFO>Human readable section is completely irrelevant for parsing!',
                 '<PP_HEADER',
                 'contents before element tag',
                 'O                     Element',
@@ -272,7 +272,7 @@ class TestUpfParser:
                 'Human readable section is completely irrelevant for parsing!',
                 '<PP_HEADER',
                 'contents before element tag',
-                'element="Ab"' 'contents following element tag',
+                'element="Ab"contents following element tag',
                 '>',
             ]
         )
@@ -289,7 +289,7 @@ class TestUpfParser:
         # upf file header contents
         upf_contents = '\n'.join(
             [
-                '<PP_INFO>' 'Human readable section is completely irrelevant for parsing!',
+                '<PP_INFO>Human readable section is completely irrelevant for parsing!',
                 '<PP_HEADER',
                 'contents before element tag',
                 'element should be here but is missing',
@@ -334,7 +334,7 @@ class TestUpfParser:
         # upf file header contents
         upf_contents = '\n'.join(
             [
-                '<PP_INFO>' 'Human readable section is completely irrelevant for parsing!',
+                '<PP_INFO>Human readable section is completely irrelevant for parsing!',
                 '<PP_HEADER',
                 'contents before element tag',
                 'Ab                     Element',

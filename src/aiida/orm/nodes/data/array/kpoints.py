@@ -194,7 +194,7 @@ class KpointsData(ArrayData):
 
         if not isinstance(structuredata, StructureData):
             raise ValueError(
-                'An instance of StructureData should be passed to ' 'the KpointsData, found instead {}'.format(
+                'An instance of StructureData should be passed to the KpointsData, found instead {}'.format(
                     structuredata.__class__
                 )
             )
@@ -355,9 +355,9 @@ class KpointsData(ArrayData):
                 kpoints = numpy.array([[0.0, 0.0, 0.0]])
             else:
                 raise ValueError(
-                    'empty kpoints list is valid only in zero dimension'
-                    '; instead here with have {} dimensions'
-                    ''.format(self._dimension)
+                    'empty kpoints list is valid only in zero dimension; instead here with have {} dimensions'.format(
+                        self._dimension
+                    )
                 )
 
         if len(kpoints.shape) <= 1:
@@ -373,8 +373,9 @@ class KpointsData(ArrayData):
 
         if kpoints.shape[1] < self._dimension:
             raise ValueError(
-                'In a system which has {0} dimensions, kpoint need'
-                'more than {0} coordinates (found instead {1})'.format(self._dimension, kpoints.shape[1])
+                'In a system which has {0} dimensions, kpoint needmore than {0} coordinates (found instead {1})'.format(
+                    self._dimension, kpoints.shape[1]
+                )
             )
 
         if weights is not None:

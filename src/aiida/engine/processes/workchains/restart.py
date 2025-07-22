@@ -428,7 +428,7 @@ class BaseRestartWorkChain(WorkChain):
                     pass
 
         if cleaned_calcs:
-            self.report(f"cleaned remote folders of calculations: {' '.join(cleaned_calcs)}")
+            self.report(f'cleaned remote folders of calculations: {" ".join(cleaned_calcs)}')
 
     def _wrap_bare_dict_inputs(self, port_namespace: 'PortNamespace', inputs: Dict[str, Any]) -> AttributeDict:
         """Wrap bare dictionaries in `inputs` in a `Dict` node if dictated by the corresponding inputs portnamespace.

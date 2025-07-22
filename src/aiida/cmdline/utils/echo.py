@@ -214,7 +214,7 @@ def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=
     else:
         entries = collection
 
-    template = f"{{symbol}}{' {}' * len(attributes)}"
+    template = f'{{symbol}}{" {}" * len(attributes)}'
 
     for entry in entries:
         if hide and hide(entry):

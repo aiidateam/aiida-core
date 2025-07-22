@@ -124,7 +124,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
 
     if not dry_run:
         try:
-            workchain_module = f"polish_workchains.{filename.replace('.py', '')}"
+            workchain_module = f'polish_workchains.{filename.replace(".py", "")}'
             workchains = importlib.import_module(workchain_module)
         except ImportError:
             click.echo(f'could not import the {workchain_module} module')

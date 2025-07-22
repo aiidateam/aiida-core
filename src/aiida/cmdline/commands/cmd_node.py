@@ -401,7 +401,7 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
 
         if not force and not dry_run:
             echo.echo_warning(
-                f'YOU ARE ABOUT TO CLEAN {len(descendant_pks)} REMOTE DIRECTORIES! ' 'THIS CANNOT BE UNDONE!'
+                f'YOU ARE ABOUT TO CLEAN {len(descendant_pks)} REMOTE DIRECTORIES! THIS CANNOT BE UNDONE!'
             )
             echo.echo_info(
                 'Remote directories of nodes with the following pks would be cleaned: '
@@ -520,7 +520,7 @@ def verdi_graph():
 @click.option(
     '-e',
     '--engine',
-    help="The graphviz engine, e.g. 'dot', 'circo', ... " '(see http://www.graphviz.org/doc/info/output.html)',
+    help="The graphviz engine, e.g. 'dot', 'circo', ... (see http://www.graphviz.org/doc/info/output.html)",
     default='dot',
 )
 @click.option('-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
@@ -663,8 +663,8 @@ def comment_show(user, nodes):
         for comment in comments:
             comment_msg = [
                 f'Comment<{comment.pk}> for Node<{node.pk}> by {comment.user.email}',
-                f"Created on {timezone.localtime(comment.ctime).strftime('%Y-%m-%d %H:%M')}",
-                f"Last modified on {timezone.localtime(comment.mtime).strftime('%Y-%m-%d %H:%M')}",
+                f'Created on {timezone.localtime(comment.ctime).strftime("%Y-%m-%d %H:%M")}',
+                f'Last modified on {timezone.localtime(comment.mtime).strftime("%Y-%m-%d %H:%M")}',
                 f'\n{comment.content}\n',
             ]
             echo.echo('\n'.join(comment_msg))

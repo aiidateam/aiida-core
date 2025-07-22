@@ -199,7 +199,7 @@ class PluginParamType(EntryPointType):
                 )
             elif not matching_groups:
                 raise ValueError(
-                    "entry point '{}' is not valid for any of the allowed " 'entry point groups: {}'.format(
+                    "entry point '{}' is not valid for any of the allowed entry point groups: {}".format(
                         name, ' '.join(self.groups)
                     )
                 )

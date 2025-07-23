@@ -92,7 +92,6 @@ repos:
         src/aiida/calculations/transfer.py|
         src/aiida/cmdline/commands/cmd_devel.py|
         src/aiida/cmdline/commands/cmd_group.py|
-        src/aiida/cmdline/commands/cmd_storage.py|
         src/aiida/common/extendeddicts.py|
         src/aiida/common/utils.py|
         src/aiida/engine/daemon/execmanager.py|

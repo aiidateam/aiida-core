@@ -296,6 +296,7 @@ def migrate(
             outpath.unlink()
         shutil.move(new_zip_path, outpath)  # type: ignore[arg-type]
 
+
 def _read_json(inpath: Path, filename: str, is_tar: bool) -> Dict[str, Any]:
     """Read a JSON file from the archive."""
     if is_tar:

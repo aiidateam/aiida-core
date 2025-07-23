@@ -132,7 +132,7 @@ class SqliteZipBackend(StorageBackend):
         filepath_archive = Path(profile.storage_config['filepath'])
 
         if filepath_archive.exists() and not reset:
-            from .migrator import migrate, check_migration_needed
+            from .migrator import check_migration_needed, migrate
 
             # Check if migration is needed before entering the expensive context manager
             # PRCOMMENT: `version_head` might not point to the _latest_ version?

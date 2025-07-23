@@ -16,7 +16,7 @@ import json
 import logging
 import sys
 from collections.abc import Sequence
-from typing import Any, Callable, NoReturn, Optional
+from typing import Any, Callable, NoReturn
 
 import click
 
@@ -69,7 +69,7 @@ def highlight_string(string: str, color: str = 'highlight') -> str:
     return click.style(string, fg=COLORS[color])
 
 
-def echo(message: str, fg: Optional[str] = None, bold: bool = False, nl: bool = True, err: bool = False) -> None:
+def echo(message: Any, fg: str | None = None, bold: bool = False, nl: bool = True, err: bool = False) -> None:
     """Log a message to the cmdline logger.
 
     .. note:: The message will be logged at the ``REPORT`` level but always without the log level prefix.

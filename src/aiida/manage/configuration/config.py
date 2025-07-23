@@ -16,8 +16,6 @@ See https://github.com/pydantic/pydantic/issues/2678 for details).
 from __future__ import annotations
 
 import codecs
-import contextlib
-import io
 import json
 import os
 import shutil
@@ -528,8 +526,7 @@ class Config:
 
         LOGGER.report('Initialising the storage backend.')
         try:
-            with contextlib.redirect_stdout(io.StringIO()):
-                profile.storage_cls.initialise(profile)
+            profile.storage_cls.initialise(profile)
         except Exception as exception:
             raise StorageMigrationError(
                 f'Storage backend initialisation failed, probably because the configuration is incorrect:\n{exception}'

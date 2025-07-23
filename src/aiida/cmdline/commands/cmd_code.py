@@ -12,6 +12,7 @@ import pathlib
 import warnings
 from collections import defaultdict
 from functools import partial
+from typing import Any
 
 import click
 
@@ -31,7 +32,7 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls, **kwargs):
+def create_code(ctx: click.Context, cls, **kwargs) -> None:
     """Create a new `Code` instance."""
     try:
         instance = cls._from_model(cls.Model(**kwargs))
@@ -59,7 +60,8 @@ def code_create():
 
 def get_default(key, ctx):
     """Get the default argument using a user instance property
-    :param value: The name of the property to use
+
+    :param key: The name of the property to use
     :param ctx: The click context (which will be used to get the user)
     :return: The default value, or None
     """
@@ -371,7 +373,7 @@ VALID_PROJECTIONS = {
 )
 @options.ALL(help='Include hidden codes.')
 @options.ALL_USERS(help='Include codes from all users.')
-@options.PROJECT(type=click.Choice(VALID_PROJECTIONS.keys()), default=['full_label', 'pk', 'entry_point'])
+@options.PROJECT(type=click.Choice(VALID_PROJECTIONS.keys()), default=['full_label', 'pk', 'entry_point'])  # type: ignore[arg-type]
 @options.RAW()
 @click.option('-o', '--show-owner', 'show_owner', is_flag=True, default=False, help='Show owners of codes.')
 @with_dbenv()
@@ -388,8 +390,8 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
         if 'user' not in project:
             project = project + ('user',)
 
-    filters = defaultdict(dict)
-    projections = defaultdict(list)
+    filters: dict[str, Any] = defaultdict(dict)
+    projections: dict[str, Any] = defaultdict(list)
 
     for key in project:
         for entity, projection in VALID_PROJECTIONS[key]:
@@ -400,7 +402,10 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
         filters['code'][f'extras.{orm.Code.HIDDEN_KEY}'] = {'!==': True}
 
     if not all_users:
-        filters['user']['email'] = orm.User.collection.get_default().email
+        if default_user := orm.User.collection.get_default():
+            filters['user']['email'] = default_user.email
+        else:
+            echo.echo_critical("No default user set. Set the default user or specify '--all-users'")
 
     if computer is not None:
         filters['computer']['uuid'] = computer.uuid

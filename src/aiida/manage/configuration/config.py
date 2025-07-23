@@ -528,6 +528,7 @@ class Config:
 
         LOGGER.report('Initialising the storage backend.')
         try:
+            # PRCOMMENT: Not sure what this context manager is for?
             with contextlib.redirect_stdout(io.StringIO()):
                 profile.storage_cls.initialise(profile)
         except Exception as exception:

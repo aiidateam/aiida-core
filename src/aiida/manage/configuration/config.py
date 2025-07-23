@@ -16,8 +16,6 @@ See https://github.com/pydantic/pydantic/issues/2678 for details).
 from __future__ import annotations
 
 import codecs
-import contextlib
-import io
 import json
 import os
 import shutil

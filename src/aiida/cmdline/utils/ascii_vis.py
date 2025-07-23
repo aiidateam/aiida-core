@@ -12,6 +12,9 @@ from __future__ import annotations
 
 import typing as t
 
+if t.TYPE_CHECKING:
+    from aiida import orm
+
 __all__ = ('format_call_graph',)
 
 TREE_LAST_ENTRY = '\u2514\u2500\u2500 '
@@ -19,8 +22,8 @@ TREE_MIDDLE_ENTRY = '\u251c\u2500\u2500 '
 TREE_FIRST_ENTRY = TREE_MIDDLE_ENTRY
 
 
-def calc_info(node, call_link_label: bool = False) -> str:
-    """Return a string with the summary of the state of a CalculationNode.
+def calc_info(node: orm.ProcessNode, call_link_label: bool = False) -> str:
+    """Return a string with the summary of the state of a ProcessNode.
 
     :param calc_node: The calculation node
     :param call_link_label: Include the call link label if other from the default ``CALL``.
@@ -60,7 +63,10 @@ def calc_info(node, call_link_label: bool = False) -> str:
 
 
 def format_call_graph(
-    calc_node, max_depth: int | None = None, call_link_label: bool = False, info_fn: t.Callable = calc_info
+    calc_node: orm.ProcessNode,
+    max_depth: int | None = None,
+    call_link_label: bool = False,
+    info_fn: t.Callable = calc_info,
 ) -> t.Any:
     """Print a tree like the POSIX tree command for the calculation call graph.
 
@@ -75,7 +81,10 @@ def format_call_graph(
 
 
 def build_call_graph(
-    calc_node, max_depth: int | None = None, call_link_label: bool = False, info_fn: t.Callable = calc_info
+    calc_node: orm.ProcessNode,
+    max_depth: int | None = None,
+    call_link_label: bool = False,
+    info_fn: t.Callable = calc_info,
 ) -> str | tuple[str, list]:
     """Build the call graph of a given node.
 
@@ -104,7 +113,7 @@ def build_call_graph(
     return info_string
 
 
-def format_tree_descending(tree: t.Any, prefix: str = '', pos: int = -1):
+def format_tree_descending(tree: t.Any, prefix: str = '', pos: int = -1) -> str:
     """Format a descending tree."""
     text = []
 

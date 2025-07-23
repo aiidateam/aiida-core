@@ -69,7 +69,7 @@ def highlight_string(string: str, color: str = 'highlight') -> str:
     return click.style(string, fg=COLORS[color])
 
 
-def echo(message: Any, fg: Optional[str] = None, bold: bool = False, nl: bool = True, err: bool = False) -> None:
+def echo(message: str, fg: Optional[str] = None, bold: bool = False, nl: bool = True, err: bool = False) -> None:
     """Log a message to the cmdline logger.
 
     .. note:: The message will be logged at the ``REPORT`` level but always without the log level prefix.
@@ -209,7 +209,7 @@ def echo_formatted_list(
     sort: Callable | None = None,
     highlight: Callable | None = None,
     hide: Callable | None = None,
-):
+) -> None:
     """Log a collection of entries as a formatted list, one entry per line.
 
     :param collection: a list of objects

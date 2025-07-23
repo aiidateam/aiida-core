@@ -15,7 +15,7 @@ import os
 import sys
 import textwrap
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, Sequence
 
 from click import style
 
@@ -27,8 +27,7 @@ if TYPE_CHECKING:
 
     import plumpy
 
-    from aiida.engine import Process, ProcessSpec
-    from aiida.orm import CalcJobNode, Node, WorkChainNode
+    from aiida import engine, orm
 
 __all__ = ('is_verbose',)
 
@@ -86,7 +85,7 @@ def format_local_time(timestamp: datetime | float, format_str: str = '%Y-%m-%d %
     return timestamp.strftime(format_str)
 
 
-def print_last_process_state_change(process_type: str | None = None) -> None:
+def print_last_process_state_change(process_type: Literal['work'] | Literal['calculation'] | None = None) -> None:
     """Print the last time that a process of the specified type has changed its state.
 
     :param process_type: optional process type for which to get the latest state change timestamp.
@@ -108,7 +107,7 @@ def print_last_process_state_change(process_type: str | None = None) -> None:
         echo_report(f'Last time an entry changed state: {relative} ({formatted})')
 
 
-def get_node_summary(node: Node) -> str:
+def get_node_summary(node: orm.Node) -> str:
     """Return a multi line string with a pretty formatted summary of a Node.
 
     :param node: a Node instance
@@ -161,7 +160,7 @@ def get_node_summary(node: Node) -> str:
     return tabulate(table, headers=table_headers)
 
 
-def get_node_info(node: Node, include_summary: bool = True) -> str:
+def get_node_info(node: orm.Node, include_summary: bool = True) -> str:
     """Return a multi line string of information about the given node, such as the incoming and outcoming links.
 
     :param include_summary: boolean, if True, also include a summary of node properties
@@ -206,7 +205,7 @@ def get_node_info(node: Node, include_summary: bool = True) -> str:
     return result
 
 
-def format_flat_links(links: list, headers) -> str:
+def format_flat_links(links: list[orm.LinkTriple], headers: Sequence[str]) -> str:
     """Given a flat list of LinkTriples, return a flat string representation.
 
     :param links: a list of LinkTriples
@@ -225,7 +224,7 @@ def format_flat_links(links: list, headers) -> str:
     return result
 
 
-def format_nested_links(links: dict, headers) -> str:
+def format_nested_links(links: dict, headers: Sequence[str]) -> str:
     """Given a nested dictionary of nodes, return a nested string representation.
 
     :param links: a nested dictionary of nodes
@@ -262,7 +261,7 @@ def format_nested_links(links: dict, headers) -> str:
     return result
 
 
-def get_calcjob_report(calcjob: CalcJobNode) -> str:
+def get_calcjob_report(calcjob: orm.CalcJobNode) -> str:
     """Return a multi line string representation of the log messages and output of a given calcjob
 
     :param calcjob: the calcjob node
@@ -315,7 +314,7 @@ def get_calcjob_report(calcjob: CalcJobNode) -> str:
     return '\n'.join(report)
 
 
-def get_process_function_report(node: Node) -> str:
+def get_process_function_report(node: orm.CalcFunctionNode | orm.WorkFunctionNode) -> str:
     """Return a multi line string representation of the log messages and output of a given process function node
 
     :param node: the node
@@ -331,7 +330,9 @@ def get_process_function_report(node: Node) -> str:
     return '\n'.join(report)
 
 
-def get_workchain_report(node: WorkChainNode, levelname: str, indent_size: int = 4, max_depth: int | None = None):
+def get_workchain_report(
+    node: orm.WorkChainNode, levelname: str, indent_size: int = 4, max_depth: int | None = None
+) -> str:
     """Return a multi line string representation of the log messages and output of a given workchain
 
     :param node: the workchain node
@@ -409,7 +410,7 @@ def get_workchain_report(node: WorkChainNode, levelname: str, indent_size: int =
     return '\n'.join(report)
 
 
-def print_process_info(process: Process) -> None:
+def print_process_info(process: engine.Process) -> None:
     """Print detailed information about a process class and its process specification.
 
     :param process: a :py:class:`~aiida.engine.processes.process.Process` class
@@ -424,7 +425,7 @@ def print_process_info(process: Process) -> None:
     print_process_spec(process.spec())
 
 
-def print_process_spec(process_spec: ProcessSpec) -> None:
+def print_process_spec(process_spec: engine.ProcessSpec) -> None:
     """Print the process spec in a human-readable formatted way.
 
     :param process_spec: a `ProcessSpec` instance

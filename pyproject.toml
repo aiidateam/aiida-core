@@ -204,7 +204,7 @@ atomic_tools = [
   'PyCifRW~=4.4',
   'ase~=3.21',
   'matplotlib~=3.3,>=3.3.4',
-  'pymatgen>=2023.11.10',
+  'pymatgen>=2024.3.1',
   'pymysql~=0.9.3',
   'seekpath~=1.9,>=1.9.3',
   'spglib>=1.14,<3.0'

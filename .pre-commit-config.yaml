@@ -90,7 +90,6 @@ repos:
         src/aiida/calculations/diff_tutorial/calculations.py|
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
-        src/aiida/cmdline/commands/cmd_computer.py|
         src/aiida/cmdline/commands/cmd_devel.py|
         src/aiida/cmdline/commands/cmd_group.py|
         src/aiida/cmdline/commands/cmd_storage.py|

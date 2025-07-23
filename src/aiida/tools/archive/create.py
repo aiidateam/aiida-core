@@ -16,7 +16,7 @@ import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union
+from typing import Callable, Iterable, Optional, Sequence, Union
 
 from tabulate import tabulate
 
@@ -192,7 +192,7 @@ def create_archive(
     EXPORT_LOGGER.report(initial_summary)
 
     # Store starting UUIDs, to write to metadata
-    starting_uuids: Dict[EntityTypes, Set[str]] = {
+    starting_uuids: dict[EntityTypes, set[str]] = {
         EntityTypes.USER: set(),
         EntityTypes.COMPUTER: set(),
         EntityTypes.GROUP: set(),
@@ -201,7 +201,7 @@ def create_archive(
 
     # Store all entity IDs to be written to the archive
     # Note, this is the order they will be written to the archive
-    entity_ids: Dict[EntityTypes, Set[int]] = {
+    entity_ids: dict[EntityTypes, set[int]] = {
         ent: set()
         for ent in [
             EntityTypes.USER,
@@ -376,12 +376,12 @@ def create_archive(
 
 def _collect_all_entities(
     querybuilder: QbType,
-    entity_ids: Dict[EntityTypes, Set[int]],
+    entity_ids: dict[EntityTypes, set[int]],
     include_authinfos: bool,
     include_comments: bool,
     include_logs: bool,
     batch_size: int,
-) -> Tuple[List[Tuple[int, int]], Set[LinkQuadruple]]:
+) -> tuple[list[tuple[int, int]], set[LinkQuadruple]]:
     """Collect all entities.
 
     :returns: (group_id_to_node_id, link_data) and updates entity_ids
@@ -393,11 +393,7 @@ def _collect_all_entities(
     with get_progress_reporter()(desc=progress_str(''), total=9) as progress:
         progress.set_description_str(progress_str('Nodes'))
         entity_ids[EntityTypes.NODE].update(
-            querybuilder()
-            .append(orm.Node, project='id')
-            .all(  # type: ignore[arg-type]
-                batch_size=batch_size, flat=True
-            )
+            querybuilder().append(orm.Node, project='id').all(batch_size=batch_size, flat=True)
         )
         progress.update()
 
@@ -417,7 +413,7 @@ def _collect_all_entities(
             querybuilder()
             .append(
                 orm.Group,
-                project='id',  # type: ignore[arg-type]
+                project='id',
             )
             .all(batch_size=batch_size, flat=True)
         )
@@ -429,7 +425,7 @@ def _collect_all_entities(
             .append(orm.Node, with_group='group', project='id')
             .distinct()
         )
-        group_nodes: List[Tuple[int, int]] = qbuilder.all(batch_size=batch_size)  # type: ignore[assignment]
+        group_nodes: list[tuple[int, int]] = qbuilder.all(batch_size=batch_size)  # type: ignore[assignment]
 
         progress.set_description_str(progress_str('Computers'))
         progress.update()
@@ -437,7 +433,7 @@ def _collect_all_entities(
             querybuilder()
             .append(
                 orm.Computer,
-                project='id',  # type: ignore[arg-type]
+                project='id',
             )
             .all(batch_size=batch_size, flat=True)
         )
@@ -449,7 +445,7 @@ def _collect_all_entities(
                 querybuilder()
                 .append(
                     orm.AuthInfo,
-                    project='id',  # type: ignore[arg-type]
+                    project='id',
                 )
                 .all(batch_size=batch_size, flat=True)
             )
@@ -461,7 +457,7 @@ def _collect_all_entities(
                 querybuilder()
                 .append(
                     orm.Log,
-                    project='id',  # type: ignore[arg-type]
+                    project='id',
                 )
                 .all(batch_size=batch_size, flat=True)
             )
@@ -473,7 +469,7 @@ def _collect_all_entities(
                 querybuilder()
                 .append(
                     orm.Comment,
-                    project='id',  # type: ignore[arg-type]
+                    project='id',
                 )
                 .all(batch_size=batch_size, flat=True)
             )
@@ -484,7 +480,7 @@ def _collect_all_entities(
             querybuilder()
             .append(
                 orm.User,
-                project='id',  # type: ignore[arg-type]
+                project='id',
             )
             .all(batch_size=batch_size, flat=True)
         )
@@ -494,14 +490,14 @@ def _collect_all_entities(
 
 def _collect_required_entities(
     querybuilder: QbType,
-    entity_ids: Dict[EntityTypes, Set[int]],
-    traversal_rules: Dict[str, bool],
+    entity_ids: dict[EntityTypes, set[int]],
+    traversal_rules: dict[str, bool],
     include_authinfos: bool,
     include_comments: bool,
     include_logs: bool,
     backend: StorageBackend,
     batch_size: int,
-) -> Tuple[List[Tuple[int, int]], Set[LinkQuadruple]]:
+) -> tuple[list[tuple[int, int]], set[LinkQuadruple]]:
     """Collect required entities, given a set of starting entities and provenance graph traversal rules.
 
     :returns: (group_id_to_node_id, link_data) and updates entity_ids
@@ -513,7 +509,7 @@ def _collect_required_entities(
     with get_progress_reporter()(desc=progress_str(''), total=7) as progress:
         # get all nodes from groups
         progress.set_description_str(progress_str('Nodes (groups)'))
-        group_nodes: List[Tuple[int, int]] = []
+        group_nodes: list[tuple[int, int]] = []
         if entity_ids[EntityTypes.GROUP]:
             qbuilder = querybuilder()
             qbuilder.append(
@@ -632,7 +628,7 @@ def _collect_required_entities(
 
 
 def _stream_repo_files(
-    key_format: str, writer: ArchiveWriterAbstract, node_ids: Set[int], backend: StorageBackend, batch_size: int
+    key_format: str, writer: ArchiveWriterAbstract, node_ids: set[int], backend: StorageBackend, batch_size: int
 ) -> None:
     """Collect all repository object keys from the nodes, then stream the files to the archive."""
     keys = set(
@@ -652,7 +648,7 @@ def _stream_repo_files(
             progress.update()
 
 
-def _check_unsealed_nodes(querybuilder: QbType, node_ids: Set[int], batch_size: int) -> None:
+def _check_unsealed_nodes(querybuilder: QbType, node_ids: set[int], batch_size: int) -> None:
     """Check no process nodes are unsealed, i.e. all processes have completed."""
     qbuilder = (
         querybuilder()
@@ -678,7 +674,7 @@ def _check_unsealed_nodes(querybuilder: QbType, node_ids: Set[int], batch_size: 
 
 def _check_node_licenses(
     querybuilder: QbType,
-    node_ids: Set[int],
+    node_ids: set[int],
     allowed_licenses: Union[None, Sequence[str], Callable],
     forbidden_licenses: Union[None, Sequence[str], Callable],
     batch_size: int,

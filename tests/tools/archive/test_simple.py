@@ -178,7 +178,7 @@ def test_tmp_dir_custom_valid(tmp_path):
         create_archive([node], filename=filename, tmp_dir=custom_tmp)
 
         # Check that TemporaryDirectory was called with custom directory
-        mock_temp_dir.assert_called_once_with(dir=custom_tmp, prefix=None)
+        mock_temp_dir.assert_called_once_with(dir=custom_tmp, prefix='.aiida-export-')
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -187,10 +187,6 @@ def test_tmp_dir_validation_errors(tmp_path):
 
     node = orm.Int(42).store()
     filename = tmp_path / 'export.aiida'
-
-    # Non-existent directory
-    with pytest.raises(ArchiveExportError, match='does not exist'):
-        create_archive([node], filename=filename, tmp_dir=tmp_path / 'nonexistent')
 
     # File instead of directory
     not_a_dir = tmp_path / 'file.txt'

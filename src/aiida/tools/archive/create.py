@@ -187,26 +187,6 @@ def create_archive(
         name: traversal_rules.get(name, rule.default) for name, rule in GraphTraversalRules.EXPORT.value.items()
     }
 
-    # Handle temporary directory configuration
-    tmp_prefix = '.aiida-export-'
-    if tmp_dir is not None:
-        tmp_dir = Path(tmp_dir)
-        if not tmp_dir.exists():
-            EXPORT_LOGGER.warning(f"Specified temporary directory '{tmp_dir}' doesn't exist. Creating it.")
-            tmp_dir.mkdir(parents=False)
-        if not tmp_dir.is_dir():
-            msg = f"Specified temporary directory '{tmp_dir}' is not a directory"
-            raise ArchiveExportError(msg)
-        # Check if directory is writable
-        # Taken from: https://stackoverflow.com/a/2113511
-        if not os.access(tmp_dir, os.W_OK | os.X_OK):
-            msg = f"Specified temporary directory '{tmp_dir}' is not writable"
-            raise ArchiveExportError(msg)
-
-    else:
-        # Create temporary directory in the same folder as the output file
-        tmp_dir = filename.parent
-
     initial_summary = get_init_summary(
         archive_version=archive_format.latest_version,
         outfile=filename,
@@ -308,10 +288,29 @@ def create_archive(
 
     EXPORT_LOGGER.report(f'Creating archive with:\n{tabulate(count_summary)}')
 
+    # Handle temporary directory configuration
+    tmp_prefix = '.aiida-export-'
+    if tmp_dir is not None:
+        tmp_dir = Path(tmp_dir)
+        if not tmp_dir.exists():
+            EXPORT_LOGGER.warning(f"Specified temporary directory '{tmp_dir}' doesn't exist. Creating it.")
+            tmp_dir.mkdir(parents=False)
+        if not tmp_dir.is_dir():
+            msg = f"Specified temporary directory '{tmp_dir}' is not a directory"
+            raise ArchiveExportError(msg)
+        # Check if directory is writable
+        # Taken from: https://stackoverflow.com/a/2113511
+        if not os.access(tmp_dir, os.W_OK | os.X_OK):
+            msg = f"Specified temporary directory '{tmp_dir}' is not writable"
+            raise ArchiveExportError(msg)
+
+    else:
+        # Create temporary directory in the same folder as the output file
+        tmp_dir = filename.parent
+
     # Create and open the archive for writing.
     # We create in a temp dir then move to final place at end,
     # so that the user cannot end up with a half written archive on errors
-
     try:
         tmp_dir.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(dir=tmp_dir, prefix=tmp_prefix) as tmpdir:

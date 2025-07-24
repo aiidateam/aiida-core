@@ -60,6 +60,7 @@ py:obj ModelType
 py:class aiida.common.ReturnType
 py:class aiida.common.SelfType
 py:class aiida.common.lang.MethodType
+py:class aiida.cmdline.params._shims.C
 py:class aiida.orm.entitites.CollectionType
 py:class aiida.orm.entitites.EntityType
 py:class aiida.orm.entitites.BackendEntityType
@@ -136,6 +137,7 @@ py:class click.types.Path
 py:class click.types.File
 py:class click.types.StringParamType
 py:class click.parser.OptionParser
+py:class click.parser._OptionParser
 py:func click.shell_completion._start_of_option
 py:meth click.Option.get_default
 py:meth fail

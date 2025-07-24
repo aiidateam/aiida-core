@@ -9,8 +9,10 @@
 """Tests for `verdi storage`."""
 
 import json
+from importlib import metadata
 
 import pytest
+from packaging import version
 
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_storage
@@ -169,11 +171,17 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
 
     monkeypatch.setattr(storage, 'maintain', mock_maintain)
 
-    # Not passing user input should cause the command to exit without executing `storage.mantain` and so the last
+    raises = False
+    # Not passing user input should cause the command to exit
+    # without executing `storage.mantain` and so the last
     # message should be the prompt to continue or not.
-    result = run_cli_command(cmd_storage.storage_maintain, use_subprocess=False)
+    # In click>=8.2 this raises an exception which we need to catch.
+    click_version = version.Version(metadata.version('click'))
+    if click_version >= version.Version('8.2.0'):
+        raises = True
+    result = run_cli_command(cmd_storage.storage_maintain, use_subprocess=False, raises=raises)
     message_list = result.output_lines
-    assert message_list[-1] == 'Are you sure you want continue in this mode? [y/N]: '
+    assert message_list[-1].startswith('Are you sure you want continue in this mode? [y/N]:')
 
     # Test `storage.mantain` with `--force`
     result = run_cli_command(cmd_storage.storage_maintain, parameters=['--force', '--compress'], use_subprocess=False)

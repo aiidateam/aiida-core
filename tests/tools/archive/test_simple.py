@@ -182,7 +182,7 @@ def test_tmp_dir_custom_valid(tmp_path):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_tmp_dir_validation_errors(tmp_path):
+def test_tmp_dir_file_error(tmp_path):
     """Test tmp_dir validation errors."""
 
     node = orm.Int(42).store()

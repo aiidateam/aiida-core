@@ -15,14 +15,19 @@ import os
 import sys
 import textwrap
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal, Sequence
 
 from click import style
 
 from . import echo
 
 if TYPE_CHECKING:
-    from aiida.orm import WorkChainNode
+    from collections.abc import MutableMapping
+    from datetime import datetime
+
+    import plumpy
+
+    from aiida import engine, orm
 
 __all__ = ('is_verbose',)
 
@@ -34,7 +39,7 @@ def tabulate(table, **kwargs):
     return tb.tabulate(table, **kwargs)
 
 
-def is_verbose():
+def is_verbose() -> bool:
     """Return whether the configured logging verbosity is considered verbose, i.e., equal or lower to ``INFO`` level.
 
     .. note:: This checks the effective logging level that is set on the ``CMDLINE_LOGGER``. This means that it will
@@ -46,7 +51,7 @@ def is_verbose():
     return echo.CMDLINE_LOGGER.getEffectiveLevel() <= logging.INFO
 
 
-def get_env_with_venv_bin():
+def get_env_with_venv_bin() -> MutableMapping:
     """Create a clone of the current running environment with the AIIDA_PATH variable set directory of the config."""
     from aiida.common.warnings import warn_deprecation
     from aiida.manage.configuration import get_config
@@ -59,28 +64,28 @@ def get_env_with_venv_bin():
     config = get_config()
 
     currenv = os.environ.copy()
-    currenv['PATH'] = f"{os.path.dirname(sys.executable)}:{currenv['PATH']}"
+    currenv['PATH'] = f'{os.path.dirname(sys.executable)}:{currenv["PATH"]}'
     currenv['AIIDA_PATH'] = config.dirpath
     currenv['PYTHONUNBUFFERED'] = 'True'
 
     return currenv
 
 
-def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
+def format_local_time(timestamp: datetime | float, format_str: str = '%Y-%m-%d %H:%M:%S') -> str:
     """Format a datetime object or UNIX timestamp in a human readable format
 
     :param timestamp: a datetime object or a float representing a UNIX timestamp
     :param format_str: optional string format to pass to strftime
     """
-    from aiida.common import timezone
+    from datetime import datetime
 
     if isinstance(timestamp, float):
-        return timezone.datetime.fromtimestamp(timestamp).strftime(format_str)
+        return datetime.fromtimestamp(timestamp).strftime(format_str)
 
     return timestamp.strftime(format_str)
 
 
-def print_last_process_state_change(process_type=None):
+def print_last_process_state_change(process_type: Literal['work'] | Literal['calculation'] | None = None) -> None:
     """Print the last time that a process of the specified type has changed its state.
 
     :param process_type: optional process type for which to get the latest state change timestamp.
@@ -102,7 +107,7 @@ def print_last_process_state_change(process_type=None):
         echo_report(f'Last time an entry changed state: {relative} ({formatted})')
 
 
-def get_node_summary(node):
+def get_node_summary(node: orm.Node) -> str:
     """Return a multi line string with a pretty formatted summary of a Node.
 
     :param node: a Node instance
@@ -113,7 +118,7 @@ def get_node_summary(node):
     from aiida.orm import ProcessNode
 
     table_headers = ['Property', 'Value']
-    table = []
+    table: list[list[str | Any]] = []
 
     if isinstance(node, ProcessNode):
         table.append(['type', node.process_label])
@@ -150,12 +155,12 @@ def get_node_summary(node):
         pass
     else:
         if computer is not None:
-            table.append(['computer', f'[{node.computer.pk}] {node.computer.label}'])
+            table.append(['computer', f'[{computer.pk}] {computer.label}'])
 
     return tabulate(table, headers=table_headers)
 
 
-def get_node_info(node, include_summary=True):
+def get_node_info(node: orm.Node, include_summary: bool = True) -> str:
     """Return a multi line string of information about the given node, such as the incoming and outcoming links.
 
     :param include_summary: boolean, if True, also include a summary of node properties
@@ -175,18 +180,18 @@ def get_node_info(node, include_summary=True):
     nodes_output = node.base.links.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
 
     if nodes_input:
-        result += f"\n{format_nested_links(nodes_input.nested(), headers=['Inputs', 'PK', 'Type'])}"
+        result += f'\n{format_nested_links(nodes_input.nested(), headers=["Inputs", "PK", "Type"])}'
 
     if nodes_output:
-        result += f"\n{format_nested_links(nodes_output.nested(), headers=['Outputs', 'PK', 'Type'])}"
+        result += f'\n{format_nested_links(nodes_output.nested(), headers=["Outputs", "PK", "Type"])}'
 
     if nodes_caller:
         links = sorted(nodes_caller.all(), key=lambda x: x.node.ctime)
-        result += f"\n{format_flat_links(links, headers=['Caller', 'PK', 'Type'])}"
+        result += f'\n{format_flat_links(links, headers=["Caller", "PK", "Type"])}'
 
     if nodes_called:
         links = sorted(nodes_called.all(), key=lambda x: x.node.ctime)
-        result += f"\n{format_flat_links(links, headers=['Called', 'PK', 'Type'])}"
+        result += f'\n{format_flat_links(links, headers=["Called", "PK", "Type"])}'
 
     log_messages = orm.Log.collection.get_logs_for(node)
 
@@ -200,7 +205,7 @@ def get_node_info(node, include_summary=True):
     return result
 
 
-def format_flat_links(links, headers):
+def format_flat_links(links: list[orm.LinkTriple], headers: Sequence[str]) -> str:
     """Given a flat list of LinkTriples, return a flat string representation.
 
     :param links: a list of LinkTriples
@@ -219,7 +224,7 @@ def format_flat_links(links, headers):
     return result
 
 
-def format_nested_links(links, headers):
+def format_nested_links(links: dict, headers: Sequence[str]) -> str:
     """Given a nested dictionary of nodes, return a nested string representation.
 
     :param links: a nested dictionary of nodes
@@ -248,7 +253,7 @@ def format_nested_links(links, headers):
     table = []
 
     for depth, label, pk, class_name in format_recursive(links):
-        table.append([f"{' ' * (depth * indent_size)}{label}", pk, class_name])
+        table.append([f'{" " * (depth * indent_size)}{label}', pk, class_name])
 
     result = f'\n{tabulate(table, headers=headers)}'
     tb.PRESERVE_WHITESPACE = False
@@ -256,7 +261,7 @@ def format_nested_links(links, headers):
     return result
 
 
-def get_calcjob_report(calcjob):
+def get_calcjob_report(calcjob: orm.CalcJobNode) -> str:
     """Return a multi line string representation of the log messages and output of a given calcjob
 
     :param calcjob: the calcjob node
@@ -274,7 +279,7 @@ def get_calcjob_report(calcjob):
     report = []
 
     if calcjob_state == CalcJobState.WITHSCHEDULER:
-        state_string = f"{calcjob_state}, scheduler state: {scheduler_state if scheduler_state else '(unknown)'}"
+        state_string = f'{calcjob_state}, scheduler state: {scheduler_state if scheduler_state else "(unknown)"}'
     else:
         state_string = f'{calcjob_state}'
 
@@ -309,7 +314,7 @@ def get_calcjob_report(calcjob):
     return '\n'.join(report)
 
 
-def get_process_function_report(node):
+def get_process_function_report(node: orm.CalcFunctionNode | orm.WorkFunctionNode) -> str:
     """Return a multi line string representation of the log messages and output of a given process function node
 
     :param node: the node
@@ -325,7 +330,9 @@ def get_process_function_report(node):
     return '\n'.join(report)
 
 
-def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_depth=None):
+def get_workchain_report(
+    node: orm.WorkChainNode, levelname: str, indent_size: int = 4, max_depth: int | None = None
+) -> str:
     """Return a multi line string representation of the log messages and output of a given workchain
 
     :param node: the workchain node
@@ -403,7 +410,7 @@ def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_de
     return '\n'.join(report)
 
 
-def print_process_info(process):
+def print_process_info(process: engine.Process) -> None:
     """Print detailed information about a process class and its process specification.
 
     :param process: a :py:class:`~aiida.engine.processes.process.Process` class
@@ -418,13 +425,13 @@ def print_process_info(process):
     print_process_spec(process.spec())
 
 
-def print_process_spec(process_spec):
+def print_process_spec(process_spec: engine.ProcessSpec) -> None:
     """Print the process spec in a human-readable formatted way.
 
     :param process_spec: a `ProcessSpec` instance
     """
 
-    def build_entries(ports):
+    def build_entries(ports: plumpy.PortNamespace) -> list[tuple]:
         """Build a list of entries to be printed for a `PortNamespace.
 
         :param ports: the port namespace
@@ -437,9 +444,9 @@ def print_process_spec(process_spec):
                 continue
 
             valid_types = port.valid_type if isinstance(port.valid_type, (list, tuple)) else (port.valid_type,)
-            valid_types = ', '.join([valid_type.__name__ for valid_type in valid_types if valid_type is not None])
+            valid_types_str = ', '.join([valid_type.__name__ for valid_type in valid_types if valid_type is not None])
             info = textwrap.wrap(port.help if port.help is not None else '', width=75)
-            result.append([name, port.required, valid_types, info])
+            result.append((name, port.required, valid_types_str, info))
 
         return result
 
@@ -473,23 +480,23 @@ def print_process_spec(process_spec):
     if process_spec.exit_codes:
         echo.echo('Exit codes:\n', fg=echo.COLORS['report'], bold=True)
 
-        table = [('0', 'The process finished successfully.')]
+        exit_codes_table = [('0', 'The process finished successfully.')]
 
         for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
             if exit_code.invalidates_cache:
                 status = style(exit_code.status, bold=True, fg='red')
             else:
                 status = exit_code.status
-            table.append((status, '\n'.join(textwrap.wrap(exit_code.message, width=75))))
+            exit_codes_table.append((status, '\n'.join(textwrap.wrap(exit_code.message, width=75))))
 
-        echo.echo(tabulate(table, tablefmt='plain'))
+        echo.echo(tabulate(exit_codes_table, tablefmt='plain'))
         echo.echo(style('\nExit codes that invalidate the cache are marked in bold red.\n', italic=True))
 
 
 def validate_output_filename(
     output_file: Path | str,
     overwrite: bool = False,
-):
+) -> None:
     """Validate output filename."""
 
     if output_file is None:

@@ -51,7 +51,7 @@ jobs:
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.11'
-        extras: '[pre-commit]'
+        extras: pre-commit
         from-lock: 'false'
 
     - name: Run pre-commit

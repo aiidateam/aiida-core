@@ -199,7 +199,7 @@ jobs:
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: ${{ matrix.python-version }}
-        extras: '[atomic_tools,docs,notebook,rest,tests,tui]'
+        extras: atomic_tools,docs,notebook,rest,tests,tui
         from-lock: 'false'
 
     - name: Setup AiiDA environment

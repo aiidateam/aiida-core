@@ -294,7 +294,7 @@ def create_archive(
         tmp_dir = Path(tmp_dir)
         if not tmp_dir.exists():
             EXPORT_LOGGER.warning(f"Specified temporary directory '{tmp_dir}' doesn't exist. Creating it.")
-            tmp_dir.mkdir(parents=False)
+            tmp_dir.mkdir(parents=True)
         if not tmp_dir.is_dir():
             msg = f"Specified temporary directory '{tmp_dir}' is not a directory"
             raise ArchiveExportError(msg)

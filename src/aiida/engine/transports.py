@@ -13,8 +13,10 @@ import contextlib
 import contextvars
 import logging
 import traceback
+from datetime import datetime
 from typing import TYPE_CHECKING, Awaitable, Dict, Hashable, Iterator, Optional
 
+from aiida.common import timezone
 from aiida.orm import AuthInfo
 
 if TYPE_CHECKING:
@@ -27,7 +29,6 @@ class TransportRequest:
     """Information kept about request for a transport object"""
 
     def __init__(self):
-        super().__init__()
         self.future: asyncio.Future = asyncio.Future()
         self.count = 0
 
@@ -47,6 +48,7 @@ class TransportQueue:
         """:param loop: An asyncio event, will use `asyncio.get_event_loop()` if not supplied"""
         self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._transport_requests: Dict[Hashable, TransportRequest] = {}
+        self._last_close_time: Optional[datetime] = None
 
     @property
     def loop(self) -> asyncio.AbstractEventLoop:
@@ -99,7 +101,23 @@ class TransportQueue:
             # passed around to many places, including outside aiida-core (e.g. paramiko). Anyone keeping a reference
             # to this handle would otherwise keep the Process context (and thus the process itself) in memory.
             # See https://github.com/aiidateam/aiida-core/issues/4698
-            open_callback_handle = self._loop.call_later(safe_open_interval, do_open, context=contextvars.Context())
+
+            # First request, submit immediately
+            if self._last_close_time is None:
+                open_callback_handle = self._loop.call_soon(do_open, context=contextvars.Context())
+
+            else:
+                close_timedelta = (timezone.localtime(timezone.now()) - self._last_close_time).total_seconds()
+
+                if close_timedelta > safe_open_interval:
+                    # If time since last close > `safe_open_interval`, open immediately
+                    open_callback_handle = self._loop.call_soon(do_open, context=contextvars.Context())
+
+                else:
+                    # Otherwise, wait only the difference required until the `safe_open_interval` is reached
+                    open_callback_handle = self._loop.call_later(
+                        safe_open_interval - close_timedelta, do_open, context=contextvars.Context()
+                    )
 
         try:
             transport_request.count += 1
@@ -120,7 +138,9 @@ class TransportQueue:
                 if transport_request.future.done():
                     _LOGGER.debug('Transport request closing transport for %s', authinfo)
                     transport_request.future.result().close()
+
                 elif open_callback_handle is not None:
                     open_callback_handle.cancel()
 
+                self._last_close_time = timezone.localtime(timezone.now())
                 self._transport_requests.pop(authinfo.pk, None)

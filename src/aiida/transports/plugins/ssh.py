@@ -672,7 +672,7 @@ class SshTransport(BlockingTransport):
         so this should never happen within this class.
         """
         warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
+            '`getcwd()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
             version=3,
         )
         return self.sftp.getcwd()

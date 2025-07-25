@@ -126,7 +126,7 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
         parser = CifParser(handle, **constructor_kwargs)
 
     try:
-        structures = parser.get_structures(**parameters)
+        structures = parser.parse_structures(**parameters)
     except ValueError:
         # Verify whether the failure was due to wrong occupancy numbers
         try:

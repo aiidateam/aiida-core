@@ -1357,7 +1357,7 @@ def test_compress_basic(
 
         transport.get(tmp_path_remote / archive_name, tmp_path_local / archive_name)
 
-        shutil.unpack_archive(tmp_path_local / archive_name, tmp_path_local / 'extracted')
+        shutil.unpack_archive(tmp_path_local / archive_name, tmp_path_local / 'extracted', filter='tar')
 
         extracted = [
             str(path.relative_to(tmp_path_local / 'extracted')) for path in (tmp_path_local / 'extracted').rglob('*')
@@ -1418,7 +1418,7 @@ def test_compress_glob(
 
         transport.get(tmp_path_remote / archive_name, tmp_path_local / archive_name)
 
-        shutil.unpack_archive(tmp_path_local / archive_name, tmp_path_local / 'extracted_glob')
+        shutil.unpack_archive(tmp_path_local / archive_name, tmp_path_local / 'extracted_glob', filter='data')
 
         extracted = [
             str(path.relative_to(tmp_path_local / 'extracted_glob'))

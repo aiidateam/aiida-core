@@ -12,6 +12,7 @@ The archive is a subset of the provenance graph,
 stored in a single file.
 """
 
+import os
 import shutil
 import tempfile
 from datetime import datetime
@@ -59,6 +60,7 @@ def create_archive(
     compression: int = 6,
     test_run: bool = False,
     backend: Optional[StorageBackend] = None,
+    tmp_dir: Optional[Union[str, Path]] = None,
     **traversal_rules: bool,
 ) -> Path:
     """Export AiiDA data to an archive file.
@@ -138,6 +140,12 @@ def create_archive(
     :param test_run: if True, do not write to file
 
     :param backend: the backend to export from. If not specified, the default backend is used.
+
+    :param tmp_dir: Directory to use for temporary files during archive creation.
+        If not specified, a temporary directory will be created in the same directory as the output file
+        with a '.aiida-export-' prefix. This parameter is useful when the output directory has limited
+        space or when you want to use a specific filesystem (e.g., faster storage) for temporary operations.
+        The directory must exist and be writable.
 
     :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
         what rule names are toggleable and what the defaults are.
@@ -280,94 +288,130 @@ def create_archive(
 
     EXPORT_LOGGER.report(f'Creating archive with:\n{tabulate(count_summary)}')
 
+    # Handle temporary directory configuration
+    tmp_prefix = '.aiida-export-'
+    if tmp_dir is not None:
+        tmp_dir = Path(tmp_dir)
+        if not tmp_dir.exists():
+            EXPORT_LOGGER.warning(f"Specified temporary directory '{tmp_dir}' doesn't exist. Creating it.")
+            tmp_dir.mkdir(parents=True)
+        if not tmp_dir.is_dir():
+            msg = f"Specified temporary directory '{tmp_dir}' is not a directory"
+            raise ArchiveExportError(msg)
+        # Check if directory is writable
+        # Taken from: https://stackoverflow.com/a/2113511
+        if not os.access(tmp_dir, os.W_OK | os.X_OK):
+            msg = f"Specified temporary directory '{tmp_dir}' is not writable"
+            raise ArchiveExportError(msg)
+
+    else:
+        # Create temporary directory in the same folder as the output file
+        tmp_dir = filename.parent
+
     # Create and open the archive for writing.
     # We create in a temp dir then move to final place at end,
     # so that the user cannot end up with a half written archive on errors
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_filename = Path(tmpdir) / 'export.zip'
-        with archive_format.open(tmp_filename, mode='x', compression=compression) as writer:
-            # add metadata
-            writer.update_metadata(
-                {
-                    'ctime': datetime.now().isoformat(),
-                    'creation_parameters': {
-                        'entities_starting_set': None
-                        if entities is None
-                        else {etype.value: list(unique) for etype, unique in starting_uuids.items() if unique},
-                        'include_authinfos': include_authinfos,
-                        'include_comments': include_comments,
-                        'include_logs': include_logs,
-                        'graph_traversal_rules': full_traversal_rules,
-                    },
-                }
-            )
-            # stream entity data to the archive
-            with get_progress_reporter()(desc='Archiving database: ', total=sum(entity_counts.values())) as progress:
-                for etype, ids in entity_ids.items():
-                    if etype == EntityTypes.NODE and strip_checkpoints:
-
-                        def transform(row):
-                            data = row['entity']
-                            if data.get('node_type', '').startswith('process.'):
-                                data['attributes'].pop(orm.ProcessNode.CHECKPOINT_KEY, None)
-                            return data
-                    else:
-
-                        def transform(row):
-                            return row['entity']
-
-                    progress.set_description_str(f'Archiving database: {etype.value}s')
-                    if ids:
-                        for nrows, rows in batch_iter(
-                            querybuilder()
-                            .append(
-                                entity_type_to_orm[etype], filters={'id': {'in': ids}}, tag='entity', project=['**']
-                            )
-                            .iterdict(batch_size=batch_size),
-                            batch_size,
-                            transform,
-                        ):
-                            writer.bulk_insert(etype, rows)
-                            progress.update(nrows)
-
-                # stream links
-                progress.set_description_str(f'Archiving database: {EntityTypes.LINK.value}s')
-
-                def transform(d):
-                    return {
-                        'input_id': d.source_id,
-                        'output_id': d.target_id,
-                        'label': d.link_label,
-                        'type': d.link_type,
+    try:
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=tmp_dir, prefix=tmp_prefix) as tmpdir:
+            tmp_filename = Path(tmpdir) / 'export.zip'
+            with archive_format.open(tmp_filename, mode='x', compression=compression) as writer:
+                # add metadata
+                writer.update_metadata(
+                    {
+                        'ctime': datetime.now().isoformat(),
+                        'creation_parameters': {
+                            'entities_starting_set': None
+                            if entities is None
+                            else {etype.value: list(unique) for etype, unique in starting_uuids.items() if unique},
+                            'include_authinfos': include_authinfos,
+                            'include_comments': include_comments,
+                            'include_logs': include_logs,
+                            'graph_traversal_rules': full_traversal_rules,
+                        },
                     }
+                )
+                # stream entity data to the archive
+                with get_progress_reporter()(
+                    desc='Archiving database: ', total=sum(entity_counts.values())
+                ) as progress:
+                    for etype, ids in entity_ids.items():
+                        if etype == EntityTypes.NODE and strip_checkpoints:
 
-                for nrows, rows in batch_iter(link_data, batch_size, transform):
-                    writer.bulk_insert(EntityTypes.LINK, rows, allow_defaults=True)
-                    progress.update(nrows)
-                del link_data  # release memory
+                            def transform(row):
+                                data = row['entity']
+                                if data.get('node_type', '').startswith('process.'):
+                                    data['attributes'].pop(orm.ProcessNode.CHECKPOINT_KEY, None)
+                                return data
+                        else:
 
-                # stream group_nodes
-                progress.set_description_str(f'Archiving database: {EntityTypes.GROUP_NODE.value}s')
+                            def transform(row):
+                                return row['entity']
 
-                def transform(d):
-                    return {'dbgroup_id': d[0], 'dbnode_id': d[1]}
+                        progress.set_description_str(f'Archiving database: {etype.value}s')
+                        if ids:
+                            for nrows, rows in batch_iter(
+                                querybuilder()
+                                .append(
+                                    entity_type_to_orm[etype], filters={'id': {'in': ids}}, tag='entity', project=['**']
+                                )
+                                .iterdict(batch_size=batch_size),
+                                batch_size,
+                                transform,
+                            ):
+                                writer.bulk_insert(etype, rows)
+                                progress.update(nrows)
 
-                for nrows, rows in batch_iter(group_nodes, batch_size, transform):
-                    writer.bulk_insert(EntityTypes.GROUP_NODE, rows, allow_defaults=True)
-                    progress.update(nrows)
-                del group_nodes  # release memory
+                    # stream links
+                    progress.set_description_str(f'Archiving database: {EntityTypes.LINK.value}s')
 
-            # stream node repository files to the archive
-            if entity_ids[EntityTypes.NODE]:
-                _stream_repo_files(archive_format.key_format, writer, entity_ids[EntityTypes.NODE], backend, batch_size)
+                    def transform(d):
+                        return {
+                            'input_id': d.source_id,
+                            'output_id': d.target_id,
+                            'label': d.link_label,
+                            'type': d.link_type,
+                        }
 
-            EXPORT_LOGGER.report('Finalizing archive creation...')
+                    for nrows, rows in batch_iter(link_data, batch_size, transform):
+                        writer.bulk_insert(EntityTypes.LINK, rows, allow_defaults=True)
+                        progress.update(nrows)
+                    del link_data  # release memory
 
-        if filename.exists():
-            filename.unlink()
+                    # stream group_nodes
+                    progress.set_description_str(f'Archiving database: {EntityTypes.GROUP_NODE.value}s')
 
-        filename.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(tmp_filename, filename)
+                    def transform(d):
+                        return {'dbgroup_id': d[0], 'dbnode_id': d[1]}
+
+                    for nrows, rows in batch_iter(group_nodes, batch_size, transform):
+                        writer.bulk_insert(EntityTypes.GROUP_NODE, rows, allow_defaults=True)
+                        progress.update(nrows)
+                    del group_nodes  # release memory
+
+                # stream node repository files to the archive
+                if entity_ids[EntityTypes.NODE]:
+                    _stream_repo_files(
+                        archive_format.key_format, writer, entity_ids[EntityTypes.NODE], backend, batch_size
+                    )
+
+                EXPORT_LOGGER.report('Finalizing archive creation...')
+
+            if filename.exists():
+                filename.unlink()
+
+            filename.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(tmp_filename, filename)
+    except OSError as e:
+        if e.errno == 28:  # No space left on device
+            msg = (
+                f"Insufficient disk space in temporary directory '{tmp_dir}'. "
+                f'Consider using --tmp-dir to specify a location with more available space.'
+            )
+            raise ArchiveExportError(msg) from e
+
+        msg = f'Failed to create temporary directory: {e}'
+        raise ArchiveExportError(msg) from e
 
     EXPORT_LOGGER.report('Archive created successfully')
 

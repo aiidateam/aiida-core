@@ -391,7 +391,7 @@ filterwarnings = [
   'ignore::DeprecationWarning:jsonbackend:',
   'ignore::DeprecationWarning:pkg_resources:',
   'ignore:ast.* is deprecated.*:DeprecationWarning:docstring_parser:',
-  'ignore::SyntaxWarning:CifFile:',
+  'ignore::SyntaxWarning:CifFile',
   'ignore::pytest.PytestCollectionWarning',
   'ignore:Creating AiiDA configuration folder.*:UserWarning',
   'ignore:Object of type .* not in session, .* operation along .* will not proceed:sqlalchemy.exc.SAWarning',

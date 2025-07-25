@@ -2058,6 +2058,7 @@ class TestStructureDataFromPymatgen:
     """
 
     @skip_pymatgen
+    @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_1(self):
         """Tests roundtrip pymatgen -> StructureData -> pymatgen
         Test's input is derived from COD entry 9011963, processed with

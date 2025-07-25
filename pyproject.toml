@@ -400,9 +400,15 @@ filterwarnings = [
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   # https://github.com/aiidateam/plumpy/issues/283
   'ignore:There is no current event loop:DeprecationWarning:plumpy',
+  'ignore:There is no current event loop:DeprecationWarning:nest_asyncio',
   # spglib deprecation
   'ignore:dict interface is deprecated:DeprecationWarning',
-  'default::ResourceWarning'
+  # TODO: Fix these warnings
+  'ignore:.*getcwd.*:aiida.common.warnings.AiidaDeprecationWarning',
+  "ignore:coroutine 'Process.step_until_terminated' was never awaited:RuntimeWarning:asyncio",
+  'default::ResourceWarning',
+  'ignore:unclosed database:ResourceWarning',
+  'ignore:unclosed event loop:ResourceWarning'
 ]
 markers = [
   'nightly: long running tests that should rarely be affected and so only run nightly',

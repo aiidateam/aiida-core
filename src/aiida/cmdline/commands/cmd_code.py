@@ -9,6 +9,7 @@
 """`verdi code` command."""
 
 import pathlib
+import warnings
 from collections import defaultdict
 from functools import partial
 
@@ -84,7 +85,8 @@ def set_code_builder(ctx, param, value):
     """Set the code spec for defaults of following options."""
     from aiida.orm.utils.builders.code import CodeBuilder
 
-    ctx.code_builder = CodeBuilder.from_code(value)
+    with warnings.catch_warnings(record=True):
+        ctx.code_builder = CodeBuilder.from_code(value)
     return value
 
 
@@ -123,7 +125,8 @@ def setup_code(ctx, non_interactive, **kwargs):
     if kwargs['input_plugin']:
         kwargs['input_plugin'] = kwargs['input_plugin'].name
 
-    code_builder = CodeBuilder(**kwargs)
+    with warnings.catch_warnings(record=True):
+        code_builder = CodeBuilder(**kwargs)
 
     try:
         code = code_builder.new()
@@ -226,7 +229,8 @@ def show(code):
     table.append(['Type', code.entry_point.name])
     for key in code.Model.model_fields.keys():
         try:
-            table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
+            with warnings.catch_warnings(record=True):
+                table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
         except AttributeError:
             continue
     if is_verbose():

@@ -74,6 +74,7 @@ def test_submit_script_with_num_cores_per_mpiproc(scheduler, template):
 
 
 @pytest.mark.timeout(timeout=10)
+@pytest.mark.filterwarnings('ignore:This process .* is multi-threaded:DeprecationWarning')
 def test_kill_job(scheduler, tmpdir):
     """Test if kill_job kill all descendant children from the process.
     For that we spawn a new process that runs a sleep command, then we

@@ -13,6 +13,7 @@ Plugin specific tests will be written in the corresponding test file.
 
 import io
 import os
+import re
 import shutil
 import signal
 import tempfile
@@ -23,6 +24,7 @@ from pathlib import Path
 import psutil
 import pytest
 
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import Transport
 
@@ -63,7 +65,7 @@ def tmp_path_local(tmp_path_factory):
     ],
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
-    """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
+    """Fixture that parametrizes over all the registered implementations of the transport plugins."""
     plugin = TransportFactory(request.param[0])
 
     if request.param[0] == 'core.ssh':
@@ -321,10 +323,11 @@ def test_chdir_to_empty_string(custom_transport):
         return
 
     with custom_transport as transport:
-        new_dir = transport.normalize(os.path.join('/', 'tmp'))
-        transport.chdir(new_dir)
-        transport.chdir('')
-        assert new_dir == transport.getcwd()
+        with pytest.warns(AiidaDeprecationWarning, match=re.escape('`chdir()` is deprecated and will be removed')):
+            new_dir = transport.normalize(os.path.join('/', 'tmp'))
+            transport.chdir(new_dir)
+            transport.chdir('')
+            assert new_dir == transport.getcwd()
 
 
 def test_put_and_get(custom_transport, tmp_path_remote, tmp_path_local):
@@ -985,14 +988,16 @@ def test_exec_pwd(custom_transport, tmp_path_remote):
         subfolder = """_'s f"#"""  # A folder with characters to escape
         subfolder_fullpath = os.path.join(location, subfolder)
 
-        transport.chdir(location)
+        with pytest.warns(AiidaDeprecationWarning, match=re.escape('`chdir()` is deprecated and will be removed')):
+            transport.chdir(location)
         if not transport.isdir(subfolder):
             # Since I created the folder, I will remember to
             # delete it at the end of this test
             transport.mkdir(subfolder)
 
             assert transport.isdir(subfolder)
-            transport.chdir(subfolder)
+            with pytest.warns(AiidaDeprecationWarning, match=re.escape('`chdir()` is deprecated and will be removed')):
+                transport.chdir(subfolder)
 
             assert subfolder_fullpath == transport.getcwd()
             retcode, stdout, stderr = transport.exec_command_wait('pwd')

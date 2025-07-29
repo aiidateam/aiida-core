@@ -1099,9 +1099,9 @@ class TestProfileDumping:
             # Should detect no changes via log
             profile.dump(output_path=output_path, all_entries=True)
 
-        assert (
-            'No changes detected since last dump' in caplog.text
-        ), "Engine did not log the expected 'No changes detected' message."
+        assert 'No changes detected since last dump' in caplog.text, (
+            "Engine did not log the expected 'No changes detected' message."
+        )
         compare_tree(expected=initial_tree, base_path=tmp_path)  # Structure remains identical
 
     @pytest.mark.usefixtures('aiida_profile_clean')
@@ -1135,9 +1135,9 @@ class TestProfileDumping:
         # Check mtime of original node dir DID NOT change
         mtime_orig_node_after = original_node_dump_path.stat().st_mtime
         # Use approx comparison due to potential filesystem time resolution issues
-        assert (
-            abs(mtime_orig_node_before - mtime_orig_node_after) < 0.1
-        ), 'Original node dump directory was modified in time-filtered incremental update'
+        assert abs(mtime_orig_node_before - mtime_orig_node_after) < 0.1, (
+            'Original node dump directory was modified in time-filtered incremental update'
+        )
 
         # Check new node dir DOES exist
         new_node_dir_name = f'{new_node.process_label}-{new_node.pk}'

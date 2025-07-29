@@ -403,7 +403,7 @@ def profile_factory() -> Profile:
                     'database_name': kwargs.pop('database_name', name),
                     'database_username': kwargs.pop('database_username', 'user'),
                     'database_password': kwargs.pop('database_password', 'pass'),
-                    'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
+                    'repository_uri': f'file:///{os.path.join(repository_dirpath, f"repository_{name}")}',
                 },
             },
             'process_control': {
@@ -935,7 +935,7 @@ def construct_calculation_node_add(tmp_path_factory):
 
         # Create FolderData node for retrieved
         retrieved_folder = FolderData()
-        output_content = f'{x+y}\n'.encode()
+        output_content = f'{x + y}\n'.encode()
         retrieved_folder.put_object_from_bytes(output_content, 'aiida.out')
 
         scheduler_stdout = '\n'.encode()

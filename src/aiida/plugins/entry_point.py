@@ -190,7 +190,7 @@ def format_entry_point_string(group: str, name: str, fmt: EntryPointFormat = Ent
     if fmt == EntryPointFormat.FULL:
         return f'{group}{ENTRY_POINT_STRING_SEPARATOR}{name}'
     if fmt == EntryPointFormat.PARTIAL:
-        return f'{group[len(ENTRY_POINT_GROUP_PREFIX):]}{ENTRY_POINT_STRING_SEPARATOR}{name}'
+        return f'{group[len(ENTRY_POINT_GROUP_PREFIX) :]}{ENTRY_POINT_STRING_SEPARATOR}{name}'
     if fmt == EntryPointFormat.MINIMAL:
         return f'{name}'
     raise ValueError('invalid EntryPointFormat')

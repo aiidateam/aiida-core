@@ -19,7 +19,7 @@ class CodDbImporter(DbImporter):
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
                 raise ValueError(f"incorrect value for keyword '{alias}' only integers and strings are accepted")
-        return f"{key} IN ({', '.join(str(int(i)) for i in values)})"
+        return f'{key} IN ({", ".join(str(int(i)) for i in values)})'
 
     def _str_exact_clause(self, key, alias, values):
         """Returns SQL query predicate for querying string fields."""
@@ -30,7 +30,7 @@ class CodDbImporter(DbImporter):
             if isinstance(value, int):
                 value = str(value)  # noqa: PLW2901
             clause_parts.append(f"'{value}'")
-        return f"{key} IN ({', '.join(clause_parts)})"
+        return f'{key} IN ({", ".join(clause_parts)})'
 
     def _str_exact_or_none_clause(self, key, alias, values):
         """Returns SQL query predicate for querying string fields, allowing
@@ -163,9 +163,9 @@ class CodDbImporter(DbImporter):
                 sql_parts.append(f'({self._keywords[key][1](self, self._keywords[key][0], key, values)})')
 
         if kwargs:
-            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
+            raise NotImplementedError(f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}')
 
-        return f"SELECT file, svnrevision FROM data WHERE {' AND '.join(sql_parts)}"
+        return f'SELECT file, svnrevision FROM data WHERE {" AND ".join(sql_parts)}'
 
     def query(self, **kwargs):
         """Performs a query on the COD database using ``keyword = value`` pairs,
@@ -256,9 +256,9 @@ class CodSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        url = f"{self._base_url + result_dict['id']}.cif"
+        url = f'{self._base_url + result_dict["id"]}.cif'
         if 'svnrevision' in result_dict and result_dict['svnrevision'] is not None:
-            return f"{url}@{result_dict['svnrevision']}"
+            return f'{url}@{result_dict["svnrevision"]}'
 
         return url
 

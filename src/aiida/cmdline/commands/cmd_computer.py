@@ -227,7 +227,7 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo, comput
 
     if not isclose(timing_true, timing_false, rel_tol=rel_tol, abs_tol=abs_tol):
         return True, (
-            f"\n\n{click.style('Warning:', fg='yellow', bold=True)} "
+            f'\n\n{click.style("Warning:", fg="yellow", bold=True)} '
             'The computer is configured to use a login shell, which is slower compared to a normal shell.\n'
             f'Command execution time of {timing_true:.3f} versus {timing_false:.3f} seconds, respectively).\n'
             'Unless this setting is really necessary, consider disabling it with:\n'
@@ -345,7 +345,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
-        echo.echo_critical(f"A computer called {kwargs['label']} already exists")
+        echo.echo_critical(f'A computer called {kwargs["label"]} already exists')
 
     kwargs['transport'] = kwargs['transport'].name
     kwargs['scheduler'] = kwargs['scheduler'].name
@@ -716,7 +716,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
                     option_value = (
-                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"
+                        option.opts[-1] if config.get(option.name) else f'--no-{option.name.replace("_", "-")}'
                     )
                 elif t_opt.get('is_flag'):
                     is_default = config.get(option.name) == transport_cli.transport_option_default(

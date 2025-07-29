@@ -52,7 +52,7 @@ EXPORT_OPTIONS = [
         '--gzip-threshold',
         type=click.INT,
         default=None,
-        help='Specify the minimum size of exported file which should' ' be gzipped.',
+        help='Specify the minimum size of exported file which should be gzipped.',
     ),
     click.option(
         '-o',

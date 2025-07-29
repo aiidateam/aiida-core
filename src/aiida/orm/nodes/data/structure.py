@@ -515,7 +515,7 @@ def get_symbols_string(symbols, weights):
         pieces.append(f'{symbol}{weight:4.2f}')
     if has_vacancies(weights):
         pieces.append(f'X{1.0 - sum(weights):4.2f}')
-    return f"{{{''.join(sorted(pieces))}}}"
+    return f'{{{"".join(sorted(pieces))}}}'
 
 
 def has_vacancies(weights):
@@ -957,7 +957,7 @@ class StructureData(Data):
             return_string += ' '.join([f'{i:18.10f}' for i in cell_vector])
             return_string += '\n'
         return_string += 'PRIMCOORD 1\n'
-        return_string += f'{int(len(sites))} 1\n'
+        return_string += f'{len(sites)} 1\n'
         for site in sites:
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
@@ -1383,7 +1383,7 @@ class StructureData(Data):
         if aseatom is not None:
             if kwargs:
                 raise ValueError(
-                    "If you pass 'ase' as a parameter to " 'append_atom, you cannot pass any further' 'parameter'
+                    "If you pass 'ase' as a parameter to append_atom, you cannot pass any furtherparameter"
                 )
             position = aseatom.position
             kind = Kind(ase=aseatom)
@@ -2146,9 +2146,7 @@ class Kind:
         weights_tuple = _create_weights_tuple(value)
 
         if len(weights_tuple) != len(self._symbols):
-            raise ValueError(
-                'Cannot change the number of weights. Use the ' 'set_symbols_and_weights function instead.'
-            )
+            raise ValueError('Cannot change the number of weights. Use the set_symbols_and_weights function instead.')
         validate_weights_tuple(weights_tuple, _SUM_THRESHOLD)
 
         self._weights = weights_tuple
@@ -2201,9 +2199,7 @@ class Kind:
         symbols_tuple = _create_symbols_tuple(value)
 
         if len(symbols_tuple) != len(self._weights):
-            raise ValueError(
-                'Cannot change the number of symbols. Use the ' 'set_symbols_and_weights function instead.'
-            )
+            raise ValueError('Cannot change the number of symbols. Use the set_symbols_and_weights function instead.')
         validate_symbols_tuple(symbols_tuple)
 
         self._symbols = symbols_tuple

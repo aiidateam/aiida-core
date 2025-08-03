@@ -24,7 +24,7 @@ jobs:
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.9'
-        extras: '[docs,tests,rest,atomic_tools]'
+        extras: docs,tests,rest,atomic_tools
         from-lock: 'false'
 
     - name: Build HTML docs

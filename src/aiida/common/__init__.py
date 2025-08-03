@@ -16,7 +16,6 @@
 
 # fmt: off
 
-from .asserts import *
 from .datastructures import *
 from .exceptions import *
 from .extendeddicts import *
@@ -81,7 +80,6 @@ __all__ = (
     'UniquenessError',
     'UnsupportedSpeciesError',
     'ValidationError',
-    'assert_never',
     'create_callback',
     'get_progress_reporter',
     'override_log_level',

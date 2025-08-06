@@ -6,21 +6,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Implementation of StashCalculation."""
+"""Implementation of UnStashCalculation."""
 
 import json
+from pathlib import Path
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
-from aiida.common.datastructures import CalcInfo, CodeInfo, StashMode
+from aiida.common.datastructures import CalcInfo, CodeInfo, UnStashMode
 from aiida.engine import CalcJob
 
-EXEC_LOGGER = AIIDA_LOGGER.getChild('StashCalculation')
+from .stash import StashCalculation
+
+EXEC_LOGGER = AIIDA_LOGGER.getChild('UnStashCalculation')
 
 
-class StashCalculation(CalcJob):
+class UnStashCalculation(CalcJob):
     """
-    Utility to stash files from a remote folder.
+    Utility to unstash files from a remote folder.
 
     An example of how the input should look like:
 
@@ -28,44 +31,17 @@ class StashCalculation(CalcJob):
 
         inputs = {
             'metadata': {
-                'computer': load_computer(label="localhost"),
+                'computer': Computer.collection.get(label="localhost"),
                 'options': {
                     'resources': {'num_machines': 1},
-                    'stash': {
-                        'stash_mode': StashMode.COPY.value,
-                        'target_base': '/scratch/my_stashing/',
-                        'source_list': ['aiida.in', '_aiidasubmit.sh'],
+                    'unstash': {
+                        'unstash_mode': UnStashMode.NewNode.value,
+                        'source_list': ['aiida.in', '_aiidasubmit.sh'],     # also accepts ['*']
                     },
                 },
             },
-            'source_node': node_1,
-        }
-
-    Ideally one could use the same computer as the one of the `source_node`.
-    However if you cannot access the stash storage from the same computer anymore
-    but you have access to it from another computer, you can can specify the computer in `metadata.computer`.
-
-
-    Only in case of `StashMode.SUBMIT_CUSTOM_CODE` mode, the `code` input is required.
-    And the stashing is done by submitting a script to the computer specified in `metadata.computer`.
-    For example:
-
-    .. code-block:: python
-
-        inputs = {
-            'metadata': {
-                'computer': load_computer(label="localhost"),
-                'options': {
-                    'resources': {'num_machines': 1},
-                    'stash': {
-                        'stash_mode': StashMode.SUBMIT_CUSTOM_CODE.value,
-                        'target_base': '/scratch/my_stashing/',
-                        'source_list': ['aiida.in', '_aiidasubmit.sh'],
-                    },
-                },
-            },
-            'source_node': <RemoteData_NODE>,
-            'code': <MY_CODE>
+            'source_node': <RemoteStashData>,
+            'code': <MY_CODE>      # only in case of `type(source_node)==RemoteStashCustomData`
         }
     """
 
@@ -78,16 +54,14 @@ class StashCalculation(CalcJob):
 
         spec.input(
             'source_node',
-            valid_type=orm.RemoteData,
+            valid_type=orm.RemoteStashData,
             required=True,
             help='',
         )
 
         spec.inputs['metadata']['computer'].required = True
-        spec.inputs['metadata']['options']['stash'].required = True
-        spec.inputs['metadata']['options']['stash']['stash_mode'].required = True
-        spec.inputs['metadata']['options']['stash']['target_base'].required = True
-        spec.inputs['metadata']['options']['stash']['source_list'].required = True
+        spec.inputs['metadata']['options']['unstash'].required = True
+        spec.inputs['metadata']['options']['unstash']['unstash_mode'].required = True
         spec.inputs['metadata']['options']['resources'].default = {
             'num_machines': 1,
             'num_mpiprocs_per_machine': 1,
@@ -107,17 +81,51 @@ class StashCalculation(CalcJob):
                 ' so you had to create a new computer configured with ``core.slurm``,'
                 " and you'll need a job submission to do this."
             )
-
-        stash_mode = self.inputs.metadata.options.stash.get('stash_mode')
+        source_node = self.inputs.get('source_node')
+        unstash_mode = self.inputs.metadata.options.unstash.get('unstash_mode')
 
         calc_info = CalcInfo()
 
-        if stash_mode == StashMode.SUBMIT_CUSTOM_CODE.value:
+        if isinstance(source_node, orm.RemoteStashCustomData):
+            if unstash_mode == UnStashMode.OriginalPlace.value:
+
+                def traverse(node_):
+                    for link in node_.base.links.get_incoming():
+                        if (isinstance(link.node, CalcJob) and not isinstance(link.node, StashCalculation)) or (
+                            isinstance(link.node, orm.RemoteData)
+                        ):
+                            return link.node
+                        return traverse(link.node)
+                    return None
+
+                stashed_calculation_node = traverse(source_node)
+
+                if not stashed_calculation_node:
+                    raise ValueError(
+                        'Your stash node is not connected to any calcjob node, cannot find the source path.'
+                    )
+
+                target_path = stashed_calculation_node.get_remote_path()
+            else:  # UnStashMode.NewRemoteData.value
+                computer = self.inputs.metadata.get('computer')
+                with computer.get_transport() as transport:
+                    remote_user = transport.whoami_async()
+                remote_working_directory = computer.get_workdir().format(username=remote_user)
+
+                # The following line is set at calcjob::presubmit, but we need it here
+                calc_info_uuid = str(self.node.uuid)
+
+                # This is normally done in execmanager::upload_calculation,
+                # however unfortunatly is not modular and I had to copy-paste the logic here
+                target_path = Path(remote_working_directory).joinpath(
+                    calc_info_uuid[:2], calc_info_uuid[2:4], calc_info_uuid[4:]
+                )
+
             with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
                 stash_dict = {
-                    'source_path': self.inputs.source_node.get_remote_path(),
-                    'source_list': self.inputs.metadata.options.stash.source_list,
-                    'target_base': self.inputs.metadata.options.stash.target_base,
+                    'source_path': self.inputs.source_node.target_basepath,
+                    'source_list': self.inputs.metadata.options.unstash.get('source_list'),
+                    'target_base': str(target_path),
                 }
                 stash_json = json.dumps(stash_dict)
                 handle.write(f'{stash_json}\n')
@@ -129,7 +137,7 @@ class StashCalculation(CalcJob):
             if 'code' in self.inputs:
                 code_info.code_uuid = self.inputs.code.uuid
             else:
-                raise ValueError(f"Input 'code' is required for `StashMode.{StashMode(stash_mode)}` mode.")
+                raise ValueError(f"Input 'code' is required for `UnStashMode.{UnStashMode(unstash_mode)}` mode.")
 
             calc_info.codes_info = [code_info]
             calc_info.retrieve_list = [self.options.output_filename]
@@ -137,13 +145,11 @@ class StashCalculation(CalcJob):
             calc_info.remote_copy_list = []
             calc_info.remote_symlink_list = []
 
-            # The stashed node is going to be created by ``execmanager``, once the job is finished.
-
         else:
             if 'code' in self.inputs:
                 raise ValueError(
-                    f"Input 'code' cannot be used for `StashMode.{StashMode(stash_mode)}` mode."
-                    ' This Stash mode is performed on the login node, '
+                    f"Input 'code' cannot be used for `UnStashMode.{UnStashMode(unstash_mode)}` mode."
+                    ' This UnStash mode is performed on the login node, '
                     'no submission is planned therefore no code is needed.'
                 )
 

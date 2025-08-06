@@ -520,7 +520,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                     # try to clean up in case of a failure
                     await transport.rmtree_async(target_base / uuid[:2])
                 else:
-                    EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
+                    EXEC_LOGGER.debug(f'stashed from {source_filepath} to {target_filepath}')
 
         remote_stash = RemoteStashFolderData(
             computer=calculation.computer,
@@ -572,7 +572,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
             # raise exceptions.RemoteOperationError(f'failed '
             # 'to compress {source_list} to {target_destination}: {exception}')
         else:
-            EXEC_LOGGER.debug(f'stashed {source_list} to {target_destination}')
+            EXEC_LOGGER.debug(f'Stashed {source_list} to {target_destination}')
 
         remote_stash.store()
 
@@ -580,6 +580,117 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
         assert_never(stash_mode)
 
     remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
+
+
+async def unstash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+    """Unstash files from a previously stashed calculation to restore them to a target location.
+
+    This function reverses the stashing operation by copying or extracting files from a stashed location
+    back to either their original location or the working directory of the unstash calculation. It supports
+    multiple unstashing modes and stash formats including direct copy and compressed archives.
+
+    :param calculation: The CalcJobNode representing the unstash calculation. Must be of process type
+        'aiida.calculations:core.unstash' and contain unstash options and a source_node input.
+    :param transport: An already opened transport to use for file operations on the remote machine.
+
+    :raises: Does not raise exceptions but logs errors for:
+        - Invalid calculation process type (not 'aiida.calculations:core.unstash')
+        - Missing connection to original CalcJob when using OriginalPlace mode
+        - File copy/extraction failures
+        - Mismatched source lists for compressed stash modes
+
+    Note: All file operations are performed asynchronously and errors are logged rather than raised
+    to avoid triggering exponential backoff in the daemon execution manager.
+    """
+
+    if calculation.process_type != 'aiida.calculations:core.unstash':
+        EXEC_LOGGER.error('Unstashing is only supported via `UnStashCalculation`. Stashing failed!')
+        return
+    from aiida.common.datastructures import StashMode, UnStashMode
+
+    unstash_options = calculation.get_option('unstash')
+    unstash_mode = unstash_options.get('unstash_mode')
+    source_list = unstash_options.get('source_list', [])
+    source_node = load_node(calculation.inputs.source_node.pk)
+    stash_mode = source_node.stash_mode.value
+
+    if stash_mode == StashMode.SUBMIT_CUSTOM_CODE.value:
+        EXEC_LOGGER.debug('Stashing was performed via job submission, skip from engine.')
+        return
+
+    if unstash_mode == UnStashMode.OriginalPlace.value:
+
+        def traverse(node_):
+            for link in node_.base.links.get_incoming():
+                if (
+                    isinstance(link.node, CalcJobNode) and link.node.process_type != 'aiida.calculations:core.stash'
+                ) or (isinstance(link.node, RemoteData)):
+                    return link.node
+                return traverse(link.node)
+            return None
+
+        stash_calculation_node = traverse(source_node)
+
+        if not stash_calculation_node:
+            EXEC_LOGGER.error(
+                'Your stash node is not connected to any calcjob node, cannot find the source path. Stashing failed!'
+            )
+            return
+        target_basepath = Path(stash_calculation_node.get_remote_path())
+    else:  # UnStashMode.NewRemoteData.value
+        target_basepath = Path(calculation.get_remote_workdir())
+
+    source_basepath = Path(source_node.target_basepath)
+
+    if stash_mode == StashMode.COPY.value:
+        for source_filename in source_list:
+            if has_magic(source_filename):
+                copy_instructions = []
+                for globbed_filename in await transport.glob_async(source_basepath / source_filename):
+                    target_filepath = target_basepath / Path(globbed_filename).relative_to(source_basepath)
+                    copy_instructions.append((globbed_filename, target_filepath))
+            else:
+                copy_instructions = [(source_basepath / source_filename, target_basepath / source_filename)]
+
+            for source_filepath, target_filepath in copy_instructions:
+                # If the source file is in a (nested) directory, create those directories first in the target directory
+                target_dirname = target_filepath.parent
+                await transport.makedirs_async(target_dirname, ignore_existing=True)
+
+                try:
+                    await transport.copy_async(source_filepath, target_filepath)
+                except (OSError, ValueError) as exception:
+                    EXEC_LOGGER.error(f'Failed to unstash {source_filepath} to {target_filepath}: {exception}')
+                else:
+                    EXEC_LOGGER.debug(f'unstashed from {source_filepath} to {target_filepath}')
+
+    elif stash_mode in [
+        StashMode.COMPRESS_TAR.value,
+        StashMode.COMPRESS_TARBZ2.value,
+        StashMode.COMPRESS_TARGZ.value,
+        StashMode.COMPRESS_TARXZ.value,
+    ]:
+        if sorted(source_list) != sorted(source_node.source_list):
+            EXEC_LOGGER.error(
+                f'Failed to stash. When stash_mode is {stash_mode}, '
+                f'{sorted(source_list)} has to be exactly euqual to {sorted(source_node.source_list)}'
+            )
+            return
+        try:
+            await transport.extract_async(
+                remotesource=source_basepath,
+                remotedestination=target_basepath,
+                overwrite=True,
+                strip_components=3,
+            )
+        except (OSError, ValueError) as exception:
+            EXEC_LOGGER.error(f'Failed to stash {source_basepath!s} to {target_basepath}: {exception}')
+            return
+            # note: if you raise here, you trigger the exponential backoff
+            # and if you don't raise, it appears as successful in verdi process list: Finished [0]
+            # An issue opened to investigate and fix this https://github.com/aiidateam/aiida-core/issues/6789
+        else:
+            EXEC_LOGGER.debug(f'Stashed {source_basepath!s} to {target_basepath}')
 
 
 async def retrieve_calculation(

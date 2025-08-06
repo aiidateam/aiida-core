@@ -113,6 +113,28 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
     return None
 
 
+def validate_unstash_options(unstash_options: Any, _: Any) -> Optional[str]:
+    """Validate the ``unstash`` options."""
+    from aiida.common.datastructures import UnStashMode
+
+    source_list = unstash_options.get('source_list', None)
+    unstash_mode = unstash_options.get('unstash_mode', None)
+
+    if not isinstance(source_list, (list, tuple)) or any(
+        not isinstance(src, str) or os.path.isabs(src) for src in source_list
+    ):
+        port = 'metadata.options.unstash.source_list'
+        return f'`{port}` should be a list or tuple of relative filepaths, got: {source_list}'
+
+    try:
+        UnStashMode(unstash_mode)
+    except ValueError:
+        port = 'metadata.options.unstash.unstash_mode'
+        return f'`{port}` should be a member of aiida.common.datastructures.UnStashMode, got: {unstash_mode}'
+
+    return None
+
+
 def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     """Validate the ``stash`` options."""
     from aiida.common.datastructures import StashMode
@@ -405,6 +427,26 @@ class CalcJob(Process):
             valid_type=(list, tuple),
             validator=validate_additional_retrieve_list,
             help='List of relative file paths that should be retrieved in addition to what the plugin specifies.',
+        )
+        spec.input_namespace(
+            'metadata.options.unstash',
+            required=False,
+            populate_defaults=False,
+            validator=validate_unstash_options,
+            help='Optional directives to unstash files after upload.',
+        )
+        spec.input(
+            'metadata.options.unstash.source_list',
+            valid_type=(tuple, list),
+            required=False,
+            help='Sequence of relative filepaths representing files in the remote directory that should be unstashed.',
+        )
+        spec.input(
+            'metadata.options.unstash.unstash_mode',
+            valid_type=str,
+            required=False,
+            help='Mode with which to perform the unstashing, should be value of '
+            '`aiida.common.datastructures.UnStashMode`.',
         )
         spec.input_namespace(
             'metadata.options.stash',

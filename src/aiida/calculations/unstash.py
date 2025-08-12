@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Implementation of UnStashCalculation."""
+"""Implementation of UnstashCalculation."""
 
 import json
 from pathlib import Path
@@ -18,10 +18,10 @@ from aiida.engine import CalcJob
 
 from .stash import StashCalculation
 
-EXEC_LOGGER = AIIDA_LOGGER.getChild('UnStashCalculation')
+EXEC_LOGGER = AIIDA_LOGGER.getChild('UnstashCalculation')
 
 
-class UnStashCalculation(CalcJob):
+class UnstashCalculation(CalcJob):
     """
     Utility to unstash files from a remote folder.
 

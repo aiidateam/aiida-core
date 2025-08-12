@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the `StashCalculation` and `UnStashCalculation` plugin.
+"""Tests for the `StashCalculation` and `UnstashCalculation` plugin.
 
 Note: testing the main functionality is done in via `test_execmanager.py`.
 Here, we mainly check for redirection, of the calcjob.
@@ -218,7 +218,7 @@ def test_code_vs_stash_mode_conflict(stash_mode, fixture_sandbox, aiida_localhos
 @pytest.mark.requires_rmq
 @pytest.mark.parametrize('unstash_target_mode', [UnstashTargetMode.NewRemoteData, UnstashTargetMode.OriginalPlace])
 def test_submit_custom_code(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path, unstash_target_mode):
-    """Test the full functionality of the `StashCalculation` and `UnStashCalculation` with a custom code submission."""
+    """Test the full functionality of the `StashCalculation` and `UnstashCalculation` with a custom code submission."""
     from pathlib import Path
 
     from aiida.engine import run, run_get_node
@@ -320,7 +320,7 @@ done
     for filename, content in test_files.items():
         Path(source / filename).unlink()
 
-    ### UnStashCalculation
+    ### UnstashCalculation
     unstash_inputs = {
         'metadata': {
             'computer': aiida_localhost,
@@ -384,7 +384,7 @@ done
     ],
 )
 def test_all_modes(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path, stash_mode, unstash_target_mode):
-    """Test the full functionality of the `StashCalculation` and `UnStashCalculation` for all other modes"""
+    """Test the full functionality of the `StashCalculation` and `UnstashCalculation` for all other modes"""
     from pathlib import Path
 
     # Setup source directory and files
@@ -464,7 +464,7 @@ def test_all_modes(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path
     for filename, content in test_files.items():
         Path(source / filename).unlink()
 
-    ### UnStashCalculation
+    ### UnstashCalculation
     unstash_inputs = {
         'metadata': {
             'computer': aiida_localhost,

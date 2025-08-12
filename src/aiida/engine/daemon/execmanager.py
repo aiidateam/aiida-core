@@ -604,7 +604,7 @@ async def unstash_calculation(calculation: CalcJobNode, transport: Transport) ->
     """
 
     if calculation.process_type != 'aiida.calculations:core.unstash':
-        EXEC_LOGGER.error('Unstashing is only supported via `UnStashCalculation`. Stashing failed!')
+        EXEC_LOGGER.error('Unstashing is only supported via `UnstashCalculation`. Stashing failed!')
         return
     from aiida.common.datastructures import StashMode, UnstashTargetMode
 

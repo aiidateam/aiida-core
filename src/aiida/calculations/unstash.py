@@ -13,7 +13,7 @@ from pathlib import Path
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
-from aiida.common.datastructures import CalcInfo, CodeInfo, UnStashMode
+from aiida.common.datastructures import CalcInfo, CodeInfo, UnstashTargetMode
 from aiida.engine import CalcJob
 
 from .stash import StashCalculation
@@ -35,7 +35,7 @@ class UnStashCalculation(CalcJob):
                 'options': {
                     'resources': {'num_machines': 1},
                     'unstash': {
-                        'unstash_mode': UnStashMode.NewNode.value,
+                        'unstash_target_mode': UnstashTargetMode.NewNode.value,
                         'source_list': ['aiida.in', '_aiidasubmit.sh'],     # also accepts ['*']
                     },
                 },
@@ -61,7 +61,7 @@ class UnStashCalculation(CalcJob):
 
         spec.inputs['metadata']['computer'].required = True
         spec.inputs['metadata']['options']['unstash'].required = True
-        spec.inputs['metadata']['options']['unstash']['unstash_mode'].required = True
+        spec.inputs['metadata']['options']['unstash']['unstash_target_mode'].required = True
         spec.inputs['metadata']['options']['resources'].default = {
             'num_machines': 1,
             'num_mpiprocs_per_machine': 1,
@@ -82,12 +82,12 @@ class UnStashCalculation(CalcJob):
                 " and you'll need a job submission to do this."
             )
         source_node = self.inputs.get('source_node')
-        unstash_mode = self.inputs.metadata.options.unstash.get('unstash_mode')
+        unstash_target_mode = self.inputs.metadata.options.unstash.get('unstash_target_mode')
 
         calc_info = CalcInfo()
 
         if isinstance(source_node, orm.RemoteStashCustomData):
-            if unstash_mode == UnStashMode.OriginalPlace.value:
+            if unstash_target_mode == UnstashTargetMode.OriginalPlace.value:
 
                 def traverse(node_):
                     for link in node_.base.links.get_incoming():
@@ -106,7 +106,7 @@ class UnStashCalculation(CalcJob):
                     )
 
                 target_path = stashed_calculation_node.get_remote_path()
-            else:  # UnStashMode.NewRemoteData.value
+            else:  # UnstashTargetMode.NewRemoteData.value
                 computer = self.inputs.metadata.get('computer')
                 with computer.get_transport() as transport:
                     remote_user = transport.whoami_async()
@@ -137,7 +137,9 @@ class UnStashCalculation(CalcJob):
             if 'code' in self.inputs:
                 code_info.code_uuid = self.inputs.code.uuid
             else:
-                raise ValueError(f"Input 'code' is required for `UnStashMode.{UnStashMode(unstash_mode)}` mode.")
+                raise ValueError(
+                    f"Input 'code' is required for `UnstashTargetMode.{UnstashTargetMode(unstash_target_mode)}` mode."
+                )
 
             calc_info.codes_info = [code_info]
             calc_info.retrieve_list = [self.options.output_filename]
@@ -148,8 +150,8 @@ class UnStashCalculation(CalcJob):
         else:
             if 'code' in self.inputs:
                 raise ValueError(
-                    f"Input 'code' cannot be used for `UnStashMode.{UnStashMode(unstash_mode)}` mode."
-                    ' This UnStash mode is performed on the login node, '
+                    f"Input 'code' cannot be used for `UnstashTargetMode.{UnstashTargetMode(unstash_target_mode)}`"
+                    ' mode. This UnStash mode is performed on the login node, '
                     'no submission is planned therefore no code is needed.'
                 )
 

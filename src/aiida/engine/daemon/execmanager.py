@@ -606,10 +606,10 @@ async def unstash_calculation(calculation: CalcJobNode, transport: Transport) ->
     if calculation.process_type != 'aiida.calculations:core.unstash':
         EXEC_LOGGER.error('Unstashing is only supported via `UnStashCalculation`. Stashing failed!')
         return
-    from aiida.common.datastructures import StashMode, UnStashMode
+    from aiida.common.datastructures import StashMode, UnstashTargetMode
 
     unstash_options = calculation.get_option('unstash')
-    unstash_mode = unstash_options.get('unstash_mode')
+    unstash_target_mode = unstash_options.get('unstash_target_mode')
     source_list = unstash_options.get('source_list', [])
     source_node = load_node(calculation.inputs.source_node.pk)
     stash_mode = source_node.stash_mode.value
@@ -618,7 +618,7 @@ async def unstash_calculation(calculation: CalcJobNode, transport: Transport) ->
         EXEC_LOGGER.debug('Stashing was performed via job submission, skip from engine.')
         return
 
-    if unstash_mode == UnStashMode.OriginalPlace.value:
+    if unstash_target_mode == UnstashTargetMode.OriginalPlace.value:
 
         def traverse(node_):
             for link in node_.base.links.get_incoming():
@@ -637,7 +637,7 @@ async def unstash_calculation(calculation: CalcJobNode, transport: Transport) ->
             )
             return
         target_basepath = Path(stash_calculation_node.get_remote_path())
-    else:  # UnStashMode.NewRemoteData.value
+    else:  # UnstashTargetMode.NewRemoteData.value
         target_basepath = Path(calculation.get_remote_workdir())
 
     source_basepath = Path(source_node.target_basepath)

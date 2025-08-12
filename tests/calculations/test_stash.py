@@ -19,7 +19,7 @@ import logging
 import pytest
 
 from aiida import orm
-from aiida.common.datastructures import StashMode, UnStashMode
+from aiida.common.datastructures import StashMode, UnstashTargetMode
 from aiida.plugins import CalculationFactory
 
 
@@ -54,7 +54,7 @@ def test_calculation_basic(
         source_node = orm.RemoteData(computer=a_different_computer, remote_path=str(source))
     else:  # unstash
         operation_config = {
-            'unstash_mode': UnStashMode.NewRemoteData.value,
+            'unstash_target_mode': UnstashTargetMode.NewRemoteData.value,
             'source_list': ['*'],
         }
         source_node = orm.RemoteStashFolderData(
@@ -161,7 +161,7 @@ def test_code_vs_stash_mode_conflict(stash_mode, fixture_sandbox, aiida_localhos
             'options': {
                 'resources': {'num_machines': 1},
                 'unstash': {
-                    'unstash_mode': UnStashMode.NewRemoteData.value,
+                    'unstash_target_mode': UnstashTargetMode.NewRemoteData.value,
                     'source_list': ['*'],
                 },
             },
@@ -184,7 +184,8 @@ def test_code_vs_stash_mode_conflict(stash_mode, fixture_sandbox, aiida_localhos
         unstash_no_code = unstash_input.copy()
         unstash_no_code.pop('code')
         with pytest.raises(
-            ValueError, match=f"Input 'code' is required for `UnStashMode.{UnStashMode.NewRemoteData}` mode."
+            ValueError,
+            match=f"Input 'code' is required for `UnstashTargetMode.{UnstashTargetMode.NewRemoteData}` mode.",
         ):
             generate_calc_job(fixture_sandbox, 'core.unstash', unstash_no_code)
 
@@ -207,7 +208,7 @@ def test_code_vs_stash_mode_conflict(stash_mode, fixture_sandbox, aiida_localhos
             generate_calc_job(fixture_sandbox, 'core.stash', stash_input)
 
         unstash_error_msg = (
-            f"Input 'code' cannot be used for `UnStashMode.{UnStashMode.NewRemoteData}` mode. "
+            f"Input 'code' cannot be used for `UnstashTargetMode.{UnstashTargetMode.NewRemoteData}` mode. "
             'This UnStash mode is performed on the login node, no submission is planned therefore no code is needed.'
         )
         with pytest.raises(ValueError, match=unstash_error_msg):
@@ -215,8 +216,8 @@ def test_code_vs_stash_mode_conflict(stash_mode, fixture_sandbox, aiida_localhos
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.parametrize('unstash_mode', [UnStashMode.NewRemoteData, UnStashMode.OriginalPlace])
-def test_submit_custom_code(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path, unstash_mode):
+@pytest.mark.parametrize('unstash_target_mode', [UnstashTargetMode.NewRemoteData, UnstashTargetMode.OriginalPlace])
+def test_submit_custom_code(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path, unstash_target_mode):
     """Test the full functionality of the `StashCalculation` and `UnStashCalculation` with a custom code submission."""
     from pathlib import Path
 
@@ -326,7 +327,7 @@ done
             'options': {
                 'resources': {'num_machines': 1},
                 'unstash': {
-                    'unstash_mode': unstash_mode.value,
+                    'unstash_target_mode': unstash_target_mode.value,
                     'source_list': list(test_files.keys()),
                 },
             },
@@ -347,7 +348,9 @@ done
     # Run unstash calculation
     unstash_result = run(CalculationFactory('core.unstash'), **unstash_inputs)
     calcjob_remote_path_unstash = unstash_result['remote_folder'].get_remote_path()
-    expected_target_base = source if unstash_mode == UnStashMode.OriginalPlace else calcjob_remote_path_unstash
+    expected_target_base = (
+        source if unstash_target_mode == UnstashTargetMode.OriginalPlace else calcjob_remote_path_unstash
+    )
 
     # Verify unstash input file
     expected_unstash_input = {
@@ -367,7 +370,9 @@ done
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.requires_rmq
-@pytest.mark.parametrize('unstash_mode', [UnStashMode.OriginalPlace.value, UnStashMode.NewRemoteData.value])
+@pytest.mark.parametrize(
+    'unstash_target_mode', [UnstashTargetMode.OriginalPlace.value, UnstashTargetMode.NewRemoteData.value]
+)
 @pytest.mark.parametrize(
     'stash_mode',
     [
@@ -378,7 +383,7 @@ done
         StashMode.COMPRESS_TARXZ.value,
     ],
 )
-def test_all_modes(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path, stash_mode, unstash_mode):
+def test_all_modes(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path, stash_mode, unstash_target_mode):
     """Test the full functionality of the `StashCalculation` and `UnStashCalculation` for all other modes"""
     from pathlib import Path
 
@@ -466,7 +471,7 @@ def test_all_modes(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path
             'options': {
                 'resources': {'num_machines': 1},
                 'unstash': {
-                    'unstash_mode': unstash_mode,
+                    'unstash_target_mode': unstash_target_mode,
                     'source_list': list(test_files.keys()),
                 },
             },
@@ -477,7 +482,9 @@ def test_all_modes(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path
     # Run unstash calculation
     unstash_result = run(CalculationFactory('core.unstash'), **unstash_inputs)
     calcjob_remote_path_unstash = unstash_result['remote_folder'].get_remote_path()
-    expected_target_base = source if unstash_mode == UnStashMode.OriginalPlace.value else calcjob_remote_path_unstash
+    expected_target_base = (
+        source if unstash_target_mode == UnstashTargetMode.OriginalPlace.value else calcjob_remote_path_unstash
+    )
 
     # Verify files were unstashed
     for filename, expected_content in test_files.items():

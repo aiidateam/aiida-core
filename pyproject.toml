@@ -68,6 +68,7 @@ requires-python = '>=3.9'
 'core.stash' = 'aiida.calculations.stash:StashCalculation'
 'core.templatereplacer' = 'aiida.calculations.templatereplacer:TemplatereplacerCalculation'
 'core.transfer' = 'aiida.calculations.transfer:TransferCalculation'
+'core.unstash' = 'aiida.calculations.unstash:UnstashCalculation'
 
 [project.entry-points.'aiida.calculations.importers']
 'core.arithmetic.add' = 'aiida.calculations.importers.arithmetic.add:ArithmeticAddCalculationImporter'

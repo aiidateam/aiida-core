@@ -81,3 +81,33 @@ def test_validate_sqlite_version(monkeypatch):
     monkeypatch.setattr('sqlite3.sqlite_version', '100.0.0')
     monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '0.0.0')
     validate_sqlite_version()
+
+
+def test_initialise_early_return_no_migration(tmp_path, caplog):
+    """Test that initialise returns False early when no migration is needed."""
+    filepath_archive = tmp_path / 'archive.zip'
+    profile = SqliteZipBackend.create_profile(filepath_archive)
+
+    # First initialisation to create the archive
+    SqliteZipBackend.initialise(profile)
+    assert filepath_archive.exists()
+
+    # Clear the log to focus on the second call
+    caplog.clear()
+
+    # Second initialisation should return False early without migration
+    result = SqliteZipBackend.initialise(profile, reset=False)
+
+    assert result is False
+
+    # Should log that it's already at target version
+    target_version = SqliteZipBackend.version_head()
+    assert any(
+        f'Existing SqliteZipBackend is already at target version {target_version}' in record.message
+        for record in caplog.records
+    ), f'Expected log message not found. Actual messages: {[r.message for r in caplog.records]}'
+
+    # Should NOT log any migration messages
+    assert not any(
+        'Migrating existing SqliteZipBackend' in record.message for record in caplog.records
+    ), 'Should not attempt migration when already at target version'

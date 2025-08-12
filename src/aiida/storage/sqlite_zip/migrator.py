@@ -81,29 +81,34 @@ def check_migration_needed(inpath: Union[str, Path], target_version: str) -> boo
 
     # the file should be either a tar (legacy only) or zip file
     if not (tarfile.is_tarfile(str(inpath)) or zipfile.is_zipfile(str(inpath))):
-        raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
+        msg = f'The input file is neither a tar nor a zip file: {inpath}'
+        raise CorruptStorage(msg)
 
     # read the metadata.json which should always be present
     metadata = extract_metadata(inpath, search_limit=None)
 
     # obtain the current version from the metadata
     if 'export_version' not in metadata:
-        raise CorruptStorage('No export_version found in metadata')
+        msg = 'No export_version found in metadata'
+        raise CorruptStorage(msg)
     current_version = metadata['export_version']
 
     # check versions are valid
     # versions 0.1, 0.2, 0.3 are no longer supported,
     # since 0.3 -> 0.4 requires costly migrations of repo files (you would need to unpack all of them)
     if current_version in ('0.1', '0.2', '0.3') or target_version in ('0.1', '0.2', '0.3'):
-        raise StorageMigrationError(
+        msg = (
             f"Legacy migration from '{current_version}' -> '{target_version}' is not supported in aiida-core v2. "
             'First migrate them to the latest version in aiida-core v1.'
         )
+        raise StorageMigrationError(msg)
     all_versions = list_versions()
     if current_version not in all_versions:
-        raise StorageMigrationError(f"Unknown current version '{current_version}'")
+        msg = f"Unknown current version '{current_version}'"
+        raise StorageMigrationError(msg)
     if target_version not in all_versions:
-        raise StorageMigrationError(f"Unknown target version '{target_version}'")
+        msg = f"Unknown target version '{target_version}'"
+        raise StorageMigrationError(msg)
 
     # check if migration is needed
     return current_version != target_version

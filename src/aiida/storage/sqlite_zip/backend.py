@@ -134,12 +134,11 @@ class SqliteZipBackend(StorageBackend):
         if filepath_archive.exists() and not reset:
             from .migrator import check_migration_needed, migrate
 
-            # Check if migration is needed before entering the expensive context manager
-            # PRCOMMENT: `version_head` might not point to the _latest_ version?
+            # Check if migration is needed
             target_version = cls.version_head()
 
             # if we are already at the desired version, then no migration is required
-            if not check_migration_needed(filepath_archive, target_version):
+            if not check_migration_needed(inpath=filepath_archive, target_version=target_version):
                 LOGGER.report(f'Existing {cls.__name__} is already at target version {target_version}')
                 return False
 

@@ -36,7 +36,7 @@ def test_initialise_reset_true(tmp_path, caplog):
 
 
 def test_initialise_reset_false(tmp_path, caplog):
-    """Test :meth:`aiida.storage.sqlite_zip.backend.SqliteZipBackend.initialise` with ``reset=True``."""
+    """Test :meth:`aiida.storage.sqlite_zip.backend.SqliteZipBackend.initialise` with ``reset=False``."""
     filepath_archive = tmp_path / 'archive.zip'
 
     # Initialise the archive
@@ -50,7 +50,7 @@ def test_initialise_reset_false(tmp_path, caplog):
 
     assert filepath_archive.exists()
     validate_storage(filepath_archive)
-    assert any('Migrating existing SqliteZipBackend' in record.message for record in caplog.records)
+    assert any('is already at target version' in record.message for record in caplog.records)
 
 
 @pytest.mark.usefixtures('chdir_tmp_path')

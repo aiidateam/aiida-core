@@ -152,7 +152,7 @@ def migrate(
     if outpath.exists() and not outpath.is_file():
         raise StorageMigrationError('Existing output path is not a file')
 
-    # Check if migration is needed and get file info
+    # Check if migration is needed
     if not check_migration_needed(inpath, version):
         # if we are already at the desired version, then no migration is required, so simply copy the file if necessary
         if inpath != outpath:

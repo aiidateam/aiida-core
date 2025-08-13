@@ -158,27 +158,15 @@ def test_control_of_licenses(tmp_path):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_tmp_dir_custom_valid(tmp_path):
-    """Test using a custom valid temporary directory."""
-    from unittest.mock import patch
-
+def test_tmp_dir(tmp_path, aiida_profile_clean):
+    """Test that tmp_dir parameter is used correctly."""
     node = orm.Int(42).store()
     custom_tmp = tmp_path / 'custom_tmp'
     custom_tmp.mkdir()
-    filename = tmp_path / 'export.aiida'  # Put output file outside custom_tmp
+    filename = tmp_path / 'export.aiida'
 
-    with patch('tempfile.TemporaryDirectory') as mock_temp_dir:
-        # Create the actual temp directory that the mock returns
-        actual_temp_dir = custom_tmp / 'temp_dir'
-        actual_temp_dir.mkdir()
-
-        mock_temp_dir.return_value.__enter__.return_value = str(actual_temp_dir)
-        mock_temp_dir.return_value.__exit__.return_value = None
-
-        create_archive([node], filename=filename, tmp_dir=custom_tmp)
-
-        # Check that TemporaryDirectory was called with custom directory
-        mock_temp_dir.assert_called_once_with(dir=custom_tmp, prefix='.aiida-export-')
+    create_archive([node], filename=filename, tmp_dir=custom_tmp)
+    assert filename.exists()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

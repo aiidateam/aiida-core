@@ -158,7 +158,7 @@ def test_control_of_licenses(tmp_path):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_tmp_dir(tmp_path, aiida_profile_clean):
+def test_tmp_dir_basic(tmp_path):
     """Test that tmp_dir parameter is used correctly."""
     node = orm.Int(42).store()
     custom_tmp = tmp_path / 'custom_tmp'
@@ -200,4 +200,69 @@ def test_tmp_dir_disk_space_error(tmp_path):
 
     with patch('tempfile.TemporaryDirectory', side_effect=mock_temp_dir_error):
         with pytest.raises(ArchiveExportError, match='Insufficient disk space.*--tmp-dir'):
+            create_archive([node], filename=filename, tmp_dir=custom_tmp)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_tmp_dir_auto_create(tmp_path):
+    """Test automatic creation of non-existent tmp_dir."""
+    node = orm.Int(42).store()
+    filename = tmp_path / 'export.aiida'
+    custom_tmp = tmp_path / 'nonexistent_tmp'  # Don't create it!
+
+    create_archive([node], filename=filename, tmp_dir=custom_tmp)
+    assert filename.exists()
+    # Verify the directory was created
+    assert custom_tmp.exists()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_tmp_dir_permission_error(tmp_path):
+    """Test tmp_dir permission validation."""
+    import stat
+
+    node = orm.Int(42).store()
+    filename = tmp_path / 'export.aiida'
+    readonly_tmp = tmp_path / 'readonly_tmp'
+    readonly_tmp.mkdir()
+
+    # Make directory read-only
+    readonly_tmp.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+
+    try:
+        with pytest.raises(ArchiveExportError, match='is not writable'):
+            create_archive([node], filename=filename, tmp_dir=readonly_tmp)
+    finally:
+        # Restore permissions for cleanup
+        readonly_tmp.chmod(stat.S_IRWXU)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_tmp_dir_default_behavior(tmp_path):
+    """Test default tmp_dir behavior (no tmp_dir specified)."""
+    node = orm.Int(42).store()
+    filename = tmp_path / 'export.aiida'
+
+    # Don't specify tmp_dir - test the default path
+    create_archive([node], filename=filename)
+    assert filename.exists()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_tmp_dir_general_os_error(tmp_path):
+    """Test general OS error handling."""
+    from unittest.mock import patch
+
+    node = orm.Int(42).store()
+    custom_tmp = tmp_path / 'custom_tmp'
+    custom_tmp.mkdir()
+    filename = tmp_path / 'export.aiida'
+
+    def mock_temp_dir_error(*args, **kwargs):
+        error = OSError('Permission denied')
+        error.errno = 13  # Different from 28
+        raise error
+
+    with patch('aiida.tools.archive.create.tempfile.TemporaryDirectory', side_effect=mock_temp_dir_error):
+        with pytest.raises(ArchiveExportError, match='Failed to create temporary directory'):
             create_archive([node], filename=filename, tmp_dir=custom_tmp)

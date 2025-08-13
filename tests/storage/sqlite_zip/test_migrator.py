@@ -30,7 +30,7 @@ def test_check_migration_needed_same_version(tmp_path):
     assert not check_migration_needed(zip_path, latest_version)
 
 
-def test_check_migration_needed_different_version(tmp_path):
+def test_check_migration_needed_different_version(tmp_path, caplog):
     """Test check_migration_needed when migration is needed."""
     zip_path = tmp_path / 'test.zip'
 

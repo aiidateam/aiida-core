@@ -150,6 +150,7 @@ class SqliteZipBackend(StorageBackend):
                 migrate(filepath_archive, filepath_migrated, target_version)
                 shutil.move(filepath_migrated, filepath_archive)  # type: ignore[arg-type]
                 return False
+
         # Here the original archive either doesn't exist or ``reset == True`` so we simply create an empty base archive
         # and move it to the path pointed to by the storage configuration of the profile.
         with tempfile.TemporaryDirectory() as dirpath:

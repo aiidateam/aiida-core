@@ -119,7 +119,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
     cache_path_backup = None
     # Keep generating a new backup filename based on the current time until it does not exist
     while not cache_path_backup or os.path.isfile(cache_path_backup):
-        cache_path_backup = f"{cache_path}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
+        cache_path_backup = f'{cache_path}.{timezone.now().strftime("%Y%m%d-%H%M%S.%f")}'
 
     warnings.warn(
         'cache_config.yml use is deprecated and support will be removed in `v3.0`. Merging into config.json and '

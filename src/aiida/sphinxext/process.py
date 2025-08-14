@@ -182,7 +182,7 @@ class AiidaProcessDirective(SphinxDirective):
             return valid_type.__name__
         except AttributeError:
             try:
-                return f"({', '.join(v.__name__ for v in valid_type)})"
+                return f'({", ".join(v.__name__ for v in valid_type)})'
             except (AttributeError, TypeError):
                 return str(valid_type)
 

@@ -171,7 +171,7 @@ def validate_traversal_rules(
         rules_applied[name] = follow
 
     if traversal_rules:
-        error_message = f"unrecognized keywords: {', '.join(traversal_rules.keys())}"
+        error_message = f'unrecognized keywords: {", ".join(traversal_rules.keys())}'
         raise exceptions.ValidationError(error_message)
 
     valid_output = {

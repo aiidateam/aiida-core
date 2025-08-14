@@ -56,9 +56,9 @@ def validate_list_of_string_tuples(val, tuple_length):
     from aiida.common.exceptions import ValidationError
 
     err_msg = (
-        'the value must be a list (or tuple) '
-        'of length-N list (or tuples), whose elements are strings; '
-        'N={}'.format(tuple_length)
+        'the value must be a list (or tuple) of length-N list (or tuples), whose elements are strings; N={}'.format(
+            tuple_length
+        )
     )
 
     if not isinstance(val, (list, tuple)):
@@ -395,7 +395,7 @@ class Prettifier:
         try:
             self._prettifier_f = self.prettifiers[format]
         except KeyError:
-            raise ValueError(f"Unknown prettifier format {format}; valid formats: {', '.join(self.get_prettifiers())}")
+            raise ValueError(f'Unknown prettifier format {format}; valid formats: {", ".join(self.get_prettifiers())}')
 
     def prettify(self, label):
         """Prettify a label using the format passed in the initializer

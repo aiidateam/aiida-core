@@ -478,3 +478,16 @@ class ImportGroup(Group):
 
 class UpfFamily(Group):
     """Group that represents a pseudo potential family containing `UpfData` nodes."""
+
+
+# from aiida.orm.nodes.data import Data
+
+# class DataGroup(Group, Data):
+#    """Group that represents a pseudo potential family containing `UpfData` nodes."""
+
+from aiida.orm.nodes.data.base import to_aiida_type
+
+
+@to_aiida_type.register(Group)
+def _(value):
+    return value

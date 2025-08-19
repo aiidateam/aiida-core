@@ -33,6 +33,12 @@ from aiida.common.folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage.configuration import Profile, get_config, load_profile
 
+try:
+    # typing.assert_never available since 3.11
+    from typing import assert_never
+except ImportError:
+    from typing_extensions import assert_never
+
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
 
@@ -906,7 +912,7 @@ def reset_log_level():
 
 @pytest.fixture
 def generate_calculation_node_add(tmp_path, aiida_localhost, request):
-    def _generate_calculation_node_add(x: int = 1, y: int = 2, method: str = 'run'):
+    def _generate_calculation_node_add(x: int = 1, y: int = 2, method: t.Literal['run', 'construct'] = 'run'):
         if method == 'run':
             # Actually run the calculation
             from aiida.engine import run_get_node
@@ -925,7 +931,7 @@ def generate_calculation_node_add(tmp_path, aiida_localhost, request):
 
             return add_node
 
-        elif method == 'mock':
+        elif method == 'construct':
             # Artificially create the node
             import json
 
@@ -1024,15 +1030,16 @@ def generate_calculation_node_add(tmp_path, aiida_localhost, request):
             return calcjob_node
 
         else:
-            msg = f"Unknown method '{method}'. Use 'run' or 'mock'."
-            raise ValueError(msg)
+            assert_never(method)
 
     return _generate_calculation_node_add
 
 
 @pytest.fixture
 def generate_workchain_multiply_add(aiida_localhost):
-    def _generate_workchain_multiply_add(x: int = 1, y: int = 2, z: int = 3, method: str = 'run'):
+    def _generate_workchain_multiply_add(
+        x: int = 1, y: int = 2, z: int = 3, method: t.Literal['run', 'construct'] = 'run'
+    ):
         if method == 'run':
             # Original implementation - actually run the workchain
             from aiida.engine import run_get_node
@@ -1052,15 +1059,15 @@ def generate_workchain_multiply_add(aiida_localhost):
 
             return multiply_add_node
 
-        elif method == 'mock':
-            msg = "Mock method for workchain multiply_add not yet implemented"
-            raise NotImplementedError()
+        elif method == 'construct':
+            msg = 'Manual construction method for multiply_add workchain not yet implemented.'
+            raise NotImplementedError(msg)
 
         else:
-            msg = f"Unknown method '{method}'. Use 'run' or 'mock'."
-            raise ValueError(msg)
+            assert_never(method)
 
     return _generate_workchain_multiply_add
+
 
 @pytest.fixture
 def create_file_hierarchy():

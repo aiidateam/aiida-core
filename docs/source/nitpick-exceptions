@@ -135,12 +135,15 @@ py:class click.types.Choice
 py:class click.types.Path
 py:class click.types.File
 py:class click.types.StringParamType
+py:class click.parser.OptionParser
 py:func click.shell_completion._start_of_option
 py:meth click.Option.get_default
 py:meth fail
 
 py:class ComputedFieldInfo
+py:class BaseModel
 py:class pydantic.fields.Field
+py:class pydantic.fields.FieldInfo
 py:class pydantic.main.BaseModel
 py:class PluggableSchemaValidator
 
@@ -155,8 +158,10 @@ py:class disk_objectstore.backup_utils.BackupManager
 
 py:class frozenset
 
+py:class numpy.bool
 py:class numpy.bool_
 py:class numpy.ndarray
+py:class np.ndarray
 py:class ndarray
 
 py:class paramiko.proxy.ProxyCommand

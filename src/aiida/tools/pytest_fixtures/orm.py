@@ -212,11 +212,36 @@ def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], 'Computer']:
     :return: A stored computer instance.
     """
 
-    def factory(label: str | None = None, configure: bool = True) -> 'Computer':
-        computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh_async')
+    def factory(label: str | None = None, configure: bool = True, backend: str | None = None) -> 'Computer':
+        """
+        Create or load a computer with the ``core.ssh_async`` transport.
+        :param label: The computer label. If not specified, a random UUID4 is used.
+        :param configure: Boolean, if ``True``, ensures the computer is configured.
+        :param backend: The backend to use for the async SSH transport. it can be either `asyncssh` or `openssh`
+            If not specified, it raises a ValueError.
+        """
 
+        def if_exists_and_is_configured(label):
+            from aiida.common.exceptions import NotExistent
+            from aiida.orm.utils import load_computer
+
+            try:
+                computer = load_computer(label=label)
+                if computer.is_configured:
+                    return True
+            except NotExistent:
+                pass
+            return False
+
+        if configure and backend is None and not if_exists_and_is_configured(label):
+            # For accurate testing, we don't set a default value for this.
+            # It should be explicitly specified to error nasty bugs.
+            raise ValueError(
+                'The `backend` argument must be specified when configuring a computer with `core.ssh_async` transport.'
+            )
+        computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh_async')
         if configure:
-            computer.configure()
+            computer.configure(backend=backend)
 
         return computer
 

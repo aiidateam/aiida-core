@@ -1,10 +1,17 @@
 name: release
 
-# Automate deployment to PyPI when creating a release tag vX.Y.Z
-# will only be published to PyPI if the git tag matches the release version
-# and the pre-commit and tests pass
+# Automate plubishing to PyPI and TestPyPI. When pushing a release tag vX.Y.Z,
+# the workflow will publish to PyPI. When the 'test-release' label is active on
+# a PR, the workflow will publish to TestPyPI on each update. In both cases it
+# is checked if pre-commit and the tests pass. When a release tag is pushed it
+# will in addition check if the tag and aiida-core version and tag match.
 
 on:
+  # pull request event we use for test releases
+  pull_request:
+    branches-ignore: [gh-pages]
+    paths-ignore: [docs/**]
+  # tag push event we use for the official release
   push:
     tags:
     - v[0-9]+.[0-9]+.[0-9]+*
@@ -16,21 +23,24 @@ jobs:
 
   check-release-tag:
 
-    # Only run this job on the main repository and not on forks
-    if: github.repository == 'aiidateam/aiida-core'
+    if: github.repository == 'aiidateam/aiida-core' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
     - name: Set up Python 3.9
       uses: actions/setup-python@v5
       with:
         python-version: '3.9'
-    - run: python .github/workflows/check_release_tag.py $GITHUB_REF
+
+    - name: Check tag
+      run: python .github/workflows/check_release_tag.py $GITHUB_REF
 
   pre-commit:
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
 
-    needs: [check-release-tag]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -41,15 +51,15 @@ jobs:
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.11'
-        extras: '[pre-commit]'
+        extras: pre-commit
         from-lock: 'false'
 
     - name: Run pre-commit
       run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
   tests:
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
 
-    needs: [check-release-tag]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -69,7 +79,8 @@ jobs:
     - name: Run sub-set of test suite
       run: pytest -s -m requires_rmq --db-backend=sqlite tests/
 
-  publish:
+  publish-pypi:
+    if: startsWith(github.ref, 'refs/tags/')
 
     name: Publish to PyPI
 
@@ -93,3 +104,32 @@ jobs:
       env:
         FLIT_USERNAME: __token__
         FLIT_PASSWORD: ${{ secrets.PYPI_KEY }}
+        FLIT_INDEX_URL: https://upload.pypi.org/legacy/
+
+
+  publish-testpypi:
+    if: github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release')
+
+    name: Publish to test PyPI
+
+    needs: [pre-commit, tests]
+
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+    - name: install flit
+      run: |
+        pip install flit~=3.4
+    - name: Build and publish
+      run: |
+        flit publish
+      env:
+        FLIT_USERNAME: __token__
+        FLIT_PASSWORD: ${{ secrets.TEST_PYPI_KEY }}
+        FLIT_INDEX_URL: https://test.pypi.org/legacy/

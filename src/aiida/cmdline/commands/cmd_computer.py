@@ -628,30 +628,35 @@ def computer_delete(computer, dry_run):
     builder = QueryBuilder()
     builder.append(Computer, filters={'label': label}, tag='computer')
     builder.append(Node, with_computer='computer', project=Node.fields.pk)
-    node_pks = builder.all(flat=True)
+    associated_nodes_pk = builder.all(flat=True)
 
-    echo.echo_report(f'This computer has {len(node_pks)} associated nodes')
+    echo.echo_report(f'This computer has {len(associated_nodes_pk)} associated nodes')
 
     def _dry_run_callback(pks):
         if pks:
             echo.echo_report('The nodes with the following pks would be deleted: ' + ' '.join(map(str, pks)))
-            echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
-        confirm = click.prompt('Shall I continue? [yes/N]', type=str) == 'yes'
+            echo.echo_warning(
+                f'YOU ARE ABOUT TO DELETE {len(pks)} NODES AND COMPUTER {label!r}! THIS CANNOT BE UNDONE!'
+            )
+
+        confirm = click.confirm('Shall I continue?', default=False)
         if not confirm:
             raise click.Abort
         return not confirm
 
-    delete_nodes(node_pks, dry_run=dry_run or _dry_run_callback)
+    if associated_nodes_pk:
+        delete_nodes(associated_nodes_pk, dry_run=dry_run or _dry_run_callback)
 
     if dry_run:
         return
 
+    # We delete the computer separately from the associated nodes, since the computer pk is in a different table
     try:
         orm.Computer.collection.delete(computer.pk)
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 
-    echo.echo_success(f'Computer `{label}` {"and all its associated nodes" if node_pks else ""} deleted.')
+    echo.echo_success(f'Computer `{label}` {"and all its associated nodes " if associated_nodes_pk else ""}deleted.')
 
 
 class LazyConfigureGroup(VerdiCommandGroup):

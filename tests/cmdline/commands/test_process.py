@@ -628,19 +628,10 @@ class TestVerdiProcess:
             assert len(result.output_lines) == 1, result.output_lines
             assert result.output_lines[0] == 'No log messages recorded for this entry'
 
-<<<<<<< HEAD
-    def test_process_dump(self, run_cli_command, tmp_path, run_workchain_multiply_add):
-        """Test verdi process dump"""
-
-        # Only test CLI interface here, the actual functionalities of the Python API are tested in `test_processes.py`
-        test_path = tmp_path / 'cli-dump'
-        node = run_workchain_multiply_add()
-=======
     def test_dump_basic(self, run_cli_command, tmp_path, generate_calculation_node_add):
         """Test basic dump functionality"""
         test_path = tmp_path / 'cli-dump'
         node = generate_calculation_node_add()
->>>>>>> main
 
         options = [str(node.pk), '--path', str(test_path)]
         result = run_cli_command(cmd_process.process_dump, options)

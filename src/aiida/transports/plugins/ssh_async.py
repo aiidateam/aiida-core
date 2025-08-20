@@ -172,7 +172,11 @@ class AsyncSshTransport(AsyncTransport):
         if self.script_before != 'None':
             os.system(f'{self.script_before}')
 
-        await self.async_backend.open()
+        try:
+            await self.async_backend.open()
+        except OSError as exc:
+            raise OSError(f'Error while opening the transport: {exc}')
+
         self._is_open = True
 
         return self
@@ -741,6 +745,8 @@ class AsyncSshTransport(AsyncTransport):
         if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
             raise ValueError(f'Unsupported compression format: {format}')
 
+        await self.makedirs_async(Path(remotedestination).parent, ignore_existing=True)
+
         compression_flag = {
             'tar': '',
             'tar.gz': 'z',
@@ -755,7 +761,7 @@ class AsyncSshTransport(AsyncTransport):
 
         for source in remotesources:
             if has_magic(source):
-                copy_list += await self.glob_async(source)
+                copy_list += await self.glob_async(source, ignore_nonexisting=False)
             else:
                 if not await self.path_exists_async(source):
                     raise OSError(f'The remote path {source} does not exist')
@@ -783,7 +789,11 @@ class AsyncSshTransport(AsyncTransport):
             raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
 
     async def extract_async(
-        self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        overwrite: bool = True,
+        strip_components: int = 0,
     ):
         """Extract a remote archive.
 
@@ -793,6 +803,7 @@ class AsyncSshTransport(AsyncTransport):
         :param remotedestination: path to the remote destination directory
         :param overwrite: if True, overwrite the file at remotedestination if it already exists
             (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+        :param strip_components: strip NUMBER leading components from file names on extraction
 
         :raises OSError: if the remotesource does not exist.
         :raises OSError: if the extraction fails.
@@ -805,7 +816,7 @@ class AsyncSshTransport(AsyncTransport):
 
         await self.makedirs_async(remotedestination, ignore_existing=True)
 
-        tar_command = f'tar -xf {remotesource!s} -C {remotedestination!s} '
+        tar_command = f'tar --strip-components {strip_components} -xf {remotesource!s} -C {remotedestination!s} '
 
         retval, stdout, stderr = await self.exec_command_wait_async(tar_command)
 
@@ -1161,20 +1172,21 @@ class AsyncSshTransport(AsyncTransport):
         else:
             await self.async_backend.symlink(remotesource, remotedestination)
 
-    async def glob_async(self, pathname: TransportPath):
+    async def glob_async(self, pathname: TransportPath, ignore_nonexisting: bool = True):
         """Return a list of paths matching a pathname pattern.
 
         The pattern may contain simple shell-style wildcards a la fnmatch.
 
         :param pathname: the pathname pattern to match.
             It should only be absolute path.
+        :param ignore_nonexisting: if True, it will not raise and returns an empty list.
 
         :type pathname:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a list of paths matching the pattern.
         """
         pathname = str(pathname)
-        return await self.async_backend.glob(pathname)
+        return await self.async_backend.glob(pathname, ignore_nonexisting=ignore_nonexisting)
 
     async def chmod_async(self, path: TransportPath, mode: int, follow_symlinks: bool = True):
         """Change the permissions of a file.

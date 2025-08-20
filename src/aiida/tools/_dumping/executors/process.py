@@ -621,6 +621,7 @@ class ReadmeGenerator:
         from aiida.cmdline.utils.ascii_vis import format_call_graph
         from aiida.cmdline.utils.common import (
             get_calcjob_report,
+            get_node_info,
             get_process_function_report,
             get_workchain_report,
         )
@@ -662,7 +663,7 @@ class ReadmeGenerator:
         _readme_string += f'\n## Process Report (`verdi process report {pk}`)\n\n```\n{report}\n```\n'
 
         _readme_string += (
-            f'\n## Node Info (`verdi node show {process_node.uuid}`)\n\n```\n{{get_node_info(process_node)}}\n```\n'
+            f'\n## Node Info (`verdi node show {process_node.uuid}`)\n\n```\n{get_node_info(process_node)}\n```\n'
         )
 
         (output_path / 'README.md').write_text(_readme_string, encoding='utf-8')

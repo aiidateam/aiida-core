@@ -484,13 +484,22 @@ class StorageBackend(abc.ABC):
             )
             data['Nodes']['process_types'] = [p for p in process_types if p]
 
-            first_time = QueryBuilder(self).append(Node, project=['ctime'], tag='node').order_by({'node': {'ctime': 'asc'}}).first(flat=True)
-            last_time = QueryBuilder(self).append(Node, project=['ctime'], tag='node').order_by({'node': {'ctime': 'desc'}}).first(flat=True)
+            first_time = (
+                QueryBuilder(self)
+                .append(Node, project=['ctime'], tag='node')
+                .order_by({'node': {'ctime': 'asc'}})
+                .first(flat=True)
+            )
+            last_time = (
+                QueryBuilder(self)
+                .append(Node, project=['ctime'], tag='node')
+                .order_by({'node': {'ctime': 'desc'}})
+                .first(flat=True)
+            )
 
             data['Nodes']['first_created'] = str(first_time) if first_time else None
             data['Nodes']['last_created'] = str(last_time) if last_time else None
 
-        
         query_group = QueryBuilder(self).append(Group, project=['type_string'])
         data['Groups'] = {'count': query_group.count()}
         if detailed:

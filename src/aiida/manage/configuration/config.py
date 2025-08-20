@@ -576,17 +576,27 @@ class Config:
 
         profile = self.get_profile(name)
         is_default_profile: bool = profile.name == self.default_profile_name
-
         if delete_storage:
             storage_cls = StorageFactory(profile.storage_backend)
-            if profile.storage_backend == 'core.sqlite_zip' and not Path(profile.storage_config['filepath']).exists():
-                LOGGER.warning(
-                    (
-                        f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the `.aiida` file at '
-                        f"`{profile.storage_config['filepath']}` doesn't exist anymore."
-                        'Possibly the file was manually removed before? Profile deletion will proceed anyway.'
+            if profile.storage_backend == 'core.sqlite_zip':
+                filepath = profile.storage_config.get('filepath')
+                if filepath is None:
+                    LOGGER.warning(
+                        f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but no filepath is configured. '
+                        'Profile deletion will proceed anyway.'
                     )
-                )
+                elif not Path(filepath).exists():
+                    LOGGER.warning(
+                        (
+                            f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the `.aiida` file at '
+                            f"`{filepath}` doesn't exist anymore. "
+                            'Possibly the file was manually removed before? Profile deletion will proceed anyway.'
+                        )
+                    )
+                else:
+                    storage = storage_cls(profile)
+                    storage.delete()
+                    LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
             else:
                 storage = storage_cls(profile)
                 storage.delete()

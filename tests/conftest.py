@@ -38,6 +38,8 @@ if t.TYPE_CHECKING:
 
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
+P = t.ParamSpec('P')
+
 
 class TestDbBackend(Enum):
     """Options for the '--db-backend' CLI argument when running pytest."""
@@ -382,8 +384,8 @@ def empty_config(tmp_path) -> Config:
         manager.load_profile(current_profile_name)
 
 
-@pytest.fixture
-def profile_factory():
+@pytest.fixture  # type: ignore[misc]
+def profile_factory() -> t.Callable[t.Concatenate[str, P], Profile]:
     """Create a new profile instance.
 
     :return: the profile instance.

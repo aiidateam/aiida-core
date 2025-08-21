@@ -33,6 +33,8 @@ from aiida.transports import Transport
 # TODO : test for exotic cases of copy with source = destination
 # TODO : silly cases of copy/put/get from self to self
 
+CHDIR_WARNING = re.escape('`chdir()` is deprecated and will be removed')
+
 
 @pytest.fixture(scope='function')
 def tmp_path_remote(tmp_path_factory):
@@ -323,7 +325,7 @@ def test_chdir_to_empty_string(custom_transport):
         return
 
     with custom_transport as transport:
-        with pytest.warns(AiidaDeprecationWarning, match=re.escape('`chdir()` is deprecated and will be removed')):
+        with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
             new_dir = transport.normalize(os.path.join('/', 'tmp'))
             transport.chdir(new_dir)
             transport.chdir('')
@@ -988,7 +990,7 @@ def test_exec_pwd(custom_transport, tmp_path_remote):
         subfolder = """_'s f"#"""  # A folder with characters to escape
         subfolder_fullpath = os.path.join(location, subfolder)
 
-        with pytest.warns(AiidaDeprecationWarning, match=re.escape('`chdir()` is deprecated and will be removed')):
+        with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
             transport.chdir(location)
         if not transport.isdir(subfolder):
             # Since I created the folder, I will remember to
@@ -996,7 +998,7 @@ def test_exec_pwd(custom_transport, tmp_path_remote):
             transport.mkdir(subfolder)
 
             assert transport.isdir(subfolder)
-            with pytest.warns(AiidaDeprecationWarning, match=re.escape('`chdir()` is deprecated and will be removed')):
+            with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
                 transport.chdir(subfolder)
 
             assert subfolder_fullpath == transport.getcwd()

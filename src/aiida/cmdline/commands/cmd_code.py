@@ -85,6 +85,7 @@ def set_code_builder(ctx, param, value):
     """Set the code spec for defaults of following options."""
     from aiida.orm.utils.builders.code import CodeBuilder
 
+    # TODO(danielhollas): CodeBuilder is deprecated, rewrite this somehow?
     with warnings.catch_warnings(record=True):
         ctx.code_builder = CodeBuilder.from_code(value)
     return value
@@ -125,6 +126,7 @@ def setup_code(ctx, non_interactive, **kwargs):
     if kwargs['input_plugin']:
         kwargs['input_plugin'] = kwargs['input_plugin'].name
 
+    # TODO(danielhollas): CodeBuilder is deprecated
     with warnings.catch_warnings(record=True):
         code_builder = CodeBuilder(**kwargs)
 
@@ -227,10 +229,16 @@ def show(code):
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
     table.append(['Type', code.entry_point.name])
+    # TODO(danielhollas): This code is a bit too clever, make it simpler!
+    # It generates warnings because it accessess deprecated attributes such as
+    # Code.repository_metadata -> Code.base.repository.metadata
+    # Code.attributes -> Code.base.attributes.all
+    # Code.extras -> Code.base.extras.all
+    # Also also, the blanket `except AttributeError` is evil and can hide bugs.
     for key in code.Model.model_fields.keys():
         try:
-            with warnings.catch_warnings(record=True):
-                table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
+            # with warnings.catch_warnings(record=True):
+            table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
         except AttributeError:
             continue
     if is_verbose():

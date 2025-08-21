@@ -646,7 +646,7 @@ def computer_delete(computer, dry_run):
         return not confirm
 
     if associated_nodes_pk:
-        delete_nodes(associated_nodes_pk, dry_run=dry_run or _dry_run_callback)  # type: ignore[arg-type]
+        delete_nodes(associated_nodes_pk, dry_run=dry_run or _dry_run_callback)
 
     if dry_run:
         return

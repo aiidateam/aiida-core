@@ -237,8 +237,8 @@ def show(code):
     # Also also, the blanket `except AttributeError` is evil and can hide bugs.
     for key in code.Model.model_fields.keys():
         try:
-            # with warnings.catch_warnings(record=True):
-            table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
+            with warnings.catch_warnings(record=True):
+                table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
         except AttributeError:
             continue
     if is_verbose():

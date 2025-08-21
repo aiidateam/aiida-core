@@ -11,11 +11,11 @@ lists and meshes of k-points (i.e., points in the reciprocal space of a
 periodic crystal structure).
 """
 
-from typing import List
+import typing as t
 
 import numpy
 
-from aiida.orm.fields import add_field
+from aiida.common.pydantic import MetadataField
 
 from .array import ArrayData
 
@@ -38,48 +38,15 @@ class KpointsData(ArrayData):
     set_cell_from_structure methods.
     """
 
-    __qb_fields__ = [
-        add_field(
-            'labels',
-            dtype=List[str],
-            doc='Labels associated with the list of kpoints',
-        ),
-        add_field(
-            'label_numbers',
-            dtype=List[int],
-            doc='Index of the labels in the list of kpoints',
-        ),
-        add_field(
-            'mesh',
-            dtype=List[int],
-            doc='Mesh of kpoints',
-        ),
-        add_field(
-            'offset',
-            dtype=List[float],
-            doc='Offset of kpoints',
-        ),
-        add_field(
-            'cell',
-            dtype=List[List[float]],
-            doc='Unit cell of the crystal, in Angstroms',
-        ),
-        add_field(
-            'pbc1',
-            dtype=bool,
-            doc='True if the first lattice vector is periodic',
-        ),
-        add_field(
-            'pbc2',
-            dtype=bool,
-            doc='True if the second lattice vector is periodic',
-        ),
-        add_field(
-            'pbc3',
-            dtype=bool,
-            doc='True if the third lattice vector is periodic',
-        ),
-    ]
+    class Model(ArrayData.Model):
+        labels: t.List[str] = MetadataField(description='Labels associated with the list of kpoints')
+        label_numbers: t.List[int] = MetadataField(description='Index of the labels in the list of kpoints')
+        mesh: t.List[int] = MetadataField(description='Mesh of kpoints')
+        offset: t.List[float] = MetadataField(description='Offset of kpoints')
+        cell: t.List[t.List[float]] = MetadataField(description='Unit cell of the crystal, in Angstroms')
+        pbc1: bool = MetadataField(description='True if the first lattice vector is periodic')
+        pbc2: bool = MetadataField(description='True if the second lattice vector is periodic')
+        pbc3: bool = MetadataField(description='True if the third lattice vector is periodic')
 
     def get_description(self):
         """Returns a string with infos retrieved from  kpoints node's properties.

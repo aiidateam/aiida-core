@@ -8,9 +8,10 @@
 ###########################################################################
 """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
+import typing as t
 from functools import singledispatch
 
-from aiida.orm.fields import add_field
+from aiida.common.pydantic import MetadataField
 
 from .data import Data
 
@@ -26,12 +27,12 @@ def to_aiida_type(value):
 class BaseType(Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
-    __qb_fields__ = [
-        add_field(
-            'value',
-            doc='The value of the data',
-        ),
-    ]
+    class Model(Data.Model):
+        value: t.Any = MetadataField(
+            ...,
+            title='Data value.',
+            description='The value of the data',
+        )
 
     def __init__(self, value=None, **kwargs):
         try:

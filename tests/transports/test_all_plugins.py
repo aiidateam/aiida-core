@@ -23,7 +23,7 @@ from pathlib import Path
 import psutil
 import pytest
 
-from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
+from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import Transport
 
 # TODO : test for copy with pattern
@@ -55,25 +55,23 @@ def tmp_path_local(tmp_path_factory):
 # Skip for any transport plugins that are locally installed but are not part of `aiida-core`
 @pytest.fixture(
     scope='function',
-    params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
+    params=[
+        ('core.local', None),
+        ('core.ssh', None),
+        ('core.ssh_async', 'asyncssh'),
+        ('core.ssh_async', 'openssh'),
+    ],
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
-    plugin = TransportFactory(request.param)
+    plugin = TransportFactory(request.param[0])
 
-    if request.param == 'core.ssh':
+    if request.param[0] == 'core.ssh':
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
-    elif request.param == 'core.ssh_auto':
-        kwargs = {'machine': 'localhost'}
-        # The transport config is store in a independent temporary path per test to not mix up
-        # with the files under operating.
-        filepath_config = tmp_path_factory.mktemp('transport') / 'config'
-        monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
-        if not filepath_config.exists():
-            filepath_config.write_text('Host localhost')
-    elif request.param == 'core.ssh_async':
+    elif request.param[0] == 'core.ssh_async':
         kwargs = {
             'machine': 'localhost',
+            'backend': request.param[1],
         }
     else:
         kwargs = {}
@@ -152,6 +150,7 @@ def test_listdir(custom_transport, tmp_path_remote):
     """Create directories, verify listdir, delete a folder with subfolders"""
     with custom_transport as transport:
         list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
+        list_of_dir = ['1', '-f', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
         for this_dir in list_of_dir:
             transport.mkdir(tmp_path_remote / this_dir)
@@ -184,6 +183,7 @@ def test_listdir_withattributes(custom_transport, tmp_path_remote):
 
     with custom_transport as transport:
         list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
+        list_of_dir = ['1', '-f', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
         for this_dir in list_of_dir:
             transport.mkdir(tmp_path_remote / this_dir)
@@ -239,7 +239,6 @@ def test_dir_permissions_creation_modification(custom_transport, tmp_path_remote
         directory = tmp_path_remote / 'test'
 
         transport.makedirs(directory)
-
         # change permissions
         transport.chmod(directory, 0o777)
 
@@ -569,6 +568,12 @@ def test_put_and_get_tree(custom_transport, tmp_path_remote, tmp_path_local):
             {'local': {'file.txt': 'Viva verdi'}},
             ('local', 'local'),
             {'local': {'file.txt': 'Viva verdi', 'local': {'file.txt': 'Viva verdi'}}},
+        ),
+        (
+            {'local': {'sub': {'file.txt': 'Viva verdi'}}},
+            {},
+            ('local/sub', 'local/sub'),
+            {'local': {'sub': {'file.txt': 'Viva verdi'}}},
         ),
     ),
 )
@@ -1278,7 +1283,7 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
         with pytest.raises(OSError, match=f"{tmp_path_remote / 'non_existing'} does not exist"):
             transport.compress('tar', tmp_path_remote / 'non_existing', tmp_path_remote / 'archive.tar', '/')
 
-        # if a matching pattern if remote source is not found
+        # if a matching pattern of the remote source is not found
         with pytest.raises(OSError, match='does not exist, or a matching file/folder not found'):
             transport.compress('tar', tmp_path_remote / 'non_existing*', tmp_path_remote / 'archive.tar', '/')
 
@@ -1474,3 +1479,51 @@ def test_extract(
     with pytest.raises(OSError, match='Error while extracting the tar archive.'):
         with custom_transport as transport:
             transport.extract(tmp_path_remote / archive_name, tmp_path_remote / 'extracted_1')
+
+
+def test_glob(custom_transport, tmp_path_local):
+    """Test the glob method of the transport plugin.
+    This tests mainly the implementation, doesn't need to run on remote
+    """
+
+    for subpath in [
+        'i.txt',
+        'j.txt',
+        'folder1/a/b.txt',
+        'folder1/a/c.txt',
+        'folder1/a/c.in',
+        'folder1/c.txt',
+        'folder1/e/f/g.txt',
+        'folder2/x',
+        'folder2/y/z',
+    ]:
+        tmp_path_local.joinpath(subpath).parent.mkdir(parents=True, exist_ok=True)
+        tmp_path_local.joinpath(subpath).write_text('touch')
+
+    with custom_transport as transport:
+        # do not raise an error if the path does not exist
+        g_list = transport.glob(str(tmp_path_local) + '/non_existing/*.txt')
+        assert g_list == []
+
+        g_list = transport.glob(str(tmp_path_local) + '/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['i.txt', 'j.txt']]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder1/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['folder1/c.txt']]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder1/*/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['folder1/a/b.txt', 'folder1/a/c.txt']]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder*/*')
+        paths = [
+            str(tmp_path_local.joinpath(item))
+            for item in ['folder1/a', 'folder1/c.txt', 'folder2/x', 'folder2/y', 'folder1/e']
+        ]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder1/*/*/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['folder1/e/f/g.txt']]
+        assert sorted(paths) == sorted(g_list)

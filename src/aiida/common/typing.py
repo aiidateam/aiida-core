@@ -6,21 +6,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module with asserts that can be used in the codebase."""
+"""Module to define commonly used data structures."""
 
-from typing import Optional
+from __future__ import annotations
 
-try:
-    from typing import Never
-except ImportError:
-    # Fallback for Python 3.10 and older
-    from typing_extensions import Never
+import pathlib
+from typing import Union
+
+__all__ = ('FilePath',)
 
 
-def assert_never(arg: Never, message: Optional[str] = None) -> Never:
-    """Assert a part of code that should never be reached.
-    This is useful, especially when adding new variables to an enum,
-    so to remind the developers to handle the new variable in all the switch cases.
-    """
-
-    raise AssertionError('This part of code should never be reached' if not message else message)
+FilePath = Union[str, pathlib.PurePath]

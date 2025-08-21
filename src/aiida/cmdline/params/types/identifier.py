@@ -76,7 +76,7 @@ class IdentifierParamType(click.ParamType, ABC):
 
     @property
     @abstractmethod
-    @with_dbenv()  # type: ignore[misc]
+    @with_dbenv()
     def orm_class_loader(self) -> OrmEntityLoader:
         """Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
@@ -84,7 +84,7 @@ class IdentifierParamType(click.ParamType, ABC):
         :return: the orm entity loader class for this ParamType
         """
 
-    @with_dbenv()  # type: ignore[misc]
+    @with_dbenv()
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context) -> t.Any:
         """Attempt to convert the given value to an instance of the orm class using the orm class loader.
 

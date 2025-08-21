@@ -18,7 +18,7 @@ jobs:
 
   run-and-upload:
 
-    # Only run on pushes and when the job is on the main repository and not on forks
+    # Only run if branch or PR base is pointing to the upstream repo
     if: github.repository == 'aiidateam/aiida-core'
 
     strategy:
@@ -60,7 +60,7 @@ jobs:
         from-lock: 'true'
 
     - name: Run benchmarks
-      run: uv run pytest --db-backend psql --benchmark-only --benchmark-json benchmark.json tests/
+      run: pytest --db-backend psql --benchmark-only --benchmark-json benchmark.json tests/
 
     - name: Store benchmark result
       uses: aiidateam/github-action-benchmark@v3
@@ -78,3 +78,4 @@ jobs:
         comment-on-alert: true
         fail-on-alert: false
         alert-comment-cc-users: '@giovannipizzi,@agoscinski,@GeigerJ2,@khsrali,@unkcpz'
+      if: github.event_name == 'push' && github.ref_name == 'main'

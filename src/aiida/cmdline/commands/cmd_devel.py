@@ -54,7 +54,7 @@ def devel_check_load_time():
                 f'potential `verdi` speed problem: `{loaded}` module is imported which is not in: {allowed}'
             )
 
-    echo.echo_success('no issues detected')
+    echo.echo_success('no load time issues detected')
 
 
 @verdi_devel.command('check-undesired-imports')
@@ -65,7 +65,7 @@ def devel_check_undesired_imports():
     """
     loaded_modules = 0
 
-    unwanted_modules = [
+    undesired_modules = [
         'requests',
         'plumpy',
         'disk_objectstore',
@@ -81,15 +81,15 @@ def devel_check_undesired_imports():
     # trogon powers the optional TUI and uses asyncio.
     # Check for asyncio only when the optional tui extras are not installed.
     if 'trogon' not in sys.modules:
-        unwanted_modules += 'asyncio'
-    for modulename in unwanted_modules:
+        undesired_modules += 'asyncio'
+    for modulename in undesired_modules:
         if modulename in sys.modules:
             echo.echo_warning(f'Detected loaded module "{modulename}"')
             loaded_modules += 1
 
     if loaded_modules > 0:
-        echo.echo_critical(f'Detected {loaded_modules} unwanted modules')
-    echo.echo_success('no issues detected')
+        echo.echo_critical(f'Detected {loaded_modules} undesired modules')
+    echo.echo_success('no undesired modules detected')
 
 
 @verdi_devel.command('validate-plugins')

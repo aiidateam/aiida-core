@@ -89,6 +89,7 @@ ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.cmdline.data.structure.import': 'aiida.cmdline.data.structure.import',
     'aiida.data': 'aiida.orm.nodes.data',
     'aiida.groups': 'aiida.orm.groups',
+    'aiida.orm': 'aiida.orm',
     'aiida.node': 'aiida.orm.nodes',
     'aiida.parsers': 'aiida.parsers.plugins',
     'aiida.schedulers': 'aiida.schedulers.plugins',

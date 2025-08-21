@@ -529,8 +529,8 @@ class Config:
             profile.storage_cls.initialise(profile)
         except Exception as exception:
             raise StorageMigrationError(
-                f'Storage backend initialisation failed, probably because the configuration is incorrect:\n{exception}'
-            )
+                'Initialisation of the storage backend failed. Please check the traceback.'
+            ) from exception
         LOGGER.report('Storage initialisation completed.')
 
         self.add_profile(profile)

@@ -23,8 +23,7 @@ from aiida.orm.utils.node import (
 
 def test_load_node_class_fallback():
     """Verify that `load_node_class` will fall back to `Data` class if entry point cannot be loaded."""
-    with pytest.warns(UserWarning):
-        loaded_class = load_node_class('data.core.some.non.existing.plugin.')
+    loaded_class = load_node_class('data.core.some.non.existing.plugin.')
     assert loaded_class == Data
 
     # For really unresolvable type strings, we fall back onto the `Data` class

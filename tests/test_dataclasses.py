@@ -212,6 +212,7 @@ class TestCifData:
     @skip_ase
     @skip_pycifrw
     @pytest.mark.requires_rmq
+    @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_get_structure(self):
         """Test `CifData.get_structure`."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
@@ -293,6 +294,7 @@ O 0.5 0.5 0.5
     @skip_pycifrw
     @skip_pymatgen
     @pytest.mark.requires_rmq
+    @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
@@ -2058,6 +2060,7 @@ class TestStructureDataFromPymatgen:
     """
 
     @skip_pymatgen
+    @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_1(self):
         """Tests roundtrip pymatgen -> StructureData -> pymatgen
         Test's input is derived from COD entry 9011963, processed with

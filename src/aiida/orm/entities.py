@@ -14,7 +14,7 @@ import abc
 import pathlib
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, Union
 
 from plumpy.base.utils import call_with_super_check, super_check
 from pydantic import BaseModel
@@ -156,14 +156,14 @@ class Collection(abc.ABC, Generic[EntityType]):
         :return: a list of resulting matches
         """
         query = self.query(filters=filters, order_by=order_by, limit=limit)
-        return cast(List[EntityType], query.all(flat=True))
+        return query.all(flat=True)
 
     def all(self) -> List[EntityType]:
         """Get all entities in this collection.
 
         :return: A list of all entities
         """
-        return cast(List[EntityType], self.query().all(flat=True))
+        return self.query().all(flat=True)
 
     def count(self, filters: Optional['FilterType'] = None) -> int:
         """Count entities in this collection according to criteria.

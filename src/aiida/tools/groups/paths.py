@@ -179,7 +179,7 @@ class GroupPath:
         query = orm.QueryBuilder()
         filters = {'label': self.path}
         query.append(self.cls, subclassing=False, filters=filters, project='id')
-        return query.all(flat=True)  # type: ignore[return-value]
+        return query.all(flat=True)
 
     @property
     def is_virtual(self) -> bool:

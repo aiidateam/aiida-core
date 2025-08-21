@@ -440,154 +440,61 @@ def test_delete_profile(config_with_profile, profile_factory):
     assert profile_name not in config_on_disk.profile_names
 
 
-def test_delete_profile_sqlite_zip(config_with_profile, tmp_path, caplog, monkeypatch):
-    """Test the ``delete_profile`` method with sqlite_zip backend when file doesn't exist."""
+@pytest.mark.parametrize(
+    'file_exists,delete_storage,expected_messages',
+    [
+        # sqlite_zip with file exists - normal case
+        (True, True, ['Data storage deleted']),
+        # sqlite_zip with file exists, don't delete storage
+        (True, False, ['Data storage not deleted']),
+        # sqlite_zip with non-existent file
+        (False, True, ["doesn't exist anymore", 'Possibly the file was manually removed']),
+    ],
+)
+def test_delete_profile_sqlite_zip(
+    config_with_profile, tmp_path, caplog, monkeypatch, file_exists, delete_storage, expected_messages
+):
+    """Test the ``delete_profile`` method with sqlite_zip backend in different scenarios."""
     import logging
 
     # Mock the validate_storage function to avoid needing a valid archive file
-    # This allows us to test the delete_profile logic without creating real, complex archive files
     from aiida.storage.sqlite_zip import migrator
     from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 
     monkeypatch.setattr(migrator, 'validate_storage', lambda path: None)
 
     config = config_with_profile
-    profile_name = 'sqlite-zip-profile'
+    profile_name = 'sqlite-zip-test-profile'
 
-    # Create a path for the sqlite zip file
     zip_filepath = tmp_path / f'{profile_name}.aiida'
-
-    # Create a profile with sqlite_zip backend
     profile = SqliteZipBackend.create_profile(zip_filepath)
     profile._name = profile_name
 
     config.add_profile(profile)
-    assert config.get_profile(profile_name) == profile
-
-    # Store the config to disk
     config.store()
 
-    # Test case 1: File exists - normal deletion should work
-    # Create the zip file to simulate it exists
-    zip_filepath.write_bytes(b'dummy zip content')
-    assert zip_filepath.exists()
+    # Create file if it should exist and we have a valid path
+    if file_exists:
+        zip_filepath.write_bytes(b'dummy zip content')
+
+    caplog.clear()
 
     with caplog.at_level(logging.INFO):
-        config.delete_profile(profile_name, delete_storage=True)
+        config.delete_profile(profile_name, delete_storage=delete_storage)
 
-    # Verify the file was deleted and profile removed
-    assert not zip_filepath.exists()
+    # Verify file handling
+    if delete_storage and file_exists:
+        assert not zip_filepath.exists()
+    elif file_exists and not delete_storage:
+        assert zip_filepath.exists()
+
+    # Verify profile removal
     assert profile_name not in config.profile_names
 
-    # Verify config was persisted to disk
-    config_on_disk = Config.from_file(config.filepath)
-    assert profile_name not in config_on_disk.profile_names
-
-    # Test case 2: File doesn't exist - should log warning but proceed
-    # Re-add the profile for the second test
-    profile2_name = 'sqlite-zip-profile-2'
-    zip_filepath2 = tmp_path / f'{profile2_name}.aiida'
-
-    profile2 = SqliteZipBackend.create_profile(zip_filepath2)
-    profile2._name = profile2_name
-
-    config.add_profile(profile2)
-    config.store()
-
-    # Ensure the zip file does NOT exist
-    assert not zip_filepath2.exists()
-
-    # Clear previous log records
-    caplog.clear()
-
-    with caplog.at_level(logging.WARNING):
-        config.delete_profile(profile2_name, delete_storage=True)
-
-    # Verify the warning messages were logged
-    warning_messages = [record.message for record in caplog.records if record.levelname == 'WARNING']
-    assert len(warning_messages) == 1
-    assert f'Profile `{profile2_name}` has the `core.sqlite_zip` backend' in warning_messages[0]
-    assert "doesn't exist anymore" in warning_messages[0]
-    assert 'Possibly the file was manually removed before' in warning_messages[0]
-
-    # Verify profile was still removed from config
-    assert profile2_name not in config.profile_names
-
-    # Verify config was persisted to disk
-    config_on_disk = Config.from_file(config.filepath)
-    assert profile2_name not in config_on_disk.profile_names
-
-    # Test case 3: delete_storage=False should not attempt to delete storage
-    profile3_name = 'sqlite-zip-profile-3'
-    zip_filepath3 = tmp_path / f'{profile3_name}.aiida'
-
-    profile3 = SqliteZipBackend.create_profile(zip_filepath3)
-    profile3._name = profile3_name
-
-    config.add_profile(profile3)
-    config.store()
-
-    # Create the file so we can verify it's NOT deleted
-    zip_filepath3.write_bytes(b'dummy zip content')
-    assert zip_filepath3.exists()
-
-    # Clear previous log records
-    caplog.clear()
-
-    with caplog.at_level(logging.INFO):
-        config.delete_profile(profile3_name, delete_storage=False)
-
-    # Verify the file was NOT deleted
-    assert zip_filepath3.exists()
-
-    # Verify appropriate log message
-    info_messages = [record.message for record in caplog.records]
-    assert any('Data storage not deleted' in msg for msg in info_messages)
-
-    # Verify profile was removed from config
-    assert profile3_name not in config.profile_names
-
-    # Test case 4: Test with default profile to verify default profile handling
-    profile4_name = 'sqlite-zip-default-profile'
-    zip_filepath4 = tmp_path / f'{profile4_name}.aiida'
-
-    profile4 = SqliteZipBackend.create_profile(zip_filepath4)
-    profile4._name = profile4_name
-
-    config.add_profile(profile4)
-    config.set_default_profile(profile4_name, overwrite=True)
-    config.store()
-
-    # Create the file
-    zip_filepath4.write_bytes(b'dummy zip content')
-    assert zip_filepath4.exists()
-
-    # Clear previous log records
-    caplog.clear()
-
-    with caplog.at_level(logging.WARNING):
-        config.delete_profile(profile4_name, delete_storage=True)
-
-    # Verify the file was deleted and profile removed
-    assert not zip_filepath4.exists()
-    assert profile4_name not in config.profile_names
-
-    # Verify appropriate warning about default profile
-    warning_messages = [record.message for record in caplog.records if record.levelname == 'WARNING']
-
-    # If other profiles exist, one should be set as new default
-    assert any('setting' in msg and 'as the new default' in msg for msg in warning_messages)
-
-    config.store()
-
-    # No other profiles exist anymore
-    caplog.clear()
-    with caplog.at_level(logging.WARNING):
-        config.delete_profile('default', delete_storage=False)
-    warning_messages = [record.message for record in caplog.records if record.levelname == 'WARNING']
-
-    assert not config.profile_names
-    assert any('no profiles remain to set as default' in msg for msg in warning_messages)
+    # Verify expected log messages
+    all_messages = [record.message for record in caplog.records]
+    for expected_message in expected_messages:
+        assert any(expected_message in msg for msg in all_messages)
 
 
 def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):

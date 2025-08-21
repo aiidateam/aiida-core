@@ -47,7 +47,7 @@ dependencies = [
   'sqlalchemy>=2.0.20,<3',
   'tabulate>=0.9.0,<0.10.0',
   'tqdm~=4.45',
-  'typing-extensions~=4.0;python_version<"3.10"',
+  'typing-extensions~=4.1;python_version<"3.11"',
   'upf_to_json~=0.9.2',
   'wrapt~=1.11',
   'chardet~=5.2.0;platform_system=="Windows"'
@@ -68,6 +68,7 @@ requires-python = '>=3.9'
 'core.stash' = 'aiida.calculations.stash:StashCalculation'
 'core.templatereplacer' = 'aiida.calculations.templatereplacer:TemplatereplacerCalculation'
 'core.transfer' = 'aiida.calculations.transfer:TransferCalculation'
+'core.unstash' = 'aiida.calculations.unstash:UnstashCalculation'
 
 [project.entry-points.'aiida.calculations.importers']
 'core.arithmetic.add' = 'aiida.calculations.importers.arithmetic.add:ArithmeticAddCalculationImporter'
@@ -230,7 +231,7 @@ notebook = [
 ]
 pre-commit = [
   'aiida-core[atomic_tools,rest,tests,tui]',
-  'mypy~=1.16.0',
+  'mypy~=1.17.0',
   'packaging~=23.0',
   'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',

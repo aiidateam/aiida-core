@@ -33,10 +33,18 @@ from aiida.common.folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage.configuration import Profile, get_config, load_profile
 
+try:
+    from typing import ParamSpec
+except ImportError:
+    # Fallback for Python 3.9 and older
+    from typing_extensions import ParamSpec  # type: ignore[assignment]
+
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
 
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
+
+P = ParamSpec('P')
 
 
 class TestDbBackend(Enum):
@@ -412,14 +420,14 @@ def empty_config(tmp_path) -> Config:
         manager.load_profile(current_profile_name)
 
 
-@pytest.fixture
-def profile_factory() -> Profile:
+@pytest.fixture  # type: ignore[misc]
+def profile_factory() -> t.Callable[t.Concatenate[str, P], Profile]:
     """Create a new profile instance.
 
     :return: the profile instance.
     """
 
-    def _create_profile(name='test-profile', **kwargs):
+    def _create_profile(name='test-profile', **kwargs) -> Profile:
         repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
 
         profile_dictionary = {

@@ -269,7 +269,7 @@ class Config:
 
         # Keep generating a new backup filename based on the current time until it does not exist
         while not filepath_backup or os.path.isfile(filepath_backup):
-            filepath_backup = f"{filepath}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
+            filepath_backup = f'{filepath}.{timezone.now().strftime("%Y%m%d-%H%M%S.%f")}'
 
         shutil.copy(filepath, filepath_backup)
 
@@ -579,12 +579,31 @@ class Config:
 
         profile = self.get_profile(name)
         is_default_profile: bool = profile.name == self.default_profile_name
-
         if delete_storage:
             storage_cls = StorageFactory(profile.storage_backend)
-            storage = storage_cls(profile)
-            storage.delete()
-            LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
+            if profile.storage_backend == 'core.sqlite_zip':
+                filepath = profile.storage_config.get('filepath')
+                if filepath is None:
+                    LOGGER.warning(
+                        f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but no filepath is configured. '
+                        'Profile deletion will proceed anyway.'
+                    )
+                elif not Path(filepath).exists():
+                    LOGGER.warning(
+                        (
+                            f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the aiida archive file '
+                            f"at `{filepath}` doesn't exist anymore. "
+                            'Possibly the file was manually removed before? Profile deletion will proceed anyway.'
+                        )
+                    )
+                else:
+                    storage = storage_cls(profile)
+                    storage.delete()
+                    LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
+            else:
+                storage = storage_cls(profile)
+                storage.delete()
+                LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
         else:
             LOGGER.report(f'Data storage not deleted, configuration is: {profile.storage_config}')
 

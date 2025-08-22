@@ -101,9 +101,6 @@ repos:
         src/aiida/cmdline/commands/cmd_node.py|
         src/aiida/cmdline/commands/cmd_shell.py|
         src/aiida/cmdline/commands/cmd_storage.py|
-        src/aiida/cmdline/utils/ascii_vis.py|
-        src/aiida/cmdline/utils/common.py|
-        src/aiida/cmdline/utils/echo.py|
         src/aiida/common/extendeddicts.py|
         src/aiida/common/utils.py|
         src/aiida/engine/daemon/execmanager.py|

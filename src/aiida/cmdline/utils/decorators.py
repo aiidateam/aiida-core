@@ -18,6 +18,8 @@ Provides:
 
 """
 
+from __future__ import annotations
+
 import typing as t
 from contextlib import contextmanager
 
@@ -181,7 +183,7 @@ def only_if_daemon_running(echo_function=echo.echo_critical, message=None):
     return wrapper
 
 
-def only_if_daemon_not_running(echo_function=echo.echo_critical, message=None):
+def only_if_daemon_not_running(echo_function=echo.echo_critical, message: str | None = None):
     """Function decorator for CLI command to print critical error and exit automatically when daemon is running.
 
     The error printing and exit behavior can be controlled with the decorator keyword arguments. The default message
@@ -242,7 +244,7 @@ def check_circus_zmq_version(wrapped, _, args, kwargs):
     return wrapped(*args, **kwargs)
 
 
-def deprecated_command(message):
+def deprecated_command(message: str):
     """Function decorator that will mark a click command as deprecated when invoked.
 
     Example::

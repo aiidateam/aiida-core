@@ -8,12 +8,15 @@
 ###########################################################################
 """Convenience functions for logging output from ``verdi`` commands."""
 
+from __future__ import annotations
+
 import collections
 import enum
 import json
 import logging
 import sys
-from typing import Any, Optional
+from collections.abc import Sequence
+from typing import Any, Callable, NoReturn, Optional
 
 import click
 
@@ -78,7 +81,7 @@ def echo(message: Any, fg: Optional[str] = None, bold: bool = False, nl: bool = 
     :param err: whether to log to stderr.
     """
     message = click.style(message, fg=fg, bold=bold)
-    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})  # type: ignore[attr-defined]
 
 
 def echo_debug(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -117,7 +120,7 @@ def echo_report(message: str, bold: bool = False, nl: bool = True, err: bool = F
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': prefix})  # type: ignore[attr-defined]
 
 
 def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -136,7 +139,7 @@ def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = 
     if prefix:
         message = click.style('Success: ', bold=True, fg=COLORS['success']) + message
 
-    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})  # type: ignore[attr-defined]
 
 
 def echo_warning(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -165,7 +168,7 @@ def echo_error(message: str, bold: bool = False, nl: bool = True, err: bool = Tr
     CMDLINE_LOGGER.error(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
-def echo_critical(message: str, bold: bool = False, nl: bool = True, err: bool = True, prefix: bool = True) -> None:
+def echo_critical(message: str, bold: bool = False, nl: bool = True, err: bool = True, prefix: bool = True) -> NoReturn:
     """Log a critical error message to the cmdline logger and exit with ``exit_status``.
 
     This should be used to print messages for errors that cannot be recovered from and so the script should be directly
@@ -200,7 +203,13 @@ def echo_deprecated(message: str, bold: bool = False, nl: bool = True, err: bool
         sys.exit(ExitCode.DEPRECATED)
 
 
-def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=None):
+def echo_formatted_list(
+    collection: Sequence,
+    attributes: list,
+    sort: Callable | None = None,
+    highlight: Callable | None = None,
+    hide: Callable | None = None,
+) -> None:
     """Log a collection of entries as a formatted list, one entry per line.
 
     :param collection: a list of objects
@@ -209,10 +218,9 @@ def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=
     :param highlight: optional lambda to highlight an entry in the collection if it returns True
     :param hide: optional lambda to skip an entry if it returns True
     """
+    entries = collection
     if sort:
         entries = sorted(collection, key=sort)
-    else:
-        entries = collection
 
     template = f"{{symbol}}{' {}' * len(attributes)}"
 
@@ -227,7 +235,7 @@ def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=
             echo(click.style(template.format(symbol=' ', *values)))
 
 
-def _format_dictionary_json_date(dictionary, sort_keys=True):
+def _format_dictionary_json_date(dictionary: dict | list, sort_keys: bool = True) -> str:
     """Return a dictionary formatted as a string using the json format and converting dates to strings."""
 
     def default_jsondump(data):
@@ -244,14 +252,14 @@ def _format_dictionary_json_date(dictionary, sort_keys=True):
     return json.dumps(dictionary, indent=4, sort_keys=sort_keys, default=default_jsondump)
 
 
-def _format_yaml(dictionary, sort_keys=True):
+def _format_yaml(dictionary: dict | list, sort_keys: bool = True) -> str:
     """Return a dictionary formatted as a string using the YAML format."""
     import yaml
 
     return yaml.dump(dictionary, sort_keys=sort_keys)
 
 
-def _format_yaml_expanded(dictionary, sort_keys=True):
+def _format_yaml_expanded(dictionary: dict | list, sort_keys: bool = True) -> str:
     """Return a dictionary formatted as a string using the expanded YAML format."""
     import yaml
 
@@ -263,7 +271,7 @@ VALID_DICT_FORMATS_MAPPING = collections.OrderedDict(
 )
 
 
-def echo_tabulate(table, **kwargs):
+def echo_tabulate(table: Any, **kwargs) -> None:
     """Echo the string generated by passing ``table`` to ``tabulate.tabulate``.
 
     This wrapper is added in order to lazily import the ``tabulate`` package only when invoked. This helps keeping the
@@ -277,10 +285,10 @@ def echo_tabulate(table, **kwargs):
     echo(tabulate(table, **kwargs))
 
 
-def echo_dictionary(dictionary, fmt='json+date', sort_keys=True):
+def echo_dictionary(dictionary: dict | list, fmt: str = 'json+date', sort_keys: bool = True) -> None:
     """Log the given dictionary to stdout in the given format
 
-    :param dictionary: the dictionary
+    :param dictionary: dictionary or a list of dictionaries
     :param fmt: the format to use for printing
     :param sort_keys: Whether to automatically sort keys
     """
@@ -293,7 +301,7 @@ def echo_dictionary(dictionary, fmt='json+date', sort_keys=True):
     echo(format_function(dictionary, sort_keys=sort_keys))
 
 
-def is_stdout_redirected():
+def is_stdout_redirected() -> bool:
     """Determines if the standard output is redirected.
 
     For cases where the standard output is redirected and you want to

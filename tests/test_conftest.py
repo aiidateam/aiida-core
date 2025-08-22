@@ -79,7 +79,7 @@ def test_entry_points_add_and_load(entry_points):
         entry_point()
 
 
-def test_nodes_produce_same_results(generate_calculation_node_add):
+def test_arithmetic_add_node_results(generate_calculation_node_add):
     """Test that run and construct methods produce equivalent nodes."""
     x, y = 5, 7
 

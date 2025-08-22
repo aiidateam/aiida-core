@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import enum
 import functools
 import re
 import typing as t
@@ -198,6 +199,9 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
                     if metadata_key in ('priority', 'short_name', 'option_cls'):
                         options_spec[key][metadata_key] = metadata_value
 
+            if issubclass(field_type, enum.Enum):
+                options_spec[key]['type'] = click.Choice([e.value for e in field_type])
+
         options_ordered = []
 
         for name, spec in sorted(options_spec.items(), key=lambda x: x[1].get('priority', 0), reverse=True):
@@ -209,13 +213,13 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
     @staticmethod
     def create_option(name, spec: dict) -> t.Callable[[t.Any], t.Any]:
         """Create a click option from a name and a specification."""
-        is_flag = spec.pop('is_flag', False)
+        is_flag = spec.get('is_flag', False)
         name_dashed = name.replace('_', '-')
         option_name = f'--{name_dashed}/--no-{name_dashed}' if is_flag else f'--{name_dashed}'
         option_short_name = spec.pop('short_name', None)
         option_names = (option_short_name, option_name) if option_short_name else (option_name,)
 
-        kwargs = {'cls': spec.pop('option_cls', InteractiveOption), 'show_default': True, 'is_flag': is_flag, **spec}
+        kwargs = {'cls': spec.pop('option_cls', InteractiveOption), 'show_default': True, **spec}
 
         # If the option is a flag with no default, make sure it is not prompted for, as that will force the user to
         # specify it to be on or off, but cannot let it unspecified.

@@ -46,6 +46,7 @@ QbType = Callable[[], orm.QueryBuilder]
 
 def create_archive(
     entities: Optional[Iterable[Union[orm.Computer, orm.Node, orm.Group, orm.User]]],
+    # TODO: This is different from the CLI implementation, where OUTPUT_FILENAME is a required argument
     filename: Union[None, str, Path] = None,
     *,
     archive_format: Optional[ArchiveFormatAbstract] = None,
@@ -287,30 +288,22 @@ def create_archive(
 
     EXPORT_LOGGER.report(f'Creating archive with:\n{tabulate(count_summary)}')
 
-    # Handle temporary directory configuration
-    if tmp_dir is not None:
-        tmp_dir = Path(tmp_dir)
-        if not tmp_dir.exists():
-            EXPORT_LOGGER.warning(f"Specified temporary directory '{tmp_dir}' doesn't exist. Creating it.")
-            tmp_dir.mkdir(parents=True)
-        if not tmp_dir.is_dir():
-            msg = f"Specified temporary directory '{tmp_dir}' is not a directory"
-            raise ArchiveExportError(msg)
-        # Check if directory is writable
-        # Taken from: https://stackoverflow.com/a/2113511
-        if not os.access(tmp_dir, os.W_OK | os.X_OK):
-            msg = f"Specified temporary directory '{tmp_dir}' is not writable"
-            raise ArchiveExportError(msg)
+    # Create temporary directory in the same folder as the output file
+    parent_dir = filename.parent
 
-    else:
-        # Create temporary directory in the same folder as the output file
-        tmp_dir = filename.parent
+    if not parent_dir.exists():
+        msg = "Parent directory of the export file doesn't exist."
+        raise ArchiveExportError(msg)
+    # Check if directory is writable
+    # Taken from: https://stackoverflow.com/a/2113511
+    if not os.access(parent_dir, os.W_OK | os.X_OK):
+        msg = f"Specified temporary directory '{tmp_dir}' is not writable"
+        raise ArchiveExportError(msg)
 
     # Create and open the archive for writing.
     # We create in a temp dir then move to final place at end,
     # so that the user cannot end up with a half written archive on errors
     try:
-        tmp_dir.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(dir=tmp_dir, prefix='.aiida-export-') as tmpdir:
             tmp_filename = Path(tmpdir) / 'export.zip'
             with archive_format.open(tmp_filename, mode='x', compression=compression) as writer:
@@ -404,7 +397,6 @@ def create_archive(
         if e.errno == 28:  # No space left on device
             msg = (
                 f"Insufficient disk space in temporary directory '{tmp_dir}'. "
-                f'Consider using --tmp-dir to specify a location with more available space.'
             )
             raise ArchiveExportError(msg) from e
 

@@ -208,17 +208,3 @@ def test_info_empty_archive(run_cli_command):
     filename_input = get_archive_file('empty.aiida', filepath='export/migrate')
     result = run_cli_command(cmd_archive.archive_info, [filename_input], raises=True)
     assert 'archive file unreadable' in result.output
-
-
-def test_create_tmp_dir_option(run_cli_command, tmp_path):
-    """Test that the --tmp-dir CLI option passes through correctly."""
-    node = Dict().store()
-
-    custom_tmp = tmp_path / 'custom_tmp'
-    custom_tmp.mkdir()
-    filename_output = tmp_path / 'archive.aiida'
-
-    options = ['--tmp-dir', str(custom_tmp), '-N', node.pk, '--', filename_output]
-
-    run_cli_command(cmd_archive.create, options)
-    assert filename_output.is_file()

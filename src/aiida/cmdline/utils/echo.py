@@ -16,7 +16,7 @@ import json
 import logging
 import sys
 from collections.abc import Sequence
-from typing import Any, Callable, Literal, NoReturn, Optional
+from typing import Any, Callable, NoReturn, Optional
 
 import click
 
@@ -235,7 +235,7 @@ def echo_formatted_list(
             echo(click.style(template.format(symbol=' ', *values)))
 
 
-def _format_dictionary_json_date(dictionary: dict, sort_keys: bool = True) -> str:
+def _format_dictionary_json_date(dictionary: dict | list, sort_keys: bool = True) -> str:
     """Return a dictionary formatted as a string using the json format and converting dates to strings."""
 
     def default_jsondump(data):
@@ -252,14 +252,14 @@ def _format_dictionary_json_date(dictionary: dict, sort_keys: bool = True) -> st
     return json.dumps(dictionary, indent=4, sort_keys=sort_keys, default=default_jsondump)
 
 
-def _format_yaml(dictionary: dict, sort_keys: bool = True) -> str:
+def _format_yaml(dictionary: dict | list, sort_keys: bool = True) -> str:
     """Return a dictionary formatted as a string using the YAML format."""
     import yaml
 
     return yaml.dump(dictionary, sort_keys=sort_keys)
 
 
-def _format_yaml_expanded(dictionary: dict, sort_keys: bool = True) -> str:
+def _format_yaml_expanded(dictionary: dict | list, sort_keys: bool = True) -> str:
     """Return a dictionary formatted as a string using the expanded YAML format."""
     import yaml
 
@@ -285,11 +285,7 @@ def echo_tabulate(table: Any, **kwargs) -> None:
     echo(tabulate(table, **kwargs))
 
 
-def echo_dictionary(
-    dictionary: dict,
-    fmt: Literal['json+date'] | Literal['yaml'] | Literal['yaml_expanded'] = 'json+date',
-    sort_keys: bool = True,
-) -> None:
+def echo_dictionary(dictionary: dict | list, fmt: str = 'json+date', sort_keys: bool = True) -> None:
     """Log the given dictionary to stdout in the given format
 
     :param dictionary: dictionary or a list of dictionaries

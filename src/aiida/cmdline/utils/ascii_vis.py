@@ -67,7 +67,7 @@ def format_call_graph(
     max_depth: int | None = None,
     call_link_label: bool = False,
     info_fn: t.Callable = calc_info,
-) -> t.Any:
+) -> str:
     """Print a tree like the POSIX tree command for the calculation call graph.
 
     :param calc_node: The calculation node

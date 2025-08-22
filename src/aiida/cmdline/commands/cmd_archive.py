@@ -141,11 +141,12 @@ def inspect(ctx, archive, version, meta_data, database):
 @click.option(
     '--tmp-dir',
     type=click.Path(exists=True, file_okay=False, dir_okay=True, writable=True, path_type=Path),
-    help='Directory to use for temporary files during archive creation. '
-    'If not specified, a temporary directory will be created in the same directory as the output file '
-    "with a '.aiida-export-' prefix. This parameter is useful when the output directory has limited "
-    'space or when you want to use a specific filesystem (e.g., faster storage) for temporary operations. '
-    'The directory must exist and be writable.',
+    help=(
+        'Location where the temporary directory will be written during archive creation.'
+        'The directory must exist and be writable, and defaults to the parent directory of the output file.'
+        'This parameter is useful when the output directory has limited space or when you want to use a specific'
+        'filesystem (e.g., faster storage) for temporary operations.'
+    ),
 )
 @decorators.with_dbenv()
 def create(

@@ -141,11 +141,10 @@ def create_archive(
 
     :param backend: the backend to export from. If not specified, the default backend is used.
 
-    :param tmp_dir: Directory to use for temporary files during archive creation.
-        If not specified, a temporary directory will be created in the same directory as the output file
-        with a '.aiida-export-' prefix. This parameter is useful when the output directory has limited
-        space or when you want to use a specific filesystem (e.g., faster storage) for temporary operations.
-        The directory must exist and be writable.
+    :param tmp_dir: Location where the temporary directory will be written during archive creation.
+        The directory must exist and be writable, and defaults to the parent directory of the output file.
+        This parameter is useful when the output directory has limited space or when you want to use a specific
+        filesystem (e.g., faster storage) for temporary operations.
 
     :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
         what rule names are toggleable and what the defaults are.
@@ -289,7 +288,6 @@ def create_archive(
     EXPORT_LOGGER.report(f'Creating archive with:\n{tabulate(count_summary)}')
 
     # Handle temporary directory configuration
-    tmp_prefix = '.aiida-export-'
     if tmp_dir is not None:
         tmp_dir = Path(tmp_dir)
         if not tmp_dir.exists():
@@ -313,7 +311,7 @@ def create_archive(
     # so that the user cannot end up with a half written archive on errors
     try:
         tmp_dir.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(dir=tmp_dir, prefix=tmp_prefix) as tmpdir:
+        with tempfile.TemporaryDirectory(dir=tmp_dir, prefix='.aiida-export-') as tmpdir:
             tmp_filename = Path(tmpdir) / 'export.zip'
             with archive_format.open(tmp_filename, mode='x', compression=compression) as writer:
                 # add metadata

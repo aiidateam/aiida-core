@@ -588,8 +588,8 @@ class Config:
                 elif not Path(filepath).exists():
                     LOGGER.warning(
                         (
-                            f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the `.aiida` file at '
-                            f"`{filepath}` doesn't exist anymore. "
+                            f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the aiida archive file '
+                            f"at `{filepath}` doesn't exist anymore. "
                             'Possibly the file was manually removed before? Profile deletion will proceed anyway.'
                         )
                     )

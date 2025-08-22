@@ -31,6 +31,7 @@ from aiida.cmdline.commands.cmd_computer import (
     computer_test,
 )
 from aiida.cmdline.utils.echo import ExitCode
+from aiida.common.warnings import AiidaDeprecationWarning
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):
@@ -215,7 +216,8 @@ def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_2'})
     options_dict['mpiprocs-per-machine'] = 0
     options = generate_setup_options(options_dict)
-    run_cli_command(computer_setup, options)
+    with pytest.warns(AiidaDeprecationWarning, match='Specifying `0` to not set `default_mpiprocs_per_machine`'):
+        run_cli_command(computer_setup, options)
 
     new_computer = orm.Computer.collection.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)

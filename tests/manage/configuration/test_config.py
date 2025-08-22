@@ -11,7 +11,6 @@
 import json
 import os
 import pathlib
-import typing as t
 import uuid
 
 import pytest
@@ -23,13 +22,6 @@ from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST
 from aiida.manage.configuration.options import get_option
 from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.storage.sqlite_temp import SqliteTempBackend
-
-try:
-    from typing import ParamSpec
-except ImportError:
-    from typing_extensions import ParamSpec
-
-    t.ParamSpec = ParamSpec
 
 
 class InvalidBaseStorage:

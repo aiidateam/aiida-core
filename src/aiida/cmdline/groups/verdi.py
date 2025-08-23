@@ -106,11 +106,7 @@ class VerdiCommand(click.Command):
         if self.deprecated:
             # We are abusing click.Command `deprecated` member variable by using a
             # string instead of a bool to also use it as optional deprecated message
-            echo_deprecated(
-                self.deprecated
-                if isinstance(self.deprecated, str)  # type: ignore[redundant-expr]
-                else 'This command is deprecated.'
-            )
+            echo_deprecated(self.deprecated if isinstance(self.deprecated, str) else 'This command is deprecated.')
 
         return super().parse_args(ctx, args)
 

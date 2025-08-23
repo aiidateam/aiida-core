@@ -52,7 +52,9 @@ class JsonableData(Data):
 
     class Model(Data.Model):
         model_config = ConfigDict(arbitrary_types_allowed=True)
-        obj: JsonSerializableProtocol = MetadataField(description='The JSON-serializable object.')
+        obj: JsonSerializableProtocol = MetadataField(
+            description='The JSON-serializable object.',
+        )
 
     def __init__(self, obj: JsonSerializableProtocol, *args, **kwargs):
         """Construct the node for the to be wrapped object."""

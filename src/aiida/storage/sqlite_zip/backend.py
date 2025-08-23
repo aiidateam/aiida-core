@@ -132,14 +132,20 @@ class SqliteZipBackend(StorageBackend):
         filepath_archive = Path(profile.storage_config['filepath'])
 
         if filepath_archive.exists() and not reset:
-            from .migrator import migrate
+            from .migrator import check_migration_needed, migrate
+
+            # Check if migration is needed. If we are already at the desired version, then no migration is required
+            target_version = cls.version_head()
+            if not check_migration_needed(inpath=filepath_archive, target_version=target_version):
+                LOGGER.report(f'Existing {cls.__name__} is already at target version {target_version}')
+                return False
 
             # The archive exists but ``reset == False``, so we try to migrate to the latest schema version. If the
             # migration works, we replace the original archive with the migrated one.
             with tempfile.TemporaryDirectory() as dirpath:
                 filepath_migrated = Path(dirpath) / 'migrated.zip'
-                LOGGER.report(f'Migrating existing {cls.__name__}')
-                migrate(filepath_archive, filepath_migrated, cls.version_head())
+                LOGGER.report(f'Migrating existing {cls.__name__} to {target_version}')
+                migrate(filepath_archive, filepath_migrated, target_version)
                 shutil.move(filepath_migrated, filepath_archive)  # type: ignore[arg-type]
                 return False
 

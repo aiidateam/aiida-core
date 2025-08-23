@@ -175,9 +175,10 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     # Not passing user input should cause the command to exit
     # without executing `storage.mantain` and so the last
     # message should be the prompt to continue or not.
-    # In click>=8.2 this raises an exception which we need to catch.
+    # In testing infrastructure of click>=8.2.1
+    # this raises an exception which we need to catch.
     click_version = version.Version(metadata.version('click'))
-    if click_version >= version.Version('8.2.0'):
+    if click_version >= version.Version('8.2.1'):
         raises = True
     result = run_cli_command(cmd_storage.storage_maintain, use_subprocess=False, raises=raises)
     message_list = result.output_lines

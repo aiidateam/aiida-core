@@ -34,7 +34,7 @@ class BaseType(Data):
             description='The value of the data',
         )
 
-    def __init__(self, value=None, **kwargs):
+    def __init__(self, value: t.Optional[t.Any] = None, **kwargs):
         try:
             getattr(self, '_type')
         except AttributeError:

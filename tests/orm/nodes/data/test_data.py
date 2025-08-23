@@ -18,7 +18,7 @@ from tests.static import STATIC_DIR
 
 
 @pytest.fixture
-def generate_class_instance(tmp_path, aiida_localhost):
+def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
     """Generate a dummy `Data` instance for the given sub class."""
 
     def _generate_class_instance(data_class):

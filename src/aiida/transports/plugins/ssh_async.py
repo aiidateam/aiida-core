@@ -745,6 +745,8 @@ class AsyncSshTransport(AsyncTransport):
         if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
             raise ValueError(f'Unsupported compression format: {format}')
 
+        await self.makedirs_async(Path(remotedestination).parent, ignore_existing=True)
+
         compression_flag = {
             'tar': '',
             'tar.gz': 'z',
@@ -787,7 +789,11 @@ class AsyncSshTransport(AsyncTransport):
             raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
 
     async def extract_async(
-        self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        overwrite: bool = True,
+        strip_components: int = 0,
     ):
         """Extract a remote archive.
 
@@ -797,6 +803,7 @@ class AsyncSshTransport(AsyncTransport):
         :param remotedestination: path to the remote destination directory
         :param overwrite: if True, overwrite the file at remotedestination if it already exists
             (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+        :param strip_components: strip NUMBER leading components from file names on extraction
 
         :raises OSError: if the remotesource does not exist.
         :raises OSError: if the extraction fails.
@@ -809,7 +816,7 @@ class AsyncSshTransport(AsyncTransport):
 
         await self.makedirs_async(remotedestination, ignore_existing=True)
 
-        tar_command = f'tar -xf {remotesource!s} -C {remotedestination!s} '
+        tar_command = f'tar --strip-components {strip_components} -xf {remotesource!s} -C {remotedestination!s} '
 
         retval, stdout, stderr = await self.exec_command_wait_async(tar_command)
 

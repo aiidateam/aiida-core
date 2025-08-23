@@ -768,7 +768,7 @@ This calculation produces an ``aiida.in`` file in JSON format with the stashing 
 
 .. code-block:: none
 
-   {"working_directory": <orm.RemoteData>.get_remote_path(),
+   {"source_path": <orm.RemoteData>.get_remote_path(),
     "source_list": ["aiida.out", "output.txt"],
     "target_base": "/path/to/stash"}
 
@@ -783,14 +783,14 @@ Therefore, your script should parse the JSON, and implement the stashing by any 
 .. code-block:: bash
 
    json=$(cat)
-   working_directory=$(echo "$json" | jq -r '.working_directory')
+   source_path=$(echo "$json" | jq -r '.source_path')
    source_list=$(echo "$json" | jq -r '.source_list[]')
    target_base=$(echo "$json" | jq -r '.target_base')
 
    mkdir -p "$target_base"
    for item in $source_list; do
-       cp "$working_directory/$item" "$target_base/"
-       echo "$working_directory/$item copied successfully."
+       cp "$source_path/$item" "$target_base/"
+       echo "$source_path/$item copied successfully."
    done
 
 This way you can implement any custom logic in your script, such as tape commands, handling errors, or filtering files dynamically.

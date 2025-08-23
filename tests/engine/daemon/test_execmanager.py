@@ -658,8 +658,6 @@ async def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_i
         )
 
 
-# TODO:
-# THIS entire test suit has to move and merge with test_stash.py
 @pytest.mark.parametrize(
     'file_hierarchy',
     [{'aiida.out': 'out', 'aiida.in': 'in', '_aiidasubmit.sh': 'script', 'folder': {'1': '1', '2': '2', '3': '3'}}],
@@ -685,9 +683,7 @@ async def test_stashing(
     monkeypatch,
     caplog,
 ):
-    """Test the stashing of files, when stashing is performed as part of a generic calculation job.
-    Testing the stashing of files, when stashing is performed via `StashCalculation` is done in `test_stash.py`.
-    """
+    """Test `stash_calculation`"""
 
     import logging
 

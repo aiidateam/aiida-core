@@ -167,8 +167,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         max_wallclock_seconds: None | int
         max_memory_kb: None | int
         rerunnable: bool
-        retrieve_list: None | list[str | tuple[str, str, str]]
-        retrieve_temporary_list: None | list[str | tuple[str, str, str]]
+        retrieve_list: None | list[str | tuple[str, str, int]]
+        retrieve_temporary_list: None | list[str | tuple[str, str, int]]
         local_copy_list: None | list[tuple[str, str, str]]
         remote_copy_list: None | list[tuple[str, str, str]]
         remote_symlink_list: None | list[tuple[str, str, str]]

@@ -41,34 +41,34 @@ class KpointsData(ArrayData):
     class Model(ArrayData.Model):
         labels: t.Optional[t.List[str]] = MetadataField(
             description='Labels associated with the list of kpoints',
-            orm_to_model=lambda node, _: node.base.attributes.get('labels', None),
+            orm_to_model=lambda node, _: node.base.attributes.get('labels', None),  # type: ignore[attr-defined]
         )
         label_numbers: t.Optional[t.List[int]] = MetadataField(
             description='Index of the labels in the list of kpoints',
-            orm_to_model=lambda node, _: node.base.attributes.get('label_numbers', None),
+            orm_to_model=lambda node, _: node.base.attributes.get('label_numbers', None),  # type: ignore[attr-defined]
         )
         mesh: t.Optional[t.List[int]] = MetadataField(
             description='Mesh of kpoints',
-            orm_to_model=lambda node, _: node.base.attributes.get('mesh', None),
+            orm_to_model=lambda node, _: node.base.attributes.get('mesh', None),  # type: ignore[attr-defined]
         )
         offset: t.Optional[t.List[float]] = MetadataField(
             description='Offset of kpoints',
-            orm_to_model=lambda node, _: node.base.attributes.get('offset', None),
+            orm_to_model=lambda node, _: node.base.attributes.get('offset', None),  # type: ignore[attr-defined]
         )
         cell: t.List[t.List[float]] = MetadataField(
             description='Unit cell of the crystal, in Angstroms',
         )
         pbc1: bool = MetadataField(
             description='True if the first lattice vector is periodic',
-            orm_to_model=lambda node, _: node.pbc[0],
+            orm_to_model=lambda node, _: node.pbc[0],  # type: ignore[attr-defined]
         )
         pbc2: bool = MetadataField(
             description='True if the second lattice vector is periodic',
-            orm_to_model=lambda node, _: node.pbc[1],
+            orm_to_model=lambda node, _: node.pbc[1],  # type: ignore[attr-defined]
         )
         pbc3: bool = MetadataField(
             description='True if the third lattice vector is periodic',
-            orm_to_model=lambda node, _: node.pbc[2],
+            orm_to_model=lambda node, _: node.pbc[2],  # type: ignore[attr-defined]
         )
 
     def __init__(

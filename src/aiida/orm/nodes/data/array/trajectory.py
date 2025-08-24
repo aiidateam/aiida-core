@@ -20,7 +20,7 @@ from aiida.common.pydantic import MetadataField
 from .array import ArrayData
 
 if TYPE_CHECKING:
-    from aiida.orm import StructureData
+    from aiida import orm
 
 __all__ = ('TrajectoryData',)
 
@@ -47,7 +47,7 @@ class TrajectoryData(ArrayData):
 
     def __init__(
         self,
-        structurelist: list[StructureData] | None = None,
+        structurelist: list[orm.StructureData] | None = None,
         units_positions: str | None = None,
         units_times: str | None = None,
         symbols: list[str] | None = None,

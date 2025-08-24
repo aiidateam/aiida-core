@@ -20,9 +20,6 @@ from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
 from aiida.common.pydantic import MetadataField
-from aiida.orm.computers import Computer
-from aiida.orm.implementation.storage_backend import StorageBackend
-from aiida.orm.users import User
 from aiida.orm.utils.mixins import Sealable
 
 from ..caching import NodeCaching

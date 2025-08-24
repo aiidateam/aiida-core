@@ -84,8 +84,10 @@ class KpointsData(ArrayData):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.cell = cell
-        self.pbc = (pbc1, pbc2, pbc3)
+        if cell is not None:
+            self.cell = cell
+        if any(pbc is not None for pbc in (pbc1, pbc2, pbc3)):
+            self.pbc = (pbc1 or False, pbc2 or False, pbc3 or False)
         if labels is not None and label_numbers is not None:
             if len(labels) != len(label_numbers):
                 raise ValueError('Labels and label numbers must have the same length')
@@ -144,7 +146,6 @@ class KpointsData(ArrayData):
         :return: a tuple of three booleans, each one tells if there are periodic
             boundary conditions for the i-th real-space direction (i=1,2,3)
         """
-        # return copy.deepcopy(self._pbc)
         return (self.base.attributes.get('pbc1'), self.base.attributes.get('pbc2'), self.base.attributes.get('pbc3'))
 
     @pbc.setter

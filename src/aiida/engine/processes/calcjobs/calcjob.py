@@ -216,7 +216,7 @@ def validate_additional_retrieve_list(additional_retrieve_list: Any, _: Any) -> 
 class CalcJob(Process):
     """Implementation of the CalcJob process."""
 
-    _node_class = orm.CalcJobNode
+    _node_class = orm.CalcJobNode  # type: ignore[assignment]
     _spec_class = CalcJobProcessSpec
     link_label_retrieved: str = 'retrieved'
     KEY_CACHE_VERSION: str = 'cache_version'

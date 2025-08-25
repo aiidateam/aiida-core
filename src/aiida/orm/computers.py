@@ -74,13 +74,35 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     _CLS_COLLECTION = ComputerCollection
 
     class Model(entities.Entity.Model):
-        uuid: str = MetadataField(description='The UUID of the computer', is_attribute=False, exclude_to_orm=True)
-        label: str = MetadataField(description='Label for the computer', is_attribute=False)
-        description: str = MetadataField(description='Description of the computer', is_attribute=False)
-        hostname: str = MetadataField(description='Hostname of the computer', is_attribute=False)
-        transport_type: str = MetadataField(description='Transport type of the computer', is_attribute=False)
-        scheduler_type: str = MetadataField(description='Scheduler type of the computer', is_attribute=False)
-        metadata: Dict[str, Any] = MetadataField(description='Metadata of the computer', is_attribute=False)
+        uuid: str = MetadataField(
+            description='The UUID of the computer',
+            is_attribute=False,
+            exclude_to_orm=True,
+        )
+        label: str = MetadataField(
+            description='Label for the computer',
+            is_attribute=False,
+        )
+        description: str = MetadataField(
+            description='Description of the computer',
+            is_attribute=False,
+        )
+        hostname: str = MetadataField(
+            description='Hostname of the computer',
+            is_attribute=False,
+        )
+        transport_type: str = MetadataField(
+            description='Transport type of the computer',
+            is_attribute=False,
+        )
+        scheduler_type: str = MetadataField(
+            description='Scheduler type of the computer',
+            is_attribute=False,
+        )
+        metadata: Dict[str, Any] = MetadataField(
+            description='Metadata of the computer',
+            is_attribute=False,
+        )
 
     def __init__(
         self,

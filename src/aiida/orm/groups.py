@@ -111,8 +111,16 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     __type_string: ClassVar[Optional[str]]
 
     class Model(entities.Entity.Model):
-        uuid: str = MetadataField(description='The UUID of the group', is_attribute=False, exclude_to_orm=True)
-        type_string: str = MetadataField(description='The type of the group', is_attribute=False, exclude_to_orm=True)
+        uuid: str = MetadataField(
+            description='The UUID of the group',
+            is_attribute=False,
+            exclude_to_orm=True,
+        )
+        type_string: str = MetadataField(
+            description='The type of the group',
+            is_attribute=False,
+            exclude_to_orm=True,
+        )
         user: int = MetadataField(
             description='The group owner',
             is_attribute=False,
@@ -120,10 +128,17 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             orm_to_model=lambda group, _: group.user.pk,  # type: ignore[attr-defined]
         )
         time: Optional[datetime.datetime] = MetadataField(
-            description='The creation time of the node', is_attribute=False
+            description='The creation time of the node',
+            is_attribute=False,
         )
-        label: str = MetadataField(description='The group label', is_attribute=False)
-        description: Optional[str] = MetadataField(description='The group description', is_attribute=False)
+        label: str = MetadataField(
+            description='The group label',
+            is_attribute=False,
+        )
+        description: Optional[str] = MetadataField(
+            description='The group description',
+            is_attribute=False,
+        )
         extras: Optional[Dict[str, Any]] = MetadataField(
             description='The group extras',
             is_attribute=False,
@@ -164,7 +179,11 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         type_check(user, users.User)
 
         model = backend.groups.create(
-            label=label, user=user.backend_entity, description=description, type_string=self._type_string, time=time
+            label=label,
+            user=user.backend_entity,
+            description=description,
+            type_string=self._type_string,
+            time=time,
         )
         super().__init__(model)
         if extras is not None:

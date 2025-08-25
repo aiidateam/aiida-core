@@ -515,7 +515,7 @@ def get_symbols_string(symbols, weights):
         pieces.append(f'{symbol}{weight:4.2f}')
     if has_vacancies(weights):
         pieces.append(f'X{1.0 - sum(weights):4.2f}')
-    return f"{{{''.join(sorted(pieces))}}}"
+    return f'{{{"".join(sorted(pieces))}}}'
 
 
 def has_vacancies(weights):
@@ -697,12 +697,24 @@ class StructureData(Data):
     _internal_kind_tags = None
 
     class Model(Data.Model):
-        pbc1: bool = MetadataField(description='Whether periodic in the a direction')
-        pbc2: bool = MetadataField(description='Whether periodic in the b direction')
-        pbc3: bool = MetadataField(description='Whether periodic in the c direction')
-        cell: t.List[t.List[float]] = MetadataField(description='The cell parameters')
-        kinds: t.Optional[t.List[dict]] = MetadataField(description='The kinds of atoms')
-        sites: t.Optional[t.List[dict]] = MetadataField(description='The atomic sites')
+        pbc1: bool = MetadataField(
+            description='Whether periodic in the a direction',
+        )
+        pbc2: bool = MetadataField(
+            description='Whether periodic in the b direction',
+        )
+        pbc3: bool = MetadataField(
+            description='Whether periodic in the c direction',
+        )
+        cell: t.List[t.List[float]] = MetadataField(
+            description='The cell parameters',
+        )
+        kinds: t.Optional[t.List[dict]] = MetadataField(
+            description='The kinds of atoms',
+        )
+        sites: t.Optional[t.List[dict]] = MetadataField(
+            description='The atomic sites',
+        )
 
     def __init__(
         self,
@@ -1383,7 +1395,7 @@ class StructureData(Data):
         if aseatom is not None:
             if kwargs:
                 raise ValueError(
-                    "If you pass 'ase' as a parameter to " 'append_atom, you cannot pass any further' 'parameter'
+                    "If you pass 'ase' as a parameter to append_atom, you cannot pass any furtherparameter"
                 )
             position = aseatom.position
             kind = Kind(ase=aseatom)
@@ -2146,9 +2158,7 @@ class Kind:
         weights_tuple = _create_weights_tuple(value)
 
         if len(weights_tuple) != len(self._symbols):
-            raise ValueError(
-                'Cannot change the number of weights. Use the ' 'set_symbols_and_weights function instead.'
-            )
+            raise ValueError('Cannot change the number of weights. Use the set_symbols_and_weights function instead.')
         validate_weights_tuple(weights_tuple, _SUM_THRESHOLD)
 
         self._weights = weights_tuple
@@ -2201,9 +2211,7 @@ class Kind:
         symbols_tuple = _create_symbols_tuple(value)
 
         if len(symbols_tuple) != len(self._weights):
-            raise ValueError(
-                'Cannot change the number of symbols. Use the ' 'set_symbols_and_weights function instead.'
-            )
+            raise ValueError('Cannot change the number of symbols. Use the set_symbols_and_weights function instead.')
         validate_symbols_tuple(symbols_tuple)
 
         self._symbols = symbols_tuple

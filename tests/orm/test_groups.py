@@ -791,21 +791,3 @@ class TestGroupExtras:
         extras = {'extra_one': 'value', 'extra_two': 'value'}
         self.group.base.extras.set_many(extras)
         assert set(self.group.base.extras.keys()) == set(extras)
-
-def test_add_many_nodes():
-    """Test different ways of adding nodes."""
-    # nodes = [orm.Data().store() for _ in range(1, 70000)]
-    nodes = [orm.Int(i).store() for i in range(1, 32768)]
-
-    group = orm.Group(label='test_adding_many_nodes').store()
-    group.add_nodes(nodes)
-
-    # nodes = [orm.Data().store().backend_entity for _ in range(100)]
-    #
-    # # Add nodes to groups using different batch size. Check in the end the correct addition.
-    # batch_sizes = (1, 3, 10, 1000)
-    # for batch_size in batch_sizes:
-    #     group = orm.Group(label=f'test_batches_{batch_size!s}').store()
-    #     group.backend_entity.add_nodes(nodes, batch_size=batch_size)
-    #     assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
-

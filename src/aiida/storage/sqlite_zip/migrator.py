@@ -29,6 +29,7 @@ from archive_path import ZipPath, extract_file_in_zip, open_file_in_tar, open_fi
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, StorageMigrationError
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.storage.log import MIGRATE_LOGGER
+from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 
 from .migrations.legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
 from .migrations.legacy_to_main import LEGACY_TO_MAIN_REVISION, perform_v1_migration
@@ -68,52 +69,6 @@ def validate_storage(inpath: Path) -> None:
         )
 
 
-def check_migration_needed(inpath: Union[str, Path], target_version: str) -> bool:
-    """Check if migration is needed and validate the input file.
-
-    :param inpath: Path to the input file
-    :param target_version: Target version to migrate to
-    :return: True if migration is needed, False otherwise
-    :raises: StorageMigrationError if versions are invalid or file is corrupt
-    :raises: CorruptStorage if the file cannot be read properly
-    """
-    inpath = Path(inpath)
-
-    # the file should be either a tar (legacy only) or zip file
-    if not (tarfile.is_tarfile(str(inpath)) or zipfile.is_zipfile(str(inpath))):
-        msg = f'The input file is neither a tar nor a zip file: {inpath}'
-        raise CorruptStorage(msg)
-
-    # read the metadata.json which should always be present
-    metadata = extract_metadata(inpath, search_limit=None)
-
-    # obtain the current version from the metadata
-    if 'export_version' not in metadata:
-        msg = 'No export_version found in metadata'
-        raise CorruptStorage(msg)
-    current_version = metadata['export_version']
-
-    # check versions are valid
-    # versions 0.1, 0.2, 0.3 are no longer supported,
-    # since 0.3 -> 0.4 requires costly migrations of repo files (you would need to unpack all of them)
-    if current_version in ('0.1', '0.2', '0.3') or target_version in ('0.1', '0.2', '0.3'):
-        msg = (
-            f"Legacy migration from '{current_version}' -> '{target_version}' is not supported in aiida-core v2. "
-            'First migrate them to the latest version in aiida-core v1.'
-        )
-        raise StorageMigrationError(msg)
-    all_versions = list_versions()
-    if current_version not in all_versions:
-        msg = f"Unknown current version '{current_version}'"
-        raise StorageMigrationError(msg)
-    if target_version not in all_versions:
-        msg = f"Unknown target version '{target_version}'"
-        raise StorageMigrationError(msg)
-
-    # check if migration is needed
-    return current_version != target_version
-
-
 def migrate(
     inpath: Union[str, Path], outpath: Union[str, Path], version: str, *, force: bool = False, compression: int = 6
 ) -> None:
@@ -146,6 +101,11 @@ def migrate(
     inpath = Path(inpath)
     outpath = Path(outpath)
 
+    # Early exit if identical paths (self-migration)
+    if inpath.resolve() == outpath.resolve():
+        MIGRATE_LOGGER.report(f'No migration performed: input and output path are identical ({inpath})')
+        return
+
     # halt immediately, if we could not write to the output file
     if outpath.exists() and not force:
         raise StorageMigrationError('Output path already exists and force=False')
@@ -153,7 +113,10 @@ def migrate(
         raise StorageMigrationError('Existing output path is not a file')
 
     # Check if migration is needed
-    if not check_migration_needed(inpath, version):
+    current_version = SqliteZipBackend.get_current_archive_version(inpath=inpath)
+    SqliteZipBackend.validate_archive_versions(current_version=current_version, target_version=version)
+    migration_needed = current_version != version
+    if not migration_needed:
         # if we are already at the desired version, then no migration is required, so simply copy the file if necessary
         if inpath != outpath:
             if outpath.exists() and force:
@@ -172,11 +135,6 @@ def migrate(
 
     # read the metadata.json which should always be present
     metadata = extract_metadata(inpath, search_limit=None)
-
-    # obtain the current version from the metadata
-    if 'export_version' not in metadata:
-        raise CorruptStorage('No export_version found in metadata')
-    current_version = metadata['export_version']
 
     # update the modified time of the file and the compression
     metadata['mtime'] = datetime.now().isoformat()

@@ -17,7 +17,7 @@ from aiida.tools.archive import import_archive
 
 
 @pytest.mark.requires_psql
-@pytest.mark.usefixtures("aiida_profile_clean")
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_group_bulk_operations():
     """Regression test for PostgreSQL parameter limit issue (6545) using pre-created archive."""
     archive_path = Path(__file__).parent / 'data' / '40k-int-nodes.aiida'

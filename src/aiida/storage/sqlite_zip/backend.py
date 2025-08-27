@@ -156,7 +156,7 @@ class SqliteZipBackend(StorageBackend):
             with tempfile.TemporaryDirectory() as dirpath:
                 filepath_migrated = Path(dirpath) / 'migrated.zip'
                 LOGGER.report(
-                    f'Migrating existing {cls.__name__} to from version {current_version} to version {target_version}'
+                    f'Migrating existing {cls.__name__} from version {current_version} to version {target_version}'
                 )
                 migrate(filepath_archive, filepath_migrated, target_version)
                 shutil.move(filepath_migrated, filepath_archive)  # type: ignore[arg-type]

@@ -87,13 +87,15 @@ def test_initialise_migration_needed(tmp_path, caplog, monkeypatch):
     """Test :meth:`aiida.storage.sqlite_zip.backend.SqliteZipBackend.initialise` when migration is triggered."""
     filepath_archive = tmp_path / 'archive.zip'
     profile = SqliteZipBackend.create_profile(filepath_archive)
+    target_version = SqliteZipBackend.version_head()
+    old_version = '0.9'
 
     # First create a valid current archive
     assert SqliteZipBackend.initialise(profile)
 
     # Mock get_current_archive_version to return an old version (forcing migration)
     def mock_get_current_archive_version(inpath):
-        return '0.9'  # Old version that will trigger migration
+        return old_version
 
     monkeypatch.setattr(
         'aiida.storage.sqlite_zip.backend.SqliteZipBackend.get_current_archive_version',
@@ -117,7 +119,5 @@ def test_initialise_migration_needed(tmp_path, caplog, monkeypatch):
     assert result is False  # Archive existed, so returns False even after migration
 
     # Verify migration log message was generated
-    target_version = SqliteZipBackend.version_head()
-    assert any(
-        f'Migrating existing SqliteZipBackend to {target_version}' in record.message for record in caplog.records
-    )
+    log_msg = f'Migrating existing SqliteZipBackend from version {old_version} to version {target_version}'
+    assert any(log_msg in record.message for record in caplog.records)

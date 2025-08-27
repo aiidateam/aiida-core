@@ -104,7 +104,11 @@ def test_migrate_no_migration_needed_file_operations(tmp_path):
 
     # Test: identical paths, file should remain unchanged
     before_content = input_path.read_bytes()
-    migrate(input_path, input_path, latest_version)
+
+    with pytest.raises(StorageMigrationError, match='Output path already exists and force'):
+        migrate(input_path, input_path, latest_version)
+
+    migrate(input_path, input_path, latest_version, force=True)
     after_content = input_path.read_bytes()
     assert before_content == after_content, 'File should remain unchanged when inpath == outpath'
     assert zipfile.is_zipfile(input_path)
@@ -122,21 +126,3 @@ def test_migrate_no_migration_needed_file_operations(tmp_path):
     # Migration overwrites the original text file with the zip file
     migrate(input_path, output_path, latest_version, force=True)
     assert zipfile.is_zipfile(output_path)
-
-
-def test_migrate_early_exit_identical_paths(tmp_path, caplog):
-    """Test that migrate logs and returns early when input and output paths are identical."""
-    zip_path = tmp_path / 'test.zip'
-
-    metadata = {**default_metadata, 'export_version': latest_version}
-
-    with zipfile.ZipFile(zip_path, 'w') as zf:
-        zf.writestr('metadata.json', json.dumps(metadata))
-
-    # Test with identical resolved paths
-    migrate(zip_path, zip_path, latest_version)
-
-    # Should log the early exit message
-    assert any(
-        'No migration performed: input and output path are identical' in record.message for record in caplog.records
-    )

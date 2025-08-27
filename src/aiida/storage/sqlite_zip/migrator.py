@@ -101,16 +101,20 @@ def migrate(
     inpath = Path(inpath)
     outpath = Path(outpath)
 
-    # Early exit if identical paths (self-migration)
-    if inpath.resolve() == outpath.resolve():
-        MIGRATE_LOGGER.report(f'No migration performed: input and output path are identical ({inpath})')
-        return
-
     # halt immediately, if we could not write to the output file
     if outpath.exists() and not force:
         raise StorageMigrationError('Output path already exists and force=False')
     if outpath.exists() and not outpath.is_file():
         raise StorageMigrationError('Existing output path is not a file')
+
+    # extract the information we need for the actual migration
+    # the file should be either a tar (legacy only) or zip file
+    if tarfile.is_tarfile(str(inpath)):
+        is_tar = True
+    elif zipfile.is_zipfile(str(inpath)):
+        is_tar = False
+    else:
+        raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
 
     # Check if migration is needed
     current_version = SqliteZipBackend.get_current_archive_version(inpath=inpath)
@@ -123,15 +127,6 @@ def migrate(
                 outpath.unlink()
             shutil.copyfile(inpath, outpath)
         return
-
-    # Extract the information we need for the actual migration
-    # the file should be either a tar (legacy only) or zip file
-    if tarfile.is_tarfile(str(inpath)):
-        is_tar = True
-    elif zipfile.is_zipfile(str(inpath)):
-        is_tar = False
-    else:
-        raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
 
     # read the metadata.json which should always be present
     metadata = extract_metadata(inpath, search_limit=None)

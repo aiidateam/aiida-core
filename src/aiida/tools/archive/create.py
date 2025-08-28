@@ -16,12 +16,11 @@ import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Sequence, Union
+from typing import Callable, Iterable, Optional, Union
 
 from tabulate import tabulate
 
 from aiida import orm
-from aiida.common.exceptions import LicensingException
 from aiida.common.lang import type_check
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
@@ -41,6 +40,58 @@ __all__ = ('EXPORT_LOGGER', 'create_archive')
 
 EXPORT_LOGGER = AIIDA_LOGGER.getChild('export')
 QbType = Callable[[], orm.QueryBuilder]
+
+
+def _batch_query_ids(
+    querybuilder: QbType,
+    source_entity_type: EntityTypes,
+    source_ids: set[int],
+    target_entity_type: EntityTypes,
+    relationship: str,
+    batch_size_limit: int = 10000,
+    query_batch_size: int = 1000,
+) -> set[int]:
+    """Batch query to avoid PostgreSQL parameter limits.
+
+    :param querybuilder: QueryBuilder factory function
+    :param source_entity_type: Entity type to filter on
+    :param source_ids: Set of IDs to filter
+    :param target_entity_type: Entity type to project
+    :param relationship: Relationship keyword (e.g., 'with_node', 'with_computer')
+    :param batch_size_limit: Maximum number of IDs per batch to avoid parameter limits
+    :param query_batch_size: Batch size for iterall()
+    """
+    if not source_ids:
+        return set()
+
+    entity_type_to_orm_map = {
+        EntityTypes.NODE: orm.Node,
+        EntityTypes.COMPUTER: orm.Computer,
+        EntityTypes.GROUP: orm.Group,
+        EntityTypes.USER: orm.User,
+        EntityTypes.AUTHINFO: orm.AuthInfo,
+        EntityTypes.COMMENT: orm.Comment,
+        EntityTypes.LOG: orm.Log,
+    }
+
+    source_orm = entity_type_to_orm_map[source_entity_type]
+    target_orm = entity_type_to_orm_map[target_entity_type]
+
+    all_pks = set()
+    source_id_list = list(source_ids)
+
+    for i in range(0, len(source_id_list), batch_size_limit):
+        batch_ids = source_id_list[i : i + batch_size_limit]
+
+        qb = querybuilder()
+        qb.append(source_orm, filters={'id': {'in': batch_ids}}, tag='source')
+        qb.append(target_orm, **{relationship: 'source'}, project='id')
+        qb.distinct()
+
+        batch_pks = {pk for (pk,) in qb.iterall(batch_size=query_batch_size)}
+        all_pks.update(batch_pks)
+
+    return all_pks
 
 
 def create_archive(
@@ -318,17 +369,24 @@ def create_archive(
 
                     progress.set_description_str(f'Archiving database: {etype.value}s')
                     if ids:
-                        for nrows, rows in batch_iter(
-                            querybuilder()
-                            .append(
-                                entity_type_to_orm[etype], filters={'id': {'in': ids}}, tag='entity', project=['**']
-                            )
-                            .iterdict(batch_size=batch_size),
-                            batch_size,
-                            transform,
-                        ):
-                            writer.bulk_insert(etype, rows)
-                            progress.update(nrows)
+                        # Batch the IDs to avoid parameter limits
+                        ids_list = list(ids)
+                        for i in range(0, len(ids_list), 10000):  # Batch of 10k to stay under 32k limit
+                            batch_ids = ids_list[i : i + 10000]
+                            for nrows, rows in batch_iter(
+                                querybuilder()
+                                .append(
+                                    entity_type_to_orm[etype],
+                                    filters={'id': {'in': batch_ids}},  # Now only 10k parameters max
+                                    tag='entity',
+                                    project=['**'],
+                                )
+                                .iterdict(batch_size=batch_size),
+                                batch_size,
+                                transform,
+                            ):
+                                writer.bulk_insert(etype, rows)
+                                progress.update(nrows)
 
                 # stream links
                 progress.set_description_str(f'Archiving database: {EntityTypes.LINK.value}s')
@@ -511,14 +569,16 @@ def _collect_required_entities(
         progress.set_description_str(progress_str('Nodes (groups)'))
         group_nodes: list[tuple[int, int]] = []
         if entity_ids[EntityTypes.GROUP]:
-            qbuilder = querybuilder()
-            qbuilder.append(
-                orm.Group, filters={'id': {'in': list(entity_ids[EntityTypes.GROUP])}}, project='id', tag='group'
-            )
-            qbuilder.append(orm.Node, with_group='group', project='id')
-            qbuilder.distinct()
-            group_nodes = qbuilder.all(batch_size=batch_size)  # type: ignore[assignment]
-            entity_ids[EntityTypes.NODE].update(nid for _, nid in group_nodes)
+            group_id_list = list(entity_ids[EntityTypes.GROUP])
+            for i in range(0, len(group_id_list), 10000):  # Batch to avoid parameter limits
+                batch_ids = group_id_list[i : i + 10000]
+                qbuilder = querybuilder()
+                qbuilder.append(orm.Group, filters={'id': {'in': batch_ids}}, project='id', tag='group')
+                qbuilder.append(orm.Node, with_group='group', project='id')
+                qbuilder.distinct()
+                batch_group_nodes = qbuilder.all(batch_size=batch_size)
+                group_nodes.extend(batch_group_nodes)
+                entity_ids[EntityTypes.NODE].update(nid for _, nid in batch_group_nodes)
 
         # get full set of nodes & links, following traversal rules
         progress.set_description_str(progress_str('Nodes (traversal)'))
@@ -535,12 +595,15 @@ def _collect_required_entities(
         # get full set of computers
         if entity_ids[EntityTypes.NODE]:
             entity_ids[EntityTypes.COMPUTER].update(
-                pk
-                for (pk,) in querybuilder()
-                .append(orm.Node, filters={'id': {'in': list(entity_ids[EntityTypes.NODE])}}, tag='node')
-                .append(orm.Computer, with_node='node', project='id')
-                .distinct()
-                .iterall(batch_size=batch_size)
+                _batch_query_ids(
+                    querybuilder,
+                    EntityTypes.NODE,
+                    entity_ids[EntityTypes.NODE],
+                    EntityTypes.COMPUTER,
+                    'with_node',
+                    batch_size_limit=10000,
+                    query_batch_size=batch_size,
+                )
             )
 
         # get full set of authinfos
@@ -548,12 +611,15 @@ def _collect_required_entities(
         progress.update()
         if include_authinfos and entity_ids[EntityTypes.COMPUTER]:
             entity_ids[EntityTypes.AUTHINFO].update(
-                pk
-                for (pk,) in querybuilder()
-                .append(orm.Computer, filters={'id': {'in': list(entity_ids[EntityTypes.COMPUTER])}}, tag='comp')
-                .append(orm.AuthInfo, with_computer='comp', project='id')
-                .distinct()
-                .iterall(batch_size=batch_size)
+                _batch_query_ids(
+                    querybuilder,
+                    EntityTypes.COMPUTER,
+                    entity_ids[EntityTypes.COMPUTER],
+                    EntityTypes.AUTHINFO,
+                    'with_computer',
+                    batch_size_limit=10000,
+                    query_batch_size=batch_size,
+                )
             )
 
         # get full set of logs
@@ -561,12 +627,15 @@ def _collect_required_entities(
         progress.update()
         if include_logs and entity_ids[EntityTypes.NODE]:
             entity_ids[EntityTypes.LOG].update(
-                pk
-                for (pk,) in querybuilder()
-                .append(orm.Node, filters={'id': {'in': list(entity_ids[EntityTypes.NODE])}}, tag='node')
-                .append(orm.Log, with_node='node', project='id')
-                .distinct()
-                .iterall(batch_size=batch_size)
+                _batch_query_ids(
+                    querybuilder,
+                    EntityTypes.NODE,
+                    entity_ids[EntityTypes.NODE],
+                    EntityTypes.LOG,
+                    'with_node',
+                    batch_size_limit=10000,
+                    query_batch_size=batch_size,
+                )
             )
 
         # get full set of comments
@@ -574,12 +643,15 @@ def _collect_required_entities(
         progress.update()
         if include_comments and entity_ids[EntityTypes.NODE]:
             entity_ids[EntityTypes.COMMENT].update(
-                pk
-                for (pk,) in querybuilder()
-                .append(orm.Node, filters={'id': {'in': list(entity_ids[EntityTypes.NODE])}}, tag='node')
-                .append(orm.Comment, with_node='node', project='id')
-                .distinct()
-                .iterall(batch_size=batch_size)
+                _batch_query_ids(
+                    querybuilder,
+                    EntityTypes.NODE,
+                    entity_ids[EntityTypes.NODE],
+                    EntityTypes.COMMENT,
+                    'with_node',
+                    batch_size_limit=10000,
+                    query_batch_size=batch_size,
+                )
             )
 
         # get full set of users
@@ -587,39 +659,51 @@ def _collect_required_entities(
         progress.update()
         if entity_ids[EntityTypes.NODE]:
             entity_ids[EntityTypes.USER].update(
-                pk
-                for (pk,) in querybuilder()
-                .append(orm.Node, filters={'id': {'in': list(entity_ids[EntityTypes.NODE])}}, tag='node')
-                .append(orm.User, with_node='node', project='id')
-                .distinct()
-                .iterall(batch_size=batch_size)
+                _batch_query_ids(
+                    querybuilder,
+                    EntityTypes.NODE,
+                    entity_ids[EntityTypes.NODE],
+                    EntityTypes.USER,
+                    'with_node',
+                    batch_size_limit=10000,
+                    query_batch_size=batch_size,
+                )
             )
         if entity_ids[EntityTypes.GROUP]:
             entity_ids[EntityTypes.USER].update(
-                pk
-                for (pk,) in querybuilder()
-                .append(orm.Group, filters={'id': {'in': list(entity_ids[EntityTypes.GROUP])}}, tag='group')
-                .append(orm.User, with_group='group', project='id')
-                .distinct()
-                .iterall(batch_size=batch_size)
+                _batch_query_ids(
+                    querybuilder,
+                    EntityTypes.GROUP,
+                    entity_ids[EntityTypes.GROUP],
+                    EntityTypes.USER,
+                    'with_group',
+                    batch_size_limit=10000,
+                    query_batch_size=batch_size,
+                )
             )
         if entity_ids[EntityTypes.COMMENT]:
             entity_ids[EntityTypes.USER].update(
-                pk
-                for (pk,) in querybuilder()
-                .append(orm.Comment, filters={'id': {'in': list(entity_ids[EntityTypes.COMMENT])}}, tag='comment')
-                .append(orm.User, with_comment='comment', project='id')
-                .distinct()
-                .iterall(batch_size=batch_size)
+                _batch_query_ids(
+                    querybuilder,
+                    EntityTypes.COMMENT,
+                    entity_ids[EntityTypes.COMMENT],
+                    EntityTypes.USER,
+                    'with_comment',
+                    batch_size_limit=10000,
+                    query_batch_size=batch_size,
+                )
             )
         if entity_ids[EntityTypes.AUTHINFO]:
             entity_ids[EntityTypes.USER].update(
-                pk
-                for (pk,) in querybuilder()
-                .append(orm.AuthInfo, filters={'id': {'in': list(entity_ids[EntityTypes.AUTHINFO])}}, tag='auth')
-                .append(orm.User, with_authinfo='auth', project='id')
-                .distinct()
-                .iterall(batch_size=batch_size)
+                _batch_query_ids(
+                    querybuilder,
+                    EntityTypes.AUTHINFO,
+                    entity_ids[EntityTypes.AUTHINFO],
+                    EntityTypes.USER,
+                    'with_authinfo',
+                    batch_size_limit=10000,
+                    query_batch_size=batch_size,
+                )
             )
 
         progress.update()
@@ -631,9 +715,18 @@ def _stream_repo_files(
     key_format: str, writer: ArchiveWriterAbstract, node_ids: set[int], backend: StorageBackend, batch_size: int
 ) -> None:
     """Collect all repository object keys from the nodes, then stream the files to the archive."""
-    keys = set(
-        orm.Node.get_collection(backend).iter_repo_keys(filters={'id': {'in': list(node_ids)}}, batch_size=batch_size)
-    )
+
+    # Batch the node IDs to avoid parameter limits when getting repo keys
+    node_ids_list = list(node_ids)
+    batch_size_limit = 10000  # Stay well under 65535 parameter limit
+    all_keys = set()
+
+    for i in range(0, len(node_ids_list), batch_size_limit):
+        batch_ids = node_ids_list[i : i + batch_size_limit]
+        batch_keys = set(
+            orm.Node.get_collection(backend).iter_repo_keys(filters={'id': {'in': batch_ids}}, batch_size=batch_size)
+        )
+        all_keys.update(batch_keys)
 
     repository = backend.get_repository()
     if not repository.key_format == key_format:
@@ -641,8 +734,8 @@ def _stream_repo_files(
         raise NotImplementedError(
             f'Backend repository key format incompatible: {repository.key_format!r} != {key_format!r}'
         )
-    with get_progress_reporter()(desc='Archiving files: ', total=len(keys)) as progress:
-        for key, stream in repository.iter_object_streams(keys):  # type: ignore[arg-type]
+    with get_progress_reporter()(desc='Archiving files: ', total=len(all_keys)) as progress:
+        for key, stream in repository.iter_object_streams(all_keys):  # type: ignore[arg-type]
             # to-do should we use assume the key here is correct, or always re-compute and check?
             writer.put_object(stream, key=key)
             progress.update()
@@ -650,36 +743,53 @@ def _stream_repo_files(
 
 def _check_unsealed_nodes(querybuilder: QbType, node_ids: set[int], batch_size: int) -> None:
     """Check no process nodes are unsealed, i.e. all processes have completed."""
-    qbuilder = (
-        querybuilder()
-        .append(
-            orm.ProcessNode,
-            filters={
-                'id': {'in': list(node_ids)},
-                'attributes.sealed': {
-                    '!in': [True]  # better operator?
+    if not node_ids:
+        return
+
+    # Batch the node IDs to avoid parameter limits
+    node_ids_list = list(node_ids)
+    batch_size_limit = 10000  # Stay well under 65535 parameter limit
+    all_unsealed_pks = []
+
+    for i in range(0, len(node_ids_list), batch_size_limit):
+        batch_ids = node_ids_list[i : i + batch_size_limit]
+
+        qbuilder = (
+            querybuilder()
+            .append(
+                orm.ProcessNode,
+                filters={
+                    'id': {'in': batch_ids},
+                    'attributes.sealed': {
+                        '!in': [True]  # better operator?
+                    },
                 },
-            },
-            project='id',
+                project='id',
+            )
+            .distinct()
         )
-        .distinct()
-    )
-    unsealed_node_pks = qbuilder.all(batch_size=batch_size, flat=True)
-    if unsealed_node_pks:
+        batch_unsealed_pks = qbuilder.all(batch_size=batch_size, flat=True)
+        all_unsealed_pks.extend(batch_unsealed_pks)
+
+    if all_unsealed_pks:
         raise ExportValidationError(
             'All ProcessNodes must be sealed before they can be exported. '
-            f"Node(s) with PK(s): {', '.join(str(pk) for pk in unsealed_node_pks)} is/are not sealed."
+            f"Node(s) with PK(s): {', '.join(str(pk) for pk in all_unsealed_pks)} is/are not sealed."
         )
 
 
 def _check_node_licenses(
     querybuilder: QbType,
     node_ids: set[int],
-    allowed_licenses: Union[None, Sequence[str], Callable],
-    forbidden_licenses: Union[None, Sequence[str], Callable],
+    allowed_licenses: Optional[Union[list, Callable]],
+    forbidden_licenses: Optional[Union[list, Callable]],
     batch_size: int,
 ) -> None:
     """Check the nodes to be archived for disallowed licences."""
+    from typing import Sequence
+
+    from aiida.common.exceptions import LicensingException
+
     if allowed_licenses is None and forbidden_licenses is None:
         return None
 
@@ -725,24 +835,31 @@ def _check_node_licenses(
     else:
         raise TypeError('forbidden_licenses not a list or function')
 
-    # create query
-    qbuilder = querybuilder().append(
-        orm.Node,
-        project=['id', 'attributes.source.license'],
-        filters={'id': {'in': list(node_ids)}},
-    )
+    # Batch the node IDs to avoid parameter limits
+    node_ids_list = list(node_ids)
+    batch_size_limit = 10000  # Stay well under 65535 parameter limit
 
-    for node_id, name in qbuilder.iterall(batch_size=batch_size):
-        if name is None:
-            continue
-        if not check_allowed(name):
-            raise LicensingException(
-                f"Node {node_id} is licensed under '{name}' license, which is not in the list of allowed licenses"
-            )
-        if check_forbidden(name):
-            raise LicensingException(
-                f"Node {node_id} is licensed under '{name}' license, which is in the list of forbidden licenses"
-            )
+    for i in range(0, len(node_ids_list), batch_size_limit):
+        batch_ids = node_ids_list[i : i + batch_size_limit]
+
+        # create query for this batch
+        qbuilder = querybuilder().append(
+            orm.Node,
+            project=['id', 'attributes.source.license'],
+            filters={'id': {'in': batch_ids}},
+        )
+
+        for node_id, name in qbuilder.iterall(batch_size=batch_size):
+            if name is None:
+                continue
+            if not check_allowed(name):
+                raise LicensingException(
+                    f"Node {node_id} is licensed under '{name}' license, which is not in the list of allowed licenses"
+                )
+            if check_forbidden(name):
+                raise LicensingException(
+                    f"Node {node_id} is licensed under '{name}' license, which is in the list of forbidden licenses"
+                )
 
 
 def get_init_summary(

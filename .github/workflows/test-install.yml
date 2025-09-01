@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
@@ -38,7 +38,7 @@ jobs:
         python-version: '3.11'
 
     - name: Set up uv
-      uses: astral-sh/setup-uv@v5.2.1
+      uses: astral-sh/setup-uv@v6.6.0
       with:
         version: latest
 
@@ -57,7 +57,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Setup Conda
       uses: conda-incubator/setup-miniconda@v3
@@ -82,7 +82,7 @@ jobs:
         extras: ['', '[atomic_tools,docs,notebook,rest,tests,tui]']
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up Python 3.9
       uses: actions/setup-python@v5
@@ -124,7 +124,7 @@ jobs:
           optional: false
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Setup Conda
       uses: conda-incubator/setup-miniconda@v3
@@ -189,7 +189,7 @@ jobs:
         - 5001:22
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz

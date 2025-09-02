@@ -979,8 +979,7 @@ Best Practices and Considerations
 
    - **Check stash node availability**: Before unstashing, verify that the stashed files still exist on the remote system. Files in the stash location are not managed by AiiDA and may be deleted by system administrators.
 
-   - **Error handling**: If unstashing fails (e.g., due to missing source files or permission issues), check the calculation's output and error logs for details.
-   In case of custom stashing, it's your sole responsibility to manage the failures and log errors.
+   - **Error handling**: In case of custom stashing, it's your sole responsibility to manage the failures and log errors.
 
 .. _topics:calculations:usage:calcjobs:options:
 

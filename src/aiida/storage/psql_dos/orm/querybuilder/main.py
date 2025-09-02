@@ -15,7 +15,7 @@ from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
-from sqlalchemy import and_, not_, or_, select, values
+from sqlalchemy import and_, not_, or_, select, values, Column
 from sqlalchemy import func as sa_func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Row
@@ -453,6 +453,21 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                     )
         return and_(*expressions) if expressions else None
 
+    # def _create_temp_table_join(self, column, values_list):
+    #     """Return an IN condition using a VALUES table instead of a temp table."""
+    #
+    #     # Get the SQLAlchemy type from the column
+    #     coltype = column.type
+    #
+    #     # Build a virtual table with one column named "val"
+    #     vtable = values('val', coltype).data([(v,) for v in values_list])
+    #
+    #     # Build a subquery selecting that column
+    #     subq = select(vtable.c.val)
+    #
+    #     # Return IN condition against that subquery
+    #     return column.in_(subq)
+
     def _create_temp_table_join(self, column, values_list):
         """Return an IN condition using a VALUES table instead of a temp table."""
 
@@ -460,7 +475,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         coltype = column.type
 
         # Build a virtual table with one column named "val"
-        vtable = values('val', coltype).data([(v,) for v in values_list])
+        vtable = values(Column('val', coltype)).data([(v,) for v in values_list])
 
         # Build a subquery selecting that column
         subq = select(vtable.c.val)
@@ -766,7 +781,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif operator == 'in':
             if len(value) > 1000:  # safeguard threshold
                 return self._create_temp_table_join(column, value)
-            expr = database_entity.in_(value)
+            else:
+                expr = database_entity.in_(value)
         else:
             raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr

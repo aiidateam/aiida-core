@@ -681,7 +681,13 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             expr = case((type_filter, casted_entity.ilike(value)), else_=False)
         elif operator == 'in':
             type_filter, casted_entity = cast_according_to_type(database_entity, value[0])
-            expr = case((type_filter, casted_entity.in_(value)), else_=False)
+            # Handle large lists by batching to avoid PostgreSQL parameter limits
+            if len(value) > 10000:
+                chunks = [value[i:i+10000] for i in range(0, len(value), 10000)]
+                chunk_expressions = [case((type_filter, casted_entity.in_(chunk)), else_=False) for chunk in chunks]
+                expr = or_(*chunk_expressions)
+            else:
+                expr = case((type_filter, casted_entity.in_(value)), else_=False)
         elif operator == 'contains':
             expr = database_entity.cast(JSONB).contains(value)
         elif operator == 'has_key':
@@ -714,6 +720,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         else:
             raise ValueError(f'Unknown operator {operator} for filters in JSON field')
         return expr
+
 
     @staticmethod
     def get_filter_expr_from_column(operator: str, value: Any, column) -> BinaryExpression:
@@ -749,10 +756,16 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif operator == 'ilike':
             expr = database_entity.ilike(value)
         elif operator == 'in':
-            expr = database_entity.in_(value)
+            # Handle large lists by batching to avoid PostgreSQL parameter limits
+            if len(value) > 10000:
+                chunks = [value[i:i+10000] for i in range(0, len(value), 10000)]
+                expr = or_(*[database_entity.in_(chunk) for chunk in chunks])
+            else:
+                expr = database_entity.in_(value)
         else:
             raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr
+
 
     def to_backend(self, res) -> Any:
         """Convert results to return backend specific objects.

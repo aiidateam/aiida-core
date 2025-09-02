@@ -814,8 +814,8 @@ Unstashing Files from the Remote
 
 AiiDA provides an unstashing mechanism through the `core.unstash` calculation to retrieve previously stashed files. The process supports all stash modes and offers two restoration targets:
 
-1. **OriginalPlace**: Restores files to their original location
-2. **NewRemoteData**: Creates a new remote folder with the restored files
+1. **OriginalPlace**: Restores files back to the original remote folder location. E.g., for restarting a calculation.
+2. **NewRemoteData**: Restores files to the new remote folder of `UnstashCalculation`. E.g., for further processing.
 
 ::
 
@@ -830,13 +830,6 @@ AiiDA provides an unstashing mechanism through the `core.unstash` calculation to
                               | - New RemoteData folder   |
                               +---------------------------+
 
-
-
-
-To unstash files, you need to run a `core.unstash` calculation that references the stashed data node from a previous stashing operation. The unstashing process supports two target modes:
-
-1. **OriginalPlace**: Restores files back to the original remote folder location. E.g., for restarting a calculation.
-2. **NewRemoteData**: Restores files to the new remote folder of `UnstashCalculation`. E.g., for further processing.
 
 Example of unstashing files:
 

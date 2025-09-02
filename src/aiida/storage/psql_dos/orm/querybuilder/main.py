@@ -15,7 +15,7 @@ from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
-from sqlalchemy import and_, not_, or_, select, values, Column
+from sqlalchemy import and_, not_, or_, select
 from sqlalchemy import func as sa_func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Row
@@ -453,35 +453,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                     )
         return and_(*expressions) if expressions else None
 
-    # def _create_temp_table_join(self, column, values_list):
-    #     """Return an IN condition using a VALUES table instead of a temp table."""
-    #
-    #     # Get the SQLAlchemy type from the column
-    #     coltype = column.type
-    #
-    #     # Build a virtual table with one column named "val"
-    #     vtable = values('val', coltype).data([(v,) for v in values_list])
-    #
-    #     # Build a subquery selecting that column
-    #     subq = select(vtable.c.val)
-    #
-    #     # Return IN condition against that subquery
-    #     return column.in_(subq)
-
-    def _create_temp_table_join(self, column, values_list):
-        """Return an IN condition using a VALUES table instead of a temp table."""
-
-        # Get the SQLAlchemy type from the column
-        coltype = column.type
-
-        # Build a virtual table with one column named "val"
-        vtable = values(Column('val', coltype)).data([(v,) for v in values_list])
-
-        # Build a subquery selecting that column
-        subq = select(vtable.c.val)
-
-        # Return IN condition against that subquery
-        return column.in_(subq)
 
     def get_filter_expr(
         self,
@@ -745,7 +716,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             raise ValueError(f'Unknown operator {operator} for filters in JSON field')
         return expr
 
-    # @staticmethod
     def get_filter_expr_from_column(self, operator: str, value: Any, column) -> BinaryExpression:
         """A method that returns an valid SQLAlchemy expression.
 
@@ -779,13 +749,32 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif operator == 'ilike':
             expr = database_entity.ilike(value)
         elif operator == 'in':
-            if len(value) > 1000:  # safeguard threshold
-                return self._create_temp_table_join(column, value)
+            # Use VALUES table for large lists to avoid parameter limits
+            if len(value) > 32000:  # Conservative threshold well below 65535
+                expr = self._create_values_table_join(column, value)
             else:
                 expr = database_entity.in_(value)
         else:
             raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr
+
+    def _create_values_table_join(self, column, values_list):
+        """Return an IN condition using a VALUES table to avoid parameter limits."""
+        from sqlalchemy import column as sa_column
+        from sqlalchemy import values as sa_values
+
+        # Get the SQLAlchemy type from the column
+        coltype = column.type
+
+        # Create a values table - use lowercase 'val' to avoid conflicts
+        val_column = sa_column('val', coltype)
+        vtable = sa_values(val_column, name='value_list').data([(v,) for v in values_list])
+
+        # Build a subquery selecting from the values table
+        subq = select(vtable.c.val)
+
+        # Return IN condition against that subquery
+        return column.in_(subq)
 
     def to_backend(self, res) -> Any:
         """Convert results to return backend specific objects.

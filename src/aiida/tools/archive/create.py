@@ -272,12 +272,18 @@ def create_archive(
     if test_run:
         EXPORT_LOGGER.report('Test Run: Stopping before archive creation')
         if node_ids := list(entity_ids[EntityTypes.NODE]):
-            keys = set(
-                orm.Node.get_collection(backend).iter_repo_keys(filters={'id': {'in': node_ids}}, batch_size=batch_size)
-            )
-            count_summary.append(['Repository Files', len(keys)])
+            # Batch the node IDs to avoid parameter limits in test run as well
+            all_keys = set()
+            for i in range(0, len(node_ids), filter_size):
+                batch_ids = node_ids[i : i + filter_size]
+                batch_keys = set(
+                    orm.Node.get_collection(backend).iter_repo_keys(filters={'id': {'in': batch_ids}}, batch_size=batch_size)
+                )
+                all_keys.update(batch_keys)
+            count_summary.append(['Repository Files', len(all_keys)])
         else:
             count_summary.append(['Repository Files', 0])
+
         EXPORT_LOGGER.report(f'Archive would be created with:\n{tabulate(count_summary)}')
         return filename
 

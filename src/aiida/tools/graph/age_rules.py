@@ -221,30 +221,10 @@ class QueryRule(Operation, metaclass=ABCMeta):
         target_set.empty()
 
         if primkeys:
-            primkeys_list = list(primkeys)
-            batch_size = 10000  # Stay well under 65535 parameter limit
-
-            # If we have fewer keys than the batch size, use the original approach
-            if len(primkeys_list) <= batch_size:
-                self._querybuilder.add_filter(
-                    self._first_tag, {operational_set[self._entity_from].identifier: {'in': primkeys}}
-                )
-                qres = self._querybuilder.dict()
-            else:
-                # Batch the queries for large datasets
-                all_results = []
-                for i in range(0, len(primkeys_list), batch_size):
-                    batch_primkeys = primkeys_list[i:i + batch_size]
-
-                    # Use deepcopy only when we need to batch
-                    batch_qb = deepcopy(self._querybuilder)
-                    batch_qb.add_filter(
-                        self._first_tag, {operational_set[self._entity_from].identifier: {'in': batch_primkeys}}
-                    )
-                    batch_results = batch_qb.dict()
-                    all_results.extend(batch_results)
-
-                qres = all_results
+            self._querybuilder.add_filter(
+                self._first_tag, {operational_set[self._entity_from].identifier: {'in': primkeys}}
+            )
+            qres = self._querybuilder.dict()
 
             # These are the new results returned by the query
             target_set[self._entity_to].add_entities(

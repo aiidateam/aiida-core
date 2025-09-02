@@ -20,17 +20,20 @@ from aiida.tools.archive import import_archive
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_group_bulk_operations():
     """Regression test for PostgreSQL parameter limit issue (6545) using pre-created archive."""
-    archive_path = Path(__file__).parent / 'data' / '40k-int-nodes.aiida'
+    num_nodes = 50_000
+    archive_path = Path(__file__).parent / 'data' / f'{int(num_nodes/1000)}k-int-nodes-2.7.1.post0.aiida'
+    breakpoint()
     import_archive(archive_path)
 
     qb = orm.QueryBuilder()
     qb.append(orm.Int)
     nodes = qb.all(flat=True)
+    assert len(nodes) == num_nodes
 
     # Test the group operations that were failing
     group = orm.Group(label='bulk-test').store()
     group.add_nodes(nodes)  # This would fail before the fix
-    assert group.count() == len(nodes)
+    assert group.count() == num_nodes
 
     group.remove_nodes(nodes)
     assert group.count() == 0

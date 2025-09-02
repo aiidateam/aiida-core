@@ -240,9 +240,17 @@ def traverse_graph(
             return {'nodes': set(), 'links': set()}
         return {'nodes': set(), 'links': None}
 
-    query_nodes = orm.QueryBuilder(backend=backend)
-    query_nodes.append(orm.Node, project=['id'], filters={'id': {'in': operational_set}})
-    existing_pks = set(query_nodes.all(flat=True))
+    # Batch the query to avoid parameter limits
+    existing_pks = set()
+    operational_list = list(operational_set)
+    batch_size = 10000  # Stay well under 65535 parameter limit
+
+    for i in range(0, len(operational_list), batch_size):
+        batch_ids = operational_list[i:i + batch_size]
+        query_nodes = orm.QueryBuilder(backend=backend)
+        query_nodes.append(orm.Node, project=['id'], filters={'id': {'in': batch_ids}})
+        existing_pks.update(query_nodes.all(flat=True))
+
     missing_pks = operational_set.difference(existing_pks)
     if missing_pks and missing_callback is None:
         raise exceptions.NotExistent(
@@ -294,3 +302,4 @@ def traverse_graph(
         output['links'] = results['nodes_nodes'].keyset
 
     return output
+

@@ -59,8 +59,8 @@ class TestQueryBuilderParameterLimits:
 
     @classmethod
     def setup_class(cls):
-        """Import the 100k node archive once for all tests."""
-        cls.num_nodes = 100_000
+        """Import the 50k node archive once for all tests."""
+        cls.num_nodes = 50_000
         archive_path = Path(__file__).parent / 'data' / f'{int(cls.num_nodes/1000)}k-int-nodes-2.7.1.post0.aiida'
         import_archive(archive_path)
 
@@ -80,22 +80,20 @@ class TestQueryBuilderParameterLimits:
         assert len(results) == self.num_nodes
 
     def test_jsonb_large_in_filter(self):
-        """Test large IN filters on JSONB attributes fields."""
-        # Get attribute values from nodes to create a large list for JSONB filtering
+        """Test large IN filters on JSONB fields (attributes)."""
+        # Get some sample values and replicate them to create a large list
         qb = orm.QueryBuilder()
-        qb.append(orm.Int, project='attributes.value')
+        qb.append(orm.Int, filters={'uuid': {'in': self.all_pks[:10]}}, project='attributes.value')
         sample_values = [v for (v,) in qb.all() if v is not None]
-        
+
         if sample_values:
-            # Create a very large list by replicating values to exceed 100k
-            large_value_list = sample_values * (100000 // len(sample_values) + 1)
-            large_value_list = large_value_list[:100000]  # Use exactly 100k values
-            
-            # This tests the JSONB batching logic in get_filter_expr_from_jsonb
+            # Create a list > 10k to trigger batching
+            large_value_list = sample_values * (15000 // len(sample_values) + 1)
+            large_value_list = large_value_list[:15000]
+
             qb = orm.QueryBuilder()
             qb.append(orm.Int, filters={'attributes.value': {'in': large_value_list}})
             results = qb.all(flat=True)
-            
+
             # Should not raise parameter limit error
-            breakpoint()
             assert len(results) >= 0

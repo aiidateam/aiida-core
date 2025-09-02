@@ -856,9 +856,6 @@ Example of unstashing files:
             'options': {
                 'resources': {'num_machines': 1},
                 'unstash': {
-                    # Choose target mode:
-                    # UnstashTargetMode.OriginalPlace - restores to original location
-                    # UnstashTargetMode.NewRemoteData - creates new remote folder
                     'unstash_target_mode': UnstashTargetMode.NewRemoteData.value,
                     'source_list': ['*'],  # Optional for StashMode.COPY
                 },
@@ -929,6 +926,7 @@ Note: in this example, our unstashing script is identical to the stashing script
 That means we could just as well skip the installation step and use the `MY_STASH_CODE` code again!
 
 .. code-block:: python
+
    # Run unstashing with custom code
    inputs = {
        'metadata': {

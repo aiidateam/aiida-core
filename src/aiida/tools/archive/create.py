@@ -54,7 +54,7 @@ def create_archive(
     allowed_licenses: Optional[Union[list, Callable]] = None,
     forbidden_licenses: Optional[Union[list, Callable]] = None,
     strip_checkpoints: bool = True,
-    filter_size: int = 10000,
+    filter_size: int = 10_000,
     batch_size: int = 1000,
     compression: int = 6,
     test_run: bool = False,
@@ -668,8 +668,7 @@ def _stream_repo_files(
     node_ids_list = list(node_ids)
     all_keys = set()
 
-    for i in range(0, len(node_ids_list), filter_size):
-        batch_ids = node_ids_list[i : i + filter_size]
+    for _, batch_ids in batch_iter(node_ids_list, filter_size):
         batch_keys = set(
             orm.Node.get_collection(backend).iter_repo_keys(filters={'id': {'in': batch_ids}}, batch_size=batch_size)
         )
@@ -694,11 +693,9 @@ def _check_unsealed_nodes(querybuilder: QbType, node_ids: set[int], batch_size: 
         return
 
     # Batch the node IDs to avoid parameter limits
-    node_ids_list = list(node_ids)
     all_unsealed_pks = []
 
-    for i in range(0, len(node_ids_list), filter_size):
-        batch_ids = node_ids_list[i : i + filter_size]
+    for _, batch_ids in batch_iter(node_ids, filter_size):
 
         qbuilder = (
             querybuilder()
@@ -736,8 +733,6 @@ def _check_node_licenses(
     from typing import Sequence
 
     from aiida.common.exceptions import LicensingException
-
-    print(filter_size)
 
     if allowed_licenses is None and forbidden_licenses is None:
         return None
@@ -784,11 +779,7 @@ def _check_node_licenses(
     else:
         raise TypeError('forbidden_licenses not a list or function')
 
-    # Batch the node IDs to avoid parameter limits
-    node_ids_list = list(node_ids)
-
-    for i in range(0, len(node_ids_list), filter_size):
-        batch_ids = node_ids_list[i : i + filter_size]
+    for _, batch_ids in batch_iter(node_ids, filter_size):
 
         # create query for this batch
         qbuilder = querybuilder().append(

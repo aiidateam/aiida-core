@@ -217,25 +217,32 @@ class QueryRule(Operation, metaclass=ABCMeta):
             There is no returned value for this method.
         :param operational_set: where the results originate from (walkers)
         """
+        from copy import deepcopy
+        
         primkeys = operational_set[self._entity_from].keyset
         target_set.empty()
 
+        import traceback
+        traceback.print_stack()
         breakpoint()
         if primkeys:
-            batch_size = 10000  # Stay well under 65535 parameter limit
+            # PRCOMMENT: Expose this to the user somehow?
+            filter_size = 10000  # Stay well under 65535 parameter limit
 
             # If we have fewer keys than the batch size, use the original approach
-            if len(primkeys) <= batch_size:
+            assert self._querybuilder is not None
+            if len(primkeys) <= filter_size:
                 self._querybuilder.add_filter(
                     self._first_tag, {operational_set[self._entity_from].identifier: {'in': primkeys}}
                 )
                 qres = self._querybuilder.dict()
             else:
-                # Batch the queries for large datasets
+                # PRCOMMENT: Maybe move `batch_iter` elsewhere? Import feels weird here?
+                from aiida.tools.archive.common import batch_iter
+                # Batch the queries for large datasets using batch_iter
                 all_results = []
-                for i in range(0, len(primkeys_list), batch_size):
-                    batch_primkeys = primkeys_list[i:i + batch_size]
-
+                
+                for _, batch_primkeys in batch_iter(primkeys_list, filter_size):
                     # Use deepcopy only when we need to batch
                     batch_qb = deepcopy(self._querybuilder)
                     batch_qb.add_filter(
@@ -260,7 +267,6 @@ class QueryRule(Operation, metaclass=ABCMeta):
                 target_set[edge_key].add_entities(
                     [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in qres]
                 )
-
     def set_accumulator(self, accumulator_set):
         self._accumulator_set = accumulator_set
 

@@ -534,9 +534,9 @@ def _collect_required_entities(
                 qbuilder.append(orm.Group, filters={'id': {'in': group_batch_ids}}, project='id', tag='group')
                 qbuilder.append(orm.Node, with_group='group', project='id')
                 qbuilder.distinct()
-                batch_group_nodes = qbuilder.all(batch_size=batch_size, flat=True)
-                group_nodes.extend(batch_group_nodes)
-                entity_ids[EntityTypes.NODE].update(nid for nid in batch_group_nodes)
+                batch_group_nodes = qbuilder.all(batch_size=batch_size)
+                group_nodes.extend(batch_group_nodes)  # type: ignore[assignment]
+                entity_ids[EntityTypes.NODE].update(nid for _, nid in batch_group_nodes)
 
         # get full set of nodes & links, following traversal rules
         progress.set_description_str(progress_str('Nodes (traversal)'))

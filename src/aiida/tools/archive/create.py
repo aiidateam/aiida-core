@@ -275,10 +275,10 @@ def create_archive(
         if node_ids := list(entity_ids[EntityTypes.NODE]):
             # Batch the node IDs to avoid parameter limits in test run as well
             all_keys = set()
-            for _, batch_ids in batch_iter(node_ids, filter_size):
+            for _, node_batch_ids in batch_iter(node_ids, filter_size):
                 batch_keys = set(
                     orm.Node.get_collection(backend).iter_repo_keys(
-                        filters={'id': {'in': batch_ids}}, batch_size=batch_size
+                        filters={'id': {'in': node_batch_ids}}, batch_size=batch_size
                     )
                 )
                 all_keys.update(batch_keys)
@@ -331,13 +331,12 @@ def create_archive(
                         # Batch also the IDs to avoid query filter parameter limits
                         for _, batch_ids in batch_iter(ids, filter_size):
                             # Build the query for this batch of IDs
-                            query = (querybuilder()
-                                    .append(
-                                        entity_type_to_orm[etype],
-                                        filters={'id': {'in': batch_ids}},
-                                        tag='entity',
-                                        project=['**'],
-                                    ))
+                            query = querybuilder().append(
+                                entity_type_to_orm[etype],
+                                filters={'id': {'in': batch_ids}},
+                                tag='entity',
+                                project=['**'],
+                            )
 
                             # Process the query results in batches
                             query_results = query.iterdict(batch_size=batch_size)
@@ -530,9 +529,9 @@ def _collect_required_entities(
         progress.set_description_str(progress_str('Nodes (groups)'))
         group_nodes: list[tuple[int, int]] = []
         if entity_ids[EntityTypes.GROUP]:
-            for _, batch_ids in batch_iter(list(entity_ids[EntityTypes.GROUP]), filter_size):
+            for _, group_batch_ids in batch_iter(list(entity_ids[EntityTypes.GROUP]), filter_size):
                 qbuilder = querybuilder()
-                qbuilder.append(orm.Group, filters={'id': {'in': batch_ids}}, project='id', tag='group')
+                qbuilder.append(orm.Group, filters={'id': {'in': group_batch_ids}}, project='id', tag='group')
                 qbuilder.append(orm.Node, with_group='group', project='id')
                 qbuilder.distinct()
                 batch_group_nodes = qbuilder.all(batch_size=batch_size, flat=True)
@@ -553,11 +552,11 @@ def _collect_required_entities(
 
         # get full set of computers
         if entity_ids[EntityTypes.NODE]:
-            for _, batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+            for _, node_batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.COMPUTER].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.Node, filters={'id': {'in': batch_ids}}, tag='node')
+                    .append(orm.Node, filters={'id': {'in': node_batch_ids}}, tag='node')
                     .append(orm.Computer, with_node='node', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)
@@ -567,11 +566,11 @@ def _collect_required_entities(
         progress.set_description_str(progress_str('AuthInfos'))
         progress.update()
         if include_authinfos and entity_ids[EntityTypes.COMPUTER]:
-            for _, computer_id_chunk in batch_iter(list(entity_ids[EntityTypes.COMPUTER]), filter_size):
+            for _, computer_batch_ids in batch_iter(list(entity_ids[EntityTypes.COMPUTER]), filter_size):
                 entity_ids[EntityTypes.AUTHINFO].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.Computer, filters={'id': {'in': computer_id_chunk}}, tag='comp')
+                    .append(orm.Computer, filters={'id': {'in': computer_batch_ids}}, tag='comp')
                     .append(orm.AuthInfo, with_computer='comp', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)
@@ -581,11 +580,11 @@ def _collect_required_entities(
         progress.set_description_str(progress_str('Logs'))
         progress.update()
         if include_logs and entity_ids[EntityTypes.NODE]:
-            for _, batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+            for _, node_batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.LOG].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.Node, filters={'id': {'in': batch_ids}}, tag='node')
+                    .append(orm.Node, filters={'id': {'in': node_batch_ids}}, tag='node')
                     .append(orm.Log, with_node='node', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)
@@ -595,11 +594,11 @@ def _collect_required_entities(
         progress.set_description_str(progress_str('Comments'))
         progress.update()
         if include_comments and entity_ids[EntityTypes.NODE]:
-            for _, batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+            for _, node_batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.COMMENT].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.Node, filters={'id': {'in': batch_ids}}, tag='node')
+                    .append(orm.Node, filters={'id': {'in': node_batch_ids}}, tag='node')
                     .append(orm.Comment, with_node='node', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)
@@ -609,41 +608,41 @@ def _collect_required_entities(
         progress.set_description_str(progress_str('Users'))
         progress.update()
         if entity_ids[EntityTypes.NODE]:
-            for _, batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+            for _, node_batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.USER].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.Node, filters={'id': {'in': batch_ids}}, tag='node')
+                    .append(orm.Node, filters={'id': {'in': node_batch_ids}}, tag='node')
                     .append(orm.User, with_node='node', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)
                 )
         if entity_ids[EntityTypes.GROUP]:
-            for _, group_id_chunk in batch_iter(list(entity_ids[EntityTypes.GROUP]), filter_size):
+            for _, group_batch_ids in batch_iter(list(entity_ids[EntityTypes.GROUP]), filter_size):
                 entity_ids[EntityTypes.USER].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.Group, filters={'id': {'in': group_id_chunk}}, tag='group')
+                    .append(orm.Group, filters={'id': {'in': group_batch_ids}}, tag='group')
                     .append(orm.User, with_group='group', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)
                 )
         if entity_ids[EntityTypes.COMMENT]:
-            for _, comment_id_chunk in batch_iter(list(entity_ids[EntityTypes.COMMENT]), filter_size):
+            for _, comment_batch_ids in batch_iter(list(entity_ids[EntityTypes.COMMENT]), filter_size):
                 entity_ids[EntityTypes.USER].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.Comment, filters={'id': {'in': comment_id_chunk}}, tag='comment')
+                    .append(orm.Comment, filters={'id': {'in': comment_batch_ids}}, tag='comment')
                     .append(orm.User, with_comment='comment', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)
                 )
         if entity_ids[EntityTypes.AUTHINFO]:
-            for _, authinfo_id_chunk in batch_iter(list(entity_ids[EntityTypes.AUTHINFO]), filter_size):
+            for _, authinfo_batch_ids in batch_iter(list(entity_ids[EntityTypes.AUTHINFO]), filter_size):
                 entity_ids[EntityTypes.USER].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.AuthInfo, filters={'id': {'in': authinfo_id_chunk}}, tag='auth')
+                    .append(orm.AuthInfo, filters={'id': {'in': authinfo_batch_ids}}, tag='auth')
                     .append(orm.User, with_authinfo='auth', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)
@@ -665,12 +664,13 @@ def _stream_repo_files(
     """Collect all repository object keys from the nodes, then stream the files to the archive."""
 
     # Batch the node IDs to avoid parameter limits when getting repo keys
-    node_ids_list = list(node_ids)
     all_keys = set()
 
-    for _, batch_ids in batch_iter(node_ids_list, filter_size):
+    for _, node_batch_ids in batch_iter(node_ids, filter_size):
         batch_keys = set(
-            orm.Node.get_collection(backend).iter_repo_keys(filters={'id': {'in': batch_ids}}, batch_size=batch_size)
+            orm.Node.get_collection(backend).iter_repo_keys(
+                filters={'id': {'in': node_batch_ids}}, batch_size=batch_size
+            )
         )
         all_keys.update(batch_keys)
 
@@ -695,14 +695,13 @@ def _check_unsealed_nodes(querybuilder: QbType, node_ids: set[int], batch_size: 
     # Batch the node IDs to avoid parameter limits
     all_unsealed_pks = []
 
-    for _, batch_ids in batch_iter(node_ids, filter_size):
-
+    for _, node_batch_ids in batch_iter(node_ids, filter_size):
         qbuilder = (
             querybuilder()
             .append(
                 orm.ProcessNode,
                 filters={
-                    'id': {'in': batch_ids},
+                    'id': {'in': node_batch_ids},
                     'attributes.sealed': {
                         '!in': [True]  # better operator?
                     },
@@ -779,13 +778,12 @@ def _check_node_licenses(
     else:
         raise TypeError('forbidden_licenses not a list or function')
 
-    for _, batch_ids in batch_iter(node_ids, filter_size):
-
+    for _, node_batch_ids in batch_iter(node_ids, filter_size):
         # create query for this batch
         qbuilder = querybuilder().append(
             orm.Node,
             project=['id', 'attributes.source.license'],
-            filters={'id': {'in': batch_ids}},
+            filters={'id': {'in': node_batch_ids}},
         )
 
         for node_id, name in qbuilder.iterall(batch_size=batch_size):

@@ -135,7 +135,7 @@ def inspect(ctx, archive, version, meta_data, database):
 @click.option(
     '-f',
     '--filter-size',
-    default=10_000,
+    default=999,
     type=int,
     help='Batch database query filters to avoid database parameter limits (e.g., psql-psycopg 65535 limit).',
 )

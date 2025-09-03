@@ -8,7 +8,6 @@
 ###########################################################################
 """Import an archive."""
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, Literal, Optional, Set, Tuple, Union
 
@@ -28,7 +27,7 @@ from aiida.orm.querybuilder import QueryBuilder
 from aiida.repository import Repository
 
 from .abstract import ArchiveFormatAbstract
-from .common import batch_iter, entity_type_to_orm
+from .common import batch_iter, entity_type_to_orm, QueryParams
 from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
 from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
@@ -46,16 +45,6 @@ MergeCommentsType = Literal['leave', 'newest', 'overwrite']
 
 DUPLICATE_LABEL_MAX = 100
 DUPLICATE_LABEL_TEMPLATE = '{0} (Imported #{1})'
-
-
-@dataclass
-class QueryParams:
-    """Parameters for executing backend queries."""
-
-    batch_size: int
-    """Batch size for streaming database rows."""
-    filter_size: int
-    """Maximum number of parameters allowed in a single query filter."""
 
 
 def import_archive(

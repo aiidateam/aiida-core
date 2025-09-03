@@ -32,7 +32,7 @@ from aiida.orm.utils.links import LinkQuadruple
 from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
 
 from .abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
-from .common import batch_iter, entity_type_to_orm
+from .common import batch_iter, entity_type_to_orm, QueryParams
 from .exceptions import ArchiveExportError, ExportValidationError
 from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
@@ -54,7 +54,7 @@ def create_archive(
     allowed_licenses: Optional[Union[list, Callable]] = None,
     forbidden_licenses: Optional[Union[list, Callable]] = None,
     strip_checkpoints: bool = True,
-    filter_size: int = 10_000,
+    filter_size: int = 999,
     batch_size: int = 1000,
     compression: int = 6,
     test_run: bool = False,
@@ -215,12 +215,13 @@ def create_archive(
             EntityTypes.LOG,
         ]
     }
+    query_params = QueryParams(batch_size=batch_size, filter_size=filter_size)
 
     # extract ids/uuid from initial entities
     type_check(entities, Iterable, allow_none=True)
     if entities is None:
         group_nodes, link_data = _collect_all_entities(
-            querybuilder, entity_ids, include_authinfos, include_comments, include_logs, batch_size
+            querybuilder, entity_ids, include_authinfos, include_comments, include_logs, query_params.batch_size
         )
     else:
         for entry in entities:
@@ -251,8 +252,8 @@ def create_archive(
             include_comments,
             include_logs,
             backend,
-            batch_size,
-            filter_size,
+            query_params.batch_size,
+            query_params.filter_size,
         )
 
     # now all the nodes have been retrieved, perform some checks

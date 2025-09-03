@@ -32,7 +32,7 @@ from aiida.orm.utils.links import LinkQuadruple
 from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
 
 from .abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
-from .common import batch_iter, entity_type_to_orm, QueryParams
+from .common import QueryParams, batch_iter, entity_type_to_orm
 from .exceptions import ArchiveExportError, ExportValidationError
 from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
@@ -328,21 +328,21 @@ def create_archive(
 
                     progress.set_description_str(f'Archiving database: {etype.value}s')
                     if ids:
-                        # Batch the IDs to avoid parameter limits
-                        ids_list = list(ids)
-                        for _, batch_ids in batch_iter(ids_list, filter_size):
-                            for nrows, rows in batch_iter(
-                                querybuilder()
-                                .append(
-                                    entity_type_to_orm[etype],
-                                    filters={'id': {'in': batch_ids}},
-                                    tag='entity',
-                                    project=['**'],
-                                )
-                                .iterdict(batch_size=batch_size),
-                                batch_size,
-                                transform,
-                            ):
+                        # Batch also the IDs to avoid query filter parameter limits
+                        for _, batch_ids in batch_iter(ids, filter_size):
+                            # Build the query for this batch of IDs
+                            query = (querybuilder()
+                                    .append(
+                                        entity_type_to_orm[etype],
+                                        filters={'id': {'in': batch_ids}},
+                                        tag='entity',
+                                        project=['**'],
+                                    ))
+
+                            # Process the query results in batches
+                            query_results = query.iterdict(batch_size=batch_size)
+
+                            for nrows, rows in batch_iter(query_results, batch_size, transform):
                                 writer.bulk_insert(etype, rows)
                                 progress.update(nrows)
 
@@ -375,7 +375,6 @@ def create_archive(
 
             # stream node repository files to the archive
             if entity_ids[EntityTypes.NODE]:
-                # TODO: Expose to user?
                 _stream_repo_files(
                     archive_format.key_format, writer, entity_ids[EntityTypes.NODE], backend, batch_size, filter_size
                 )

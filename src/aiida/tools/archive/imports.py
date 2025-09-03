@@ -66,7 +66,7 @@ def import_archive(
 
     :param path: the path to the archive
     :param archive_format: The class for interacting with the archive
-    :param filter_size: Maximum size of parameters allowed in a single query filter
+    :param filter_size: Batch database query filters to avoid database parameter limits (e.g., psql-psycopg 65535 limit)
     :param batch_size: Batch size for streaming database rows
     :param import_new_extras: Keep extras on new nodes (except private aiida keys), else strip
     :param merge_extras: Rules for merging extras into existing nodes.

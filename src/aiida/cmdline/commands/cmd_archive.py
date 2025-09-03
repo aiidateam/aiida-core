@@ -133,6 +133,13 @@ def inspect(ctx, archive, version, meta_data, database):
     '-b', '--batch-size', default=1000, type=int, help='Stream database rows in batches, to reduce memory usage.'
 )
 @click.option(
+    '-f',
+    '--filter-size',
+    default=10_000,
+    type=int,
+    help='Batch database query filters to avoid database parameter limits (e.g., psql-psycopg 65535 limit).',
+)
+@click.option(
     '--test-run',
     is_flag=True,
     help='Determine entities to export, but do not create the archive. Deprecated, please use `--dry-run` instead.',
@@ -158,6 +165,7 @@ def create(
     include_authinfos,
     compress,
     batch_size,
+    filter_size,
     test_run,
     dry_run,
 ):
@@ -210,6 +218,7 @@ def create(
         'overwrite': force,
         'compression': compress,
         'batch_size': batch_size,
+        'filter_size': filter_size,
         'test_run': dry_run,
     }
 

@@ -8,6 +8,7 @@
 ###########################################################################
 """Tests for generic queries and unit tests for QueryBuilder parameter limit fixes."""
 
+# TODO: Move to other archive creation tests but keep psql mark
 from pathlib import Path
 
 import pytest
@@ -31,8 +32,7 @@ def test_large_archive_export(tmp_path):
     all_nodes = qb.all(flat=True)
     assert len(all_nodes) == num_nodes
 
-    # Test archive creation with the large dataset - this should not raise parameter limit errors
     export_file = tmp_path / 'large_export.aiida'
-    create_archive(all_nodes, filename=export_file, test_run=True)
+    create_archive(all_nodes, filename=export_file, test_run=False)
 
     # Test passed if no OperationalError was raised

@@ -220,7 +220,7 @@ def create_archive(
     type_check(entities, Iterable, allow_none=True)
     if entities is None:
         group_nodes, link_data = _collect_all_entities(
-            querybuilder, entity_ids, include_authinfos, include_comments, include_logs, batch_size, filter_size
+            querybuilder, entity_ids, include_authinfos, include_comments, include_logs, batch_size
         )
     else:
         for entry in entities:
@@ -274,16 +274,16 @@ def create_archive(
         if node_ids := list(entity_ids[EntityTypes.NODE]):
             # Batch the node IDs to avoid parameter limits in test run as well
             all_keys = set()
-            for i in range(0, len(node_ids), filter_size):
-                batch_ids = node_ids[i : i + filter_size]
+            for _, batch_ids in batch_iter(node_ids, filter_size):
                 batch_keys = set(
-                    orm.Node.get_collection(backend).iter_repo_keys(filters={'id': {'in': batch_ids}}, batch_size=batch_size)
+                    orm.Node.get_collection(backend).iter_repo_keys(
+                        filters={'id': {'in': batch_ids}}, batch_size=batch_size
+                    )
                 )
                 all_keys.update(batch_keys)
             count_summary.append(['Repository Files', len(all_keys)])
         else:
             count_summary.append(['Repository Files', 0])
-
         EXPORT_LOGGER.report(f'Archive would be created with:\n{tabulate(count_summary)}')
         return filename
 
@@ -329,8 +329,7 @@ def create_archive(
                     if ids:
                         # Batch the IDs to avoid parameter limits
                         ids_list = list(ids)
-                        for i in range(0, len(ids_list), filter_size):
-                            batch_ids = ids_list[i : i + filter_size]
+                        for _, batch_ids in batch_iter(ids_list, filter_size):
                             for nrows, rows in batch_iter(
                                 querybuilder()
                                 .append(
@@ -375,7 +374,10 @@ def create_archive(
 
             # stream node repository files to the archive
             if entity_ids[EntityTypes.NODE]:
-                _stream_repo_files(archive_format.key_format, writer, entity_ids[EntityTypes.NODE], backend, batch_size)
+                # TODO: Expose to user?
+                _stream_repo_files(
+                    archive_format.key_format, writer, entity_ids[EntityTypes.NODE], backend, batch_size, filter_size
+                )
 
             EXPORT_LOGGER.report('Finalizing archive creation...')
 
@@ -397,13 +399,11 @@ def _collect_all_entities(
     include_comments: bool,
     include_logs: bool,
     batch_size: int,
-    filter_size: int,
 ) -> tuple[list[tuple[int, int]], set[LinkQuadruple]]:
     """Collect all entities.
 
     :returns: (group_id_to_node_id, link_data) and updates entity_ids
     """
-    print(filter_size)
 
     def progress_str(name):
         return f'Collecting entities: {name}'
@@ -535,7 +535,7 @@ def _collect_required_entities(
                 qbuilder.append(orm.Group, filters={'id': {'in': batch_ids}}, project='id', tag='group')
                 qbuilder.append(orm.Node, with_group='group', project='id')
                 qbuilder.distinct()
-                batch_group_nodes = qbuilder.all(batch_size=batch_size)
+                batch_group_nodes = qbuilder.all(batch_size=batch_size, flat=True)
                 group_nodes.extend(batch_group_nodes)
                 entity_ids[EntityTypes.NODE].update(nid for _, nid in batch_group_nodes)
 
@@ -555,7 +555,8 @@ def _collect_required_entities(
         if entity_ids[EntityTypes.NODE]:
             for _, node_id_chunk in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.COMPUTER].update(
-                    pk for (pk,) in querybuilder()
+                    pk
+                    for (pk,) in querybuilder()
                     .append(orm.Node, filters={'id': {'in': node_id_chunk}}, tag='node')
                     .append(orm.Computer, with_node='node', project='id')
                     .distinct()
@@ -568,7 +569,8 @@ def _collect_required_entities(
         if include_authinfos and entity_ids[EntityTypes.COMPUTER]:
             for _, computer_id_chunk in batch_iter(list(entity_ids[EntityTypes.COMPUTER]), filter_size):
                 entity_ids[EntityTypes.AUTHINFO].update(
-                    pk for (pk,) in querybuilder()
+                    pk
+                    for (pk,) in querybuilder()
                     .append(orm.Computer, filters={'id': {'in': computer_id_chunk}}, tag='comp')
                     .append(orm.AuthInfo, with_computer='comp', project='id')
                     .distinct()
@@ -581,7 +583,8 @@ def _collect_required_entities(
         if include_logs and entity_ids[EntityTypes.NODE]:
             for _, node_id_chunk in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.LOG].update(
-                    pk for (pk,) in querybuilder()
+                    pk
+                    for (pk,) in querybuilder()
                     .append(orm.Node, filters={'id': {'in': node_id_chunk}}, tag='node')
                     .append(orm.Log, with_node='node', project='id')
                     .distinct()
@@ -594,7 +597,8 @@ def _collect_required_entities(
         if include_comments and entity_ids[EntityTypes.NODE]:
             for _, node_id_chunk in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.COMMENT].update(
-                    pk for (pk,) in querybuilder()
+                    pk
+                    for (pk,) in querybuilder()
                     .append(orm.Node, filters={'id': {'in': node_id_chunk}}, tag='node')
                     .append(orm.Comment, with_node='node', project='id')
                     .distinct()
@@ -607,7 +611,8 @@ def _collect_required_entities(
         if entity_ids[EntityTypes.NODE]:
             for _, node_id_chunk in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.USER].update(
-                    pk for (pk,) in querybuilder()
+                    pk
+                    for (pk,) in querybuilder()
                     .append(orm.Node, filters={'id': {'in': node_id_chunk}}, tag='node')
                     .append(orm.User, with_node='node', project='id')
                     .distinct()
@@ -616,7 +621,8 @@ def _collect_required_entities(
         if entity_ids[EntityTypes.GROUP]:
             for _, group_id_chunk in batch_iter(list(entity_ids[EntityTypes.GROUP]), filter_size):
                 entity_ids[EntityTypes.USER].update(
-                    pk for (pk,) in querybuilder()
+                    pk
+                    for (pk,) in querybuilder()
                     .append(orm.Group, filters={'id': {'in': group_id_chunk}}, tag='group')
                     .append(orm.User, with_group='group', project='id')
                     .distinct()
@@ -625,7 +631,8 @@ def _collect_required_entities(
         if entity_ids[EntityTypes.COMMENT]:
             for _, comment_id_chunk in batch_iter(list(entity_ids[EntityTypes.COMMENT]), filter_size):
                 entity_ids[EntityTypes.USER].update(
-                    pk for (pk,) in querybuilder()
+                    pk
+                    for (pk,) in querybuilder()
                     .append(orm.Comment, filters={'id': {'in': comment_id_chunk}}, tag='comment')
                     .append(orm.User, with_comment='comment', project='id')
                     .distinct()
@@ -634,7 +641,8 @@ def _collect_required_entities(
         if entity_ids[EntityTypes.AUTHINFO]:
             for _, authinfo_id_chunk in batch_iter(list(entity_ids[EntityTypes.AUTHINFO]), filter_size):
                 entity_ids[EntityTypes.USER].update(
-                    pk for (pk,) in querybuilder()
+                    pk
+                    for (pk,) in querybuilder()
                     .append(orm.AuthInfo, filters={'id': {'in': authinfo_id_chunk}}, tag='auth')
                     .append(orm.User, with_authinfo='auth', project='id')
                     .distinct()
@@ -647,7 +655,12 @@ def _collect_required_entities(
 
 
 def _stream_repo_files(
-    key_format: str, writer: ArchiveWriterAbstract, node_ids: set[int], backend: StorageBackend, batch_size: int, filter_size: int
+    key_format: str,
+    writer: ArchiveWriterAbstract,
+    node_ids: set[int],
+    backend: StorageBackend,
+    batch_size: int,
+    filter_size: int,
 ) -> None:
     """Collect all repository object keys from the nodes, then stream the files to the archive."""
 
@@ -723,6 +736,7 @@ def _check_node_licenses(
     from typing import Sequence
 
     from aiida.common.exceptions import LicensingException
+
     print(filter_size)
 
     if allowed_licenses is None and forbidden_licenses is None:

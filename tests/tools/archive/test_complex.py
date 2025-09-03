@@ -202,21 +202,19 @@ def get_hash_from_db_content(grouplabel):
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_large_archive_import_export(tmp_path):
-    """Test that large datasets can be exported without parameter limit errors."""
+    """Test that large datasets can be imported / exported without parameter limit errors."""
     # Import the 100k node archive
     num_nodes = 100_000
     archive_path = Path(__file__).parents[2] / 'data' / f'{int(num_nodes/1000)}k-int-nodes-2.7.1.post0.aiida'
     import_archive(archive_path)
 
     # Verify we have the expected number of nodes
-    qb = orm.QueryBuilder()
-    qb.append(orm.Node)
-    all_nodes = qb.all(flat=True)
+    all_nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
     assert len(all_nodes) == num_nodes
 
     export_file = tmp_path / 'large_export.aiida'
     # NOTE: This calls the `_collect_required_entities` function,
-    # not `_collect_all_entities` which doesn't use QB filters
+    # not `_collect_all_entities` which doesn't use QB filters anyway
     create_archive(all_nodes, filename=export_file, test_run=False)
 
     # Test passed if no OperationalError was raised

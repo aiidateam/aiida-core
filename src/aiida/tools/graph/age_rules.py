@@ -218,13 +218,10 @@ class QueryRule(Operation, metaclass=ABCMeta):
         :param operational_set: where the results originate from (walkers)
         """
         from copy import deepcopy
-        
+
         primkeys = operational_set[self._entity_from].keyset
         target_set.empty()
 
-        import traceback
-        traceback.print_stack()
-        breakpoint()
         if primkeys:
             # PRCOMMENT: Expose this to the user somehow?
             filter_size = 10000  # Stay well under 65535 parameter limit
@@ -239,10 +236,11 @@ class QueryRule(Operation, metaclass=ABCMeta):
             else:
                 # PRCOMMENT: Maybe move `batch_iter` elsewhere? Import feels weird here?
                 from aiida.tools.archive.common import batch_iter
+
                 # Batch the queries for large datasets using batch_iter
                 all_results = []
-                
-                for _, batch_primkeys in batch_iter(primkeys_list, filter_size):
+
+                for _, batch_primkeys in batch_iter(primkeys, filter_size):
                     # Use deepcopy only when we need to batch
                     batch_qb = deepcopy(self._querybuilder)
                     batch_qb.add_filter(
@@ -267,6 +265,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
                 target_set[edge_key].add_entities(
                     [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in qres]
                 )
+
     def set_accumulator(self, accumulator_set):
         self._accumulator_set = accumulator_set
 

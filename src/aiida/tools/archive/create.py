@@ -553,11 +553,11 @@ def _collect_required_entities(
 
         # get full set of computers
         if entity_ids[EntityTypes.NODE]:
-            for _, node_id_chunk in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+            for _, batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.COMPUTER].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.Node, filters={'id': {'in': node_id_chunk}}, tag='node')
+                    .append(orm.Node, filters={'id': {'in': batch_ids}}, tag='node')
                     .append(orm.Computer, with_node='node', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)
@@ -581,11 +581,11 @@ def _collect_required_entities(
         progress.set_description_str(progress_str('Logs'))
         progress.update()
         if include_logs and entity_ids[EntityTypes.NODE]:
-            for _, node_id_chunk in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+            for _, batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.LOG].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.Node, filters={'id': {'in': node_id_chunk}}, tag='node')
+                    .append(orm.Node, filters={'id': {'in': batch_ids}}, tag='node')
                     .append(orm.Log, with_node='node', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)
@@ -595,11 +595,11 @@ def _collect_required_entities(
         progress.set_description_str(progress_str('Comments'))
         progress.update()
         if include_comments and entity_ids[EntityTypes.NODE]:
-            for _, node_id_chunk in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+            for _, batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.COMMENT].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.Node, filters={'id': {'in': node_id_chunk}}, tag='node')
+                    .append(orm.Node, filters={'id': {'in': batch_ids}}, tag='node')
                     .append(orm.Comment, with_node='node', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)
@@ -609,11 +609,11 @@ def _collect_required_entities(
         progress.set_description_str(progress_str('Users'))
         progress.update()
         if entity_ids[EntityTypes.NODE]:
-            for _, node_id_chunk in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+            for _, batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
                 entity_ids[EntityTypes.USER].update(
                     pk
                     for (pk,) in querybuilder()
-                    .append(orm.Node, filters={'id': {'in': node_id_chunk}}, tag='node')
+                    .append(orm.Node, filters={'id': {'in': batch_ids}}, tag='node')
                     .append(orm.User, with_node='node', project='id')
                     .distinct()
                     .iterall(batch_size=batch_size)

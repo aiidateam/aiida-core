@@ -209,6 +209,8 @@ def traverse_graph(
 
     :param missing_callback: A callback to handle missing starting_pks or if None raise NotExistent
     """
+    from aiida.tools.archive.common import batch_iter
+
     if max_iterations is None:
         max_iterations = cast(int, inf)
     elif not (isinstance(max_iterations, int) or max_iterations is inf):
@@ -240,13 +242,10 @@ def traverse_graph(
             return {'nodes': set(), 'links': set()}
         return {'nodes': set(), 'links': None}
 
-    # Batch the query to avoid parameter limits
     existing_pks = set()
-    operational_list = list(operational_set)
-    batch_size = 10000  # Stay well under 65535 parameter limit
+    filter_size = 10_000  # Stay well under 65535 parameter limit
 
-    for i in range(0, len(operational_list), batch_size):
-        batch_ids = operational_list[i:i + batch_size]
+    for _, batch_ids in batch_iter(operational_set, filter_size):
         query_nodes = orm.QueryBuilder(backend=backend)
         query_nodes.append(orm.Node, project=['id'], filters={'id': {'in': batch_ids}})
         existing_pks.update(query_nodes.all(flat=True))
@@ -302,4 +301,3 @@ def traverse_graph(
         output['links'] = results['nodes_nodes'].keyset
 
     return output
-

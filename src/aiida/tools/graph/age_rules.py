@@ -217,8 +217,6 @@ class QueryRule(Operation, metaclass=ABCMeta):
             There is no returned value for this method.
         :param operational_set: where the results originate from (walkers)
         """
-        from copy import deepcopy
-
         primkeys = operational_set[self._entity_from].keyset
         target_set.empty()
 

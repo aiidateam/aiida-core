@@ -8,9 +8,9 @@
 ###########################################################################
 """Shared resources for the archive."""
 
-from dataclasses import dataclass
 import urllib.parse
 import urllib.request
+from dataclasses import dataclass
 from html.parser import HTMLParser
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type
 
@@ -28,6 +28,7 @@ entity_type_to_orm: Dict[EntityTypes, Type[Entity]] = {
     EntityTypes.COMMENT: Comment,
 }
 
+
 @dataclass
 class QueryParams:
     """Parameters for executing backend queries."""
@@ -36,7 +37,6 @@ class QueryParams:
     """Batch size for streaming database rows."""
     filter_size: int
     """Maximum number of parameters allowed in a single query filter."""
-
 
 
 def batch_iter(

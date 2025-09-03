@@ -224,7 +224,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
 
         if primkeys:
             # PRCOMMENT: Expose this to the user somehow?
-            filter_size = 10000  # Stay well under 65535 parameter limit
+            filter_size = 10_000  # Stay well under 65535 parameter limit
 
             # If we have fewer keys than the batch size, use the original approach
             assert self._querybuilder is not None

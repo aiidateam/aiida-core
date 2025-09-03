@@ -536,7 +536,7 @@ def _collect_required_entities(
                 qbuilder.distinct()
                 batch_group_nodes = qbuilder.all(batch_size=batch_size, flat=True)
                 group_nodes.extend(batch_group_nodes)
-                entity_ids[EntityTypes.NODE].update(nid for _, nid in batch_group_nodes)
+                entity_ids[EntityTypes.NODE].update(nid for nid in batch_group_nodes)
 
         # get full set of nodes & links, following traversal rules
         progress.set_description_str(progress_str('Nodes (traversal)'))
@@ -692,7 +692,6 @@ def _check_unsealed_nodes(querybuilder: QbType, node_ids: set[int], batch_size: 
     if not node_ids:
         return
 
-    # Batch the node IDs to avoid parameter limits
     all_unsealed_pks = []
 
     for _, node_batch_ids in batch_iter(node_ids, filter_size):

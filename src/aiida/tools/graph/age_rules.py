@@ -220,12 +220,12 @@ class QueryRule(Operation, metaclass=ABCMeta):
         primkeys = operational_set[self._entity_from].keyset
         target_set.empty()
 
+        breakpoint()
         if primkeys:
-            primkeys_list = list(primkeys)
             batch_size = 10000  # Stay well under 65535 parameter limit
 
             # If we have fewer keys than the batch size, use the original approach
-            if len(primkeys_list) <= batch_size:
+            if len(primkeys) <= batch_size:
                 self._querybuilder.add_filter(
                     self._first_tag, {operational_set[self._entity_from].identifier: {'in': primkeys}}
                 )

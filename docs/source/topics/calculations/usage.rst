@@ -915,8 +915,10 @@ Now, you can install that script as a `code`.
    )
    unstash_code.store()
 
-Note: in this example, our unstashing script is identical to the stashing script that we used earlier!
-That means we could just as well skip the installation step and use the `MY_STASH_CODE` code again!
+.. note::
+
+   In this example, our unstashing script is identical to the stashing script that we used earlier!
+   That means we could just as well skip the installation step and use the `MY_STASH_CODE` code again!
 
 .. code-block:: python
 
@@ -957,9 +959,12 @@ To locate stashed data nodes from previous calculations:
 
     # For separate stash calculation (Method 2)
     qb = QueryBuilder()
-    qb.append(CalculationFactory('core.stash'), filters={'id': <STASH_CALC_PK>}, tag='calc')
+    qb.append(CalculationFactory('core.stash'),
+              filters={'id': <STASH_CALC_PK>},
+              tag='calc')
     qb.append((RemoteStashData),
-              with_incoming='calc', project='*')
+              with_incoming='calc',
+              project='*')
     stash_node = qb.one()[0]
 
 
@@ -968,7 +973,7 @@ Best Practices and Considerations
 
 .. important::
 
-   - **Usability**: Unlike Stashing, Untashing can only be performed as a dedicated calcjob via `core.unstash`.
+   - **Usability**: Unlike stashing, untashing can only be performed as a dedicated calcjob via `core.unstash`.
 
    - **Check stash node availability**: Before unstashing, verify that the stashed files still exist on the remote system. Files in the stash location are not managed by AiiDA and may be deleted by system administrators.
 

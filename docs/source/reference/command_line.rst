@@ -75,7 +75,7 @@ Below is a list with all available subcommands.
       create     Create a new code.
       delete     Delete a code.
       duplicate  Duplicate a code allowing to change some parameters.
-      export     Export code to a yaml file.
+      export     Export code(s) to yaml file(s).
       hide       Hide one or more codes from `verdi code list`.
       list       List the available codes.
       relabel    Relabel a code.
@@ -453,7 +453,7 @@ Below is a list with all available subcommands.
       --broker-host HOSTNAME          Hostname for the message broker.  [default: 127.0.0.1]
       --broker-port INTEGER           Port for the message broker.  [default: 5672]
       --broker-virtual-host TEXT      Name of the virtual host for the message broker without
-                                      leading forward slash.  [default: ""]
+                                      leading forward slash.
       --repository DIRECTORY          Absolute path to the file repository.
       --test-profile                  Designate the profile to be used for running the test
                                       suite only.

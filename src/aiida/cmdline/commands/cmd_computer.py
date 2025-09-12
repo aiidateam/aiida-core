@@ -322,6 +322,39 @@ def computer_setup(ctx, non_interactive, **kwargs):
     echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
 
 
+@verdi_computer.command('setup-many')
+@click.argument('config_files', nargs=-1, required=True, type=click.Path(exists=True, path_type=pathlib.Path))
+@with_dbenv()
+def computer_setup_many(config_files):
+    """Create multiple computers from YAML configuration files."""
+    import yaml
+
+    from aiida.common.exceptions import IntegrityError
+    from aiida.orm.utils.builders.computer import ComputerBuilder
+
+    for config_path in config_files:
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config_data = yaml.safe_load(f)
+
+            computer_builder = ComputerBuilder(**config_data)
+            computer = computer_builder.new()
+            computer.store()
+
+            echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
+        except IntegrityError as e:
+            if 'UNIQUE constraint failed: db_dbcomputer.label' in str(e):
+                msg = (
+                    f'Error processing {config_path}: Computer with label "{config_data.get("label", "unknown")}"'
+                    'already exists'
+                )
+                echo.echo_error(msg)
+            else:
+                echo.echo_error(f'Error processing {config_path}: Database integrity error - {e}')
+        except Exception as e:
+            echo.echo_error(f'Error processing {config_path}: {e}')
+
+
 @verdi_computer.command('duplicate')
 @arguments.COMPUTER(callback=set_computer_builder)
 @options_computer.LABEL(contextual_default=partial(get_parameter_default, 'label'))
@@ -745,222 +778,91 @@ def computer_export():
 
 
 @computer_export.command('setup')
-@click.argument('computers_and_output', nargs=-1, required=False)
-@click.option('-a', '--all', 'export_all', is_flag=True, help='Export all computers.')
+@arguments.COMPUTER()
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
 @options.OVERWRITE()
 @options.SORT()
 @with_dbenv()
-def computer_export_setup(computers_and_output, export_all, overwrite, sort):
-    """Export computer setup(s) to YAML file(s).
-
-    Usage:
-    - verdi computer export setup COMPUTER_ID [COMPUTER_ID ...] [OUTPUT_FILE]
-    - verdi computer export setup --all
-
-    If no output file is given, default names are created based on the computer labels.
-    Custom output filename can only be provided when exporting a single computer.
-    """
+def computer_export_setup(computer, output_file, overwrite, sort):
+    """Export computer setup to a YAML file."""
     import yaml
 
-    from aiida import orm
-    from aiida.common import NotExistent
-    from aiida.orm import load_computer
+    computer_setup = {
+        'label': computer.label,
+        'hostname': computer.hostname,
+        'description': computer.description,
+        'transport': computer.transport_type,
+        'scheduler': computer.scheduler_type,
+        'shebang': computer.get_shebang(),
+        'work_dir': computer.get_workdir(),
+        'mpirun_command': ' '.join(computer.get_mpirun_command()),
+        'mpiprocs_per_machine': computer.get_default_mpiprocs_per_machine(),
+        'default_memory_per_machine': computer.get_default_memory_per_machine(),
+        'use_double_quotes': computer.get_use_double_quotes(),
+        'prepend_text': computer.get_prepend_text(),
+        'append_text': computer.get_append_text(),
+    }
 
-    # Handle --all option
-    if export_all:
-        if computers_and_output:
-            echo.echo_critical('Cannot specify both --all and individual computers.')
+    if output_file is None:
+        output_file = pathlib.Path(f'{computer.label}-setup.yaml')
+    try:
+        validate_output_filename(output_file=output_file, overwrite=overwrite)
+    except (FileExistsError, IsADirectoryError) as exception:
+        raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
 
-        # Get all computers
-        query = orm.QueryBuilder()
-        query.append(orm.Computer)
-        computers = [computer for [computer] in query.all()]
-        if not computers:
-            echo.echo_report('No computers found in the database.')
-            return
-        output_file = None
+    try:
+        output_file.write_text(yaml.dump(computer_setup, sort_keys=sort), 'utf-8')
+    except Exception as e:
+        error_traceback = traceback.format_exc()
+        echo.CMDLINE_LOGGER.debug(error_traceback)
+        echo.echo_critical(
+            f'Unexpected error while exporting setup for Computer<{computer.pk}> {computer.label}:\n ({e!s}).'
+        )
     else:
-        # Parse computers and potential output file
-        if not computers_and_output:
-            echo.echo_critical('Must specify either --all or individual computer identifiers.')
-
-        computers = []
-        output_file = None
-
-        # Try to parse all arguments as computers first
-        for i, arg in enumerate(computers_and_output):
-            try:
-                computer = load_computer(arg)
-                computers.append(computer)
-            except NotExistent:
-                # This argument is not a valid computer identifier
-                if i == len(computers_and_output) - 1:
-                    # Last argument and not a computer - treat as output file
-                    output_file = pathlib.Path(arg)
-                    break
-                else:
-                    # Not last argument and not a computer - error
-                    echo.echo_critical(f'Invalid computer identifier: {arg}')
-
-        if not computers:
-            echo.echo_critical('No valid computer identifiers provided.')
-
-    # Validate output file usage
-    if output_file and len(computers) > 1:
-        msg = 'Custom output filename can only be provided if a single computer is being exported.'
-        raise click.BadParameter(msg)
-
-    # Export each computer
-    for computer in computers:
-        computer_setup = {
-            'label': computer.label,
-            'hostname': computer.hostname,
-            'description': computer.description,
-            'transport': computer.transport_type,
-            'scheduler': computer.scheduler_type,
-            'shebang': computer.get_shebang(),
-            'work_dir': computer.get_workdir(),
-            'mpirun_command': ' '.join(computer.get_mpirun_command()),
-            'mpiprocs_per_machine': computer.get_default_mpiprocs_per_machine(),
-            'default_memory_per_machine': computer.get_default_memory_per_machine(),
-            'use_double_quotes': computer.get_use_double_quotes(),
-            'prepend_text': computer.get_prepend_text(),
-            'append_text': computer.get_append_text(),
-        }
-
-        # Determine the output file for this specific computer
-        if output_file is None:
-            current_output_file = pathlib.Path(f'{computer.label}-setup.yaml')
-        else:
-            current_output_file = output_file
-
-        try:
-            validate_output_filename(output_file=current_output_file, overwrite=overwrite)
-        except (FileExistsError, IsADirectoryError) as exception:
-            raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
-
-        try:
-            current_output_file.write_text(yaml.dump(computer_setup, sort_keys=sort), 'utf-8')
-        except Exception as e:
-            error_traceback = traceback.format_exc()
-            echo.CMDLINE_LOGGER.debug(error_traceback)
-            echo.echo_critical(
-                f'Unexpected error while exporting setup for Computer<{computer.pk}> {computer.label}:\n ({e!s}).'
-            )
-        else:
-            echo.echo_success(
-                f"Computer<{computer.pk}> {computer.label} setup exported to file '{current_output_file}'."
-            )
+        echo.echo_success(f"Computer<{computer.pk}> {computer.label} setup exported to file '{output_file}'.")
 
 
 @computer_export.command('config')
-@click.argument('computers_and_output', nargs=-1, required=False)
-@click.option('-a', '--all', 'export_all', is_flag=True, help='Export all computers.')
+@arguments.COMPUTER()
+@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
 @options.USER(
     help='Email address of the AiiDA user from whom to export this computer (if different from default user).'
 )
 @options.OVERWRITE()
 @options.SORT()
 @with_dbenv()
-def computer_export_config(computers_and_output, export_all, user, overwrite, sort):
-    """Export computer transport configuration(s) for a user to YAML file(s).
-
-    Usage:
-    - verdi computer export config COMPUTER_ID [COMPUTER_ID ...] [OUTPUT_FILE]
-    - verdi computer export config --all
-
-    If no output file is given, default names are created based on the computer labels.
-    Custom output filename can only be provided when exporting a single computer.
-    """
+def computer_export_config(computer, output_file, user, overwrite, sort):
+    """Export computer transport configuration for a user to a YAML file."""
     import yaml
 
-    from aiida import orm
-    from aiida.common import NotExistent
-    from aiida.orm import load_computer
-
-    # Handle --all option
-    if export_all:
-        if computers_and_output:
-            echo.echo_critical('Cannot specify both --all and individual computers.')
-
-        # Get all configured computers
-        query = orm.QueryBuilder()
-        query.append(orm.Computer)
-        all_computers = [computer for [computer] in query.all()]
-        computers = [comp for comp in all_computers if comp.is_configured]
-        if not computers:
-            echo.echo_report('No configured computers found in the database.')
-            return
-        output_file = None
+    if not computer.is_configured:
+        echo.echo_critical(
+            f'Computer<{computer.pk}> {computer.label} configuration cannot be exported,'
+            ' because computer has not been configured yet.'
+        )
     else:
-        # Parse computers and potential output file
-        if not computers_and_output:
-            echo.echo_critical('Must specify either --all or individual computer identifiers.')
-
-        computers = []
-        output_file = None
-
-        # Try to parse all arguments as computers first
-        for i, arg in enumerate(computers_and_output):
-            try:
-                computer = load_computer(arg)
-                computers.append(computer)
-            except NotExistent:
-                # This argument is not a valid computer identifier
-                if i == len(computers_and_output) - 1:
-                    # Last argument and not a computer - treat as output file
-                    output_file = pathlib.Path(arg)
-                    break
-                else:
-                    # Not last argument and not a computer - error
-                    echo.echo_critical(f'Invalid computer identifier: {arg}')
-
-        if not computers:
-            echo.echo_critical('No valid computer identifiers provided.')
-
-    # Validate output file usage
-    if output_file and len(computers) > 1:
-        msg = 'Custom output filename can only be provided if a single computer is being exported.'
-        raise click.BadParameter(msg)
-
-    # Export each computer
-    for computer in computers:
-        if not computer.is_configured:
-            echo.echo_warning(
-                f'Computer<{computer.pk}> {computer.label} configuration cannot be exported,'
-                ' because computer has not been configured yet. Skipping.'
-            )
-            continue
-
-        # Determine the output file for this specific computer
         if output_file is None:
-            current_output_file = pathlib.Path(f'{computer.label}-config.yaml')
-        else:
-            current_output_file = output_file
-
+            output_file = pathlib.Path(f'{computer.label}-config.yaml')
         try:
-            validate_output_filename(output_file=current_output_file, overwrite=overwrite)
+            validate_output_filename(output_file=output_file, overwrite=overwrite)
         except (FileExistsError, IsADirectoryError) as exception:
             raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
 
-        try:
-            computer_configuration = computer.get_configuration(user)
-            current_output_file.write_text(yaml.dump(computer_configuration, sort_keys=sort), 'utf-8')
+    try:
+        computer_configuration = computer.get_configuration(user)
+        output_file.write_text(yaml.dump(computer_configuration, sort_keys=sort), 'utf-8')
 
-        except Exception as exception:
-            error_traceback = traceback.format_exc()
-            echo.CMDLINE_LOGGER.debug(error_traceback)
-            if user is None:
-                echo.echo_critical(
-                    'Unexpected error while exporting configuration for '
-                    f'Computer<{computer.pk}> {computer.label}: {exception!s}.'
-                )
-            else:
-                echo.echo_critical(
-                    f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}'
-                    f' and User<{user.pk}> {user.email}: {exception!s}.'
-                )
-        else:
-            echo.echo_success(
-                f'Computer<{computer.pk}> {computer.label} configuration exported to file `{current_output_file}`.'
+    except Exception as exception:
+        error_traceback = traceback.format_exc()
+        echo.CMDLINE_LOGGER.debug(error_traceback)
+        if user is None:
+            echo.echo_critical(
+                f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}: {exception!s}.'  # noqa: E501
             )
+        else:
+            echo.echo_critical(
+                f'Unexpected error while exporting configuration for Computer<{computer.pk}> {computer.label}'
+                f' and User<{user.pk}> {user.email}: {exception!s}.'
+            )
+    else:
+        echo.echo_success(f'Computer<{computer.pk}> {computer.label} configuration exported to file `{output_file}`.')

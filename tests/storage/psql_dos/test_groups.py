@@ -17,6 +17,7 @@ from aiida.tools.archive import import_archive
 
 
 @pytest.mark.requires_psql
+@pytest.mark.nightly
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_group_bulk_operations():
     """

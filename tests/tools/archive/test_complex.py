@@ -201,7 +201,8 @@ def get_hash_from_db_content(grouplabel):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.timeout(600)  # 10 minutes for the full test
+@pytest.mark.timeout(600)
+@pytest.mark.nightly
 def test_large_archive_import_export(tmp_path):
     """Test that large datasets can be imported and exported without parameter limit errors."""
     # Import the 100k node archive

@@ -1189,10 +1189,11 @@ class AsyncSshTransport(AsyncTransport):
         return await self.async_backend.glob(pathname, ignore_nonexisting=ignore_nonexisting)
 
     async def chmod_async(self, path: TransportPath, mode: int, follow_symlinks: bool = True):
-        """Change the permissions of a file.
+        """Change permissions of a path.
 
-        :param path: path to the file
-        :param mode: the new permissions
+        :param path: Path to the file or directory.
+        :param mode: New permissions as an integer, for example 0o700 (octal) or 448 (decimal) results in `-rwx------`
+            for a file.
         :param bool follow_symlinks: if True, follow symbolic links
 
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`

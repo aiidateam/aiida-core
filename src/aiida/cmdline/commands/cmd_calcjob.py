@@ -8,7 +8,10 @@
 ###########################################################################
 """`verdi calcjob` commands."""
 
+from __future__ import annotations
+
 import os
+import typing as t
 
 import click
 
@@ -16,6 +19,9 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.cmdline.utils import decorators, echo
+
+if t.TYPE_CHECKING:
+    from aiida import orm
 
 
 @verdi.group('calcjob')
@@ -126,7 +132,7 @@ def calcjob_inputcat(calcjob, path):
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 @click.argument('path', type=str, required=False)
 @decorators.with_dbenv()
-def calcjob_remotecat(calcjob, path):
+def calcjob_remotecat(calcjob: orm.CalcJobNode, path: str | None):
     """Show the contents of a file in the remote working directory.
 
     The file to show can be specified using the PATH argument. If PATH is not specified, the default output file path
@@ -288,7 +294,7 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
     clean_mapping_remote_paths(path_mapping)
 
 
-def get_remote_and_path(calcjob, path=None):
+def get_remote_and_path(calcjob: orm.CalcJobNode, path: str | None = None) -> tuple[orm.RemoteData, str]:
     """Return the remote folder output node and process the path argument.
 
     :param calcjob: The ``CalcJobNode`` whose remote_folder to be returned.
@@ -327,7 +333,7 @@ def get_remote_and_path(calcjob, path=None):
         ) from exception
 
     # Try to get the default output filename from the node's associated process class spec
-    port = process_class.spec_options.get('output_filename')
+    port = process_class.spec_options.get('output_filename')  # type: ignore[attr-defined]
     if port and port.has_default():
         path = port.default
 

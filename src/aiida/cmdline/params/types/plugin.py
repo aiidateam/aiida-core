@@ -67,34 +67,32 @@ class PluginParamType(EntryPointType):
         'aiida.workflows': factories.WorkflowFactory,
     }
 
-    def __init__(self, group: str | tuple[str] | None = None, load: bool = False, *args, **kwargs):
+    def __init__(self, group: str | tuple[str, ...] | None = None, load: bool = False, *args, **kwargs):
         """Group should be either a string or a tuple of valid entry point groups.
         If it is not specified we use the tuple of all recognized entry point groups.
         """
+        if group is None or isinstance(group, tuple):
+            self._input_groups = group
+        elif isinstance(group, str):
+            self._input_groups = (group,)
+        else:
+            raise ValueError('PluginParamType: invalid type for group argument')
+
         self.load = load
-        self._input_group = group
 
         super().__init__(*args, **kwargs)
 
     @functools.cached_property
     def groups(self) -> tuple[str, ...]:
         """Returns a tuple of valid groups for this instance"""
-        group = self._input_group
         valid_entry_point_groups = get_entry_point_groups()
 
-        if group is None:
+        if self._input_groups is None:
             return tuple(valid_entry_point_groups)
-
-        if isinstance(group, str):
-            unvalidated_groups = (group,)
-        elif isinstance(group, tuple):
-            unvalidated_groups = group
-        else:
-            raise ValueError('invalid type for group')
 
         groups = []
 
-        for grp in unvalidated_groups:
+        for grp in self._input_groups:
             if not grp.startswith(ENTRY_POINT_GROUP_PREFIX):
                 grp = ENTRY_POINT_GROUP_PREFIX + grp  # noqa: PLW2901
 

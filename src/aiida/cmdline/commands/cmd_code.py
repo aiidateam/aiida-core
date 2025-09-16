@@ -58,7 +58,7 @@ def code_create():
     """Create a new code."""
 
 
-def get_default(key, ctx):
+def get_default(key: str, ctx: click.Context) -> 'Any | None':
     """Get the default argument using a user instance property
 
     :param key: The name of the property to use
@@ -66,7 +66,7 @@ def get_default(key, ctx):
     :return: The default value, or None
     """
     try:
-        value = getattr(ctx.code_builder, key)
+        value = getattr(ctx.code_builder, key)  # type: ignore[attr-defined]
         if value == '':
             value = None
     except KeyError:
@@ -75,21 +75,21 @@ def get_default(key, ctx):
     return value
 
 
-def get_computer_name(ctx):
-    return getattr(ctx.code_builder, 'computer').label
+def get_computer_name(ctx: click.Context) -> str:
+    return getattr(ctx.code_builder, 'computer').label  # type: ignore[attr-defined]
 
 
-def get_on_computer(ctx):
-    return not getattr(ctx.code_builder, 'is_local')()
+def get_on_computer(ctx: click.Context) -> bool:
+    return not getattr(ctx.code_builder, 'is_local')()  # type: ignore[attr-defined]
 
 
-def set_code_builder(ctx, param, value):
+def set_code_builder(ctx: click.Context, _param: Any, value: Any) -> Any:
     """Set the code spec for defaults of following options."""
     from aiida.orm.utils.builders.code import CodeBuilder
 
     # TODO(danielhollas): CodeBuilder is deprecated, rewrite this somehow?
     with warnings.catch_warnings(record=True):
-        ctx.code_builder = CodeBuilder.from_code(value)
+        ctx.code_builder = CodeBuilder.from_code(value)  # type: ignore[attr-defined]
     return value
 
 

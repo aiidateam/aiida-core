@@ -30,6 +30,8 @@ from aiida.manage import get_manager
 from .fields import EntityFieldMeta
 
 if TYPE_CHECKING:
+    from logging import Logger
+
     from aiida.orm.implementation import BackendEntity, StorageBackend
     from aiida.orm.querybuilder import FilterType, OrderByType, QueryBuilder
 
@@ -179,7 +181,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     """An AiiDA entity"""
 
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
-    _logger = log.AIIDA_LOGGER.getChild('orm.entities')
+    _logger: Logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
     class Model(BaseModel, defer_build=True):
         pk: Optional[int] = MetadataField(

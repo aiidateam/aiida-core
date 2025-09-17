@@ -145,8 +145,6 @@ repos:
         src/aiida/tools/graph/age_rules.py|
         src/aiida/tools/graph/deletions.py|
         src/aiida/tools/graph/graph_traversers.py|
-        src/aiida/tools/query/calculation.py|
-        src/aiida/tools/query/mapping.py|
         src/aiida/transports/cli.py|
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|

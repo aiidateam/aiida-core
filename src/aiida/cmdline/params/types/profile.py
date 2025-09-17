@@ -8,6 +8,9 @@
 ###########################################################################
 """Profile param type for click."""
 
+import typing as t
+
+import click
 from click.shell_completion import CompletionItem
 
 from .strings import LabelStringType
@@ -25,22 +28,22 @@ class ProfileParamType(LabelStringType):
 
     name = 'profile'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
         self._cannot_exist = kwargs.pop('cannot_exist', False)
         self._load_profile = kwargs.pop('load_profile', False)  # If True, will load the profile converted from value
         super().__init__(*args, **kwargs)
 
     @staticmethod
-    def deconvert_default(value):
+    def deconvert_default(value: t.Any) -> t.Any:
         return value.name
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         """Attempt to match the given value to a valid profile."""
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
         from aiida.manage.configuration import Profile, load_profile
 
         try:
-            config = ctx.obj.config
+            config = ctx.obj.config  # type: ignore[union-attr]
         except AttributeError:
             raise RuntimeError(
                 'The context does not contain a user defined object with the loaded AiiDA configuration. '
@@ -69,11 +72,11 @@ class ProfileParamType(LabelStringType):
         if self._load_profile:
             load_profile(profile.name)
 
-        ctx.obj.profile = profile
+        ctx.obj.profile = profile  # type: ignore[union-attr]
 
         return profile
 
-    def shell_complete(self, ctx, param, incomplete):
+    def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]:
         """Return possible completions based on an incomplete value
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description

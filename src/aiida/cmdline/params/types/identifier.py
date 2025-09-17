@@ -53,7 +53,7 @@ class IdentifierParamType(click.ParamType, ABC):
         if sub_classes is not None and not isinstance(sub_classes, tuple):
             raise TypeError('sub_classes should be a tuple of entry point strings')
 
-        self._sub_classes: tuple | None = None
+        self._sub_classes: tuple[t.Any, ...] | None = None
         self._entry_point_strings = sub_classes
 
     @cached_property

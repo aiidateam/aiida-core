@@ -8,8 +8,12 @@
 ###########################################################################
 """Module for various text-based string validation."""
 
-import re
+from __future__ import annotations
 
+import re
+import typing as t
+
+import click
 from click.types import StringParamType
 
 __all__ = ('EmailType', 'EntryPointType', 'HostnameType', 'LabelStringType', 'NonEmptyStringParamType')
@@ -20,7 +24,7 @@ class NonEmptyStringParamType(StringParamType):
 
     name = 'nonemptystring'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         newval = super().convert(value, param, ctx)
 
         # Note: Valid :py:class:`click.ParamType`s need to pass through None unchanged
@@ -32,7 +36,7 @@ class NonEmptyStringParamType(StringParamType):
 
         return newval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'NONEMPTYSTRING'
 
 
@@ -48,7 +52,7 @@ class LabelStringType(NonEmptyStringParamType):
 
     ALPHABET = r'\w\.\-'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         newval = super().convert(value, param, ctx)
 
         if not re.match(f'^[{self.ALPHABET}]*$', newval):
@@ -56,7 +60,7 @@ class LabelStringType(NonEmptyStringParamType):
 
         return newval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'LABELSTRING'
 
 
@@ -74,7 +78,7 @@ class HostnameType(StringParamType):
 
     name = 'hostname'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         newval = super().convert(value, param, ctx)
 
         if newval and not HOSTNAME_REGEX.match(newval):
@@ -82,7 +86,7 @@ class HostnameType(StringParamType):
 
         return newval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'HOSTNAME'
 
 
@@ -94,7 +98,7 @@ class EmailType(StringParamType):
 
     name = 'email'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         newval = super().convert(value, param, ctx)
 
         if not re.match(r'[^@]+@[^@]+(\.[^@]+){0,1}', newval):
@@ -102,7 +106,7 @@ class EmailType(StringParamType):
 
         return newval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'EMAIL'
 
 
@@ -114,7 +118,7 @@ class EntryPointType(NonEmptyStringParamType):
 
     name = 'entrypoint'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         newval = super().convert(value, param, ctx)
 
         if not re.match(r'[\w.-]', newval):
@@ -124,5 +128,5 @@ class EntryPointType(NonEmptyStringParamType):
 
         return newval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'ENTRYPOINT'

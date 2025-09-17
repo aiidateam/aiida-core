@@ -69,13 +69,19 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
 
     class Model(entities.Entity.Model):
         uuid: Optional[str] = MetadataField(
-            description='The UUID of the comment', is_attribute=False, exclude_to_orm=True
+            description='The UUID of the comment',
+            is_attribute=False,
+            exclude_to_orm=True,
         )
         ctime: Optional[datetime] = MetadataField(
-            description='Creation time of the comment', is_attribute=False, exclude_to_orm=True
+            description='Creation time of the comment',
+            is_attribute=False,
+            exclude_to_orm=True,
         )
         mtime: Optional[datetime] = MetadataField(
-            description='Modified time of the comment', is_attribute=False, exclude_to_orm=True
+            description='Modified time of the comment',
+            is_attribute=False,
+            exclude_to_orm=True,
         )
         node: int = MetadataField(
             description='Node PK that the comment is attached to',
@@ -89,10 +95,17 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
             orm_class='core.user',
             orm_to_model=lambda comment, _: comment.user.pk,
         )
-        content: str = MetadataField(description='Content of the comment', is_attribute=False)
+        content: str = MetadataField(
+            description='Content of the comment',
+            is_attribute=False,
+        )
 
     def __init__(
-        self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['StorageBackend'] = None
+        self,
+        node: 'Node',
+        user: 'User',
+        content: Optional[str] = None,
+        backend: Optional['StorageBackend'] = None,
     ):
         """Create a Comment for a given node and user
 
@@ -104,7 +117,11 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         :return: a Comment object associated to the given node and user
         """
         backend = backend or get_manager().get_profile_storage()
-        model = backend.comments.create(node=node.backend_entity, user=user.backend_entity, content=content)
+        model = backend.comments.create(
+            node=node.backend_entity,
+            user=user.backend_entity,
+            content=content,
+        )
         super().__init__(model)
 
     def __str__(self) -> str:

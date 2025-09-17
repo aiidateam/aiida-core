@@ -77,3 +77,31 @@ def test_entry_points_add_and_load(entry_points):
 
     with pytest.raises(RuntimeError, match='inline function was called'):
         entry_point()
+
+
+def test_arithmetic_add_node_results(generate_calculation_node_add):
+    """Test that run and construct methods produce equivalent nodes."""
+    x, y = 5, 7
+
+    run_node = generate_calculation_node_add(x=x, y=y, method='run')
+    construct_node = generate_calculation_node_add(x=x, y=y, method='construct')
+
+    # Check same basic properties
+    assert run_node.outputs.sum.value == construct_node.outputs.sum.value == 12
+    assert run_node.exit_status == construct_node.exit_status == 0
+    assert run_node.process_state == construct_node.process_state
+    assert run_node.inputs.x.value == construct_node.inputs.x.value == x
+    assert run_node.inputs.y.value == construct_node.inputs.y.value == y
+
+
+@pytest.mark.benchmark
+@pytest.mark.parametrize('method', ['run', 'construct'])
+def test_benchmark_arithmetic_add_node_methods(benchmark, generate_calculation_node_add, method):
+    """Benchmark for run and construct methods of ArithmeticAdd CalcJob node."""
+
+    def create_node():
+        return generate_calculation_node_add(method=method)
+
+    node = benchmark(create_node)
+    assert node.is_stored
+    assert node.outputs.sum.value == 3

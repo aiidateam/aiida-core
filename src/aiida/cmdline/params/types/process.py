@@ -8,6 +8,11 @@
 ###########################################################################
 """Module for the process node parameter type"""
 
+import typing as t
+
+if t.TYPE_CHECKING:
+    from aiida.orm.utils.loaders import ProcessEntityLoader
+
 from .identifier import IdentifierParamType
 
 __all__ = ('ProcessParamType',)
@@ -19,7 +24,7 @@ class ProcessParamType(IdentifierParamType):
     name = 'Process'
 
     @property
-    def orm_class_loader(self):
+    def orm_class_loader(self) -> 'type[ProcessEntityLoader]':
         """Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
 

@@ -8,7 +8,14 @@
 ###########################################################################
 """Convenience class which can be used to defined a set of commonly used arguments that can be easily reused."""
 
+from __future__ import annotations
+
+import typing as t
+
 import click
+
+if t.TYPE_CHECKING:
+    from click.decorators import FC
 
 __all__ = ('OverridableArgument',)
 
@@ -35,12 +42,12 @@ class OverridableArgument:
     the function argument name is determined, can be overridden.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
         """Store the default args and kwargs"""
         self.args = args
         self.kwargs = kwargs
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Callable[[FC], FC]:
         """Override the stored kwargs with the passed kwargs and return the argument.
 
         The stored args are used only if they are not provided. This allows the user to override the variable name,

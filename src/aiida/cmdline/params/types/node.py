@@ -8,6 +8,11 @@
 ###########################################################################
 """Module to define the custom click param type for node"""
 
+import typing as t
+
+if t.TYPE_CHECKING:
+    from aiida.orm.utils.loaders import NodeEntityLoader
+
 from .identifier import IdentifierParamType
 
 __all__ = ('NodeParamType',)
@@ -19,7 +24,7 @@ class NodeParamType(IdentifierParamType):
     name = 'Node'
 
     @property
-    def orm_class_loader(self):
+    def orm_class_loader(self) -> 'type[NodeEntityLoader]':
         """Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
 

@@ -15,15 +15,15 @@ from aiida.cmdline.params.options.interactive import InteractiveOption, Template
 from aiida.cmdline.params.options.overridable import OverridableOption
 
 
-def is_on_computer(ctx):
+def is_on_computer(ctx: click.Context) -> bool:
     return bool(ctx.params.get('on_computer'))
 
 
-def is_not_on_computer(ctx):
+def is_not_on_computer(ctx: click.Context) -> bool:
     return bool(not is_on_computer(ctx))
 
 
-def validate_label_uniqueness(ctx, _, value):
+def validate_label_uniqueness(ctx: click.Context, _: None, value: str) -> str:
     """Validate the uniqueness of the label of the code.
 
     The exact uniqueness criterion depends on the type of the code, whether it is "local" or "remote". For the former,

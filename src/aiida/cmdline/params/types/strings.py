@@ -24,12 +24,10 @@ class NonEmptyStringParamType(StringParamType):
 
     name = 'nonemptystring'
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
-        newval = super().convert(value, param, ctx)
-
-        # Note: Valid :py:class:`click.ParamType`s need to pass through None unchanged
-        if newval is None:
-            return None
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        # NOTE: The return value of click.StringParamType.convert is typed as t.Any,
+        # but from its implementation its clear that it returns a string.
+        newval = t.cast(str, super().convert(value, param, ctx))
 
         if not newval:  # empty string
             self.fail('Empty string is not valid!')
@@ -52,7 +50,7 @@ class LabelStringType(NonEmptyStringParamType):
 
     ALPHABET = r'\w\.\-'
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
         newval = super().convert(value, param, ctx)
 
         if not re.match(f'^[{self.ALPHABET}]*$', newval):
@@ -78,8 +76,8 @@ class HostnameType(StringParamType):
 
     name = 'hostname'
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
-        newval = super().convert(value, param, ctx)
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        newval = t.cast(str, super().convert(value, param, ctx))
 
         if newval and not HOSTNAME_REGEX.match(newval):
             self.fail('Please enter a valid hostname.')
@@ -98,8 +96,8 @@ class EmailType(StringParamType):
 
     name = 'email'
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
-        newval = super().convert(value, param, ctx)
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        newval = t.cast(str, super().convert(value, param, ctx))
 
         if not re.match(r'[^@]+@[^@]+(\.[^@]+){0,1}', newval):
             self.fail('Please enter a valid email.')
@@ -118,7 +116,7 @@ class EntryPointType(NonEmptyStringParamType):
 
     name = 'entrypoint'
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
         newval = super().convert(value, param, ctx)
 
         if not re.match(r'[\w.-]', newval):

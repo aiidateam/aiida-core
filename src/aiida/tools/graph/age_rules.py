@@ -221,10 +221,33 @@ class QueryRule(Operation, metaclass=ABCMeta):
         target_set.empty()
 
         if primkeys:
-            self._querybuilder.add_filter(
-                self._first_tag, {operational_set[self._entity_from].identifier: {'in': primkeys}}
-            )
-            qres = self._querybuilder.dict()
+            # PRCOMMENT: Expose this to the user somehow?
+            filter_size = 10_000  # Stay well under 65535 parameter limit
+
+            # If we have fewer keys than the batch size, use the original approach
+            assert self._querybuilder is not None
+            if len(primkeys) <= filter_size:
+                self._querybuilder.add_filter(
+                    self._first_tag, {operational_set[self._entity_from].identifier: {'in': primkeys}}
+                )
+                qres = self._querybuilder.dict()
+            else:
+                # PRCOMMENT: Maybe move `batch_iter` elsewhere? Import feels weird here?
+                from aiida.tools.archive.common import batch_iter
+
+                # Batch the queries for large datasets using batch_iter
+                all_results = []
+
+                for _, batch_primkeys in batch_iter(primkeys, filter_size):
+                    # Use deepcopy only when we need to batch
+                    batch_qb = deepcopy(self._querybuilder)
+                    batch_qb.add_filter(
+                        self._first_tag, {operational_set[self._entity_from].identifier: {'in': batch_primkeys}}
+                    )
+                    batch_results = batch_qb.dict()
+                    all_results.extend(batch_results)
+
+                qres = all_results
 
             # These are the new results returned by the query
             target_set[self._entity_to].add_entities(

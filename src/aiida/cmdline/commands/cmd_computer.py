@@ -322,6 +322,39 @@ def computer_setup(ctx, non_interactive, **kwargs):
     echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
 
 
+@verdi_computer.command('setup-many')
+@click.argument('config_files', nargs=-1, required=True, type=click.Path(exists=True, path_type=pathlib.Path))
+@with_dbenv()
+def computer_setup_many(config_files):
+    """Create multiple computers from YAML configuration files."""
+    import yaml
+
+    from aiida.common.exceptions import IntegrityError
+    from aiida.orm.utils.builders.computer import ComputerBuilder
+
+    for config_path in config_files:
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config_data = yaml.safe_load(f)
+
+            computer_builder = ComputerBuilder(**config_data)
+            computer = computer_builder.new()
+            computer.store()
+
+            echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
+        except IntegrityError as e:
+            if 'UNIQUE constraint failed: db_dbcomputer.label' in str(e):
+                msg = (
+                    f'Error processing {config_path}: Computer with label "{config_data.get("label", "unknown")}"'
+                    'already exists'
+                )
+                echo.echo_error(msg)
+            else:
+                echo.echo_error(f'Error processing {config_path}: Database integrity error - {e}')
+        except Exception as e:
+            echo.echo_error(f'Error processing {config_path}: {e}')
+
+
 @verdi_computer.command('duplicate')
 @arguments.COMPUTER(callback=set_computer_builder)
 @options_computer.LABEL(contextual_default=partial(get_parameter_default, 'label'))

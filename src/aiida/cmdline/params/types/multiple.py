@@ -8,6 +8,10 @@
 ###########################################################################
 """Module to define custom click param type for multiple values"""
 
+from __future__ import annotations
+
+import typing as t
+
 import click
 
 __all__ = ('MultipleValueParamType',)
@@ -16,7 +20,7 @@ __all__ = ('MultipleValueParamType',)
 class MultipleValueParamType(click.ParamType):
     """An extension of click.ParamType that can parse multiple values for a given ParamType"""
 
-    def __init__(self, param_type):
+    def __init__(self, param_type: t.Any):
         """Construct a new instance."""
         super().__init__()
         self._param_type = param_type
@@ -32,7 +36,7 @@ class MultipleValueParamType(click.ParamType):
         except AttributeError:
             return self.name
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> tuple[t.Any, ...]:
         try:
             return tuple(self._param_type(entry) for entry in value)
         except ValueError:

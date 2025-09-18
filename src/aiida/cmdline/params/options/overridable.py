@@ -41,7 +41,7 @@ class OverridableOption:
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
         """Store the default args and kwargs.
 
         :param args: default arguments to be used for the click option
@@ -50,7 +50,7 @@ class OverridableOption:
         self.args = args
         self.kwargs = kwargs
 
-    def __call__(self, **kwargs) -> t.Callable[[t.Any], t.Any]:
+    def __call__(self, **kwargs: t.Any) -> t.Callable[[t.Any], t.Any]:
         """Override the stored kwargs, (ignoring args as we do not allow option name changes) and return the option.
 
         :param kwargs: keyword arguments that will override those set in the construction
@@ -60,7 +60,7 @@ class OverridableOption:
         kw_copy.update(kwargs)
         return click.option(*self.args, **kw_copy)
 
-    def clone(self, **kwargs) -> 'OverridableOption':
+    def clone(self, **kwargs: t.Any) -> 'OverridableOption':
         """Create a new instance of by cloning the current instance and updating the stored kwargs with those passed.
 
         This can be useful when an already predefined OverridableOption needs to be further specified and reused

@@ -26,7 +26,7 @@ def isidentifier(identifier):
 T = TypeVar('T')
 
 
-def type_check(what: T, of_type: Any, msg: str | None = None, allow_none: bool = False) -> T | None:
+def type_check(what: T, of_type: Any, msg: 'str | None' = None, allow_none: bool = False) -> 'T | None':
     """Verify that object 'what' is of type 'of_type' and if not the case, raise a TypeError.
 
     :param what: the object to check

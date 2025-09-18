@@ -15,6 +15,9 @@ import typing as t
 import click
 from click.shell_completion import CompletionItem
 
+if t.TYPE_CHECKING:
+    from aiida.manage.configuration.options import Option
+
 __all__ = ('ConfigOptionParamType',)
 
 
@@ -23,7 +26,7 @@ class ConfigOptionParamType(click.types.StringParamType):
 
     name = 'config option'
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> Option:
         from aiida.manage.configuration.options import get_option, get_option_names
 
         if value not in get_option_names():

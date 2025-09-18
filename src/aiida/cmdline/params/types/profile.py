@@ -17,6 +17,9 @@ from click.shell_completion import CompletionItem
 
 from .strings import LabelStringType
 
+if t.TYPE_CHECKING:
+    from aiida.manage.configuration import Profile
+
 __all__ = ('ProfileParamType',)
 
 
@@ -39,7 +42,7 @@ class ProfileParamType(LabelStringType):
     def deconvert_default(value: t.Any) -> t.Any:
         return value.name
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> Profile:  # type: ignore[override]
         """Attempt to match the given value to a valid profile."""
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
         from aiida.manage.configuration import Profile, load_profile

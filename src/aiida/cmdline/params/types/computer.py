@@ -55,10 +55,8 @@ class ShebangParamType(StringParamType):
 
     name = 'shebangline'
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
-        newval = super().convert(value, param, ctx)
-        if newval is None:
-            return None
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        newval = t.cast(str, super().convert(value, param, ctx))
         if not newval.startswith('#!'):
             self.fail(f'The shebang line should start with the two caracters #!, it is instead: {newval}')
         return newval
@@ -84,8 +82,8 @@ class MpirunCommandParamType(StringParamType):
     def __repr__(self) -> str:
         return 'MPIRUNCOMMANDSTRING'
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
-        newval = super().convert(value, param, ctx)
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        newval = t.cast(str, super().convert(value, param, ctx))
 
         # TODO: Handle case when ctx is None
         scheduler_ep = ctx.params.get('scheduler', None)  # type: ignore[union-attr]

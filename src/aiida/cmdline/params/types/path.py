@@ -20,6 +20,8 @@ __all__ = ('AbsolutePathParamType', 'FileOrUrl', 'PathOrUrl')
 
 URL_TIMEOUT_SECONDS = 10
 
+PathType: t.TypeAlias = str | bytes | os.PathLike[str]
+
 
 def check_timeout_seconds(timeout_seconds: float) -> int:
     """Raise if timeout is not within range [0;60]"""
@@ -39,7 +41,7 @@ class AbsolutePathParamType(click.Path):
 
     name = 'AbsolutePath'
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> PathType:
         value = os.path.expanduser(value)
         newval = super().convert(value, param, ctx)
         if not os.path.isabs(newval):
@@ -55,7 +57,7 @@ class AbsolutePathOrEmptyParamType(AbsolutePathParamType):
 
     name = 'AbsolutePathEmpty'
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> PathType:
         if not value:
             return value
         return super().convert(value, param, ctx)

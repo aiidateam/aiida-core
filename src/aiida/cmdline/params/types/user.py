@@ -17,6 +17,9 @@ from click.shell_completion import CompletionItem
 
 from aiida.cmdline.utils.decorators import with_dbenv
 
+if t.TYPE_CHECKING:
+    from aiida import orm
+
 __all__ = ('UserParamType',)
 
 
@@ -30,7 +33,7 @@ class UserParamType(click.ParamType):
         self._create = create
 
     @with_dbenv()
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> orm.User:
         from aiida import orm
 
         results = orm.User.collection.find({'email': value})

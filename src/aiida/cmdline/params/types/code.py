@@ -56,7 +56,7 @@ class CodeParamType(IdentifierParamType):
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        return [CompletionItem(option) for (option,) in self.orm_class_loader.get_options(incomplete, project='label')]
+        return [CompletionItem(option) for (option,) in self.orm_class_loader.get_options(incomplete, project='label')]  # type: ignore[no-untyped-call]
 
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         code = super().convert(value, param, ctx)

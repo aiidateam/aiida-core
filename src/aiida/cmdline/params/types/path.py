@@ -59,7 +59,7 @@ class AbsolutePathOrEmptyParamType(AbsolutePathParamType):
 
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> PathType:
         if not value:
-            return value
+            return value  # type: ignore[no-any-return]
         return super().convert(value, param, ctx)
 
     def __repr__(self) -> str:

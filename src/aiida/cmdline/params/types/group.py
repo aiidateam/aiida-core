@@ -76,7 +76,7 @@ class GroupParamType(IdentifierParamType):
         """
         return [
             click.shell_completion.CompletionItem(option)
-            for (option,) in self.orm_class_loader.get_options(incomplete, project='label')
+            for (option,) in self.orm_class_loader.get_options(incomplete, project='label')  # type: ignore[no-untyped-call]
         ]
 
     @decorators.with_dbenv()

@@ -20,7 +20,7 @@ __all__ = ('MultipleValueParamType',)
 class MultipleValueParamType(click.ParamType):
     """An extension of click.ParamType that can parse multiple values for a given ParamType"""
 
-    def __init__(self, param_type: t.Any):
+    def __init__(self, param_type: click.ParamType):
         """Construct a new instance."""
         super().__init__()
         self._param_type = param_type
@@ -28,9 +28,9 @@ class MultipleValueParamType(click.ParamType):
         if hasattr(param_type, 'name'):
             self.name = f'{param_type.name}...'
         else:
-            self.name = f'{param_type.__name__.upper()}...'
+            self.name = f'{param_type.__name__.upper()}...'  # type: ignore[attr-defined]
 
-    def get_metavar(self, param: click.Parameter) -> str:
+    def get_metavar(self, param: click.Parameter) -> str | None:
         try:
             return self._param_type.get_metavar(param)
         except AttributeError:

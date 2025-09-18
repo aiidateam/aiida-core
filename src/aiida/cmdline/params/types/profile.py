@@ -79,7 +79,7 @@ class ProfileParamType(LabelStringType):
 
         ctx.obj.profile = profile  # type: ignore[union-attr]
 
-        return profile
+        return profile  # type: ignore[no-any-return]
 
     def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]:
         """Return possible completions based on an incomplete value

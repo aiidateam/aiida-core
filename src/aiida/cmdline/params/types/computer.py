@@ -47,7 +47,7 @@ class ComputerParamType(IdentifierParamType):
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        return [CompletionItem(option) for (option,) in self.orm_class_loader.get_options(incomplete, project='label')]
+        return [CompletionItem(option) for (option,) in self.orm_class_loader.get_options(incomplete, project='label')]  # type: ignore[no-untyped-call]
 
 
 class ShebangParamType(StringParamType):

@@ -325,6 +325,15 @@ disallow_untyped_decorators = false
 module = 'aiida.cmdline.commands.*'
 
 [[tool.mypy.overrides]]
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+module = 'aiida.cmdline.params.*'
+warn_return_any = true
+
+[[tool.mypy.overrides]]
 check_untyped_defs = false
 module = 'tests.*'
 

@@ -374,10 +374,6 @@ module = [
   'upf_to_json.*'
 ]
 
-[[tool.mypy.overrides]]
-ignore_errors = true
-module = 'plumpy'
-
 [tool.pytest.ini_options]
 addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
 filterwarnings = [

@@ -30,7 +30,7 @@ class MultipleValueParamType(click.ParamType):
         else:
             self.name = f'{param_type.__name__.upper()}...'
 
-    def get_metavar(self, param):
+    def get_metavar(self, param: click.Parameter) -> str:
         try:
             return self._param_type.get_metavar(param)
         except AttributeError:

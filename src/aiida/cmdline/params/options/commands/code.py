@@ -23,7 +23,7 @@ def is_not_on_computer(ctx: click.Context) -> bool:
     return bool(not is_on_computer(ctx))
 
 
-def validate_label_uniqueness(ctx: click.Context, _: click.Parameter, value: str) -> str:
+def validate_label_uniqueness(ctx: click.Context, _: None, value: str) -> str:
     """Validate the uniqueness of the label of the code.
 
     The exact uniqueness criterion depends on the type of the code, whether it is "local" or "remote". For the former,

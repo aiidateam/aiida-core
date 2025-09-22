@@ -58,32 +58,31 @@ def test_get_current_archive_version_error_cases(tmp_path):
         SqliteZipBackend.get_current_archive_version(zip_path)
 
 
-def test_validate_archive_versions_valid():
-    """Test validate_archive_versions with valid versions."""
-    # Should not raise any exception
+def test_validate_archive_versions():
+    """Test validate_archive_versions with various scenarios."""
+    # Valid versions - should not raise
     SqliteZipBackend.validate_archive_versions(latest_version, latest_version)
     SqliteZipBackend.validate_archive_versions(old_version, latest_version)
 
-
-def test_validate_archive_versions_legacy():
-    """Test validate_archive_versions with legacy versions."""
     # Legacy current version
-    with pytest.raises(StorageMigrationError, match='Legacy migration.*not supported'):
+    with pytest.raises(StorageMigrationError, match=r'Legacy migration.*not supported'):
         SqliteZipBackend.validate_archive_versions('0.3', latest_version)
 
     # Legacy target version
-    with pytest.raises(StorageMigrationError, match='Legacy migration.*not supported'):
+    with pytest.raises(StorageMigrationError, match=r'Legacy migration.*not supported'):
         SqliteZipBackend.validate_archive_versions(latest_version, '0.2')
 
     # Both legacy
-    with pytest.raises(StorageMigrationError, match='Legacy migration.*not supported'):
+    with pytest.raises(StorageMigrationError, match=r'Legacy migration.*not supported'):
         SqliteZipBackend.validate_archive_versions('0.1', '0.3')
 
-
-def test_validate_archive_versions_unknown_target():
-    """Test validate_archive_versions with unknown target version."""
+    # Unknown target version
     with pytest.raises(StorageMigrationError, match='Unknown target version'):
         SqliteZipBackend.validate_archive_versions(old_version, 'unknown_target')
+
+    # Unknown current version
+    with pytest.raises(StorageMigrationError, match='Unknown current version'):
+        SqliteZipBackend.validate_archive_versions('unknown_current', latest_version)
 
 
 def test_migrate_no_migration_needed_file_operations(tmp_path):

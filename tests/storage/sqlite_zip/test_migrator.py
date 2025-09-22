@@ -26,10 +26,10 @@ default_metadata = {
 }
 
 
-def test_get_current_archive_version_valid(tmp_path):
-    """Test get_current_archive_version with a valid archive."""
+def test_get_current_archive_version(tmp_path):
+    """Test get_current_archive_version with valid archive and error cases."""
+    # Valid case
     zip_path = tmp_path / 'test.zip'
-
     metadata = {**default_metadata, 'export_version': latest_version}
 
     with zipfile.ZipFile(zip_path, 'w') as zf:
@@ -38,9 +38,6 @@ def test_get_current_archive_version_valid(tmp_path):
     version = SqliteZipBackend.get_current_archive_version(zip_path)
     assert version == latest_version
 
-
-def test_get_current_archive_version_error_cases(tmp_path):
-    """Test error cases for get_current_archive_version."""
     # Invalid file format
     invalid_path = tmp_path / 'invalid.txt'
     invalid_path.write_text('not a zip or tar file')
@@ -49,13 +46,13 @@ def test_get_current_archive_version_error_cases(tmp_path):
         SqliteZipBackend.get_current_archive_version(invalid_path)
 
     # Missing export_version
-    zip_path = tmp_path / 'missing_version.zip'
+    missing_version_path = tmp_path / 'missing_version.zip'
 
-    with zipfile.ZipFile(zip_path, 'w') as zf:
+    with zipfile.ZipFile(missing_version_path, 'w') as zf:
         zf.writestr('metadata.json', json.dumps(default_metadata))
 
     with pytest.raises(CorruptStorage, match='No export_version found'):
-        SqliteZipBackend.get_current_archive_version(zip_path)
+        SqliteZipBackend.get_current_archive_version(missing_version_path)
 
 
 def test_validate_archive_versions():

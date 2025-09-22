@@ -11,10 +11,8 @@
 import random
 import string
 from datetime import datetime
-from pathlib import Path
 
 import numpy as np
-import pytest
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
@@ -200,24 +198,55 @@ def get_hash_from_db_content(grouplabel):
     return hash_
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.timeout(600)
-@pytest.mark.nightly
-def test_large_archive_import_export(tmp_path):
-    """Test that large datasets can be imported and exported without parameter limit errors."""
-    # Import the 100k node archive
-    num_nodes = 100_000
-    archive_path = Path(__file__).parents[2] / 'data' / f'{int(num_nodes/1000)}k-int-nodes-2.7.1.post0.aiida'
-    import_archive(archive_path)
+def test_complex_export_filter_size(tmp_path, aiida_profile_clean):
+    """Test export with various entity types when filter_size limits are exceeded."""
+    # Create multiple entity types to test different code paths
+    nb_entities = 10
 
-    # Verify we have the expected number of nodes
-    all_nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
-    assert len(all_nodes) == num_nodes
+    # Create users (will need nodes attached to be exported)
+    users = []
+    for i in range(nb_entities):
+        user = orm.User(email=f'user{i}@example.com').store()
+        users.append(user)
 
-    # Export the nodes
+    # Create nodes with different users
+    nodes = []
+    for i, user in enumerate(users):
+        node = orm.Int(i, user=user)
+        node.label = f'node_{i}'
+        node.store()
+        nodes.append(node)
+
+    # Create some links between nodes
+    calc_nodes = []
+    for i in range(min(3, nb_entities)):
+        calc = orm.CalculationNode()
+        calc.base.links.add_incoming(nodes[i], LinkType.INPUT_CALC, f'input_{i}')
+        calc.store()
+        calc.seal()
+        calc_nodes.append(calc)
+        nodes.append(calc)
+
+    # Export with small filter_size to force batching in multiple functions
     export_file = tmp_path / 'large_export.aiida'
-    # NOTE: This calls the `_collect_required_entities` function,
-    # not `_collect_all_entities` which doesn't use QB filters anyway
-    create_archive(all_nodes, filename=export_file, test_run=False)
+    create_archive(nodes, filename=export_file, filter_size=3)
 
-    # Test passed if no OperationalError was raised
+    # Verify by importing
+    aiida_profile_clean.reset_storage()
+    import_archive(export_file)
+
+    # Check all entities were properly exported/imported
+    assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
+    assert orm.QueryBuilder().append(orm.User).count() == nb_entities + 1  # +1 for default user
+
+    # Assert for calculation nodes specifically
+    calc_node_count = orm.QueryBuilder().append(orm.CalculationNode).count()
+    assert calc_node_count == len(calc_nodes)
+
+    # Assert for data nodes specifically
+    data_node_count = orm.QueryBuilder().append(orm.Int).count()
+    assert data_node_count == nb_entities
+
+    # Verify links were preserved
+    link_count = orm.QueryBuilder().append(entity_type='link').count()
+    assert link_count >= 3  # At least the links we created

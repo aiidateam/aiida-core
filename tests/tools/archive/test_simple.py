@@ -154,3 +154,31 @@ def test_control_of_licenses(tmp_path):
 
     with pytest.raises(LicensingException):
         create_archive([struct], test_run=True, forbidden_licenses=crashing_filter)
+
+
+def test_export_filter_size(tmp_path, aiida_profile_clean):
+    """Test that export still works when the number of entities exceeds filter_size limit."""
+    # Create multiple entities that will trigger filter_size batching
+    nb_nodes = 5
+    nodes = []
+    for i in range(nb_nodes):
+        node = orm.Int(i)
+        node.label = f'node_{i}'
+        node.store()
+        nodes.append(node)
+
+    # Export with a small filter_size to force batching
+    export_file = tmp_path / 'export.aiida'
+    create_archive(nodes, filename=export_file, filter_size=2)
+
+    # Verify export was successful by importing and checking
+    aiida_profile_clean.reset_storage()
+    import_archive(export_file)
+
+    # Check all nodes were exported/imported correctly
+    builder = orm.QueryBuilder().append(orm.Node, project=['label'])
+    imported_nodes = builder.all(flat=True)
+
+    assert len(imported_nodes) == nb_nodes
+    expected_labels = [f'node_{i}' for i in range(nb_nodes)]
+    assert set(imported_nodes) == set(expected_labels)

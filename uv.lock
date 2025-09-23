@@ -218,7 +218,7 @@ requires-dist = [
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3,>=1.3.1" },
     { name = "plumpy", specifier = "~=0.25.0" },
     { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=3.5" },
-    { name = "psutil", specifier = "~=7.0" },
+    { name = "psutil", specifier = "~=7.0,<8.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.0.2,<4" },
     { name = "pyasn1", marker = "extra == 'ssh-kerberos'", specifier = "~=0.4.8" },
     { name = "pycifrw", marker = "extra == 'atomic-tools'", specifier = "~=4.4" },

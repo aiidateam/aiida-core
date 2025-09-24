@@ -31,7 +31,7 @@ from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
     type=click.Choice(AVAILABLE_SHELLS.keys()),  # type: ignore[arg-type]
     help='Specify an interactive interpreter interface.',
 )
-def shell(plain, no_startup, interface):
+def shell(plain: bool, no_startup: bool, interface: str):
     """Start a python shell with preloaded AiiDA environment."""
     try:
         if plain:

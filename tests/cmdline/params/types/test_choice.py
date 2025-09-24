@@ -1,9 +1,14 @@
 """Unit tests for the LazyChoice click parameter type."""
 
+from importlib import metadata
+
 import click
 import pytest
+from packaging import version
 
 from aiida.cmdline import LazyChoice
+
+CLICK_VERSION = version.Version(metadata.version('click'))
 
 
 @pytest.fixture
@@ -29,7 +34,7 @@ def counting_choice_getter():
 
     def get_choices():
         call_count['count'] += 1
-        return [f'choice_{call_count["count"]}']
+        return (f'choice_{call_count["count"]}',)
 
     get_choices.call_count = call_count
     return get_choices
@@ -69,7 +74,7 @@ def test_convert_method():
     """Test the convert method delegates to click.Choice."""
 
     def get_choices():
-        return ['valid', 1, '2']
+        return ('valid', 1, '2')
 
     lazy_choice = LazyChoice(get_choices)
     param = click.Option(['-t', '--test'])
@@ -77,8 +82,10 @@ def test_convert_method():
 
     # Valid choices should work, regardless of type
     assert 'valid' == lazy_choice.convert('valid', param, ctx)
-    assert 1 == lazy_choice.convert('1', param, ctx)
     assert 1 == lazy_choice.convert(1, param, ctx)
+    # The following one only seems to works with click>=8.2
+    if CLICK_VERSION >= version.Version('8.2.0'):
+        assert 1 == lazy_choice.convert('1', param, ctx)
 
     # Invalid choice should raise click.BadParameter
     with pytest.raises(click.BadParameter):
@@ -104,7 +111,7 @@ def test_generic_type_support():
     """Test that LazyChoice supports generic types."""
 
     def get_int_choices():
-        return [1, 2, 3]
+        return (1, 2, 3)
 
     def get_str_choices():
         return ('a', 'b', 'c')
@@ -120,7 +127,7 @@ def test_empty_choices():
     """Test LazyChoice with empty choices."""
 
     def get_empty_choices():
-        return []
+        return ()
 
     lazy_choice = LazyChoice(get_empty_choices)
     assert lazy_choice.choices == ()
@@ -157,7 +164,9 @@ def test_get_metavar():
 
     lazy_choice = LazyChoice(get_choices)
     param = click.Option(['-s', '--size'])
-    ctx = click.Context(click.Command('test'))
+    ctx = None
+    if CLICK_VERSION >= version.Version('8.2.0'):
+        ctx = click.Context(click.Command('test'))
 
     # get_metavar should return the choices in the expected format
     metavar = lazy_choice.get_metavar(param, ctx=ctx)
@@ -174,7 +183,9 @@ def test_get_missing_message():
 
     lazy_choice = LazyChoice(get_choices)
     param = click.Option(['-c', '--color'], required=True)
-    ctx = click.Context(click.Command('test'))
+    ctx = None
+    if CLICK_VERSION >= version.Version('8.2.0'):
+        ctx = click.Context(click.Command('test'))
 
     message = lazy_choice.get_missing_message(param, ctx=ctx)
     assert isinstance(message, str)

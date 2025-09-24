@@ -14,6 +14,8 @@ import typing as t
 
 import click
 
+from .._shims import shim_add_ctx
+
 __all__ = ('MultipleValueParamType',)
 
 
@@ -27,12 +29,18 @@ class MultipleValueParamType(click.ParamType):
 
         if hasattr(param_type, 'name'):
             self.name = f'{param_type.name}...'
+        elif hasattr(param_type, '__name__'):
+            self.name = f'{param_type.__name__.upper()}...'
         else:
-            self.name = f'{param_type.__name__.upper()}...'  # type: ignore[attr-defined]
+            self.name = ''
 
-    def get_metavar(self, param: click.Parameter) -> str | None:
+    @shim_add_ctx
+    def get_metavar(self, param: click.Parameter, ctx: click.Context | None) -> str | None:
         try:
-            return self._param_type.get_metavar(param)
+            if ctx is not None:
+                return self._param_type.get_metavar(param, ctx=ctx)
+            else:
+                return self._param_type.get_metavar(param)  # type: ignore[call-arg]
         except AttributeError:
             return self.name
 

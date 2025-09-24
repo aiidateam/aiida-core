@@ -8,6 +8,8 @@
 ###########################################################################
 """Module to define multi value options for click."""
 
+from __future__ import annotations
+
 import typing as t
 
 import click
@@ -56,17 +58,17 @@ class MultipleValueOption(click.Option):
             kwargs['type'] = types.MultipleValueParamType(param_type)
 
         super().__init__(*args, **kwargs)
-        self._previous_parser_process: t.Callable[[t.Any, click.parser.ParsingState], None] | None = None
-        self._eat_all_parser: click.parser.Option | None = None
+        self._previous_parser_process: t.Callable[[t.Any, click.parser._ParsingState], None] | None = None
+        self._eat_all_parser: click.parser._Option | None = None
 
     # TODO: add_to_parser has been deprecated in 8.2.0
-    def add_to_parser(self, parser: click.parser.OptionParser, ctx: click.Context) -> None:
+    def add_to_parser(self, parser: click.parser._OptionParser, ctx: click.Context) -> None:
         """Override built in click method that allows us to specify a custom parser
         to eat up parameters until the following flag or 'endopt' (i.e. --)
         """
         super().add_to_parser(parser, ctx)
 
-        def parser_process(value: t.Any, state: click.parser.ParsingState) -> None:
+        def parser_process(value: t.Any, state: click.parser._ParsingState) -> None:
             """The actual function that parses the options
 
             :param value: The value to parse

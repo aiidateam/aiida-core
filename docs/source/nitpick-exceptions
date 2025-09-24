@@ -115,6 +115,7 @@ py:class aiida.engine.processes.workchains.context.ToContext
 py:func aiida.orm.implementation.BackendQueryBuilder
 
 ### Typing aliases
+py:obj aiida.cmdline.params.types.choice.T
 py:obj aiida.engine.processes.functions.P
 py:obj aiida.engine.processes.functions.N
 py:obj aiida.engine.processes.functions.R_co

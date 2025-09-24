@@ -8,6 +8,8 @@
 ###########################################################################
 """Module to define multi value options for click."""
 
+import typing as t
+
 import click
 
 from .. import types
@@ -47,15 +49,15 @@ class MultipleValueOption(click.Option):
     the option flag for each value, which gets impractical for long lists of values
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
         param_type = kwargs.pop('type', None)
 
         if param_type is not None:
             kwargs['type'] = types.MultipleValueParamType(param_type)
 
         super().__init__(*args, **kwargs)
-        self._previous_parser_process = None
-        self._eat_all_parser = None
+        self._previous_parser_process: t.Callable[[t.Any, click.parser.ParsingState], None] | None = None
+        self._eat_all_parser: click.parser.Option | None = None
 
     # TODO: add_to_parser has been deprecated in 8.2.0
     def add_to_parser(self, parser: click.parser.OptionParser, ctx: click.Context) -> None:
@@ -64,7 +66,7 @@ class MultipleValueOption(click.Option):
         """
         super().add_to_parser(parser, ctx)
 
-        def parser_process(value, state):
+        def parser_process(value: t.Any, state: click.parser.ParsingState) -> None:
             """The actual function that parses the options
 
             :param value: The value to parse

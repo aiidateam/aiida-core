@@ -231,7 +231,7 @@ notebook = [
 ]
 pre-commit = [
   'aiida-core[atomic_tools,rest,tests,tui]',
-  'mypy~=1.17.0',
+  'mypy~=1.18.0',
   'packaging~=23.0',
   'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
@@ -325,6 +325,18 @@ disallow_untyped_decorators = false
 module = 'aiida.cmdline.commands.*'
 
 [[tool.mypy.overrides]]
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+module = [
+  'aiida.cmdline.params.*',
+  'aiida.cmdline.groups.*'
+]
+warn_return_any = true
+
+[[tool.mypy.overrides]]
 check_untyped_defs = false
 module = 'tests.*'
 
@@ -373,10 +385,6 @@ module = [
   'wrapt.*',
   'upf_to_json.*'
 ]
-
-[[tool.mypy.overrides]]
-ignore_errors = true
-module = 'plumpy'
 
 [tool.pytest.ini_options]
 addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '

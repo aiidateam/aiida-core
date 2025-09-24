@@ -117,8 +117,10 @@ py:func aiida.orm.implementation.BackendQueryBuilder
 py:obj aiida.engine.processes.functions.P
 py:obj aiida.engine.processes.functions.N
 py:obj aiida.engine.processes.functions.R_co
+py:class FC
 py:class P
 py:class N
+py:class aiida.common.lang.T
 py:class aiida.engine.processes.functions.N
 py:class aiida.engine.processes.functions.R_co
 

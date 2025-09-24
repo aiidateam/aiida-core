@@ -48,7 +48,7 @@ class LazyVerdiObjAttributeDict(AttributeDict):
     _KEY_PROFILE = 'profile'
 
     def __init__(self, ctx: click.Context, dictionary: dict[str, t.Any] | None = None):
-        super().__init__(dictionary)
+        super().__init__(dictionary)  # type: ignore[no-untyped-call]
         self.ctx = ctx
 
     def __getattr__(self, attr: str) -> t.Any:
@@ -68,13 +68,13 @@ class LazyVerdiObjAttributeDict(AttributeDict):
             except ConfigurationError as exception:
                 self.ctx.fail(str(exception))
 
-        return super().__getattr__(attr)
+        return super().__getattr__(attr)  # type: ignore[no-untyped-call]
 
 
 class VerdiContext(click.Context):
     """Custom context implementation that defines the ``obj`` user object and adds the ``Config`` instance."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
         super().__init__(*args, **kwargs)
         if self.obj is None:
             self.obj = LazyVerdiObjAttributeDict(self)
@@ -190,7 +190,7 @@ class VerdiCommandGroup(click.Group):
 
         return None
 
-    def group(self, *args, **kwargs) -> click.Group:
+    def group(self, *args: t.Any, **kwargs: t.Any) -> click.Group:
         """Ensure that sub command groups use the same class but do not override an explicitly set value."""
         kwargs.setdefault('cls', self.__class__)
-        return super().group(*args, **kwargs)
+        return super().group(*args, **kwargs)  # type: ignore[no-any-return]

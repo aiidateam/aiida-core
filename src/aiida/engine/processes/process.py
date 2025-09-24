@@ -718,10 +718,10 @@ class Process(PlumpyProcess):
             if link_label not in outputs_new:
                 continue
 
-            if isinstance(self.node, orm.CalculationNode):
-                output.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
-            elif isinstance(self.node, orm.WorkflowNode):
-                output.base.links.add_incoming(self.node, LinkType.RETURN, link_label)
+            # if isinstance(self.node, orm.CalculationNode):
+            #    output.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
+            # elif isinstance(self.node, orm.WorkflowNode):
+            #    output.base.links.add_incoming(self.node, LinkType.RETURN, link_label)
 
             output.store()
 

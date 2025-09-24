@@ -44,7 +44,7 @@ class MultipleValueParamType(click.ParamType):
         except AttributeError:
             return self.name
 
-    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> tuple:
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> tuple[t.Any, ...]:
         try:
             return tuple(self._param_type(entry) for entry in value)
         except ValueError:

@@ -13,7 +13,7 @@ import os
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import decorators
 from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
 
 
@@ -31,16 +31,12 @@ from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
     type=click.Choice(AVAILABLE_SHELLS.keys()),
     help='Specify an interactive interpreter interface.',
 )
-def shell(plain, no_startup, interface):
+def shell(plain: bool, no_startup: bool, interface: str):
     """Start a python shell with preloaded AiiDA environment."""
     try:
         if plain:
             # Don't bother loading IPython, because the user wants plain Python.
             raise ImportError
-
-        # If a non-plain python interpreter is requested, check that there is at least one type of shell available
-        if not AVAILABLE_SHELLS:
-            echo.echo_critical('No shells are available')
 
         run_shell(interface=interface)
     except ImportError:
@@ -49,7 +45,7 @@ def shell(plain, no_startup, interface):
         # Set up a dictionary to serve as the environment for the shell, so
         # that tab completion works on objects that are imported at runtime.
         # See ticket 5082.
-        imported_objects = {}
+        imported_objects = {}  # type: ignore[var-annotated]
         try:  # Try activating rlcompleter, because it's handy.
             import readline
         except ImportError:

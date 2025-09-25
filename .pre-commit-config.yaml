@@ -1,9 +1,3 @@
-ci:
-  autofix_prs: true
-  autoupdate_commit_msg: 'Devops: Update pre-commit dependencies'
-  autoupdate_schedule: quarterly
-  skip: [mypy, generate-conda-environment, validate-conda-environment, verdi-autodocs]
-
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v5.0.0
@@ -96,20 +90,6 @@ repos:
         src/aiida/calculations/diff_tutorial/calculations.py|
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
-        src/aiida/cmdline/commands/cmd_archive.py|
-        src/aiida/cmdline/commands/cmd_calcjob.py|
-        src/aiida/cmdline/commands/cmd_code.py|
-        src/aiida/cmdline/commands/cmd_computer.py|
-        src/aiida/cmdline/commands/cmd_data/cmd_list.py|
-        src/aiida/cmdline/commands/cmd_data/cmd_upf.py|
-        src/aiida/cmdline/commands/cmd_devel.py|
-        src/aiida/cmdline/commands/cmd_group.py|
-        src/aiida/cmdline/commands/cmd_node.py|
-        src/aiida/cmdline/commands/cmd_shell.py|
-        src/aiida/cmdline/commands/cmd_storage.py|
-        src/aiida/cmdline/utils/ascii_vis.py|
-        src/aiida/cmdline/utils/common.py|
-        src/aiida/cmdline/utils/echo.py|
         src/aiida/common/extendeddicts.py|
         src/aiida/common/utils.py|
         src/aiida/engine/daemon/execmanager.py|
@@ -177,7 +157,6 @@ repos:
         src/aiida/tools/graph/age_rules.py|
         src/aiida/tools/graph/deletions.py|
         src/aiida/tools/graph/graph_traversers.py|
-        src/aiida/tools/groups/paths.py|
         src/aiida/tools/query/calculation.py|
         src/aiida/tools/query/mapping.py|
         src/aiida/transports/cli.py|

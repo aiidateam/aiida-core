@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, List, cast
+from typing import TYPE_CHECKING, cast
 
 from aiida import orm
 from aiida.common import NotExistent
@@ -91,7 +91,7 @@ class ProfileDumpExecutor(CollectionDumpExecutor):
         """Determine which groups to process based on config."""
         if self.config.all_entries:
             qb_groups = orm.QueryBuilder().append(orm.Group)
-            return cast(List[orm.Group], qb_groups.all(flat=True))
+            return qb_groups.all(flat=True)
 
         if not self.config.groups:
             return []

@@ -24,7 +24,7 @@ dependencies = [
   "asyncssh~=2.19.0",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
-  'click~=8.1.0',
+  'click>=8.1.0,<8.3',
   'disk-objectstore~=1.3.0',
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
@@ -231,7 +231,7 @@ notebook = [
 ]
 pre-commit = [
   'aiida-core[atomic_tools,rest,tests,tui]',
-  'mypy~=1.16.0',
+  'mypy~=1.18.0',
   'packaging~=23.0',
   'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
@@ -325,6 +325,18 @@ disallow_untyped_decorators = false
 module = 'aiida.cmdline.commands.*'
 
 [[tool.mypy.overrides]]
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+module = [
+  'aiida.cmdline.params.*',
+  'aiida.cmdline.groups.*'
+]
+warn_return_any = true
+
+[[tool.mypy.overrides]]
 check_untyped_defs = false
 module = 'tests.*'
 
@@ -374,10 +386,6 @@ module = [
   'upf_to_json.*'
 ]
 
-[[tool.mypy.overrides]]
-ignore_errors = true
-module = 'plumpy'
-
 [tool.pytest.ini_options]
 addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
 filterwarnings = [
@@ -391,8 +399,9 @@ filterwarnings = [
   'ignore::DeprecationWarning:pymatgen:',
   'ignore::DeprecationWarning:jsonbackend:',
   'ignore::DeprecationWarning:pkg_resources:',
+  "ignore:'BaseCommand' is deprecated and will be removed in Click 9.0.:DeprecationWarning:trogon:",
   'ignore:ast.* is deprecated.*:DeprecationWarning:docstring_parser:',
-  'ignore::SyntaxWarning:CifFile:',
+  'ignore::SyntaxWarning:CifFile',
   'ignore::pytest.PytestCollectionWarning',
   'ignore:Creating AiiDA configuration folder.*:UserWarning',
   'ignore:Object of type .* not in session, .* operation along .* will not proceed:sqlalchemy.exc.SAWarning',
@@ -401,9 +410,19 @@ filterwarnings = [
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   # https://github.com/aiidateam/plumpy/issues/283
   'ignore:There is no current event loop:DeprecationWarning:plumpy',
+  'ignore:There is no current event loop:DeprecationWarning:nest_asyncio',
   # spglib deprecation
   'ignore:dict interface is deprecated:DeprecationWarning',
-  'default::ResourceWarning'
+  # https://github.com/aiidateam/archive-path/issues/21
+  'ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning:archive_path',
+  # TODO: Fix these warnings
+  'ignore:.*getcwd.*:aiida.common.warnings.AiidaDeprecationWarning',
+  "ignore:coroutine 'Process.step_until_terminated' was never awaited:RuntimeWarning:asyncio",
+  'default::ResourceWarning',
+  'ignore:unclosed database:ResourceWarning',
+  'ignore:unclosed event loop:ResourceWarning',
+  'ignore:connection .* was deleted while still open:ResourceWarning:psycopg',
+  'ignore:the server-side cursor .* was deleted while still open:ResourceWarning:psycopg'
 ]
 markers = [
   'nightly: long running tests that should rarely be affected and so only run nightly',

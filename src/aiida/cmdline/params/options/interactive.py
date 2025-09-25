@@ -19,6 +19,9 @@ from aiida.cmdline.utils import echo
 
 from .conditional import ConditionalOption
 
+if t.TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 class InteractiveOption(ConditionalOption):
     """Prompts for input, intercepting certain keyword arguments to provide more feature-rich behavior.
@@ -50,7 +53,13 @@ class InteractiveOption(ConditionalOption):
     CHARACTER_PROMPT_HELP = '?'
     CHARACTER_IGNORE_DEFAULT = '!'
 
-    def __init__(self, param_decls=None, prompt_fn=None, contextual_default=None, **kwargs):
+    def __init__(
+        self,
+        param_decls: Sequence[str] | None = None,
+        prompt_fn: t.Callable[[click.Context], bool] | None = None,
+        contextual_default: t.Any | None = None,
+        **kwargs: t.Any,
+    ):
         """Construct a new instance.
 
         :param param_decls: relayed to :class:`click.Option`
@@ -62,7 +71,7 @@ class InteractiveOption(ConditionalOption):
         self._contextual_default = contextual_default
 
     @property
-    def prompt(self):
+    def prompt(self) -> str | None:
         """Return a colorized version of the prompt text."""
         return click.style(self._prompt, fg=self.PROMPT_COLOR)
 
@@ -137,8 +146,10 @@ class InteractiveOption(ConditionalOption):
         """Return a message to be displayed for in-prompt help."""
         message = self.help or f'Expecting {self.type.name}'
 
-        shell_complete: t.Callable = getattr(self.type, 'shell_complete', lambda x, y, z: [])
-        choices: list[CompletionItem] = shell_complete(self.type, None, '')
+        shell_complete: t.Callable[[click.ParamType, click.Context | None, str], list[CompletionItem]] = getattr(
+            self.type, 'shell_complete', lambda x, y, z: []
+        )
+        choices = shell_complete(self.type, None, '')
         choices_string = []
 
         for choice in choices:
@@ -153,7 +164,7 @@ class InteractiveOption(ConditionalOption):
 
         return message
 
-    def get_default(self, ctx: click.Context, call: bool = True) -> t.Callable[[], t.Any] | None:
+    def get_default(self, ctx: click.Context, call: bool = True) -> t.Any | None:
         """Provides the functionality of :meth:`click.Option.get_default`"""
         if ctx.resilient_parsing:
             return None
@@ -187,7 +198,7 @@ class TemplateInteractiveOption(InteractiveOption):
     This is useful for options that need to be able to specify multiline string values.
     """
 
-    def __init__(self, param_decls=None, **kwargs):
+    def __init__(self, param_decls: Sequence[str] | None = None, **kwargs: t.Any):
         """Define the configuration for the multiline template in the keyword arguments.
 
         :param template: name of the template to use from the ``aiida.cmdline.templates`` directory.

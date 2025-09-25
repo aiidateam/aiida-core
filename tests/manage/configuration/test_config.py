@@ -440,6 +440,63 @@ def test_delete_profile(config_with_profile, profile_factory):
     assert profile_name not in config_on_disk.profile_names
 
 
+@pytest.mark.parametrize(
+    'file_exists,delete_storage,expected_messages',
+    [
+        # sqlite_zip with file exists - normal case
+        (True, True, ['Data storage deleted']),
+        # sqlite_zip with file exists, don't delete storage
+        (True, False, ['Data storage not deleted']),
+        # sqlite_zip with non-existent file
+        (False, True, ["doesn't exist anymore", 'Possibly the file was manually removed']),
+    ],
+)
+def test_delete_profile_sqlite_zip(
+    config_with_profile, tmp_path, caplog, monkeypatch, file_exists, delete_storage, expected_messages
+):
+    """Test the ``delete_profile`` method with sqlite_zip backend in different scenarios."""
+    import logging
+
+    # Mock the validate_storage function to avoid needing a valid archive file
+    from aiida.storage.sqlite_zip import migrator
+    from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+
+    monkeypatch.setattr(migrator, 'validate_storage', lambda path: None)
+
+    config = config_with_profile
+    profile_name = 'sqlite-zip-test-profile'
+
+    zip_filepath = tmp_path / f'{profile_name}.aiida'
+    profile = SqliteZipBackend.create_profile(zip_filepath)
+    profile._name = profile_name
+
+    config.add_profile(profile)
+    config.store()
+
+    # Create file if it should exist and we have a valid path
+    if file_exists:
+        zip_filepath.write_bytes(b'dummy zip content')
+
+    caplog.clear()
+
+    with caplog.at_level(logging.INFO):
+        config.delete_profile(profile_name, delete_storage=delete_storage)
+
+    # Verify file handling
+    if delete_storage and file_exists:
+        assert not zip_filepath.exists()
+    elif file_exists and not delete_storage:
+        assert zip_filepath.exists()
+
+    # Verify profile removal
+    assert profile_name not in config.profile_names
+
+    # Verify expected log messages
+    all_messages = [record.message for record in caplog.records]
+    for expected_message in expected_messages:
+        assert any(expected_message in msg for msg in all_messages)
+
+
 def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):
     """Test the ``create_profile`` method when it raises."""
     config = config_with_profile

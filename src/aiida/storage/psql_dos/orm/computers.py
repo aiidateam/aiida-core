@@ -114,7 +114,7 @@ class SqlaComputerCollection(BackendComputerCollection):
 
     ENTITY_CLASS = SqlaComputer
 
-    def list_names(self) -> list:
+    def list_names(self) -> list[tuple[str]]:
         session = self.backend.get_session()
         return session.query(self.ENTITY_CLASS.MODEL_CLASS.label).all()
 

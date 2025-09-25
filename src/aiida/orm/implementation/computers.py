@@ -106,5 +106,5 @@ class BackendComputerCollection(BackendCollection[BackendComputer]):
         """
 
     @abc.abstractmethod
-    def list_names(self) -> list:
+    def list_names(self) -> list[tuple[str]]:
         """Return a list with all the labels of the computers in the DB."""

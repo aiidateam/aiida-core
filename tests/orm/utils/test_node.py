@@ -55,13 +55,12 @@ def test_load_node_class_with_process_prefix():
     # Test process prefix with empty subtype - should return ProcessNode
     loaded_class = load_node_class('process.')
     assert loaded_class == ProcessNode
-    # Changed from Data to ProcessNode because that's what the implementation returns
 
 
 def test_load_node_class_with_data_prefix():
     """Test the behavior of load_node_class with data prefix."""
     # Test data prefix with removeprefix
-    with pytest.warns(UserWarning):  # Remove strict match requirement
+    with pytest.warns(UserWarning):
         loaded_class = load_node_class('data.dict.')
     assert loaded_class == Data
 

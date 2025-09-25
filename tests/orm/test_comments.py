@@ -60,6 +60,7 @@ def test_comment_user(node, default_user):
     assert comment.user.uuid == default_user.uuid
 
 
+@pytest.mark.requires_psql
 def test_comment_set_user(node, default_user):
     new_user = orm.User(email='meeseeks.look@me').store()
     comment = Comment(node, default_user, 'Look at me!').store()

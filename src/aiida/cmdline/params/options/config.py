@@ -25,10 +25,13 @@ import click
 
 from .overridable import OverridableOption
 
+if t.TYPE_CHECKING:
+    from click.decorators import FC
+
 __all__ = ('ConfigFileOption',)
 
 
-def yaml_config_file_provider(handle, cmd_name):
+def yaml_config_file_provider(handle: t.Any, _cmd_name: t.Any) -> t.Any:
     """Read yaml config file from file handle."""
     import yaml
 
@@ -45,7 +48,7 @@ def configuration_callback(
     ctx: click.Context,
     param: click.Parameter,
     value: t.Any,
-):
+) -> t.Any:
     """Callback for reading the config file.
 
     Also takes care of calling user specified custom callback afterwards.
@@ -89,7 +92,7 @@ def configuration_callback(
     return saved_callback(ctx, param, value) if saved_callback else value
 
 
-def configuration_option(*param_decls, **attrs):
+def configuration_option(*param_decls: t.Any, **attrs: t.Any) -> t.Callable[[FC], FC]:
     """Adds configuration file support to a click application.
 
     This will create an option of type ``click.File`` expecting the path to a configuration file. When specified, it
@@ -114,7 +117,7 @@ def configuration_option(*param_decls, **attrs):
     param_decls = param_decls or ('--config',)
     option_name = param_decls[0]
 
-    def decorator(func):
+    def decorator(func: FC) -> FC:
         attrs.setdefault('is_eager', True)
         attrs.setdefault('help', 'Read configuration from FILE.')
         attrs.setdefault('expose_value', False)
@@ -164,7 +167,7 @@ class ConfigFileOption(OverridableOption):
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
         """Store the default args and kwargs.
 
         :param args: default arguments to be used for the option
@@ -173,7 +176,7 @@ class ConfigFileOption(OverridableOption):
         kwargs.update({'provider': yaml_config_file_provider, 'implicit': False})
         super().__init__(*args, **kwargs)
 
-    def __call__(self, **kwargs):
+    def __call__(self, **kwargs: t.Any) -> t.Any:
         """Override the stored kwargs, (ignoring args as we do not allow option name changes) and return the option.
 
         :param kwargs: keyword arguments that will override those set in the construction

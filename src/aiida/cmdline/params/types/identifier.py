@@ -53,7 +53,7 @@ class IdentifierParamType(click.ParamType, ABC):
         if sub_classes is not None and not isinstance(sub_classes, tuple):
             raise TypeError('sub_classes should be a tuple of entry point strings')
 
-        self._sub_classes: tuple | None = None
+        self._sub_classes: tuple[t.Any, ...] | None = None
         self._entry_point_strings = sub_classes
 
     @cached_property
@@ -76,7 +76,7 @@ class IdentifierParamType(click.ParamType, ABC):
 
     @property
     @abstractmethod
-    @with_dbenv()  # type: ignore[misc]
+    @with_dbenv()
     def orm_class_loader(self) -> OrmEntityLoader:
         """Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
@@ -84,7 +84,7 @@ class IdentifierParamType(click.ParamType, ABC):
         :return: the orm entity loader class for this ParamType
         """
 
-    @with_dbenv()  # type: ignore[misc]
+    @with_dbenv()
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context) -> t.Any:
         """Attempt to convert the given value to an instance of the orm class using the orm class loader.
 
@@ -114,7 +114,7 @@ class IdentifierParamType(click.ParamType, ABC):
 
             for entry_point in self._entry_points:
                 try:
-                    sub_class = entry_point.load()
+                    sub_class = entry_point.load()  # type: ignore[no-untyped-call]
                 except ImportError as exception:
                     raise RuntimeError(f'failed to load the entry point {entry_point}: {exception}')
 

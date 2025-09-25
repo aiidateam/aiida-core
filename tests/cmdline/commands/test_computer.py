@@ -31,6 +31,7 @@ from aiida.cmdline.commands.cmd_computer import (
     computer_test,
 )
 from aiida.cmdline.utils.echo import ExitCode
+from aiida.common.warnings import AiidaDeprecationWarning
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):
@@ -215,7 +216,8 @@ def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_2'})
     options_dict['mpiprocs-per-machine'] = 0
     options = generate_setup_options(options_dict)
-    run_cli_command(computer_setup, options)
+    with pytest.warns(AiidaDeprecationWarning, match='Specifying `0` to not set `default_mpiprocs_per_machine`'):
+        run_cli_command(computer_setup, options)
 
     new_computer = orm.Computer.collection.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
@@ -1013,7 +1015,7 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
 # comment on 'core.ssh_async':
 # It is important that 'ssh localhost' is functional in your test environment.
 # It should connect without asking for a password.
-@pytest.mark.parametrize('transport_type, config', [('core.ssh_async', ['--host', 'localhost'])])
+@pytest.mark.parametrize('transport_type, config', [('core.ssh_async', ['--host', 'localhost', '-n'])])
 def test_computer_setup_with_various_transport(run_cli_command, aiida_computer, transport_type, config):
     """Test setup of computer with ``core.ssh_async`` entry points.
 

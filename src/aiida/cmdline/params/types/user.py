@@ -8,9 +8,17 @@
 ###########################################################################
 """User param type for click."""
 
+from __future__ import annotations
+
+import typing as t
+
 import click
+from click.shell_completion import CompletionItem
 
 from aiida.cmdline.utils.decorators import with_dbenv
+
+if t.TYPE_CHECKING:
+    from aiida import orm
 
 __all__ = ('UserParamType',)
 
@@ -20,12 +28,12 @@ class UserParamType(click.ParamType):
 
     name = 'user'
 
-    def __init__(self, create=False):
+    def __init__(self, create: bool = False):
         """:param create: If the user does not exist, create a new instance (unstored)."""
         self._create = create
 
     @with_dbenv()
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> orm.User:
         from aiida import orm
 
         results = orm.User.collection.find({'email': value})
@@ -42,7 +50,7 @@ class UserParamType(click.ParamType):
         return results[0]
 
     @with_dbenv()
-    def shell_complete(self, ctx, param, incomplete):
+    def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]:
         """Return possible completions based on an incomplete value
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
@@ -51,6 +59,4 @@ class UserParamType(click.ParamType):
 
         users = orm.User.collection.find()
 
-        return [
-            click.shell_completion.CompletionItem(user.email) for user in users if user.email.startswith(incomplete)
-        ]
+        return [CompletionItem(user.email) for user in users if user.email.startswith(incomplete)]

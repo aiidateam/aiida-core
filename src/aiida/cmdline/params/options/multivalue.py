@@ -8,6 +8,10 @@
 ###########################################################################
 """Module to define multi value options for click."""
 
+from __future__ import annotations
+
+import typing as t
+
 import click
 
 from .. import types
@@ -15,7 +19,7 @@ from .. import types
 __all__ = ('MultipleValueOption',)
 
 
-def collect_usage_pieces(self, ctx):
+def collect_usage_pieces(self: click.Command, ctx: click.Context) -> list[str]:
     """Returns all the pieces that go into the usage line and returns it as a list of strings."""
     result = [self.options_metavar]
 
@@ -27,11 +31,11 @@ def collect_usage_pieces(self, ctx):
     for param in self.get_params(ctx):
         result.extend(param.get_usage_pieces(ctx))
 
-    return result
+    return result  # type: ignore[return-value]
 
 
 # Override the `collect_usage_pieces` method of the `click.Command` class to automatically affect all commands
-click.Command.collect_usage_pieces = collect_usage_pieces
+click.Command.collect_usage_pieces = collect_usage_pieces  # type: ignore[method-assign]
 
 
 class MultipleValueOption(click.Option):
@@ -47,23 +51,24 @@ class MultipleValueOption(click.Option):
     the option flag for each value, which gets impractical for long lists of values
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
         param_type = kwargs.pop('type', None)
 
         if param_type is not None:
             kwargs['type'] = types.MultipleValueParamType(param_type)
 
         super().__init__(*args, **kwargs)
-        self._previous_parser_process = None
-        self._eat_all_parser = None
+        self._previous_parser_process: t.Callable[[t.Any, click.parser._ParsingState], None] | None = None
+        self._eat_all_parser: click.parser._Option | None = None
 
-    def add_to_parser(self, parser, ctx):
+    # TODO: add_to_parser has been deprecated in 8.2.0
+    def add_to_parser(self, parser: click.parser._OptionParser, ctx: click.Context) -> None:
         """Override built in click method that allows us to specify a custom parser
         to eat up parameters until the following flag or 'endopt' (i.e. --)
         """
         super().add_to_parser(parser, ctx)
 
-        def parser_process(value, state):
+        def parser_process(value: t.Any, state: click.parser._ParsingState) -> None:
             """The actual function that parses the options
 
             :param value: The value to parse
@@ -75,7 +80,7 @@ class MultipleValueOption(click.Option):
 
             # Grab everything up to the next option or endopts symbol
             while state.rargs and not done:
-                for prefix in self._eat_all_parser.prefixes:
+                for prefix in self._eat_all_parser.prefixes:  # type: ignore[union-attr]
                     if state.rargs[0].startswith(prefix) or state.rargs[0] == ENDOPTS:
                         done = True
                 if not done:
@@ -83,12 +88,12 @@ class MultipleValueOption(click.Option):
 
             value = tuple(value)
 
-            self._previous_parser_process(value, state)
+            self._previous_parser_process(value, state)  # type: ignore[misc]
 
         for name in self.opts:
             our_parser = parser._long_opt.get(name) or parser._short_opt.get(name)
             if our_parser:
                 self._eat_all_parser = our_parser
                 self._previous_parser_process = our_parser.process
-                our_parser.process = parser_process
+                our_parser.process = parser_process  # type: ignore[method-assign]
                 break

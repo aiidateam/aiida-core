@@ -8,7 +8,12 @@
 ###########################################################################
 """Module for the calculation parameter type"""
 
+import typing as t
+
 from .identifier import IdentifierParamType
+
+if t.TYPE_CHECKING:
+    from aiida.orm.utils.loaders import CalculationEntityLoader
 
 __all__ = ('CalculationParamType',)
 
@@ -19,7 +24,7 @@ class CalculationParamType(IdentifierParamType):
     name = 'Calculation'
 
     @property
-    def orm_class_loader(self):
+    def orm_class_loader(self) -> 'type[CalculationEntityLoader]':
         """Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
 

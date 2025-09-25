@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
@@ -171,7 +171,7 @@ class DumpChangeDetector:
         if self.NODE_TAG not in qb._projections:
             qb.add_projection(self.NODE_TAG, '*')
 
-        return cast(list[orm.ProcessNode], qb.all(flat=True))
+        return qb.all(flat=True)
 
     def _exclude_tracked_nodes(self, nodes: list[orm.ProcessNode], store_type: str) -> list[orm.ProcessNode]:
         """Exclude nodes that are already tracked in the dump tracker.
@@ -289,7 +289,7 @@ class DumpChangeDetector:
             qb = orm.QueryBuilder()
             orm_type = REGISTRY_TO_ORM_TYPE[registry_name]
             qb.append(orm_type, project=['uuid'])
-            all_db_uuids = cast(Set[str], set(qb.all(flat=True)))
+            all_db_uuids = set(qb.all(flat=True))
 
             # Find missing UUIDs
             missing_uuids = dumped_uuids - all_db_uuids

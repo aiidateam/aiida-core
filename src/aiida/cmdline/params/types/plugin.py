@@ -28,6 +28,7 @@ from aiida.plugins.entry_point import (
     get_entry_points,
 )
 
+from .._shims import shim_add_ctx
 from .strings import EntryPointType
 
 if t.TYPE_CHECKING:
@@ -67,34 +68,32 @@ class PluginParamType(EntryPointType):
         'aiida.workflows': factories.WorkflowFactory,
     }
 
-    def __init__(self, group: str | tuple[str] | None = None, load: bool = False, *args, **kwargs):
+    def __init__(self, group: str | tuple[str, ...] | None = None, load: bool = False, *args: t.Any, **kwargs: t.Any):
         """Group should be either a string or a tuple of valid entry point groups.
         If it is not specified we use the tuple of all recognized entry point groups.
         """
+        if group is None or isinstance(group, tuple):
+            self._input_groups = group
+        elif isinstance(group, str):
+            self._input_groups = (group,)
+        else:
+            raise ValueError('PluginParamType: invalid type for group argument')
+
         self.load = load
-        self._input_group = group
 
         super().__init__(*args, **kwargs)
 
     @functools.cached_property
     def groups(self) -> tuple[str, ...]:
         """Returns a tuple of valid groups for this instance"""
-        group = self._input_group
         valid_entry_point_groups = get_entry_point_groups()
 
-        if group is None:
+        if self._input_groups is None:
             return tuple(valid_entry_point_groups)
-
-        if isinstance(group, str):
-            unvalidated_groups = (group,)
-        elif isinstance(group, tuple):
-            unvalidated_groups = group
-        else:
-            raise ValueError('invalid type for group')
 
         groups = []
 
-        for grp in unvalidated_groups:
+        for grp in self._input_groups:
             if not grp.startswith(ENTRY_POINT_GROUP_PREFIX):
                 grp = ENTRY_POINT_GROUP_PREFIX + grp  # noqa: PLW2901
 
@@ -165,7 +164,8 @@ class PluginParamType(EntryPointType):
         """
         return [click.shell_completion.CompletionItem(p) for p in self.get_possibilities(incomplete=incomplete)]
 
-    def get_missing_message(self, param: click.Parameter) -> str:
+    @shim_add_ctx
+    def get_missing_message(self, param: click.Parameter, ctx: click.Context | None) -> str:
         return 'Possible arguments are:\n\n' + '\n'.join(self.get_valid_arguments())
 
     def get_entry_point_from_string(self, entry_point_string: str) -> EntryPoint:
@@ -218,7 +218,7 @@ class PluginParamType(EntryPointType):
         if group not in self.groups:
             raise ValueError(f'entry point group `{group}` is not supported by this parameter.')
 
-    def convert(
+    def convert(  # type: ignore[override]
         self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None
     ) -> t.Union[EntryPoint, t.Any]:
         """Convert the string value to an entry point instance, if the value can be successfully parsed
@@ -245,7 +245,7 @@ class PluginParamType(EntryPointType):
 
         if self.load:
             try:
-                return entry_point.load()
+                return entry_point.load()  # type: ignore[no-untyped-call]
             except exceptions.LoadingEntryPointError as exception:
                 raise click.BadParameter(str(exception))
         else:

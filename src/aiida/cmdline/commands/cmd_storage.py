@@ -40,6 +40,8 @@ def storage_version():
 
     try:
         profile = get_profile()
+        if profile is None:
+            echo.echo_critical('Could not load default profile')
         head_version = profile.storage_cls.version_head()
         profile_version = profile.storage_cls.version_profile(profile)
         echo.echo(f'Latest storage schema version: {head_version!r}')
@@ -69,6 +71,8 @@ def storage_migrate(force):
 
     manager = get_manager()
     profile = manager.get_profile()
+    if profile is None:
+        echo.echo_critical('Could not load default profile')
 
     if profile.process_control_backend:
         client = get_daemon_client()
@@ -100,7 +104,6 @@ def storage_migrate(force):
         except click.Abort:
             echo.echo('\n')
             echo.echo_critical('Migration aborted, the data has not been affected.')
-            return
 
     try:
         storage_cls.migrate(profile)
@@ -187,7 +190,7 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
     if not dry_run and not force and not click.confirm('Are you sure you want continue in this mode?'):
         return
 
-    if STORAGE_LOGGER.level <= logging.REPORT:
+    if STORAGE_LOGGER.level <= logging.REPORT:  # type: ignore[attr-defined]
         # Only keep the first tqdm bar if it is info. To keep the nested bar information one needs report level
         set_progress_bar_tqdm(leave=STORAGE_LOGGER.level <= logging.INFO)
     else:

@@ -28,7 +28,7 @@ def test_closed_connection_sftp():
     """Test calling sftp command on a closed connection."""
     with pytest.raises(TransportInternalError):
         transport = SshTransport(machine='localhost')
-        transport.listdir()
+        transport.listdir('/home')
 
 
 def test_auto_add_policy():

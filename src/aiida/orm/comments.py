@@ -111,7 +111,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         arguments = [self.uuid, self.node.pk, self.user.email, self.content]
         return 'Comment<{}> for node<{}> and user<{}>: {}'.format(*arguments)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Comment):
             return False
 

@@ -38,7 +38,7 @@ class BackendComputer(BackendEntity):
         """Return the (unique) label of the computer."""
 
     @abc.abstractmethod
-    def set_label(self, val: str):
+    def set_label(self, val: str) -> None:
         """Set the (unique) label of the computer."""
 
     @property
@@ -47,7 +47,7 @@ class BackendComputer(BackendEntity):
         """Return the description of the computer."""
 
     @abc.abstractmethod
-    def set_description(self, val: str):
+    def set_description(self, val: str) -> None:
         """Set the description of the computer."""
 
     @property

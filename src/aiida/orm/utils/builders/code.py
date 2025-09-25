@@ -15,14 +15,16 @@ from aiida.common.utils import ErrorAccumulator
 from aiida.common.warnings import warn_deprecation
 from aiida.orm import InstalledCode, PortableCode
 
-warn_deprecation('This module is deprecated. To create a new code instance, simply use the constructor.', version=3)
-
 
 class CodeBuilder:
     """Build a code with validation of attribute combinations"""
 
     def __init__(self, **kwargs):
         """Construct a new instance."""
+        warn_deprecation(
+            'CodeBuilder is deprecated. To create a new code instance, use its constructor.',
+            version=3,
+        )
         self._err_acc = ErrorAccumulator(self.CodeValidationError)
         self._code_spec = {}
 

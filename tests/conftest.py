@@ -33,10 +33,18 @@ from aiida.common.folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage.configuration import Profile, get_config, load_profile
 
+try:
+    from typing import ParamSpec
+except ImportError:
+    # Fallback for Python 3.9 and older
+    from typing_extensions import ParamSpec  # type: ignore[assignment]
+
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
 
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
+
+P = ParamSpec('P')
 
 
 class TestDbBackend(Enum):
@@ -382,14 +390,14 @@ def empty_config(tmp_path) -> Config:
         manager.load_profile(current_profile_name)
 
 
-@pytest.fixture
-def profile_factory() -> Profile:
+@pytest.fixture  # type: ignore[misc]
+def profile_factory() -> t.Callable[t.Concatenate[str, P], Profile]:
     """Create a new profile instance.
 
     :return: the profile instance.
     """
 
-    def _create_profile(name='test-profile', **kwargs):
+    def _create_profile(name='test-profile', **kwargs) -> Profile:
         repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
 
         profile_dictionary = {
@@ -774,7 +782,11 @@ def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, 
     # circumvents this machinery.
     command = VerdiCommandGroup.add_verbosity_option(command)
 
-    runner = CliRunner(mix_stderr=False)
+    try:
+        runner = CliRunner(mix_stderr=False)
+    except TypeError:
+        # click >=8.2.0
+        runner = CliRunner()
     result = runner.invoke(command, parameters, input=user_input, obj=obj, **kwargs)
     return CliResult(
         exc_info=result.exc_info or (None, None, None),

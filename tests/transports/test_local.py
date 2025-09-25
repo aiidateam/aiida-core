@@ -32,7 +32,7 @@ def test_closed_connection():
     """Test running a command on a closed connection."""
     with pytest.raises(TransportInternalError):
         transport = LocalTransport()
-        transport.listdir()
+        transport.listdir('/home')
 
 
 def test_gotocomputer():

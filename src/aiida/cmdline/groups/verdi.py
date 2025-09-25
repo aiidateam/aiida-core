@@ -6,6 +6,7 @@ import base64
 import difflib
 import gzip
 import typing as t
+from collections.abc import Hashable
 
 import click
 
@@ -48,10 +49,10 @@ class LazyVerdiObjAttributeDict(AttributeDict):
     _KEY_PROFILE = 'profile'
 
     def __init__(self, ctx: click.Context, dictionary: dict[str, t.Any] | None = None):
-        super().__init__(dictionary)  # type: ignore[no-untyped-call]
+        super().__init__(dictionary)
         self.ctx = ctx
 
-    def __getattr__(self, attr: str) -> t.Any:
+    def __getattr__(self, attr: Hashable) -> t.Any:
         """Override of ``AttributeDict.__getattr__`` to lazily initialize the ``config`` and ``profile`` attributes.
 
         :param attr: The attribute to return.
@@ -68,7 +69,7 @@ class LazyVerdiObjAttributeDict(AttributeDict):
             except ConfigurationError as exception:
                 self.ctx.fail(str(exception))
 
-        return super().__getattr__(attr)  # type: ignore[no-untyped-call]
+        return super().__getattr__(attr)
 
 
 class VerdiContext(click.Context):

@@ -104,3 +104,7 @@ class BackendComputerCollection(BackendCollection[BackendComputer]):
 
         :param pk: the pk of the entry to delete
         """
+
+    @abc.abstractmethod
+    def list_names(self) -> list:
+        """Return a list with all the labels of the computers in the DB."""

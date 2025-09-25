@@ -102,6 +102,7 @@ def test_is_valid_node_type_string():
 
     # Test invalid cases
     assert not is_valid_node_type_string('data.dict')  # No trailing dot
+    assert not is_valid_node_type_string('data.')  # Just one dot
 
     # Test raise_on_false parameter
     with pytest.raises(exceptions.DbContentError, match='invalid'):

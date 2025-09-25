@@ -10,7 +10,7 @@
 
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, NoReturn, Optional, Tuple, Type, Union, overload
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -35,7 +35,13 @@ class ComputerCollection(entities.Collection['Computer']):
     def _entity_base_cls() -> Type['Computer']:
         return Computer
 
-    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple[bool, 'Computer']:
+    @overload
+    def get_or_create(self, label: Literal['', None] = None, **kwargs: Any) -> NoReturn: ...
+
+    @overload
+    def get_or_create(self, label: str, **kwargs: Any) -> tuple[bool, 'Computer']: ...
+
+    def get_or_create(self, label: Optional[str] = None, **kwargs: Any) -> Tuple[bool, 'Computer']:
         """Try to retrieve a Computer from the DB with the given arguments;
         create (and store) a new Computer if such a Computer was not present yet.
 
@@ -107,10 +113,10 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         if workdir is not None:
             self.set_workdir(workdir)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.label} ({self.hostname}), pk: {self.pk}'
 
     @property

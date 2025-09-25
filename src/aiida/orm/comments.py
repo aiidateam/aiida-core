@@ -17,7 +17,7 @@ from aiida.manage import get_manager
 from . import entities
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation import BackendComment, StorageBackend
 
     from .nodes.node import Node
     from .users import User

@@ -21,7 +21,7 @@ from . import entities
 if TYPE_CHECKING:
     from aiida.orm import Node
     from aiida.orm.implementation import StorageBackend
-    from aiida.orm.implementation.logs import BackendLog  # noqa: F401
+    from aiida.orm.implementation.logs import BackendLog
     from aiida.orm.querybuilder import FilterType, OrderByType
 
 __all__ = ('ASCENDING', 'DESCENDING', 'Log', 'OrderSpecifier')

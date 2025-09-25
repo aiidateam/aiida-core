@@ -84,7 +84,6 @@ repos:
         src/aiida/calculations/diff_tutorial/calculations.py|
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
-        src/aiida/common/extendeddicts.py|
         src/aiida/engine/daemon/execmanager.py|
         src/aiida/engine/processes/calcjobs/manager.py|
         src/aiida/engine/processes/calcjobs/monitors.py|

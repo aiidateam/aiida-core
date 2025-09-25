@@ -40,10 +40,7 @@ def load_node_class(type_string):
     if not type_string.endswith('.'):
         raise exceptions.DbContentError(f'The type string `{type_string}` is invalid')
 
-    try:
-        base_path = type_string.rsplit('.', 2)[0]
-    except ValueError as exc:
-        raise exceptions.EntryPointError from exc
+    base_path = type_string.rsplit('.', 2)[0]
 
     # This exception needs to be there to make migrations work that rely on the old type string starting with `node.`
     # Since now the type strings no longer have that prefix, we simply strip it and continue with the normal logic.

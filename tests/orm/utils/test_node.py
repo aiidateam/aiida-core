@@ -29,6 +29,10 @@ def test_load_node_class_fallback():
         loaded_class = load_node_class('__main__.SubData.')
     assert loaded_class == Data
 
+    # Test invalid type string without trailing dot.
+    with pytest.raises(exceptions.DbContentError, match='invalid'):
+        load_node_class('data.dict')
+
 
 def test_load_node_class_with_node_prefix():
     """Test the behavior of load_node_class with node prefix."""

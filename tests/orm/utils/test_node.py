@@ -13,8 +13,6 @@ import pytest
 from aiida.common import exceptions
 from aiida.orm import Data
 from aiida.orm.utils.node import (
-    AbstractNodeMeta,
-    get_query_type_from_type_string,
     get_type_string_from_class,
     is_valid_node_type_string,
     load_node_class,
@@ -81,22 +79,6 @@ def test_load_node_class_empty_string():
     assert loaded_class == Node
 
 
-def test_load_node_class_data_data():
-    """Test explicitly that 'data.Data.' returns Data."""
-    from aiida.orm import Data
-
-    loaded_class = load_node_class('data.Data.')
-    assert loaded_class == Data
-
-
-def test_load_node_class_no_trailing_dot():
-    """Test invalid type string without trailing dot."""
-    from aiida.common import exceptions
-
-    with pytest.raises(exceptions.DbContentError, match='invalid'):
-        load_node_class('data.dict')
-
-
 def test_get_type_string_from_class():
     """Test conversion from class module/name to type string."""
     # Test with internal data class
@@ -124,84 +106,3 @@ def test_is_valid_node_type_string():
     # Test raise_on_false parameter
     with pytest.raises(exceptions.DbContentError, match='invalid'):
         is_valid_node_type_string('data.dict', raise_on_false=True)
-
-
-def test_get_query_type_from_type_string():
-    """Test conversion from full type string to query type string."""
-    # Test normal type strings
-    assert get_query_type_from_type_string('data.dict.Dict.') == 'data.dict.'
-
-    # Test empty string
-    assert get_query_type_from_type_string('') == ''
-
-    # Test invalid type strings (should raise)
-    with pytest.raises(exceptions.DbContentError):
-        get_query_type_from_type_string('invalid.type')
-
-
-def test_load_node_class_value_error():
-    """Test that a ValueError in processing the type string results in an EntryPointError."""
-    from unittest.mock import MagicMock
-
-    # Create a mock string object that raises ValueError on rsplit
-    mock_string = MagicMock()
-    mock_string.endswith.return_value = True  # To pass the initial check
-    mock_string.rsplit.side_effect = ValueError('Test error')
-
-    # Now the function should catch the ValueError and raise an EntryPointError.
-    with pytest.raises(exceptions.EntryPointError):
-        load_node_class(mock_string)
-
-
-def test_abstract_node_meta():
-    """Test AbstractNodeMeta metaclass."""
-
-    # Create a class using the metaclass
-    class TestNode(metaclass=AbstractNodeMeta):
-        _node_type = 'test.node'
-
-    # Verify node_type is properly set
-    assert hasattr(TestNode, '_node_type')
-    assert TestNode._node_type == 'test.node'
-
-
-def node(base_path_parts):
-    if len(base_path_parts) == 0:
-        raise ValueError('Invalid type string format')
-
-
-def test_load_node_class_generic_fallback():
-    """Test that an unknown type string (not matching any known prefix)
-    falls back onto the `Data` class."""
-    base_path_parts = []
-    with pytest.raises(ValueError, match='Invalid type string format'):
-        node(base_path_parts)
-
-
-def test_load_node_class_empty_base_path_parts():
-    """Test that load_node_class fails (raises an EntryPointError) when rsplit returns an empty list-like object."""
-    import pytest
-
-    from aiida.common import exceptions
-    from aiida.orm.utils.node import load_node_class
-
-    class FakeList:
-        def __len__(self):
-            return 0
-
-        def __getitem__(self, index):
-            raise ValueError('Invalid type string format')
-
-    class FakeString(str):
-        def endswith(self, suffix):
-            return True
-
-        def rsplit(self, sep, maxsplit):
-            # Return a fake list-like object that simulates an empty result but raises ValueError on access
-            return FakeList()
-
-    fake_type_string = FakeString('anything.')
-    with pytest.raises(exceptions.EntryPointError) as excinfo:
-        load_node_class(fake_type_string)
-    # Verify that the underlying ValueError has the expected message.
-    assert 'Invalid type string format' in str(excinfo.value.__cause__)

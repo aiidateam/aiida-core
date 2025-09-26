@@ -13,7 +13,6 @@ parts of the database.
 """
 
 from io import StringIO
-from pathlib import Path
 
 import pytest
 
@@ -111,46 +110,65 @@ def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects)
 
 
 @pytest.mark.parametrize('filter_size', [100, 1000, 10000])
-@pytest.mark.timeout(1200)
-@pytest.mark.nightly
+@pytest.mark.timeout(600)
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_large_archive_import_benchmark(aiida_profile_clean, filter_size, benchmark):
-    """Benchmark import performance with different filter_size values using pre-existing 100k archive."""
-    num_nodes = 100_000
-    archive_path = Path(__file__).parents[1] / 'data' / f'{int(num_nodes / 1000)}k-int-nodes-2.7.1.post0.aiida'
+def test_large_archive_export_benchmark(tmp_path, filter_size, benchmark, create_int_nodes):
+    """Benchmark export performance with different filter_size values using 10k nodes.
 
-    def import_operation():
-        aiida_profile_clean.reset_storage()
-        import_archive(archive_path, filter_size=filter_size)
+    :param tmp_path: Pytest temporary directory fixture
+    :param filter_size: Maximum number of parameters in query filters
+    :param benchmark: Pytest benchmark fixture
+    :param create_int_nodes: Fixture to create test nodes
+    """
+    num_nodes = 10_000
 
-    benchmark.pedantic(import_operation, rounds=3, iterations=1)
-
-    # Verify correctness after benchmark
-    all_nodes = QueryBuilder().append(Node).all(flat=True)
-    assert len(all_nodes) == num_nodes
-
-
-@pytest.mark.parametrize('filter_size', [100, 1000, 10000])
-@pytest.mark.timeout(1200)
-@pytest.mark.nightly
-@pytest.mark.usefixtures('aiida_profile_clean')
-def test_large_archive_export_benchmark(tmp_path, filter_size, benchmark):
-    """Benchmark export performance with different filter_size values."""
-    num_nodes = 100_000
-    archive_path = Path(__file__).parents[1] / 'data' / f'{int(num_nodes / 1000)}k-int-nodes-2.7.1.post0.aiida'
-
-    # Setup: import with fixed filter_size (not benchmarked)
-    import_archive(archive_path, filter_size=1000)
-    all_nodes = QueryBuilder().append(Node).all(flat=True)
-    assert len(all_nodes) == num_nodes
-
-    # Benchmark only the export with varying filter_size
+    # Setup: create nodes (not benchmarked)
+    _ = create_int_nodes(num_nodes)
     export_file = tmp_path / f'export_{filter_size}.aiida'
 
     def export_operation():
-        create_archive(all_nodes, filename=export_file, filter_size=filter_size, overwrite=True)
+        create_archive(entities=None, filename=export_file, filter_size=filter_size, overwrite=True)
 
     benchmark.pedantic(export_operation, rounds=3, iterations=1)
 
     # Verify export succeeded
     assert export_file.exists()
+
+
+@pytest.mark.parametrize('filter_size', [100, 1000, 10000])
+@pytest.mark.timeout(600)
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_large_archive_import_benchmark(tmp_path, filter_size, benchmark, create_int_nodes, aiida_profile_clean):
+    """Benchmark import performance with different filter_size values using 10k nodes.
+
+    :param tmp_path: Pytest temporary directory fixture
+    :param filter_size: Maximum number of parameters in query filters
+    :param benchmark: Pytest benchmark fixture
+    :param create_int_nodes: Fixture to create test nodes
+    :param aiida_profile_clean: Clean AiiDA profile fixture
+    """
+    num_nodes = 10_000
+
+    def setup():
+        """Create archive for import benchmarking (setup phase, not timed)."""
+        # Create nodes and export to archive
+        export_file = tmp_path / f'import_benchmark_{filter_size}.aiida'
+        # archive is being created in the multiple runs of the benchmark
+        if export_file.exists():
+            return (export_file,), {}
+        else:
+            _ = create_int_nodes(num_nodes)
+            create_archive(None, filename=export_file, overwrite=False)
+        return (export_file,), {}
+
+    def import_operation(export_file):
+        """The actual import operation to benchmark."""
+        aiida_profile_clean.reset_storage()
+        import_archive(export_file, filter_size=filter_size)
+
+    # Use benchmark.pedantic with setup function
+    benchmark.pedantic(import_operation, setup=setup, rounds=3, iterations=1)
+
+    # Verify correctness after benchmark
+    all_nodes = QueryBuilder().append(Node).all(flat=True)
+    assert len(all_nodes) == num_nodes

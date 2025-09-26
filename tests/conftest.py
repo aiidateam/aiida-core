@@ -21,6 +21,7 @@ import pathlib
 import subprocess
 import types
 import typing as t
+import uuid
 import warnings
 from enum import Enum
 from pathlib import Path
@@ -29,8 +30,10 @@ import click
 import pytest
 
 from aiida import get_profile, orm
+from aiida.common import timezone
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
+from aiida.manage import get_manager
 from aiida.manage.configuration import Profile, get_config, load_profile
 
 try:
@@ -411,7 +414,7 @@ def profile_factory() -> t.Callable[t.Concatenate[str, P], Profile]:
                     'database_name': kwargs.pop('database_name', name),
                     'database_username': kwargs.pop('database_username', 'user'),
                     'database_password': kwargs.pop('database_password', 'pass'),
-                    'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
+                    'repository_uri': f'file:///{os.path.join(repository_dirpath, f"repository_{name}")}',
                 },
             },
             'process_control': {
@@ -943,7 +946,7 @@ def construct_calculation_node_add(tmp_path_factory):
 
         # Create FolderData node for retrieved
         retrieved_folder = FolderData()
-        output_content = f'{x+y}\n'.encode()
+        output_content = f'{x + y}\n'.encode()
         retrieved_folder.put_object_from_bytes(output_content, 'aiida.out')
 
         scheduler_stdout = '\n'.encode()
@@ -1198,3 +1201,54 @@ def setup_duplicate_group():
         return dupl_group
 
     return _setup_duplicate_group
+
+
+@pytest.fixture
+def create_int_nodes():
+    """Factory fixture to create a specified number of Int nodes efficiently using bulk_insert."""
+
+    def _create_nodes(count, label_prefix='test_node', store_individually=False):
+        """Create count number of Int nodes.
+
+        :param count: Number of nodes to create
+        :param label_prefix: Prefix for node labels
+        :param store_individually: If True, use individual .store() calls (_much_ slower but creates proper ORM objects).
+            If False, use bulk_insert (faster but returns only PKs)
+
+        :returns: List of node PKs if store_individually=False, list of Node objects if store_individually=True
+        """
+        if store_individually:
+            # Slower method that returns actual ORM objects
+            nodes = []
+            for i in range(count):
+                node = orm.Int(i)
+                node.label = f'{label_prefix}_{i}'
+                node.store()
+                nodes.append(node)
+            return nodes
+        else:
+            # Faster bulk_insert method
+            backend = get_manager().get_profile_storage()
+            current_time = timezone.now()
+
+            nodes_data = []
+            for i in range(count):
+                node_data = {
+                    'uuid': str(uuid.uuid4()),
+                    'node_type': 'data.core.int.Int.',
+                    'process_type': None,
+                    'label': f'{label_prefix}_{i}',
+                    'description': 'Test node for integration testing',
+                    'user_id': backend.default_user.pk,
+                    'dbcomputer_id': None,
+                    'ctime': current_time,
+                    'mtime': current_time,
+                    'attributes': {'value': i},
+                    'extras': {},
+                    'repository_metadata': {},
+                }
+                nodes_data.append(node_data)
+
+            return backend.bulk_insert(orm.entities.EntityTypes.NODE, nodes_data)
+
+    return _create_nodes

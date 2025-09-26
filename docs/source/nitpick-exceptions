@@ -204,6 +204,7 @@ py:class RmqThreadCommunicator
 py:class _asyncio.Future
 
 py:class tqdm.std.tqdm
+py:class tqdm
 
 py:class _pytest.tmpdir.TempPathFactory
 py:class pytest.tmpdir.TempPathFactory

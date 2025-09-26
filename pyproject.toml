@@ -18,6 +18,9 @@ classifiers = [
   'Programming Language :: Python :: 3.13',
   'Topic :: Scientific/Engineering'
 ]
+# NOTE: When updating versions of some packages, such as requests or paramiko,
+# you need to also update the versions of corresponding stub packages
+# in the 'pre-commit' group e.g. 'types-requests'
 dependencies = [
   'alembic~=1.8',
   'archive-path~=0.4.2',
@@ -229,6 +232,9 @@ notebook = [
   'jupyter~=1.0',
   'notebook~=6.1,>=6.1.5'
 ]
+# NOTE: THe versions of the `types-*` stubs packages should match
+# the versions of the actual packages see:
+# https://github.com/python/typeshed?tab=readme-ov-file#package-versioning-for-third-party-stubs
 pre-commit = [
   'aiida-core[atomic_tools,rest,tests,tui]',
   'mypy~=1.18.0',
@@ -236,7 +242,15 @@ pre-commit = [
   'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
   'tomli',
-  'types-PyYAML'
+  'types-click-spinner~=0.1.8',
+  'types-docutils~=0.20',
+  'types-PyYAML~=6.0',
+  'types-paramiko~=3.0',
+  'types-psutil~=5.6',
+  'types-pytz~=2021.1',
+  'types-tabulate>=0.9.0,<0.10.0',
+  'types-tqdm~=4.45',
+  'types-requests~=2.0'
 ]
 rest = [
   'flask-cors~=3.0',
@@ -343,47 +357,18 @@ module = 'tests.*'
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
-  'ase.*',
-  'asyncssh.*',
   'bpython.*',
   'bs4.*',
-  'CifFile.*',
   'circus.*',
-  'click_spinner.*',
-  'docutils.*',
-  'flask_cors.*',
   'flask_restful.*',
   'get_annotations.*',
   'graphviz.*',
-  'importlib._bootstrap.*',
-  'IPython.*',
   'kiwipy.*',
-  'matplotlib.*',
   'mayavi.*',
-  'MySQLdb.*',
-  'numpy.*',
-  'paramiko.*',
   'pgsu.*',
   'pgtest.*',
-  'phonopy.*',
-  'psutil.*',
-  'psycopg.*',
-  'pymatgen.*',
-  'pymysql.*',
-  'pyparsing.*',
-  'pympler.*',
-  'pytz.*',
-  'requests.*',
-  'ruamel.*',
-  'scipy.*',
-  'seekpath.*',
-  'spglib.*',
-  'sphinxcontrib.details.*',
-  'tabulate.*',
-  'tqdm.*',
   'trogon.*',
-  'wrapt.*',
-  'upf_to_json.*'
+  'wrapt.*'
 ]
 
 [tool.pytest.ini_options]

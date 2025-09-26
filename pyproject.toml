@@ -472,6 +472,7 @@ select = [
   'PLR',  # pylint-refactor
   'PLW',  # pylint-warning
   'RUF',  # ruff
+  'FLY',  # flynt
   'NPY201'  # numpy compatibility
 ]
 

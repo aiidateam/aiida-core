@@ -8,6 +8,8 @@
 ###########################################################################
 """Data plugin represeting an executable code to be wrapped and called through a `CalcJob` plugin."""
 
+from __future__ import annotations
+
 import os
 import pathlib
 import typing as t
@@ -51,9 +53,15 @@ class Code(AbstractCode):
         input_plugin: t.Optional[str] = MetadataField(
             description='The name of the input plugin to be used for this code'
         )
-        local_executable: t.Optional[str] = MetadataField(description='Path to a local executable')
-        remote_exec_path: t.Optional[str] = MetadataField(description='Remote path to executable')
-        is_local: t.Optional[bool] = MetadataField(description='Whether the code is local or remote')
+        local_executable: t.Optional[str] = MetadataField(
+            description='Path to a local executable',
+        )
+        remote_exec_path: t.Optional[str] = MetadataField(
+            description='Remote path to executable',
+        )
+        is_local: t.Optional[bool] = MetadataField(
+            description='Whether the code is local or remote',
+        )
 
     def __init__(self, remote_computer_exec=None, local_executable=None, input_plugin_name=None, files=None, **kwargs):
         super().__init__(**kwargs)
@@ -220,7 +228,7 @@ class Code(AbstractCode):
         elif query.count() > 1:
             codes = query.all(flat=True)
             retstr = f"There are multiple codes with label '{label}', having IDs: "
-            retstr += f"{', '.join(sorted([str(c.pk) for c in codes]))}.\n"
+            retstr += f'{", ".join(sorted([str(c.pk) for c in codes]))}.\n'
             retstr += 'Relabel them (using their ID), or refer to them with their ID.'
             raise MultipleObjectsError(retstr)
         else:
@@ -333,7 +341,7 @@ class Code(AbstractCode):
         if self.is_local():
             if not self.get_local_executable():
                 raise exceptions.ValidationError(
-                    'You have to set which file is the local executable ' 'using the set_exec_filename() method'
+                    'You have to set which file is the local executable using the set_exec_filename() method'
                 )
             if self.get_local_executable() not in self.base.repository.list_object_names():
                 raise exceptions.ValidationError(

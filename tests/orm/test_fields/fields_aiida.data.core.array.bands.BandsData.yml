@@ -10,12 +10,13 @@ description: QbStrField('description', dtype=typing.Optional[str], is_attribute=
 extras: QbDictField('extras', dtype=typing.Optional[typing.Dict[str, typing.Any]],
   is_attribute=False, is_subscriptable=True)
 label: QbStrField('label', dtype=typing.Optional[str], is_attribute=False)
-label_numbers: QbArrayField('label_numbers', dtype=typing.List[int], is_attribute=True)
-labels: QbArrayField('labels', dtype=typing.List[str], is_attribute=True)
-mesh: QbArrayField('mesh', dtype=typing.List[int], is_attribute=True)
+label_numbers: QbArrayField('label_numbers', dtype=typing.Optional[typing.List[int]],
+  is_attribute=True)
+labels: QbArrayField('labels', dtype=typing.Optional[typing.List[str]], is_attribute=True)
+mesh: QbArrayField('mesh', dtype=typing.Optional[typing.List[int]], is_attribute=True)
 mtime: QbNumericField('mtime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
 node_type: QbStrField('node_type', dtype=typing.Optional[str], is_attribute=False)
-offset: QbArrayField('offset', dtype=typing.List[float], is_attribute=True)
+offset: QbArrayField('offset', dtype=typing.Optional[typing.List[float]], is_attribute=True)
 pbc1: QbField('pbc1', dtype=<class 'bool'>, is_attribute=True)
 pbc2: QbField('pbc2', dtype=<class 'bool'>, is_attribute=True)
 pbc3: QbField('pbc3', dtype=<class 'bool'>, is_attribute=True)

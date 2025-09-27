@@ -8,6 +8,8 @@
 ###########################################################################
 """Module with `Node` sub class for processes."""
 
+from __future__ import annotations
+
 import enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
@@ -189,13 +191,52 @@ class ProcessNode(Sealable, Node):
         )
 
     class Model(Node.Model, Sealable.Model):
-        process_label: Optional[str] = MetadataField(description='The process label')
-        process_state: Optional[str] = MetadataField(description='The process state enum')
-        process_status: Optional[str] = MetadataField(description='The process status is a generic status message')
-        exit_status: Optional[int] = MetadataField(description='The process exit status')
-        exit_message: Optional[str] = MetadataField(description='The process exit message')
-        exception: Optional[str] = MetadataField(description='The process exception message')
-        paused: bool = MetadataField(description='Whether the process is paused')
+        process_label: Optional[str] = MetadataField(
+            description='The process label',
+        )
+        process_state: Optional[str] = MetadataField(
+            description='The process state enum',
+        )
+        process_status: Optional[str] = MetadataField(
+            description='The process status is a generic status message',
+        )
+        exit_status: Optional[int] = MetadataField(
+            description='The process exit status',
+        )
+        exit_message: Optional[str] = MetadataField(
+            description='The process exit message',
+        )
+        exception: Optional[str] = MetadataField(
+            description='The process exception message',
+        )
+        paused: bool = MetadataField(
+            description='Whether the process is paused',
+            exclude_to_orm=True,
+        )
+
+    def __init__(
+        self,
+        process_label: str | None = None,
+        process_state: str | None = None,
+        process_status: str | None = None,
+        exit_status: int | None = None,
+        exit_message: str | None = None,
+        exception: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        if process_label is not None:
+            self.set_process_label(process_label)
+        if process_state is not None:
+            self.set_process_state(process_state)
+        if process_status is not None:
+            self.set_process_status(process_status)
+        if exit_status is not None:
+            self.set_exit_status(exit_status)
+        if exit_message is not None:
+            self.set_exit_message(exit_message)
+        if exception is not None:
+            self.set_exception(exception)
 
     def set_metadata_inputs(self, value: Dict[str, Any]) -> None:
         """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
@@ -465,7 +506,7 @@ class ProcessNode(Sealable, Node):
     def set_exit_status(self, status: Union[None, enum.Enum, int]) -> None:
         """Set the exit status of the process
 
-        :param state: an integer exit code or None, which will be interpreted as zero
+        :param status: the exit status, an integer exit code, or None
         """
         if status is None:
             status = 0

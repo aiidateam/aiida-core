@@ -8,8 +8,12 @@
 ###########################################################################
 """Module with `Node` sub class for calculation job processes."""
 
+from __future__ import annotations
+
 import datetime
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
+
+from pydantic import field_serializer, field_validator
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
@@ -66,21 +70,25 @@ class CalcJobNode(CalculationNode):
 
     class Model(CalculationNode.Model):
         scheduler_state: Optional[str] = MetadataField(
-            description='The state of the scheduler', orm_to_model=lambda node, _: node.get_scheduler_state()
+            description='The state of the scheduler',
+            orm_to_model=lambda node, _: node.get_scheduler_state(),
         )
         state: Optional[str] = MetadataField(
-            description='The active state of the calculation job', orm_to_model=lambda node, _: node.get_state()
+            description='The active state of the calculation job',
+            orm_to_model=lambda node, _: node.get_state(),
         )
         remote_workdir: Optional[str] = MetadataField(
             description='The path to the remote (on cluster) scratch folder',
             orm_to_model=lambda node, _: node.get_remote_workdir(),
         )
         job_id: Optional[str] = MetadataField(
-            description='The scheduler job id', orm_to_model=lambda node, _: node.get_job_id()
+            description='The scheduler job id',
+            orm_to_model=lambda node, _: node.get_job_id(),
         )
         scheduler_lastchecktime: Optional[datetime.datetime] = MetadataField(
             description='The last time the scheduler was checked, in isoformat',
             orm_to_model=lambda node, _: node.get_scheduler_lastchecktime(),
+            exclude_to_orm=True,
         )
         last_job_info: Optional[dict] = MetadataField(
             description='The last job info returned by the scheduler',
@@ -90,20 +98,104 @@ class CalcJobNode(CalculationNode):
             description='The detailed job info returned by the scheduler',
             orm_to_model=lambda node, _: node.get_detailed_job_info(),
         )
-        retrieve_list: Optional[List[str]] = MetadataField(
+        retrieve_list: Optional[Sequence[Union[str, Tuple[str, str, int]]]] = MetadataField(
             description='The list of files to retrieve from the remote cluster',
             orm_to_model=lambda node, _: node.get_retrieve_list(),
         )
-        retrieve_temporary_list: Optional[List[str]] = MetadataField(
+        retrieve_temporary_list: Optional[Sequence[Union[str, Tuple[str, str, int]]]] = MetadataField(
             description='The list of temporary files to retrieve from the remote cluster',
             orm_to_model=lambda node, _: node.get_retrieve_temporary_list(),
         )
         imported: Optional[bool] = MetadataField(
-            description='Whether the node has been migrated', orm_to_model=lambda node, _: node.is_imported
+            description='Whether the node has been migrated',
+            orm_to_model=lambda node, _: node.is_imported,
+            exclude_to_orm=True,
         )
+
+        @field_validator('scheduler_state')
+        @classmethod
+        def validate_scheduler_state(cls, value: Optional[str]) -> Optional['JobState']:
+            from aiida.schedulers.datastructures import JobState
+
+            if value is None:
+                return value
+
+            try:
+                return JobState(value)
+            except ValueError as exception:
+                raise ValueError(exception) from exception
+
+        @field_serializer('scheduler_state')
+        @classmethod
+        def serialize_scheduler_state(cls, value: Optional['JobState']) -> Optional[str]:
+            return value.value if value else None
+
+        @field_validator('state')
+        @classmethod
+        def validate_state(cls, value: Optional[str]) -> Optional[CalcJobState]:
+            if value is None:
+                return value
+
+            try:
+                return CalcJobState(value)
+            except ValueError as exception:
+                raise ValueError(exception) from exception
+
+        @field_serializer('state')
+        @classmethod
+        def serialize_state(cls, value: Optional[CalcJobState]) -> Optional[str]:
+            return value.value if value else None
+
+        @field_validator('last_job_info')
+        @classmethod
+        def validate_last_job_info(cls, value: Optional[dict]) -> Optional['JobInfo']:
+            from aiida.schedulers.datastructures import JobInfo
+
+            if value is None:
+                return value
+
+            try:
+                return JobInfo(value)
+            except ValueError as exception:
+                raise ValueError(exception) from exception
+
+        @field_serializer('last_job_info')
+        @classmethod
+        def serialize_last_job_info(cls, value: Optional['JobInfo']) -> Optional[dict]:
+            return value.get_dict() if value else None
 
     # An optional entry point for a CalculationTools instance
     _tools = None
+
+    def __init__(
+        self,
+        scheduler_state: 'JobState' | None = None,
+        state: CalcJobState | None = None,
+        remote_workdir: str | None = None,
+        job_id: str | None = None,
+        last_job_info: 'JobInfo' | None = None,
+        detailed_job_info: dict | None = None,
+        retrieve_list: Sequence[str | tuple[str, str, int]] | None = None,
+        retrieve_temporary_list: Sequence[str | tuple[str, str, int]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        if scheduler_state is not None:
+            self.set_scheduler_state(scheduler_state)
+        if state is not None:
+            self.set_state(state)
+        if remote_workdir is not None:
+            self.set_remote_workdir(remote_workdir)
+        if job_id is not None:
+            self.set_job_id(job_id)
+        if last_job_info is not None:
+            self.set_last_job_info(last_job_info)
+        if detailed_job_info is not None:
+            self.set_detailed_job_info(detailed_job_info)
+        if retrieve_list is not None:
+            self.set_retrieve_list(retrieve_list)
+        if retrieve_temporary_list is not None:
+            self.set_retrieve_temporary_list(retrieve_temporary_list)
 
     @property
     def tools(self) -> 'CalculationTools':
@@ -259,7 +351,7 @@ class CalcJobNode(CalculationNode):
         return self.base.attributes.get(self.REMOTE_WORKDIR_KEY, None)
 
     @staticmethod
-    def _validate_retrieval_directive(directives: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
+    def _validate_retrieval_directive(directives: Sequence[str | tuple[str, str, int]]) -> None:
         """Validate a list or tuple of file retrieval directives.
 
         :param directives: a list or tuple of file retrieval directives
@@ -286,7 +378,7 @@ class CalcJobNode(CalculationNode):
             if not isinstance(directive[2], (int, type(None))):
                 raise ValueError('invalid directive, third element has to be an integer representing the depth')
 
-    def set_retrieve_list(self, retrieve_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
+    def set_retrieve_list(self, retrieve_list: Sequence[str | tuple[str, str, int]]) -> None:
         """Set the retrieve list.
 
         This list of directives will instruct the daemon what files to retrieve after the calculation has completed.
@@ -297,14 +389,14 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_list)
         self.base.attributes.set(self.RETRIEVE_LIST_KEY, retrieve_list)
 
-    def get_retrieve_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
+    def get_retrieve_list(self) -> Optional[Sequence[str | tuple[str, str, int]]]:
         """Return the list of files/directories to be retrieved on the cluster after the calculation has completed.
 
         :return: a list of file directives
         """
         return self.base.attributes.get(self.RETRIEVE_LIST_KEY, None)
 
-    def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
+    def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[str | tuple[str, str, int]]) -> None:
         """Set the retrieve temporary list.
 
         The retrieve temporary list stores files that are retrieved after completion and made available during parsing
@@ -315,7 +407,7 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_temporary_list)
         self.base.attributes.set(self.RETRIEVE_TEMPORARY_LIST_KEY, retrieve_temporary_list)
 
-    def get_retrieve_temporary_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
+    def get_retrieve_temporary_list(self) -> Optional[Sequence[str | tuple[str, str, int]]]:
         """Return list of files to be retrieved from the cluster which will be available during parsing.
 
         :return: a list of file directives
@@ -399,6 +491,11 @@ class CalcJobNode(CalculationNode):
 
         :param last_job_info: a `JobInfo` object
         """
+        from aiida.schedulers.datastructures import JobInfo
+
+        if not isinstance(last_job_info, JobInfo):
+            raise ValueError(f'last job info should be an instance of JobInfo, got: {last_job_info}')
+
         self.base.attributes.set(self.SCHEDULER_LAST_JOB_INFO_KEY, last_job_info.get_dict())
 
     def get_last_job_info(self) -> Optional['JobInfo']:

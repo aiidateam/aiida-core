@@ -141,7 +141,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 lumo = [_[0][_[1] + 1] for _ in zip(bands, homo_indexes)]
             except IndexError:
                 raise ValueError(
-                    'To understand if it is a metal or insulator, ' 'need more bands than n_band=number_electrons'
+                    'To understand if it is a metal or insulator, need more bands than n_band=number_electrons'
                 )
 
         else:
@@ -158,7 +158,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 lumo = [i[number_electrons // number_electrons_per_band] for i in bands]  # take the n+1th level
             except IndexError:
                 raise ValueError(
-                    'To understand if it is a metal or insulator, ' 'need more bands than n_band=number_electrons'
+                    'To understand if it is a metal or insulator, need more bands than n_band=number_electrons'
                 )
 
         if number_electrons % 2 == 1 and len(stored_bands.shape) == 2:
@@ -214,8 +214,23 @@ class BandsData(KpointsData):
     """Class to handle bands data"""
 
     class Model(KpointsData.Model):
-        array_labels: t.Optional[t.List[str]] = MetadataField(description='Labels associated with the band arrays')
-        units: str = MetadataField(description='Units in which the data in bands were stored')
+        array_labels: t.Optional[t.List[str]] = MetadataField(
+            description='Labels associated with the band arrays',
+        )
+        units: str = MetadataField(
+            description='Units in which the data in bands were stored',
+        )
+
+    def __init__(
+        self,
+        array_labels: t.Optional[t.List[str]] = None,
+        units: t.Optional[str] = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.units = units
+        if array_labels is not None:
+            self.array_labels = array_labels
 
     def set_kpointsdata(self, kpointsdata):
         """Load the kpoints from a kpoint object.
@@ -304,7 +319,7 @@ class BandsData(KpointsData):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError(
-                    'Band labels have an unrecognized type ({})' 'but should be a string or a list of strings'.format(
+                    'Band labels have an unrecognized type ({})but should be a string or a list of strings'.format(
                         labels.__class__
                     )
                 )
@@ -334,7 +349,7 @@ class BandsData(KpointsData):
         self.units = units
 
         if the_labels is not None:
-            self.base.attributes.set('array_labels', the_labels)
+            self.array_labels = the_labels
 
         if the_occupations is not None:
             # set occupations
@@ -345,19 +360,20 @@ class BandsData(KpointsData):
         """Get the labels associated with the band arrays"""
         return self.base.attributes.get('array_labels', None)
 
+    @array_labels.setter
+    def array_labels(self, value):
+        """Set the labels associated with the band arrays"""
+        self.base.attributes.set('array_labels', value)
+
     @property
     def units(self) -> str:
         """Units in which the data in bands were stored."""
-        # return copy.deepcopy(self._pbc)
         return self.base.attributes.get('units')
 
     @units.setter
     def units(self, value):
-        """Set the value of pbc, i.e. a tuple of three booleans, indicating if the
-        cell is periodic in the 1,2,3 crystal direction
-        """
-        the_str = str(value)
-        self.base.attributes.set('units', the_str)
+        """Set the units in which the data in bands are stored."""
+        self.base.attributes.set('units', str(value))
 
     def _set_pbc(self, value):
         """Validate the pbc, then store them"""

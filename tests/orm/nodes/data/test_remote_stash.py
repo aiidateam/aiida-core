@@ -47,15 +47,15 @@ def test_constructor_folder(store):
 
 
 @pytest.mark.parametrize(
-    'argument, value',
+    'argument, value, error',
     (
-        ('stash_mode', 'copy'),
-        ('target_basepath', ['list']),
-        ('source_list', 'relative/path'),
-        ('source_list', ('/absolute/path')),
+        ('stash_mode', 'copy', ValueError),
+        ('target_basepath', ['list'], TypeError),
+        ('source_list', 'relative/path', TypeError),
+        ('source_list', ('/absolute/path'), TypeError),
     ),
 )
-def test_constructor_invalid_folder(argument, value):
+def test_constructor_invalid_folder(argument, value, error):
     """Test the constructor for invalid argument types."""
 
     kwargs = {
@@ -64,7 +64,7 @@ def test_constructor_invalid_folder(argument, value):
         'source_list': ('relative/folder', 'relative/file'),
     }
 
-    with pytest.raises(TypeError):
+    with pytest.raises(error):
         kwargs[argument] = value
         RemoteStashFolderData(**kwargs)
 

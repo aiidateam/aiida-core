@@ -54,10 +54,22 @@ class User(entities.Entity['BackendUser', UserCollection]):
     _CLS_COLLECTION = UserCollection
 
     class Model(entities.Entity.Model):
-        email: str = MetadataField(description='The user email', is_attribute=False)
-        first_name: str = MetadataField(description='The user first name', is_attribute=False)
-        last_name: str = MetadataField(description='The user last name', is_attribute=False)
-        institution: str = MetadataField(description='The user institution', is_attribute=False)
+        email: str = MetadataField(
+            description='The user email',
+            is_attribute=False,
+        )
+        first_name: str = MetadataField(
+            description='The user first name',
+            is_attribute=False,
+        )
+        last_name: str = MetadataField(
+            description='The user last name',
+            is_attribute=False,
+        )
+        institution: str = MetadataField(
+            description='The user institution',
+            is_attribute=False,
+        )
 
     def __init__(
         self,
@@ -71,7 +83,10 @@ class User(entities.Entity['BackendUser', UserCollection]):
         backend = backend or get_manager().get_profile_storage()
         email = self.normalize_email(email)
         backend_entity = backend.users.create(
-            email=email, first_name=first_name, last_name=last_name, institution=institution
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            institution=institution,
         )
         super().__init__(backend_entity)
 

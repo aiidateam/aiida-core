@@ -195,16 +195,23 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
     class Model(Entity.Model):
         uuid: Optional[str] = MetadataField(
-            None, description='The UUID of the node', is_attribute=False, exclude_to_orm=True, exclude_from_cli=True
+            None,
+            description='The UUID of the node',
+            is_attribute=False,
+            exclude_to_orm=True,
+            exclude_from_cli=True,
         )
         node_type: Optional[str] = MetadataField(
-            None, description='The type of the node', is_attribute=False, exclude_to_orm=True, exclude_from_cli=True
+            None,
+            description='The type of the node',
+            is_attribute=False,
+            exclude_to_orm=True,
+            exclude_from_cli=True,
         )
         process_type: Optional[str] = MetadataField(
             None,
             description='The process type of the node',
             is_attribute=False,
-            exclude_to_orm=True,
             exclude_from_cli=True,
         )
         repository_metadata: Optional[Dict[str, Any]] = MetadataField(
@@ -230,10 +237,16 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             exclude_from_cli=True,
         )
         label: Optional[str] = MetadataField(
-            None, description='The node label', is_attribute=False, exclude_from_cli=True
+            None,
+            description='The node label',
+            is_attribute=False,
+            exclude_from_cli=True,
         )
         description: Optional[str] = MetadataField(
-            None, description='The node description', is_attribute=False, exclude_from_cli=True
+            None,
+            description='The node description',
+            is_attribute=False,
+            exclude_from_cli=True,
         )
         attributes: Optional[Dict[str, Any]] = MetadataField(
             None,
@@ -302,7 +315,10 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             raise ValueError('the user cannot be None')
 
         backend_entity = backend.nodes.create(
-            node_type=self.class_node_type, user=user.backend_entity, computer=backend_computer, **kwargs
+            node_type=self.class_node_type,
+            user=user.backend_entity,
+            computer=backend_computer,
+            **kwargs,
         )
         super().__init__(backend_entity)
         if extras is not None:

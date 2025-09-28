@@ -177,7 +177,7 @@ class Collection(abc.ABC, Generic[EntityType]):
 class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
     """An AiiDA entity"""
 
-    _CLS_COLLECTION: type[Collection[Self]] = Collection
+    _CLS_COLLECTION: type[Collection[EntityType]] = Collection
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
     class Model(BaseModel, defer_build=True):
@@ -207,7 +207,7 @@ class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
             if field_value is None:
                 continue
 
-            orm_class: type[Entity] | str | None = None
+            orm_class: type['Entity'] | str | None = None
             if orm_class := get_metadata(field, 'orm_class'):
                 if isinstance(orm_class, str):
                     try:
@@ -240,7 +240,7 @@ class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
         return self.Model(**fields)
 
     @classmethod
-    def _from_model(cls, model: Model) -> Self:
+    def _from_model(cls: type[EntityType], model: Model) -> EntityType:
         """Return an entity instance from an instance of its model."""
         fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
@@ -267,7 +267,7 @@ class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
         return self._to_model(repository_path).model_dump()
 
     @classmethod
-    def from_serialized(cls, **kwargs: dict[str, Any]) -> EntityType:
+    def from_serialized(cls: type[EntityType], **kwargs: dict[str, Any]) -> EntityType:
         """Construct an entity instance from JSON serialized data."""
         cls._logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
@@ -275,7 +275,7 @@ class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
         return cls._from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
 
     @classproperty
-    def objects(cls: EntityType) -> Collection[Self]:  # noqa: N805
+    def objects(cls: type[EntityType]) -> Collection[EntityType]:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
@@ -286,7 +286,7 @@ class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
         return cls.collection
 
     @classproperty
-    def collection(cls) -> Collection[Self]:  # noqa: N805
+    def collection(cls: type[EntityType]) -> Collection[EntityType]:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         :return: an object that can be used to access entities of this type
@@ -294,7 +294,7 @@ class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
         return cls._CLS_COLLECTION.get_cached(cls, get_manager().get_profile_storage())
 
     @classmethod
-    def get_collection(cls, backend: 'StorageBackend'):
+    def get_collection(cls: type[EntityType], backend: 'StorageBackend') -> Collection[EntityType]:
         """Get a collection for objects of this type for a given backend.
 
         .. note:: Use the ``collection`` class property instead if the currently loaded backend or backend of the
@@ -306,7 +306,7 @@ class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
         return cls._CLS_COLLECTION.get_cached(cls, backend)
 
     @classmethod
-    def get(cls, **kwargs):
+    def get(cls: type[EntityType], **kwargs) -> EntityType | None:
         """Get an entity of the collection matching the given filters.
 
         .. deprecated: Will be removed in v3, use `Entity.collection.get` instead.

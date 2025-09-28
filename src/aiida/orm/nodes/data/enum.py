@@ -17,7 +17,7 @@ members (or enum members) and are functionally constants. The enum members have 
 
 from __future__ import annotations
 
-from enum import Enum
+import enum
 from typing import Any, TypeVar
 
 from plumpy.loaders import get_object_loader
@@ -30,10 +30,10 @@ from .data import Data
 
 __all__ = ('EnumData',)
 
-EnumType = TypeVar('EnumType', bound=Enum)
+EnumType = TypeVar('EnumType', bound=enum.Enum)
 
 
-@to_aiida_type.register(Enum)
+@to_aiida_type.register(enum.Enum)
 def _(value):
     return EnumData(member=value)
 
@@ -53,14 +53,14 @@ class EnumData(Data):
     KEY_IDENTIFIER = 'identifier'
 
     class Model(Data.Model):
-        member: Enum = MetadataField(
+        member: enum.Enum = MetadataField(
             description='The member name.',
             orm_to_model=lambda node, _: node.get_member(),  # type: ignore[attr-defined]
         )
 
-    def __init__(self, member: Enum, *args, **kwargs):
+    def __init__(self, member: enum.Enum, *args, **kwargs):
         """Construct the node for the to enum member that is to be wrapped."""
-        type_check(member, Enum)
+        type_check(member, enum.Enum)
         super().__init__(*args, **kwargs)
 
         data = {
@@ -115,7 +115,7 @@ class EnumData(Data):
 
     def __eq__(self, other: Any) -> bool:
         """Return whether the other object is equivalent to ourselves."""
-        if isinstance(other, Enum):
+        if isinstance(other, enum.Enum):
             try:
                 return self.get_member() == other
             except (ImportError, ValueError):

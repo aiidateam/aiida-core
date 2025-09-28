@@ -123,6 +123,8 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         time: Optional[datetime.datetime] = MetadataField(
             description='The creation time of the node', is_attribute=False
         )
+        label: str = MetadataField(description='The group label', is_attribute=False)
+        description: Optional[str] = MetadataField(description='The group description', is_attribute=False)
         extras: Optional[dict[str, Any]] = MetadataField(
             description='The group extras',
             is_attribute=False,

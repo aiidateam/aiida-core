@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 
 __all__ = ('Collection', 'Entity', 'EntityTypes')
 
+CollectionType = TypeVar('CollectionType', bound='Collection')
 EntityType = TypeVar('EntityType', bound='Entity')
 BackendEntityType = TypeVar('BackendEntityType', bound='BackendEntity')
 
@@ -174,10 +175,10 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self.query(filters=filters).count()
 
 
-class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
+class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=EntityFieldMeta):
     """An AiiDA entity"""
 
-    _CLS_COLLECTION: type[Collection[EntityType]] = Collection
+    _CLS_COLLECTION: type[CollectionType] = Collection  # type: ignore[assignment]
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
     class Model(BaseModel, defer_build=True):
@@ -275,7 +276,7 @@ class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
         return cls._from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
 
     @classproperty
-    def objects(cls: type[EntityType]) -> Collection[EntityType]:  # noqa: N805
+    def objects(cls: type[EntityType]) -> CollectionType:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
@@ -286,7 +287,7 @@ class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
         return cls.collection
 
     @classproperty
-    def collection(cls: type[EntityType]) -> Collection[EntityType]:  # noqa: N805
+    def collection(cls: type[EntityType]) -> CollectionType:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         :return: an object that can be used to access entities of this type
@@ -294,7 +295,7 @@ class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
         return cls._CLS_COLLECTION.get_cached(cls, get_manager().get_profile_storage())
 
     @classmethod
-    def get_collection(cls: type[EntityType], backend: 'StorageBackend') -> Collection[EntityType]:
+    def get_collection(cls: type[EntityType], backend: 'StorageBackend') -> CollectionType:
         """Get a collection for objects of this type for a given backend.
 
         .. note:: Use the ``collection`` class property instead if the currently loaded backend or backend of the

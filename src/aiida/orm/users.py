@@ -50,7 +50,7 @@ class UserCollection(entities.Collection['User']):
         return self.backend.default_user
 
 
-class User(entities.Entity['BackendUser']):
+class User(entities.Entity['BackendUser', UserCollection]):
     """AiiDA User"""
 
     _CLS_COLLECTION = UserCollection

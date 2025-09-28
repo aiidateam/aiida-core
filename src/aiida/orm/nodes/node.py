@@ -143,7 +143,7 @@ class NodeBase:
         return self._node._CLS_NODE_LINKS(self._node)
 
 
-class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
+class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     """Base class for all nodes in AiiDA.
 
     Stores attributes starting with an underscore.

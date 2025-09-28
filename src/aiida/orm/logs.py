@@ -126,7 +126,7 @@ class LogCollection(entities.Collection['Log']):
         return self._backend.logs.delete_many(filters)
 
 
-class Log(entities.Entity['BackendLog']):
+class Log(entities.Entity['BackendLog', LogCollection]):
     """An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node."""
 
     _CLS_COLLECTION = LogCollection

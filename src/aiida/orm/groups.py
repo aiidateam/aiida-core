@@ -106,7 +106,7 @@ class GroupBase:
         return extras.EntityExtras(self._group)
 
 
-class Group(entities.Entity['BackendGroup']):
+class Group(entities.Entity['BackendGroup', GroupCollection]):
     """An AiiDA ORM implementation of group of nodes."""
 
     __type_string: ClassVar[str | None]

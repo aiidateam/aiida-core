@@ -63,7 +63,7 @@ class ComputerCollection(entities.Collection['Computer']):
         return self._backend.computers.delete(pk)
 
 
-class Computer(entities.Entity['BackendComputer']):
+class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     """Computer entity."""
 
     _logger = logging.getLogger(__name__)

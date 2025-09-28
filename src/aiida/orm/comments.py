@@ -64,7 +64,7 @@ class CommentCollection(entities.Collection['Comment']):
         return self._backend.comments.delete_many(filters)
 
 
-class Comment(entities.Entity['BackendComment']):
+class Comment(entities.Entity['BackendComment', CommentCollection]):
     """Base class to map a DbComment that represents a comment attached to a certain Node."""
 
     _CLS_COLLECTION = CommentCollection

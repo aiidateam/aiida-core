@@ -6,6 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: FLY002
 """This module contains tests for UpfData and UpfData related functions."""
 
 import json

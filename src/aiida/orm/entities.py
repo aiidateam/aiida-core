@@ -91,7 +91,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         """Get or create a cached collection using a new backend."""
         if backend is self._backend:
             return self
-        return self.get_cached(self.entity_type, backend=backend)  # type: ignore[arg-type]
+        return self.get_cached(self.entity_type, backend=backend)
 
     @property
     def entity_type(self) -> type[EntityType]:
@@ -208,7 +208,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             if field_value is None:
                 continue
 
-            orm_class: type['Entity'] | str | None = None
             if orm_class := get_metadata(field, 'orm_class'):
                 if isinstance(orm_class, str):
                     try:

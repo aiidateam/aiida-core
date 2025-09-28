@@ -13,7 +13,7 @@ from __future__ import annotations
 import abc
 import functools
 import pathlib
-import typing as t
+from typing import TYPE_CHECKING, Optional
 
 from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
@@ -25,7 +25,7 @@ from aiida.plugins import CalculationFactory
 
 from ..data import Data
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from aiida.engine import ProcessBuilder
 
 __all__ = ('AbstractCode',)
@@ -58,7 +58,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             description='Human-readable description, ideally including version and compilation environment.',
             short_name='-D',
         )
-        default_calc_job_plugin: t.Optional[str] = MetadataField(
+        default_calc_job_plugin: Optional[str] = MetadataField(
             None,
             title='Default `CalcJob` plugin',
             description='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).',
@@ -70,7 +70,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             description='Whether the executable and arguments of the code in the submission script should be escaped '
             'with single or double quotes.',
         )
-        with_mpi: t.Optional[bool] = MetadataField(
+        with_mpi: Optional[bool] = MetadataField(
             None,
             title='Run with MPI',
             description='Whether the executable should be run as an MPI program. This option can be left unspecified '

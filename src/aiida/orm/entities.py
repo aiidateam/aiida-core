@@ -11,19 +11,19 @@
 from __future__ import annotations
 
 import abc
-import pathlib
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, Union
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar
 
 from plumpy.base.utils import call_with_super_check, super_check
-from pydantic import BaseModel
-from pydantic.fields import FieldInfo
+from pydantic import BaseModel, fields
 
 from aiida.common import exceptions, log
 from aiida.common.exceptions import EntryPointError, InvalidOperation, NotExistent
 from aiida.common.lang import classproperty, type_check
 from aiida.common.pydantic import MetadataField, get_metadata
+from aiida.common.typing import Self
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
@@ -35,7 +35,6 @@ if TYPE_CHECKING:
 
 __all__ = ('Collection', 'Entity', 'EntityTypes')
 
-CollectionType = TypeVar('CollectionType', bound='Collection')
 EntityType = TypeVar('EntityType', bound='Entity')
 BackendEntityType = TypeVar('BackendEntityType', bound='BackendEntity')
 
@@ -59,12 +58,12 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     @staticmethod
     @abc.abstractmethod
-    def _entity_base_cls() -> Type[EntityType]:
+    def _entity_base_cls() -> type[EntityType]:
         """The allowed entity class or subclasses thereof."""
 
     @classmethod
     @lru_cache(maxsize=100)
-    def get_cached(cls, entity_class: Type[EntityType], backend: 'StorageBackend'):
+    def get_cached(cls, entity_class: type[EntityType], backend: 'StorageBackend'):
         """Get the cached collection instance for the given entity class and backend.
 
         :param backend: the backend instance to get the collection for
@@ -74,7 +73,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         type_check(backend, StorageBackend)
         return cls(entity_class, backend=backend)
 
-    def __init__(self, entity_class: Type[EntityType], backend: Optional['StorageBackend'] = None) -> None:
+    def __init__(self, entity_class: type[EntityType], backend: 'StorageBackend' | None = None) -> None:
         """Construct a new entity collection.
 
         :param entity_class: the entity type e.g. User, Computer, etc
@@ -87,14 +86,14 @@ class Collection(abc.ABC, Generic[EntityType]):
         self._backend = backend or get_manager().get_profile_storage()
         self._entity_type = entity_class
 
-    def __call__(self: CollectionType, backend: 'StorageBackend') -> CollectionType:
+    def __call__(self, backend: 'StorageBackend') -> Self:
         """Get or create a cached collection using a new backend."""
         if backend is self._backend:
             return self
         return self.get_cached(self.entity_type, backend=backend)  # type: ignore[arg-type]
 
     @property
-    def entity_type(self) -> Type[EntityType]:
+    def entity_type(self) -> type[EntityType]:
         """The entity type for this instance."""
         return self._entity_type
 
@@ -105,11 +104,11 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     def query(
         self,
-        filters: Optional['FilterType'] = None,
-        order_by: Optional['OrderByType'] = None,
-        project: Optional[Union[list[str], str]] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        filters: 'FilterType' | None = None,
+        order_by: 'OrderByType' | None = None,
+        project: list[str] | str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
         subclassing: bool = True,
     ) -> 'QueryBuilder':
         """Get a query builder for the objects of this collection.
@@ -143,10 +142,10 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     def find(
         self,
-        filters: Optional['FilterType'] = None,
-        order_by: Optional['OrderByType'] = None,
-        limit: Optional[int] = None,
-    ) -> List[EntityType]:
+        filters: 'FilterType' | None = None,
+        order_by: 'OrderByType' | None = None,
+        limit: int | None = None,
+    ) -> list[EntityType]:
         """Find collection entries matching the filter criteria.
 
         :param filters: the keyword value pair filters to match
@@ -158,14 +157,14 @@ class Collection(abc.ABC, Generic[EntityType]):
         query = self.query(filters=filters, order_by=order_by, limit=limit)
         return query.all(flat=True)
 
-    def all(self) -> List[EntityType]:
+    def all(self) -> list[EntityType]:
         """Get all entities in this collection.
 
         :return: A list of all entities
         """
         return self.query().all(flat=True)
 
-    def count(self, filters: Optional['FilterType'] = None) -> int:
+    def count(self, filters: 'FilterType' | None = None) -> int:
         """Count entities in this collection according to criteria.
 
         :param filters: the keyword value pair filters to match
@@ -175,10 +174,10 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self.query(filters=filters).count()
 
 
-class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=EntityFieldMeta):
+class Entity(abc.ABC, Generic[BackendEntityType], metaclass=EntityFieldMeta):
     """An AiiDA entity"""
 
-    _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
+    _CLS_COLLECTION: type[Collection[Self]] = Collection
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
     class Model(BaseModel, defer_build=True):
@@ -191,7 +190,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         )
 
     @classmethod
-    def model_to_orm_fields(cls) -> dict[str, FieldInfo]:
+    def model_to_orm_fields(cls) -> dict[str, fields.FieldInfo]:
         return {
             key: field for key, field in cls.Model.model_fields.items() if not get_metadata(field, 'exclude_to_orm')
         }
@@ -208,6 +207,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             if field_value is None:
                 continue
 
+            orm_class: type[Entity] | str | None = None
             if orm_class := get_metadata(field, 'orm_class'):
                 if isinstance(orm_class, str):
                     try:
@@ -227,7 +227,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return fields
 
-    def _to_model(self, repository_path: pathlib.Path) -> Model:
+    def _to_model(self, repository_path: Path | None = None) -> Model:
         """Return the entity instance as an instance of its model."""
         fields = {}
 
@@ -240,15 +240,15 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return self.Model(**fields)
 
     @classmethod
-    def _from_model(cls, model: Model) -> 'Entity':
+    def _from_model(cls, model: Model) -> Self:
         """Return an entity instance from an instance of its model."""
         fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
 
-    def serialize(self, repository_path: Union[pathlib.Path, None] = None) -> dict[str, Any]:
+    def serialize(self, repository_path: Path | None = None) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
-        :param repository_path: If the orm node has files in the repository, this path is used to dump the repostiory
+        :param repository_path: If the orm node has files in the repository, this path is used to dump the repository
             files to. If no path is specified a temporary path is created using the entities pk.
         """
         self.logger.warning(
@@ -257,7 +257,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         if repository_path is None:
             import tempfile
 
-            repository_path = pathlib.Path(tempfile.mkdtemp()) / f'./aiida_serialization/{self.pk}/'
+            repository_path = Path(tempfile.mkdtemp()) / f'./aiida_serialization/{self.pk}/'
             repository_path.mkdir(parents=True)
         else:
             if not repository_path.exists():
@@ -267,7 +267,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return self._to_model(repository_path).model_dump()
 
     @classmethod
-    def from_serialized(cls, **kwargs: dict[str, Any]) -> 'Entity':
+    def from_serialized(cls, **kwargs: dict[str, Any]) -> EntityType:
         """Construct an entity instance from JSON serialized data."""
         cls._logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
@@ -275,7 +275,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls._from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
 
     @classproperty
-    def objects(cls: EntityType) -> CollectionType:  # noqa: N805
+    def objects(cls: EntityType) -> Collection[Self]:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
@@ -286,7 +286,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls.collection
 
     @classproperty
-    def collection(cls) -> CollectionType:  # noqa: N805
+    def collection(cls) -> Collection[Self]:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         :return: an object that can be used to access entities of this type
@@ -396,7 +396,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return self._backend_entity
 
 
-def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType) -> EntityType:
+def from_backend_entity(cls: type[EntityType], backend_entity: BackendEntityType) -> EntityType:
     """Construct an entity from a backend entity instance
 
     :param backend_entity: the backend entity

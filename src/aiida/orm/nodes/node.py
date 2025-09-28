@@ -13,7 +13,7 @@ from __future__ import annotations
 import base64
 import datetime
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterator, List, Optional, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterator, Optional, TypeVar
 from uuid import UUID
 
 from aiida.common import exceptions
@@ -21,6 +21,7 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.pydantic import MetadataField
+from aiida.common.typing import Self
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.utils.node import (
@@ -30,8 +31,7 @@ from aiida.orm.utils.node import (
 )
 
 from ..computers import Computer
-from ..entities import Collection as EntityCollection
-from ..entities import Entity, from_backend_entity
+from ..entities import Collection, Entity, from_backend_entity
 from ..extras import EntityExtras
 from ..querybuilder import QueryBuilder
 from ..users import User
@@ -54,11 +54,11 @@ __all__ = ('Node',)
 NodeType = TypeVar('NodeType', bound='Node')
 
 
-class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
+class NodeCollection(Collection[NodeType], Generic[NodeType]):
     """The collection of nodes."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Node']:  # type: ignore[override]
+    def _entity_base_cls() -> type['Node']:  # type: ignore[override]
         return Node
 
     def delete(self, pk: int) -> None:
@@ -80,7 +80,10 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
         self._backend.nodes.delete(pk)
 
     def iter_repo_keys(
-        self, filters: Optional[dict] = None, subclassing: bool = True, batch_size: int = 100
+        self,
+        filters: dict | None = None,
+        subclassing: bool = True,
+        batch_size: int = 100,
     ) -> Iterator[str]:
         """Iterate over all repository object keys for this ``Node`` class
 
@@ -140,7 +143,7 @@ class NodeBase:
         return self._node._CLS_NODE_LINKS(self._node)
 
 
-class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
+class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     """Base class for all nodes in AiiDA.
 
     Stores attributes starting with an underscore.
@@ -181,10 +184,10 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
     # A tuple of attribute names that can be updated even after node is stored
     # Requires Sealable mixin, but needs empty tuple for base class
-    _updatable_attributes: Tuple[str, ...] = tuple()
+    _updatable_attributes: tuple[str, ...] = tuple()
 
     # A tuple of attribute names that will be ignored when creating the hash.
-    _hash_ignored_attributes: Tuple[str, ...] = tuple()
+    _hash_ignored_attributes: tuple[str, ...] = tuple()
 
     # Flag that determines whether the class can be cached.
     _cachable = False
@@ -207,7 +210,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
-        repository_metadata: Optional[Dict[str, Any]] = MetadataField(
+        repository_metadata: Optional[dict[str, Any]] = MetadataField(
             None,
             description='Virtual hierarchy of the file repository.',
             is_attribute=False,
@@ -235,7 +238,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         description: Optional[str] = MetadataField(
             None, description='The node description', is_attribute=False, exclude_from_cli=True
         )
-        attributes: Optional[Dict[str, Any]] = MetadataField(
+        attributes: Optional[dict[str, Any]] = MetadataField(
             None,
             description='The node attributes',
             is_attribute=False,
@@ -244,7 +247,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             exclude_from_cli=True,
             exclude_to_orm=True,
         )
-        extras: Optional[Dict[str, Any]] = MetadataField(
+        extras: Optional[dict[str, Any]] = MetadataField(
             None,
             description='The node extras',
             is_attribute=False,
@@ -284,10 +287,10 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
     def __init__(
         self,
-        backend: Optional['StorageBackend'] = None,
-        user: Optional[User] = None,
-        computer: Optional[Computer] = None,
-        extras: Optional[Dict[str, Any]] = None,
+        backend: 'StorageBackend' | None = None,
+        user: User | None = None,
+        computer: Computer | None = None,
+        extras: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         backend = backend or get_manager().get_profile_storage()
@@ -309,11 +312,13 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             self.base.extras.set_many(extras)
 
     @classmethod
-    def _from_model(cls, model: Model) -> 'Node':  # type: ignore[override]
+    def _from_model(  # type: ignore[override]
+        cls, model: Model
+    ) -> Self:
         """Return an entity instance from an instance of its model."""
         fields = cls.model_to_orm_field_values(model)
 
-        repository_content = fields.pop('repository_content', {})
+        repository_content: dict[str, bytes] = fields.pop('repository_content', {})
         node = cls(**fields)
 
         for filepath, encoded in repository_content.items():
@@ -326,7 +331,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         """Return the node base namespace."""
         return NodeBase(self)
 
-    def _check_mutability_attributes(self, keys: Optional[List[str]] = None) -> None:
+    def _check_mutability_attributes(self, keys: list[str] | None = None) -> None:
         """Check if the entity is mutable and raise an exception if not.
 
         This is called from `NodeAttributes` methods that modify the attributes.
@@ -399,7 +404,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         return cls._plugin_type_string
 
     @classproperty
-    def entry_point(cls) -> Optional['EntryPoint']:  # noqa: N805
+    def entry_point(cls) -> 'EntryPoint' | None:  # noqa: N805
         """Return the entry point associated this node class.
 
         :return: the associated entry point or ``None`` if it isn't known.
@@ -409,7 +414,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
 
     @property
-    def logger(self) -> Optional[AiidaLoggerType]:
+    def logger(self) -> AiidaLoggerType | None:
         """Return the logger configured for this Node.
 
         :return: Logger object
@@ -433,7 +438,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         return self.backend_entity.node_type
 
     @property
-    def process_type(self) -> Optional[str]:
+    def process_type(self) -> str | None:
         """Return the node process type.
 
         :return: the process type
@@ -481,7 +486,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         self.backend_entity.description = value
 
     @property
-    def computer(self) -> Optional[Computer]:
+    def computer(self) -> Computer | None:
         """Return the computer of this node."""
         if self.backend_entity.computer:
             return from_backend_entity(Computer, self.backend_entity.computer)
@@ -489,7 +494,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         return None
 
     @computer.setter
-    def computer(self, computer: Optional[Computer]) -> None:
+    def computer(self, computer: Computer | None) -> None:
         """Set the computer of this node.
 
         :param computer: a `Computer`

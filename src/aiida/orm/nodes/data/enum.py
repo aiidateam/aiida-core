@@ -15,8 +15,10 @@ members (or enum members) and are functionally constants. The enum members have 
 ``Color.RED`` is ``RED`` and the value of ``Color.RED`` is ``1``.
 """
 
-import typing as t
+from __future__ import annotations
+
 from enum import Enum
+from typing import Any, TypeVar
 
 from plumpy.loaders import get_object_loader
 
@@ -28,7 +30,7 @@ from .data import Data
 
 __all__ = ('EnumData',)
 
-EnumType = t.TypeVar('EnumType', bound=Enum)
+EnumType = TypeVar('EnumType', bound=Enum)
 
 
 @to_aiida_type.register(Enum)
@@ -75,11 +77,11 @@ class EnumData(Data):
         return self.base.attributes.get(self.KEY_NAME)
 
     @property
-    def value(self) -> t.Any:
+    def value(self) -> Any:
         """Return the value of the enum member."""
         return self.base.attributes.get(self.KEY_VALUE)
 
-    def get_enum(self) -> t.Type[EnumType]:
+    def get_enum(self) -> type[EnumType]:
         """Return the enum class reconstructed from the serialized identifier stored in the database.
 
         :raises `ImportError`: if the enum class represented by the stored identifier cannot be imported.
@@ -101,7 +103,7 @@ class EnumData(Data):
         :raises `ValueError`: if the stored enum member value is no longer valid for the imported enum class.
         """
         value = self.base.attributes.get(self.KEY_VALUE)
-        enum: t.Type[EnumType] = self.get_enum()
+        enum: type[EnumType] = self.get_enum()
 
         try:
             return enum(value)
@@ -111,7 +113,7 @@ class EnumData(Data):
                 'have changed since storing the node.'
             ) from exc
 
-    def __eq__(self, other: t.Any) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Return whether the other object is equivalent to ourselves."""
         if isinstance(other, Enum):
             try:

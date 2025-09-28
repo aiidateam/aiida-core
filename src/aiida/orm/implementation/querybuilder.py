@@ -8,8 +8,10 @@
 ###########################################################################
 """Abstract `QueryBuilder` definition."""
 
+from __future__ import annotations
+
 import abc
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Literal, Optional, Set, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Iterable, Literal, TypedDict
 
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
@@ -22,7 +24,7 @@ __all__ = ('BackendQueryBuilder',)
 
 QUERYBUILD_LOGGER = AIIDA_LOGGER.getChild('orm.querybuilder')
 
-EntityRelationships: Dict[str, Set[str]] = {
+EntityRelationships: dict[str, set[str]] = {
     EntityTypes.AUTHINFO.value: {'with_computer', 'with_user'},
     EntityTypes.COMMENT.value: {'with_node', 'with_user'},
     EntityTypes.COMPUTER.value: {'with_node'},
@@ -47,7 +49,7 @@ EntityRelationships: Dict[str, Set[str]] = {
 class PathItemType(TypedDict):
     """An item on the query path"""
 
-    entity_type: Union[str, List[str]]
+    entity_type: str | list[str]
     # this can be derived from the entity_type, but it is more efficient to store
     orm_base: Literal['node', 'group', 'authinfo', 'comment', 'computer', 'log', 'user']
     tag: str
@@ -60,20 +62,20 @@ class PathItemType(TypedDict):
 class QueryDictType(TypedDict):
     """A JSON serialisable representation of a ``QueryBuilder`` instance"""
 
-    path: List[PathItemType]
+    path: list[PathItemType]
     # mapping: tag -> 'and' | 'or' | '~or' | '~and' | '!and' | '!or' -> [] -> operator -> value
     #              -> operator -> value
-    filters: Dict[str, Dict[str, Union[Dict[str, List[Dict[str, Any]]], Dict[str, Any]]]]
+    filters: dict[str, dict[str, dict[str, list[dict[str, Any]]] | dict[str, Any]]]
     # mapping: tag -> [] -> field -> 'func' -> 'max' | 'min' | 'count'
     #                                'cast' -> 'b' | 'd' | 'f' | 'i' | 'j' | 't'
-    project: Dict[str, List[Dict[str, Dict[str, Any]]]]
+    project: dict[str, list[dict[str, dict[str, Any]]]]
     # mapping: tag -> field -> return key for iterdict method
-    project_map: Dict[str, Dict[str, str]]
+    project_map: dict[str, dict[str, str]]
     # list of mappings: tag  -> [] -> field -> 'order' -> 'asc' | 'desc'
     #                                          'cast'  -> 'b' | 'd' | 'f' | 'i' | 'j' | 't'
-    order_by: List[Dict[str, List[Dict[str, Dict[str, str]]]]]
-    offset: Optional[int]
-    limit: Optional[int]
+    order_by: list[dict[str, list[dict[str, dict[str, str]]]]]
+    offset: int | None
+    limit: int | None
     distinct: bool
 
 
@@ -101,18 +103,18 @@ class BackendQueryBuilder(abc.ABC):
         """Return the number of results of the query"""
 
     @abc.abstractmethod
-    def first(self, data: QueryDictType) -> Optional[List[Any]]:
+    def first(self, data: QueryDictType) -> list[Any] | None:
         """Executes query, asking for one instance.
 
         :returns: One row of aiida results
         """
 
     @abc.abstractmethod
-    def iterall(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[List[Any]]:
+    def iterall(self, data: QueryDictType, batch_size: int | None) -> Iterable[list[Any]]:
         """Return an iterator over all the results of a list of lists."""
 
     @abc.abstractmethod
-    def iterdict(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[Dict[str, Dict[str, Any]]]:
+    def iterdict(self, data: QueryDictType, batch_size: int | None) -> Iterable[dict[str, dict[str, Any]]]:
         """Return an iterator over all the results of a list of dictionaries."""
 
     def as_sql(self, data: QueryDictType, inline: bool = False) -> str:
@@ -138,7 +140,7 @@ class BackendQueryBuilder(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_creation_statistics(self, user_pk: Optional[int] = None) -> Dict[str, Any]:
+    def get_creation_statistics(self, user_pk: int | None = None) -> dict[str, Any]:
         """Return a dictionary with the statistics of node creation, summarized by day.
 
         :note: Days when no nodes were created are not present in the returned `ctime_by_day` dictionary.

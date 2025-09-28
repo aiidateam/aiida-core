@@ -8,9 +8,11 @@
 ###########################################################################
 """Module for Computer entities"""
 
+from __future__ import annotations
+
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -32,10 +34,10 @@ class ComputerCollection(entities.Collection['Computer']):
     """The collection of Computer entries."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Computer']:
+    def _entity_base_cls() -> type['Computer']:
         return Computer
 
-    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple[bool, 'Computer']:
+    def get_or_create(self, label: str | None = None, **kwargs) -> tuple[bool, 'Computer']:
         """Try to retrieve a Computer from the DB with the given arguments;
         create (and store) a new Computer if such a Computer was not present yet.
 
@@ -52,7 +54,7 @@ class ComputerCollection(entities.Collection['Computer']):
         except exceptions.NotExistent:
             return True, Computer(backend=self.backend, label=label, **kwargs)
 
-    def list_labels(self) -> List[str]:
+    def list_labels(self) -> list[str]:
         """Return a list with all the labels of the computers in the DB."""
         return self._backend.computers.list_names()
 
@@ -61,7 +63,7 @@ class ComputerCollection(entities.Collection['Computer']):
         return self._backend.computers.delete(pk)
 
 
-class Computer(entities.Entity['BackendComputer', ComputerCollection]):
+class Computer(entities.Entity['BackendComputer']):
     """Computer entity."""
 
     _logger = logging.getLogger(__name__)
@@ -74,24 +76,46 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     _CLS_COLLECTION = ComputerCollection
 
     class Model(entities.Entity.Model):
-        uuid: str = MetadataField(description='The UUID of the computer', is_attribute=False, exclude_to_orm=True)
-        label: str = MetadataField(description='Label for the computer', is_attribute=False)
-        description: str = MetadataField(description='Description of the computer', is_attribute=False)
-        hostname: str = MetadataField(description='Hostname of the computer', is_attribute=False)
-        transport_type: str = MetadataField(description='Transport type of the computer', is_attribute=False)
-        scheduler_type: str = MetadataField(description='Scheduler type of the computer', is_attribute=False)
-        metadata: Dict[str, Any] = MetadataField(description='Metadata of the computer', is_attribute=False)
+        uuid: str = MetadataField(
+            description='The UUID of the computer',
+            is_attribute=False,
+            exclude_to_orm=True,
+        )
+        label: str = MetadataField(
+            description='Label for the computer',
+            is_attribute=False,
+        )
+        description: str = MetadataField(
+            description='Description of the computer',
+            is_attribute=False,
+        )
+        hostname: str = MetadataField(
+            description='Hostname of the computer',
+            is_attribute=False,
+        )
+        transport_type: str = MetadataField(
+            description='Transport type of the computer',
+            is_attribute=False,
+        )
+        scheduler_type: str = MetadataField(
+            description='Scheduler type of the computer',
+            is_attribute=False,
+        )
+        metadata: dict[str, Any] = MetadataField(
+            description='Metadata of the computer',
+            is_attribute=False,
+        )
 
     def __init__(
         self,
-        label: Optional[str] = None,
+        label: str | None = None,
         hostname: str = '',
         description: str = '',
         transport_type: str = '',
         scheduler_type: str = '',
-        workdir: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        backend: Optional['StorageBackend'] = None,
+        workdir: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        backend: StorageBackend | None = None,
     ) -> None:
         """Construct a new computer."""
         backend = backend or get_manager().get_profile_storage()
@@ -186,7 +210,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         if not os.path.isabs(convertedwd):
             raise exceptions.ValidationError('The workdir must be an absolute path')
 
-    def _mpirun_command_validator(self, mpirun_cmd: Union[List[str], Tuple[str, ...]]) -> None:
+    def _mpirun_command_validator(self, mpirun_cmd: list[str] | tuple[str, ...]) -> None:
         """Validates the mpirun_command variable. MUST be called after properly
         checking for a valid scheduler.
         """
@@ -239,7 +263,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         self._mpirun_command_validator(mpirun_cmd)
 
     @classmethod
-    def _default_mpiprocs_per_machine_validator(cls, def_cpus_per_machine: Optional[int]) -> None:
+    def _default_mpiprocs_per_machine_validator(cls, def_cpus_per_machine: int | None) -> None:
         """Validates the default number of CPUs per machine (node)"""
         if def_cpus_per_machine is None:
             return
@@ -251,7 +275,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             )
 
     @classmethod
-    def default_memory_per_machine_validator(cls, def_memory_per_machine: Optional[int]) -> None:
+    def default_memory_per_machine_validator(cls, def_memory_per_machine: int | None) -> None:
         """Validates the default amount of memory (kB) per machine (node)"""
         if def_memory_per_machine is None:
             return
@@ -355,7 +379,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         self._backend_entity.set_transport_type(value)
 
     @property
-    def metadata(self) -> Dict[str, Any]:
+    def metadata(self) -> dict[str, Any]:
         """Return the computer metadata.
 
         :return: the metadata.
@@ -363,7 +387,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         return self._backend_entity.get_metadata()
 
     @metadata.setter
-    def metadata(self, value: Dict[str, Any]) -> None:
+    def metadata(self, value: dict[str, Any]) -> None:
         """Set the computer metadata.
 
         :param value: the metadata to set.
@@ -441,7 +465,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         type_check(val, bool)
         self.set_property('use_double_quotes', val)
 
-    def get_mpirun_command(self) -> List[str]:
+    def get_mpirun_command(self) -> list[str]:
         """Return the mpirun command. Must be a list of strings, that will be
         then joined with spaces when submitting.
 
@@ -449,7 +473,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """
         return self.get_property('mpirun_command', ['mpirun', '-np', '{tot_num_mpiprocs}'])
 
-    def set_mpirun_command(self, val: Union[List[str], Tuple[str, ...]]) -> None:
+    def set_mpirun_command(self, val: list[str] | tuple[str, ...]) -> None:
         """Set the mpirun command. It must be a list of strings (you can use
         string.split() if you have a single, space-separated string).
         """
@@ -457,13 +481,13 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             raise TypeError('the mpirun_command must be a list of strings')
         self.set_property('mpirun_command', val)
 
-    def get_default_mpiprocs_per_machine(self) -> Optional[int]:
+    def get_default_mpiprocs_per_machine(self) -> int | None:
         """Return the default number of CPUs per machine (node) for this computer,
         or None if it was not set.
         """
         return self.get_property('default_mpiprocs_per_machine', None)
 
-    def set_default_mpiprocs_per_machine(self, def_cpus_per_machine: Optional[int]) -> None:
+    def set_default_mpiprocs_per_machine(self, def_cpus_per_machine: int | None) -> None:
         """Set the default number of CPUs per machine (node) for this computer.
         Accepts None if you do not want to set this value.
         """
@@ -473,13 +497,13 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             raise TypeError('def_cpus_per_machine must be an integer (or None)')
         self.set_property('default_mpiprocs_per_machine', def_cpus_per_machine)
 
-    def get_default_memory_per_machine(self) -> Optional[int]:
+    def get_default_memory_per_machine(self) -> int | None:
         """Return the default amount of memory (kB) per machine (node) for this computer,
         or None if it was not set.
         """
         return self.get_property('default_memory_per_machine', None)
 
-    def set_default_memory_per_machine(self, def_memory_per_machine: Optional[int]) -> None:
+    def set_default_memory_per_machine(self, def_memory_per_machine: int | None) -> None:
         """Set the default amount of memory (kB) per machine (node) for this computer.
         Accepts None if you do not want to set this value.
         """
@@ -588,7 +612,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             # Return False if the user is not configured (in a sense, it is disabled for that user)
             return False
 
-    def get_transport(self, user: Optional['User'] = None) -> 'Transport':
+    def get_transport(self, user: 'User' | None = None) -> 'Transport':
         """Return a Transport class, configured with all correct parameters.
         The Transport is closed (meaning that if you want to run any operation with
         it, you have to open it first (i.e., e.g. for a SSH transport, you have
@@ -612,7 +636,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         authinfo = authinfos.AuthInfo.get_collection(self.backend).get(dbcomputer=self, aiidauser=user)
         return authinfo.get_transport()
 
-    def get_transport_class(self) -> Type['Transport']:
+    def get_transport_class(self) -> type['Transport']:
         """Get the transport class for this computer.  Can be used to instantiate a transport instance."""
         try:
             return TransportFactory(self.transport_type)
@@ -632,7 +656,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
                 f'No scheduler found for {self.label} [type {self.scheduler_type}], message: {exception}'
             )
 
-    def configure(self, user: Optional['User'] = None, **kwargs: Any) -> 'AuthInfo':
+    def configure(self, user: 'User' | None = None, **kwargs: Any) -> 'AuthInfo':
         """Configure a computer for a user with valid auth params passed via kwargs
 
         :param user: the user to configure the computer for
@@ -663,7 +687,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         return authinfo
 
-    def get_configuration(self, user: Optional['User'] = None) -> Dict[str, Any]:
+    def get_configuration(self, user: 'User' | None = None) -> dict[str, Any]:
         """Get the configuration of computer for the given user as a dictionary
 
         :param user: the user to to get the configuration for, otherwise default user

@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -33,7 +33,7 @@ class AuthInfoCollection(entities.Collection['AuthInfo']):
     """The collection of `AuthInfo` entries."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['AuthInfo']:
+    def _entity_base_cls() -> type['AuthInfo']:
         return AuthInfo
 
     def delete(self, pk: int) -> None:
@@ -44,7 +44,7 @@ class AuthInfoCollection(entities.Collection['AuthInfo']):
         self._backend.authinfos.delete(pk)
 
 
-class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
+class AuthInfo(entities.Entity['BackendAuthInfo']):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
     _CLS_COLLECTION = AuthInfoCollection
@@ -68,12 +68,12 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
             description='Whether the instance is enabled',
             is_attribute=False,
         )
-        auth_params: Dict[str, Any] = MetadataField(
+        auth_params: dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Dictionary of authentication parameters',
             is_attribute=False,
         )
-        metadata: Dict[str, Any] = MetadataField(
+        metadata: dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Dictionary of metadata',
             is_attribute=False,
@@ -84,9 +84,9 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         computer: 'Computer',
         user: 'User',
         enabled: bool = True,
-        auth_params: Dict[str, Any] | None = None,
-        metadata: Dict[str, Any] | None = None,
-        backend: Optional['StorageBackend'] = None,
+        auth_params: dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
+        backend: 'StorageBackend' | None = None,
     ) -> None:
         """Create an `AuthInfo` instance for the given computer and user.
 
@@ -151,35 +151,35 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         return entities.from_backend_entity(users.User, self._backend_entity.user)
 
     @property
-    def auth_params(self) -> Dict[str, Any]:
+    def auth_params(self) -> dict[str, Any]:
         return self._backend_entity.get_auth_params()
 
     @property
-    def metadata(self) -> Dict[str, Any]:
+    def metadata(self) -> dict[str, Any]:
         return self._backend_entity.get_metadata()
 
-    def get_auth_params(self) -> Dict[str, Any]:
+    def get_auth_params(self) -> dict[str, Any]:
         """Return the dictionary of authentication parameters
 
         :return: a dictionary with authentication parameters
         """
         return self._backend_entity.get_auth_params()
 
-    def set_auth_params(self, auth_params: Dict[str, Any]) -> None:
+    def set_auth_params(self, auth_params: dict[str, Any]) -> None:
         """Set the dictionary of authentication parameters
 
         :param auth_params: a dictionary with authentication parameters
         """
         self._backend_entity.set_auth_params(auth_params)
 
-    def get_metadata(self) -> Dict[str, Any]:
+    def get_metadata(self) -> dict[str, Any]:
         """Return the dictionary of metadata
 
         :return: a dictionary with metadata
         """
         return self._backend_entity.get_metadata()
 
-    def set_metadata(self, metadata: Dict[str, Any]) -> None:
+    def set_metadata(self, metadata: dict[str, Any]) -> None:
         """Set the dictionary of metadata
 
         :param metadata: a dictionary with metadata

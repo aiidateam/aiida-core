@@ -8,9 +8,11 @@
 ###########################################################################
 """Backend group module"""
 
+from __future__ import annotations
+
 import abc
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any
 
 from .entities import BackendCollection, BackendEntity
 
@@ -58,7 +60,7 @@ class BackendLog(BackendEntity):
 
     @property
     @abc.abstractmethod
-    def metadata(self) -> Dict[str, Any]:
+    def metadata(self) -> dict[str, Any]:
         """Return the metadata corresponding to the log entry."""
 
 
@@ -85,7 +87,7 @@ class BackendLogCollection(BackendCollection[BackendLog]):
         """
 
     @abc.abstractmethod
-    def delete_many(self, filters: 'FilterType') -> List[int]:
+    def delete_many(self, filters: 'FilterType') -> list[int]:
         """Delete Logs based on ``filters``
 
         :param filters: similar to QueryBuilder filter

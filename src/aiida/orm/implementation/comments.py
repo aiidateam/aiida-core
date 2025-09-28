@@ -8,9 +8,11 @@
 ###########################################################################
 """Module for comment backend classes."""
 
+from __future__ import annotations
+
 import abc
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from .entities import BackendCollection, BackendEntity
 
@@ -77,7 +79,7 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
 
     @abc.abstractmethod
     def create(  # type: ignore[override]
-        self, node: 'BackendNode', user: 'BackendUser', content: Optional[str] = None, **kwargs
+        self, node: 'BackendNode', user: 'BackendUser', content: str | None = None, **kwargs
     ):
         """Create a Comment for a given node and user
 
@@ -105,7 +107,7 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
         """
 
     @abc.abstractmethod
-    def delete_many(self, filters: dict) -> List[int]:
+    def delete_many(self, filters: dict) -> list[int]:
         """Delete Comments based on ``filters``
 
         :param filters: similar to QueryBuilder filter

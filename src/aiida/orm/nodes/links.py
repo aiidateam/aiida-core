@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import typing as t
-from typing import Optional, cast
+from typing import TYPE_CHECKING, Any, Sequence, cast
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -13,7 +12,7 @@ from aiida.common.links import LinkType
 from ..querybuilder import QueryBuilder
 from ..utils.links import LinkManager, LinkTriple
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from .node import Node
 
 
@@ -113,9 +112,9 @@ class NodeLinks:
 
     def get_stored_link_triples(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: type['Node'] | None = None,
+        link_type: LinkType | Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         link_direction: str = 'incoming',
         only_uuid: bool = False,
     ) -> list[LinkTriple]:
@@ -133,14 +132,14 @@ class NodeLinks:
         from .node import Node
 
         if not isinstance(link_type, (tuple, list)):
-            link_type = cast(t.Sequence[LinkType], (link_type,))
+            link_type = cast(Sequence[LinkType], (link_type,))
 
         if link_type and not all(isinstance(t, LinkType) for t in link_type):
             raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
 
         node_class = node_class or Node
-        node_filters: dict[str, t.Any] = {'id': {'==': self._node.pk}}
-        edge_filters: dict[str, t.Any] = {}
+        node_filters: dict[str, Any] = {'id': {'==': self._node.pk}}
+        edge_filters: dict[str, Any] = {}
 
         if link_type:
             edge_filters['type'] = {'in': [t.value for t in link_type]}
@@ -173,9 +172,9 @@ class NodeLinks:
 
     def get_incoming(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: type['Node'] | None = None,
+        link_type: LinkType | Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         only_uuid: bool = False,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) incoming into this node.
@@ -189,7 +188,7 @@ class NodeLinks:
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
         if not isinstance(link_type, (tuple, list)):
-            link_type = cast(t.Sequence[LinkType], (link_type,))
+            link_type = cast(Sequence[LinkType], (link_type,))
 
         if self._node.is_stored:
             link_triples = self.get_stored_link_triples(
@@ -223,9 +222,9 @@ class NodeLinks:
 
     def get_outgoing(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: type['Node'] | None = None,
+        link_type: LinkType | Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         only_uuid: bool = False,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) outgoing of this node.

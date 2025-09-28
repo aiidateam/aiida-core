@@ -11,7 +11,7 @@ lists and meshes of k-points (i.e., points in the reciprocal space of a
 periodic crystal structure).
 """
 
-import typing as t
+from __future__ import annotations
 
 import numpy
 
@@ -39,11 +39,11 @@ class KpointsData(ArrayData):
     """
 
     class Model(ArrayData.Model):
-        labels: t.List[str] = MetadataField(description='Labels associated with the list of kpoints')
-        label_numbers: t.List[int] = MetadataField(description='Index of the labels in the list of kpoints')
-        mesh: t.List[int] = MetadataField(description='Mesh of kpoints')
-        offset: t.List[float] = MetadataField(description='Offset of kpoints')
-        cell: t.List[t.List[float]] = MetadataField(description='Unit cell of the crystal, in Angstroms')
+        labels: list[str] = MetadataField(description='Labels associated with the list of kpoints')
+        label_numbers: list[int] = MetadataField(description='Index of the labels in the list of kpoints')
+        mesh: list[int] = MetadataField(description='Mesh of kpoints')
+        offset: list[float] = MetadataField(description='Offset of kpoints')
+        cell: list[list[float]] = MetadataField(description='Unit cell of the crystal, in Angstroms')
         pbc1: bool = MetadataField(description='True if the first lattice vector is periodic')
         pbc2: bool = MetadataField(description='True if the second lattice vector is periodic')
         pbc3: bool = MetadataField(description='True if the third lattice vector is periodic')
@@ -194,7 +194,7 @@ class KpointsData(ArrayData):
 
         if not isinstance(structuredata, StructureData):
             raise ValueError(
-                'An instance of StructureData should be passed to ' 'the KpointsData, found instead {}'.format(
+                'An instance of StructureData should be passed to the KpointsData, found instead {}'.format(
                     structuredata.__class__
                 )
             )
@@ -355,9 +355,9 @@ class KpointsData(ArrayData):
                 kpoints = numpy.array([[0.0, 0.0, 0.0]])
             else:
                 raise ValueError(
-                    'empty kpoints list is valid only in zero dimension'
-                    '; instead here with have {} dimensions'
-                    ''.format(self._dimension)
+                    'empty kpoints list is valid only in zero dimension; instead here with have {} dimensions'.format(
+                        self._dimension
+                    )
                 )
 
         if len(kpoints.shape) <= 1:
@@ -373,8 +373,9 @@ class KpointsData(ArrayData):
 
         if kpoints.shape[1] < self._dimension:
             raise ValueError(
-                'In a system which has {0} dimensions, kpoint need'
-                'more than {0} coordinates (found instead {1})'.format(self._dimension, kpoints.shape[1])
+                'In a system which has {0} dimensions, kpoint needmore than {0} coordinates (found instead {1})'.format(
+                    self._dimension, kpoints.shape[1]
+                )
             )
 
         if weights is not None:

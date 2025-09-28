@@ -8,7 +8,9 @@
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
 
-from typing import Dict, Optional
+from __future__ import annotations
+
+from typing import Optional
 
 from aiida.common import exceptions
 from aiida.common.lang import override
@@ -40,7 +42,7 @@ class Data(Node):
     # By default, if not found here,
     # The fileformat string is assumed to match the extension.
     # Example: {'dat': 'dat_multicolumn'}
-    _export_format_replacements: Dict[str, str] = {}
+    _export_format_replacements: dict[str, str] = {}
 
     # Data nodes are storable
     _storable = True
@@ -48,10 +50,13 @@ class Data(Node):
 
     class Model(Node.Model):
         source: Optional[dict] = MetadataField(
-            None, description='Source of the data.', is_subscriptable=True, exclude_from_cli=True
+            None,
+            description='Source of the data.',
+            is_subscriptable=True,
+            exclude_from_cli=True,
         )
 
-    def __init__(self, *args, source=None, **kwargs):
+    def __init__(self, *args, source: dict | None = None, **kwargs):
         """Construct a new instance, setting the ``source`` attribute if provided as a keyword argument."""
         super().__init__(*args, **kwargs)
         if source is not None:
@@ -83,7 +88,7 @@ class Data(Node):
         return clone
 
     @property
-    def source(self) -> Optional[dict]:
+    def source(self) -> dict | None:
         """Gets the dictionary describing the source of Data object. Possible fields:
 
         * **db_name**: name of the source database.

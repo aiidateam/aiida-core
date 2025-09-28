@@ -8,8 +8,10 @@
 ###########################################################################
 """Tools for handling Crystallographic Information Files (CIF)"""
 
+from __future__ import annotations
+
 import re
-import typing as t
+from typing import Optional
 
 from aiida.common.pydantic import MetadataField
 from aiida.common.utils import Capturing
@@ -251,14 +253,20 @@ class CifData(SinglefileData):
     _ase = None
 
     class Model(SinglefileData.Model):
-        formulae: t.Optional[t.List[str]] = MetadataField(
-            None, description='List of formulae contained in the CIF file.', exclude_to_orm=True
+        formulae: Optional[list[str]] = MetadataField(
+            None,
+            description='List of formulae contained in the CIF file.',
+            exclude_to_orm=True,
         )
-        spacegroup_numbers: t.Optional[t.List[str]] = MetadataField(
-            None, description='List of space group numbers of the structure.', exclude_to_orm=True
+        spacegroup_numbers: Optional[list[str]] = MetadataField(
+            None,
+            description='List of space group numbers of the structure.',
+            exclude_to_orm=True,
         )
-        md5: t.Optional[str] = MetadataField(
-            None, description='MD5 checksum of the file contents.', exclude_to_orm=True
+        md5: Optional[str] = MetadataField(
+            None,
+            description='MD5 checksum of the file contents.',
+            exclude_to_orm=True,
         )
 
     def __init__(self, ase=None, file=None, filename=None, values=None, scan_type=None, parse_policy=None, **kwargs):

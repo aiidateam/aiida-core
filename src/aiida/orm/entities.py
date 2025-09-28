@@ -152,16 +152,18 @@ class Collection(abc.ABC, Generic[EntityType]):
         filters: 'FilterType' | None = None,
         order_by: 'OrderByType' | None = None,
         limit: int | None = None,
+        offset: int | None = None,
     ) -> list[EntityType]:
         """Find collection entries matching the filter criteria.
 
         :param filters: the keyword value pair filters to match
         :param order_by: a list of (key, direction) pairs specifying the sort order
         :param limit: the maximum number of results to return
+        :param offset: number of initial results to be skipped
 
         :return: a list of resulting matches
         """
-        query = self.query(filters=filters, order_by=order_by, limit=limit)
+        query = self.query(filters=filters, order_by=order_by, limit=limit, offset=offset)
         return query.all(flat=True)
 
     def all(self) -> list[EntityType]:
@@ -233,7 +235,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return fields
 
-    def _to_model(self, repository_path: Path | None = None) -> Model:
+    def to_model(self, repository_path: Path | None = None) -> Model:
         """Return the entity instance as an instance of its model."""
         fields = {}
 
@@ -246,16 +248,17 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return self.Model(**fields)
 
     @classmethod
-    def _from_model(cls: type[EntityType], model: Model) -> EntityType:
+    def from_model(cls: type[EntityType], model: Model) -> EntityType:
         """Return an entity instance from an instance of its model."""
         fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
 
-    def serialize(self, repository_path: Path | None = None) -> dict[str, Any]:
+    def serialize(self, repository_path: Path | None = None, serialize_files: bool = False) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
         :param repository_path: If the orm node has files in the repository, this path is used to dump the repository
             files to. If no path is specified a temporary path is created using the entities pk.
+        :param serialize_files: Whether to include files in the serialization. If False, only metadata is serialized.
         """
         self.logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
@@ -270,7 +273,11 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                 raise ValueError(f'The repository_path `{repository_path}` does not exist.')
             if not repository_path.is_dir():
                 raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
-        return self._to_model(repository_path).model_dump()
+
+        exclude = set()
+        if not serialize_files:
+            exclude.add('repository_content')
+        return self.to_model(repository_path).model_dump(exclude=exclude)
 
     @classmethod
     def from_serialized(cls: type[EntityType], **kwargs: dict[str, Any]) -> EntityType:
@@ -278,7 +285,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         cls._logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
         )
-        return cls._from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
+        return cls.from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
 
     @classproperty
     def objects(cls: type[EntityType]) -> CollectionType:  # noqa: N805

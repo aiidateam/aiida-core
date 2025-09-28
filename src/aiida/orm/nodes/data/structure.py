@@ -18,6 +18,8 @@ import itertools
 import json
 from typing import Optional
 
+from pydantic import field_validator
+
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
 from aiida.common.pydantic import MetadataField
@@ -517,7 +519,7 @@ def get_symbols_string(symbols, weights):
         pieces.append(f'{symbol}{weight:4.2f}')
     if has_vacancies(weights):
         pieces.append(f'X{1.0 - sum(weights):4.2f}')
-    return f"{{{''.join(sorted(pieces))}}}"
+    return f'{{{"".join(sorted(pieces))}}}'
 
 
 def has_vacancies(weights):
@@ -1234,6 +1236,20 @@ class StructureData(Data):
         kinds: Optional[list[dict]] = MetadataField(None, description='The kinds of atoms')
         sites: Optional[list[dict]] = MetadataField(None, description='The atomic sites')
 
+        @field_validator('kinds', mode='before')
+        @classmethod
+        def _validate_kinds(cls, value: Optional[list[Kind]]) -> Optional[list[dict]]:
+            if value is None:
+                return None
+            return [kind.get_raw() for kind in value]
+
+        @field_validator('sites', mode='before')
+        @classmethod
+        def _validate_sites(cls, value: Optional[list[Site]]) -> Optional[list[dict]]:
+            if value is None:
+                return None
+            return [site.get_raw() for site in value]
+
     def __init__(
         self,
         cell=None,
@@ -1913,7 +1929,7 @@ class StructureData(Data):
         if aseatom is not None:
             if kwargs:
                 raise ValueError(
-                    "If you pass 'ase' as a parameter to " 'append_atom, you cannot pass any further' 'parameter'
+                    "If you pass 'ase' as a parameter to append_atom, you cannot pass any furtherparameter"
                 )
             position = aseatom.position
             kind = Kind(ase=aseatom)

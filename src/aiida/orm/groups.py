@@ -112,28 +112,42 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     __type_string: ClassVar[str | None]
 
     class Model(entities.Entity.Model):
-        uuid: str = MetadataField(
+        uuid: Optional[str] = MetadataField(
+            None,
             description='The UUID of the group',
             is_attribute=False,
             exclude_to_orm=True,
         )
-        type_string: str = MetadataField(
+        type_string: Optional[str] = MetadataField(
+            None,
             description='The type of the group',
             is_attribute=False,
             exclude_to_orm=True,
         )
-        user: int = MetadataField(
+        user: Optional[int] = MetadataField(
+            None,
             description='The group owner',
             is_attribute=False,
             orm_class='core.user',
             orm_to_model=lambda group, _: cast('Group', group).user.pk,
         )
         time: Optional[datetime.datetime] = MetadataField(
-            description='The creation time of the node', is_attribute=False
+            None,
+            description='The creation time of the node',
+            is_attribute=False,
         )
-        label: str = MetadataField(description='The group label', is_attribute=False)
-        description: Optional[str] = MetadataField(description='The group description', is_attribute=False)
+        label: Optional[str] = MetadataField(
+            None,
+            description='The group label',
+            is_attribute=False,
+        )
+        description: Optional[str] = MetadataField(
+            None,
+            description='The group description',
+            is_attribute=False,
+        )
         extras: Optional[dict[str, Any]] = MetadataField(
+            None,
             description='The group extras',
             is_attribute=False,
             is_subscriptable=True,
@@ -173,7 +187,11 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         type_check(user, users.User)
 
         model = backend.groups.create(
-            label=label, user=user.backend_entity, description=description, type_string=self._type_string, time=time
+            label=label,
+            user=user.backend_entity,
+            description=description,
+            type_string=self._type_string,
+            time=time,
         )
         super().__init__(model)
         if extras is not None:

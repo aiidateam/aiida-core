@@ -191,13 +191,59 @@ class ProcessNode(Sealable, Node):
         )
 
     class Model(Node.Model, Sealable.Model):
-        process_label: Optional[str] = MetadataField(description='The process label')
-        process_state: Optional[str] = MetadataField(description='The process state enum')
-        process_status: Optional[str] = MetadataField(description='The process status is a generic status message')
-        exit_status: Optional[int] = MetadataField(description='The process exit status')
-        exit_message: Optional[str] = MetadataField(description='The process exit message')
-        exception: Optional[str] = MetadataField(description='The process exception message')
-        paused: bool = MetadataField(description='Whether the process is paused')
+        process_label: Optional[str] = MetadataField(
+            None,
+            description='The process label',
+        )
+        process_state: Optional[str] = MetadataField(
+            None,
+            description='The process state enum',
+        )
+        process_status: Optional[str] = MetadataField(
+            None,
+            description='The process status is a generic status message',
+        )
+        exit_status: Optional[int] = MetadataField(
+            None,
+            description='The process exit status',
+        )
+        exit_message: Optional[str] = MetadataField(
+            None,
+            description='The process exit message',
+        )
+        exception: Optional[str] = MetadataField(
+            None,
+            description='The process exception message',
+        )
+        paused: Optional[bool] = MetadataField(
+            None,
+            description='Whether the process is paused',
+            exclude_to_orm=True,
+        )
+
+    def __init__(
+        self,
+        process_label: str | None = None,
+        process_state: str | None = None,
+        process_status: str | None = None,
+        exit_status: int | None = None,
+        exit_message: str | None = None,
+        exception: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        if process_label is not None:
+            self.set_process_label(process_label)
+        if process_state is not None:
+            self.set_process_state(process_state)
+        if process_status is not None:
+            self.set_process_status(process_status)
+        if exit_status is not None:
+            self.set_exit_status(exit_status)
+        if exit_message is not None:
+            self.set_exit_message(exit_message)
+        if exception is not None:
+            self.set_exception(exception)
 
     def set_metadata_inputs(self, value: dict[str, Any]) -> None:
         """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""

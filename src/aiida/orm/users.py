@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -56,24 +56,42 @@ class User(entities.Entity['BackendUser', UserCollection]):
     _CLS_COLLECTION = UserCollection
 
     class Model(entities.Entity.Model):
-        email: str = MetadataField(description='The user email', is_attribute=False)
-        first_name: str = MetadataField(description='The user first name', is_attribute=False)
-        last_name: str = MetadataField(description='The user last name', is_attribute=False)
-        institution: str = MetadataField(description='The user institution', is_attribute=False)
+        email: str = MetadataField(
+            description='The user email',
+            is_attribute=False,
+        )
+        first_name: Optional[str] = MetadataField(
+            None,
+            description='The user first name',
+            is_attribute=False,
+        )
+        last_name: Optional[str] = MetadataField(
+            None,
+            description='The user last name',
+            is_attribute=False,
+        )
+        institution: Optional[str] = MetadataField(
+            None,
+            description='The user institution',
+            is_attribute=False,
+        )
 
     def __init__(
         self,
         email: str,
-        first_name: str = '',
-        last_name: str = '',
-        institution: str = '',
+        first_name: str | None = None,
+        last_name: str | None = None,
+        institution: str | None = None,
         backend: 'StorageBackend' | None = None,
     ):
         """Create a new `User`."""
         backend = backend or get_manager().get_profile_storage()
         email = self.normalize_email(email)
         backend_entity = backend.users.create(
-            email=email, first_name=first_name, last_name=last_name, institution=institution
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            institution=institution,
         )
         super().__init__(backend_entity)
 

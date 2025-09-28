@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -76,7 +76,8 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     _CLS_COLLECTION = ComputerCollection
 
     class Model(entities.Entity.Model):
-        uuid: str = MetadataField(
+        uuid: Optional[str] = MetadataField(
+            None,
             description='The UUID of the computer',
             is_attribute=False,
             exclude_to_orm=True,
@@ -85,23 +86,28 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             description='Label for the computer',
             is_attribute=False,
         )
-        description: str = MetadataField(
+        description: Optional[str] = MetadataField(
+            None,
             description='Description of the computer',
             is_attribute=False,
         )
-        hostname: str = MetadataField(
+        hostname: Optional[str] = MetadataField(
+            None,
             description='Hostname of the computer',
             is_attribute=False,
         )
-        transport_type: str = MetadataField(
+        transport_type: Optional[str] = MetadataField(
+            None,
             description='Transport type of the computer',
             is_attribute=False,
         )
-        scheduler_type: str = MetadataField(
+        scheduler_type: Optional[str] = MetadataField(
+            None,
             description='Scheduler type of the computer',
             is_attribute=False,
         )
-        metadata: dict[str, Any] = MetadataField(
+        metadata: Optional[dict[str, Any]] = MetadataField(
+            None,
             description='Metadata of the computer',
             is_attribute=False,
         )

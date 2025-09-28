@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Any
+from typing import Any, Optional
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -51,7 +51,8 @@ class Dict(Data):
     """
 
     class Model(Data.Model):
-        value: dict[str, Any] = MetadataField(
+        value: Optional[dict[str, Any]] = MetadataField(
+            None,
             description='Dictionary content.',
             is_attribute=False,
             is_subscriptable=True,

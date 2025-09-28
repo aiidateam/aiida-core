@@ -88,19 +88,22 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
             is_attribute=False,
             exclude_to_orm=True,
         )
-        node: int = MetadataField(
+        node: Optional[int] = MetadataField(
+            None,
             description='Node PK that the comment is attached to',
             is_attribute=False,
             orm_class='core.node',
             orm_to_model=lambda comment, _: cast('Comment', comment).node.pk,
         )
-        user: int = MetadataField(
+        user: Optional[int] = MetadataField(
+            None,
             description='User PK that created the comment',
             is_attribute=False,
             orm_class='core.user',
             orm_to_model=lambda comment, _: cast('Comment', comment).user.pk,
         )
-        content: str = MetadataField(
+        content: Optional[str] = MetadataField(
+            None,
             description='Content of the comment',
             is_attribute=False,
         )
@@ -122,7 +125,11 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         :return: a Comment object associated to the given node and user
         """
         backend = backend or get_manager().get_profile_storage()
-        model = backend.comments.create(node=node.backend_entity, user=user.backend_entity, content=content)
+        model = backend.comments.create(
+            node=node.backend_entity,
+            user=user.backend_entity,
+            content=content,
+        )
         super().__init__(model)
 
     def __str__(self) -> str:

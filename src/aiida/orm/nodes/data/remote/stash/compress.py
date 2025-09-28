@@ -26,7 +26,7 @@ class RemoteStashCompressedData(RemoteStashData):
 
     class Model(RemoteStashData.Model):
         target_basepath: str = MetadataField(
-            description='The the target basepath',
+            description='The target basepath',
         )
         source_list: list[str] = MetadataField(
             description='The list of source files that were stashed',

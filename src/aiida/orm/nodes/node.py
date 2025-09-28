@@ -13,8 +13,11 @@ from __future__ import annotations
 import base64
 import datetime
 from functools import cached_property
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterator, Optional, TypeVar
 from uuid import UUID
+
+from pydantic import field_serializer
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
@@ -198,15 +201,30 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
     class Model(Entity.Model):
         uuid: Optional[str] = MetadataField(
-            None, description='The UUID of the node', is_attribute=False, exclude_to_orm=True, exclude_from_cli=True
+            None,
+            description='The UUID of the node',
+            is_attribute=False,
+            exclude_to_orm=True,
+            exclude_from_cli=True,
         )
         node_type: Optional[str] = MetadataField(
-            None, description='The type of the node', is_attribute=False, exclude_to_orm=True, exclude_from_cli=True
+            None,
+            description='The type of the node',
+            is_attribute=False,
+            exclude_to_orm=True,
+            exclude_from_cli=True,
         )
         process_type: Optional[str] = MetadataField(
             None,
             description='The process type of the node',
             is_attribute=False,
+            exclude_from_cli=True,
+        )
+        entry_point: Optional[str] = MetadataField(
+            None,
+            description='The entry point of the node',
+            is_attribute=False,
+            orm_to_model=lambda node, _: node.entry_point.name,  # type: ignore[attr-defined]
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
@@ -233,10 +251,16 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             exclude_from_cli=True,
         )
         label: Optional[str] = MetadataField(
-            None, description='The node label', is_attribute=False, exclude_from_cli=True
+            None,
+            description='The node label',
+            is_attribute=False,
+            exclude_from_cli=True,
         )
         description: Optional[str] = MetadataField(
-            None, description='The node description', is_attribute=False, exclude_from_cli=True
+            None,
+            description='The node description',
+            is_attribute=False,
+            exclude_from_cli=True,
         )
         attributes: Optional[dict[str, Any]] = MetadataField(
             None,
@@ -244,8 +268,8 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             is_attribute=False,
             orm_to_model=lambda node, _: node.base.attributes.all,  # type: ignore[attr-defined]
             is_subscriptable=True,
-            exclude_from_cli=True,
             exclude_to_orm=True,
+            exclude_from_cli=True,
         )
         extras: Optional[dict[str, Any]] = MetadataField(
             None,
@@ -253,8 +277,8 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             is_attribute=False,
             orm_to_model=lambda node, _: node.base.extras.all,  # type: ignore[attr-defined]
             is_subscriptable=True,
-            exclude_from_cli=True,
             exclude_to_orm=True,
+            exclude_from_cli=True,
         )
         computer: Optional[int] = MetadataField(
             None,
@@ -272,18 +296,25 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             orm_class=User,
             exclude_from_cli=True,
         )
-        repository_content: Optional[dict[str, bytes]] = MetadataField(
-            None,
-            description='Dictionary of file repository content. Keys are relative filepaths and values are binary file '
-            'contents encoded as base64.',
-            is_attribute=False,
-            orm_to_model=lambda node, _: {
-                key: base64.encodebytes(content)
-                for key, content in node.base.repository.serialize_content().items()  # type: ignore[attr-defined]
-            },
-            exclude_from_cli=True,
-            exclude_to_orm=True,
-        )
+        # repository_content: Optional[dict[str, bytes]] = MetadataField(
+        #     None,
+        #     description='Dictionary of file repository content. Keys are relative filepaths and values are binary file '
+        #     'contents encoded as base64.',
+        #     is_attribute=False,
+        #     orm_to_model=lambda node, _: {
+        #         key: base64.encodebytes(content)
+        #         for key, content in node.base.repository.serialize_content().items()  # type: ignore[attr-defined]
+        #     },
+        #     exclude_to_orm=True,
+        #     exclude_from_cli=True,
+        # )
+
+        @field_serializer('ctime', 'mtime')
+        def _serialize_datetime(self, value: Optional[datetime.datetime]) -> Optional[str]:
+            """Serialize datetime fields to ISO format."""
+            if value is not None:
+                return value.isoformat()
+            return value
 
     def __init__(
         self,
@@ -305,14 +336,21 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             raise ValueError('the user cannot be None')
 
         backend_entity = backend.nodes.create(
-            node_type=self.class_node_type, user=user.backend_entity, computer=backend_computer, **kwargs
+            node_type=self.class_node_type,
+            user=user.backend_entity,
+            computer=backend_computer,
+            **kwargs,
         )
         super().__init__(backend_entity)
         if extras is not None:
             self.base.extras.set_many(extras)
 
+    # This is here for now until a better solution is presented to support return type checking
+    def to_model(self, repository_path: Path | None = None) -> Model:
+        return super().to_model(repository_path)
+
     @classmethod
-    def _from_model(  # type: ignore[override]
+    def from_model(  # type: ignore[override]
         cls, model: Model
     ) -> Self:
         """Return an entity instance from an instance of its model."""

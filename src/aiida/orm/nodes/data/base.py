@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Any
+from typing import Any, Optional
 
 from aiida.common.pydantic import MetadataField
 
@@ -30,8 +30,8 @@ class BaseType(Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
     class Model(Data.Model):
-        value: Any = MetadataField(
-            ...,
+        value: Optional[Any] = MetadataField(
+            None,
             title='Data value.',
             description='The value of the data',
         )

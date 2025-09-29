@@ -109,7 +109,7 @@ class FixedFieldsAttributeDict(AttributeDict):
             _valid_fields = ('a','b','c')
     """
 
-    _valid_fields: tuple = tuple()
+    _valid_fields: tuple[Any, ...] = tuple()
 
     def __init__(self, init: Mapping | None = None):
         if init is None:
@@ -140,6 +140,8 @@ class FixedFieldsAttributeDict(AttributeDict):
         """Return the list of valid fields."""
         return cls._valid_fields
 
+    # TODO: We're in violation of the `dict` interface here,
+    # we should be returning collections.abc.KeysView[Any]
     def __dir__(self) -> list[Any]:  # type: ignore[override]
         return list(self._valid_fields)
 

@@ -501,7 +501,7 @@ class Capturing:
         sys.stdout = self._stdout
         del self._stringioout  # free up some memory
         if self._capture_stderr:
-            # NOTE: mypy is not clever enough to now that when we're here, self.stderr_lines is not None
+            # NOTE: mypy is not clever enough to know that when we're here, self.stderr_lines is not None
             self.stderr_lines.extend(self._stringioerr.getvalue().splitlines())  # type: ignore[union-attr]
             sys.stderr = self._stderr
             del self._stringioerr  # free up some memory

@@ -201,10 +201,10 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             return False, 0.0
 
         # insulating case, take the max of the band maxima below the fermi energy
-        homo_en = max(i[0] for i in max_mins if i[0] < fermi_energy)
+        homo_energy = max(i[0] for i in max_mins if i[0] < fermi_energy)
         # take the min of the band minima above the fermi energy
-        lumo_en = min(i[1] for i in max_mins if i[1] > fermi_energy)
-        gap = lumo_en - homo_en
+        lumo_energy = min(i[1] for i in max_mins if i[1] > fermi_energy)
+        gap = lumo_energy - homo_energy
         if gap <= 0.0:
             raise RuntimeError('Something wrong has been implemented. Revise the code!')
         return True, gap
@@ -1129,8 +1129,8 @@ class BandsData(KpointsData):
         all_sets = []
         for band in the_bands:
             this_set = ''
-            for j in zip(x, band):
-                line = f'{j[0]:.8f}' + '\t' + f'{j[1]:.8f}' + '\n'
+            for p in zip(x, band):
+                line = f'{p[0]:.8f}' + '\t' + f'{p[1]:.8f}' + '\n'
                 this_set += line
             all_sets.append(this_set)
 

@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from aiida.common.log import AiidaLoggerType
 
     from ..implementation import StorageBackend
-    from ..implementation.nodes import BackendNode  # noqa: F401
+    from ..implementation.nodes import BackendNode
     from .repository import NodeRepository
 
 __all__ = ('Node',)

@@ -38,7 +38,7 @@ class BackendComputer(BackendEntity):
         """Return the (unique) label of the computer."""
 
     @abc.abstractmethod
-    def set_label(self, val: str):
+    def set_label(self, val: str) -> None:
         """Set the (unique) label of the computer."""
 
     @property
@@ -47,7 +47,7 @@ class BackendComputer(BackendEntity):
         """Return the description of the computer."""
 
     @abc.abstractmethod
-    def set_description(self, val: str):
+    def set_description(self, val: str) -> None:
         """Set the description of the computer."""
 
     @property
@@ -104,3 +104,7 @@ class BackendComputerCollection(BackendCollection[BackendComputer]):
 
         :param pk: the pk of the entry to delete
         """
+
+    @abc.abstractmethod
+    def list_names(self) -> list[tuple[str]]:
+        """Return a list with all the labels of the computers in the DB."""

@@ -14,7 +14,7 @@ if t.TYPE_CHECKING:
     from aiida.orm import Entity
 
 
-def get_metadata(field_info, key: str, default: t.Any | None = None):
+def get_metadata(field_info: t.Any, key: str, default: t.Any | None = None) -> t.Any:
     """Return a the metadata of the given field for a particular key.
 
     :param field_info: The field from which to retrieve the metadata.
@@ -34,15 +34,15 @@ def MetadataField(  # noqa: N802
     priority: int = 0,
     short_name: str | None = None,
     option_cls: t.Any | None = None,
-    orm_class: type['Entity'] | str | None = None,
-    orm_to_model: t.Callable[['Entity', Path], t.Any] | None = None,
+    orm_class: type[Entity] | str | None = None,
+    orm_to_model: t.Callable[[Entity, Path], t.Any] | None = None,
     model_to_orm: t.Callable[['BaseModel'], t.Any] | None = None,
     exclude_to_orm: bool = False,
     exclude_from_cli: bool = False,
     is_attribute: bool = True,
     is_subscriptable: bool = False,
-    **kwargs,
-):
+    **kwargs: t.Any,
+) -> t.Any:
     """Return a :class:`pydantic.fields.Field` instance with additional metadata.
 
     .. code-block:: python

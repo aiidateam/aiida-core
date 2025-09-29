@@ -18,12 +18,19 @@ import re
 import sys
 from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
-from typing import Any, Callable, TypeAlias
+from typing import TYPE_CHECKING, Any, Callable
 from uuid import UUID
 
 from aiida.common.typing import Self
 
 from .lang import classproperty
+
+if TYPE_CHECKING:
+    # TypeAlias added in Python 3.10
+    try:
+        from typing import TypeAlias
+    except ImportError:
+        from typing_extensions import TypeAlias
 
 
 def get_new_uuid() -> str:

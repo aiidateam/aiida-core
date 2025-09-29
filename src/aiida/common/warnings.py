@@ -31,7 +31,7 @@ class AiidaTestWarning(Warning):
     """Class for warnings concerning the AiiDA testing infrastructure."""
 
 
-def warn_deprecation(message: str, version: int, stacklevel=2) -> None:
+def warn_deprecation(message: str, version: int, stacklevel: int = 2) -> None:
     """Warn about a deprecation for a future aiida-core version.
 
     Warnings are emitted if the ``warnings.showdeprecations`` config option is set to ``True``. Its value can be

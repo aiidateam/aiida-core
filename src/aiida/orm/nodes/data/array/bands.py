@@ -201,10 +201,10 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             return False, 0.0
 
         # insulating case, take the max of the band maxima below the fermi energy
-        homo = max(i[0] for i in max_mins if i[0] < fermi_energy)
+        homo_energy = max(i[0] for i in max_mins if i[0] < fermi_energy)
         # take the min of the band minima above the fermi energy
-        lumo = min(i[1] for i in max_mins if i[1] > fermi_energy)
-        gap = lumo - homo
+        lumo_energy = min(i[1] for i in max_mins if i[1] > fermi_energy)
+        gap = lumo_energy - homo_energy
         if gap <= 0.0:
             raise RuntimeError('Something wrong has been implemented. Revise the code!')
         return True, gap
@@ -292,7 +292,7 @@ class BandsData(KpointsData):
 
         for x, msg in list_of_arrays_to_be_checked:
             try:
-                [float(_) for _ in x.flatten() if _ is not None]
+                [float(_) for _ in x.flatten() if _ is not None]  # type: ignore[attr-defined]
             except (TypeError, ValueError):
                 raise ValueError(f'The {msg} array can only contain float or None values')
 
@@ -475,7 +475,7 @@ class BandsData(KpointsData):
         if join_symbol:
             the_labels = join_labels(the_labels, join_symbol=join_symbol)
 
-        plot_info = {}
+        plot_info: dict[str, t.Any] = {}
         plot_info['x'] = x
         plot_info['y'] = bands
         plot_info['band_type_idx'] = band_type_idx
@@ -748,8 +748,8 @@ class BandsData(KpointsData):
         if labels:
             tick_pos, tick_labels = zip(*labels)
         else:
-            tick_pos = []
-            tick_labels = []
+            tick_pos = ()
+            tick_labels = ()
 
         all_data['paths'] = plot_info['paths']
         all_data['band_type_idx'] = plot_info['band_type_idx'].tolist()
@@ -808,7 +808,7 @@ class BandsData(KpointsData):
         """
         import os
 
-        all_data = self._matplotlib_get_dict(*args, main_file_name=main_file_name, **kwargs)
+        all_data = self._matplotlib_get_dict(*args, main_file_name=main_file_name, **kwargs)  # type: ignore[misc]
 
         json_fname = os.path.splitext(main_file_name)[0] + '_data.json'
         # Escape double_quotes
@@ -845,8 +845,8 @@ class BandsData(KpointsData):
         s_body = self._get_mpl_body_template(all_data['paths'])
 
         # I get a temporary file name
-        handle, filename = tempfile.mkstemp()
-        os.close(handle)
+        file, filename = tempfile.mkstemp()
+        os.close(file)
         os.remove(filename)
 
         escaped_fname = filename.replace('"', '"')
@@ -892,8 +892,8 @@ class BandsData(KpointsData):
         s_body = self._get_mpl_body_template(all_data['paths'])
 
         # I get a temporary file name
-        handle, filename = tempfile.mkstemp()
-        os.close(handle)
+        file, filename = tempfile.mkstemp()
+        os.close(file)
         os.remove(filename)
 
         escaped_fname = filename.replace('"', '"')
@@ -1129,8 +1129,8 @@ class BandsData(KpointsData):
         all_sets = []
         for band in the_bands:
             this_set = ''
-            for i in zip(x, band):
-                line = f'{i[0]:.8f}' + '\t' + f'{i[1]:.8f}' + '\n'
+            for p in zip(x, band):
+                line = f'{p[0]:.8f}' + '\t' + f'{p[1]:.8f}' + '\n'
                 this_set += line
             all_sets.append(this_set)
 
@@ -1798,7 +1798,7 @@ def get_bands_and_parents_structure(args, backend=None):
     if args.past_days is not None:
         bdata_filters.update({'ctime': {'>=': timezone.now() - datetime.timedelta(days=args.past_days)}})
 
-    q_build.append(orm.BandsData, tag='bdata', filters=bdata_filters, project=['id', 'label', 'ctime'], **with_args)
+    q_build.append(orm.BandsData, tag='bdata', filters=bdata_filters, project=['id', 'label', 'ctime'], **with_args)  # type: ignore[arg-type]
     bands_list_data = q_build.all()
 
     q_build.append(
@@ -1817,7 +1817,7 @@ def get_bands_and_parents_structure(args, backend=None):
         structure_dict[bid] = (akinds, asites)
 
     entry_list = []
-    already_visited_bdata = set()
+    already_visited_bdata: set[int] = set()
 
     for [bid, blabel, bdate] in bands_list_data:
         # We process only one StructureData per BandsData.

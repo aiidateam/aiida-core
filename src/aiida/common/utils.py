@@ -18,7 +18,7 @@ import re
 import sys
 from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
-from typing import Any, Callable
+from typing import Any, Callable, TypeAlias
 from uuid import UUID
 
 from aiida.common.typing import Self
@@ -411,7 +411,10 @@ class Prettifier:
         return self._prettifier_f(label)
 
 
-def prettify_labels(labels: list[tuple[float, str]], format: str | None = None) -> list[tuple[float, str]]:
+_Labels: TypeAlias = list[tuple[float, str]]
+
+
+def prettify_labels(labels: _Labels, format: str | None = None) -> _Labels:
     """Prettify label for typesetting in various formats
 
     :param labels: a list of length-2 tuples, in the format(position, label)
@@ -425,9 +428,7 @@ def prettify_labels(labels: list[tuple[float, str]], format: str | None = None) 
     return [(pos, prettifier.prettify(label)) for pos, label in labels]
 
 
-def join_labels(
-    labels: list[tuple[float, str]], join_symbol: str = '|', threshold: float = 1.0e-6
-) -> list[tuple[float, str]]:
+def join_labels(labels: _Labels, join_symbol: str = '|', threshold: float = 1.0e-6) -> _Labels:
     """Join labels with a joining symbol when they are very close
 
     :param labels: a list of length-2 tuples, in the format(position, label)

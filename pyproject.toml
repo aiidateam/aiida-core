@@ -461,6 +461,11 @@ select = [
   'NPY201'  # numpy compatibility
 ]
 
+# Mark some classes as generic, per https://docs.astral.sh/ruff/settings/#lint_pyflakes_extend-generics
+# Needed due to https://github.com/astral-sh/ruff/issues/9298
+[tool.ruff.lint.pyflakes]
+extend-generics = ["aiida.orm.entities.Entity", "aiida.orm.entities.Collection"]
+
 [tool.tox]
 legacy_tox_ini = """
 [tox]

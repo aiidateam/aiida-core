@@ -65,7 +65,7 @@ class Transport(abc.ABC):
     """
 
     # This will be used for ``Computer.get_minimum_job_poll_interval``
-    DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10
+    DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10.0
 
     # This is used as a global default in case subclasses don't redefine this,
     # but this should  be redefined in plugins where appropriate

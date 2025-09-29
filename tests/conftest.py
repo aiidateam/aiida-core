@@ -1207,17 +1207,17 @@ def setup_duplicate_group():
 def create_int_nodes():
     """Factory fixture to create a specified number of Int nodes efficiently using bulk_insert."""
 
-    def _create_nodes(count, label_prefix='test_node', store_individually=False):
+    def _create_nodes(count, label_prefix='test_node', use_orm=False):
         """Create count number of Int nodes.
 
         :param count: Number of nodes to create
         :param label_prefix: Prefix for node labels
-        :param store_individually: If True, use individual .store() calls (_much_ slower but creates proper ORM objects).
+        :param use_orm: If True, use individual .store() calls (_much_ slower but creates proper ORM objects).
             If False, use bulk_insert (faster but returns only PKs)
 
-        :returns: List of node PKs if store_individually=False, list of Node objects if store_individually=True
+        :returns: List of node PKs if use_orm=False, list of Node objects if use_orm=True
         """
-        if store_individually:
+        if use_orm:
             # Slower method that returns actual ORM objects
             nodes = []
             for i in range(count):
@@ -1249,6 +1249,6 @@ def create_int_nodes():
                 }
                 nodes_data.append(node_data)
 
-            return backend.bulk_insert(orm.entities.EntityTypes.NODE, nodes_data)
+            return backend.bulk_insert(entity_type=orm.entities.EntityTypes.NODE, rows=nodes_data)
 
     return _create_nodes

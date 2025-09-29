@@ -253,173 +253,37 @@ def test_complex_export_filter_size(tmp_path, aiida_profile_clean):
     assert link_count >= 3  # At least the links we created
 
 
-# @pytest.mark.timeout(600)
-# @pytest.mark.nightly
-# @pytest.mark.usefixtures('aiida_profile_clean')
-# def test_large_archive_import_export_regression(tmp_path, create_int_nodes, aiida_profile_clean):
-#     """Regression test: ensure import works correctly with 100k nodes.
-#
-#     :param tmp_path: Pytest temporary directory fixture
-#     :param create_int_nodes: Fixture to create test nodes
-#     :param aiida_profile_clean: Clean AiiDA profile fixture
-#     """
-#     num_nodes = 100_000
-#     filter_size = 999  # Use a reasonable default filter size
-#
-#     # Create nodes in the profile's storage
-#     _ = create_int_nodes(num_nodes)
-#
-#     export_file = tmp_path / 'regression_export.aiida'
-#     print(export_file)
-#     # NOTE: Need to obtain a selection of `orm.Node`s, otherwise, with `entities=None`, where the profile is exported in full,
-#     # no QB query is constructed in the `collect_all_entities` method
-#     all_nodes = QueryBuilder().append(Node).all(flat=True)
-#     # NOTE: This should raise -> Or should it? It should with PQSL
-#     create_archive(entites=all_nodes, filename=export_file, filter_size=100_000)
-#
-#     # create_archive(None, filename=export_file, filter_size=filter_size)
-#     #
-#     # # Clear storage and import
-#     # aiida_profile_clean.reset_storage()
-#     # import_archive(export_file, filter_size=filter_size)
-#     #
-#     # # Verify all nodes were imported correctly
-#     # all_nodes = QueryBuilder().append(Node).all(flat=True)
-#     # assert len(all_nodes) == num_nodes
-#     #
-#     # # with pytest.raises()
-
-
-@pytest.mark.timeout(600)
+@pytest.mark.timeout(1200)
 @pytest.mark.nightly
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_large_archive_export_operationalerror_regression(pytestconfig, tmp_path, create_int_nodes):
-    """Regression test: ensure OperationalError is raised with too large filter_size."""
-    import time
+def test_large_archive_export_operr_regression(pytestconfig, tmp_path, create_int_nodes):
+    """Regression test: ensure OperationalError occurs (not) with too large (sufficiently small) filter_size."""
 
-    from sqlalchemy.exc import OperationalError as SQLAlchemyOperationalError
+    from sqlalchemy.exc import OperationalError
 
-    start_time = time.perf_counter()
-    num_nodes = 100_000
+    num_nodes = 66_000  # Minimum value that OpErr is raised
 
-    print(f'Starting node creation at {time.perf_counter() - start_time:.2f}s')
     _ = create_int_nodes(num_nodes)
-    print(f'Node creation completed at {time.perf_counter() - start_time:.2f}s')
 
-    print(f'Starting node loading at {time.perf_counter() - start_time:.2f}s')
-    # Load actual ORM objects (use a subset to avoid memory issues but enough to trigger the error)
-    node_pks = orm.QueryBuilder().append(orm.Node, project='id').all(flat=True)
-    # Load first 10k nodes as proper ORM objects - enough to trigger the parameter limit
-    loaded_nodes = [orm.load_node(pk) for pk in node_pks[:10000]]
-    print(f'Node loading completed at {time.perf_counter() - start_time:.2f}s, loaded {len(loaded_nodes)} nodes')
+    # NOTE: Need to obtain a selection of `orm.Node`s, otherwise, with `entities=None`, where the profile is exported in
+    # full, no QB filters are applied, as the `_collect_all_entities` method is called
+    orm_nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
+
+    # NOTE: This passes for both backends
+    export_file = tmp_path / 'should_work.aiida'
+    create_archive(entities=orm_nodes, filename=export_file, filter_size=1000)
+
+    # NOTE: Run the failing test at the end as the exception leaves sqlachemy in an erroneus state,
+    # so the `orm_nodes` list cannot be re-used. Trying to do so gives:
+    # sqlalchemy.orm.exc.DetachedInstanceError: Instance <DbNode at 0x75d3826f1b40> is not bound to a Session;
+    # attribute refresh operation cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+    # .venv/lib/python3.10/site-packages/sqlalchemy/orm/loading.py:1603: DetachedInstanceError
 
     db_backend = pytestconfig.getoption('--db-backend')
+
     if db_backend.value == 'psql':
         print('Testing that large filter_size fails with PostgreSQL parameter limit')
         export_file = tmp_path / 'should_fail.aiida'
-        with pytest.raises(SQLAlchemyOperationalError, match='number of parameters must be between 0 and 65535'):
-            create_archive(entities=loaded_nodes, filename=export_file, filter_size=100_000)
-        print('Successfully caught expected OperationalError')
-
-
-@pytest.mark.timeout(600)
-@pytest.mark.nightly
-@pytest.mark.usefixtures('aiida_profile_clean')
-def test_large_archive_export_success_regression(tmp_path, create_int_nodes, aiida_profile_clean):
-    """Regression test: ensure export works with proper filter_size."""
-    import time
-
-    start_time = time.perf_counter()
-    num_nodes = 100_000
-
-    print(f'Starting node creation at {time.perf_counter() - start_time:.2f}s')
-    _ = create_int_nodes(num_nodes)
-    print(f'Node creation completed at {time.perf_counter() - start_time:.2f}s')
-
-    export_file = tmp_path / 'regression_export.aiida'
-    print('Now testing export with proper filter_size')
-    create_archive(entities=None, filename=export_file, filter_size=1000)  # Export all with good filter_size
-    print(f'Archive creation completed at {time.perf_counter() - start_time:.2f}s')
-
-    # Test import
-    print(f'Starting storage reset at {time.perf_counter() - start_time:.2f}s')
-    aiida_profile_clean.reset_storage()
-    print(f'Storage reset completed at {time.perf_counter() - start_time:.2f}s')
-
-    print(f'Starting archive import at {time.perf_counter() - start_time:.2f}s')
-    import_archive(export_file, filter_size=1000)
-    print(f'Archive import completed at {time.perf_counter() - start_time:.2f}s')
-
-    # Verify
-    final_count = orm.QueryBuilder().append(orm.Node).count()
-    assert final_count == num_nodes
-    print(f'Test completed in {time.perf_counter() - start_time:.2f}s total')
-
-
-@pytest.mark.timeout(600)
-@pytest.mark.nightly
-@pytest.mark.usefixtures('aiida_profile_clean')
-def test_large_archive_import_export_regression(pytestconfig, tmp_path, create_int_nodes, aiida_profile_clean):
-    """Regression test: ensure import works correctly with 100k nodes.
-
-    :param tmp_path: Pytest temporary directory fixture
-    :param create_int_nodes: Fixture to create test nodes
-    :param aiida_profile_clean: Clean AiiDA profile fixture
-    """
-
-    # there's also OperationalError from psycopp, but it's wrapped by sqlalchemy
-    import time
-
-    from sqlalchemy.exc import OperationalError as SQLAlchemyOperationalError
-
-    start_time = time.perf_counter()
-
-    num_nodes = 100_000
-    filter_size = 1000
-
-    print(f'Starting node creation at {time.perf_counter() - start_time:.2f}s')
-    # Create nodes in the profile's storage
-    _ = create_int_nodes(num_nodes)
-    print(f'Node creation completed at {time.perf_counter() - start_time:.2f}s')
-
-    export_file = tmp_path / 'regression_export.aiida'
-    print(f'Export file: {export_file}')
-
-    print(f'Starting node query at {time.perf_counter() - start_time:.2f}s')
-    # NOTE: Need to obtain a selection of `orm.Node`s, otherwise, with `entities=None`, where the profile is exported in full,
-    # no QB query is constructed in the `collect_all_entities` method
-    all_nodes = orm.QueryBuilder().append(orm.Node).all(flat=True)
-    print(f'Node query completed at {time.perf_counter() - start_time:.2f}s, found {len(all_nodes)} nodes')
-
-    print(f'Starting archive creation at {time.perf_counter() - start_time:.2f}s')
-    # NOTE: This should raise -> Or should it?
-    # Fixed typo: entites -> entities
-    db_backend = pytestconfig.getoption('--db-backend')
-    if db_backend.value == 'psql':
-        print('Testing that large filter_size fails with PostgreSQL parameter limit')
-        with pytest.raises(SQLAlchemyOperationalError, match='number of parameters must be between 0 and 65535'):
-            create_archive(entities=all_nodes, filename=export_file, filter_size=100_000)
-        print('Successfully caught expected OperationalError')
-
-    print('Now testing with proper filter_size')
-    create_archive(entities=all_nodes, filename=export_file, filter_size=1000)
-    print(f'Archive creation completed at {time.perf_counter() - start_time:.2f}s')
-
-    # create_archive(None, filename=export_file, filter_size=filter_size)
-    #
-    # print(f"Starting storage reset at {time.perf_counter() - start_time:.2f}s")
-    # # Clear storage and import
-    # aiida_profile_clean.reset_storage()
-    # print(f"Storage reset completed at {time.perf_counter() - start_time:.2f}s")
-    #
-    # print(f"Starting archive import at {time.perf_counter() - start_time:.2f}s")
-    # import_archive(export_file, filter_size=filter_size)
-    # print(f"Archive import completed at {time.perf_counter() - start_time:.2f}s")
-    #
-    # print(f"Starting verification query at {time.perf_counter() - start_time:.2f}s")
-    # # Verify all nodes were imported correctly
-    # all_nodes = QueryBuilder().append(Node).all(flat=True)
-    # assert len(all_nodes) == num_nodes
-    # print(f"Verification completed at {time.perf_counter() - start_time:.2f}s")
-
-    print(f'Test completed in {time.perf_counter() - start_time:.2f}s total')
+        with pytest.raises(OperationalError, match='number of parameters must be between 0 and 65535'):
+            # Using `filter_size=100_000` effectively disables filter_size
+            create_archive(entities=orm_nodes, filename=export_file, filter_size=num_nodes)

@@ -253,7 +253,7 @@ def test_complex_export_filter_size(tmp_path, aiida_profile_clean):
     assert link_count >= 3  # At least the links we created
 
 
-@pytest.mark.timeout(1200)
+@pytest.mark.timeout(600)  # Should finish in ~350s
 @pytest.mark.nightly
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_large_archive_export_operr_regression(pytestconfig, tmp_path, create_int_nodes):

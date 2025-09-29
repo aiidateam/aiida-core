@@ -207,6 +207,12 @@ jobs:
         from-lock: 'true'
         extras: tests
 
+    - name: Setup SSH
+      run: .github/workflows/setup_ssh.sh
+
+    - name: Test new pytest fixtures
+      run: pytest -v --cov aiida --noconftest tests/tools/pytest_fixtures/
+
     - name: Test legacy pytest fixtures
       run: pytest --cov aiida --noconftest .github/test_legacy_pytest_fixtures.py
 

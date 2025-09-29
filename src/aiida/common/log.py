@@ -18,6 +18,8 @@ import logging
 import types
 import typing as t
 
+from aiida.common.typing import FilePath
+
 __all__ = ('AIIDA_LOGGER', 'override_log_level')
 
 # Custom logging level, intended specifically for informative log messages reported during WorkChains.
@@ -67,7 +69,7 @@ CLI_LOG_LEVEL: str | None = None
 
 # The default logging dictionary for AiiDA that can be used in conjunction
 # with the config.dictConfig method of python's logging module
-def get_logging_config():
+def get_logging_config() -> dict[str, t.Any]:
     from aiida.manage.configuration import get_config_option
 
     return {
@@ -144,7 +146,7 @@ def get_logging_config():
     }
 
 
-def evaluate_logging_configuration(dictionary):
+def evaluate_logging_configuration(dictionary: collections.abc.Mapping) -> dict:
     """Recursively evaluate the logging configuration, calling lambdas when encountered.
 
     This allows the configuration options that are dependent on the active profile to be loaded lazily.
@@ -164,7 +166,7 @@ def evaluate_logging_configuration(dictionary):
     return result
 
 
-def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
+def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_file: FilePath | None = None) -> None:
     """Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
     daemon, set the argument 'daemon' to True and specify the path to the log file. This

@@ -8,7 +8,14 @@
 ###########################################################################
 """Option whose requiredness is determined by a callback function."""
 
+from __future__ import annotations
+
+import typing as t
+
 import click
+
+if t.TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class ConditionalOption(click.Option):
@@ -24,7 +31,12 @@ class ConditionalOption(click.Option):
         is typically used when the condition depends on other parameters specified on the command line.
     """
 
-    def __init__(self, param_decls=None, required_fn=None, **kwargs):
+    def __init__(
+        self,
+        param_decls: Sequence[str] | None = None,
+        required_fn: t.Callable[[click.Context], bool] | None = None,
+        **kwargs: t.Any,
+    ):
         self.required_fn = required_fn
 
         # If there is not callback to determine requiredness, assume the option is not required.
@@ -33,7 +45,7 @@ class ConditionalOption(click.Option):
 
         super().__init__(param_decls=param_decls, **kwargs)
 
-    def process_value(self, ctx, value):
+    def process_value(self, ctx: click.Context, value: t.Any) -> t.Any:
         try:
             value = super().process_value(ctx, value)
         except click.MissingParameter:
@@ -45,7 +57,7 @@ class ConditionalOption(click.Option):
 
         return value
 
-    def is_required(self, ctx):
+    def is_required(self, ctx: click.Context) -> bool:
         """Runs the given check on the context to determine requiredness"""
         if self.required_fn:
             return self.required_fn(ctx)

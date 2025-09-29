@@ -16,7 +16,7 @@ import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Union
+from typing import Any, Callable, Iterable, Optional, Union
 
 from tabulate import tabulate
 
@@ -810,11 +810,11 @@ def get_init_summary(
     compression: int,
 ) -> str:
     """Get summary for archive initialisation"""
-    parameters = [['Path', str(outfile)], ['Version', archive_version], ['Compression', compression]]
+    parameters: list[list[Any]] = [['Path', str(outfile)], ['Version', archive_version], ['Compression', compression]]
 
     result = f"\n{tabulate(parameters, headers=['Archive Parameters', ''])}"
 
-    inclusions = [
+    inclusions: list[list[Any]] = [
         ['Computers/Nodes/Groups/Users', 'All' if collect_all else 'Selected'],
         ['Computer Authinfos', include_authinfos],
         ['Node Comments', include_comments],

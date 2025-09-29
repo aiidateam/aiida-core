@@ -15,8 +15,10 @@ members (or enum members) and are functionally constants. The enum members have 
 ``Color.RED`` is ``RED`` and the value of ``Color.RED`` is ``1``.
 """
 
-import typing as t
-from enum import Enum
+from __future__ import annotations
+
+import enum
+from typing import Any, TypeVar
 
 from plumpy.loaders import get_object_loader
 
@@ -28,10 +30,10 @@ from .data import Data
 
 __all__ = ('EnumData',)
 
-EnumType = t.TypeVar('EnumType', bound=Enum)
+EnumType = TypeVar('EnumType', bound=enum.Enum)
 
 
-@to_aiida_type.register(Enum)
+@to_aiida_type.register(enum.Enum)
 def _(value):
     return EnumData(member=value)
 
@@ -51,14 +53,14 @@ class EnumData(Data):
     KEY_IDENTIFIER = 'identifier'
 
     class Model(Data.Model):
-        member: Enum = MetadataField(
+        member: enum.Enum = MetadataField(
             description='The member name.',
             orm_to_model=lambda node, _: node.get_member(),  # type: ignore[attr-defined]
         )
 
-    def __init__(self, member: Enum, *args, **kwargs):
+    def __init__(self, member: enum.Enum, *args, **kwargs):
         """Construct the node for the to enum member that is to be wrapped."""
-        type_check(member, Enum)
+        type_check(member, enum.Enum)
         super().__init__(*args, **kwargs)
 
         data = {
@@ -75,11 +77,11 @@ class EnumData(Data):
         return self.base.attributes.get(self.KEY_NAME)
 
     @property
-    def value(self) -> t.Any:
+    def value(self) -> Any:
         """Return the value of the enum member."""
         return self.base.attributes.get(self.KEY_VALUE)
 
-    def get_enum(self) -> t.Type[EnumType]:
+    def get_enum(self) -> type[EnumType]:
         """Return the enum class reconstructed from the serialized identifier stored in the database.
 
         :raises `ImportError`: if the enum class represented by the stored identifier cannot be imported.
@@ -101,7 +103,7 @@ class EnumData(Data):
         :raises `ValueError`: if the stored enum member value is no longer valid for the imported enum class.
         """
         value = self.base.attributes.get(self.KEY_VALUE)
-        enum: t.Type[EnumType] = self.get_enum()
+        enum: type[EnumType] = self.get_enum()
 
         try:
             return enum(value)
@@ -111,9 +113,9 @@ class EnumData(Data):
                 'have changed since storing the node.'
             ) from exc
 
-    def __eq__(self, other: t.Any) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Return whether the other object is equivalent to ourselves."""
-        if isinstance(other, Enum):
+        if isinstance(other, enum.Enum):
             try:
                 return self.get_member() == other
             except (ImportError, ValueError):

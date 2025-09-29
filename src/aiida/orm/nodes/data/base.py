@@ -8,8 +8,10 @@
 ###########################################################################
 """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
-import typing as t
+from __future__ import annotations
+
 from functools import singledispatch
+from typing import Any
 
 from aiida.common.pydantic import MetadataField
 
@@ -28,13 +30,13 @@ class BaseType(Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
     class Model(Data.Model):
-        value: t.Any = MetadataField(
+        value: Any = MetadataField(
             ...,
             title='Data value.',
             description='The value of the data',
         )
 
-    def __init__(self, value=None, **kwargs):
+    def __init__(self, value: Any | None = None, **kwargs):
         try:
             getattr(self, '_type')
         except AttributeError:

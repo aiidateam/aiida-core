@@ -11,9 +11,17 @@
 from __future__ import annotations
 
 import pathlib
+import sys
 from typing import Union
 
-__all__ = ('FilePath',)
-
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 FilePath = Union[str, pathlib.PurePath]
+
+__all__ = (
+    'FilePath',
+    'Self',
+)

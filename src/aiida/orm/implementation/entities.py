@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterable, List, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterable, TypeVar
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
@@ -74,7 +74,7 @@ class BackendEntity(abc.ABC):
 class BackendCollection(Generic[EntityType]):
     """Container class that represents a collection of entries of a particular backend entity."""
 
-    ENTITY_CLASS: ClassVar[Type[EntityType]]
+    ENTITY_CLASS: ClassVar[type[EntityType]]
 
     def __init__(self, backend: 'StorageBackend'):
         """:param backend: the backend this collection belongs to"""
@@ -99,7 +99,7 @@ class BackendEntityExtrasMixin(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def extras(self) -> Dict[str, Any]:
+    def extras(self) -> dict[str, Any]:
         """Return the complete extras dictionary.
 
         .. warning:: While the entity is unstored, this will return references of the extras on the database model,
@@ -128,7 +128,7 @@ class BackendEntityExtrasMixin(abc.ABC):
         :raises AttributeError: if the extra does not exist
         """
 
-    def get_extra_many(self, keys: Iterable[str]) -> List[Any]:
+    def get_extra_many(self, keys: Iterable[str]) -> list[Any]:
         """Return the values of multiple extras.
 
         .. warning:: While the entity is unstored, this will return references of the extras on the database model,
@@ -153,7 +153,7 @@ class BackendEntityExtrasMixin(abc.ABC):
         :param value: value of the extra
         """
 
-    def set_extra_many(self, extras: Dict[str, Any]) -> None:
+    def set_extra_many(self, extras: dict[str, Any]) -> None:
         """Set multiple extras.
 
         .. note:: This will override any existing extras that are present in the new dictionary.
@@ -164,7 +164,7 @@ class BackendEntityExtrasMixin(abc.ABC):
             self.set_extra(key, value)
 
     @abc.abstractmethod
-    def reset_extras(self, extras: Dict[str, Any]) -> None:
+    def reset_extras(self, extras: dict[str, Any]) -> None:
         """Reset the extras.
 
         .. note:: This will completely clear any existing extras and replace them with the new dictionary.
@@ -194,7 +194,7 @@ class BackendEntityExtrasMixin(abc.ABC):
         """Delete all extras."""
 
     @abc.abstractmethod
-    def extras_items(self) -> Iterable[Tuple[str, Any]]:
+    def extras_items(self) -> Iterable[tuple[str, Any]]:
         """Return an iterator over the extras key/value pairs."""
 
     @abc.abstractmethod

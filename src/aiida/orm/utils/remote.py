@@ -11,13 +11,13 @@
 from __future__ import annotations
 
 import os
-import typing as t
+from typing import TYPE_CHECKING, Any
 
 from aiida import orm
 from aiida.cmdline.utils import echo
 from aiida.orm.nodes.data.remote.base import RemoteData
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from aiida.orm.implementation import StorageBackend
@@ -102,7 +102,7 @@ def get_calcjob_remote_paths(
     from aiida.common import timezone
     from aiida.orm import CalcJobNode
 
-    filters_calc: dict[str, t.Any] = {}
+    filters_calc: dict[str, Any] = {}
     filters_computer = {}
     filters_remote = {}
 

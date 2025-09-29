@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import typing as t
+from typing import TYPE_CHECKING
 
 from ..comments import Comment
 from ..users import User
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from .node import Node
 
 
@@ -18,7 +18,7 @@ class NodeComments:
         """Initialize the comments interface."""
         self._node = node
 
-    def add(self, content: str, user: t.Optional[User] = None) -> Comment:
+    def add(self, content: str, user: User | None = None) -> Comment:
         """Add a new comment.
 
         :param content: string with comment

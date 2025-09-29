@@ -8,7 +8,8 @@
 ###########################################################################
 """`Data` sub class to represent a list."""
 
-import typing as t
+from __future__ import annotations
+
 from collections.abc import MutableSequence
 from typing import Any
 
@@ -26,7 +27,7 @@ class List(Data, MutableSequence):
     _LIST_KEY = 'list'
 
     class Model(Data.Model):
-        value: t.List[t.Any] = MetadataField(
+        value: list[Any] = MetadataField(
             description='Content of the data',
         )
 
@@ -119,7 +120,7 @@ class List(Data, MutableSequence):
             self.set_list(data)
 
     @property
-    def value(self) -> list[t.Any]:
+    def value(self) -> list[Any]:
         """Return the value of this node, which is the list content.
 
         :return: The list content.

@@ -8,6 +8,8 @@
 ###########################################################################
 """Module with `Node` sub class for calculation job processes."""
 
+from __future__ import annotations
+
 import datetime
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
 
@@ -90,11 +92,11 @@ class CalcJobNode(CalculationNode):
             description='The detailed job info returned by the scheduler',
             orm_to_model=lambda node, _: node.get_detailed_job_info(),
         )
-        retrieve_list: Optional[List[str]] = MetadataField(
+        retrieve_list: Optional[list[str]] = MetadataField(
             description='The list of files to retrieve from the remote cluster',
             orm_to_model=lambda node, _: node.get_retrieve_list(),
         )
-        retrieve_temporary_list: Optional[List[str]] = MetadataField(
+        retrieve_temporary_list: Optional[list[str]] = MetadataField(
             description='The list of temporary files to retrieve from the remote cluster',
             orm_to_model=lambda node, _: node.get_retrieve_temporary_list(),
         )
@@ -286,7 +288,7 @@ class CalcJobNode(CalculationNode):
             if not isinstance(directive[2], (int, type(None))):
                 raise ValueError('invalid directive, third element has to be an integer representing the depth')
 
-    def set_retrieve_list(self, retrieve_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
+    def set_retrieve_list(self, retrieve_list: Sequence[str | tuple[str, str, str]]) -> None:
         """Set the retrieve list.
 
         This list of directives will instruct the daemon what files to retrieve after the calculation has completed.
@@ -297,14 +299,14 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_list)
         self.base.attributes.set(self.RETRIEVE_LIST_KEY, retrieve_list)
 
-    def get_retrieve_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
+    def get_retrieve_list(self) -> Optional[Sequence[str | tuple[str, str, str]]]:
         """Return the list of files/directories to be retrieved on the cluster after the calculation has completed.
 
         :return: a list of file directives
         """
         return self.base.attributes.get(self.RETRIEVE_LIST_KEY, None)
 
-    def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
+    def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[str | tuple[str, str, str]]) -> None:
         """Set the retrieve temporary list.
 
         The retrieve temporary list stores files that are retrieved after completion and made available during parsing
@@ -315,7 +317,7 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_temporary_list)
         self.base.attributes.set(self.RETRIEVE_TEMPORARY_LIST_KEY, retrieve_temporary_list)
 
-    def get_retrieve_temporary_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
+    def get_retrieve_temporary_list(self) -> Optional[Sequence[str | tuple[str, str, str]]]:
         """Return list of files to be retrieved from the cluster which will be available during parsing.
 
         :return: a list of file directives

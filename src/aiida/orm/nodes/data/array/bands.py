@@ -10,9 +10,11 @@
 in a Brillouin zone, and how to operate on them.
 """
 
+from __future__ import annotations
+
 import json
-import typing as t
 from string import Template
+from typing import Optional
 
 import numpy
 
@@ -214,7 +216,7 @@ class BandsData(KpointsData):
     """Class to handle bands data"""
 
     class Model(KpointsData.Model):
-        array_labels: t.Optional[t.List[str]] = MetadataField(description='Labels associated with the band arrays')
+        array_labels: Optional[list[str]] = MetadataField(description='Labels associated with the band arrays')
         units: str = MetadataField(description='Units in which the data in bands were stored')
 
     def set_kpointsdata(self, kpointsdata):

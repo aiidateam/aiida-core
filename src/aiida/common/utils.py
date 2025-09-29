@@ -21,12 +21,9 @@ from datetime import datetime, timedelta
 from typing import Any, Callable
 from uuid import UUID
 
-from .lang import classproperty
+from aiida.common.typing import Self
 
-try:
-    from typing import Self
-except ImportError:
-    from typing_extensions import Self
+from .lang import classproperty
 
 
 def get_new_uuid() -> str:

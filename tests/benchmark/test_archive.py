@@ -110,16 +110,9 @@ def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects)
 
 
 @pytest.mark.parametrize('filter_size', [100, 1000, 10000])
-@pytest.mark.timeout(600)
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_large_archive_export_benchmark(tmp_path, filter_size, benchmark, create_int_nodes):
-    """Benchmark export performance with different filter_size values using 10k nodes.
-
-    :param tmp_path: Pytest temporary directory fixture
-    :param filter_size: Maximum number of parameters in query filters
-    :param benchmark: Pytest benchmark fixture
-    :param create_int_nodes: Fixture to create test nodes
-    """
+    """Benchmark export performance with different filter_size values using 10k nodes."""
     num_nodes = 10_000
 
     # Setup: create nodes (not benchmarked)
@@ -136,17 +129,9 @@ def test_large_archive_export_benchmark(tmp_path, filter_size, benchmark, create
 
 
 @pytest.mark.parametrize('filter_size', [100, 1000, 10000])
-@pytest.mark.timeout(600)
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_large_archive_import_benchmark(tmp_path, filter_size, benchmark, create_int_nodes, aiida_profile_clean):
-    """Benchmark import performance with different filter_size values using 10k nodes.
-
-    :param tmp_path: Pytest temporary directory fixture
-    :param filter_size: Maximum number of parameters in query filters
-    :param benchmark: Pytest benchmark fixture
-    :param create_int_nodes: Fixture to create test nodes
-    :param aiida_profile_clean: Clean AiiDA profile fixture
-    """
+    """Benchmark import performance with different filter_size values using 10k nodes."""
     num_nodes = 10_000
 
     def setup():

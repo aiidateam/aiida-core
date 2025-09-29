@@ -282,8 +282,7 @@ def test_large_archive_export_operr_regression(pytestconfig, tmp_path, create_in
     db_backend = pytestconfig.getoption('--db-backend')
 
     if db_backend.value == 'psql':
-        print('Testing that large filter_size fails with PostgreSQL parameter limit')
         export_file = tmp_path / 'should_fail.aiida'
         with pytest.raises(OperationalError, match='number of parameters must be between 0 and 65535'):
-            # Using `filter_size=100_000` effectively disables filter_size
+            # Using `filter_size=num_nodes` effectively disables it
             create_archive(entities=orm_nodes, filename=export_file, filter_size=num_nodes)

@@ -243,7 +243,7 @@ def traverse_graph(
         return {'nodes': set(), 'links': None}
 
     existing_pks = set()
-    filter_size = 10_000  # Stay well under 65535 parameter limit
+    filter_size = 999
 
     for _, batch_ids in batch_iter(operational_set, filter_size):
         query_nodes = orm.QueryBuilder(backend=backend)

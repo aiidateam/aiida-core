@@ -131,7 +131,7 @@ def _json_to_sqlite(
     outpath: Path, data: dict, node_repos: Dict[str, List[Tuple[str, Optional[str]]]], batch_size: int = 100
 ) -> None:
     """Convert a JSON archive format to SQLite."""
-    from aiida.tools.archive.common import batch_iter
+    from aiida.common.utils import batch_iter
 
     from . import v1_db_schema as v1_schema
 

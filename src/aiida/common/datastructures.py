@@ -10,12 +10,16 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum, IntEnum
 from typing import TYPE_CHECKING
 
 from .extendeddicts import DefaultFieldsAttributeDict
 
 __all__ = ('CalcInfo', 'CalcJobState', 'CodeInfo', 'CodeRunMode', 'StashMode', 'UnstashTargetMode')
+
+DEFAULT_FILTER_SIZE: int = 999
+DEFAULT_BATCH_SIZE: int = 1000
 
 
 class StashMode(Enum):
@@ -259,3 +263,13 @@ class CodeRunMode(IntEnum):
 
     SERIAL = 0
     PARALLEL = 1
+
+
+@dataclass
+class QueryParams:
+    """Parameters for executing backend queries."""
+
+    batch_size: int = DEFAULT_BATCH_SIZE
+    """Batch size for streaming database rows."""
+    filter_size: int = DEFAULT_FILTER_SIZE
+    """Maximum number of parameters allowed in a single query filter."""

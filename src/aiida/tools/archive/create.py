@@ -22,10 +22,12 @@ from typing import Any, Callable, Iterable, Optional, Union
 from tabulate import tabulate
 
 from aiida import orm
+from aiida.common.datastructures import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, QueryParams
 from aiida.common.lang import type_check
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter
+from aiida.common.utils import batch_iter
 from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
@@ -33,7 +35,7 @@ from aiida.orm.utils.links import LinkQuadruple
 from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
 
 from .abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
-from .common import QueryParams, batch_iter, entity_type_to_orm
+from .common import entity_type_to_orm
 from .exceptions import ArchiveExportError, ExportValidationError
 from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
@@ -55,8 +57,8 @@ def create_archive(
     allowed_licenses: Optional[Union[list, Callable]] = None,
     forbidden_licenses: Optional[Union[list, Callable]] = None,
     strip_checkpoints: bool = True,
-    batch_size: int = 1000,
-    filter_size: int = 999,
+    batch_size: int = DEFAULT_BATCH_SIZE,
+    filter_size: int = DEFAULT_FILTER_SIZE,
     compression: int = 6,
     test_run: bool = False,
     backend: Optional[StorageBackend] = None,
@@ -253,8 +255,7 @@ def create_archive(
             include_comments,
             include_logs,
             backend,
-            query_params.batch_size,
-            query_params.filter_size,
+            query_params,
         )
 
     # now all the nodes have been retrieved, perform some checks
@@ -514,13 +515,15 @@ def _collect_required_entities(
     include_comments: bool,
     include_logs: bool,
     backend: StorageBackend,
-    batch_size: int,
-    filter_size: int,
+    query_params: QueryParams,
 ) -> tuple[list[tuple[int, int]], set[LinkQuadruple]]:
     """Collect required entities, given a set of starting entities and provenance graph traversal rules.
 
     :returns: (group_id_to_node_id, link_data) and updates entity_ids
     """
+
+    filter_size = query_params.filter_size
+    batch_size = query_params.batch_size
 
     def progress_str(name):
         return f'Collecting entities: {name}'

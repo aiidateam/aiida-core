@@ -23,6 +23,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
+from aiida.common.datastructures import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
@@ -130,14 +131,11 @@ def inspect(ctx, archive, version, meta_data, database):
 )
 @click.option('--compress', default=6, show_default=True, type=int, help='Level of compression to use (0-9).')
 @click.option(
-    '-b', '--batch-size', default=1000, type=int, help='Stream database rows in batches, to reduce memory usage.'
-)
-@click.option(
-    '-f',
-    '--filter-size',
-    default=999,
+    '-b',
+    '--batch-size',
+    default=DEFAULT_BATCH_SIZE,
     type=int,
-    help='Batch database query filters to avoid database parameter limits (e.g., psql-psycopg 65535 limit).',
+    help='Stream database rows in batches, to reduce memory usage.',
 )
 @click.option(
     '--test-run',
@@ -165,7 +163,6 @@ def create(
     include_authinfos,
     compress,
     batch_size,
-    filter_size,
     test_run,
     dry_run,
 ):
@@ -218,7 +215,7 @@ def create(
         'overwrite': force,
         'compression': compress,
         'batch_size': batch_size,
-        'filter_size': filter_size,
+        'filter_size': DEFAULT_FILTER_SIZE,
         'test_run': dry_run,
     }
 
@@ -336,7 +333,7 @@ class ExtrasImportCode(Enum):
     '--extras-mode-new',
     type=click.Choice(EXTRAS_MODE_NEW),
     default='import',
-    help='Specify whether to import extras of new nodes: ' 'import: import extras. ' 'none: do not import extras.',
+    help='Specify whether to import extras of new nodes: import: import extras. none: do not import extras.',
 )
 @click.option(
     '--comment-mode',

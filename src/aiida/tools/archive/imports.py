@@ -15,11 +15,13 @@ from tabulate import tabulate
 
 from aiida import orm
 from aiida.common import timezone
+from aiida.common.datastructures import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, QueryParams
 from aiida.common.exceptions import IncompatibleStorageSchema
 from aiida.common.lang import type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter
+from aiida.common.utils import batch_iter
 from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
@@ -27,7 +29,7 @@ from aiida.orm.querybuilder import QueryBuilder
 from aiida.repository import Repository
 
 from .abstract import ArchiveFormatAbstract
-from .common import QueryParams, batch_iter, entity_type_to_orm
+from .common import entity_type_to_orm
 from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
 from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
@@ -51,8 +53,8 @@ def import_archive(
     path: Union[str, Path],
     *,
     archive_format: Optional[ArchiveFormatAbstract] = None,
-    filter_size: int = 999,
-    batch_size: int = 1000,
+    filter_size: int = DEFAULT_FILTER_SIZE,
+    batch_size: int = DEFAULT_BATCH_SIZE,
     import_new_extras: bool = True,
     merge_extras: MergeExtrasType = ('k', 'n', 'l'),
     merge_comments: MergeCommentsType = 'leave',

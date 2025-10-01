@@ -10,9 +10,8 @@
 
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
 from html.parser import HTMLParser
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type
+from typing import Dict, Type
 
 from aiida.orm import AuthInfo, Comment, Computer, Entity, Group, Log, Node, User
 from aiida.orm.entities import EntityTypes
@@ -27,40 +26,6 @@ entity_type_to_orm: Dict[EntityTypes, Type[Entity]] = {
     EntityTypes.NODE: Node,
     EntityTypes.COMMENT: Comment,
 }
-
-
-@dataclass
-class QueryParams:
-    """Parameters for executing backend queries."""
-
-    batch_size: int
-    """Batch size for streaming database rows."""
-    filter_size: int
-    """Maximum number of parameters allowed in a single query filter."""
-
-
-def batch_iter(
-    iterable: Iterable[Any], size: int, transform: Optional[Callable[[Any], Any]] = None
-) -> Iterable[Tuple[int, List[Any]]]:
-    """Yield an iterable in batches of a set number of items.
-
-    Note, the final yield may be less than this size.
-
-    :param transform: a transform to apply to each item
-    :returns: (number of items, list of items)
-    """
-    transform = transform or (lambda x: x)
-    current = []
-    length = 0
-    for item in iterable:
-        current.append(transform(item))
-        length += 1
-        if length >= size:
-            yield length, current
-            current = []
-            length = 0
-    if current:
-        yield length, current
 
 
 class HTMLGetLinksParser(HTMLParser):

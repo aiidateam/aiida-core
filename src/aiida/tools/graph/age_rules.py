@@ -15,6 +15,7 @@ from copy import deepcopy
 import numpy as np
 
 from aiida import orm
+from aiida.common.datastructures import DEFAULT_FILTER_SIZE
 from aiida.common.lang import type_check
 from aiida.tools.graph.age_entities import Basket
 
@@ -221,24 +222,21 @@ class QueryRule(Operation, metaclass=ABCMeta):
         target_set.empty()
 
         if primkeys:
-            # PRCOMMENT: Expose this to the user somehow?
-            filter_size = 999
-
             # If we have fewer keys than the batch size, use the original approach
             assert self._querybuilder is not None
-            if len(primkeys) <= filter_size:
+            if len(primkeys) <= DEFAULT_FILTER_SIZE:
                 self._querybuilder.add_filter(
                     self._first_tag, {operational_set[self._entity_from].identifier: {'in': primkeys}}
                 )
                 qres = self._querybuilder.dict()
             else:
                 # PRCOMMENT: Maybe move `batch_iter` elsewhere? Import feels weird here?
-                from aiida.tools.archive.common import batch_iter
+                from aiida.common.utils import batch_iter
 
                 # Batch the queries for large datasets using batch_iter
                 all_results = []
 
-                for _, batch_primkeys in batch_iter(primkeys, filter_size):
+                for _, batch_primkeys in batch_iter(iterable=primkeys, size=DEFAULT_FILTER_SIZE):
                     # Use deepcopy only when we need to batch
                     batch_qb = deepcopy(self._querybuilder)
                     batch_qb.add_filter(

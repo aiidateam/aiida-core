@@ -18,7 +18,7 @@ import re
 import sys
 from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple
 from uuid import UUID
 
 from aiida.common.typing import Self
@@ -68,9 +68,9 @@ def validate_list_of_string_tuples(val: Any, tuple_length: int) -> bool:
     from aiida.common.exceptions import ValidationError
 
     err_msg = (
-        'the value must be a list (or tuple) '
-        'of length-N list (or tuples), whose elements are strings; '
-        'N={}'.format(tuple_length)
+        'the value must be a list (or tuple) of length-N list (or tuples), whose elements are strings; N={}'.format(
+            tuple_length
+        )
     )
 
     if not isinstance(val, (list, tuple)):
@@ -407,7 +407,7 @@ class Prettifier:
         try:
             self._prettifier_f = self.prettifiers[format]
         except KeyError:
-            raise ValueError(f"Unknown prettifier format {format}; valid formats: {', '.join(self.get_prettifiers())}")
+            raise ValueError(f'Unknown prettifier format {format}; valid formats: {", ".join(self.get_prettifiers())}')
 
     def prettify(self, label: str) -> str:
         """Prettify a label using the format passed in the initializer
@@ -608,3 +608,27 @@ def format_directory_size(size_in_bytes: int) -> str:
 
     # Format the size to two decimal places
     return f'{converted_size:.2f} {prefixes[index]}'
+
+
+def batch_iter(
+    iterable: Iterable[Any], size: int, transform: Optional[Callable[[Any], Any]] = None
+) -> Iterable[Tuple[int, List[Any]]]:
+    """Yield an iterable in batches of a set number of items.
+
+    Note, the final yield may be less than this size.
+
+    :param transform: a transform to apply to each item
+    :returns: (number of items, list of items)
+    """
+    transform = transform or (lambda x: x)
+    current = []
+    length = 0
+    for item in iterable:
+        current.append(transform(item))
+        length += 1
+        if length >= size:
+            yield length, current
+            current = []
+            length = 0
+    if current:
+        yield length, current

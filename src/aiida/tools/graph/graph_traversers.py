@@ -15,6 +15,7 @@ from numpy import inf
 
 from aiida import orm
 from aiida.common import exceptions
+from aiida.common.datastructures import DEFAULT_FILTER_SIZE
 from aiida.common.links import GraphTraversalRules, LinkType
 from aiida.orm.utils.links import LinkQuadruple
 from aiida.tools.graph.age_entities import Basket
@@ -209,7 +210,7 @@ def traverse_graph(
 
     :param missing_callback: A callback to handle missing starting_pks or if None raise NotExistent
     """
-    from aiida.tools.archive.common import batch_iter
+    from aiida.common.utils import batch_iter
 
     if max_iterations is None:
         max_iterations = cast(int, inf)
@@ -243,9 +244,8 @@ def traverse_graph(
         return {'nodes': set(), 'links': None}
 
     existing_pks = set()
-    filter_size = 999
 
-    for _, batch_ids in batch_iter(operational_set, filter_size):
+    for _, batch_ids in batch_iter(operational_set, DEFAULT_FILTER_SIZE):
         query_nodes = orm.QueryBuilder(backend=backend)
         query_nodes.append(orm.Node, project=['id'], filters={'id': {'in': batch_ids}})
         existing_pks.update(query_nodes.all(flat=True))

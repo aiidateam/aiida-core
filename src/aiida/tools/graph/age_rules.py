@@ -8,21 +8,27 @@
 ###########################################################################
 """Rules for the AiiDA Graph Explorer utility"""
 
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
-
-import numpy as np
+from typing import TYPE_CHECKING, Literal
 
 from aiida import orm
 from aiida.common.lang import type_check
 from aiida.tools.graph.age_entities import Basket
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from aiida.orm.implementation.querybuilder import QueryDictType
+
 
 class Operation(metaclass=ABCMeta):
     """Base class for all AGE explorer classes"""
 
-    def __init__(self, max_iterations, track_edges):
+    def __init__(self, max_iterations: int, track_edges: bool):
         """Initialization method
 
         :param max_iterations: maximum number of iterations to perform.
@@ -30,21 +36,24 @@ class Operation(metaclass=ABCMeta):
         """
         self.set_max_iterations(max_iterations)
         self._track_edges = track_edges
-        self._iterations_done = None
+        self._iterations_done: int | None = None
 
-    def set_max_iterations(self, max_iterations):
+    # NOTE: numpy.inf if a float type, so we unfortunately need to accept float for max_iterations
+    def set_max_iterations(self, max_iterations: int | float) -> None:
         """Sets the max iterations"""
-        if not (isinstance(max_iterations, int) or max_iterations is np.inf):
-            raise TypeError('max_iterations has to be an integer or np.inf')
+        from numpy import inf
+
+        if not (isinstance(max_iterations, int) or max_iterations is inf):
+            raise TypeError('max_iterations has to be an integer or numpy.inf')
         self._max_iterations = max_iterations
 
     @property
-    def iterations_done(self):
+    def iterations_done(self) -> int | None:
         """Number of iterations performed"""
         return self._iterations_done
 
     @abstractmethod
-    def run(self, operational_set):
+    def run(self, operational_set: Basket) -> Basket:
         """Takes the operational_set and overwrites it with the set of nodes that results
         from applying the rule (this might or not include the initial set of nodes as
         well depending on the rule).
@@ -52,6 +61,9 @@ class Operation(metaclass=ABCMeta):
         :type operational_set: :py:class:`aiida.tools.graph.age_entities.Basket`
         :param operational_set: initital set of nodes to be overwritten by the rule.
         """
+
+
+_EdgeKey = str | tuple[str, str]
 
 
 class QueryRule(Operation, metaclass=ABCMeta):
@@ -64,7 +76,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
     found in the last iteration of the query (ReplaceRule).
     """
 
-    def __init__(self, querybuilder: orm.QueryBuilder, max_iterations=1, track_edges=False):
+    def __init__(self, querybuilder: orm.QueryBuilder, max_iterations: int = 1, track_edges: bool = False):
         """Initialization method
 
         :param querybuilder: an instance of the QueryBuilder class from which to take the
@@ -75,20 +87,27 @@ class QueryRule(Operation, metaclass=ABCMeta):
         """
         super().__init__(max_iterations, track_edges=track_edges)
 
-        def get_spec_from_path(query_dict, idx):
-            from aiida.orm.querybuilder import GROUP_ENTITY_TYPE_PREFIX
+        def get_spec_from_path(query_dict: QueryDictType, idx: int) -> Literal['nodes', 'groups']:
+            from aiida.orm.implementation.querybuilder import GROUP_ENTITY_TYPE_PREFIX
 
+            entity_type = query_dict['path'][idx]['entity_type']
+
+            # TODO: According to QueryDictType, entity_type can be a list as well,
+            # but that is not handled by the code below!
+            assert isinstance(entity_type, str)
+
+            result: Literal['nodes', 'groups']
             if (
-                query_dict['path'][idx]['entity_type'].startswith('node')
-                or query_dict['path'][idx]['entity_type'].startswith('data')
-                or query_dict['path'][idx]['entity_type'].startswith('process')
-                or query_dict['path'][idx]['entity_type'] == ''
+                entity_type.startswith('node')
+                or entity_type.startswith('data')
+                or entity_type.startswith('process')
+                or entity_type == ''
             ):
                 result = 'nodes'
-            elif query_dict['path'][idx]['entity_type'].startswith(GROUP_ENTITY_TYPE_PREFIX):
+            elif entity_type.startswith(GROUP_ENTITY_TYPE_PREFIX):
                 result = 'groups'
             else:
-                raise RuntimeError(f"not understood entity from ( {query_dict['path'][idx]['entity_type']} )")
+                raise RuntimeError(f'not understood entity from ( {entity_type} )')
             return result
 
         query_dict = querybuilder.as_dict()
@@ -110,18 +129,18 @@ class QueryRule(Operation, metaclass=ABCMeta):
         query_dict = self._qbtemplate.as_dict()
         self._first_tag = query_dict['path'][0]['tag']
         self._last_tag = query_dict['path'][-1]['tag']
-        self._querybuilder = None
+        self._querybuilder: orm.QueryBuilder | None = None
 
         # All of these are set in _init_run:
-        self._edge_label = None
-        self._edge_keys = None
-        self._entity_to_identifier = None
+        self._edge_label: str | None = None
+        self._edge_keys: list[_EdgeKey] | None = None
+        self._entity_to_identifier: str | None = None
 
         self._entity_from = get_spec_from_path(query_dict, 0)
         self._entity_to = get_spec_from_path(query_dict, -1)
-        self._accumulator_set = None
+        self._accumulator_set: Basket | None = None
 
-    def set_edge_keys(self, edge_keys):
+    def set_edge_keys(self, edge_keys: list[_EdgeKey]) -> None:
         """Set the edge keys that are use to classify the edges during the run of this query.
 
         :param edge_keys:
@@ -142,7 +161,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
         """
         self._edge_keys = edge_keys[:]
 
-    def _init_run(self, operational_set):
+    def _init_run(self, operational_set: Basket) -> None:
         """Initialization Utility method
 
         This method initializes a run. It initializes the accumulator_set in order
@@ -163,7 +182,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
         query_dict = self._qbtemplate.as_dict()
         self._querybuilder = deepcopy(self._qbtemplate)
 
-        self._entity_to_identifier = operational_set[self._entity_to].identifier
+        # TODO: Remove the type-ignore
+        self._entity_to_identifier = operational_set[self._entity_to].identifier  # type: ignore[union-attr]
 
         # Now I add the necessary projections, which is the identifier of the
         # last entity of the QueryBuilder path:
@@ -209,7 +229,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
                 except (TypeError, ValueError) as exc:
                     raise KeyError('The projection for the edge-identifier is invalid.\n') from exc
 
-    def _load_results(self, target_set, operational_set):
+    def _load_results(self, target_set: Basket, operational_set: Basket) -> None:
         """Single application of the rules to the operational set
 
         :param target_set:
@@ -220,9 +240,14 @@ class QueryRule(Operation, metaclass=ABCMeta):
         primkeys = operational_set[self._entity_from].keyset
         target_set.empty()
 
+        assert self._querybuilder is not None
+        assert self._entity_to_identifier is not None
+        assert self._edge_keys is not None
+
         if primkeys:
             self._querybuilder.add_filter(
-                self._first_tag, {operational_set[self._entity_from].identifier: {'in': primkeys}}
+                self._first_tag,
+                {operational_set[self._entity_from].identifier: {'in': primkeys}},  # type: ignore[union-attr]
             )
             qres = self._querybuilder.dict()
 
@@ -237,20 +262,17 @@ class QueryRule(Operation, metaclass=ABCMeta):
                 edge_set = operational_set.dict[edge_key]
                 namedtuple_ = edge_set.edge_namedtuple
 
+                # TODO: Understand the type ignore
                 target_set[edge_key].add_entities(
-                    [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in qres]
+                    [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in qres]  # type: ignore[misc]
                 )
 
-    def set_accumulator(self, accumulator_set):
+    def set_accumulator(self, accumulator_set: Basket) -> None:
         self._accumulator_set = accumulator_set
 
-    def empty_accumulator(self):
+    def empty_accumulator(self) -> None:
         if self._accumulator_set is not None:
             self._accumulator_set.empty()
-
-    # Pylint complains if this is not here, but should be removed asap
-    def run(self, operational_set):
-        pass
 
 
 class UpdateRule(QueryRule):
@@ -260,10 +282,12 @@ class UpdateRule(QueryRule):
     no new nodes are added to the accumulation set).
     """
 
-    def run(self, operational_set):
+    def run(self, operational_set: Basket) -> Basket:
         self._init_run(operational_set)
         self._iterations_done = 0
         new_results = operational_set.get_template()
+
+        assert self._accumulator_set is not None
 
         # The operational_set will be updated with the new_nodes that were not
         # already in the _acumulator_set, so that we are not querying from the
@@ -284,12 +308,14 @@ class ReplaceRule(QueryRule):
     it was following a cycle, it would run indefinitely).
     """
 
-    def __init__(self, querybuilder, max_iterations=1, track_edges=False):
-        if max_iterations == np.inf:
+    def __init__(self, querybuilder: orm.QueryBuilder, max_iterations: int = 1, track_edges: bool = False):
+        from numpy import inf
+
+        if max_iterations == inf:
             raise ValueError('You cannot have max_iterations to be infinitely large for replace rules')
         super().__init__(querybuilder, max_iterations=max_iterations, track_edges=track_edges)
 
-    def run(self, operational_set):
+    def run(self, operational_set: Basket) -> Basket:
         self._init_run(operational_set)
         self._iterations_done = 0
         new_results = operational_set.get_template()
@@ -312,7 +338,7 @@ class RuleSaveWalkers(Operation):
     there instead.
     """
 
-    def __init__(self, stash):
+    def __init__(self, stash: Basket):
         """Initialization method
 
         :param stash: external variable in which to save the operational_set
@@ -320,7 +346,7 @@ class RuleSaveWalkers(Operation):
         self._stash = stash
         super().__init__(max_iterations=1, track_edges=True)
 
-    def run(self, operational_set):
+    def run(self, operational_set: Basket) -> Basket:
         self._stash.empty()
         self._stash += operational_set
         return operational_set
@@ -334,7 +360,7 @@ class RuleSetWalkers(Operation):
     loaded in it.
     """
 
-    def __init__(self, stash):
+    def __init__(self, stash: Basket):
         """Initialization method
 
         :param stash: external variable from which to load into the operational_set
@@ -342,7 +368,7 @@ class RuleSetWalkers(Operation):
         self._stash = stash
         super().__init__(max_iterations=1, track_edges=True)
 
-    def run(self, operational_set):
+    def run(self, operational_set: Basket) -> Basket:
         operational_set.empty()
         operational_set += self._stash
         return operational_set
@@ -358,16 +384,16 @@ class RuleSequence(Operation):
     the first (see RuleSetWalkers and RuleSaveWalkers).
     """
 
-    def __init__(self, rules, max_iterations=1):
+    def __init__(self, rules: Iterable[Operation], max_iterations: int = 1):
         for rule in rules:
             if not isinstance(rule, Operation):
                 raise TypeError('rule has to be an instance of Operation-subclass')
         self._rules = rules
-        self._accumulator_set = None
-        self._visits_set = None
+        self._accumulator_set: Basket | None = None
+        self._visits_set: Basket | None = None
         super().__init__(max_iterations, track_edges=False)
 
-    def run(self, operational_set):
+    def run(self, operational_set: Basket) -> Basket:
         type_check(operational_set, Basket)
 
         if self._accumulator_set is not None:
@@ -401,20 +427,20 @@ class RuleSequence(Operation):
 
         return self._visits_set.copy()
 
-    def set_accumulator(self, accumulator_set):
+    def set_accumulator(self, accumulator_set: Basket) -> None:
         """Set the accumulator set"""
         self._accumulator_set = accumulator_set
 
-    def empty_accumulator(self):
+    def empty_accumulator(self) -> None:
         """Empties the accumulator set"""
         if self._accumulator_set is not None:
             self._accumulator_set.empty()
 
-    def set_visits(self, visits_set):
+    def set_visits(self, visits_set: Basket) -> None:
         """Set the visits set"""
         self._visits_set = visits_set
 
-    def empty_visits(self):
+    def empty_visits(self) -> None:
         """Empties the visits set"""
         if self._visits_set is not None:
             self._visits_set.empty()

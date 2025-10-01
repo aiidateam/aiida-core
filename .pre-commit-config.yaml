@@ -140,10 +140,6 @@ repos:
         src/aiida/tools/data/orbital/orbital.py|
         src/aiida/tools/data/orbital/realhydrogen.py|
         src/aiida/tools/dbimporters/plugins/.*|
-        src/aiida/tools/graph/age_entities.py|
-        src/aiida/tools/graph/age_rules.py|
-        src/aiida/tools/graph/deletions.py|
-        src/aiida/tools/graph/graph_traversers.py|
         src/aiida/tools/query/calculation.py|
         src/aiida/tools/query/mapping.py|
         src/aiida/transports/cli.py|

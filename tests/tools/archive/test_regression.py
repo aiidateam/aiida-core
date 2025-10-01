@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Complex tests for the export and import routines"""
+"""Regression tests for ``OperationalError``s on archive import/export"""
 
 import pytest
 
@@ -45,10 +45,10 @@ def test_large_archive_export_operr_regression(pytestconfig, tmp_path, create_in
     db_backend = pytestconfig.getoption('--db-backend')
 
     if db_backend.value == 'psql':
-        export_file = tmp_path / 'should_fail.aiida'
+        export_file_fail = tmp_path / 'should_fail.aiida'
         with pytest.raises(OperationalError, match='number of parameters must be between 0 and 65535'):
             # Using `filter_size=num_nodes` effectively disables it
-            create_archive(entities=orm_nodes, filename=export_file, filter_size=num_nodes)
+            create_archive(entities=orm_nodes, filename=export_file_fail, filter_size=num_nodes)
 
-    # Explicitly session clean-up after the error
-    get_manager().get_profile_storage().get_session().rollback()
+        # Explicitly session clean-up after the error
+        get_manager().get_profile_storage().get_session().rollback()

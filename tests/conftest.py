@@ -414,7 +414,7 @@ def profile_factory() -> t.Callable[t.Concatenate[str, P], Profile]:
                     'database_name': kwargs.pop('database_name', name),
                     'database_username': kwargs.pop('database_username', 'user'),
                     'database_password': kwargs.pop('database_password', 'pass'),
-                    'repository_uri': f'file:///{os.path.join(repository_dirpath, f"repository_{name}")}',
+                    'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
                 },
             },
             'process_control': {
@@ -950,7 +950,7 @@ def construct_calculation_node_add(tmp_path_factory):
 
         # Create FolderData node for retrieved
         retrieved_folder = FolderData()
-        output_content = f'{x + y}\n'.encode()
+        output_content = f'{x+y}\n'.encode()
         retrieved_folder.put_object_from_bytes(output_content, 'aiida.out')
 
         scheduler_stdout = '\n'.encode()
@@ -1211,48 +1211,37 @@ def setup_duplicate_group():
 def create_int_nodes():
     """Factory fixture to create a specified number of Int nodes efficiently using bulk_insert."""
 
-    def _create_nodes(count, label_prefix='test_node', use_orm=False):
+    def _create_nodes(count, label_prefix='test_node'):
         """Create count number of Int nodes.
 
         :param count: Number of nodes to create
         :param label_prefix: Prefix for node labels
-        :param use_orm: If True, use individual .store() calls (_much_ slower but creates proper ORM objects).
-            If False, use bulk_insert (faster but returns only PKs)
 
         :returns: List of node PKs if use_orm=False, list of Node objects if use_orm=True
         """
-        if use_orm:
-            # Slower method that returns actual ORM objects
-            nodes = []
-            for i in range(count):
-                node = orm.Int(i)
-                node.label = f'{label_prefix}_{i}'
-                node.store()
-                nodes.append(node)
-            return nodes
-        else:
-            # Faster bulk_insert method
-            backend = get_manager().get_profile_storage()
-            current_time = timezone.now()
+        backend = get_manager().get_profile_storage()
+        assert backend.default_user is not None
 
-            nodes_data = []
-            for i in range(count):
-                node_data = {
-                    'uuid': str(uuid.uuid4()),
-                    'node_type': 'data.core.int.Int.',
-                    'process_type': None,
-                    'label': f'{label_prefix}_{i}',
-                    'description': 'Test node for integration testing',
-                    'user_id': backend.default_user.pk,
-                    'dbcomputer_id': None,
-                    'ctime': current_time,
-                    'mtime': current_time,
-                    'attributes': {'value': i},
-                    'extras': {},
-                    'repository_metadata': {},
-                }
-                nodes_data.append(node_data)
+        current_time = timezone.now()
 
-            return backend.bulk_insert(entity_type=orm.entities.EntityTypes.NODE, rows=nodes_data)
+        nodes_data = []
+        for i in range(count):
+            node_data = {
+                'uuid': str(uuid.uuid4()),
+                'node_type': 'data.core.int.Int.',
+                'process_type': None,
+                'label': f'{label_prefix}_{i}',
+                'description': 'Test node for integration testing',
+                'user_id': backend.default_user.pk,
+                'dbcomputer_id': None,
+                'ctime': current_time,
+                'mtime': current_time,
+                'attributes': {'value': i},
+                'extras': {},
+                'repository_metadata': {},
+            }
+            nodes_data.append(node_data)
+
+        return backend.bulk_insert(entity_type=orm.entities.EntityTypes.NODE, rows=nodes_data)
 
     return _create_nodes

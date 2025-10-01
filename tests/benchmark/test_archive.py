@@ -21,6 +21,8 @@ from aiida.engine import ProcessState
 from aiida.orm import CalcFunctionNode, Dict, Node, QueryBuilder, load_node
 from aiida.tools.archive import create_archive, import_archive
 
+GROUP_NAME = 'import-export'
+
 
 def recursive_provenance(in_node, depth, breadth, num_objects=0):
     """Recursively build a provenance tree."""
@@ -68,7 +70,7 @@ TREE = {'no-objects': (4, 3, 0), 'with-objects': (4, 3, 2)}
 
 
 @pytest.mark.parametrize('depth,breadth,num_objects', TREE.values(), ids=TREE.keys())
-@pytest.mark.benchmark(group='import-export')
+@pytest.mark.benchmark(group=GROUP_NAME)
 def test_export(benchmark, tmp_path, depth, breadth, num_objects):
     """Benchmark exporting a provenance graph."""
     root_node = Dict()
@@ -88,7 +90,7 @@ def test_export(benchmark, tmp_path, depth, breadth, num_objects):
 
 
 @pytest.mark.parametrize('depth,breadth,num_objects', TREE.values(), ids=TREE.keys())
-@pytest.mark.benchmark(group='import-export')
+@pytest.mark.benchmark(group=GROUP_NAME)
 def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects):
     """Benchmark importing a provenance graph."""
     aiida_profile.reset_storage()
@@ -111,6 +113,7 @@ def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects)
 
 @pytest.mark.parametrize('filter_size', [100, 1000, 10000])
 @pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.benchmark(group='large-archive')
 def test_large_archive_export_benchmark(tmp_path, filter_size, benchmark, create_int_nodes):
     """Benchmark export performance with different filter_size values using 10k nodes."""
     num_nodes = 10_000
@@ -130,6 +133,7 @@ def test_large_archive_export_benchmark(tmp_path, filter_size, benchmark, create
 
 @pytest.mark.parametrize('filter_size', [100, 1000, 10000])
 @pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.benchmark(group='large-archive')
 def test_large_archive_import_benchmark(tmp_path, filter_size, benchmark, create_int_nodes, aiida_profile_clean):
     """Benchmark import performance with different filter_size values using 10k nodes."""
     num_nodes = 10_000

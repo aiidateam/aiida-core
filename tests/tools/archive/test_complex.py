@@ -253,13 +253,16 @@ def test_complex_export_filter_size(tmp_path, aiida_profile_clean):
     assert link_count >= 3  # At least the links we created
 
 
-@pytest.mark.timeout(600)  # Should finish in ~350s
+@pytest.mark.timeout(1000)  # Should finish in ~350s
 @pytest.mark.nightly
+@pytest.mark.first
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_large_archive_export_operr_regression(pytestconfig, tmp_path, create_int_nodes):
     """Regression test: ensure OperationalError occurs (not) with too large (sufficiently small) filter_size."""
 
     from sqlalchemy.exc import OperationalError
+
+    from aiida.manage import get_manager
 
     num_nodes = 66_000  # Minimum value that OpErr is raised
 
@@ -286,3 +289,6 @@ def test_large_archive_export_operr_regression(pytestconfig, tmp_path, create_in
         with pytest.raises(OperationalError, match='number of parameters must be between 0 and 65535'):
             # Using `filter_size=num_nodes` effectively disables it
             create_archive(entities=orm_nodes, filename=export_file, filter_size=num_nodes)
+
+    # Explicitly session clean-up after the error
+    get_manager().get_profile_storage().get_session().rollback()

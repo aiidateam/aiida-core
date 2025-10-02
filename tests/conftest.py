@@ -1211,13 +1211,12 @@ def setup_duplicate_group():
 def create_int_nodes():
     """Factory fixture to create a specified number of Int nodes efficiently using bulk_insert."""
 
-    def _create_nodes(count, label_prefix='test_node'):
+    def _create_nodes(num_nodes):
         """Create count number of Int nodes.
 
-        :param count: Number of nodes to create
-        :param label_prefix: Prefix for node labels
+        :param num_nodes: Number of nodes to create
 
-        :returns: List of node PKs if use_orm=False, list of Node objects if use_orm=True
+        :returns: List of PKs of orm.Int nodes created in profile storage
         """
         backend = get_manager().get_profile_storage()
         assert backend.default_user is not None
@@ -1225,12 +1224,12 @@ def create_int_nodes():
         current_time = timezone.now()
 
         nodes_data = []
-        for i in range(count):
+        for i in range(num_nodes):
             node_data = {
                 'uuid': str(uuid.uuid4()),
                 'node_type': 'data.core.int.Int.',
                 'process_type': None,
-                'label': f'{label_prefix}_{i}',
+                'label': f'test_node_{i}',
                 'description': 'Test node for integration testing',
                 'user_id': backend.default_user.pk,
                 'dbcomputer_id': None,

@@ -9,7 +9,7 @@
 """Import an archive."""
 
 from pathlib import Path
-from typing import Callable, Dict, Literal, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Literal, Optional, Set, Tuple, Union
 
 from tabulate import tabulate
 
@@ -649,7 +649,7 @@ def _merge_node_extras(
             f'Number of Nodes in archive ({input_extras.count()}) and backend ({backend_extras.count()}) do not match'
         )
 
-    def _transform(data: Tuple[Tuple[str, dict], Tuple[str, dict]]) -> dict:
+    def _transform(data: tuple[Any, Any]) -> dict:
         """Transform the new and existing extras into a dict that can be passed to bulk_update."""
         new_uuid, new_extras = data[0]
         old_uuid, old_extras = data[1]

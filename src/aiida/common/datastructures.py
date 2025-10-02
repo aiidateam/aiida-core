@@ -20,12 +20,12 @@ __all__ = ('CalcInfo', 'CalcJobState', 'CodeInfo', 'CodeRunMode', 'StashMode', '
 
 # NOTE: `sqlite` has an `SQLITE_MAX_VARIABLE_NUMBER` compile-time flag, see:
 # https://www.slingacademy.com/article/sqlite-error-too-many-sql-variables/
-# On older `sqlite versions, this was set to 1000, for newer versions it might be higher,
+# On older `sqlite` versions, this was set to 1000, for newer versions it might be higher,
 # while very old versions didn't enforce this (or any other) limits at all, see:
 # https://www.sqlite.org/limits.html
 # If `DEFAULT_FILTER_SIZE` is set too high, the limit can be hit when large `IN` queries are
 # constructed through AiiDA, leading to SQLAlchemy `OperationalError`s.
-# On modern systems, the limit might be in the hundrends of thousands, however, as it is OS-
+# On modern systems, the limit might be in the hundreds of thousands, however, as it is OS-
 # and/or Python version dependent and we don't know its size, we set the value to 999 for safety.
 # From manual benchmarking, this value for batching also seems to give reasonable performance.
 DEFAULT_FILTER_SIZE: int = 999
@@ -286,6 +286,7 @@ class CodeRunMode(IntEnum):
 class QueryParams:
     """Parameters for executing backend queries."""
 
+    # NOTE: See the default value definitions for additional background on the parameters.
     batch_size: int = DEFAULT_BATCH_SIZE
     """Batch size for streaming database rows."""
     filter_size: int = DEFAULT_FILTER_SIZE

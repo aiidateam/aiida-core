@@ -123,6 +123,7 @@ py:class FC
 py:class P
 py:class N
 py:class T
+py:class _ContainerTypes
 py:class aiida.cmdline.params.types.choice.T
 py:class aiida.common.lang.T
 py:class aiida.engine.processes.functions.N

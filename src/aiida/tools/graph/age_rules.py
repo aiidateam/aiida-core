@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Literal, cast
 
 from aiida import orm
 from aiida.common.lang import type_check
+from aiida.common.typing import TypeAlias
 from aiida.tools.graph.age_entities import Basket
 
 if TYPE_CHECKING:
@@ -63,7 +64,7 @@ class Operation(metaclass=ABCMeta):
         """
 
 
-_EdgeKey = str | tuple[str, str]
+_EdgeKey: TypeAlias = 'str | tuple[str, str]'
 
 
 class QueryRule(Operation, metaclass=ABCMeta):

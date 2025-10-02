@@ -17,10 +17,7 @@ import typing as t
 import click
 
 if t.TYPE_CHECKING:
-    try:
-        from typing import TypeAlias
-    except ImportError:
-        from typing_extensions import TypeAlias
+    from aiida.common.typing import TypeAlias
 
 __all__ = ('AbsolutePathParamType', 'FileOrUrl', 'PathOrUrl')
 

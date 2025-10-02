@@ -13,6 +13,8 @@ from __future__ import annotations
 import pathlib
 from typing import Union
 
+# TypeAlias was added in 3.10
+# Self was added in 3.11
 try:
     from typing import Self, TypeAlias
 except ImportError:

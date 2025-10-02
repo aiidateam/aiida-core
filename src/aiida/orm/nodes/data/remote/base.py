@@ -41,7 +41,7 @@ class RemoteData(Data):
             orm_to_model=lambda node, _: node.get_remote_path(),
         )
 
-    def __init__(self, remote_path: Union[str, None] = None, **kwargs):
+    def __init__(self, remote_path: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if remote_path is not None:
             self.set_remote_path(remote_path)

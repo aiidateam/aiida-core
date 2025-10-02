@@ -8,8 +8,10 @@
 ###########################################################################
 """Interface to the attributes of a node instance."""
 
+from __future__ import annotations
+
 import copy
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Tuple
+from typing import TYPE_CHECKING, Any, Iterable
 
 if TYPE_CHECKING:
     from .node import Node
@@ -39,7 +41,7 @@ class NodeAttributes:
         return key in self._backend_node.attributes
 
     @property
-    def all(self) -> Dict[str, Any]:
+    def all(self) -> dict[str, Any]:
         """Return the complete attributes dictionary.
 
         .. warning:: While the entity is unstored, this will return references of the attributes on the database model,
@@ -85,7 +87,7 @@ class NodeAttributes:
 
         return attribute
 
-    def get_many(self, keys: List[str]) -> List[Any]:
+    def get_many(self, keys: list[str]) -> list[Any]:
         """Return the values of multiple attributes.
 
         .. warning:: While the entity is unstored, this will return references of the attributes on the database model,
@@ -118,7 +120,7 @@ class NodeAttributes:
         self._node._check_mutability_attributes([key])
         self._backend_node.set_attribute(key, value)
 
-    def set_many(self, attributes: Dict[str, Any]) -> None:
+    def set_many(self, attributes: dict[str, Any]) -> None:
         """Set multiple attributes.
 
         .. note:: This will override any existing attributes that are present in the new dictionary.
@@ -130,7 +132,7 @@ class NodeAttributes:
         self._node._check_mutability_attributes(list(attributes))
         self._backend_node.set_attribute_many(attributes)
 
-    def reset(self, attributes: Dict[str, Any]) -> None:
+    def reset(self, attributes: dict[str, Any]) -> None:
         """Reset the attributes.
 
         .. note:: This will completely clear any existing attributes and replace them with the new dictionary.
@@ -152,7 +154,7 @@ class NodeAttributes:
         self._node._check_mutability_attributes([key])
         self._backend_node.delete_attribute(key)
 
-    def delete_many(self, keys: List[str]) -> None:
+    def delete_many(self, keys: list[str]) -> None:
         """Delete multiple attributes.
 
         :param keys: names of the attributes to delete
@@ -167,7 +169,7 @@ class NodeAttributes:
         self._node._check_mutability_attributes()
         self._backend_node.clear_attributes()
 
-    def items(self) -> Iterable[Tuple[str, Any]]:
+    def items(self) -> Iterable[tuple[str, Any]]:
         """Return an iterator over the attributes.
 
         :return: an iterator with attribute key value pairs

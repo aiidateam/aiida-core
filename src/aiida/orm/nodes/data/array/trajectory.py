@@ -8,8 +8,9 @@
 ###########################################################################
 """AiiDA class to deal with crystal structure trajectories."""
 
+from __future__ import annotations
+
 import collections.abc
-from typing import List
 
 from aiida.common.pydantic import MetadataField
 
@@ -26,7 +27,7 @@ class TrajectoryData(ArrayData):
     class Model(ArrayData.Model):
         units_positions: str = MetadataField(alias='units|positions', description='Unit of positions')
         units_times: str = MetadataField(alias='units|times', description='Unit of time')
-        symbols: List[str] = MetadataField(description='List of symbols')
+        symbols: list[str] = MetadataField(description='List of symbols')
 
     def __init__(self, structurelist=None, **kwargs):
         super().__init__(**kwargs)
@@ -70,7 +71,7 @@ class TrajectoryData(ArrayData):
         numatoms = len(symbols)
         if positions.shape != (numsteps, numatoms, 3):
             raise ValueError(
-                'TrajectoryData.positions must have shape (s,n,3), ' 'with s=number of steps and n=number of symbols'
+                'TrajectoryData.positions must have shape (s,n,3), with s=number of steps and n=number of symbols'
             )
         if times is not None:
             if times.shape != (numsteps,):
@@ -257,7 +258,7 @@ class TrajectoryData(ArrayData):
             return None
 
     @property
-    def symbols(self) -> List[str]:
+    def symbols(self) -> list[str]:
         """Return the array of symbols, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
@@ -371,7 +372,7 @@ class TrajectoryData(ArrayData):
             for k in custom_kinds:
                 if not isinstance(k, Kind):
                     raise TypeError(
-                        'Each element of the custom_kinds list must ' 'be a aiida.orm.nodes.data.structure.Kind object'
+                        'Each element of the custom_kinds list must be a aiida.orm.nodes.data.structure.Kind object'
                     )
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):

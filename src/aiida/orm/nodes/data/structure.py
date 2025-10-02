@@ -10,11 +10,13 @@
 functions to operate on them.
 """
 
+from __future__ import annotations
+
 import copy
 import functools
 import itertools
 import json
-import typing as t
+from typing import Optional
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
@@ -669,6 +671,534 @@ def atom_kinds_to_html(atom_kind):
     return html_formula
 
 
+class Kind:
+    """This class contains the information about the species (kinds) of the system.
+
+    It can be a single atom, or an alloy, or even contain vacancies.
+    """
+
+    def __init__(self, **kwargs):
+        """Create a site.
+        One can either pass:
+
+        :param raw: the raw python dictionary that will be converted to a
+               Kind object.
+        :param ase: an ase Atom object
+        :param kind: a Kind object (to get a copy)
+
+        Or alternatively the following parameters:
+
+        :param symbols: a single string for the symbol of this site, or a list
+                   of symbol strings
+        :param weights: (optional) the weights for each atomic species of
+                   this site.
+                   If only a single symbol is provided, then this value is
+                   optional and the weight is set to 1.
+        :param mass: (optional) the mass for this site in atomic mass units.
+                   If not provided, the mass is set by the
+                   self.reset_mass() function.
+        :param name: a string that uniquely identifies the kind, and that
+                   is used to identify the sites.
+        """
+        # Internal variables
+        self._mass = None
+        self._symbols = None
+        self._weights = None
+        self._name = None
+
+        # It will be remain to None in general; it is used to further
+        # identify this species. At the moment, it is used only when importing
+        # from ASE, if the species had a tag (different from zero).
+        ## NOTE! This is not persisted on DB but only used while the class
+        # is loaded in memory (i.e., it is not output with the get_raw() method)
+        self._internal_tag = None
+
+        # Logic to create the site from the raw format
+        if 'raw' in kwargs:
+            if len(kwargs) != 1:
+                raise ValueError("If you pass 'raw', then you cannot pass any other parameter.")
+
+            raw = kwargs['raw']
+
+            try:
+                self.set_symbols_and_weights(raw['symbols'], raw['weights'])
+            except KeyError:
+                raise ValueError("You didn't specify either 'symbols' or 'weights' in the raw site data.")
+            try:
+                self.mass = raw['mass']
+            except KeyError:
+                raise ValueError("You didn't specify the site mass in the raw site data.")
+
+            try:
+                self.name = raw['name']
+            except KeyError:
+                raise ValueError("You didn't specify the name in the raw site data.")
+
+        elif 'kind' in kwargs:
+            if len(kwargs) != 1:
+                raise ValueError("If you pass 'kind', then you cannot pass any other parameter.")
+            oldkind = kwargs['kind']
+
+            try:
+                self.set_symbols_and_weights(oldkind.symbols, oldkind.weights)
+                self.mass = oldkind.mass
+                self.name = oldkind.name
+                self._internal_tag = oldkind._internal_tag
+            except AttributeError:
+                raise ValueError(
+                    'Error using the Kind object. Are you sure '
+                    'it is a Kind object? [Introspection says it is '
+                    '{}]'.format(str(type(oldkind)))
+                )
+
+        elif 'ase' in kwargs:
+            aseatom = kwargs['ase']
+            if len(kwargs) != 1:
+                raise ValueError("If you pass 'ase', then you cannot pass any other parameter.")
+
+            try:
+                import numpy
+
+                self.set_symbols_and_weights([aseatom.symbol], [1.0])
+                # ASE sets mass to numpy.nan for unstable species
+                if not numpy.isnan(aseatom.mass):
+                    self.mass = aseatom.mass
+                else:
+                    self.reset_mass()
+            except AttributeError:
+                raise ValueError(
+                    'Error using the aseatom object. Are you sure '
+                    'it is a ase.atom.Atom object? [Introspection says it is '
+                    '{}]'.format(str(type(aseatom)))
+                )
+            if aseatom.tag != 0:
+                self.set_automatic_kind_name(tag=aseatom.tag)
+                self._internal_tag = aseatom.tag
+            else:
+                self.set_automatic_kind_name()
+        else:
+            if 'symbols' not in kwargs:
+                raise ValueError(
+                    "'symbols' need to be "
+                    'specified (at least) to create a Site object. Otherwise, '
+                    "pass a raw site using the 'raw' parameter."
+                )
+            weights = kwargs.pop('weights', None)
+            self.set_symbols_and_weights(kwargs.pop('symbols'), weights)
+            try:
+                self.mass = kwargs.pop('mass')
+            except KeyError:
+                self.reset_mass()
+            try:
+                self.name = kwargs.pop('name')
+            except KeyError:
+                self.set_automatic_kind_name()
+            if kwargs:
+                raise ValueError(f'Unrecognized parameters passed to Kind constructor: {kwargs.keys()}')
+
+    def get_raw(self):
+        """Return the raw version of the site, mapped to a suitable dictionary.
+        This is the format that is actually used to store each kind of the
+        structure in the DB.
+
+        :return: a python dictionary with the kind.
+        """
+        return {
+            'symbols': self.symbols,
+            'weights': self.weights,
+            'mass': self.mass,
+            'name': self.name,
+        }
+
+    def reset_mass(self):
+        """Reset the mass to the automatic calculated value.
+
+        The mass can be set manually; by default, if not provided,
+        it is the mass of the constituent atoms, weighted with their
+        weight (after the weight has been normalized to one to take
+        correctly into account vacancies).
+
+        This function uses the internal _symbols and _weights values and
+        thus assumes that the values are validated.
+
+        It sets the mass to None if the sum of weights is zero.
+        """
+        w_sum = sum(self._weights)
+
+        if abs(w_sum) < _SUM_THRESHOLD:
+            self._mass = None
+            return
+
+        normalized_weights = (i / w_sum for i in self._weights)
+        element_masses = (_atomic_masses[sym] for sym in self._symbols)
+        # Weighted mass
+        self._mass = sum(i * j for i, j in zip(normalized_weights, element_masses))
+
+    @property
+    def name(self):
+        """Return the name of this kind.
+        The name of a kind is used to identify the species of a site.
+
+        :return: a string
+        """
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        """Set the name of this site (a string)."""
+        self._name = str(value)
+
+    def set_automatic_kind_name(self, tag=None):
+        """Set the type to a string obtained with the symbols appended one
+        after the other, without spaces, in alphabetical order;
+        if the site has a vacancy, a X is appended at the end too.
+        """
+        name_string = create_automatic_kind_name(self.symbols, self.weights)
+        if tag is None:
+            self.name = name_string
+        else:
+            self.name = f'{name_string}{tag}'
+
+    def compare_with(self, other_kind):
+        """Compare with another Kind object to check if they are different.
+
+        .. note:: This does NOT check the 'type' attribute. Instead, it compares
+            (with reasonable thresholds, where applicable): the mass, and the list
+            of symbols and of weights. Moreover, it compares the
+            ``_internal_tag``, if defined (at the moment, defined automatically
+            only when importing the Kind from ASE, if the atom has a non-zero tag).
+            Note that the _internal_tag is only used while the class is loaded,
+            but is not persisted on the database.
+
+        :return: A tuple with two elements. The first one is True if the two sites
+            are 'equivalent' (same mass, symbols and weights), False otherwise.
+            The second element of the tuple is a string,
+            which is either None (if the first element was True), or contains
+            a 'human-readable' description of the first difference encountered
+            between the two sites.
+        """
+        # Check length of symbols
+        if len(self.symbols) != len(other_kind.symbols):
+            return (False, 'Different length of symbols list')
+
+        # Check list of symbols
+        for i, symbol in enumerate(self.symbols):
+            if symbol != other_kind.symbols[i]:
+                return (False, f'Symbol at position {i + 1:d} are different ({symbol} vs. {other_kind.symbols[i]})')
+        # Check weights (assuming length of weights and of symbols have same
+        # length, which should be always true
+        for i, weight in enumerate(self.weights):
+            if weight != other_kind.weights[i]:
+                return (False, f'Weight at position {i + 1:d} are different ({weight} vs. {other_kind.weights[i]})')
+        # Check masses
+        if abs(self.mass - other_kind.mass) > _MASS_THRESHOLD:
+            return (False, f'Masses are different ({self.mass} vs. {other_kind.mass})')
+
+        if self._internal_tag != other_kind._internal_tag:
+            return (False, f'Internal tags are different ({self._internal_tag} vs. {other_kind._internal_tag})')
+
+        # If we got here, the two Site objects are similar enough
+        # to be considered of the same kind
+        return (True, '')
+
+    @property
+    def mass(self):
+        """The mass of this species kind.
+
+        :return: a float
+        """
+        return self._mass
+
+    @mass.setter
+    def mass(self, value):
+        the_mass = float(value)
+        if the_mass <= 0:
+            raise ValueError('The mass must be positive.')
+        self._mass = the_mass
+
+    @property
+    def weights(self):
+        """Weights for this species kind. Refer also to
+        :func:validate_symbols_tuple for the validation rules on the weights.
+        """
+        return copy.deepcopy(self._weights)
+
+    @weights.setter
+    def weights(self, value):
+        """If value is a number, a single weight is used. Otherwise, a list or
+        tuple of numbers is expected.
+        None is also accepted, corresponding to the list [1.].
+        """
+        weights_tuple = _create_weights_tuple(value)
+
+        if len(weights_tuple) != len(self._symbols):
+            raise ValueError('Cannot change the number of weights. Use the set_symbols_and_weights function instead.')
+        validate_weights_tuple(weights_tuple, _SUM_THRESHOLD)
+
+        self._weights = weights_tuple
+
+    def get_symbols_string(self):
+        """Return a string that tries to match as good as possible the symbols
+        of this kind. If there is only one symbol (no alloy) with 100%
+        occupancy, just returns the symbol name. Otherwise, groups the full
+        string in curly brackets, and try to write also the composition
+        (with 2 precision only).
+
+        .. note:: If there is a vacancy (sum of weights<1), we indicate it
+            with the X symbol followed by 1-sum(weights) (still with 2
+            digits precision, so it can be 0.00)
+
+        .. note:: Note the difference with respect to the symbols and the
+            symbol properties!
+        """
+        return get_symbols_string(self._symbols, self._weights)
+
+    @property
+    def symbol(self):
+        """If the kind has only one symbol, return it; otherwise, raise a
+        ValueError.
+        """
+        if len(self._symbols) == 1:
+            return self._symbols[0]
+
+        raise ValueError(f'This kind has more than one symbol (it is an alloy): {self._symbols}')
+
+    @property
+    def symbols(self):
+        """List of symbols for this site. If the site is a single atom,
+        pass a list of one element only, or simply the string for that atom.
+        For alloys, a list of elements.
+
+        .. note:: Note that if you change the list of symbols, the kind
+            name remains unchanged.
+        """
+        return copy.deepcopy(self._symbols)
+
+    @symbols.setter
+    def symbols(self, value):
+        """If value is a string, a single symbol is used. Otherwise, a list or
+        tuple of strings is expected.
+
+        I set a copy of the list, so to avoid that the content changes
+        after the value is set.
+        """
+        symbols_tuple = _create_symbols_tuple(value)
+
+        if len(symbols_tuple) != len(self._weights):
+            raise ValueError('Cannot change the number of symbols. Use the set_symbols_and_weights function instead.')
+        validate_symbols_tuple(symbols_tuple)
+
+        self._symbols = symbols_tuple
+
+    def set_symbols_and_weights(self, symbols, weights):
+        """Set the chemical symbols and the weights for the site.
+
+        .. note:: Note that the kind name remains unchanged.
+        """
+        symbols_tuple = _create_symbols_tuple(symbols)
+        weights_tuple = _create_weights_tuple(weights)
+        if len(symbols_tuple) != len(weights_tuple):
+            raise ValueError('The number of symbols and weights must coincide.')
+        validate_symbols_tuple(symbols_tuple)
+        validate_weights_tuple(weights_tuple, _SUM_THRESHOLD)
+        self._symbols = symbols_tuple
+        self._weights = weights_tuple
+
+    @property
+    def is_alloy(self):
+        """Return whether the Kind is an alloy, i.e. contains more than one element
+
+        :return: boolean, True if the kind has more than one element, False otherwise.
+        """
+        return len(self._symbols) != 1
+
+    @property
+    def has_vacancies(self):
+        """Return whether the Kind contains vacancies, i.e. when the sum of the weights is less than one.
+
+        .. note:: the property uses the internal variable `_SUM_THRESHOLD` as a threshold.
+
+        :return: boolean, True if the sum of the weights is less than one, False otherwise
+        """
+        return has_vacancies(self._weights)
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__}: {self!s}>'
+
+    def __str__(self):
+        symbol = self.get_symbols_string()
+        return f"name '{self.name}', symbol '{symbol}'"
+
+
+class Site:
+    """This class contains the information about a given site of the system.
+
+    It can be a single atom, or an alloy, or even contain vacancies.
+    """
+
+    def __init__(self, **kwargs):
+        """Create a site.
+
+        :param kind_name: a string that identifies the kind (species) of this site.
+                This has to be found in the list of kinds of the StructureData
+                object.
+                Validation will be done at the StructureData level.
+        :param position: the absolute position (three floats) in angstrom
+        """
+        self._kind_name = None
+        self._position = None
+
+        if 'site' in kwargs:
+            site = kwargs.pop('site')
+            if kwargs:
+                raise ValueError("If you pass 'site', you cannot pass any further parameter to the Site constructor")
+            if not isinstance(site, Site):
+                raise ValueError("'site' must be of type Site")
+            self.kind_name = site.kind_name
+            self.position = site.position
+        elif 'raw' in kwargs:
+            raw = kwargs.pop('raw')
+            if kwargs:
+                raise ValueError("If you pass 'raw', you cannot pass any further parameter to the Site constructor")
+            try:
+                self.kind_name = raw['kind_name']
+                self.position = raw['position']
+            except KeyError as exc:
+                raise ValueError(f'Invalid raw object, it does not contain any key {exc.args[0]}')
+            except TypeError:
+                raise ValueError('Invalid raw object, it is not a dictionary')
+
+        else:
+            try:
+                self.kind_name = kwargs.pop('kind_name')
+                self.position = kwargs.pop('position')
+            except KeyError as exc:
+                raise ValueError(f'You need to specify {exc.args[0]}')
+            if kwargs:
+                raise ValueError(f'Unrecognized parameters: {kwargs.keys}')
+
+    def get_raw(self):
+        """Return the raw version of the site, mapped to a suitable dictionary.
+        This is the format that is actually used to store each site of the
+        structure in the DB.
+
+        :return: a python dictionary with the site.
+        """
+        return {
+            'position': self.position,
+            'kind_name': self.kind_name,
+        }
+
+    def get_ase(self, kinds):
+        """Return a ase.Atom object for this site.
+
+        :param kinds: the list of kinds from the StructureData object.
+
+        .. note:: If any site is an alloy or has vacancies, a ValueError
+            is raised (from the site.get_ase() routine).
+        """
+        from collections import defaultdict
+
+        import ase
+
+        # I create the list of tags
+        tag_list = []
+        used_tags = defaultdict(list)
+        for k in kinds:
+            # Skip alloys and vacancies
+            if k.is_alloy or k.has_vacancies:
+                tag_list.append(None)
+            # If the kind name is equal to the specie name,
+            # then no tag should be set
+            elif str(k.name) == str(k.symbols[0]):
+                tag_list.append(None)
+            else:
+                # Name is not the specie name
+                if k.name.startswith(k.symbols[0]):
+                    try:
+                        new_tag = int(k.name[len(k.symbols[0])])
+                        tag_list.append(new_tag)
+                        used_tags[k.symbols[0]].append(new_tag)
+                        continue
+                    except ValueError:
+                        pass
+                tag_list.append(k.symbols[0])  # I use a string as a placeholder
+
+        for i, _ in enumerate(tag_list):
+            # If it is a string, it is the name of the element,
+            # and I have to generate a new integer for this element
+            # and replace tag_list[i] with this new integer
+            if isinstance(tag_list[i], str):
+                # I get a list of used tags for this element
+                existing_tags = used_tags[tag_list[i]]
+                if existing_tags:
+                    new_tag = max(existing_tags) + 1
+                else:  # empty list
+                    new_tag = 1
+                # I store it also as a used tag!
+                used_tags[tag_list[i]].append(new_tag)
+                # I update the tag
+                tag_list[i] = new_tag
+
+        found = False
+        for kind_candidate, tag_candidate in zip(kinds, tag_list):
+            if kind_candidate.name == self.kind_name:
+                kind = kind_candidate
+                tag = tag_candidate
+                found = True
+                break
+        if not found:
+            raise ValueError(f"No kind '{self.kind_name}' has been found in the list of kinds")
+
+        if kind.is_alloy or kind.has_vacancies:
+            raise ValueError('Cannot convert to ASE if the kind represents an alloy or it has vacancies.')
+        aseatom = ase.Atom(position=self.position, symbol=str(kind.symbols[0]), mass=kind.mass)
+        if tag is not None:
+            aseatom.tag = tag
+        return aseatom
+
+    @property
+    def kind_name(self):
+        """Return the kind name of this site (a string).
+
+        The type of a site is used to decide whether two sites are identical
+        (same mass, symbols, weights, ...) or not.
+        """
+        return self._kind_name
+
+    @kind_name.setter
+    def kind_name(self, value):
+        """Set the type of this site (a string)."""
+        self._kind_name = str(value)
+
+    @property
+    def position(self):
+        """Return the position of this site in absolute coordinates,
+        in angstrom.
+        """
+        return copy.deepcopy(self._position)
+
+    @position.setter
+    def position(self, value):
+        """Set the position of this site in absolute coordinates,
+        in angstrom.
+        """
+        try:
+            internal_pos = tuple(float(i) for i in value)
+            if len(internal_pos) != 3:
+                raise ValueError
+        # value is not iterable or elements are not floats or len != 3
+        except (ValueError, TypeError):
+            raise ValueError('Wrong format for position, must be a list of three float numbers.')
+        self._position = internal_pos
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__}: {self!s}>'
+
+    def __str__(self):
+        return f"kind name '{self.kind_name}' @ {self.position[0]},{self.position[1]},{self.position[2]}"
+
+
 class StructureData(Data):
     """Data class that represents an atomic structure.
 
@@ -700,9 +1230,9 @@ class StructureData(Data):
         pbc1: bool = MetadataField(description='Whether periodic in the a direction')
         pbc2: bool = MetadataField(description='Whether periodic in the b direction')
         pbc3: bool = MetadataField(description='Whether periodic in the c direction')
-        cell: t.List[t.List[float]] = MetadataField(description='The cell parameters')
-        kinds: t.Optional[t.List[dict]] = MetadataField(description='The kinds of atoms')
-        sites: t.Optional[t.List[dict]] = MetadataField(description='The atomic sites')
+        cell: list[list[float]] = MetadataField(description='The cell parameters')
+        kinds: Optional[list[dict]] = MetadataField(None, description='The kinds of atoms')
+        sites: Optional[list[dict]] = MetadataField(None, description='The atomic sites')
 
     def __init__(
         self,
@@ -1528,7 +2058,7 @@ class StructureData(Data):
         return [k.name for k in self.kinds]
 
     @property
-    def cell(self) -> t.List[t.List[float]]:
+    def cell(self) -> list[list[float]]:
         """Returns the cell shape.
 
         :return: a 3x3 list of lists.
@@ -1883,538 +2413,6 @@ class StructureData(Data):
 
         positions = [list(site.position) for site in self.sites]
         return Molecule(species, positions)
-
-
-class Kind:
-    """This class contains the information about the species (kinds) of the system.
-
-    It can be a single atom, or an alloy, or even contain vacancies.
-    """
-
-    def __init__(self, **kwargs):
-        """Create a site.
-        One can either pass:
-
-        :param raw: the raw python dictionary that will be converted to a
-               Kind object.
-        :param ase: an ase Atom object
-        :param kind: a Kind object (to get a copy)
-
-        Or alternatively the following parameters:
-
-        :param symbols: a single string for the symbol of this site, or a list
-                   of symbol strings
-        :param weights: (optional) the weights for each atomic species of
-                   this site.
-                   If only a single symbol is provided, then this value is
-                   optional and the weight is set to 1.
-        :param mass: (optional) the mass for this site in atomic mass units.
-                   If not provided, the mass is set by the
-                   self.reset_mass() function.
-        :param name: a string that uniquely identifies the kind, and that
-                   is used to identify the sites.
-        """
-        # Internal variables
-        self._mass = None
-        self._symbols = None
-        self._weights = None
-        self._name = None
-
-        # It will be remain to None in general; it is used to further
-        # identify this species. At the moment, it is used only when importing
-        # from ASE, if the species had a tag (different from zero).
-        ## NOTE! This is not persisted on DB but only used while the class
-        # is loaded in memory (i.e., it is not output with the get_raw() method)
-        self._internal_tag = None
-
-        # Logic to create the site from the raw format
-        if 'raw' in kwargs:
-            if len(kwargs) != 1:
-                raise ValueError("If you pass 'raw', then you cannot pass any other parameter.")
-
-            raw = kwargs['raw']
-
-            try:
-                self.set_symbols_and_weights(raw['symbols'], raw['weights'])
-            except KeyError:
-                raise ValueError("You didn't specify either 'symbols' or 'weights' in the raw site data.")
-            try:
-                self.mass = raw['mass']
-            except KeyError:
-                raise ValueError("You didn't specify the site mass in the raw site data.")
-
-            try:
-                self.name = raw['name']
-            except KeyError:
-                raise ValueError("You didn't specify the name in the raw site data.")
-
-        elif 'kind' in kwargs:
-            if len(kwargs) != 1:
-                raise ValueError("If you pass 'kind', then you cannot pass any other parameter.")
-            oldkind = kwargs['kind']
-
-            try:
-                self.set_symbols_and_weights(oldkind.symbols, oldkind.weights)
-                self.mass = oldkind.mass
-                self.name = oldkind.name
-                self._internal_tag = oldkind._internal_tag
-            except AttributeError:
-                raise ValueError(
-                    'Error using the Kind object. Are you sure '
-                    'it is a Kind object? [Introspection says it is '
-                    '{}]'.format(str(type(oldkind)))
-                )
-
-        elif 'ase' in kwargs:
-            aseatom = kwargs['ase']
-            if len(kwargs) != 1:
-                raise ValueError("If you pass 'ase', then you cannot pass any other parameter.")
-
-            try:
-                import numpy
-
-                self.set_symbols_and_weights([aseatom.symbol], [1.0])
-                # ASE sets mass to numpy.nan for unstable species
-                if not numpy.isnan(aseatom.mass):
-                    self.mass = aseatom.mass
-                else:
-                    self.reset_mass()
-            except AttributeError:
-                raise ValueError(
-                    'Error using the aseatom object. Are you sure '
-                    'it is a ase.atom.Atom object? [Introspection says it is '
-                    '{}]'.format(str(type(aseatom)))
-                )
-            if aseatom.tag != 0:
-                self.set_automatic_kind_name(tag=aseatom.tag)
-                self._internal_tag = aseatom.tag
-            else:
-                self.set_automatic_kind_name()
-        else:
-            if 'symbols' not in kwargs:
-                raise ValueError(
-                    "'symbols' need to be "
-                    'specified (at least) to create a Site object. Otherwise, '
-                    "pass a raw site using the 'raw' parameter."
-                )
-            weights = kwargs.pop('weights', None)
-            self.set_symbols_and_weights(kwargs.pop('symbols'), weights)
-            try:
-                self.mass = kwargs.pop('mass')
-            except KeyError:
-                self.reset_mass()
-            try:
-                self.name = kwargs.pop('name')
-            except KeyError:
-                self.set_automatic_kind_name()
-            if kwargs:
-                raise ValueError(f'Unrecognized parameters passed to Kind constructor: {kwargs.keys()}')
-
-    def get_raw(self):
-        """Return the raw version of the site, mapped to a suitable dictionary.
-        This is the format that is actually used to store each kind of the
-        structure in the DB.
-
-        :return: a python dictionary with the kind.
-        """
-        return {
-            'symbols': self.symbols,
-            'weights': self.weights,
-            'mass': self.mass,
-            'name': self.name,
-        }
-
-    def reset_mass(self):
-        """Reset the mass to the automatic calculated value.
-
-        The mass can be set manually; by default, if not provided,
-        it is the mass of the constituent atoms, weighted with their
-        weight (after the weight has been normalized to one to take
-        correctly into account vacancies).
-
-        This function uses the internal _symbols and _weights values and
-        thus assumes that the values are validated.
-
-        It sets the mass to None if the sum of weights is zero.
-        """
-        w_sum = sum(self._weights)
-
-        if abs(w_sum) < _SUM_THRESHOLD:
-            self._mass = None
-            return
-
-        normalized_weights = (i / w_sum for i in self._weights)
-        element_masses = (_atomic_masses[sym] for sym in self._symbols)
-        # Weighted mass
-        self._mass = sum(i * j for i, j in zip(normalized_weights, element_masses))
-
-    @property
-    def name(self):
-        """Return the name of this kind.
-        The name of a kind is used to identify the species of a site.
-
-        :return: a string
-        """
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        """Set the name of this site (a string)."""
-        self._name = str(value)
-
-    def set_automatic_kind_name(self, tag=None):
-        """Set the type to a string obtained with the symbols appended one
-        after the other, without spaces, in alphabetical order;
-        if the site has a vacancy, a X is appended at the end too.
-        """
-        name_string = create_automatic_kind_name(self.symbols, self.weights)
-        if tag is None:
-            self.name = name_string
-        else:
-            self.name = f'{name_string}{tag}'
-
-    def compare_with(self, other_kind):
-        """Compare with another Kind object to check if they are different.
-
-        .. note:: This does NOT check the 'type' attribute. Instead, it compares
-            (with reasonable thresholds, where applicable): the mass, and the list
-            of symbols and of weights. Moreover, it compares the
-            ``_internal_tag``, if defined (at the moment, defined automatically
-            only when importing the Kind from ASE, if the atom has a non-zero tag).
-            Note that the _internal_tag is only used while the class is loaded,
-            but is not persisted on the database.
-
-        :return: A tuple with two elements. The first one is True if the two sites
-            are 'equivalent' (same mass, symbols and weights), False otherwise.
-            The second element of the tuple is a string,
-            which is either None (if the first element was True), or contains
-            a 'human-readable' description of the first difference encountered
-            between the two sites.
-        """
-        # Check length of symbols
-        if len(self.symbols) != len(other_kind.symbols):
-            return (False, 'Different length of symbols list')
-
-        # Check list of symbols
-        for i, symbol in enumerate(self.symbols):
-            if symbol != other_kind.symbols[i]:
-                return (False, f'Symbol at position {i + 1:d} are different ({symbol} vs. {other_kind.symbols[i]})')
-        # Check weights (assuming length of weights and of symbols have same
-        # length, which should be always true
-        for i, weight in enumerate(self.weights):
-            if weight != other_kind.weights[i]:
-                return (False, f'Weight at position {i + 1:d} are different ({weight} vs. {other_kind.weights[i]})')
-        # Check masses
-        if abs(self.mass - other_kind.mass) > _MASS_THRESHOLD:
-            return (False, f'Masses are different ({self.mass} vs. {other_kind.mass})')
-
-        if self._internal_tag != other_kind._internal_tag:
-            return (False, f'Internal tags are different ({self._internal_tag} vs. {other_kind._internal_tag})')
-
-        # If we got here, the two Site objects are similar enough
-        # to be considered of the same kind
-        return (True, '')
-
-    @property
-    def mass(self):
-        """The mass of this species kind.
-
-        :return: a float
-        """
-        return self._mass
-
-    @mass.setter
-    def mass(self, value):
-        the_mass = float(value)
-        if the_mass <= 0:
-            raise ValueError('The mass must be positive.')
-        self._mass = the_mass
-
-    @property
-    def weights(self):
-        """Weights for this species kind. Refer also to
-        :func:validate_symbols_tuple for the validation rules on the weights.
-        """
-        return copy.deepcopy(self._weights)
-
-    @weights.setter
-    def weights(self, value):
-        """If value is a number, a single weight is used. Otherwise, a list or
-        tuple of numbers is expected.
-        None is also accepted, corresponding to the list [1.].
-        """
-        weights_tuple = _create_weights_tuple(value)
-
-        if len(weights_tuple) != len(self._symbols):
-            raise ValueError(
-                'Cannot change the number of weights. Use the ' 'set_symbols_and_weights function instead.'
-            )
-        validate_weights_tuple(weights_tuple, _SUM_THRESHOLD)
-
-        self._weights = weights_tuple
-
-    def get_symbols_string(self):
-        """Return a string that tries to match as good as possible the symbols
-        of this kind. If there is only one symbol (no alloy) with 100%
-        occupancy, just returns the symbol name. Otherwise, groups the full
-        string in curly brackets, and try to write also the composition
-        (with 2 precision only).
-
-        .. note:: If there is a vacancy (sum of weights<1), we indicate it
-            with the X symbol followed by 1-sum(weights) (still with 2
-            digits precision, so it can be 0.00)
-
-        .. note:: Note the difference with respect to the symbols and the
-            symbol properties!
-        """
-        return get_symbols_string(self._symbols, self._weights)
-
-    @property
-    def symbol(self):
-        """If the kind has only one symbol, return it; otherwise, raise a
-        ValueError.
-        """
-        if len(self._symbols) == 1:
-            return self._symbols[0]
-
-        raise ValueError(f'This kind has more than one symbol (it is an alloy): {self._symbols}')
-
-    @property
-    def symbols(self):
-        """List of symbols for this site. If the site is a single atom,
-        pass a list of one element only, or simply the string for that atom.
-        For alloys, a list of elements.
-
-        .. note:: Note that if you change the list of symbols, the kind
-            name remains unchanged.
-        """
-        return copy.deepcopy(self._symbols)
-
-    @symbols.setter
-    def symbols(self, value):
-        """If value is a string, a single symbol is used. Otherwise, a list or
-        tuple of strings is expected.
-
-        I set a copy of the list, so to avoid that the content changes
-        after the value is set.
-        """
-        symbols_tuple = _create_symbols_tuple(value)
-
-        if len(symbols_tuple) != len(self._weights):
-            raise ValueError(
-                'Cannot change the number of symbols. Use the ' 'set_symbols_and_weights function instead.'
-            )
-        validate_symbols_tuple(symbols_tuple)
-
-        self._symbols = symbols_tuple
-
-    def set_symbols_and_weights(self, symbols, weights):
-        """Set the chemical symbols and the weights for the site.
-
-        .. note:: Note that the kind name remains unchanged.
-        """
-        symbols_tuple = _create_symbols_tuple(symbols)
-        weights_tuple = _create_weights_tuple(weights)
-        if len(symbols_tuple) != len(weights_tuple):
-            raise ValueError('The number of symbols and weights must coincide.')
-        validate_symbols_tuple(symbols_tuple)
-        validate_weights_tuple(weights_tuple, _SUM_THRESHOLD)
-        self._symbols = symbols_tuple
-        self._weights = weights_tuple
-
-    @property
-    def is_alloy(self):
-        """Return whether the Kind is an alloy, i.e. contains more than one element
-
-        :return: boolean, True if the kind has more than one element, False otherwise.
-        """
-        return len(self._symbols) != 1
-
-    @property
-    def has_vacancies(self):
-        """Return whether the Kind contains vacancies, i.e. when the sum of the weights is less than one.
-
-        .. note:: the property uses the internal variable `_SUM_THRESHOLD` as a threshold.
-
-        :return: boolean, True if the sum of the weights is less than one, False otherwise
-        """
-        return has_vacancies(self._weights)
-
-    def __repr__(self):
-        return f'<{self.__class__.__name__}: {self!s}>'
-
-    def __str__(self):
-        symbol = self.get_symbols_string()
-        return f"name '{self.name}', symbol '{symbol}'"
-
-
-class Site:
-    """This class contains the information about a given site of the system.
-
-    It can be a single atom, or an alloy, or even contain vacancies.
-    """
-
-    def __init__(self, **kwargs):
-        """Create a site.
-
-        :param kind_name: a string that identifies the kind (species) of this site.
-                This has to be found in the list of kinds of the StructureData
-                object.
-                Validation will be done at the StructureData level.
-        :param position: the absolute position (three floats) in angstrom
-        """
-        self._kind_name = None
-        self._position = None
-
-        if 'site' in kwargs:
-            site = kwargs.pop('site')
-            if kwargs:
-                raise ValueError("If you pass 'site', you cannot pass any further parameter to the Site constructor")
-            if not isinstance(site, Site):
-                raise ValueError("'site' must be of type Site")
-            self.kind_name = site.kind_name
-            self.position = site.position
-        elif 'raw' in kwargs:
-            raw = kwargs.pop('raw')
-            if kwargs:
-                raise ValueError("If you pass 'raw', you cannot pass any further parameter to the Site constructor")
-            try:
-                self.kind_name = raw['kind_name']
-                self.position = raw['position']
-            except KeyError as exc:
-                raise ValueError(f'Invalid raw object, it does not contain any key {exc.args[0]}')
-            except TypeError:
-                raise ValueError('Invalid raw object, it is not a dictionary')
-
-        else:
-            try:
-                self.kind_name = kwargs.pop('kind_name')
-                self.position = kwargs.pop('position')
-            except KeyError as exc:
-                raise ValueError(f'You need to specify {exc.args[0]}')
-            if kwargs:
-                raise ValueError(f'Unrecognized parameters: {kwargs.keys}')
-
-    def get_raw(self):
-        """Return the raw version of the site, mapped to a suitable dictionary.
-        This is the format that is actually used to store each site of the
-        structure in the DB.
-
-        :return: a python dictionary with the site.
-        """
-        return {
-            'position': self.position,
-            'kind_name': self.kind_name,
-        }
-
-    def get_ase(self, kinds):
-        """Return a ase.Atom object for this site.
-
-        :param kinds: the list of kinds from the StructureData object.
-
-        .. note:: If any site is an alloy or has vacancies, a ValueError
-            is raised (from the site.get_ase() routine).
-        """
-        from collections import defaultdict
-
-        import ase
-
-        # I create the list of tags
-        tag_list = []
-        used_tags = defaultdict(list)
-        for k in kinds:
-            # Skip alloys and vacancies
-            if k.is_alloy or k.has_vacancies:
-                tag_list.append(None)
-            # If the kind name is equal to the specie name,
-            # then no tag should be set
-            elif str(k.name) == str(k.symbols[0]):
-                tag_list.append(None)
-            else:
-                # Name is not the specie name
-                if k.name.startswith(k.symbols[0]):
-                    try:
-                        new_tag = int(k.name[len(k.symbols[0])])
-                        tag_list.append(new_tag)
-                        used_tags[k.symbols[0]].append(new_tag)
-                        continue
-                    except ValueError:
-                        pass
-                tag_list.append(k.symbols[0])  # I use a string as a placeholder
-
-        for i, _ in enumerate(tag_list):
-            # If it is a string, it is the name of the element,
-            # and I have to generate a new integer for this element
-            # and replace tag_list[i] with this new integer
-            if isinstance(tag_list[i], str):
-                # I get a list of used tags for this element
-                existing_tags = used_tags[tag_list[i]]
-                if existing_tags:
-                    new_tag = max(existing_tags) + 1
-                else:  # empty list
-                    new_tag = 1
-                # I store it also as a used tag!
-                used_tags[tag_list[i]].append(new_tag)
-                # I update the tag
-                tag_list[i] = new_tag
-
-        found = False
-        for kind_candidate, tag_candidate in zip(kinds, tag_list):
-            if kind_candidate.name == self.kind_name:
-                kind = kind_candidate
-                tag = tag_candidate
-                found = True
-                break
-        if not found:
-            raise ValueError(f"No kind '{self.kind_name}' has been found in the list of kinds")
-
-        if kind.is_alloy or kind.has_vacancies:
-            raise ValueError('Cannot convert to ASE if the kind represents an alloy or it has vacancies.')
-        aseatom = ase.Atom(position=self.position, symbol=str(kind.symbols[0]), mass=kind.mass)
-        if tag is not None:
-            aseatom.tag = tag
-        return aseatom
-
-    @property
-    def kind_name(self):
-        """Return the kind name of this site (a string).
-
-        The type of a site is used to decide whether two sites are identical
-        (same mass, symbols, weights, ...) or not.
-        """
-        return self._kind_name
-
-    @kind_name.setter
-    def kind_name(self, value):
-        """Set the type of this site (a string)."""
-        self._kind_name = str(value)
-
-    @property
-    def position(self):
-        """Return the position of this site in absolute coordinates,
-        in angstrom.
-        """
-        return copy.deepcopy(self._position)
-
-    @position.setter
-    def position(self, value):
-        """Set the position of this site in absolute coordinates,
-        in angstrom.
-        """
-        try:
-            internal_pos = tuple(float(i) for i in value)
-            if len(internal_pos) != 3:
-                raise ValueError
-        # value is not iterable or elements are not floats or len != 3
-        except (ValueError, TypeError):
-            raise ValueError('Wrong format for position, must be a list of three float numbers.')
-        self._position = internal_pos
-
-    def __repr__(self):
-        return f'<{self.__class__.__name__}: {self!s}>'
-
-    def __str__(self):
-        return f"kind name '{self.kind_name}' @ {self.position[0]},{self.position[1]},{self.position[2]}"
 
 
 def _get_dimensionality(pbc, cell):

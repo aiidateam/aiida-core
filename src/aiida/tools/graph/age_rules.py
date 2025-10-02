@@ -89,7 +89,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
             elif query_dict['path'][idx]['entity_type'].startswith(GROUP_ENTITY_TYPE_PREFIX):
                 result = 'groups'
             else:
-                raise RuntimeError(f'not understood entity from ( {query_dict["path"][idx]["entity_type"]} )')
+                raise RuntimeError(f"not understood entity from ( {query_dict['path'][idx]['entity_type']} )")
             return result
 
         query_dict = querybuilder.as_dict()
@@ -232,7 +232,6 @@ class QueryRule(Operation, metaclass=ABCMeta):
         all_results = []
 
         for _, batch_primkeys in batch_iter(iterable=primkeys, size=DEFAULT_FILTER_SIZE):
-            # Use deepcopy only when we need to batch
             batch_qb = deepcopy(self._querybuilder)
             batch_qb.add_filter(
                 self._first_tag, {operational_set[self._entity_from].identifier: {'in': batch_primkeys}}

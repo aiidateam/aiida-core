@@ -83,7 +83,6 @@ def override_decorator(check: bool = False) -> Callable[[MethodType], MethodType
 override = override_decorator(check=False)
 
 ReturnType = TypeVar('ReturnType')
-SelfType = TypeVar('SelfType')
 
 
 class classproperty(Generic[ReturnType]):  # noqa: N801
@@ -94,9 +93,8 @@ class classproperty(Generic[ReturnType]):  # noqa: N801
     instance as its first argument).
     """
 
-    def __init__(self, getter: Callable[[SelfType], ReturnType]) -> None:
+    def __init__(self, getter: Callable[[Any], ReturnType]) -> None:
         self.getter = getter
 
-    # mypy error: Argument 1 has incompatible type "SelfType@__get__"; expected "SelfType@__init__"
-    def __get__(self, instance: Any, owner: SelfType) -> ReturnType:
-        return self.getter(owner)  # type: ignore[arg-type]
+    def __get__(self, instance: Any, owner: type) -> ReturnType:
+        return self.getter(owner)

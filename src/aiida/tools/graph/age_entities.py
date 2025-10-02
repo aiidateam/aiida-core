@@ -131,8 +131,6 @@ class AbstractSetContainer(metaclass=ABCMeta):
         return f"{{{','.join(map(str, self.keyset))}}}"
 
     def __eq__(self, other: Any) -> Any:
-        if not issubclass(other, AbstractSetContainer):
-            return False
         return self.keyset == other.keyset
 
     def __ne__(self, other: Any) -> bool:

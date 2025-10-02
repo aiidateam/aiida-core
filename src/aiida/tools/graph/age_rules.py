@@ -134,7 +134,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
 
         # All of these are set in _init_run:
         self._edge_label: str | None = None
-        self._edge_keys: list[_EdgeKey] | None = None
+        self._edge_keys: list[_EdgeKey] = []
         self._entity_to_identifier: str | None = None
 
         self._entity_from = get_spec_from_path(query_dict, 0)
@@ -245,7 +245,6 @@ class QueryRule(Operation, metaclass=ABCMeta):
 
         assert self._querybuilder is not None
         assert self._entity_to_identifier is not None
-        assert self._edge_keys is not None
 
         if primkeys:
             self._querybuilder.add_filter(
@@ -260,6 +259,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
             )
 
             if self._track_edges:
+                assert self._edge_keys is not None
                 # As in _init_run, I need the key for the edge_set
                 edge_key = cast(
                     "Literal['nodes_nodes', 'groups_nodes']",
@@ -268,7 +268,6 @@ class QueryRule(Operation, metaclass=ABCMeta):
                 edge_set = operational_set.dict[edge_key]
                 namedtuple_ = edge_set.edge_namedtuple
 
-                # TODO: Understand the type ignore
                 target_set[edge_key].add_entities(
                     [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in qres]  # type: ignore[misc]
                 )

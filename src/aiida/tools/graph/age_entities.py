@@ -12,20 +12,20 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 from aiida import orm
-from aiida.common.typing import Self
+from aiida.common.typing import Self, TypeAlias
 from aiida.orm.utils.links import LinkQuadruple
 
 VALID_ENTITY_CLASSES = (orm.Node, orm.Group)
 
 GroupNodeEdge = namedtuple('GroupNodeEdge', ['node_id', 'group_id'])
 
-_NodeOrGroupCls = type[orm.Node] | type[orm.Group]
-_ContainerTypes = list[Any] | tuple[Any, ...] | set[Any]
-_EdgeType = type[LinkQuadruple] | type[GroupNodeEdge]
-_EdgeIdentifiers = tuple[tuple[str, str], ...]
+_NodeOrGroupCls: TypeAlias = 'type[orm.Node] | type[orm.Group]'
+_ContainerTypes: TypeAlias = 'list[Any] | tuple[Any, ...] | set[Any]'
+_EdgeType: TypeAlias = 'type[LinkQuadruple] | type[GroupNodeEdge]'
+_EdgeIdentifiers: TypeAlias = tuple[tuple[str, str], ...]
 
 
 class AbstractSetContainer(metaclass=ABCMeta):
@@ -311,6 +311,19 @@ class DirectedEdgeSet(AbstractSetContainer):
         return self._edge_identifiers
 
 
+# NOTE: Lot of the remaining type-ignores in the Basket class are due to
+# https://github.com/python/mypy/issues/7981
+class _BasketDict(TypedDict):
+    nodes: AiidaEntitySet
+    groups: AiidaEntitySet
+    nodes_nodes: DirectedEdgeSet
+    groups_nodes: DirectedEdgeSet
+
+
+_BasketKeys: TypeAlias = Literal['nodes', 'groups', 'nodes_nodes', 'groups_nodes']
+_BasketValues: TypeAlias = 'AiidaEntitySet | DirectedEdgeSet'
+
+
 class Basket:
     """Container for several instances of
     :py:class:`aiida.tools.graph.age_entities.AiidaEntitySet` .
@@ -381,7 +394,7 @@ class Basket:
         groups = get_check_set_entity_set(groups, 'groups', orm.Group)
         nodes_nodes = get_check_set_directed_edge_set(nodes_nodes, 'nodes-nodes', orm.Node, orm.Node)
         groups_nodes = get_check_set_directed_edge_set(groups_nodes, 'groups-nodes', orm.Node, orm.Group)
-        self._dict = dict(nodes=nodes, groups=groups, nodes_nodes=nodes_nodes, groups_nodes=groups_nodes)
+        self._dict: _BasketDict = dict(nodes=nodes, groups=groups, nodes_nodes=nodes_nodes, groups_nodes=groups_nodes)
 
     @property
     def sets(self) -> tuple[Any, ...]:
@@ -391,7 +404,7 @@ class Basket:
         return list(zip(*sorted(self.dict.items())))[1]
 
     @property
-    def dict(self) -> dict[str, Any]:
+    def dict(self) -> _BasketDict:
         """All sets in the basket returned as a dictionary.
         This includes the keys 'nodes', 'groups', 'nodes_nodes' and 'nodes_groups'.
         """
@@ -400,39 +413,39 @@ class Basket:
     @property
     def nodes(self) -> AiidaEntitySet:
         """Set of nodes stored in the basket"""
-        return self._dict['nodes']  # type: ignore[return-value]
+        return self._dict['nodes']
 
     @property
     def groups(self) -> AiidaEntitySet:
         """Set of groups stored in the basket"""
-        return self._dict['groups']  # type: ignore[return-value]
+        return self._dict['groups']
 
-    def __getitem__(self, key: str) -> AiidaEntitySet | DirectedEdgeSet:
-        return self._dict[key]  # type: ignore[return-value]
+    def __getitem__(self, key: _BasketKeys) -> _BasketValues:
+        return self._dict[key]
 
-    def __setitem__(self, key: str, val: AiidaEntitySet | DirectedEdgeSet) -> None:
+    def __setitem__(self, key: _BasketKeys, val: _BasketValues) -> None:
         self._dict[key] = val
 
-    def __add__(self, other: Self) -> Self:
+    def __add__(self, other: Self) -> 'Basket':
         new_dict = {}
         for key, value in self._dict.items():
-            new_dict[key] = value + other.dict[key]
-        return Basket(**new_dict)  # type: ignore[return-value]
+            new_dict[key] = value + other.dict[key]  # type: ignore[literal-required]
+        return Basket(**new_dict)
 
     def __iadd__(self, other: Self) -> Self:
         for key in self._dict:
-            self[key] += other[key]  # type: ignore[operator]
+            self[key] += other[key]  # type: ignore[index,operator]
         return self
 
-    def __sub__(self, other: Self) -> Self:
+    def __sub__(self, other: Self) -> 'Basket':
         new_dict = {}
         for key in self._dict:
-            new_dict[key] = self[key] - other[key]  # type: ignore[operator]
-        return Basket(**new_dict)  # type: ignore[return-value,arg-type]
+            new_dict[key] = self[key] - other[key]  # type: ignore[index,operator]
+        return Basket(**new_dict)  # type: ignore[arg-type]
 
     def __isub__(self, other: Self) -> Self:
         for key in other.dict:
-            self[key] -= other[key]  # type: ignore[operator]
+            self[key] -= other[key]  # type: ignore[index,operator]
         return self
 
     def __len__(self) -> int:
@@ -442,7 +455,7 @@ class Basket:
         if not isinstance(other, Basket):
             return False
         for key in self._dict:
-            if self[key] != other[key]:
+            if self[key] != other[key]:  # type: ignore[index]
                 return False
         return True
 
@@ -460,18 +473,18 @@ class Basket:
     def empty(self) -> None:
         """Empty every subset from its content"""
         for set_ in self._dict.values():
-            set_.empty()
+            set_.empty()  # type: ignore[attr-defined]
 
-    def get_template(self) -> Self:
+    def get_template(self) -> 'Basket':
         """Create new nasket with the same defining attributes for its internal containers."""
         new_dict = {}
         for key, val in self._dict.items():
-            new_dict[key] = val.get_template()
-        return Basket(**new_dict)  # type: ignore[arg-type, return-value]
+            new_dict[key] = val.get_template()  # type: ignore[attr-defined]
+        return Basket(**new_dict)
 
-    def copy(self) -> Self:
+    def copy(self) -> 'Basket':
         """Create new instance with the same defining attributes and content."""
         new_dict = {}
         for key, val in self._dict.items():
-            new_dict[key] = val.copy()
-        return Basket(**new_dict)  # type: ignore[arg-type, return-value]
+            new_dict[key] = val.copy()  # type: ignore[attr-defined]
+        return Basket(**new_dict)

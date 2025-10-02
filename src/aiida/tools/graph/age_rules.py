@@ -13,7 +13,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 from aiida import orm
 from aiida.common.lang import type_check
@@ -199,7 +199,10 @@ class QueryRule(Operation, metaclass=ABCMeta):
             # Need to get the edge_set: This is given by entity1_entity2. Here, the results needs to
             # be sorted somehow in order to ensure that the same key is used when entity_from and
             # entity_to are exchanged.
-            edge_set = operational_set.dict['{}_{}'.format(*sorted((self._entity_from, self._entity_to)))]
+            edge_key = cast(
+                "Literal['nodes_nodes', 'groups_nodes']", '{}_{}'.format(*sorted((self._entity_from, self._entity_to)))
+            )
+            edge_set = operational_set.dict[edge_key]
 
             # Looping over the edge identifiers to figure out what I need to project and in which
             # order. The order is important! The rules:
@@ -258,7 +261,10 @@ class QueryRule(Operation, metaclass=ABCMeta):
 
             if self._track_edges:
                 # As in _init_run, I need the key for the edge_set
-                edge_key = '{}_{}'.format(*sorted((self._entity_from, self._entity_to)))
+                edge_key = cast(
+                    "Literal['nodes_nodes', 'groups_nodes']",
+                    '{}_{}'.format(*sorted((self._entity_from, self._entity_to))),
+                )
                 edge_set = operational_set.dict[edge_key]
                 namedtuple_ = edge_set.edge_namedtuple
 

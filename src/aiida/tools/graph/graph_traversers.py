@@ -8,8 +8,9 @@
 ###########################################################################
 """Module for functions to traverse AiiDA graphs."""
 
-import sys
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Mapping, Optional, Set, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, TypedDict, cast
 
 from aiida import orm
 from aiida.common import exceptions
@@ -22,15 +23,11 @@ if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
     from aiida.tools.graph.age_rules import Operation
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
 
-    class TraverseGraphOutput(TypedDict, total=False):
-        nodes: Set[int]
-        links: Optional[Set[LinkQuadruple]]
-        rules: Dict[str, bool]
-else:
-    TraverseGraphOutput = Mapping[str, Any]
+class TraverseGraphOutput(TypedDict, total=False):
+    nodes: set[int]
+    links: set[LinkQuadruple] | None
+    rules: dict[str, bool]
 
 
 def get_nodes_delete(

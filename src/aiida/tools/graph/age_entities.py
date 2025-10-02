@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, TypedDict, overload
 
 from aiida import orm
 from aiida.common.typing import Self, TypeAlias
@@ -420,6 +420,12 @@ class Basket:
         """Set of groups stored in the basket"""
         return self._dict['groups']
 
+    @overload
+    def __getitem__(self, key: Literal['nodes', 'groups']) -> AiidaEntitySet: ...
+
+    @overload
+    def __getitem__(self, key: Literal['nodes_nodes', 'groups_nodes']) -> DirectedEdgeSet: ...
+
     def __getitem__(self, key: _BasketKeys) -> _BasketValues:
         return self._dict[key]
 
@@ -434,18 +440,18 @@ class Basket:
 
     def __iadd__(self, other: Self) -> Self:
         for key in self._dict:
-            self[key] += other[key]  # type: ignore[index,operator]
+            self[key] += other[key]  # type: ignore[index,call-overload]
         return self
 
     def __sub__(self, other: Self) -> 'Basket':
         new_dict = {}
         for key in self._dict:
-            new_dict[key] = self[key] - other[key]  # type: ignore[index,operator]
-        return Basket(**new_dict)  # type: ignore[arg-type]
+            new_dict[key] = self[key] - other[key]  # type: ignore[call-overload]
+        return Basket(**new_dict)
 
     def __isub__(self, other: Self) -> Self:
         for key in other.dict:
-            self[key] -= other[key]  # type: ignore[index,operator]
+            self[key] -= other[key]  # type: ignore[call-overload,index]
         return self
 
     def __len__(self) -> int:
@@ -455,7 +461,7 @@ class Basket:
         if not isinstance(other, Basket):
             return False
         for key in self._dict:
-            if self[key] != other[key]:  # type: ignore[index]
+            if self[key] != other[key]:  # type: ignore[call-overload]
                 return False
         return True
 

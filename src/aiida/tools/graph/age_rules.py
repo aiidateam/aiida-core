@@ -182,8 +182,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
         query_dict = self._qbtemplate.as_dict()
         self._querybuilder = deepcopy(self._qbtemplate)
 
-        # TODO: Remove the type-ignore
-        self._entity_to_identifier = operational_set[self._entity_to].identifier  # type: ignore[union-attr]
+        self._entity_to_identifier = operational_set[self._entity_to].identifier
 
         # Now I add the necessary projections, which is the identifier of the
         # last entity of the QueryBuilder path:
@@ -250,7 +249,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
         if primkeys:
             self._querybuilder.add_filter(
                 self._first_tag,
-                {operational_set[self._entity_from].identifier: {'in': primkeys}},  # type: ignore[union-attr]
+                {operational_set[self._entity_from].identifier: {'in': primkeys}},
             )
             qres = self._querybuilder.dict()
 

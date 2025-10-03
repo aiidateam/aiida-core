@@ -15,7 +15,7 @@ verdi setup --non-interactive --config "${CONFIG}/profile.yaml"
 
 # set up localhost computer
 verdi computer setup --non-interactive --config "${CONFIG}/localhost.yaml"
-verdi computer configure core.local localhost --config "${CONFIG}/localhost-config.yaml"
+verdi computer configure core.local localhost --non-interactive --config "${CONFIG}/localhost-config.yaml"
 verdi computer test localhost
 verdi code create core.code.installed --non-interactive --config "${CONFIG}/doubler.yaml"
 verdi code create core.code.installed --non-interactive --config "${CONFIG}/add.yaml"
